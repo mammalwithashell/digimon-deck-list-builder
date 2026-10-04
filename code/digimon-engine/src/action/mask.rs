@@ -151,7 +151,21 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     // ChangeCostClass). 0 for every other card.
                     let cast_time_reduction =
                         game.cast_time_assembly_play_reduction_for_hand_card(player_id, i) as i16;
-                    let cost = (printed - assembly_reduction - cast_time_reduction).max(0);
+                    let mut cost = (printed - assembly_reduction - cast_time_reduction).max(0);
+                    // `before_pay_cost` reducers (the card's own
+                    // `when_playing_this` reduction — BT24-051 Merukimon,
+                    // BT24-040 Venusmon — and field-granted ones such as
+                    // BT26-088 Hiroko's suspend-self reduction) also lower
+                    // the cost the payment chain charges, so they participate
+                    // in declare-then-pay legality the same way. Previewed
+                    // only when the play is otherwise unaffordable (the
+                    // common case pays nothing for the scan).
+                    // G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION.
+                    if (game.memory - cost) < game.rules.memory_range.0 {
+                        let before_pay_reduction =
+                            game.preview_play_cost_reduction_for_hand_card(player_id, i) as i16;
+                        cost = (cost - before_pay_reduction).max(0);
+                    }
                     if (game.memory - cost) < game.rules.memory_range.0 {
                         continue;
                     }

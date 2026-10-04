@@ -255,3 +255,65 @@ fn opponent_tamer(id: &str) -> CardData {
     card.play_cost = 3;
     card
 }
+
+// ─── G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION ──────────────────────
+// The RL mask must judge hand-play affordability against the cost AFTER the
+// automatic `when_playing_this` reduction (declare-then-pay, rule 1-3-11-1:
+// the play is declarable iff the REDUCED cost is payable within the -10 floor).
+
+fn mask_runner(memory: i16, own_digimon: usize) -> DebugRunner {
+    let mut runner = merukimon_runner()
+        .add_card(own_iliad("ALLY", CardColor::Blue))
+        .hand(0, &[CARD_ID])
+        .memory(memory)
+        .start();
+    for _ in 0..own_digimon {
+        runner.place_on_field(0, "ALLY", Some(0));
+    }
+    runner
+}
+
+fn hand_play_offered(runner: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+#[test]
+fn bt24_051_mask_offers_play_at_zero_memory_with_three_digimon_and_resolves_at_minus_seven() {
+    let mut runner = mask_runner(0, 3);
+    assert_eq!(runner.game.players[0].hand.len(), 1);
+    assert!(
+        hand_play_offered(&runner),
+        "12 - 5 = 7 is payable from 0 memory (0 - 7 >= -10)"
+    );
+    runner
+        .play(0, 0)
+        .expect("Merukimon plays at the reduced cost");
+    assert_eq!(runner.memory(), -7, "paid the reduced cost 7");
+    assert!(runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == CARD_ID));
+}
+
+#[test]
+fn bt24_051_mask_hides_play_when_even_the_reduced_cost_overdraws() {
+    // -4 - 7 = -11 < -10: unpayable even after the reduction.
+    let runner = mask_runner(-4, 3);
+    assert!(!hand_play_offered(&runner));
+    // -3 - 7 = -10: exactly the floor — payable.
+    let runner = mask_runner(-3, 3);
+    assert!(hand_play_offered(&runner));
+}
+
+#[test]
+fn bt24_051_mask_keeps_printed_cost_when_condition_is_false() {
+    // Only 2 Digimon: no reduction, printed 12 from 0 → -12 < -10.
+    let runner = mask_runner(0, 2);
+    assert!(!hand_play_offered(&runner));
+    // 2 memory → 2 - 12 = -10: payable at the printed cost.
+    let mut runner = mask_runner(2, 2);
+    assert!(hand_play_offered(&runner));
+    runner.play(0, 0).expect("plays at printed cost");
+    assert_eq!(runner.memory(), -10, "paid the printed 12");
+}

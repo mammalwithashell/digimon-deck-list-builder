@@ -866,7 +866,7 @@ impl Game {
     }
 
     pub(crate) fn collect_before_pay_cost_reducers(
-        &mut self,
+        &self,
         acting_player: PlayerId,
         cost_target: Option<CostTargetContext>,
         processed: &[CostReductionKey],
@@ -950,8 +950,73 @@ impl Game {
         candidates
     }
 
+    /// Read-only preview of the `before_pay_cost` play-cost reduction that
+    /// `continue_play_from_hand_cost_reduction_chain` can realize for hand
+    /// card `hand_index` right now (`G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION`).
+    ///
+    /// The action mask subtracts this beside the `[Assembly]` / cast-time
+    /// reductions so a hand play is offered iff SOME legal sequence of
+    /// reducer choices makes its cost payable (declare-then-pay; an unpayable
+    /// cost can't be declared, rule 1-3-11-1). It walks the exact candidate
+    /// set the payment chain walks (`collect_before_pay_cost_reducers`, so the
+    /// `CannotReduceCost` / `CannotReducePlayCost` flood-gates, `[Once Per
+    /// Turn]` counters, conditions and target predicates all agree) and
+    /// counts each candidate as follows:
+    ///
+    /// - **No pay_cost** (the target's own `when_playing_this` reduction,
+    ///   field auras): counted. Mandatory ones auto-apply; an optional one is
+    ///   an accept/decline the player can always accept.
+    /// - **pay_cost with a read-only payability twin**
+    ///   (`activation_cost_kind`, e.g. "by suspending this Tamer" — BT26-088
+    ///   Hiroko, BT5-092): counted at its amount iff the cost is payable now
+    ///   (accepting is then always possible).
+    /// - **Any other pay_cost** (trash/delete/place-a-card costs, interactive
+    ///   pay_costs): NOT counted — no read-only probe can prove it payable,
+    ///   so the mask stays conservative (never offers a play the payment
+    ///   path could then refuse). Such a play is still offered whenever it
+    ///   is affordable without that reducer.
+    ///
+    /// Reductions are evaluated against the current state; a reducer whose
+    /// condition only becomes true after an earlier reducer's pay_cost
+    /// resolves is not anticipated (none is known to exist).
+    pub(crate) fn preview_play_cost_reduction_for_hand_card(
+        &self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> i32 {
+        let Some(card) = self.player(player_id).hand.get(hand_index) else {
+            return 0;
+        };
+        let target = CostTargetContext {
+            card: card.handle(),
+            from_hand: true,
+            is_digivolve: false,
+            target_permanents: [None, None],
+        };
+        self.collect_before_pay_cost_reducers(player_id, Some(target), &[], CostReductionKind::Play)
+            .into_iter()
+            .filter(|c| c.amount > 0)
+            .filter(|c| !c.has_pay_cost || self.cost_reducer_pay_cost_provably_payable(&c.key))
+            .map(|c| c.amount)
+            .sum()
+    }
+
+    /// Strict variant of [`Self::cost_reducer_pay_cost_payable`]: `true` only
+    /// when the reducer declares a read-only cost shape
+    /// (`activation_cost_kind`) AND that cost is payable right now. A pay_cost
+    /// without a data twin is unprovable and reports `false`.
+    fn cost_reducer_pay_cost_provably_payable(&self, key: &CostReductionKey) -> bool {
+        let Some(effects) = self.effects_for_card(&key.card_id, key.source_card) else {
+            return false;
+        };
+        effects
+            .get(key.effect_slot as usize)
+            .and_then(|effect| effect.activation_cost_kind)
+            .is_some_and(|kind| kind.is_payable(self, key.source_permanent))
+    }
+
     pub(crate) fn inspect_cost_reduction_candidate(
-        &mut self,
+        &self,
         key: &CostReductionKey,
         cost_target: Option<CostTargetContext>,
     ) -> Option<i32> {
