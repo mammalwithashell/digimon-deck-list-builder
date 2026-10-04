@@ -2660,6 +2660,14 @@ impl Game {
                 if effect.trash_zone {
                     continue;
                 }
+                // A `{Security}`-scoped clause (BT25-039 Sirenmon's [End of
+                // Your Turn] "play 1 [Ceresmon] ...") is active only while the
+                // card sits in its owner's security stack — never from the
+                // battle area. Mirrors `Game::is_adoptable_effect`, which
+                // already excludes `security` clauses.
+                if effect.security {
+                    continue;
+                }
                 // An inherited effect (the lower portion of a digi card) is
                 // active ONLY while that card is a digivolution source beneath
                 // another card — the top Digimon activates it (RULES 15-3-1).
@@ -3091,6 +3099,15 @@ impl Game {
                     continue;
                 }
                 if effect.inherited {
+                    continue;
+                }
+                // Zone-scoped clauses stay dormant on a breeding-area top card,
+                // exactly as on the battle-area scan (`enqueue_from_permanent`):
+                // a `linked` clause is active only while the card is linked to
+                // a Digimon (dispatched by the link-card scan), a `[Trash]`
+                // clause only from the trash, a `{Security}` clause only from
+                // the security stack.
+                if effect.linked || effect.trash_zone || effect.security {
                     continue;
                 }
                 self.effect_queue.push_back(QueuedEffect {
