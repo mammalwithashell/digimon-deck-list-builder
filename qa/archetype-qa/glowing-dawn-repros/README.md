@@ -14,7 +14,7 @@ target/debug/dcgo-harness --root "$ROOT" exam --scenario qa/archetype-qa/glowing
 
 | File | Finding |
 |---|---|
-| `repro-barrier-leak.yaml` | G-ENGINE-BARRIER-CONDITION-NOT-CARRIER-SCOPED: inherited `<Barrier>` prompts the opponent and drops `<Piercing>` |
+| `repro-barrier-leak.yaml` | G-ENGINE-BARRIER-CONDITION-NOT-CARRIER-SCOPED: inherited `<Barrier>` prompted the opponent and dropped `<Piercing>`. **Fixed 2026-10-04** by #708 (G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED); the assert now holds the correct result |
 | `repro-dual-option-reducer.yaml` | BT25-049's Option-use reducer fires on a digivolve into a DUAL card |
 | `repro-retaliation-effect-battle.yaml` | G-ENGINE-RETALIATION-EFFECT-BATTLE: `<Retaliation>` offered but no-ops after an effect battle |
 | `repro-tamer-trash-trigger-mid-cost.yaml` | ST23-13's trash trigger resolves between the two cards of a "trash 2" cost |

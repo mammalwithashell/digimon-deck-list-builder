@@ -40,15 +40,20 @@
 #     OptionalSkill row. Expected prompt-shape divergence at step 13; if DCGO
 #     asks it, this line needs a `dcgo_only` OptionalSkill row (not authored
 #     blind).
-#   * The `sim_only` decline for actor 1 answers a PHANTOM <Barrier> prompt:
-#     ENGINE FINDING -- our <Barrier> replacement_condition does not check that
-#     the subject is its carrier, so Monarchlizamon's inherited <Barrier>
-#     (from Ukkomon/Cougarmon) is offered to p1, the DELETED Digimon's
-#     controller, when p1's Birdramon dies in battle. Accepting does nothing
-#     (the process re-checks the subject). DCGO asks nothing here.
+#   * UPDATED 2026-10-04 (post-#708): the line used to carry a `sim_only`
+#     decline for actor 1 answering a PHANTOM <Barrier> prompt -- our <Barrier>
+#     replacement was offered to p1 when p1's Birdramon died in battle,
+#     because its replacement_condition did not check that the subject was
+#     its carrier (logged by this pass as G-ENGINE-BARRIER-CONDITION-NOT-
+#     CARRIER-SCOPED). #708 fixed the same root cause as
+#     G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED (RESOLVED 2026-10-04,
+#     docs/RUST_ENGINE_GAPS.md); Barrier.cs scopes CanUse to
+#     `permanent.cardSources.Contains(card)`, so neither engine asks and the
+#     row is gone (the harness's actor check refused it as wrong-seat). The
+#     Tamer pick is now step 14, and the assert moved from `at: 16` to 15.
 #   * De-Digivolve with no target: whether DCGO still asks the Tamer pick
 #     (and trashes) is unverified -- the C# "RemoveUse if no cost paid" note
-#     suggests the cost is still offered. Possible divergence at step 15.
+#     suggests the cost is still offered. Possible divergence at step 14.
 card: BT25-057
 clause: BT25-057#effect#2
 seed: 424242
@@ -105,8 +110,6 @@ steps:
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
-  - actor: 1
-    do: { select: { decline: true, sim_only: true } }
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
@@ -114,7 +117,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 16
+  - at: 15
     that:
       turn: 4
       p0.memory: -3
