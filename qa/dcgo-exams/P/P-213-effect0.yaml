@@ -1,0 +1,74 @@
+# Exam scenario: Aegiochusmon (P-213), clause P-213#effect#0 -- Special
+# Digivolution Condition "[Digivolve] [Aegiomon]: Cost 3".
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play Aegiomon BT25-033 (0 -> -5); decline its [On Play].
+#   T2 (P1, 5): pass -> P0 3.
+#   T3 (P0, 3): digivolve Aegiomon -> P-213. Aegiomon is YELLOW, so P-213's
+#        printed Red Lv.4 / cost-3 circle does NOT apply -- the only open
+#        route is THE CLAUSE (name [Aegiomon], cost 3), hence no cost-choice
+#        prompt. The WD's Rush/+3000 gate is closed (P0 has 5 security); its
+#        unconditional "Then, this Digimon may attack" is declined. Trailing
+#        pass.
+#
+# WITNESS: P0 opened T3 at 3 memory and stands at 0 with P-213 on its Aegiomon
+# source (DP 7000 -- no +3000, 5 security). P1 security untouched (no attack).
+#
+# PROMPT SHAPE / anticipated oracle quirks:
+#   - No cost prompt on either side (single route).
+#   - WD "may attack": ours is a declinable `Target` prompt (decline);
+#     DCGO's P_213.cs runs `SelectAttackEffect` behind `CanAttack` -- its
+#     decline is a "no attack" answer inside that widget. If DCGO instead
+#     gates with an OptionalSkill first, expect a 1-vs-2 row mismatch here.
+card: P-213
+clause: P-213#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-033, P-213, BT24-031, BT25-030, BT24-083,
+            BT24-102, BT24-084, BT25-022, BT24-034, BT26-090,
+            BT25-030, BT24-034, BT24-031, BT25-022]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-033, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: P-213 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectAttackEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.field:
+        - { card_id: P-213, dp: 7000, suspended: false, sources: [BT25-033] }
+      p1.security: 5

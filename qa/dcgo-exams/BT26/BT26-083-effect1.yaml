@@ -1,0 +1,145 @@
+# Exam scenario: Junomon: Hysteric Mode (BT26-083), clause BT26-083#effect#1 --
+# "<Rush> (This Digimon can attack the turn it was played.)"
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# WHY THIS SHAPE. <Rush> needs a PLAY with memory left over. Printed cost 14
+# exceeds the +10 ceiling, so the only same-turn-attack route is the Assembly
+# -4 play at exactly 10 memory (-> 0). The [Junomon] element reaches the
+# trash from hand via Asuna Shiroki BT24-088's [On Play] discard (the security
+# route trips an engine bug, see BT26-083-effect7.yaml). Asuna is then
+# RETURNED to the deck bottom by her own [Start of Your Turn] so that at the
+# attack BT26-083 is P0's ONLY permanent -- `attack: field.0` is index-safe
+# on both wires (README "Slot safety" rule 2: DCGO seats Tamers after Digimon).
+#
+#   T1 (P0, 0): Asuna (0 -> -3); [On Play] trash Junomon BT25-044, Draw 2.
+#   T2 (P1, 3): pass -> P0 3.
+#   T3 (P0, 3): Asuna [Start of Your Turn] (memory 3 <= 4): YES -> Asuna to
+#            deck bottom; the free-play pick from trash has no candidate
+#            (Junomon is Lv.6) so it opens no prompt. Pass -> P1 3.
+#   T4 (P1, 3): Agumon ST1-03 (3 -> 0), Phoenixmon ST1-10 (0 -> -10) -> P0 10.
+#   T5 (P0, 10): Assembly play of BT26-083 (10 -> 0); [On Play] trashes 5
+#            security, deletes both P1 Digimon, Recovery +3. THE CLAUSE:
+#            BT26-083 attacks P1's security THE SAME TURN. Top security
+#            BT1-009 (3000, vanilla) loses the security battle. Pass at 0
+#            (BT26-083 is suspended -> no <Execute> gate).
+#
+# WITNESS: the attack step lowers at all (a non-<Rush> Digimon played this
+# turn has no attack bit -- POSITIVE CONTROL run 2026-10-04, not committed:
+# the same prefix playing Aegiomon BT25-033 at T5 instead offers NO attack
+# action for it, "no legal action matches Attack field.0"). at 15 BT26-083 is unsuspended with 5 P1 security;
+# at 16 it is SUSPENDED, P1 security is 4 and BT1-009 is in P1's trash.
+#
+# PROMPT SHAPE. Asuna [On Play]: ours one declinable SelectHandEffect; DCGO
+# may prepend OptionalSkill (optional_gate_fold candidate). Asuna [Start of
+# Your Turn]: ours TriggerOrder(1) -> OptionalSkill; DCGO OptionalSkill, then
+# possibly an EMPTY SelectCardEffect over trash (should be skipped at 0
+# candidates). Assembly / delete pick: see BT26-083-effect7.yaml. Attack:
+# SelectAttackEffect none (security target via main-phase action).
+card: BT26-083
+clause: BT26-083#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-083, BT24-088, BT25-044, BT24-101, BT26-090,
+            BT24-031, BT25-030, BT25-033, BT24-031, BT25-030,
+            BT24-034, BT24-034, BT24-031, BT25-033, BT25-030,
+            BT24-034, BT24-031, BT25-030]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-10, BT1-009, BT3-007, ST1-02,
+            BT1-014, BT4-010, BT3-007, ST1-04, BT1-009,
+            ST1-04, BT4-010, BT1-014, BT4-014, ST1-05]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): Asuna; trash Junomon from hand.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-088, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-044] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Asuna [Start of Your Turn] -> return her to the deck bottom.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-083, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-044] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0, opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: same-turn attack.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 6
+    that:
+      p0.field: []
+      p0.memory: 3
+      p0.trash: [BT25-044]
+  - at: 12
+    that:
+      p0.memory: 10
+      p0.hand: [BT24-031, BT24-034, BT24-034, BT24-101, BT25-033, BT26-083, BT26-090]
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+  - at: 15
+    that:
+      p0.memory: 0
+      p0.field:
+        - { card_id: BT26-083, dp: 14000, suspended: false, sources: [BT25-044] }
+      p1.field: []
+      p1.security: 5
+      p1.trash: [ST1-03, ST1-10]
+  - at: 16
+    that:
+      p0.memory: 0
+      p0.field:
+        - { card_id: BT26-083, dp: 14000, suspended: true, sources: [BT25-044] }
+      p1.security: 4
+      p1.trash: [BT1-009, ST1-03, ST1-10]
+  - at: 18
+    that:
+      p0.memory: -3
+      p0.security: 3

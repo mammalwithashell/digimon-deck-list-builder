@@ -1,0 +1,89 @@
+# Exam scenario: Jupitermon (BT26-033, DUAL), clause BT26-033#effect#7 --
+# DUAL Effect "<Use Req. ([TS] trait)> (Specified cards let you ignore color
+#  requirements.)"
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container: prompt shapes
+# below are inferred from the YAML's DCGO crosscheck block + sibling exams.
+#
+# THE LINE: T1 P0 plays Homeros BT24-102 (WHITE [Iliad]/[TS] Tamer, 0 -> -5);
+# T2 P1 plays Biyomon (5 -> 3) and passes; T3 (P0, 3) Homeros' [Start of Your
+# Main Phase] +1 memory (3 -> 4; 4 < 5, so no suspend/draw), then USE
+# Jupitermon's Option face from hand. P0's ONLY permanent is white: neither
+# of the Option's colours (Yellow AND Red -- an Option needs ALL its colours,
+# mask.rs option_color_match_available, general_rule.pdf 4-19-3) is present,
+# so the use is admitted SOLELY by <Use Req. ([TS] trait)>.
+#
+# WITNESS (at 7): the use happened at all -- p0.memory 4 -> -3 (use cost 2 + 5
+# security = 7), BT26-033 in p0.trash, Biyomon deleted (p1.trash
+# [ST1-02]), p0.security 6 after <Recovery +1>. Without the clause our mask
+# would not offer the play and lowering would refuse step 6.
+#
+# Homeros' [End of Your Turn] (activate an [Olympos XII] Digimon's [On Play]/
+# [When Digivolving]) has no candidate on either turn end here (P0 has no
+# Digimon) -- probed: our engine parks nothing; DCGO is expected to agree.
+# No P0 Digimon -> no <Arts Digivolve> target -> no Arts prompt.
+#
+# Option use from hand: `play: { card: BT26-033, from: hand }` lowers as an
+# Option USE (card_kind 4 + dual block in cards.json); DCGO routes a dual
+# card played with no target permanent to UseOptionClass (NOTES-BT25-085.md),
+# no face-selection prompt on either side. [Main] is mandatory (no
+# OptionalSkill). <Arts Digivolve> is offered on EVERY use with a legal
+# target (ours optional OwnField pick; DCGO SelectPermanentEffect
+# canNoSelect:true).
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO -- unconfirmed until the oracle pass.
+card: BT26-033
+clause: BT26-033#effect#7
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-102, BT26-033, BT24-084, BT25-033, BT26-092,
+            BT24-031, BT24-034, BT26-029, BT24-083, BT25-030,
+            BT25-022, BT24-034, BT25-033]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-02, BT1-009, BT3-007, ST1-04, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): Homeros (cost 5: 0 -> -5) -> P1 at 5.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-102, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5): Biyomon (5 -> 3); pass -> P0 at 3.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3 -> 4 via Homeros' SOMP): THE CLAUSE -- use the Option.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-033, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 6
+    that:
+      p0.memory: 4
+  - at: 7
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.security: 6
+      p0.trash: [BT26-033]
+      p1.field: []
+      p1.trash: [ST1-02]
+      p0.field:
+        - { card_id: BT24-102, dp: -1, suspended: false, sources: [] }

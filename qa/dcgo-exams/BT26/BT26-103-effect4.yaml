@@ -1,0 +1,161 @@
+# Exam scenario: Jupitermon: Wrath Mode (BT26-103), clause BT26-103#effect#4 --
+# "<Succession ([Jupitermon])> (This Digimon gains all effects other than
+#  <Succession> on its topmost specified digivolution card.)"
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# THE LINE (Wrath Mode digivolves onto Jupitermon BT24-101, so it GAINS
+# BT24-101's printed effects):
+#   T1 (P0, 0): pass -> P1 3.
+#   T2 (P1, 3): hard-play Phoenixmon ST1-10 (10): 3 -> -7 -> P0 7.
+#   T3 (P0, 7): hard-play Jupitermon BT24-101 (12): 7 -> -5. Its [On Play]:
+#            trash P0's top security (Elecmon BT24-031; 5 -> 4) and -13000 on
+#            Phoenixmon (pick; deleted). Its [All Turns][OPT] fires: P1's top
+#            security (BT1-014) trashed (5 -> 4). -> P1 5.
+#   T4 (P1, 5): pass -> P0 3.
+#   T5 (P0, 3): digivolve Jupitermon -> Wrath Mode, cost-5 trait route
+#            (3 -> -2). THE CLAUSE: Wrath Mode now carries BT24-101's
+#            effects, so TWO [When Digivolving] triggers stack:
+#              Wrath Mode's own WD (effect#5) and the gained BT24-101 WD.
+#   Resolution (our TriggerOrder prompts, steps 12-17):
+#     12 [BT26-103 WD, BT24-101 gWD]           -> BT26-103: trash BT25-033,
+#                                                Recovery +2 (4 -> 3 -> 5);
+#                                                triggers effect#6 + gained AT
+#     13 [BT24-101 gWD, BT24-101 gAT, BT26-103 e6] -> e6 (no opp Digimon: no-op)
+#     14 [BT24-101 gWD, BT24-101 gAT]  ordinal 0 -> gWD: trash BT24-034
+#                                                (5 -> 4); -13000 no target;
+#                                                4 > 1 -> no Recovery;
+#                                                re-triggers gAT + e6
+#     15 [BT24-101 gAT, BT24-101 gAT, BT26-103 e6] -> e6 (no-op)
+#     16 [BT24-101 gAT, BT24-101 gAT]  ordinal 0 -> gAT: trash P1's top
+#                                                security BT1-009 (4 -> 3);
+#                                                that removal triggers e6 again
+#     17 [BT24-101 gAT (OPT spent), BT26-103 e6] -> gAT fizzles; e6 auto-last.
+#
+# WITNESS (P1's T6 breeding decision): the two gained effects ran --
+#   * gained [When Digivolving]: P0's trash gains BT24-034 (p0.security 4,
+#     not the 5 Wrath Mode's own WD alone leaves);
+#   * gained [All Turns][OPT] "your security removed -> trash opp's top
+#     security": p1.security 3 (not 4), BT1-009 in P1's trash.
+#   The end state is order-independent across the 2..3-way stacks above.
+#
+# PROMPT SHAPE / EXPECTED ORACLE TRIAGE:
+#   * Cost route by VALUE 5 (SelectCountEffect).
+#   * MultipleSkills rows: the ORDER is ours. Steps 14 and 16 use `ordinal: 0`
+#     over two same-id (BT24-101) triggers that carry no keyword, so neither
+#     `trigger:` nor `trigger_not:` applies. Step 14's branch is LOAD-BEARING
+#     for the row trace (gained WD vs gained AT) though not for the end state;
+#     read DCGO's order off the abort message if it disagrees.
+#   * Our engine re-queues effect#6 on every security removal even after a
+#     no-target resolution (its OPT is not consumed by a no-op), giving rows
+#     13/15/17 that DCGO may batch or skip (DCGO's CanActivate usually checks
+#     for a target first) -- a likely prompt-count mismatch, see report.
+#   * DCGO may also not re-queue a SECOND instance of the gained [All Turns]
+#     OPT (rows 15-17), which would shorten its stack.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT26-103
+clause: BT26-103#effect#4
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-101, BT26-103, BT24-041, BT25-044, BT25-025,
+            BT25-022, BT24-083, BT26-029, BT25-033, BT24-031,
+            BT26-029, BT26-081, BT25-025, BT25-030, BT24-034]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-10, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT1-014,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-101, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-103 } }
+    expect: { prompt: main_phase }
+  # Cost route: trait route (5).
+  - actor: 0
+    do: { select: { value: 5 } }
+    expect: { prompt: SelectCountEffect }
+  # Trigger stack (see header table).
+  - actor: 0
+    do: { select: { cards: [BT26-103] } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT26-103, BT24-101] }
+  - actor: 0
+    do: { select: { cards: [BT26-103] } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT24-101, BT24-101, BT26-103] }
+  - actor: 0
+    do: { select: { cards: [BT24-101], ordinal: 0 } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT24-101, BT24-101] }
+  - actor: 0
+    do: { select: { cards: [BT26-103] } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT24-101, BT24-101, BT26-103] }
+  - actor: 0
+    do: { select: { cards: [BT24-101], ordinal: 0 } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT24-101, BT24-101] }
+  - actor: 0
+    do: { select: { cards: [BT24-101] } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT24-101, BT26-103] }
+  # T6 (P1): trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # At the first trigger-order prompt: digivolved, nothing resolved yet.
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: -2
+      p0.security: 4
+      p1.security: 4
+      p0.trash: [BT24-031]
+      p1.trash: [BT1-014, ST1-10]
+      p0.field:
+        - { card_id: BT26-103, dp: 16000, suspended: false, sources: [BT24-101] }
+  # After own WD + gained WD (step 15's prompt): 4 -1 +2 -1 = 4.
+  - at: 15
+    that:
+      p0.security: 4
+      p1.security: 4
+      p0.trash: [BT24-031, BT24-034, BT25-033]
+  # Final: gained [All Turns] trashed P1's top security.
+  - at: 18
+    that:
+      turn: 6
+      p0.security: 4
+      p1.security: 3
+      p0.trash: [BT24-031, BT24-034, BT25-033]
+      p1.trash: [BT1-009, BT1-014, ST1-10]
+      p0.field:
+        - { card_id: BT26-103, dp: 16000, suspended: false, sources: [BT24-101] }

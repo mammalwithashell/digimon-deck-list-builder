@@ -1,0 +1,117 @@
+# Exam scenario: Aegiochusmon: Holy (BT26-029), clause BT26-029#effect#3 --
+# "[On Play] [When Digivolving] By trashing your top security card, until
+#  your opponent's turn ends, their effects can't reduce the DP of 1 of your
+#  Digimon, trash any of its stacked cards, or return them to hands or decks."
+# Reached on the [When Digivolving] arm.
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json. p0 `ts-jupitermon`; p1
+# ALSO `ts-jupitermon` (not tm-quiet-red) because the witness needs an
+# opponent effect that strips stacked cards: Aegiochusmon: Blue BT25-025's
+# [On Play] <De-Digivolve 1>. PROVISIONAL: assert block is our engine's
+# result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play Aegiomon BT25-033 (0 -> -5); decline its [On Play].
+#   T2 (P1, 5): pass -> P0 3.
+#   T3 (P0, 3): digivolve Aegiomon -> BT26-029 ([Aegiomon] cost-3 route, value
+#        3). THE CLAUSE: accept the WD -- trash top security (stack[9] =
+#        Blinding Ray BT4-104) -- then pick BT26-029 itself as the protected
+#        Digimon. (effect#4 also triggers on the security removal, but P1 has
+#        no Digimon: clamp-to-0, no prompt.) Pass -> P1 3.
+#   T4 (P1, 3): hard-play BT25-025 (3 -> -5); its mandatory [On Play]
+#        <De-Digivolve 1> targets BT26-029. P1 security is 5, so its "if 3 or
+#        fewer" tail is silent. Turn passes; P0's T5 breeding pass closes.
+#
+# WITNESS: (a) the cost -- at step 10 P0 security 5 -> 4 and Blinding Ray (the
+# old top security card) is in P0's trash; (b) the protection -- after
+# BT25-025's De-Digivolve, BT26-029 still sits on its Aegiomon source (an
+# unprotected Lv.5-over-Lv.4 would lose its top card; Lv.4 is above the
+# "can't trash past level 3" floor).
+# Not witnessed: the DP-reduction and return-to-hand/deck arms of the
+# protection (no single cheap opponent line exercises them alongside).
+#
+# PROMPT SHAPE / anticipated oracle quirks:
+#   - WD: OptionalSkill (yes) then a MANDATORY own-Digimon pick
+#     (SelectPermanentEffect, canNoSelect false per the YAML crosscheck), 1:1.
+#   - De-Digivolve target: we still OFFER the protected BT26-029 as a target
+#     (the protection makes the strip a no-op rather than an illegal target).
+#     If DCGO filters protected Digimon out of the candidate list, the pick
+#     has no legal target on its side and the row will diverge on prompt
+#     presence -- triage against §16 De-Digivolve / immunity wording.
+card: BT26-029
+clause: BT26-029#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-033, BT26-029, BT24-031, BT25-030, BT24-083,
+            BT24-102, BT24-084, BT25-022, BT24-034, BT4-104,
+            BT25-030, BT24-034, BT24-031, BT25-022]
+    rest: ts-jupitermon
+  p1:
+    stack: [BT25-025, BT24-031, BT25-030, BT24-083, BT24-034,
+            BT24-102, BT24-084, BT25-022, BT24-034, BT26-090,
+            BT25-030, BT24-031, BT25-022, BT24-083]
+    rest: ts-jupitermon
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-033, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-029 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT25-025, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 10
+    that:
+      turn: 3
+      p0.security: 4
+      p0.trash: [BT4-104]
+  - at: 14
+    that:
+      turn: 5
+      p1.memory: -5
+      p0.security: 4
+      p0.trash: [BT4-104]
+      p0.field:
+        - { card_id: BT26-029, dp: 8000, suspended: false, sources: [BT25-033] }
+      p1.field:
+        - { card_id: BT25-025, dp: 8000, suspended: false, sources: [] }
+      p1.trash: []

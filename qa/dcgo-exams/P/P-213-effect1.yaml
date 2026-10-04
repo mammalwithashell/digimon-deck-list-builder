@@ -1,0 +1,105 @@
+# Exam scenario: Aegiochusmon (P-213), clause P-213#effect#1 -- "<Raid>"
+# (When this Digimon attacks, you may switch the target of attack to 1 of your
+# opponent's unsuspended Digimon with the highest DP.)
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play Aegiomon BT25-033 (0 -> -5); decline its [On Play].
+#   T2 (P1, 5): Agumon BT3-007 (4000; 5 -> 3), Biyomon ST1-02 (3000; 3 -> 1);
+#        pass -> P0 3. Two unsuspended Digimon with DIFFERENT DP, so "the
+#        highest DP" discriminates (Agumon, field.0).
+#   T3 (P0, 3): digivolve Aegiomon -> P-213 ([Aegiomon] route, 3 -> 0, single
+#        route); WD: 5 security, no buff; decline its "may attack". Then a
+#        normal main-phase attack: P-213 -> P1's SECURITY. THE CLAUSE: <Raid>
+#        -> switch to Agumon. 7000 vs 4000: Agumon deleted. Trailing pass is
+#        the asserted step.
+#
+# WITNESS: the attack declared on the PLAYER never checks security (P1 still
+# 5) and instead P1's 4000-DP Agumon is in trash; the 3000-DP Biyomon stays.
+# P-213 is suspended from attacking.
+#
+# PROMPT SHAPE / anticipated oracle quirks:
+#   - Raid: authored `expect: OptionalSkill` over our live declinable OppField
+#     pick -- the documented <Raid>-family FOLD (DCGO gates OptionalSkill yes,
+#     then the pick; the emitter splits the row). EX12-076-effect1 precedent.
+#   - WD "may attack" decline: ours `Target` decline vs DCGO SelectAttackEffect
+#     "no attack" (see P-213-effect0 note).
+#   - SIM-ONLY row (actor 1): a phantom `<Barrier>` Replacement prompt our
+#     engine parks for P1 when P1's Agumon "would be deleted in battle". The
+#     Barrier is P0's -- P-213's inherited <Barrier> from the Aegiomon source
+#     -- and its body self-scopes only inside replacement_process, not at
+#     candidate collection (keyword_effects.rs Keyword::Barrier; compare the
+#     Evade arm, which self-scopes at candidate collection). Measured: yes or
+#     no makes no difference (Agumon is deleted, P1 security stays 5). DCGO
+#     asks nothing here. SUSPECTED ENGINE BUG, reported, not fixed.
+card: P-213
+clause: P-213#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-033, P-213, BT24-031, BT25-030, BT24-083,
+            BT24-102, BT24-084, BT25-022, BT24-034, BT26-090,
+            BT25-030, BT24-034, BT24-031, BT25-022]
+    rest: ts-jupitermon
+  p1:
+    stack: [BT3-007, ST1-02, ST1-03, ST1-04, BT1-009,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-033, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: P-213 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectAttackEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 13
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.field:
+        - { card_id: P-213, dp: 7000, suspended: true, sources: [BT25-033] }
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+      p1.trash: [BT3-007]
+      p1.security: 5
+      p0.security: 5

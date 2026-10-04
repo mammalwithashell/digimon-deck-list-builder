@@ -8778,3 +8778,23 @@ pins that the turn scan does not trash such a marker.
 
 - **Symptom:** BT21-030 Shoutmon X7: Superior Mode "Trash the top 10 stacked cards" removed `card_sources[len-2]` each pass, leaving the original TOP card. Official Q&A: "The top card is trashed until there are no more stacked cards" — the original BOTTOM card remains; DCGO `ITrashStack` trashes `TopCard` each pass.
 - **RESOLVED 2026-10-01:** `trash_top_stacked_sources` gains `include_top_card: bool` (default `false` keeps "top N digivolution cards" for BT13-030 / EX7-016 / EX7-020). `true` pops the visible top each pass (host = promoted top; an exposed Digi-Egg deletes the permanent). BT21-030 uses it. Test: `bt21::bt21_030::bt21_030_trashes_sources_then_when_attacking_targets_only_no_source_digimon` (re-pinned: remaining card is the bottom card).
+
+## TS Jupitermon exam-authoring findings (2026-10-04) — OPEN, logged not fixed
+
+### `[Counter]` timing never marks the effect as a Counter effect  [G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG]
+- **Card:** BT26-103 Jupitermon: Wrath Mode `[When Digivolving] [Counter] [Once Per Turn] Trash your top security card and <Recovery +2>`.
+- **Symptom:** `when: [when_digivolving, counter]` lowers to the counter timing but nothing under
+  `code/digimon-engine/src/dsl_cards/` calls `Effect::counter()` (only grant_keyword's
+  `.blast_digivolve()` path sets the flag). `try_enter_counter` (`combat/mod.rs`) only offers a
+  battle-area effect that carries the flag, so the arm never fires in real combat. The card's unit
+  test passes because it fires the counter timing directly.
+- **Fix shape:** set `counter = true` when a clause's timings include `counter`. Pinned by
+  `qa/dcgo-exams/BT26/BT26-103-effect3.yaml` / `-effect5.yaml` (the [When Digivolving] arm only).
+  See also `docs/RUST_ENGINE_GAPS.md` §G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK.
+
+### "Use 1 Option card" offers the Digimon face of a DUAL card  [G-DSL-USE-OPTION-ONLY]
+- **Card:** BT26-090 Kanan Yuki `[End of Your Turn] By suspending this Tamer, you may use 1 Option card with the [TS] trait from your hand…`.
+- **Symptom:** the YAML uses `play_or_use_from_hand`, which for a DUAL card (BT26-033) asks "Play as
+  Digimon / Use as Option"; the Digimon branch really puts Jupitermon on the field. The printed text
+  only permits USING the Option face. Needs a use-only variant (or a `mode: use` flag). Pinned by
+  `qa/dcgo-exams/BT26/BT26-090-effect0.yaml` (answers "Use as Option" with a `sim_only` `choice:` row).

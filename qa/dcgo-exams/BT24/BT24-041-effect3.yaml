@@ -1,0 +1,147 @@
+# Exam scenario: Minervamon (BT24-041), clause BT24-041#effect#3 --
+# "[Opponent's Turn] All of your [Iliad] trait Digimon gain <Reboot> and
+#  <Blocker>."
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE GRANTEE is Aegiomon BT24-034 ([Iliad]), which prints NEITHER keyword,
+# so both observables below exist only because of the clause.
+#
+# THE LINE.
+#   T1 (P0, 0): hard-play Aegiomon (5): 0 -> -5 (silent: no [TS] Tamer).
+#   T2 (P1, 5): Agumon ST1-03 (3, 2000): 5 -> 2; pass -> P0 3.
+#   T3 (P0, 3): hard-play Minervamon for 12 - 5 = 7: 3 -> -4. [On Play]: no
+#       play-cost <=5 [Iliad] card in hand (stacked) -> no free play; ONE
+#       mandatory <De-Digivolve> pick on Agumon (bare Lv.3, nothing trashed).
+#       -> P1 4.
+#   T4 (P1, 4): BLOCKER -- Agumon attacks P0's security; the blocker window
+#       opens and P0 blocks with AEGIOMON (granted <Blocker>; Minervamon is
+#       also a candidate, since it is [Iliad] itself). Agumon (2000) loses to
+#       5000 and is deleted; P0's security is never checked. Pass -> P0 3.
+#   T5 (P0, 3): Aegiomon attacks P1's security (p1 stack[9] Biyomon ST1-02,
+#       3000, loses) and stays SUSPENDED. Pass -> P1 3.
+#   T6 (P1): REBOOT -- in P1's unsuspend phase Aegiomon SHOULD unsuspend
+#       (rules 16-10; Minervamon's aura is live on P1's turn).
+#
+# WITNESS: (T4) p0.security 5, Aegiomon suspended, Agumon in p1.trash;
+# (T5) Aegiomon suspended after its attack; (T6) Aegiomon's suspended flag at
+# P1's breeding decision.
+#
+# !! FLAGGED -- SUSPECTED ENGINE BUG, asserted AS OUR ENGINE BEHAVES !!
+# The step-16 assert records Aegiomon STILL SUSPENDED: our engine does NOT
+# apply the aura-granted <Reboot> in P1's unsuspend phase (measured while
+# authoring: it is still suspended in P1's T6 main phase too, and only
+# unsuspends in P0's own T7 unsuspend phase). The printed text + rules 16-10
+# say it unsuspends at T6, so the step-16 row is EXPECTED to diverge at the
+# oracle, with DCGO showing `suspended: false`. Likely cause: the
+# [Opponent's Turn]-gated declarative aura is not re-materialized before the
+# Reboot scan in `game_phases.rs` (the scan reads `has_keyword`, whose
+# granted half is the materialized `permanent_keywords` map). The <Blocker>
+# half of the clause works (T4).
+#
+# PROMPT SHAPE: the blocker window is SelectPermanentEffect on DCGO / our
+# blocker prompt, answered by identity (Aegiomon). Then one SIM-ONLY row for a
+# phantom <Barrier> accept our engine offers P1 (see the step comment). Reboot
+# asks nothing.
+card: BT24-041
+clause: BT24-041#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-034, BT24-041, BT26-029, BT25-044, BT26-081,
+            BT25-030, BT24-031, BT26-073, BT26-081, BT24-101,
+            BT26-103, BT26-083, BT24-031, BT25-033, BT25-030]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, BT1-014,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0): Aegiomon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-034, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, 5): Agumon, pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Minervamon for 7; [On Play] de-digivolve pick.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-041, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (P1, 4): Agumon attacks; THE CLAUSE (Blocker) -- Aegiomon blocks.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # SIM-ONLY: a PHANTOM prompt. Our engine offers P1 "May accept replacement:
+  # <Barrier>" when P1's Agumon would be deleted in battle -- the <Barrier> is
+  # AEGIOMON's (P0's), its body self-scopes and no-ops for another subject,
+  # but the accept gate is collected without that subject check (suspected
+  # engine bug; measured: accept and decline leave identical state). DCGO
+  # asks nothing here, so the row is sim-only.
+  - actor: 1
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Aegiomon attacks security (suspends), pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): THE CLAUSE (Reboot) -- Aegiomon unsuspended at P1's breeding.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 12
+    that:
+      turn: 4
+      p0.security: 5
+      p1.field: []
+      p1.trash: [ST1-03]
+      p0.field:
+        - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
+        - { card_id: BT24-041, dp: 12000, suspended: false, sources: [] }
+  - at: 15
+    that:
+      p1.security: 4
+      p0.field:
+        - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
+        - { card_id: BT24-041, dp: 12000, suspended: false, sources: [] }
+  # OUR ENGINE'S RESULT (see FLAGGED above): rules say suspended: false.
+  - at: 16
+    that:
+      turn: 6
+      p0.field:
+        - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
+        - { card_id: BT24-041, dp: 12000, suspended: false, sources: [] }

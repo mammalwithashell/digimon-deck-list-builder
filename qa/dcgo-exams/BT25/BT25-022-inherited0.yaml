@@ -1,0 +1,103 @@
+# Exam scenario: Lunamon (BT25-022), clause BT25-022#inherited#0 -- inherited
+# <Jamming> "(This Digimon can't be deleted in battles against Security
+# Digimon.)"
+#
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
+# `tm-quiet-red`).
+#
+# THE LINE:
+#   T1 (P0, memory 0): hard-play Lunamon (0 -> -3). Its [On Play] reveal
+#      (BT25-022#effect#1, same reveal as BT25-022-effect1.yaml) adds Aegiomon
+#      BT25-033 + Inori BT24-084; Blinding Ray to the bottom. -> P1 3.
+#   T2 (P1): all-pass -> P0 3.
+#   T3 (P0, memory 3): digivolve Aegiomon BT25-033 over Lunamon (Lunamon is
+#      BLUE, so only Aegiomon's "[Digivolve] Lv.3 w/[TS]: Cost 2" route applies:
+#      3 -> 1; digivolve draw). Aegiomon's [When Digivolving] ("By adding your
+#      top security card to the hand, 1 of your opponent's Digimon gets -5000")
+#      is declined / has no target (P1 has no Digimon). Then THE CLAUSE: attack
+#      P1's security with Aegiomon (5000 DP, Lunamon inherited <Jamming>). P1's
+#      top security is pinned to stack[9] = BT4-014 Vermilimon (8000 DP, no
+#      [Security] effect). Aegiomon loses the security battle but <Jamming>
+#      prevents its deletion.
+#
+# WHY THIS DISCRIMINATES: without <Jamming>, Aegiomon would be deleted; its own
+# <Barrier> ("when this Digimon would be deleted in battle, by trashing your top
+# security card, it isn't deleted") would then open an optional window. With
+# <Jamming> nothing would be deleted, so Barrier never opens: no prompt, P0's
+# security stays at 5, Aegiomon stays (suspended) over Lunamon, and Vermilimon
+# goes to P1's trash as a checked security card.
+#
+# PROMPT SHAPE: T1 = RevealBucket x2 + OrderedPermutation N=1 (sim_only) -- see
+# BT25-022-effect1.yaml for the DCGO quirks of that block. T3: Aegiomon's WD
+# is an optional cost-gated trigger; our engine asks it even with no P1 Digimon
+# (Replacement kind -> OptionalSkill) and it is declined. DCGO may instead skip
+# it when there is no -5000 target (BT25_033.cs not readable here) -- a
+# prompt-count mismatch to triage, not a Jamming finding.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
+# unconfirmed until the oracle pass.
+card: BT25-022
+clause: BT25-022#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-022, BT24-034, BT25-030, BT24-101, BT26-090,
+            BT24-031, BT24-083, BT26-029, BT24-102, BT26-092,
+            BT24-084, BT25-033, BT4-104, BT25-030, BT24-031]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-022, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT25-033] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [BT24-084] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [BT4-104], sim_only: true } }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-033 } }
+    expect: { prompt: main_phase }
+  # Aegiomon's own optional [When Digivolving] -- declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE: lose the security battle vs 8000 DP Vermilimon; Jamming holds.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 11
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.security: 5
+      p0.field:
+        - { card_id: BT25-033, dp: 5000, suspended: true, sources: [BT25-022] }
+      p1.security: 4
+      p1.trash: [BT4-014]
