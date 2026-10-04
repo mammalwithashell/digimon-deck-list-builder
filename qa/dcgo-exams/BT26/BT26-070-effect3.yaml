@@ -28,7 +28,7 @@
 # Tamer. ST23-13's "[Your Turn] When effects trash cards from under this
 # Tamer" trigger then fires BETWEEN our two per-card trash picks and resolves
 # BEFORE the Option-use half of this [Main] (probe:
-# scratchpad wipF/BT26-070-effect3-st2313-probe.yaml; state at its step 14
+# qa/archetype-qa/glowing-dawn-repros/repro-tamer-trash-trigger-mid-cost.yaml; state at its step 14
 # shows 1 of 2 cards trashed with the trigger already offered) -- see ENGINE
 # FINDING in the fragment. That sequencing would abort the oracle on prompt
 # order and measure nothing about THIS clause, so the measured line uses Kyo,

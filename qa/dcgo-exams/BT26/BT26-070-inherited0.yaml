@@ -23,8 +23,8 @@
 # WITNESS: p1.trash gains ST1-10 and p1's field is empty after a battle
 # Phoenixmon won.
 #
-# ENGINE FINDING (not measured by this file; probe kept at scratchpad
-# wipF/BT26-070-inherited0-effect-battle-probe.yaml): the shorter line --
+# ENGINE FINDING (not measured by this file; repro at
+# qa/archetype-qa/glowing-dawn-repros/repro-retaliation-effect-battle.yaml): the shorter line --
 # accept Monarchlizamon's "[When Digivolving] This Digimon may battle 1 of
 # your opponent's Digimon" against Phoenixmon -- deletes Monarchlizamon, our
 # engine OFFERS <Retaliation> (cause gate = Battle passes) but it resolves to

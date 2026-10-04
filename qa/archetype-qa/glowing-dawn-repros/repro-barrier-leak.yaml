@@ -1,0 +1,85 @@
+# REPRO (not an exam scenario; lives outside qa/dcgo-exams on purpose).
+# G-ENGINE-BARRIER-CONDITION-NOT-CARRIER-SCOPED, found authoring the Glowing
+# Dawn exam (NOTES-GLOWING-DAWN.md). Murasamemon BT25-041 carries inherited
+# <Barrier> (BT25-032) and <Piercing> (BT25-049). On T5 it attacks P1's
+# Biyomon BT1-009 and deletes it. Our engine then parks a <Barrier>
+# Replacement prompt for PLAYER 1 (step 15 `decline`), and the Piercing
+# security check is lost: P1's security stays 5. Per §16-6 / §16-24 P1 should
+# get no prompt and the Piercing check should take P1 to 4.
+# The assert pins the CURRENT (buggy) state; flip p1.security to 4 when fixed.
+# Run: dcgo-harness exam --scenario <this> --sim-only --cards-json data/cards.json
+#      --decks qa/dcgo-exams/ST23/glowing_dawn_pool.json
+card: BT25-049
+clause: BT25-049#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-032, BT25-049, BT25-041, ST23-13, ST23-13,
+            BT26-089, BT26-089, ST23-15, BT16-082, BT16-082,
+            BT16-082, BT16-082, BT26-089, BT26-089, ST23-13]
+    rest: gd-bt26-1st
+  p1:
+    stack: [BT1-009, ST1-04, ST1-03, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-032 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-049 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-041 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { pass: {} }
+assert:
+  - at: 17
+    that:
+      turn: 5
+      p1.field: []
+      p1.trash: [BT1-009]
+      p1.security: 5

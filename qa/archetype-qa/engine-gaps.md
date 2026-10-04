@@ -24,6 +24,39 @@ Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
 - **Fix:** localized YAML change in `code/digimon-engine/cards/ex11/EX11-012.yaml` — the would-leave cost selector is now `select_any_permanent: { filter: { kind: token } }` (scans BOTH battle areas; selecting player = controller). The any-owner permanent selector with a kind filter already existed in the DSL (`select_any_permanent`, runtime `install_select_any_permanent` in `src/dsl_cards/step/selections.rs`), so **no DSL widening was needed** — this was not a substrate gap.
 - **Pinned by:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test archetypes medusamon -- --include-ignored` (`medusamon::ex11_012_survives_by_deleting_opponents_petrification_token`: Medusamon survives + opponent's Petrification Token consumed + opponent security −1) and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral ex11_012` (7/7, no regression).
 
+## Open gaps — Glowing Dawn DCGO-exam authoring (2026-10-04)
+
+Card-faithfulness findings from authoring 113 `--sim-only` exam scenarios for the Glowing Dawn deck (no oracle run yet). Engine-primitive findings from the same pass are in `docs/RUST_ENGINE_GAPS.md` ("Found by the Glowing Dawn DCGO-exam authoring pass"). Full detail: `qa/dcgo-exams/ST23/NOTES-GLOWING-DAWN.md`. Not fixed here.
+
+### §Leave-prevention gated on `any_permanent { zone: [security] }` never activates (G-GD-SECURITY-ZONE-EXISTENTIAL) — OPEN
+- **Cards:** BT25-043 Habakirimon `[All Turns][OPT]` "When any of your [Glowing Dawn] trait Digimon would leave the battle area, by trashing your top security card, they don't leave"; the byte-identical clause on ST23-05; also `ST20-15.yaml` uses the same gate.
+- **Bug:** `active_when: any_permanent { of: you, zone: [security] }`. `existential_any` (`dsl_cards/predicate.rs` ~1148) scans battle areas only and security cards are not permanents, so the gate is always false and the replacement is never offered. `security_count_gte: 1` is the intended gate.
+- **Why it stayed green:** `bt25_043_glowing_dawn_leave_prevention_installs` has a catch-all `_ =>` arm that accepts "no prompt".
+- **Pinned (as current behaviour, expected oracle divergence):** `qa/dcgo-exams/BT25/BT25-043-effect3.yaml`.
+
+### §ST23-15 e-Pulse [Security] trashes itself instead of placing itself (G-GD-ST23-15-SECURITY-PLACEMENT) — OPEN
+- "[Security] Activate this card's [Main] effects." includes "Then, place this card in the battle area", so it should end on the field (EX12-071 precedent; DCGO). Our `on_security` body omits the placement. Pinned: `qa/dcgo-exams/ST23/ST23-15-effect3.yaml` (expected divergence on `p0.trash` / `p0.field`).
+
+### §BT25-049 Option-use reducer fires on a DUAL digivolve (G-GD-BT25-049-DUAL-REDUCER) — OPEN
+- `when_any_ally_played: { kind: option }` matches `CardKind::Dual`, so digivolving into BT25-057 / BT26-075 offers the -3 "use an Option" reduction; accepted with a Tamer holding a face-down card, a cost-3 digivolve costs 0. Repro: `qa/archetype-qa/glowing-dawn-repros/repro-dual-option-reducer.yaml`. Also parks with no payable Tamer (phantom choice).
+
+### §BT25-035 free-digivolve pick offers illegal targets (G-GD-BT25-035-ILLEGAL-TARGETS) — OPEN
+- Its "[OP][WD] ... by trashing 2 bottom face-down cards ..., this Digimon may digivolve into a [Glowing Dawn] Digimon card in the hand without paying the cost" hand pick offers Lv.6 cards over a Lv.4; picking one pays the 2-card cost and then no digivolution happens. The pick should only offer legal digivolution targets.
+
+### §BT25-057 Arts/Option face timing and duration (G-GD-BT25-057-OPTION-FACE) — OPEN, needs printed-data triage
+- "Then, it may attack" is lowered as an end-of-turn may-attack window (`windowed: true`) rather than an attack inside the effect, so the Arts Digivolve prompt comes first and the attack is a normal main-phase attack (DCGO asks it in-effect).
+- Buff duration: official DB says "until your opponent's turn ends"; the YAML expires it at end of this turn. `BT25-057-effect4.yaml` asserts our 4000 DP on P1's turn 6 (printed text implies 9000).
+
+### §Split [On Play]/[When Digivolving] bodies ask a trigger-order DCGO never asks (G-GD-SPLIT-OP-WD-ORDER) — OPEN
+- ST23-08, ST23-04, BT25-057: one printed effect is authored as two triggers, so our engine asks a TriggerOrder between the halves (answered `sim_only`), queues the optional half even with no payable Tamer, and once an optional trigger is picked from the order prompt its yes/no is skipped.
+
+### §Smaller items — OPEN
+- BT26-025 Liollmon: its optional "place under a [Glowing Dawn] Tamer" pick auto-resolves with a single Tamer behind a yes/no gate; DCGO asks the pick (authored `sim_only` gate + `dcgo_only` pick).
+- P-236: `<Use Req. ([Glowing Dawn])>` is read as checking P-236 itself (always met); the printed text needs a [Glowing Dawn] card in play. Untested on an empty board.
+- BT25-090: DCGO offers a "suspend only" branch (pay the suspend, decline placing cards) for its suspend trigger; ours folds it into "no".
+- ST23-09 `[WD][WA][Once Per Turn]` may be re-offered on its attack after resolving on digivolve the same turn (uncertain; not visible in the lines).
+- `ST23-13.yaml` header comment quotes "[All Turns]" where the official card prints "[Your Turn]" (comment only; the clause is authored correctly).
+
 ## Open gaps — judge-quiz faithfulness suite discovery wave (2026-05-29)
 
 Surfaced by `openspec/changes/add-judge-quiz-faithfulness-suite` (TCG-Judges' rules quiz reproduced as behavioral tests). Discover-then-pin: tests assert the judge-correct outcome; a failure is logged here, not weakened.
