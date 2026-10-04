@@ -22,7 +22,7 @@
 #       beaten).
 #
 # WITNESS: at 10 three unsuspended P1 Digimon; at 13 Agumon + Monodramon
-# suspended, Biyomon not, Merukimon 12000 unsuspended; at 17 (end of the
+# suspended, Biyomon not, Merukimon 12000 unsuspended; at 16 (end of the
 # effect) Merukimon 17000 and suspended (it attacked), Agumon in P1's trash,
 # P1 security 3.
 # PARTIAL: "Tamers" targets not walked (P1 has none); the decline branch of
@@ -31,13 +31,19 @@
 # PROMPT SHAPE: suspend = two single SelectPermanentEffect picks on ours;
 # DCGO likely ONE maxCount-2 prompt (cardinality risk). Attacker pick =
 # SelectPermanentEffect (canNoSelect); attack target = SelectAttackEffect
-# (ours: kind Target, not sim-asserted). On the attack OUR engine stacks TWO
-# BT24-051 triggers ([BT24-051, BT24-051]; answered ordinal 0, which is the
-# #effect#3 unsuspend pick, declined; the other entry then resolves with NO
-# prompt) -- DCGO is expected to stack only the [When Attacking] unsuspend
-# and ask OptionalSkill, so the MultipleSkills row (step 15) is the likely
-# first abort; see the report finding.
-#
+# (ours: kind Target, not sim-asserted). On the attack OUR engine now asks
+# ONE prompt for Merukimon's [When Attacking] [OPT] unsuspend (#effect#3):
+# a declinable OwnField pick (the clause is `optional: true` with a
+# declinable first step, so no separate outer confirm) -- authored as the
+# OptionalSkill fold (decline -> DCGO OptionalSkill "no"). Repaired
+# 2026-10-04: before main's G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER fix
+# our engine stacked [BT24-051, BT24-051] in a TriggerOrder here (step 15
+# `ordinal:` row); that row is gone. STILL OPEN (G-ENGINE-OPT-DECLINE-
+# CONSUMES-SIBLING-TIMING): our decline records the [Once Per Turn], so the
+# still-pending [When Digivolving] entry of the same clause is then dropped
+# as OPT-spent without a prompt. If DCGO treats the declined OptionalSkill as
+# unused, it will re-offer the unsuspend (now with Merukimon suspended) after
+# this row -- the likely first divergence; Merukimon would end unsuspended.
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
 card: BT24-051
 clause: BT24-051#effect#2
@@ -96,12 +102,12 @@ steps:
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectAttackEffect }
-  - actor: 0
-    do: { select: { cards: [BT24-051], ordinal: 0 } }
-    expect: { prompt: MultipleSkills }
+  # Merukimon's [When Attacking] [OPT] unsuspend (#effect#3): ours = ONE
+  # declinable OwnField pick (the clause's outer yes/no is folded into it);
+  # the OptionalSkill marker emits DCGO's gate "no".
   - actor: 0
     do: { select: { decline: true } }
-    expect: { prompt: SelectPermanentEffect }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -124,7 +130,7 @@ assert:
         - { card_id: BT1-009, dp: 3000, suspended: true, sources: [] }
         - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
         - { card_id: ST1-03, dp: 2000, suspended: true, sources: [] }
-  - at: 17
+  - at: 16
     that:
       turn: 3
       p0.memory: 0
