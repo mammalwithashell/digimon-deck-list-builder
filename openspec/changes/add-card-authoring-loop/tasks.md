@@ -37,9 +37,9 @@ Groups 1–5 do not depend on the oracle-readiness plans and can proceed in para
 
 ## 5. Interaction schema, generators and denominator (independent)
 
-- [ ] 5.1 `scenario.rs`: optional `covers` (default `[clause]`) and `interaction {id, source, kind}`; `expect_ruling` block carrying a Q-number; legacy scenarios unchanged; Rust unit tests
-- [ ] 5.2 `exam_validate` / binding: orphan-interaction rejection; `covers` ids must all be known clauses
-- [ ] 5.3 Verdict store v2: `interactions` map beside `clauses` in per-card files; v1 loader compatibility; shared-ruling writes to every listed card in one commit
+- [x] 5.1 `scenario.rs`: optional `covers` (default `[clause]`) and `interaction {id, source, kind}`; `expect_ruling` block carrying a Q-number; legacy scenarios unchanged; Rust unit tests
+- [x] 5.2 `exam_validate` / binding: orphan-interaction rejection; `covers` ids must all be known clauses
+- [x] 5.3 Verdict store v2: `interactions` map beside `clauses` in per-card files; v1 loader compatibility; shared-ruling writes to every listed card in one commit
 - [x] 5.4 Probe generator `families@1` (optional_decline, scope, once_per_turn_multi, would_replacement, granted_keyword, leave_play, immunity, timing_gate) over extracted clause text, with negative probes; deterministic ids; tests per family on real clause text
 - [x] 5.5 Denominator builder joining `card_qa.json` + probes per card; committed artifact plus `--check` drift mode; family promotion flag and a promotion report listing cards that would drop out of readiness
 - [x] 5.6 Q&A classification packet and schema (`behavioral|textual|not_examinable`) and the `expect_ruling` authoring packet, both marked as terminating calls requiring two families
