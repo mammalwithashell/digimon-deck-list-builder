@@ -317,14 +317,46 @@ pub fn exam_validate(params: &serde_json::Value) -> Result<serde_json::Value, St
             ),
         ),
     };
-    let findings = crate::exam::validate::validate_yaml(&yaml, known_ids.as_deref());
+    let (interaction_book, interaction_note) = load_interaction_book(params);
+    let findings = crate::exam::validate::validate_scenario(
+        &yaml,
+        known_ids.as_deref(),
+        interaction_denominator(&interaction_book),
+    );
     Ok(serde_json::json!({
         "clean": findings.is_empty(),
         "findings": findings.iter().map(|f| serde_json::json!({
             "rule": f.rule, "message": f.message, "guide_topic": f.guide_topic
         })).collect::<Vec<_>>(),
-        "note": note,
+        "note": format!("{note}; {interaction_note}"),
     }))
+}
+
+/// The interaction denominator for this call (`interaction_denominator`
+/// argument, else `data/interaction_denominator.json`), and a note saying
+/// which. An unreadable denominator is not an error HERE -- a legacy clause
+/// scenario never needs it -- but an interaction scenario is refused against it.
+fn load_interaction_book(
+    params: &serde_json::Value,
+) -> (Result<crate::exam::verdict::InteractionBook, String>, String) {
+    let path = tools::opt_str_arg(params, "interaction_denominator")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(crate::exam::verdict::DEFAULT_INTERACTION_DENOMINATOR));
+    let book = crate::exam::verdict::InteractionBook::load(&path);
+    let note = match &book {
+        Ok(_) => format!("interaction ids are checked against {}", path.display()),
+        Err(e) => format!("interaction scenarios are refused: {e}"),
+    };
+    (book, note)
+}
+
+fn interaction_denominator(
+    book: &Result<crate::exam::verdict::InteractionBook, String>,
+) -> crate::exam::validate::InteractionDenominator<'_> {
+    match book {
+        Ok(b) => crate::exam::validate::InteractionDenominator::Loaded(b),
+        Err(e) => crate::exam::validate::InteractionDenominator::Missing(e.as_str()),
+    }
 }
 
 /// Where the generated guide lives.
@@ -448,7 +480,12 @@ pub fn exam_probe(
     // below, whose own notion of clean (`DiffReport::is_clean` -- every row
     // compared AND no divergence) is a completely different question. Naming
     // both `clean` would let one answer be read as the other.
-    let findings = crate::exam::validate::validate_yaml(&yaml, None);
+    let (interaction_book, _) = load_interaction_book(params);
+    let findings = crate::exam::validate::validate_scenario(
+        &yaml,
+        None,
+        interaction_denominator(&interaction_book),
+    );
     if !findings.is_empty() {
         return Ok(serde_json::json!({
             "lint_clean": false,

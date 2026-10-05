@@ -1,0 +1,43 @@
+{
+  "version": 2,
+  "last_updated": "2026-10-03T00:00:00Z",
+  "clauses": {
+    "BT7-056#effect#0": {
+      "clause_id": "BT7-056#effect#0",
+      "card_id": "BT7-056",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "c-sha",
+      "scenario_path": "qa/dcgo-exams/BT7/BT7-056-effect0.yaml",
+      "recorded_at": "2026-10-01T00:00:00Z"
+    }
+  },
+  "interactions": {
+    "probe:BT7-056#inherited#0:timing_gate:neg": {
+      "interaction_id": "probe:BT7-056#inherited#0:timing_gate:neg",
+      "card_ids": [
+        "BT7-056"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "diverged",
+      "text_sha256": "clause-sha",
+      "reason": "step 4: p0.memory ours=1 dcgo=2",
+      "recorded_at": "2026-10-03T00:00:00Z"
+    },
+    "qa:Q2002": {
+      "interaction_id": "qa:Q2002",
+      "card_ids": [
+        "BT7-056",
+        "EX4-030"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "ruling-sha",
+      "scenario_path": "qa/dcgo-exams/BT7/BT7-056-qa-Q2002.yaml",
+      "recorded_at": "2026-10-02T00:00:00Z",
+      "produced_by": "att-0001"
+    }
+  }
+}

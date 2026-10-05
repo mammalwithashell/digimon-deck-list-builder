@@ -69,7 +69,12 @@ pub fn list() -> Vec<serde_json::Value> {
                     "clause_text_json": {"type": "string",
                         "description": "Path to a `clause_coverage extract` output; defaults to \
                             the repo's tracked extract (see exam_status). Without one, the \
-                            unknown-clause-id check degrades to a card-prefix check only."}
+                            unknown-clause-id check degrades to a card-prefix check only."},
+                    "interaction_denominator": {"type": "string",
+                        "description": "Path to the interaction denominator; defaults to \
+                            data/interaction_denominator.json. An `interaction:` id absent from \
+                            it is an orphan; with no denominator at all, interaction scenarios \
+                            are refused (legacy clause scenarios are unaffected)."}
                 },
                 "required": ["yaml"]
             }

@@ -1,0 +1,6 @@
+{
+  "families@1": {
+    "promoted": true,
+    "note": "The base family set the gating denominator was designed around (design D6). A later version gates only after its own explicit promotion here; run `python -m tools.card_loop interactions promotion-report --version <v>` first to see which cards it would drop from readiness."
+  }
+}

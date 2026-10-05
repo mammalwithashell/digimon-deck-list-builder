@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "card-loop/encode_ruling@1",
+  "title": "encode_ruling result",
+  "description": "Encode an official ruling's answer as the scenario's expect_ruling block (design D7), or verify another family's encoding. TERMINATING: the block is the expected value of a three-way comparison, so one family authors it (mode author) and the OTHER family, blind to the author's reasoning, must agree it encodes the answer (mode verify) -- design D5. Strict-mode compatible: every property is required, objects are closed, and the free-form `that:` map is carried as key/value_json pairs (tools.card_loop.interactions.packets.expect_ruling_block converts it to scenario YAML).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["q_id", "mode", "expect_ruling", "agrees", "answer_quote", "reasoning"],
+  "properties": {
+    "q_id": {"type": "string", "minLength": 2},
+    "mode": {"type": "string", "enum": ["author", "verify"]},
+    "expect_ruling": {
+      "description": "author: the observables encoding the answer (required). verify: null.",
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["assert"],
+          "properties": {
+            "assert": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["at", "that"],
+                "properties": {
+                  "at": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Scenario step index the observable is checked after (same as assert:)."
+                  },
+                  "that": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["key", "value_json"],
+                      "properties": {
+                        "key": {
+                          "type": "string",
+                          "enum": [
+                            "turn", "phase", "memory", "p0.memory", "p1.memory",
+                            "p0.security", "p1.security", "p0.hand", "p1.hand",
+                            "p0.trash", "p1.trash", "p0.field", "p1.field"
+                          ],
+                          "description": "A projection key the exam checker understands (exam::assertions::ASSERTION_KEYS). Security is a COUNT."
+                        },
+                        "value_json": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "The expected value as JSON text: 3, \"main\", [\"BT7-056\"], or a field list."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "agrees": {
+      "type": ["boolean", "null"],
+      "description": "verify: does the given block encode the publisher's answer -- no more, no less? author: null."
+    },
+    "answer_quote": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The words of the publisher's answer the observables encode (author), or that the block fails to encode (verify, when agrees is false)."
+    },
+    "reasoning": {"type": "string", "minLength": 20}
+  }
+}

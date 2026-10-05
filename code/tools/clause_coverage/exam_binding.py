@@ -47,6 +47,21 @@ Verdict-store shape (as written by the Rust `VerdictStore`)::
                                  "verdict": "confirmed", "text_sha256": ...,
                                  "scenario_path": ..., "reason": ..., ...}}}
 
+**Version 2** (card-loop design D8) adds ``"interactions": {"<interaction_id>":
+{"interaction_id", "card_ids", "source", "kind", "verdict", "text_sha256",
+...}}`` beside ``clauses``. Both versions load; a file is written as v2 only
+when its card carries an interaction verdict (`write_interaction_verdict`), so
+the committed v1 files are never rewritten. A shared ruling's verdict is
+written into EVERY card file it counts for, and two copies that disagree are
+refused on read.
+
+Interaction scenarios (an ``interaction:`` block) bind to
+``scenarios.by_interaction``, never to a clause: an id absent from the
+committed interaction denominator is an orphan, and with no denominator every
+interaction scenario is one (``denominator_not_generated``). ``covers:`` ids
+the extractor does not produce are orphans too. `bind_interactions` reports a
+card's gating interactions with the same five classes.
+
 A missing verdicts file is NOT an error (fresh checkout): everything reports
 `unmeasured`.
 
@@ -74,6 +89,21 @@ VERDICT_CLASSES: tuple[str, ...] = (
 )
 
 UNMEASURED = "unmeasured"
+
+#: Verdict-store file versions this reader understands (Rust `SUPPORTED_VERSIONS`).
+SUPPORTED_STORE_VERSIONS: tuple[int, ...] = (1, 2)
+
+#: Field order the Rust `InteractionVerdict` serializes in; the Python writer
+#: emits the same order so both writers produce the same bytes.
+_INTERACTION_FIELD_ORDER: tuple[str, ...] = (
+    "interaction_id", "card_ids", "source", "kind", "verdict", "text_sha256",
+    "scenario_path", "reason", "dcgo_build", "job_id", "recorded_at",
+)
+
+#: The committed interaction denominator (`tools.card_loop.interactions`).
+DEFAULT_INTERACTION_DENOMINATOR = (
+    Path(__file__).resolve().parents[3] / "data" / "interaction_denominator.json"
+)
 
 
 def clause_text_sha256(text: str) -> str:
@@ -134,11 +164,19 @@ def _parse_scenario_header(text: str) -> dict:
     whose header this reader cannot find is reported as an orphan, never
     silently skipped, so the narrow scope cannot quietly shrink coverage.
 
-    Returns ``{"card": str | None, "clause": str | None}``.
+    Two non-scalar keys are read as well, in the forms our authors write:
+    ``covers:`` (a flow list ``[a, b]`` or a block list of ``- a`` lines) and
+    ``interaction:`` (a flow map ``{ id: ..., source: ..., kind: ... }`` or a
+    block map of indented ``key: value`` lines). A form this reader does not
+    understand yields an EMPTY list / map rather than nothing, so the caller
+    reports the scenario instead of mistaking it for a legacy one.
+
+    Returns ``{"card": str | None, "clause": str | None,
+    "covers": list[str] | None, "interaction": dict | None}``.
     """
-    found: dict[str, str | None] = {"card": None, "clause": None}
-    for raw_line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
-        line = raw_line.lstrip("﻿")
+    found: dict = {"card": None, "clause": None, "covers": None, "interaction": None}
+    lines = [ln.lstrip("﻿") for ln in text.replace("\r\n", "\n").replace("\r", "\n").split("\n")]
+    for n, line in enumerate(lines):
         if not line or line[0] in (" ", "\t", "#", "-"):
             continue
         key, sep, value = line.partition(":")
@@ -147,9 +185,55 @@ def _parse_scenario_header(text: str) -> dict:
         key = key.strip()
         if key not in found or found[key] is not None:
             continue
-        parsed = _unquote(_strip_inline_comment(value.strip())).strip()
-        found[key] = parsed or None
+        value = _strip_inline_comment(value.strip())
+        if key == "covers":
+            found[key] = _read_list(value, lines[n + 1:])
+        elif key == "interaction":
+            found[key] = _read_map(value, lines[n + 1:])
+        else:
+            parsed = _unquote(value).strip()
+            found[key] = parsed or None
     return found
+
+
+def _indented_block(following: list[str]) -> list[str]:
+    """The indented lines directly under a top-level key."""
+    block = []
+    for ln in following:
+        if ln and ln[0] not in (" ", "\t"):
+            break
+        if ln.strip() and not ln.strip().startswith("#"):
+            block.append(ln.strip())
+    return block
+
+
+def _read_list(value: str, following: list[str]) -> list[str]:
+    if value.startswith("["):
+        inner = value[1:value.rfind("]")] if "]" in value else ""
+        return [_unquote(v.strip()) for v in inner.split(",") if v.strip()]
+    if value:
+        return []  # a scalar where a list belongs: reported by the caller
+    return [
+        _unquote(_strip_inline_comment(ln[1:].strip()))
+        for ln in _indented_block(following)
+        if ln.startswith("-")
+    ]
+
+
+def _read_map(value: str, following: list[str]) -> dict:
+    if value.startswith("{"):
+        inner = value[1:value.rfind("}")] if "}" in value else ""
+        pairs = inner.split(",")
+    elif value:
+        return {}
+    else:
+        pairs = [_strip_inline_comment(ln) for ln in _indented_block(following)]
+    out = {}
+    for pair in pairs:
+        k, sep, v = pair.partition(":")
+        if sep and k.strip():
+            out[k.strip()] = _unquote(v.strip())
+    return out
 
 
 def load_verdict_store(path: Path | str | None) -> dict:
@@ -212,14 +296,134 @@ def load_verdict_store(path: Path | str | None) -> dict:
     return _load_verdict_file(p)
 
 
-def _load_verdict_file(p: Path) -> dict:
-    """One store file -> ``{clause_id: entry}``. Shape errors yield ``{}``."""
+def _read_store_file(p: Path) -> dict:
+    """One store file, version-checked. Accepts v1 and v2 (the Rust
+    `VerdictStore::from_json` rules): an unknown version, or a v1 file carrying
+    `interactions`, raises rather than being half-read."""
     with open(p, encoding="utf-8") as f:
         data = json.load(f)
-    clauses = data.get("clauses") if isinstance(data, dict) else None
+    if not isinstance(data, dict):
+        return {}
+    version = data.get("version", 1)
+    if version not in SUPPORTED_STORE_VERSIONS:
+        raise ValueError(
+            f"verdict file {p} is version {version!r}; this reader understands "
+            f"{list(SUPPORTED_STORE_VERSIONS)}"
+        )
+    if version == 1 and data.get("interactions"):
+        raise ValueError(f"verdict file {p} is version 1 but carries `interactions` (that is v2)")
+    return data
+
+
+def _load_verdict_file(p: Path) -> dict:
+    """One store file -> ``{clause_id: entry}``. Shape errors yield ``{}``."""
+    clauses = _read_store_file(p).get("clauses")
     if not isinstance(clauses, dict):
         return {}
     return clauses
+
+
+def load_interaction_verdicts(path: Path | str | None) -> dict:
+    """Load the v2 ``interactions`` maps -> ``{interaction_id: entry}``.
+
+    Same layouts as `load_verdict_store` (a directory of per-card files, or
+    one file). In the directory branch, mirroring the Rust ``load_dir``:
+
+    1. a row must list the file's card in ``card_ids`` (a card's file only
+       holds interactions that count for it);
+    2. an embedded ``interaction_id`` must agree with its key;
+    3. the copies of one shared interaction in several card files must be
+       identical -- they are written together, so a difference is a partial
+       write or a bad merge, and picking one would hide it.
+
+    A missing path is an empty store; v1 files simply contribute nothing.
+    """
+    if not path:
+        return {}
+    p = Path(path)
+    if not p.exists():
+        return {}
+    if not p.is_dir():
+        return dict(_read_store_file(p).get("interactions") or {})
+
+    merged: dict = {}
+    origin: dict[str, Path] = {}
+    for f in sorted(p.glob("*.json")):
+        card = f.stem
+        for iid, record in (_read_store_file(f).get("interactions") or {}).items():
+            if card not in (record.get("card_ids") or []):
+                raise ValueError(
+                    f"verdict file {f} holds interaction {iid!r}, which counts for "
+                    f"{record.get('card_ids')!r} but not for {card!r}"
+                )
+            embedded = record.get("interaction_id")
+            if embedded and embedded != iid:
+                raise ValueError(f"verdict file {f} key {iid!r} disagrees with its interaction_id {embedded!r}")
+            if iid in merged:
+                if merged[iid] != record:
+                    raise ValueError(
+                        f"interaction {iid!r} has disagreeing copies in {origin[iid]} and {f}; a "
+                        "shared verdict must be written identically into every listed card's file"
+                    )
+                continue
+            merged[iid] = record
+            origin[iid] = f
+    return merged
+
+
+def _ordered_interaction(record: dict) -> dict:
+    head = {k: record[k] for k in _INTERACTION_FIELD_ORDER if k in record and record[k] is not None}
+    extra = {k: record[k] for k in sorted(record) if k not in _INTERACTION_FIELD_ORDER}
+    return {**head, **extra}
+
+
+def write_interaction_verdict(verdicts_dir: Path | str, record: dict) -> list[Path]:
+    """Write one (possibly shared) interaction verdict into EVERY card file it
+    counts for, leaving each file's other verdicts untouched.
+
+    The record carries the Rust `InteractionVerdict` fields -- required:
+    ``interaction_id``, ``card_ids`` (non-empty), ``source``, ``kind``,
+    ``verdict``, ``text_sha256`` (the denominator's fingerprint; ``""`` for a
+    combo) and ``recorded_at``; anything else (``reason``, a triage block,
+    ``produced_by``) is carried as-is. Each touched file becomes
+    ``version: 2``; files of cards the interaction does not count for are
+    never opened. Returns the paths written, so the caller commits them
+    together (design D8).
+    """
+    missing = [k for k in ("interaction_id", "source", "kind", "text_sha256", "recorded_at")
+               if record.get(k) is None or (k != "text_sha256" and not record.get(k))]
+    if missing:
+        raise ValueError(f"an interaction verdict needs {missing}")
+    iid = record["interaction_id"]
+    cards = record.get("card_ids") or []
+    if not cards:
+        raise ValueError(f"interaction verdict {iid!r} names no card to file it under")
+    verdict = str(record.get("verdict", "")).lower()
+    if verdict not in VERDICT_CLASSES or verdict == UNMEASURED:
+        raise ValueError(f"interaction verdict {verdict!r} is not one of the four recordable classes")
+    row = _ordered_interaction({**record, "card_ids": list(cards), "verdict": verdict})
+
+    d = Path(verdicts_dir)
+    d.mkdir(parents=True, exist_ok=True)
+    written = []
+    for card in cards:
+        f = d / f"{card}.json"
+        data = _read_store_file(f) if f.exists() else {}
+        clauses = data.get("clauses") or {}
+        interactions = dict(data.get("interactions") or {})
+        interactions[iid] = row
+        stamps = [r.get("recorded_at") or "" for r in clauses.values()]
+        stamps += [r.get("recorded_at") or "" for r in interactions.values()]
+        out = {
+            "version": 2,
+            "last_updated": max(stamps),
+            "clauses": clauses,
+            "interactions": {k: interactions[k] for k in sorted(interactions)},
+        }
+        with open(f, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(json.dumps(out, indent=2, ensure_ascii=False) + "\n")
+        written.append(f)
+    return written
 
 
 def _scenario_files(scenarios_dir: Path | str | None) -> list[Path]:
@@ -231,12 +435,66 @@ def _scenario_files(scenarios_dir: Path | str | None) -> list[Path]:
     return sorted(p for p in d.rglob("*.yaml") if p.is_file())
 
 
+def load_interaction_denominator(path: Path | str | None) -> dict | None:
+    """The committed interaction denominator's ``interactions`` map, or
+    ``None`` when it was never generated. Read directly (not through
+    `tools.card_loop`) so this package keeps no dependency on the loop."""
+    if not path:
+        return None
+    p = Path(path)
+    if not p.exists():
+        return None
+    data = json.loads(p.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or data.get("version") != 1:
+        raise ValueError(f"{p} is not a version-1 interaction denominator")
+    return data
+
+
+def _bind_interaction_scenario(
+    path_str: str,
+    header: dict,
+    denominator: dict | None,
+    scenarios_by_interaction: dict[str, list[str]],
+    orphan_scenarios: list[dict],
+) -> None:
+    block = header["interaction"] or {}
+    iid = block.get("id") or ""
+    source = block.get("source") or ""
+
+    def orphan(kind: str, reason: str) -> None:
+        orphan_scenarios.append({
+            "path": path_str, "card": header["card"], "clause": header["clause"],
+            "interaction": iid or None, "kind": kind, "reason": reason,
+        })
+
+    if not iid or source not in ("qa", "probe", "combo") or not iid.startswith(f"{source}:"):
+        orphan("malformed_interaction",
+               f"interaction block {block!r} needs an `id` carrying its `source:` prefix")
+        return
+    if source == "combo":
+        # Model-authored combos never gate; they are examined, not denominated.
+        scenarios_by_interaction.setdefault(iid, []).append(path_str)
+        return
+    if denominator is None:
+        orphan("denominator_not_generated",
+               f"interaction {iid!r} cannot be bound: the interaction denominator was not "
+               "generated (`python -m tools.card_loop interactions build`)")
+        return
+    if iid not in denominator.get("interactions", {}):
+        orphan("orphan_interaction",
+               f"interaction {iid!r} is not in the interaction denominator -- it covers "
+               "nothing that gates any card")
+        return
+    scenarios_by_interaction.setdefault(iid, []).append(path_str)
+
+
 def bind(
     card_ids: list[str],
     scenarios_dir: Path | str | None,
     verdicts_path: Path | str | None,
     *,
     source_desc: str | None = None,
+    interaction_denominator: Path | str | None = DEFAULT_INTERACTION_DENOMINATOR,
     **extract_kwargs,
 ) -> dict:
     """Join the clause denominator, the authored scenarios, and the verdicts.
@@ -268,7 +526,9 @@ def bind(
     # --- scenarios -------------------------------------------------------
     scenario_paths = _scenario_files(scenarios_dir)
     scenarios_by_clause: dict[str, list[str]] = {}
+    scenarios_by_interaction: dict[str, list[str]] = {}
     orphan_scenarios: list[dict] = []
+    denominator = None  # loaded on the first interaction scenario only
 
     for path in scenario_paths:
         path_str = str(path)
@@ -303,6 +563,43 @@ def bind(
                 }
             )
             continue
+
+        # `covers:` -- every extra covered clause must be one the extractor
+        # produces (when its card is in scope); judged like `clause:` below.
+        covers = header["covers"]
+        extra_covered: list[str] = []
+        if covers is not None:
+            if not covers or clause_id not in covers:
+                orphan_scenarios.append({
+                    "path": path_str, "card": card, "clause": clause_id,
+                    "kind": "malformed_covers",
+                    "reason": "`covers:` must be a non-empty list that includes `clause:`",
+                })
+            for cid in covers:
+                if cid == clause_id:
+                    continue
+                if cid in clauses_by_id:
+                    extra_covered.append(cid)
+                elif cid.split("#", 1)[0] in in_scope:
+                    orphan_scenarios.append({
+                        "path": path_str, "card": card, "clause": cid,
+                        "kind": "unknown_covered_clause",
+                        "reason": f"covered clause {cid!r} is not produced by the extractor -- "
+                                  "it covers NOTHING in the denominator",
+                    })
+
+        # An interaction exam binds to its interaction, never to a clause: a
+        # passing negative probe proves a clause did NOT fire.
+        if header["interaction"] is not None:
+            if denominator is None:
+                denominator = load_interaction_denominator(interaction_denominator) or {}
+            _bind_interaction_scenario(
+                path_str, header, denominator or None, scenarios_by_interaction, orphan_scenarios
+            )
+            continue
+
+        for cid in extra_covered:
+            scenarios_by_clause.setdefault(cid, []).append(path_str)
 
         if clause_id in clauses_by_id:
             declared = clauses_by_id[clause_id]["card_id"]
@@ -418,7 +715,12 @@ def bind(
     # Invariant: exactly one class per clause, appended in the single loop above.
     assert sum(by_verdict.values()) == total_clauses
 
-    bound_scenario_count = sum(len(v) for v in scenarios_by_clause.values())
+    # Distinct files: a `covers:` scenario binds under several clauses but is
+    # still one scenario.
+    bound_scenario_count = len(
+        {p for v in scenarios_by_clause.values() for p in v}
+        | {p for v in scenarios_by_interaction.values() for p in v}
+    )
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -440,6 +742,8 @@ def bind(
             "orphaned": len(orphan_scenarios),
             "clauses_with_a_scenario": len(scenarios_by_clause),
             "by_clause": scenarios_by_clause,
+            "interactions_with_a_scenario": len(scenarios_by_interaction),
+            "by_interaction": scenarios_by_interaction,
         },
         "verdicts": {
             "path": str(verdicts_path) if verdicts_path else None,
@@ -448,4 +752,95 @@ def bind(
             "invalidated": len(invalidated_clause_ids),
             "unrecognized": len(unrecognized_verdicts),
         },
+    }
+
+
+def bind_interactions(
+    card_ids: list[str],
+    denominator_path: Path | str | None,
+    verdicts_path: Path | str | None,
+    *,
+    gating_only: bool = True,
+) -> dict:
+    """Every card's (gating) interactions x the stored interaction verdicts.
+
+    The interaction analogue of `bind`'s verdict half -- the join readiness
+    needs (design D9). Every interaction lands in exactly one of the five
+    classes; a stored verdict whose ``text_sha256`` no longer matches the
+    denominator's fingerprint (an edited ruling, a reworded clause) is
+    invalidated to `unmeasured`. A shared ruling is ONE interaction: it counts
+    once in ``denominator`` and once under each card that prints it.
+
+    Raises ``FileNotFoundError`` when the denominator was never generated --
+    reporting "0 interactions" would read as every card being clear.
+    """
+    denominator = load_interaction_denominator(denominator_path)
+    if denominator is None:
+        raise FileNotFoundError(
+            f"interaction denominator not generated: no file at {denominator_path} "
+            "(`python -m tools.card_loop interactions build`)"
+        )
+    rows = denominator.get("interactions", {})
+    per_card_ids = denominator.get("cards", {})
+    store = load_interaction_verdicts(verdicts_path)
+
+    classified: dict[str, dict] = {}
+    unrecognized: list[dict] = []
+
+    def classify(iid: str) -> dict:
+        if iid in classified:
+            return classified[iid]
+        entry = store.get(iid) or {}
+        raw = entry.get("verdict")
+        verdict = str(raw).strip().lower() if raw is not None else UNMEASURED
+        invalidated = False
+        reason = entry.get("reason")
+        if raw is not None and verdict not in VERDICT_CLASSES:
+            unrecognized.append({"interaction_id": iid, "stored_verdict": raw})
+            verdict, reason = UNMEASURED, f"stored verdict {raw!r} is not one of {list(VERDICT_CLASSES)}"
+        elif verdict != UNMEASURED and entry.get("text_sha256") != rows[iid].get("text_sha256"):
+            invalidated, verdict = True, UNMEASURED
+            reason = ("stored verdict invalidated: the ruling / clause text changed since it "
+                      "was recorded (text_sha256 mismatch)")
+        classified[iid] = {
+            "interaction_id": iid,
+            "source": rows[iid].get("source"),
+            "kind": rows[iid].get("kind"),
+            "gating": bool(rows[iid].get("gating")),
+            "verdict": verdict,
+            "invalidated": invalidated,
+            "reason": reason,
+            "scenario_path": entry.get("scenario_path"),
+        }
+        return classified[iid]
+
+    cards: dict[str, dict] = {}
+    seen: set[str] = set()
+    for cid in dict.fromkeys(card_ids):
+        ids = [i for i in per_card_ids.get(cid, []) if not gating_only or rows[i].get("gating")]
+        items = [classify(i) for i in ids]
+        seen.update(ids)
+        cards[cid] = {
+            "card_id": cid,
+            "in_denominator": cid in per_card_ids,
+            "total_interactions": len(items),
+            "by_verdict": {v: sum(1 for x in items if x["verdict"] == v) for v in VERDICT_CLASSES},
+            "interactions": items,
+        }
+
+    distinct = [classified[i] for i in sorted(seen)]
+    by_verdict = Counter({v: 0 for v in VERDICT_CLASSES})
+    by_verdict.update(x["verdict"] for x in distinct)
+    assert sum(by_verdict.values()) == len(distinct)
+    return {
+        "cards": cards,
+        "denominator": {
+            "total_interactions": len(distinct),
+            "by_verdict": {v: by_verdict[v] for v in VERDICT_CLASSES},
+            "gating_only": gating_only,
+        },
+        "cards_missing_from_denominator": [c for c, r in cards.items() if not r["in_denominator"]],
+        "unmeasured_interaction_ids": [x["interaction_id"] for x in distinct if x["verdict"] == UNMEASURED],
+        "invalidated_interaction_ids": [x["interaction_id"] for x in distinct if x["invalidated"]],
+        "unrecognized_verdicts": unrecognized,
     }
