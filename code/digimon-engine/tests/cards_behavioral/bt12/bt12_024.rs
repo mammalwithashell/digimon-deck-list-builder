@@ -233,9 +233,8 @@ fn bt12_024_digivolves_onto_blue_tamer_for_2() {
     let stack = source_ids(&runner, tamer);
     assert_eq!(stack.first().map(String::as_str), Some("TAMER-BL"));
     assert_eq!(
-        runner.game.card_data[runner.game.players[0].battle_area[tamer.index as usize]
-            .card_sources[0]
-            .data_index]
+        runner.game.card_data
+            [runner.game.players[0].battle_area[tamer.index as usize].card_sources[0].data_index]
             .card_kind,
         CardKind::Tamer,
         "the Tamer keeps its printed kind as a source"
@@ -289,7 +288,11 @@ fn bt12_024_digivolves_from_calmaramon_for_0() {
     main_phase(&mut runner);
     let before = runner.memory();
     digivolve_onto(&mut runner, calm);
-    assert_eq!(before - runner.memory(), 0, "[Digivolve] 0 from [Calmaramon]");
+    assert_eq!(
+        before - runner.memory(),
+        0,
+        "[Digivolve] 0 from [Calmaramon]"
+    );
 }
 
 #[test]
@@ -317,15 +320,24 @@ fn bt12_024_wd_places_under_other_blue_digimon_and_gains_jamming() {
     digivolve_onto(&mut runner, base);
 
     assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
-    assert!(runner.pending_is_optional(), "the placement cost is optional");
+    assert!(
+        runner.pending_is_optional(),
+        "the placement cost is optional"
+    );
     assert!(hand_action(&runner, "ROOKIE-RD").is_none(), "red excluded");
     assert!(hand_action(&runner, "CHAMP-BL").is_none(), "Lv.4 excluded");
-    assert!(hand_action(&runner, "TAMER-BL").is_none(), "non-Digimon excluded");
+    assert!(
+        hand_action(&runner, "TAMER-BL").is_none(),
+        "non-Digimon excluded"
+    );
     let pick = hand_action(&runner, "ROOKIE-BL2").expect("blue Lv.3 Digimon selectable");
     runner.execute_action(0, pick).unwrap();
 
     assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
-    assert!(own_field_action(&runner, red).is_none(), "red Digimon excluded");
+    assert!(
+        own_field_action(&runner, red).is_none(),
+        "red Digimon excluded"
+    );
     assert!(
         own_field_action(&runner, base).is_some(),
         "this Digimon is one of your blue Digimon"

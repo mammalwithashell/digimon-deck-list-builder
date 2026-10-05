@@ -113,7 +113,8 @@ fn source_ids(r: &DebugRunner, h: PermanentHandle) -> Vec<String> {
 }
 
 fn locked(r: &DebugRunner, h: PermanentHandle) -> bool {
-    r.modifiers().has(h, ModifierType::CannotAttack) && r.modifiers().has(h, ModifierType::CannotBlock)
+    r.modifiers().has(h, ModifierType::CannotAttack)
+        && r.modifiers().has(h, ModifierType::CannotBlock)
 }
 
 fn suspend_clause() -> CompiledTriggeredClause {
@@ -151,7 +152,8 @@ fn bt16_021_grants_blocker_and_armor_purge() {
         .iter()
         .filter_map(|e| match e {
             CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-                keyword, ..
+                keyword,
+                ..
             }) => Some(format!("{keyword:?}")),
             _ => None,
         })
@@ -268,8 +270,15 @@ fn bt16_021_your_turn_opp_suspend_strips_then_locks() {
         "DCGO: any of their Digimon may be chosen (no sources required)"
     );
     pick(&mut r, a);
-    assert_eq!(source_ids(&r, a), vec!["SRC".to_string()], "top source SRC2 trashed");
-    assert!(r.game.players[1].trash.iter().any(|c| c.card_id(&r.game.card_data) == "SRC2"));
+    assert_eq!(
+        source_ids(&r, a),
+        vec!["SRC".to_string()],
+        "top source SRC2 trashed"
+    );
+    assert!(r.game.players[1]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "SRC2"));
 
     let v = r.pending_selection_view().expect("lock pick");
     assert!(!v.is_optional);
@@ -392,7 +401,9 @@ fn bt16_021_once_per_turn_lockout_and_reset() {
     let _ = r.auto_resolve();
     assert_eq!(r.turn_player(), 1);
     r.game.suspend(c);
-    let v = r.pending_selection_view().expect("re-armed on the next turn");
+    let v = r
+        .pending_selection_view()
+        .expect("re-armed on the next turn");
     assert_eq!(v.selecting_player, 0, "Togemogumon's owner picks");
     pick(&mut r, c);
     let _ = r.auto_resolve();
@@ -417,7 +428,9 @@ fn bt16_021_opponents_attack_triggers_and_lock_ends_with_their_turn() {
 
     r.attack_player(attacker, 0, false);
     // Attack declaration suspends the attacker → Togemogumon triggers.
-    let v = r.pending_selection_view().expect("strip pick on their attack");
+    let v = r
+        .pending_selection_view()
+        .expect("strip pick on their attack");
     assert_eq!(v.selecting_player, 0);
     pick(&mut r, attacker); // no sources → no-op strip
     let v = r.pending_selection_view().expect("lock pick");

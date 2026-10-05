@@ -2,7 +2,7 @@
 
 **Generated — do not hand-edit.** Regenerate with `PYTHONPATH=code python -m tools.meta_coverage`.
 
-- Generated: 2026-10-04T23:37:32+00:00 (git `8b3324ce`)
+- Generated: 2026-10-05T14:49:42+00:00 (git `b6a8dd88`)
 - Window: **BT26** — 2026-09-04 → 2026-09-12 · 108 decklists · 650 distinct cards · sources dcg_nexus 108
 - Weighting: **digilab** — DigiLab names 67.05% of the field explicitly; the other 32.95% is spread over unnamed archetypes by list count
 - ⚠️ Only 108 decklists fall in this window (< 150); card-level figures are a small sample. Refresh data/deck_library.json (meta_loader.py --scrape-dcg-nexus) and re-run.
@@ -17,9 +17,9 @@
 
 **Trainable today**: 86.5% of the field (90 lists) — fully playable AND no card flagged PARTIAL, BLOCKED, AUDITED-DRIFT or AUDITED-MISSING-TESTS in `validated_cards_dsl.json`: the training deck pool's per-list gate (`digimon_gym.agents.gauntlet`).
 
-Clauses on meta cards: 2458 — confirmed 242, diverged 2, unreachable 13, unavailable 0, unmeasured 2201 (9.8% confirmed; 15.7% weighted by field play rate).
+Clauses on meta cards: 2472 — confirmed 244, diverged 2, unreachable 13, unavailable 0, unmeasured 2213 (9.9% confirmed; 15.7% weighted by field play rate).
 
-Whole pool: 1052/4472 cards implemented (23.5%), 15 flagged PARTIAL/BLOCKED, 100 DCGO-verified.
+Whole pool: 1056/4471 cards implemented (23.6%), 16 flagged PARTIAL/BLOCKED, 100 DCGO-verified.
 
 ## Launch plan
 
@@ -37,7 +37,7 @@ Goal: Optimize Digimon TCG decklists for the live meta (as DigiLab and DigimonMe
   - [x] Implemented cards missing from the deck-builder allowlist: 0 (target <= 0 cards)
 - **M3 · Verify what the field plays** (next) — 0/2 gates met
   - [ ] Meta card copies that are DCGO-verified: 13.13 (target >= 40 %)
-  - [ ] Clauses confirmed, weighted by how often the field plays each card: 15.74 (target >= 50 %)
+  - [ ] Clauses confirmed, weighted by how often the field plays each card: 15.7 (target >= 50 %)
 - **M4 · Meta training pilot** (later) — 1/3 gates met
   - [x] Field share the training pool can use: 86.5 (target >= 60 %)
   - [ ] 2026-07-02 anchored baselines re-measured on the current engine
@@ -84,7 +84,7 @@ Goal: Optimize Digimon TCG decklists for the live meta (as DigiLab and DigimonMe
 | Omni Ladder | 2.9% | 3 | 100.0% | 100.0% | 1.9% | 3.8% | 3/3 | 3/3 | 0 |
 | TS Toolbox | 2.9% | 3 | 100.0% | 100.0% | 2.5% | 4.0% | 3/3 | 3/3 | 0 |
 | Accel | 1.9% | 2 | 38.0% | 38.0% | 0.0% | 0.0% | 0/2 | 0/2 | 11 (BT20-004, BT20-030, BT20-031, BT20-033, BT20-038, BT20-039…) |
-| Gammamon | 1.9% | 2 | 38.9% | 38.9% | 0.9% | 1.9% | 0/2 | 0/2 | 11 (BT21-002, BT21-077, BT21-080, BT21-090, BT22-045, EX10-042…) |
+| Gammamon | 1.9% | 2 | 38.9% | 38.9% | 0.9% | 1.7% | 0/2 | 0/2 | 11 (BT21-002, BT21-077, BT21-080, BT21-090, BT22-045, EX10-042…) |
 | Green TyrantKabuterimon | 1.9% | 2 | 50.9% | 50.9% | 0.0% | 0.0% | 0/2 | 0/2 | 7 (BT15-004, BT15-043, BT15-085, BT16-042, BT16-045, BT16-048…) |
 | Red Hybrid (AncientGreymon) | 1.9% | 2 | 54.1% | 46.8% | 3.7% | 8.6% | 0/2 | 0/2 | 11 (AD1-020, BT12-088, BT17-012, BT17-014, BT18-011, BT18-022…) |
 | Styracomon | 1.9% | 2 | 100.0% | 100.0% | 4.6% | 15.5% | 2/2 | 2/2 | 0 |
