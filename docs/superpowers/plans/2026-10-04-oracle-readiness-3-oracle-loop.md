@@ -20,6 +20,17 @@
 - Oracle preflight (`node::health`) runs before any submission and refuses on NO-GO.
 - Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
+## Entry checklist (from the Plan 1 final review)
+
+Deferred follow-ups found by the final whole-branch review of Plan 1. Resolve or consciously re-defer each before wiring the one-call oracle loop.
+
+- Backfill only PAIRED rows: today `backfill_from_diff` refuses any scenario with `ours_unpairable > 0` (sim-only rows), so most multi-gate scenarios (EX8-067-effect1, EX10-025/028 inherited) get no `assert:` block; pass the differ's `pairing` into backfill and write only paired rows. Blocks spec §4.1(4)'s purpose for most scenarios.
+- MCP `root` is overloaded (harness root vs verdicts/claims dirs); give the MCP a separate harness-root setting before wiring the oracle loop.
+- A skipped backfill leaves the exit status unchanged; the one-call loop must return a structured `backfilled` flag.
+- Backfill writes our `phase` even when the differ suppressed the phase comparison (`is_selection_phase`, EndOfTurnAction/Main pair) — omit `phase` in those cases.
+- `ensure_cards_in_book` spawns bare `python` with relative `PYTHONPATH=code` and does an unlocked read-modify-write of a committed file; document the side effect and use an absolute code path.
+- CI `dcgo-exam-sim.yml` passes only `--decks EX12/toho_pool.json`; most scenario directories fail "unknown deck" and their asserts run nowhere in CI — needs a deck book per directory.
+
 ## File Map
 
 | File | Change | Responsibility |
