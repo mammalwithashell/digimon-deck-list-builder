@@ -49,6 +49,7 @@ pub mod drafter;
 pub mod job_spec;
 pub mod ledger;
 pub mod lower;
+pub mod oracle_diff;
 pub mod projection;
 pub mod run;
 pub mod scenario;
