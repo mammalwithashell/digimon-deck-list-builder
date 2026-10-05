@@ -487,6 +487,18 @@ pub struct Effect {
     /// pre-evaluated). `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     pub outer_optional_guard: Option<ConditionFn>,
 
+    /// When `true`, this OPTIONAL once-per-turn effect folds its "you may"
+    /// into its first body step (no outer accept/decline prompt), and
+    /// declining that first step declines the WHOLE activation: the rest of
+    /// the body is a no-op without the first step's pick (every later step
+    /// depends on its binding) or the pick is a `cost: true` select that
+    /// aborts the clause. A PASS on the first prompt the body parks therefore
+    /// refunds the once-per-turn use the queue recorded before the body ran,
+    /// exactly as the outer-confirm decline drops the entry before recording
+    /// it (§15-9-2 / §15-14-1; DCGO `RemoveUse`;
+    /// G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING).
+    pub folded_decline_refunds_opt: bool,
+
     /// `BeforePayCost` cost reducers only: when `true`, this reducer's
     /// `pay_cost_fn` begins with a declinable (PASS-able) selection, so
     /// running it surfaces the player's own opt-in/opt-out rather than
@@ -919,6 +931,7 @@ impl EffectBuilder {
                 when_playing_this: false,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
+                folded_decline_refunds_opt: false,
                 pay_cost_self_gated: false,
                 pay_cost_interactive: false,
             },
@@ -1065,6 +1078,13 @@ impl EffectBuilder {
     /// `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     pub fn needs_outer_optional_prompt(mut self) -> Self {
         self.inner.needs_outer_optional_prompt = true;
+        self
+    }
+
+    /// Mark a folded optional clause whose first-step decline declines the
+    /// whole activation. See `Effect::folded_decline_refunds_opt`.
+    pub fn folded_decline_refunds_opt(mut self) -> Self {
+        self.inner.folded_decline_refunds_opt = true;
         self
     }
 

@@ -3771,6 +3771,7 @@ impl Game {
         }
 
         let opt_key = self.queued_opt_key(effect, &qe);
+        let mut recorded_use: Option<PermanentHandle> = None;
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let Some(activation_count) =
@@ -3782,10 +3783,12 @@ impl Game {
                     return;
                 }
                 self.record_source_permanent_activation(perm_handle, qe.source_card, opt_key);
+                recorded_use = Some(perm_handle);
             }
         }
 
         if let Some(process) = &effect.process {
+            let parked_before = self.pending_selection.is_some();
             let mut ctx = EffectContext::new_with_source_kind(
                 self,
                 qe.attribution_source_card.unwrap_or(qe.source_card),
@@ -3794,6 +3797,29 @@ impl Game {
                 qe.controller,
             );
             process(&mut ctx);
+            // G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING: a folded optional
+            // clause parked on its first (declinable) step — no other step
+            // has run. Arm a refund of the use just recorded, consumed by the
+            // resolution of exactly this prompt (a PASS declines the
+            // activation; §15-9-2, §15-14-1).
+            if let (Some(perm_handle), true, false) = (
+                recorded_use,
+                effect.folded_decline_refunds_opt,
+                parked_before,
+            ) {
+                if let Some(sel) = self.pending_selection.as_ref() {
+                    if sel.is_optional {
+                        self.folded_decline_refund = Some(crate::game::FoldedDeclineRefund {
+                            permanent: perm_handle,
+                            source_card: qe.source_card,
+                            opt_key,
+                            selecting_player: sel.selecting_player,
+                            kind: sel.kind,
+                            valid_action_ids: sel.valid_action_ids.clone(),
+                        });
+                    }
+                }
+            }
         }
     }
 
@@ -4951,6 +4977,25 @@ impl Game {
         // Take the selection, restore phase, invoke the appropriate callback.
         let sel = self.pending_selection.take().expect("checked Some above");
         let resume = self.pending_selection_resume.take();
+        // G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING: a PASS on the first
+        // prompt of a folded optional [Once Per Turn] clause declines the
+        // activation itself — refund the use recorded before the body ran
+        // (mirrors the outer-confirm decline, which drops the entry before
+        // recording; DCGO `RemoveUse`). The armed entry is single-shot:
+        // any resolution consumes it, only a matching PASS refunds.
+        if let Some(refund) = self.folded_decline_refund.take() {
+            if is_pass
+                && refund.selecting_player == sel.selecting_player
+                && refund.kind == sel.kind
+                && refund.valid_action_ids == sel.valid_action_ids
+            {
+                self.unrecord_source_permanent_activation(
+                    refund.permanent,
+                    refund.source_card,
+                    refund.opt_key,
+                );
+            }
+        }
         self.current_phase = sel.previous_phase;
         // G-ENGINE-TURN-END-MID-EFFECT: the callback and every post-callback
         // continuation below (pay-cost tails, parked security removals,

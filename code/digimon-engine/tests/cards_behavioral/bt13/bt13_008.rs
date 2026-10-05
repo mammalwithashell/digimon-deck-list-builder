@@ -792,12 +792,14 @@ fn bt13_008_does_not_install_prompt_when_opponent_has_no_digimon() {
 /// OPT: two own red/yellow Tamer suspends in the same turn must produce only
 /// ONE optional delete prompt.
 #[test]
-fn bt13_008_inherited_opt_lockout_blocks_second_activation_in_same_turn() {
+fn bt13_008_inherited_opt_lockout_counts_activations_not_declines() {
     let mut runner = base_runner().start();
     let _carrier = runner.place_stack(0, &[CARD_ID, "TOP-DGM"]);
     let red = runner.place_on_field(0, "MARCUS-R", Some(0));
     let yel = runner.place_on_field(0, "MARCUS-Y", Some(0));
     let _o1 = runner.place_on_field(1, "OPP-DGM-3000", Some(0));
+    // A second target so the post-accept lockout check is not vacuous.
+    let _o2 = runner.place_on_field(1, "OPP-DGM-3000", Some(0));
 
     runner.game.suspend(red);
     assert!(
@@ -815,10 +817,34 @@ fn bt13_008_inherited_opt_lockout_blocks_second_activation_in_same_turn() {
         .resolve_selection(player, PASS)
         .expect("decline resolves");
 
+    // G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING: the declined pick IS the
+    // folded "you may" — no activation (rules 15-9-2), so the [Once Per Turn]
+    // is unspent (15-14-1) and the second suspend re-offers the prompt.
     runner.game.suspend(yel);
+    let (player, pick) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("a declined activation leaves the OPT unspent");
+        let pick = *pending
+            .valid_action_ids
+            .iter()
+            .find(|a| **a != PASS)
+            .expect("an opponent Digimon target");
+        (pending.selecting_player, pick)
+    };
+    runner
+        .game
+        .resolve_selection(player, pick)
+        .expect("accept: delete one");
+
+    // Accepted: NOW the OPT is spent — a third suspend offers nothing.
+    runner.game.players[0].battle_area[red.index as usize].is_suspended = false;
+    runner.game.suspend(red);
     assert!(
         runner.game.pending_selection.is_none(),
-        "OPT must lock the second activation in the same turn"
+        "OPT must lock activation after an accepted one in the same turn"
     );
 }
 

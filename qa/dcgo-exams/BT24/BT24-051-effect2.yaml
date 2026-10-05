@@ -16,15 +16,16 @@
 #       THE CLAUSE: suspend Agumon + Monodramon (Biyomon stays up); then
 #       Merukimon takes +5000 (12000 -> 17000) and attacks the SUSPENDED
 #       Agumon. Merukimon's [When Attacking] [OPT] unsuspend (#effect#3) is
-#       offered and declined. Agumon (2000) is deleted; <Piercing> (granted by
-#       #effect#4 to [Iliad] Digimon) checks security -- 2 cards, via
-#       BT26-073's inherited <Security A. +1>: P1 5 -> 3 (two Dracomon ST1-04
-#       beaten).
+#       offered and declined; the [When Digivolving] arm of the same clause is
+#       then offered and accepted, unsuspending Merukimon. Agumon (2000) is
+#       deleted; <Piercing> (granted by #effect#4 to [Iliad] Digimon) checks
+#       security -- 2 cards, via BT26-073's inherited <Security A. +1>: P1
+#       5 -> 3 (two Dracomon ST1-04 beaten).
 #
 # WITNESS: at 10 three unsuspended P1 Digimon; at 13 Agumon + Monodramon
-# suspended, Biyomon not, Merukimon 12000 unsuspended; at 16 (end of the
-# effect) Merukimon 17000 and suspended (it attacked), Agumon in P1's trash,
-# P1 security 3.
+# suspended, Biyomon not, Merukimon 12000 unsuspended; at 17 (end of the
+# effect) Merukimon 17000 and unsuspended (it attacked, then the WD arm
+# unsuspended it), Agumon in P1's trash, P1 security 3.
 # PARTIAL: "Tamers" targets not walked (P1 has none); the decline branch of
 # the optional attack is in BT24-051-effect1.
 #
@@ -38,12 +39,14 @@
 # OptionalSkill fold (decline -> DCGO OptionalSkill "no"). Repaired
 # 2026-10-04: before main's G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER fix
 # our engine stacked [BT24-051, BT24-051] in a TriggerOrder here (step 15
-# `ordinal:` row); that row is gone. STILL OPEN (G-ENGINE-OPT-DECLINE-
-# CONSUMES-SIBLING-TIMING): our decline records the [Once Per Turn], so the
-# still-pending [When Digivolving] entry of the same clause is then dropped
-# as OPT-spent without a prompt. If DCGO treats the declined OptionalSkill as
-# unused, it will re-offer the unsuspend (now with Merukimon suspended) after
-# this row -- the likely first divergence; Merukimon would end unsuspended.
+# `ordinal:` row); that row is gone. Re-authored 2026-10-04 after the
+# G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING fix: declining the folded pick
+# declines the activation (rules 15-9-2) and no longer records the [Once Per
+# Turn] (15-14-1 counts activations; DCGO RemoveUse), so the still-pending
+# [When Digivolving] entry of the same clause is offered next (step 16, the
+# accept fold) and Merukimon ends unsuspended. Before the fix the decline
+# spent the OPT and that entry was dropped silently. If DCGO does NOT
+# re-offer the WD arm here, step 16 is the first divergence.
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
 card: BT24-051
 clause: BT24-051#effect#2
@@ -108,6 +111,13 @@ steps:
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
+  # The declined [When Attacking] arm did not spend the [Once Per Turn], so
+  # the queued [When Digivolving] arm of the same clause is now offered:
+  # accept it and unsuspend Merukimon (suspended by its attack). Fold marker
+  # (`expect: OptionalSkill` on a pick) = DCGO OptionalSkill "yes" + the pick.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -130,12 +140,12 @@ assert:
         - { card_id: BT1-009, dp: 3000, suspended: true, sources: [] }
         - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
         - { card_id: ST1-03, dp: 2000, suspended: true, sources: [] }
-  - at: 16
+  - at: 17
     that:
       turn: 3
       p0.memory: 0
       p0.field:
-        - { card_id: BT24-051, dp: 17000, suspended: true, sources: [BT26-073] }
+        - { card_id: BT24-051, dp: 17000, suspended: false, sources: [BT26-073] }
       p1.field:
         - { card_id: BT1-009, dp: 3000, suspended: true, sources: [] }
         - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }

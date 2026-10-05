@@ -480,10 +480,28 @@ fn bt24_067_when_linked_opt_blocks_second_link_same_turn() {
     r.game.enter_main_phase();
     let host = r.place_on_field(0, CARD_ID, Some(0));
 
-    // First link — fires; decline via PASS.
+    // First link — fires; ACCEPT (an accepted activation spends the OPT; a
+    // declined optional offer would not — rules 15-9-2 / 15-14-1,
+    // G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING).
     fire_link_onto_host(&mut r, host);
-    if r.game.pending_selection.is_some() {
-        let _ = r.game.resolve_selection(0, PASS);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "first link offers the effect"
+    );
+    for _ in 0..8 {
+        let Some((player, action)) = r.game.pending_selection.as_ref().map(|p| {
+            (
+                p.selecting_player,
+                p.valid_action_ids
+                    .iter()
+                    .copied()
+                    .find(|a| *a != PASS)
+                    .unwrap_or(PASS),
+            )
+        }) else {
+            break;
+        };
+        let _ = r.game.resolve_selection(player, action);
     }
 
     // Second link same turn — OPT must block.

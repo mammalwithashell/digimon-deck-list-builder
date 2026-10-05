@@ -346,6 +346,19 @@ impl EffectsCache {
     }
 }
 
+/// See `Game::folded_decline_refund`. The prompt fingerprint ties the refund
+/// to the exact selection the folded clause's first step parked, so a stale
+/// entry can never refund on an unrelated PASS.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct FoldedDeclineRefund {
+    pub(crate) permanent: PermanentHandle,
+    pub(crate) source_card: crate::card_source::CardHandle,
+    pub(crate) opt_key: u8,
+    pub(crate) selecting_player: PlayerId,
+    pub(crate) kind: crate::selection::SelectionKind,
+    pub(crate) valid_action_ids: Vec<u16>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Game {
     pub rules: Rules,
@@ -1045,6 +1058,16 @@ pub struct Game {
     /// downstream of the resolved selection.
     #[doc(hidden)]
     pub(crate) dsl_clause_aborted: bool,
+
+    /// G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING — a once-per-turn use the
+    /// queue recorded for a folded optional clause
+    /// (`Effect::folded_decline_refunds_opt`) whose body parked on its first
+    /// (declinable) step. Consumed by the NEXT `resolve_generic_selection`:
+    /// a PASS on that same prompt declined the activation, so the use is
+    /// refunded (the outer-confirm decline's drop-before-record, DCGO
+    /// `RemoveUse`); any other resolution simply discards it.
+    #[doc(hidden)]
+    pub(crate) folded_decline_refund: Option<FoldedDeclineRefund>,
 
     /// Phase 2f4 Task 1 — one-shot delayed-effect queue. Entries are scheduled
     /// via `EffectContext::schedule_delayed` and drained by
