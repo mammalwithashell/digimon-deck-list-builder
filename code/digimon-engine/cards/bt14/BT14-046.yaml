@@ -1,0 +1,99 @@
+# BT14-046 Togemon — Digimon, Lv.4, Green, DP 3000, Cost 4.
+# Traits: Vegetation. Form: Champion. Attribute: Data.
+#
+# Printed text (official Bandai DB — data/card_bundles/BT14-046.md):
+#   [Your Turn][Once Per Turn] When you would play a green Tamer card from your
+#   hand, by suspending 1 of your green Digimon, reduce the play cost by 3.
+#   Inherited: [Your Turn][Once Per Turn] When this Digimon would digivolve, if
+#   you have a green Tamer, reduce the digivolution cost by 1.
+#
+# Digivolve: Green Lv.3 / cost 2 (standard circle).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT14/Green/BT14_046.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 1 (BeforePayCost ActivateClass, maxCountPerTurn 1, optional: true,
+#   CanUseCondition: on field + IsOwnerTurn + CanTriggerWhenPermanentWouldPlay
+#   (IsTamer && green && in owner's HAND); CanActivateCondition: some own
+#   green Digimon on field that can be suspended (CanActivateSuspendCostEffect
+#   — i.e. unsuspended). Body: SelectPermanentEffect over those, then
+#   SuspendPermanentsClass; only if it actually suspended → ChangeCost -3 on
+#   green Tamer plays.
+#   → `kind: cost_reduction`, `optional: true` (accept/decline — "by
+#   suspending" is a cost), `once_per_turn`, `active_when: your_turn`,
+#   `when_any_ally_played: green Tamer` + `cost_target_from_hand: true`,
+#   condition: ≥1 own unsuspended green Digimon; `pay_cost:
+#   [select_own_permanent (green, unsuspended Digimon — Togemon itself is
+#   eligible), suspend]`, amount 3. The pay_cost parks on the pick and the
+#   play-from-hand chain credits the reduction on resolution
+#   (G-COST-REDUCTION-INTERACTIVE-PAY-COST, play path — the BT13-083 /
+#   `cost_hooks/pay_cost_play_delete_reducer.rs` shape).
+#
+# Inherited: identical to BT13-049 (see that file).
+
+card: BT14-046
+name: Togemon
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 3000
+traits: [Vegetation]
+form: Champion
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
+
+effects:
+  # ─── [Your Turn][OPT] green Tamer play from hand: suspend a green Digimon, -3
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when: { your_turn: true }
+    when_any_ally_played:
+      all_of:
+        - kind: tamer
+        - color_is: green
+    condition:
+      all_of:
+        - cost_target_from_hand: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            color_is: green
+            is_unsuspended: true
+    optional: true
+    once_per_turn: true
+    amount: 3
+    pay_cost:
+      - select_own_permanent:
+          bind_as: suspend_cost
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: green
+              - is_unsuspended: true
+          prompt: "Suspend 1 of your green Digimon to reduce the green Tamer's play cost by 3"
+      - suspend: { target: suspend_cost }
+    summary: "[Your Turn][Once Per Turn] When you would play a green Tamer card from your hand, by suspending 1 of your green Digimon, reduce the play cost by 3"
+
+  # ─── Inherited [Your Turn][OPT] digivolve cost -1 with a green Tamer ───────
+  - kind: cost_reduction
+    scope: inherited
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            color_is: green
+    once_per_turn: true
+    amount: 1
+    summary: "[Your Turn][Once Per Turn] Inherited: when this Digimon would digivolve, if you have a green Tamer, reduce the digivolution cost by 1"

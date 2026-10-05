@@ -1,0 +1,64 @@
+# BT10-046 Palmon — Digimon, Lv.3, Green, DP 2000, Cost 3.
+# Traits: Vegetation. Form: Rookie. Attribute: Data.
+# Digivolve: Green Lv.2 / Cost 0.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT10-046.md):
+#   [On Play] Reveal the top 4 cards of your deck. Add 1 card with
+#   [Vegetation] or [Plant] in one of its traits, and 1 card with [Fairy] in
+#   its traits among them to your hand. Place the rest at the bottom of your
+#   deck in any order.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT10/Green/BT10_046.cs
+#   OnEnterFieldAnyone + CanTriggerOnPlay; SetUpActivateClass(..., false) —
+#   not optional. SimplifiedRevealDeckTopCardsAndSelect(revealCount: 4,
+#   [bucket 1: HasPlantTraits, maxCount 1, AddHand;
+#    bucket 2: CardTraits.Contains("Fairy"), maxCount 1, AddHand],
+#   remainingCardsPlace: DeckBottom, mutualConditions: true).
+#   mutualConditions → `no_duplicate_cards: true` (one revealed card lands in
+#   at most one bucket — a Vegetation+Fairy card satisfies only one of them).
+#   Each bucket is mandatory when a candidate exists (min 1 / max 1; the
+#   engine skips a bucket with no candidates).
+#   "in any order" → place_remainder_on_deck installs an OrderedPermutation
+#   selection (player-chosen order).
+#
+#   Trait matching uses `trait_contains` (case-insensitive substring): the
+#   printed wording is "in one of its traits" / "in its traits", which matches
+#   compound traits such as [Carnivorous Plant] / [Ancient Plant] /
+#   [Ancient Fairy]. NOTE: DCGO bucket 2 uses an exact `Contains("Fairy")`
+#   list match (so DCGO would NOT accept [Ancient Fairy]); the official printed
+#   text governs here.
+card: BT10-046
+name: Palmon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+traits: [Vegetation]
+form: Rookie
+attribute: Data
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 4; add 1 [Vegetation]/[Plant] card and 1 [Fairy] card to hand; rest to bottom in any order"
+    process:
+      - reveal_top_deck: { of: you, count: 4, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: plant_pick
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - trait_contains: Vegetation
+                  - trait_contains: Plant
+            - bind_as: fairy_pick
+              min: 1
+              max: 1
+              filter: { trait_contains: Fairy }
+          no_duplicate_cards: true
+          prompt: "Add 1 [Vegetation]/[Plant] card and 1 [Fairy] card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: plant_pick }
+      - add_to_hand_from_reveal: { of: you, card: fairy_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }

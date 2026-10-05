@@ -1,0 +1,100 @@
+# BT13-050 Sunflowmon — Digimon, Lv.4, Green, DP 3000, Cost 4.
+# Traits: Vegetation. Form: Champion. Attribute: Data.
+#
+# Printed text (official Bandai DB — data/card_bundles/BT13-050.md):
+#   [Main] By suspending this Digimon, 1 of your Digimon may digivolve into a
+#   Digimon card with [Fairy] in one of its traits in the hand for the
+#   digivolution cost. When it would digivolve by this effect, reduce the
+#   digivolution cost by 2.
+#   Inherited: [Your Turn][Once Per Turn] When this Digimon would digivolve, if
+#   you have a green Tamer, reduce the digivolution cost by 1.
+#
+# Digivolve: Green Lv.3 / cost 2 (standard circle).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT13/Green/BT13_050.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# [Main] (OnDeclaration, CanActivateSuspendCostEffect): suspend THIS
+#   permanent (the cost), then — only if some own Digimon has a Fairy-trait
+#   Digimon card in hand that can digivolve onto it (`CanPlayCardTargetFrame`)
+#   — SelectPermanentEffect canNoSelect: true ("may"), then
+#   DigivolveIntoHandOrTrashCard(cardCondition IsDigimon && HasFairyTraits,
+#   payCost: true, reduceCost 2, isHand: true).
+#   → `main_on_field` gated `source_is_unsuspended`; `suspend: source`;
+#   optional `select_own_permanent` filtered by `has_digivolve_candidate`
+#   (hand, Fairy Digimon) — the BT25-092 idiom; `select_hand` filtered by
+#   `can_digivolve_onto: target`; `effect_initiated_digivolve` with
+#   `cost: { reduce: 2 }` (pays the digivolution cost minus 2).
+#
+# Inherited: identical to BT13-049 (see that file).
+
+card: BT13-050
+name: Sunflowmon
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 3000
+traits: [Vegetation]
+form: Champion
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
+
+effects:
+  # ─── [Main] suspend self → 1 Digimon may digivolve into a Fairy card, -2 ──
+  - when: main_on_field
+    summary: "[Main] By suspending this Digimon, 1 of your Digimon may digivolve into a [Fairy]-trait Digimon card in hand, cost reduced by 2"
+    condition:
+      source_is_unsuspended: true
+    process:
+      - suspend: { target: source }
+      - select_own_permanent:
+          bind_as: evo_base
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - trait_contains: "Fairy"
+          prompt: "You may choose 1 of your Digimon to digivolve into a [Fairy] Digimon card in your hand (cost -2)"
+      - select_hand:
+          of: you
+          bind_as: evo_card
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_contains: "Fairy"
+              - can_digivolve_onto: evo_base
+          prompt: "Choose a [Fairy] Digimon card in your hand to digivolve into (digivolution cost reduced by 2)"
+      - effect_initiated_digivolve:
+          target: evo_base
+          from_hand: evo_card
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  # ─── Inherited [Your Turn][OPT] digivolve cost -1 with a green Tamer ───────
+  - kind: cost_reduction
+    scope: inherited
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            color_is: green
+    once_per_turn: true
+    amount: 1
+    summary: "[Your Turn][Once Per Turn] Inherited: when this Digimon would digivolve, if you have a green Tamer, reduce the digivolution cost by 1"

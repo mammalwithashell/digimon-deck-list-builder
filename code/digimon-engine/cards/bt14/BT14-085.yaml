@@ -1,0 +1,65 @@
+# BT14-085 Mimi Tachikawa — Tamer, Green, Cost 3.
+#
+# Printed card text (official Bandai DB, data/card_bundles/BT14-085.md):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with
+#   [Vegetation], [Plant] or [Fairy] in any of its traits among them to the
+#   hand. Return the rest to the bottom of the deck.
+#   [Your Turn] When effects suspend Digimon, by suspending this Tamer, gain
+#   1 memory.
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT14/Green/BT14_085.cs
+#   - On Play: SimplifiedRevealDeckTopCardsAndSelect(3, Digimon with
+#     Plant/Fairy traits, AddHand, maxCount 1), rest → DeckBottom.
+#   - OnTappedAnyone: IsOwnerTurn, ANY battle-area Digimon (either player's)
+#     suspended, IsByEffect; isOptional TRUE; CanActivate =
+#     CanActivateSuspendCostEffect(this). Body: suspend this Tamer → +1
+#     memory. No once-per-turn (maxUsableCount -1). Suspending this TAMER is
+#     not a Digimon suspend, so it cannot re-trigger itself.
+#   - Security: PlaySelfTamerSecurityEffect.
+
+card: BT14-085
+name: Mimi Tachikawa
+kind: tamer
+color: [green]
+cost: 3
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Vegetation]/[Plant]/[Fairy] Digimon card among them to the hand. Return the rest to the bottom of the deck"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 3
+      - choose_from_reveal:
+          of: you
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_contains: Vegetation
+                  - trait_contains: Plant
+                  - trait_contains: Fairy
+          destination: hand
+          prompt: "Add 1 Digimon card with [Vegetation], [Plant] or [Fairy] in its traits to your hand"
+      - order_remainder:
+          of: you
+          destinations: [deck_bottom]
+
+  - when: on_suspend
+    active_when: { your_turn: true }
+    optional: true
+    condition:
+      all_of:
+        - event_target_kind: digimon
+        - event_is_effect_initiated: true
+        - source_is_unsuspended: true
+    summary: "[Your Turn] When effects suspend Digimon, by suspending this Tamer, gain 1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

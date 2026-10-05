@@ -1,0 +1,125 @@
+# EX3-045 Hydramon — Digimon, Lv.6, Green, DP 13000, Cost 13.
+# Traits: Vegetation. Form: Mega. Attribute: Virus.
+# Standard digivolution (official DB): Green Lv.5 / cost 5.
+#
+# Printed card text (official Bandai DB — data/card_bundles/EX3-045.md):
+#   [When Digivolving] You may suspend 1 Digimon.
+#   [All Turns][Once Per Turn] When an opponent's Digimon becomes suspended, for
+#   each other suspended Digimon with [Vegetation], [Plant], or [Fairy] in one
+#   of its traits you have in play, gain 1 memory.
+#   [End of Your Turn][Once Per Turn] If you have 2 or more suspended Digimon
+#   with [Vegetation], [Plant], or [Fairy] in one of their traits, return 1 of
+#   your opponent's suspended Digimon to the bottom of its owner's deck.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX3/Green/EX3_045.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# [When Digivolving] (OnEnterFieldAnyone, isOptional: true): SelectPermanent
+#   over ANY battle-area Digimon (both players, Hydramon included), maxCount 1,
+#   canNoSelect: true, Mode.Tap → one optional any-side suspend pick.
+# [All Turns][OPT] (OnTappedAnyone, maxCountPerTurn 1): CanTriggerWhen-
+#   PermanentSuspends(IsPermanentExistsOnOpponentBattleAreaDigimon) → only an
+#   OPPONENT's DIGIMON suspending triggers. Body: AddMemory(count) where count =
+#   Owner.GetBattleAreaDigimons().Count(p != card.PermanentOfThisCard() &&
+#   IsSuspended && (HasPlantTraits || HasFairyTraits)) — "other" means other
+#   than THIS Hydramon (the suspended opponent Digimon is never yours anyway).
+#   → card_count_in_zone with `other: true`. No activation gate: a 0-count
+#   activation still spends the OPT (mirrored — no `condition:`).
+# [End of Your Turn][OPT] (OnEndTurn, IsOwnerTurn): CanActivateCondition = own
+#   suspended Plant/Fairy-trait Digimon count >= 2 (Hydramon included). Body:
+#   SelectPermanent over opponent's suspended Digimon, canNoSelect: false,
+#   Mode.PutLibraryBottom → DeckBottomBounceClass, which DiscardEvoRoots()
+#   (trashes digivolution cards) and puts only the top card on the deck bottom
+#   → default `return_to_deck { position: bottom }` (include_sources: false).
+# "In one of its traits" → substring match (`trait_contains`).
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.5 Green / Cost 5                             | IMPLEMENTED (alt_paths) |
+# | [WD] may suspend 1 Digimon (any player)                       | IMPLEMENTED (optional select_any_permanent + suspend) |
+# | [All Turns][OPT] opp Digimon suspends → +1 mem per other own  | IMPLEMENTED (on_suspend + event_target_owner/kind + card_count_in_zone other) |
+# |   suspended Veg/Plant/Fairy Digimon                           |             |
+# | [End of Your Turn][OPT] if 2+ own suspended Veg/Plant/Fairy → | IMPLEMENTED (condition count_gte + select_opponent_permanent + return_to_deck bottom) |
+# |   return 1 opp suspended Digimon to deck bottom               |             |
+
+card: EX3-045
+name: Hydramon
+kind: digimon
+level: 6
+color: [green]
+dp: 13000
+cost: 13
+traits: [Vegetation]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 5
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] You may suspend 1 Digimon"
+    process:
+      - select_any_permanent:
+          bind_as: to_suspend
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+              - is_suspended: false
+          prompt: "You may suspend 1 Digimon"
+      - suspend: { target: to_suspend }
+
+  - when: on_suspend
+    once_per_turn: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    summary: "[All Turns][OPT] When an opponent's Digimon becomes suspended, gain 1 memory per other own suspended Veg/Plant/Fairy Digimon"
+    process:
+      - gain_memory:
+          base: 0
+          per:
+            card_count_in_zone:
+              of: you
+              zone: battle_area
+              filter:
+                all_of:
+                  - kind: digimon
+                  - other: true
+                  - is_suspended: true
+                  - any_of:
+                      - trait_contains: Vegetation
+                      - trait_contains: Plant
+                      - trait_contains: Fairy
+          delta: 1
+
+  - when: end_of_your_turn
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter:
+          all_of:
+            - owner: you
+            - zone: [battle_area]
+            - kind: digimon
+            - is_suspended: true
+            - any_of:
+                - trait_contains: Vegetation
+                - trait_contains: Plant
+                - trait_contains: Fairy
+        n: 2
+    summary: "[End of Your Turn][OPT] If 2+ own suspended Veg/Plant/Fairy Digimon, return 1 opp suspended Digimon to the bottom of its owner's deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: bounce
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+          prompt: "Return 1 of your opponent's suspended Digimon to the bottom of its owner's deck"
+      - return_to_deck: { target: bounce, position: bottom }

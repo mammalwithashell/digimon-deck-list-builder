@@ -1,0 +1,61 @@
+# P-038 Green Memory Boost! — Option, Green, Cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/P-038.md):
+#   [Main] Reveal the top 4 cards of your deck. Add 1 green Digimon card among
+#   them to your hand. Place the remaining cards at the bottom of your deck in
+#   any order. Then, place this card in your battle area.
+#   [Main] <Delay> (Trash this card in your battle area to activate the effect
+#   below. You can't activate this effect the turn this card enters play.)
+#   ・Gain 2 memory.
+#   [Security] Place this card in its owner's battle area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Green/P_038.cs
+#   OptionSkill: SimplifiedRevealDeckTopCardsAndSelect(revealCount: 4,
+#     [IsDigimon && HasCardColor(Green), maxCount 1, AddHand],
+#     remainingCardsPlace: DeckBottom) → PlaceDelayOptionCards(card).
+#   OnDeclaration: <Delay> trash self → AddMemory(2).
+#   SecuritySkill: PlaceSelfDelayOptionSecurityEffect.
+#
+# Shape mirrors its colour siblings P-037 (yellow) / P-039: a card carrying a
+# `kind: delay` clause is parked in the battle area by option disposition
+# after its [Main] resolves ("Then, place this card in your battle area").
+# "in any order" → place_remainder_on_deck installs an OrderedPermutation
+# selection. The pick is mandatory when a green Digimon is revealed
+# (no "up to"/"may").
+card: P-038
+name: "Green Memory Boost!"
+kind: option
+color: [green]
+cost: 3
+
+effects:
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 4; add 1 green Digimon to hand; rest to bottom in any order; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 4
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: green
+          prompt: "Add 1 green Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in its owner's battle area"
+    process:
+      - place_self_as_delay_option: {}

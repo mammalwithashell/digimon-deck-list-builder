@@ -1,0 +1,96 @@
+# BT13-049 Lalamon — Digimon, Lv.3, Green, DP 1000, Cost 3.
+# Traits: Vegetation. Form: Rookie. Attribute: Data.
+#
+# Printed text (official Bandai DB — data/card_bundles/BT13-049.md):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with
+#   [Vegetation], [Plant], or [Fairy] in one of its traits and 1 [Yoshino
+#   Fujieda] among them to the hand. Place the rest at the bottom of the deck
+#   in any order.
+#   Inherited: [Your Turn][Once Per Turn] When this Digimon would digivolve, if
+#   you have a green Tamer, reduce the digivolution cost by 1.
+#
+# Digivolve: Green Lv.2 / cost 0 (standard circle).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT13/Green/BT13_049.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# [On Play] (OnEnterFieldAnyone, CanTriggerOnPlay, optional: false):
+#   SimplifiedRevealDeckTopCardsAndSelect(revealCount 3, [bucket A:
+#   IsDigimon && (HasPlantTraits || HasFairyTraits) max 1 AddHand, bucket B:
+#   CardNames contains "Yoshino Fujieda" max 1 AddHand],
+#   RemainingCardsPlace.DeckBottom). Each bucket is mandatory when a match is
+#   revealed and silently empty otherwise → `select_reveal_buckets` min 1 /
+#   max 1 per bucket + `no_duplicate_cards` (BT16-029 idiom). "in one of its
+#   traits" → `trait_contains` (substring) for each of the three words.
+#   "rest at the bottom in any order" → `place_remainder_on_deck { bottom }`,
+#   which always surfaces the `select_ordered_permutation` ordering prompt.
+#
+# Inherited (EffectTiming.None ChangeCostClass -1, isInherited, gated
+#   IsOwnerTurn + OPT counter on activateClass2 + owner has a green Tamer;
+#   PermanentCondition = target permanent is THIS card's permanent):
+#   → `kind: cost_reduction`, `scope: inherited`, before_pay_cost,
+#   `your_turn` + `source_is_cost_target_permanent` (digivolve of the carrier
+#   — only true for a digivolve cost) + green-Tamer `any_permanent`,
+#   `once_per_turn`, amount 1 (BT11-061 inherited idiom).
+
+card: BT13-049
+name: Lalamon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Vegetation]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+
+effects:
+  # ─── [On Play] reveal 3; add 1 Vegetation/Plant/Fairy Digimon + 1 Yoshino ──
+  - when: on_play
+    summary: "[On Play] Reveal top 3; add 1 [Vegetation]/[Plant]/[Fairy] Digimon and 1 [Yoshino Fujieda]; bottom the rest in any order"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: plant_pick
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_contains: "Vegetation"
+                      - trait_contains: "Plant"
+                      - trait_contains: "Fairy"
+              min: 1
+              max: 1
+            - bind_as: yoshino_pick
+              filter: { name_is: "Yoshino Fujieda" }
+              min: 1
+              max: 1
+      - add_to_hand_from_reveal: { of: you, card: plant_pick }
+      - add_to_hand_from_reveal: { of: you, card: yoshino_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Inherited [Your Turn][OPT] digivolve cost -1 with a green Tamer ───────
+  - kind: cost_reduction
+    scope: inherited
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            color_is: green
+    once_per_turn: true
+    amount: 1
+    summary: "[Your Turn][Once Per Turn] Inherited: when this Digimon would digivolve, if you have a green Tamer, reduce the digivolution cost by 1"

@@ -1,0 +1,111 @@
+# BT16-012 Silphymon — Digimon, Lv.5, Red/Yellow, DP 8000, Cost 8.
+# Traits: Beastkin. Form: Ultimate. Attribute: Free.
+#
+# Digivolution requirements (AUTHORITATIVE — official Bandai DB /
+# data/card_bundles/BT16-012.md):
+#   - Standard circles: Red Lv.4 / Cost 4, Yellow Lv.4 / Cost 4.
+#   - [DNA Digivolution] Red Lv.4 + yellow Lv.4: Cost 0.
+#
+# Printed text (official Bandai DB — verbatim):
+#
+#   <Partition (red Lv.4 & yellow Lv.4)> [When Digivolving] If DNA
+#   digivolving, 1 of your opponent's Digimon gets -7000 DP until the end of
+#   their turn. [When Digivolving] [When Attacking] Delete 1 of your
+#   opponent's Digimon with 4000 DP or less.
+#
+# Inherited effect text:
+#
+#   <Partition (red Lv.4 & yellow Lv.4)>
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT16/Red/BT16_012.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────
+#
+# Clause 0 — <Partition (Red Lv.4 & Yellow Lv.4)> face-up + inherited.
+#   DCGO PartitionSelfEffect(isInheritedEffect: false/true) with
+#   PartitionCondition(4, Red) / (4, Yellow). BT16-025 Paildramon idiom.
+#
+# Clause 1 — [When Digivolving] If DNA digivolving, 1 opp Digimon -7000 DP
+#   until the end of their turn. DCGO: separate ActivateClass on
+#   OnEnterFieldAnyone, CanActivateCondition = IsJogress(hashtable),
+#   mandatory SelectPermanentEffect (canNoSelect: false), ChangeDigimonDP
+#   -7000 UntilOpponentTurnEnd. Modeled as a standalone `on_dna_digivolve`
+#   clause (BT16-025 / BT23-032 precedent — fires iff the digivolve was DNA;
+#   G-ENGINE-DNA-ORIGIN-PRED keeps the in-process `dna_origin` leaf off the
+#   table) + `add_dp_modifier` expiry `end_of_opponents_turn`.
+#
+# Clause 2 — [When Digivolving] [When Attacking] Delete 1 opp Digimon with
+#   4000 DP or less. DCGO: two ActivateClasses (OnEnterFieldAnyone /
+#   OnAllyAttack) sharing one body; mandatory select (canNoSelect: false),
+#   skipped when no Digimon qualifies. → `when: [when_digivolving,
+#   when_attacking]` + `select_opponent_permanent { dp_lte: 4000 }` +
+#   `delete_permanent`. Fires on DNA and normal digivolves alike.
+
+card: BT16-012
+name: Silphymon
+kind: digimon
+level: 5
+color: [red, yellow]
+cost: 8
+dp: 8000
+traits: [Beastkin]
+form: Ultimate
+attribute: Free
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 4, color_is: red }
+      - { level_eq: 4, color_is: yellow }
+    cost: 0
+
+effects:
+  # ─── Clause 0a: <Partition (Red Lv.4 & Yellow Lv.4)> ──────────────────────
+  - kind: partition
+    summary: "<Partition (Red Lv.4 & Yellow Lv.4)>"
+    sources:
+      - { level_eq: 4, color_is: red }
+      - { level_eq: 4, color_is: yellow }
+    exclude_cause: [own_effect, battle]
+
+  # ─── Clause 1: [When Digivolving] if DNA → 1 opp Digimon -7000 DP ─────────
+  - when: on_dna_digivolve
+    summary: "[When Digivolving] If DNA digivolving, 1 of your opponent's Digimon gets -7000 DP until the end of their turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dna_dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -7000 DP until the end of their turn"
+      - add_dp_modifier:
+          target: dna_dp_target
+          value: -7000
+          expiry: end_of_opponents_turn
+
+  # ─── Clause 2: [When Digivolving] [When Attacking] delete ≤4000 DP ────────
+  - when: [when_digivolving, when_attacking]
+    summary: "[When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 4000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: delete_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete 1 of your opponent's Digimon with 4000 DP or less"
+      - delete_permanent: { target: delete_target }
+
+  # ─── Clause 0b: Inherited <Partition (Red Lv.4 & Yellow Lv.4)> ────────────
+  - kind: partition
+    scope: inherited
+    summary: "Inherited <Partition (Red Lv.4 & Yellow Lv.4)>"
+    sources:
+      - { level_eq: 4, color_is: red }
+      - { level_eq: 4, color_is: yellow }
+    exclude_cause: [own_effect, battle]

@@ -1,0 +1,92 @@
+# BT10-053 Ajatarmon — Digimon, Lv.5, Green, Cost 8, DP 7000.
+# Traits: Vegetation. Form: Ultimate. Attribute: Vaccine.
+# Digivolve: Green Lv.4, cost 3 (standard circle, from the card JSON).
+#
+# Printed card text (official Bandai DB, data/card_bundles/BT10-053.md):
+#   [Main][Once Per Turn] By suspending 1 of your green Digimon, you may play
+#   1 Digimon card with [Vegetation], [Plant], or [Fairy] in one of its traits
+#   and 3000 DP or less from your hand without paying its play cost.
+#   Inherited: [Your Turn][Once Per Turn] When an effect suspends one of your
+#   Digimon, gain 1 memory.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT10/Green/BT10_053.cs
+#   - OnDeclaration ([Main]), maxUsableCount 1; usable while an own green
+#     battle-area Digimon exists. Body: SelectPermanentEffect (canNoSelect
+#     true) → if unsuspended & can suspend: SuspendPermanentsClass (by THIS
+#     effect) → only if it became suspended: SelectHandEffect (canNoSelect
+#     true) over Digimon with Plant/Fairy traits and DP ≤ 3000 → play free.
+#   - Inherited: OnTappedAnyone, IsOwnerTurn, own Digimon, IsByEffect,
+#     maxUsableCount 1 → AddMemory(1). isOptional false.
+#
+# Modeling: same body as BT10-048's [When Digivolving]. The [Main] is gated
+# on an UNSUSPENDED own green Digimon (picking an already-suspended one in
+# DCGO resolves nothing, so it is equivalent to declining).
+
+card: BT10-053
+name: Ajatarmon
+kind: digimon
+level: 5
+color: [green]
+cost: 8
+dp: 7000
+traits: [Vegetation]
+form: Ultimate
+attribute: Vaccine
+
+effects:
+  - when: main_on_field
+    once_per_turn: true
+    summary: "[Main][Once Per Turn] By suspending 1 of your green Digimon, you may play 1 [Vegetation]/[Plant]/[Fairy] Digimon card with 3000 DP or less from hand without paying its play cost"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        color_is: green
+        is_unsuspended: true
+    process:
+      - select_own_permanent:
+          bind_as: suspend_cost
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: green
+              - is_unsuspended: true
+          prompt: "You may suspend 1 of your green Digimon"
+      - if:
+          condition: { binding_present: suspend_cost }
+          then:
+            - suspend: { target: suspend_cost }
+            - if:
+                condition: { effect_suspended_any_own_digimon: true }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: play_pick
+                      optional: true
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - dp_lte: 3000
+                          - any_of:
+                              - trait_contains: Vegetation
+                              - trait_contains: Plant
+                              - trait_contains: Fairy
+                      prompt: "You may play 1 Digimon card with [Vegetation], [Plant] or [Fairy] in its traits and 3000 DP or less without paying its play cost"
+                  - play_from_hand_free:
+                      of: you
+                      hand_index: play_pick
+
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_is_effect_initiated: true
+    summary: "[Your Turn][Once Per Turn] When an effect suspends one of your Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1

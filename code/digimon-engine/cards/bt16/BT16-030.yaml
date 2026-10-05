@@ -1,0 +1,131 @@
+# BT16-030 Salamon — Digimon, Lv.3, Yellow/Purple, DP 1000, Cost 3.
+# Traits: Mammal. Form: Rookie. Attribute: Vaccine.
+#
+# Digivolution requirements (AUTHORITATIVE — official Bandai DB /
+# data/card_bundles/BT16-030.md):
+#   - Standard circles: Purple Lv.2 / Cost 1, Red Lv.2 / Cost 1 (printed
+#     evo_costs, carried by card_overrides.json — mirrored here as alt-paths).
+#   - Special condition: "[Digivolve] [Nyaromon]: Cost 0" — DCGO
+#     `AddSelfDigivolutionRequirementStaticEffect(TopCard.CardNames
+#     .Contains("Nyaromon"), cost 0)` → `from: { name_is: Nyaromon }`.
+#
+# Printed text (official Bandai DB — verbatim):
+#
+#   [Start of Your Main Phase] [On Play] If it's your turn, 1 of your Digimon
+#   may digivolve into a level 4 Digimon card with the [Holy Beast] or [Free]
+#   trait in the trash with the digivolution cost reduced by 1.
+#
+# Inherited effect text:
+#
+#   [Your Turn] All of your opponent's Security Digimon get -3000 DP.
+#
+# Official Q&A: "No, this card's effect does not allow ignoring digivolution
+# requirements, so you can only digivolve into a card that meets the
+# digivolution requirements." → `ignore_requirements: false` + the
+# `has_digivolve_candidate` / `can_digivolve_onto` route gates.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT16/Yellow/BT16_030.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────
+#
+# Clause 1 — [Start of Your Main Phase] / [On Play] (one shared body, two
+#   timings). DCGO installs two ActivateClasses (OnStartMainPhase +
+#   OnEnterFieldAnyone) with identical bodies, both optional, both gated on
+#   `IsOwnerTurn(card)` ("If it's your turn"). Flow (DCGO ActivateCoroutine):
+#     a. SelectPermanentEffect (canNoSelect: true) — 1 of your Digimon that
+#        has at least one trash card matching CanSelectCardCondition that can
+#        legally digivolve onto it (`CanPlayCardTargetFrame`) →
+#        `select_own_permanent` optional + `has_digivolve_candidate`.
+#     b. DigivolveIntoHandOrTrashCard(isHand: false, reduceCost: 1, payCost:
+#        true, ignoreRequirements: false) → `select_union_zone` [trash] with
+#        `can_digivolve_onto: base` + `effect_initiated_digivolve` cost
+#        `reduce: 1`.
+#   CanSelectCardCondition: trait "Holy Beast"/"HolyBeast" OR "Free", Lv.4.
+#   The engine folds attribute into the trait list (card_data.rs), so
+#   `trait_has: Free` matches the [Free] attribute exactly as DCGO's
+#   `CardTraits.Contains("Free")` does. Level 4 only (`level_eq: 4`); "Digimon
+#   card" → `kind: digimon`.
+#   "If it's your turn" → `active_when: { your_turn: true }` (vacuous for the
+#   Start-of-Your-Main-Phase timing, load-bearing for an [On Play] during the
+#   opponent's turn).
+#   IMPLEMENTED.
+#
+# Clause 2 — Inherited [Your Turn] opponent security DP aura: identical to
+#   BT16-029 / ST19-03 / EX7-024 (PUPPETS-G008 idiom). IMPLEMENTED.
+
+card: BT16-030
+name: Salamon
+kind: digimon
+level: 3
+color: [yellow, purple]
+cost: 3
+dp: 1000
+traits: [Mammal]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 1
+  - kind: digivolve
+    from: { name_is: Nyaromon }
+    cost: 0
+
+effects:
+  - when: [start_of_your_main_phase, on_play]
+    active_when: { your_turn: true }
+    summary: "[Start of Your Main Phase] [On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 [Holy Beast]/[Free] trait Digimon card in the trash with the digivolution cost reduced by 1"
+    process:
+      - select_own_permanent:
+          bind_as: base
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [trash]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - level_eq: 4
+                      - any_of:
+                          - trait_has: "Holy Beast"
+                          - trait_has: Free
+          prompt: "Select 1 of your Digimon to digivolve into a level 4 [Holy Beast]/[Free] Digimon card in the trash"
+      - if:
+          condition: { binding_present: base }
+          then:
+            - select_union_zone:
+                of: you
+                zones: [trash]
+                optional: true
+                bind_as: evo
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_eq: 4
+                    - any_of:
+                        - trait_has: "Holy Beast"
+                        - trait_has: Free
+                    - can_digivolve_onto: base
+                prompt: "Digivolve into a level 4 [Holy Beast]/[Free] Digimon card in the trash with the cost reduced by 1"
+            - effect_initiated_digivolve:
+                target: base
+                source: evo
+                cost: { reduce: 1 }
+                ignore_requirements: false
+
+  # Inherited [Your Turn] "All of your opponent's Security Digimon get
+  # -3000 DP." — BT16-029 idiom (PUPPETS-G008).
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    dp_modifier: -3000
+    applies_to_opponent_security_dp: true
+    summary: "[Inherited][Your Turn] All opponent Security Digimon get -3000 DP"

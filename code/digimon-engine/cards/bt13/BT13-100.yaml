@@ -1,0 +1,57 @@
+# BT13-100 Yoshino Fujieda — Tamer, Green, Cost 4.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT13-100.md):
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [Your Turn] When any of your Digimon digivolve into Digimon with
+#   [Vegetation], [Plant] or [Fairy] in any of their traits, by suspending this
+#   Tamer, gain 1 memory.
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT13/Green/BT13_100.cs
+#   OnStartTurn → SetMemoryTo3TamerEffect (sister BT1-085).
+#   OnEnterFieldAnyone ActivateClass (isOptional: true, no OPT):
+#     CanUseCondition = IsExistOnBattleArea(card) && IsOwnerTurn(card)
+#       && CanTriggerWhenPermanentDigivolving(PermanentCondition) where
+#       PermanentCondition = own battle-area Digimon whose TopCard
+#       HasPlantTraits || HasFairyTraits.
+#     CanActivateCondition = CanActivateSuspendCostEffect (Tamer unsuspended).
+#     Body: suspend self (cost) → AddMemory(1).
+#   SecuritySkill → PlaySelfTamerSecurityEffect.
+#
+# Trait matching uses the event-side substring predicate
+# `event_target_trait_contains` ("in any of their traits" → compound traits
+# such as [Carnivorous Plant] / [Ancient Fairy] qualify).
+card: BT13-100
+name: Yoshino Fujieda
+kind: tamer
+color: [green]
+cost: 4
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  - when: on_digivolve
+    active_when: { your_turn: true }
+    optional: true
+    summary: "[Your Turn] When your Digimon digivolves into a [Vegetation]/[Plant]/[Fairy] Digimon, by suspending this Tamer, gain 1 memory"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_trait_contains: Vegetation
+            - event_target_trait_contains: Plant
+            - event_target_trait_contains: Fairy
+        - source_is_unsuspended: true
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

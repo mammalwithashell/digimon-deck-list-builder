@@ -1,0 +1,128 @@
+# BT10-057 BloomLordmon — Digimon, Lv.6, Green, DP 12000, Cost 12.
+# Traits: Fairy. Form: Mega. Attribute: Vaccine.
+# Standard digivolution (official DB): Green Lv.5 / cost 4.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT10-057.md):
+#   [When Digivolving] You may suspend 1 of your Digimon. Then, gain 1 memory
+#   for each of your suspended Digimon with [Vegetation], [Plant] or [Fairy] in
+#   any of their traits. If this effect gains 2 or more memory, this Digimon
+#   unsuspends and gains <Piercing> for the turn.
+#   [Your Turn] For every 2 of your suspended Digimon, this Digimon gains
+#   <Security A. +1> and +2000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT10/Green/BT10_057.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# [When Digivolving] (OnEnterFieldAnyone, isOptional: false): SelectPermanent
+#   over IsPermanentExistsOnOwnerBattleAreaDigimon (OWN Digimon, incl. this
+#   one), maxCount 1, canNoSelect: true, Mode.Tap → optional own suspend.
+#   Then plusMemory = Owner.GetBattleAreaDigimons().Count(IsSuspended &&
+#   (HasPlantTraits || HasFairyTraits)) — counts ALL of your suspended
+#   matching Digimon, THIS ONE INCLUDED (BloomLordmon is [Fairy]). AddMemory;
+#   if plusMemory >= 2: unsuspend this Digimon + Pierce UntilEachTurnEnd.
+#   "In any of their traits" → substring match (`trait_contains`).
+# [Your Turn] (None, two static effects): count = Owner.GetBattleAreaDigimons()
+#   .Count(IsSuspended) / 2 — ALL your suspended Digimon, THIS ONE INCLUDED,
+#   no trait filter. +2000*count DP and +count Security A., owner's turn only.
+#   `suspended_count { of: you }` counts own suspended Digimon (incl. self).
+#   `security_attack_fn` is BASE-INCLUSIVE (ST1-11 idiom): 1 + floor(n/2).
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.5 Green / Cost 4                           | IMPLEMENTED (alt_paths) |
+# | [WD] may suspend 1 of your Digimon                          | IMPLEMENTED (optional select_own_permanent + suspend) |
+# | [WD] gain 1 memory per own suspended Veg/Plant/Fairy Digimon | IMPLEMENTED (gain_memory card_count_in_zone formula) |
+# | [WD] if gained >= 2: unsuspend self + <Piercing> for turn   | IMPLEMENTED (if count_gte 2 → unsuspend source + grant_keyword end_of_turn) |
+# | [Your Turn] +2000 DP per 2 own suspended Digimon            | IMPLEMENTED (aura dp_modifier_fn multiply(floor_div)) |
+# | [Your Turn] <Security A. +1> per 2 own suspended Digimon    | IMPLEMENTED (aura security_attack_fn, base-inclusive) |
+
+card: BT10-057
+name: BloomLordmon
+kind: digimon
+level: 6
+color: [green]
+dp: 12000
+cost: 12
+traits: [Fairy]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] You may suspend 1 of your Digimon; gain 1 memory per own suspended Veg/Plant/Fairy Digimon; if 2+, unsuspend this and gain <Piercing> for the turn"
+    process:
+      - select_own_permanent:
+          bind_as: to_suspend
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+              - is_suspended: false
+          prompt: "You may suspend 1 of your Digimon"
+      - suspend: { target: to_suspend }
+      - gain_memory:
+          base: 0
+          per:
+            card_count_in_zone:
+              of: you
+              zone: battle_area
+              filter:
+                all_of:
+                  - kind: digimon
+                  - is_suspended: true
+                  - any_of:
+                      - trait_contains: Vegetation
+                      - trait_contains: Plant
+                      - trait_contains: Fairy
+          delta: 1
+      - if:
+          condition:
+            count_gte:
+              filter:
+                all_of:
+                  - owner: you
+                  - zone: [battle_area]
+                  - kind: digimon
+                  - is_suspended: true
+                  - any_of:
+                      - trait_contains: Vegetation
+                      - trait_contains: Plant
+                      - trait_contains: Fairy
+              n: 2
+          then:
+            - unsuspend: { target: source }
+            - grant_keyword:
+                target: source
+                keyword: Piercing
+                expiry: end_of_turn
+
+  - kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier_fn:
+      multiply:
+        - floor_div:
+            - base: 0
+              per:
+                suspended_count: { of: you }
+              delta: 1
+            - 2
+        - 2000
+    summary: "[Your Turn] +2000 DP for every 2 of your suspended Digimon"
+
+  - kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    security_attack_fn:
+      floor_div:
+        - base: 2
+          per:
+            suspended_count: { of: you }
+          delta: 1
+        - 2
+    summary: "[Your Turn] base-inclusive 1 + floor(own suspended Digimon / 2) security checks"
