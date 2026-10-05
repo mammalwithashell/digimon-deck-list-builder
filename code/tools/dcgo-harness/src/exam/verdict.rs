@@ -515,6 +515,10 @@ pub struct ClauseText {
 
 #[derive(Debug, Deserialize)]
 struct ClauseTextFile {
+    /// Cards the extract covered -- including those with zero clauses, which
+    /// the `clauses` list alone cannot show.
+    #[serde(default)]
+    cards: Vec<String>,
     clauses: Vec<ClauseText>,
 }
 
@@ -529,6 +533,9 @@ struct ClauseTextFile {
 #[derive(Debug, Clone)]
 pub struct ClauseTextBook {
     by_id: BTreeMap<String, ClauseText>,
+    /// Every card the book covers: the file's `cards` list plus the card
+    /// prefix of every clause id.
+    cards: std::collections::BTreeSet<String>,
     source: String,
 }
 
@@ -543,13 +550,23 @@ impl ClauseTextBook {
         let file: ClauseTextFile = serde_json::from_str(text)
             .map_err(|e| format!("invalid clause-text JSON ({source}): {e}"))?;
         let mut by_id = BTreeMap::new();
+        let mut cards: std::collections::BTreeSet<String> = file.cards.into_iter().collect();
         for c in file.clauses {
+            if let Some(card) = c.id.split('#').next() {
+                cards.insert(card.to_string());
+            }
             by_id.insert(c.id.clone(), c);
         }
         Ok(ClauseTextBook {
             by_id,
+            cards,
             source: source.to_string(),
         })
+    }
+
+    /// True when the book's extract covered this card (even with zero clauses).
+    pub fn has_card(&self, card_id: &str) -> bool {
+        self.cards.contains(card_id)
     }
 
     pub fn get(&self, clause_id: &str) -> Option<&ClauseText> {
@@ -803,6 +820,25 @@ mod tests {
             book.clause_ids(),
             vec!["ST1-12#effect#0".to_string(), "ST1-12#security#0".to_string()]
         );
+    }
+
+    #[test]
+    fn book_knows_zero_clause_cards() {
+        let book = ClauseTextBook::from_json(
+            r#"{"cards":["BT1-009","ST1-07"],"clauses":[{"id":"ST1-07#inherited#0","label":"Inherited Effect","text":"x"}]}"#,
+            "t",
+        )
+        .unwrap();
+        assert!(book.has_card("BT1-009"));
+        assert!(book.has_card("ST1-07"));
+        assert!(!book.has_card("EX10-025"));
+    }
+
+    #[test]
+    fn book_without_a_cards_array_still_knows_the_cards_of_its_clauses() {
+        let book = ClauseTextBook::from_json(EXTRACT_JSON, "t").unwrap();
+        assert!(book.has_card("ST1-12"));
+        assert!(!book.has_card("ST1-13"));
     }
 
     #[test]
