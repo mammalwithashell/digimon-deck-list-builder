@@ -10,7 +10,7 @@ New cards are assigned the next available index after all existing ones.
 Usage:
     python tools/build_registry.py                  # Full build from API
     python tools/build_registry.py --dry-run        # Fetch + stats, no write
-    python tools/build_registry.py --offline        # Rebuild norm_ids only
+    python tools/build_registry.py --offline        # No API: index unindexed cards, rebuild norm_ids
     python tools/build_registry.py --sets BT25 EX12 # Only fetch specific sets
 """
 
@@ -293,7 +293,7 @@ def main():
     )
     parser.add_argument(
         "--offline", action="store_true",
-        help="Skip API fetch; rebuild norm_ids from existing data only",
+        help="Skip API fetch; index any unindexed card (append-only) and rebuild norm_ids",
     )
     parser.add_argument(
         "--capacity", type=int, default=REGISTRY_CAPACITY,
@@ -324,12 +324,25 @@ def main():
             print("ERROR: --offline requires an existing dict-format cards.json")
             sys.exit(1)
 
-        # Rebuild norm_ids only
+        # Cards with no index (ingested without running this tool) get the next
+        # ones, append-only and in natural card order -- the rule the API path
+        # applies to new cards. Offline mode used to write norm_id 0.0 for them
+        # and leave them unindexed, i.e. at PADDING_ID in the engine.
+        assigned = build_registry(list(existing_card_data), existing_mappings, capacity)
+        new_ids = [cid for cid in existing_card_data if cid not in existing_mappings]
         registry = {}
         for card_id, entry in existing_card_data.items():
-            idx = entry.get("index", 0)
-            entry["norm_id"] = idx / capacity
+            idx = assigned[card_id]
+            if card_id in existing_mappings:
+                entry["norm_id"] = idx / capacity
+            else:
+                # Same shape as every indexed entry: index and norm_id lead.
+                entry = {"index": idx, "norm_id": idx / capacity,
+                         **{k: v for k, v in entry.items() if k not in ("index", "norm_id")}}
             registry[card_id] = entry
+        if new_ids:
+            print(f"Assigned indices {min(assigned[c] for c in new_ids)}.."
+                  f"{max(assigned[c] for c in new_ids)} to {len(new_ids)} unindexed cards.")
 
         if not args.dry_run:
             with open(cards_path, "w", encoding="utf-8") as f:

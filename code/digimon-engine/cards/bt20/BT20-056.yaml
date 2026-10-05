@@ -3,7 +3,7 @@ name: Alphamon
 kind: digimon
 level: 6
 color: [black, yellow]
-cost: 0
+cost: 12
 dp: 11000
 traits: [Holy Warrior, X Antibody, Royal Knight, Chronicle]
 form: Mega

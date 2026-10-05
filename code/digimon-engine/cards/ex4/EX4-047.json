@@ -6,7 +6,7 @@
   "card_name_eng": "DarkKnightmon",
   "card_name_jpn": "",
   "card_effect_class_name": "EX4_047",
-  "play_cost": 7,
+  "play_cost": 8,
   "dp": 7000,
   "level": 5,
   "card_kind": 0,
@@ -28,6 +28,11 @@
   "evo_costs": [
     {
       "card_color": 5,
+      "level": 4,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 1,
       "level": 4,
       "memory_cost": 4
     }

@@ -64,7 +64,9 @@
       "link_to_own_digimon",
       "place_self_as_delay_option",
       "raw_rust",
-      "refund_opt"
+      "refund_opt",
+      "place_cards_as_bottom_sources",
+      "play_cards_free"
     ],
     "code/digimon-engine/src/dsl_cards/step/modifiers.rs": [
       "add_dp_modifier",
@@ -72,7 +74,10 @@
       "add_player_modifier",
       "grant_effect_immunity",
       "grant_keyword",
-      "grant_narrow_opponent_effect_protection"
+      "grant_narrow_opponent_effect_protection",
+      "grant_keyword_continuous",
+      "grant_stack_protection_from_opponent_effects",
+      "grant_stack_trash_immunity_from_opponent_effects"
     ],
     "code/digimon-engine/src/dsl_cards/step/permanent_mutations.rs": [
       "bind_permanent_property",
@@ -86,7 +91,9 @@
       "suspend",
       "trash_all_sources",
       "trash_breeding_permanent",
-      "unsuspend"
+      "unsuspend",
+      "delete_all_permanents",
+      "delete_permanents"
     ],
     "code/digimon-engine/src/dsl_cards/step/play_digivolve.rs": [
       "app_fuse",
@@ -118,7 +125,8 @@
       "trash_top_source",
       "use_option_bound",
       "use_option_from_revealed",
-      "use_option_from_sources"
+      "use_option_from_sources",
+      "return_top_security_to_deck"
     ],
     "code/digimon-engine/src/dsl_cards/step/replacement_outcome.rs": [
       "cancel_replacement",
@@ -167,6 +175,10 @@
       "use_option_from_hand",
       "use_option_from_trash"
     ],
+    "code/digimon-engine/src/dsl_cards/step/zone_cards.rs": [
+      "return_top_stacked_to_deck",
+      "select_zone_cards"
+    ],
     "code/digimon-engine/src/dsl_cards/step/zone_moves.rs": [
       "add_bottom_security_to_hand",
       "add_this_option_to_hand",
@@ -205,7 +217,9 @@
       "trash_selected_sources",
       "trash_top_n_digivolution_cards_of_each",
       "trash_top_stacked_sources",
-      "trash_union_bound"
+      "trash_union_bound",
+      "security_place_top_card",
+      "trash_selected_materials"
     ]
   }
 }

@@ -2,113 +2,112 @@
 
 Scripts and modules for managing card data, running AI reviews, and building/deploying the engine.
 
-Card-data authority, schemas, failure/freshness rules, committed producer
-ownership, preview/plan/apply/check commands, scheduled reconciliation,
-rollback, and wrapper-retirement criteria live in
-[`CARD_DATA_PIPELINE.md`](CARD_DATA_PIPELINE.md). Pool/campaign and deferred
-consumer-cutover semantics live in
-[`CARD_POOL_CONTRACTS.md`](CARD_POOL_CONTRACTS.md). `data/cards.json` is a
-committed compatibility ABI, not printed-data authority.
-
 ---
 
 ## 1. Card Data Pipeline
 
-### 1.1 Canonical Sync and Legacy Ingest Preview
+`data/cards.json` is the card data every real game uses (`deck_tools.rs` embeds it).
+`ingest_cards.py` builds it from the digimoncard.io API, then applies
+`data/card_overrides.json`, the hand-maintained corrections that every ingest
+re-applies. Fix wrong API data with an override, plus a top-level `_note_<topic>`
+key saying why. Editing `cards.json` alone is undone by the next ingest. Printed
+data is checked against the official Bandai DB mirror (`data/card_official.json`,
+`data/card_bundles/`; see CLAUDE.md "Source priority"), and
+`code/tests/test_cards_json_integrity.py` keeps reviewed cards in line with it.
+
+### 1.1 Card Ingester
 
 **Script:** `code/tools/ingest_cards.py`
 
-This is a deprecated compatibility command. Its accepted mode is a read-only,
-secondary-source preview; it does not admit cards, allocate indices, or write
-`data/cards.json`:
+Fetches card data from the digimoncard.io API and merges it into `data/cards.json`. This is the first step when adding a new set — it populates card metadata (name, colors, level, DP, evo costs, traits, effect text) before `build_registry.py` assigns stable indices.
 
 ```bash
-# Read-only provisional diagnostic
-python code/tools/ingest_cards.py --preview-set BT26
+# Ingest a single set by ID
+python code/tools/ingest_cards.py --set BT26
+
+# Ingest all priority sets missing from cards.json
+python code/tools/ingest_cards.py --bulk
+
+# No fetch: re-apply card_overrides.json and re-derive dna_costs / digixros_costs
+python code/tools/ingest_cards.py --backfill
 ```
 
-The old `--set`, `--bulk`, `--backfill`, and positional `SET NAME` mutation
-modes are recognized only to return a nonzero refusal with migration guidance.
-They fail before fetching or changing fixed artifacts. Source publication now
-uses a complete candidate plus the reviewed canonical transaction:
+**Priority sets** are read from `code/tools/scraper/priority_sets.txt`. Bulk mode skips sets already in `cards.json`.
 
-```bash
-python -m tools.card_data sync --plan \
-  --repo-root . --candidate-dir <candidate-dir> \
-  --source-plan <source-plan.json> --plan-file <publication-plan.json>
-python -m tools.card_data sync --apply \
-  --repo-root . --candidate-dir <candidate-dir> \
-  --plan-file <publication-plan.json>
-```
+Every mode re-applies `data/card_overrides.json`. An override that sets `xros_req`
+also re-derives the parsed `dna_costs` / `digixros_costs`
+(`code/tools/xros_cost_parser.py`), so correct a DNA or Assembly requirement by
+overriding `xros_req`, not the parsed fields. Ids listed in `API_PHANTOM_IDS` are
+dropped on ingest: the API serves them, but they are not cards (RB1-10 is a stale
+duplicate of RB1-010).
 
-Plan is write-free. Apply is a separate reviewed operation protected by the
-repository writer lock, base-revision check, transaction journal, rollback,
-and marker-last publication. Private transaction files use short ordinal paths
-for Windows safety; the journal fsyncs bounded write-ahead prefixes before
-replacement and records rollback progress only after a whole reverse batch is
-restored.
+When re-ingesting an existing set, existing `index` and `norm_id` values are preserved on matching card IDs so stable tensor encoding is not corrupted. Genuinely new cards lack these fields until `build_registry.py --offline` assigns them, and the script warns while any card is unindexed. It also warns if cards with existing indices are missing from the API response.
 
-### 1.2 Stable Card Registry Compatibility Wrapper
+---
+
+### 1.2 Card Registry Builder
 
 **Script:** `code/tools/build_registry.py`
 
-This legacy command name delegates to the canonical append-only registry
-library. It is network-free and manages only registry assignments plus the
-derived `index`, `norm_id`, and suffix-derived `card_index` compatibility
-values. It never fetches or normalizes printed card data. The committed fixed
-paths are transaction-owned: the wrapper may check/dry-run them or write
-explicit non-fixed scratch paths, but it cannot publish a revision.
+Assigns stable integer indices to every card in `cards.json`. These indices are used by the RL tensor writer and `nn.Embedding` lookup. A card without one encodes as the padding id `0`, indistinguishable from an empty slot, so run it after every ingest that adds cards.
 
 ```bash
-# Accepted read-only automation against committed fixed paths
-python code/tools/build_registry.py --check
+# After an ingest: index new cards and rebuild norm_ids (no API fetch)
+python code/tools/build_registry.py --offline
+
+# Full build from API (fetches all known sets)
+python code/tools/build_registry.py
+
+# Dry run — fetch + stats, no write
 python code/tools/build_registry.py --dry-run
 
-# Optional scratch projection; both paths must be non-fixed
-python code/tools/build_registry.py \
-  --cards-json <scratch-cards-json> \
-  --registry <scratch-registry-json>
-
-# Deprecated no-op alias; the command is always offline
-python code/tools/build_registry.py --check --offline
+# Fetch specific sets only
+python code/tools/build_registry.py --sets BT25 EX12
 ```
 
 | Argument | Default | Description |
 |---|---|---|
-| `--check` | off | Fail when the registry or derived values are stale; no writes |
-| `--dry-run` | off | Report candidate changes without writing fixed paths |
-| `--offline` | off | Deprecated compatibility alias; operation is always offline |
-| `--sets` | n/a | Retired and refused; source discovery belongs to canonical sync |
-| `--capacity` | 20000 | Fixed compatibility ceiling; other values are refused |
-| `--force` | off | Retired and refused; indices cannot be reassigned |
-| `--cards-json` | `data/cards.json` | Compatibility input/output; with a committed marker, a write requires an explicit non-fixed path |
-| `--registry` | `data/card_registry.json` | Registry input/output; with a committed marker, a write requires an explicit non-fixed path |
+| `--dry-run` | off | Fetch and compute stats without writing |
+| `--offline` | off | Skip API fetch; give each unindexed card the next free index, rebuild norm_ids |
+| `--sets` | all known | Override with specific set IDs |
+| `--capacity` | 20000 | Registry capacity ceiling |
+| `--force` | off | Override reindex safety check |
 
 **Key properties:**
 
 - **Append-only indices**: existing card→index mappings are never changed. New cards get the next available index after the highest existing one.
-- **Reindex safety check**: any reassignment aborts. `--force` is refused and cannot bypass the tensor/model compatibility contract.
-- **Outputs**: explicit scratch paths only. Fixed `data/card_registry.json` and `data/cards.json` changes must be generated in a complete candidate and published by the canonical transaction; no printed fields are changed by this wrapper.
+- **Reindex safety check**: detects if any card would be reassigned a different index (which would break trained RL agent weights). Aborts unless `--force` is used.
+- **Output**: `data/cards.json` — dict-format with `index` and `norm_id` fields per card.
 - **Capacity**: 20,000 slots (indices 1–20000). Index 0 is reserved for padding/empty.
+- **Only `--offline` keeps the card data**: without it, every fetched card's entry is rebuilt from the API by the script's own converter, which does not apply `data/card_overrides.json`. Run `ingest_cards.py --backfill` afterwards, or use `--offline`.
 
 ---
 
-### 1.3 Official Bundle and Evolution-Cost Compatibility Commands
+### 1.3 Official Card Mirror
 
-`code/tools/build_card_bundles.py` and
-`code/tools/scrape_official_evo_costs.py` retain their shared official parser
-APIs for in-memory callers. Their accepted CLI modes are read-only previews:
+**Scripts:** `code/tools/build_card_bundles.py`, `code/tools/scrape_official_evo_costs.py`
+
+`build_card_bundles.py` fetches each card's page from the official Bandai card list
+(world.digimoncard.com) and writes the offline mirror: `data/card_official.json`
+(colours, cost, DP, traits, digivolve circles, text sections, Q&A) and one
+`data/card_bundles/<ID>.md` per card. `scrape_official_evo_costs.py` prints, or with
+`--out` writes, the official digivolve circles alone as `{card_id: [evo_costs]}`.
 
 ```bash
-python code/tools/build_card_bundles.py --preview --ids BT13-020 ST9-05
+python code/tools/build_card_bundles.py --ids-file all_card_ids.txt --delay 0.4
 python code/tools/scrape_official_evo_costs.py --ids BT13-020 EX1-014
 ```
 
-Both emit deprecation guidance on stderr while preserving JSON stdout.
-`build_card_bundles.py` refuses the old fixed bundle/official-mirror write, and
-`scrape_official_evo_costs.py --out` is retired. Revision-bound official
-mirrors, bundles, evolution-cost views, and lexicons are generated together by
-the canonical pipeline and published only through reviewed sync apply.
+- **It rewrites the whole index**: `data/card_official.json` ends up holding only the
+  cards of that run. Pass every card id, or restore the file afterwards.
+- **The mirror can be wrong**: the search page lists every printing, and the parser
+  keeps the first printing's text but the last printing's cost, DP and colour. Some
+  alt-printing blocks on the official site carry another card's stats, and a few
+  official entries are simply wrong. When the mirror and `cards.json` disagree, check
+  the card image. `PRINTED_OVER_MIRROR` in `code/tests/test_cards_json_integrity.py`
+  lists the known cases.
+- `code/tools/audit_digivolve/reconcile_traits.py` folds official traits the API
+  drops, including `(Rule) Trait` grants, into `card_overrides.json`.
 
 ---
 
@@ -142,8 +141,8 @@ Input (112) → Linear(112, 64) → ReLU → Linear(64, 16) → [embedding]
 
 | File | Description |
 |---|---|
-| `code/engine_py_legacy/engine/data/card_encoder.pt` | Encoder weights (for re-encoding new cards) |
-| `code/engine_py_legacy/engine/data/card_embeddings.npy` | Precomputed embedding table, shape `(max_index+1, 16)` |
+| `models/card_encoder.pt` | Encoder weights (for re-encoding new cards) |
+| `models/card_embeddings.npy` | Precomputed embedding table, shape `(max_index+1, 16)`; `pilot_training` warm-starts from it when present |
 
 After training, the script prints a spot-check showing each sampled card and its 3 nearest neighbors by cosine similarity. Cards of similar type/stats should cluster together.
 
@@ -761,44 +760,21 @@ scalars = observations[:, profile.scalar_positions]             # (batch, 7778)
 
 When a new Digimon TCG set releases, follow these steps:
 
-### Step 1: Preview, Stage, and Review Card Metadata
+### Step 1: Ingest Card Metadata
 
 ```bash
-# Optional secondary-source diagnostic; never writes or admits cards
-python code/tools/ingest_cards.py --preview-set BT26
-
-# Publish only a complete canonical candidate through plan then reviewed apply
-python -m tools.card_data sync --plan \
-  --repo-root . --candidate-dir <candidate-dir> \
-  --source-plan <source-plan.json> --plan-file <publication-plan.json>
-python -m tools.card_data sync --apply \
-  --repo-root . --candidate-dir <candidate-dir> \
-  --plan-file <publication-plan.json>
+python code/tools/ingest_cards.py --set BT26
 ```
 
-Do not use the retired `ingest_cards.py --set` or `--bulk` writers. Official
-observations, completeness checks, reviewed corrections, compatibility
-artifacts, and fixed-path publication belong to the canonical revision.
-Run `python -m tools.card_data.generate --check` for the network-free freshness
-gate. It regenerates from the marker-owned canonical, source, correction,
-registry, and narrow compatibility-projection inputs;
-`data/cards.json` is only the checked output, never its own generation input.
+Fetches card data from digimoncard.io, merges it into `cards.json` and re-applies `data/card_overrides.json`. New cards will not yet have `index` or `norm_id` fields.
 
 ### Step 2: Assign Stable Registry Indices
 
-Stable assignments are part of the complete canonical candidate. Review their
-append-only allocation in the publication plan, then publish them with the same
-`sync --apply` shown in Step 1. The compatibility wrapper is useful only for
-network-free verification:
-
 ```bash
-python code/tools/build_registry.py --check
-python code/tools/build_registry.py --dry-run
+python code/tools/build_registry.py --offline
 ```
 
-New admitted canonical IDs receive indices after the current maximum; existing
-indices are never reassigned. Direct fixed-path writes, `--sets`, and `--force`
-are refused.
+New cards get append-only indices. Existing indices are preserved, so old trained agents remain valid. Skipping this step leaves the new cards encoded as padding in every observation (EX12 went unindexed from 2026-07-05 to 2026-10-03); `code/tests/test_cards_json_integrity.py` fails while any card lacks an index. Avoid `--sets BT26` here: it rebuilds those entries from the API without `card_overrides.json`.
 
 ### Step 3: Implement Card Effects with the Rust DSL
 

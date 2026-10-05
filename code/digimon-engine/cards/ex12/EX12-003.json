@@ -1,4 +1,6 @@
 {
+  "index": 4404,
+  "norm_id": 0.2202,
   "card_id": "EX12-003",
   "card_index": 3,
   "card_name_eng": "Kapurimon",
@@ -18,7 +20,7 @@
   ],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "Inherited Effect [All Turns] When any of your [ME] trait Digimon would leave the battle area other than by your effects, 1 of them and any of your other Digimon may DNA digivolve into an [ME] trait Digimon card in the hand.",
+  "effect_description_eng": "",
   "inherited_effect_description_eng": "[All Turns] When any of your [ME] trait Digimon would leave the battle area other than by your effects, 1 of them and any of your other Digimon may DNA digivolve into an [ME] trait Digimon card in the hand.",
   "security_effect_description_eng": "",
   "evo_costs": [],

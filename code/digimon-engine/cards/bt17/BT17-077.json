@@ -13,7 +13,8 @@
   "rarity": 3,
   "card_colors": [
     4,
-    1
+    1,
+    3
   ],
   "type_eng": [
     "Ancient Holy Warrior"
@@ -29,6 +30,11 @@
   "evo_costs": [
     {
       "card_color": 1,
+      "level": 6,
+      "memory_cost": 6
+    },
+    {
+      "card_color": 3,
       "level": 6,
       "memory_cost": 6
     }

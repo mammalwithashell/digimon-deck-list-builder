@@ -68,7 +68,8 @@ fn p_136_has_printed_metadata_and_supported_clauses() {
 
     assert_eq!(compiled.name, "Arisa Kinosaki");
     assert_eq!(compiled.kind, CompiledCardKind::Tamer);
-    assert_eq!(compiled.cost, Some(4));
+    // The card prints Play 3 (image, official DB and DCGO agree); the API serves 4.
+    assert_eq!(compiled.cost, Some(3));
     assert_eq!(compiled.color, vec![CompiledColor::Yellow]);
     assert_eq!(compiled.traits, vec!["LIBERATOR".to_string()]);
 

@@ -560,6 +560,11 @@ fn c3_digital_gate_open_delay_no_color_match_leaves_nokia_in_hand() {
 // C4 — Tai & Matt double-memory off the cross-evolve sequence
 // ═════════════════════════════════════════════════════════════════════════════
 
+/// BT23-005 Elizamon, the neutral Digimon C4 plays, prints Play 3. Until
+/// 2026-10-03 its cards.json entry and YAML were a pre-release stub with cost 0,
+/// and these tests counted on the play not moving memory.
+const ELIZAMON_PLAY_COST: i16 = 3;
+
 /// C4 — "Tai & Matt double-memory off the cross-evolve sequence".
 ///
 /// - Cards: BT17-081 Tai & Matt Ishida (Tamer) + BT17-015 WarGreymon (an own
@@ -580,10 +585,10 @@ fn c3_digital_gate_open_delay_no_color_match_leaves_nokia_in_hand() {
 /// → Omnimon curve.
 #[test]
 fn c4_tai_matt_grants_two_memory_with_greymon_and_garurumon_present() {
-    // BT23-005 Elizamon — a real Lv3 cost-0 own Digimon to play (neutral filler;
-    // its only effects are a passive [Your Turn] digivolve-cost reduction + an
-    // inherited DP aura, neither of which touches memory, so the +2 swing is the
-    // clean Tai & Matt grant). cost 0 keeps the play itself from moving memory.
+    // BT23-005 Elizamon — a real Lv3 own Digimon to play (neutral filler; its
+    // only effects are a passive [Your Turn] digivolve-cost reduction + an
+    // inherited DP aura, neither of which touches memory, so the +2 swing on top
+    // of its play cost is the clean Tai & Matt grant).
     let mut runner = dsl_card_runner(&["BT17-081", "BT17-015", "BT17-027", "BT23-005"]);
     runner.game.turn_count = 1;
 
@@ -609,9 +614,9 @@ fn c4_tai_matt_grants_two_memory_with_greymon_and_garurumon_present() {
     );
     assert_eq!(
         runner.memory(),
-        memory_before + 2,
+        memory_before - ELIZAMON_PLAY_COST + 2,
         "both a Greymon (BT17-015) and a Garurumon (BT17-027) present → +2 memory \
-         (two independent grants); before={memory_before}, after={}",
+         (two independent grants) after Elizamon's play cost; before={memory_before}, after={}",
         runner.memory(),
     );
 }
@@ -625,7 +630,7 @@ fn c4_tai_matt_grants_one_memory_with_only_greymon_present() {
     let mut runner = dsl_card_runner(&["BT17-081", "BT17-015", "BT23-005"]);
     runner.game.turn_count = 1;
 
-    // BT23-005 Elizamon — the same real Lv3 cost-0 neutral own Digimon as C4.
+    // BT23-005 Elizamon — the same real Lv3 neutral own Digimon as C4.
     let taimatt = runner.place_on_field(0, "BT17-081", Some(0));
     runner.place_on_field(0, "BT17-015", Some(0));
     push_to_hand(&mut runner, 0, "BT23-005");
@@ -643,9 +648,9 @@ fn c4_tai_matt_grants_one_memory_with_only_greymon_present() {
     );
     assert_eq!(
         runner.memory(),
-        memory_before + 1,
-        "only a Greymon present (no Garurumon) → +1 memory (one independent grant); \
-         before={memory_before}, after={}",
+        memory_before - ELIZAMON_PLAY_COST + 1,
+        "only a Greymon present (no Garurumon) → +1 memory (one independent grant) \
+         after Elizamon's play cost; before={memory_before}, after={}",
         runner.memory(),
     );
 }

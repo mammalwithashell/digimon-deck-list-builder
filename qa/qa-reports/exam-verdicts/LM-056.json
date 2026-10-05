@@ -29,8 +29,8 @@
       "scenario_path": "qa/dcgo-exams/LM/LM-056-effect2.yaml",
       "recorded_at": "2026-09-21T04:51:47.097036500+00:00"
     },
-    "LM-056#effect#3": {
-      "clause_id": "LM-056#effect#3",
+    "LM-056#security#0": {
+      "clause_id": "LM-056#security#0",
       "card_id": "LM-056",
       "verdict": "confirmed",
       "label": "Security Effect",

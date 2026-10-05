@@ -9,7 +9,7 @@ Book: `qa/dcgo-exams/BT3/tm_bt3_105_pool.json` (decks `tm-breath-black`, `quiet-
 | Clause | Text | Scenario | Sim-only |
 |---|---|---|---|
 | `BT3-105#effect#0` | `[Main] 1 of your Digimon gains <Reboot> ... and "This Digimon can't have its DP reduced or be returned to its owner's hand or deck" until the end of your opponent's next turn.` | `BT3-105-effect0.yaml` | lowers, asserts pass |
-| `BT3-105#effect#1` | `[Security] Your opponent's Digimon can't attack players for the turn.` | `BT3-105-effect1.yaml` | lowers, asserts pass |
+| `BT3-105#security#0` | `[Security] Your opponent's Digimon can't attack players for the turn.` | `BT3-105-effect1.yaml` | lowers, asserts pass |
 
 ## Audit of the crashed agent's files (resumed campaign, 2026-09-18)
 

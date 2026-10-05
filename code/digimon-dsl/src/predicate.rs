@@ -647,6 +647,14 @@ pub struct PredicateSpec {
     /// Hiro-style attack observer.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_in_text_contains: Option<String>,
+    /// True when the event-target permanent's top card has inherited
+    /// effects (non-empty printed inherited text) — DCGO
+    /// `permanent.TopCard.HasInheritedEffect`. Event-target sibling of the
+    /// `has_inherited: {}` card/permanent leaf. Driver: BT21-091 Spirit
+    /// Evolution! "When any of your Tamers with inherited effects are played".
+    /// G-DSL-EVENT-TARGET-HAS-INHERITED.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_has_inherited: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_owner: Option<PlayerRef>,
     /// Match when the *event target* permanent's printed color set

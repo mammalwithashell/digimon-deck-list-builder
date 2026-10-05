@@ -45,13 +45,19 @@
 #   optional-clause yes). ST23-12's [On Play] decline: ours Replacement,
 #   DCGO canNoSelect SPE (unasserted).
 #
-# ENGINE FINDING (uncertain, flagged): on the T5 attack our TriggerOrder offers
-# ST23-09's [When Digivolving][When Attacking][Once Per Turn] AGAIN although
-# that shared OPT was already spent on the [When Digivolving] this turn. With
-# p1's board empty its resolution is invisible here, so whether it is merely
-# queued-then-skipped or actually re-resolves is not witnessed. DCGO
-# (maxCountPerTurn) should not offer it -> expected MultipleSkills divergence
-# (DCGO: just ST23-01's OptionalSkill).
+# UPDATED 2026-10-04 (post-#708): this line used to answer a 2-candidate
+# TriggerOrder (MultipleSkills) on the T5 attack, because our engine re-offered
+# ST23-09's [When Digivolving][When Attacking][Once Per Turn] although that
+# shared OPT was already spent this turn (with p1's board empty, ST23-09's WD
+# has no delete target, but it still resolves -- the immunity buff is
+# unconditional in ST23_09.cs -- so the OPT is spent). #708 stopped offering
+# spent-OPT / unactivatable triggers (G-ENGINE-OPT-NOOP-REQUEUE,
+# G-ENGINE-TRIGGER-ORDER-UNACTIVATABLE, RESOLVED 2026-10-04), so only Kekkomon's inherited [When Attacking] is offered and
+# the MultipleSkills row is gone (assert moved from `at: 27` to 26). DCGO
+# agrees: ST23_09.cs builds the WD/WA pair via ActivateClassesForSharedEffects
+# with maxCountPerTurn: 1 and the shared hash "ST23_09_WD_WA"; ST23_01.cs's
+# inherited WA is isOptional: true (-> OptionalSkill), which the bare
+# `decline` row answers.
 card: ST23-04
 clause: ST23-04#inherited#0
 seed: 424242
@@ -133,9 +139,8 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.1, target: security } }
     expect: { prompt: main_phase }
-  - actor: 0
-    do: { select: { cards: [ST23-09] } }
-    expect: { prompt: MultipleSkills }
+  # Kekkomon's (ST23-01) inherited [When Attacking] is now the only trigger:
+  # declined. (DCGO: OptionalSkill; ours: the optional Hand pick.)
   - actor: 0
     do: { select: { decline: true } }
   - actor: 0
@@ -148,7 +153,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 27
+  - at: 26
     that:
       turn: 5
       p0.memory: 1

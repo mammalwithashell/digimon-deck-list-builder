@@ -20,8 +20,8 @@
       "scenario_path": "qa/dcgo-exams/BT6/BT6-105-effect1.yaml",
       "recorded_at": "2026-09-19T15:13:56.976375500+00:00"
     },
-    "BT6-105#effect#2": {
-      "clause_id": "BT6-105#effect#2",
+    "BT6-105#security#0": {
+      "clause_id": "BT6-105#security#0",
       "card_id": "BT6-105",
       "verdict": "confirmed",
       "label": "Security Effect",

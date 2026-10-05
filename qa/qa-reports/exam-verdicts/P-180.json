@@ -20,8 +20,8 @@
       "scenario_path": "qa/dcgo-exams/P/P-180-effect1.yaml",
       "recorded_at": "2026-09-18T07:55:21.211863300+00:00"
     },
-    "P-180#effect#2": {
-      "clause_id": "P-180#effect#2",
+    "P-180#security#0": {
+      "clause_id": "P-180#security#0",
       "card_id": "P-180",
       "verdict": "confirmed",
       "label": "Security Effect",

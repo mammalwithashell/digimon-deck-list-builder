@@ -72,6 +72,10 @@ class DigiXrosElement:
     name_any: List[str] = field(default_factory=list)   # "w/[A]/[B] in name"
     text_any: List[str] = field(default_factory=list)   # "w/[A] in text", "[A] text"
     keyword: str = ""                          # "w/＜Blocker＞"
+    # "w/[A] in text or w/[B] trait": a material satisfying ANY one of these
+    # qualifier dicts (keys as above). Kept apart from the fields above, where
+    # two set fields would read as AND. Serialized only when set.
+    any_of: List[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -83,6 +87,7 @@ class DigiXrosCost:
     different_card_numbers: bool = False
     different_names: bool = False
     different_colors: bool = False  # "w/different colors" (EX13-077); serialized only when True
+    different_levels: bool = False  # "different-level cards", "w/different levels"; serialized only when True
     has_text: str = ""
     source_zones: List[str] = field(default_factory=lambda: ['hand', 'field'])
 
@@ -242,6 +247,7 @@ def parse_digixros_req(xros_req: str) -> List['DigiXrosCost']:
         different_card_numbers = 'different card numbers' in body
         different_names = 'different names' in body
         different_colors = 'different colors' in body
+        different_levels = 'different-level' in body or 'different levels' in body
 
         # Parse has_text constraint (e.g., "with ＜Save＞ in text")
         has_text = ""
@@ -264,6 +270,7 @@ def parse_digixros_req(xros_req: str) -> List['DigiXrosCost']:
             different_card_numbers=different_card_numbers,
             different_names=different_names,
             different_colors=different_colors,
+            different_levels=different_levels,
             has_text=has_text,
             source_zones=source_zones,
         ))
@@ -444,7 +451,8 @@ def _qualifier(text: str) -> Optional[dict]:
     """Parse an EX13 material qualifier into DigiXrosElement kwargs.
 
     Shapes: "w/[A]/[B] in name", "w/[A] in text", "[A] text", "w/[A]/[B] trait",
-    "[A]/[B] trait", "w/＜Kw＞", each optionally led by a colour word.
+    "[A]/[B] trait", "w/＜Kw＞", each optionally led by a colour word, and
+    "w/[A] in text or w/[B] trait" (any of those joined by "or", -> `any_of`).
     Returns None when the text is not one of these shapes.
     """
     t = text.replace('\xa0', ' ').strip()
@@ -453,24 +461,36 @@ def _qualifier(text: str) -> Optional[dict]:
     if cm:
         kw['color'] = _COLOR_NAME_MAP[cm.group(1).lower()]
         t = t[cm.end():]
+    sides = re.split(r'\s+or\s+(?=w/)', t)
+    if len(sides) > 1:
+        alternatives = [_single_qualifier(s) for s in sides]
+        if any(a is None for a in alternatives):
+            return None
+        kw['any_of'] = alternatives
+        return kw
+    single = _single_qualifier(t)
+    if single is None:
+        return None
+    kw.update(single)
+    return kw
+
+
+def _single_qualifier(t: str) -> Optional[dict]:
+    """One qualifier without a colour word: keyword, name, text or trait."""
     m = re.fullmatch(r'w/[＜<]([^＞>]+)[＞>]', t)
     if m:
-        kw['keyword'] = m.group(1).strip()
-        return kw
+        return {'keyword': m.group(1).strip()}
     m = re.fullmatch(r'(?:w/)?((?:\[[^\]]+\]\s*/?\s*)+)\s*(in name|in text|text|trait)', t)
     if not m:
         return None
     names = _BRACKETS.findall(m.group(1))
     where = m.group(2)
     if where == 'in name':
-        kw['name_any'] = names
-    elif where in ('in text', 'text'):
-        kw['text_any'] = names
-    else:
-        # Traits use the legacy fields: first trait + alternatives.
-        kw['trait_match'] = names[0]
-        kw['trait_alternatives'] = names[1:]
-    return kw
+        return {'name_any': names}
+    if where in ('in text', 'text'):
+        return {'text_any': names}
+    # Traits use the legacy fields: first trait + alternatives.
+    return {'trait_match': names[0], 'trait_alternatives': names[1:]}
 
 
 def _parse_ex13_assembly_elements(body: str) -> Optional[List['DigiXrosElement']]:
@@ -478,8 +498,11 @@ def _parse_ex13_assembly_elements(body: str) -> Optional[List['DigiXrosElement']
 
     - "Lv.5 × Lv.4 × Lv.3, all <qualifier>" -> one element per level
     - "[A]×[B]×..." (multiplication sign) -> one named element each
-    - "N [A]/[B] trait|text Digimon cards w/different names|colors"
+    - "N [A]/[B] trait|text Digimon cards w/different names|colors|levels"
     - "N Lv.L or lower [Digimon cards w/]<qualifier> ... "
+    - "N different-level cards <qualifier>"
+    - "Lv.L or lower Digimon card <qualifier>", "Lv.L or lower <qualifier> card":
+      no printed count, so one material
     """
     b = body.replace('\xa0', ' ').strip()
     m = re.fullmatch(r'((?:Lv\.\d+\s*×\s*)+Lv\.\d+)\s*,\s*all\s+(.+)', b)
@@ -492,7 +515,17 @@ def _parse_ex13_assembly_elements(body: str) -> Optional[List['DigiXrosElement']
     if '×' in b and re.fullmatch(r'\[[^\]]+\](?:\s*×\s*\[[^\]]+\])+', b):
         return [DigiXrosElement(name_contains=n, count=1, is_digimon_only=False)
                 for n in _BRACKETS.findall(b)]
-    core = re.sub(r'\s*w/different\s+(?:card numbers|names|colors)\s*$', '', b)
+    core = re.sub(r'\s*w/different\s+(?:card numbers|names|colors|levels)\s*$', '', b)
+    # No printed count: one material. Both word orders are printed.
+    for pattern, noun_group, qual_group in (
+        (r'Lv\.(\d+)\s+or\s+lower\s+(Digimon cards?|cards?)\s+(.+)', 2, 3),
+        (r'Lv\.(\d+)\s+or\s+lower\s+(.+?)\s+(Digimon cards?|cards?)', 3, 2),
+    ):
+        m = re.fullmatch(pattern, core)
+        q = _qualifier(m.group(qual_group)) if m else None
+        if q is not None:
+            return [DigiXrosElement(count=1, level_max=int(m.group(1)),
+                                    is_digimon_only=m.group(noun_group).lower().startswith('digimon'), **q)]
     m = re.fullmatch(r'(\d+)\s+(?:Lv\.(\d+)\s+or\s+lower\s+)?(.+?)\s+(Digimon cards?|cards?)(?:\s+(.+))?', core)
     if m:
         count, lv_max, pre, noun, post = m.groups()

@@ -20,8 +20,8 @@
   ],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "[Your Turn] [Once Per Turn] When effects place Digimon cards with [Aqua] or [Sea Animal] in any of their traits in this Digimon's digivolution cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
-  "inherited_effect_description_eng": "",
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When effects place Digimon cards with [Aqua] or [Sea Animal] in any of their traits in this Digimon's digivolution cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
   "security_effect_description_eng": "",
   "evo_costs": [],
   "xros_req": ""

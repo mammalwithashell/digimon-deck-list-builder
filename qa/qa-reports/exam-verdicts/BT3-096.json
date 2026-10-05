@@ -11,8 +11,8 @@
       "scenario_path": "qa/dcgo-exams/BT3/BT3-096-effect0.yaml",
       "recorded_at": "2026-09-21T10:21:53.611120+00:00"
     },
-    "BT3-096#effect#1": {
-      "clause_id": "BT3-096#effect#1",
+    "BT3-096#security#0": {
+      "clause_id": "BT3-096#security#0",
       "card_id": "BT3-096",
       "verdict": "confirmed",
       "label": "Security Effect",

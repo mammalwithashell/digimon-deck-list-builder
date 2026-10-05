@@ -1,4 +1,4 @@
-# Exam scenario: Asuna Shiroki (BT25-092), clause BT25-092#effect#2 --
+# Exam scenario: Asuna Shiroki (BT25-092), clause BT25-092#security#0 --
 # "[Security] Play this card without paying the cost."
 #
 # SEATS ARE SWAPPED for this file: P0 is the quiet-opponent ATTACKER and P1 is
@@ -27,7 +27,7 @@
 # 4 and P1's trash EMPTY -- a flipped Tamer that was NOT played would be in
 # the trash instead.
 card: BT25-092
-clause: BT25-092#effect#2
+clause: BT25-092#security#0
 seed: 424242
 decks:
   p0:

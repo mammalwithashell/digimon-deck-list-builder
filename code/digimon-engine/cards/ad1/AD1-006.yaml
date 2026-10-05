@@ -2,7 +2,7 @@ card: AD1-006
 name: Shoutmon X7
 kind: digimon
 level: 6
-color: [red, purple]
+color: [red, black, blue]
 cost: 13
 dp: 13000
 traits: [Composite, Xros Heart, Blue Flare]

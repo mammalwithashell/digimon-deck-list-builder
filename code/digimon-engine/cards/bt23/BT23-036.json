@@ -7,7 +7,7 @@
   "card_name_jpn": "",
   "card_effect_class_name": "BT23_036",
   "play_cost": 12,
-  "dp": 12,
+  "dp": 12000,
   "level": 6,
   "card_kind": 0,
   "rarity": 1,
@@ -30,6 +30,11 @@
   "evo_costs": [
     {
       "card_color": 2,
+      "level": 5,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 0,
       "level": 5,
       "memory_cost": 4
     }

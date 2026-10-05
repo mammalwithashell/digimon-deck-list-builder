@@ -11,7 +11,7 @@ clauses have a scenario; none is `unreachable`. No verdict is stored yet
 |---|---|---|
 | `EX7-071#effect#0` — "When effects trash this card from digivolution cards, gain 1 memory. While you have a [Three Musketeers] trait Digimon, you may ignore this card's color requirements." | `EX7-071-effect0.yaml` | lowers, asserts pass |
 | `EX7-071#effect#1` — `[Main]` delete 1 Lv.3, 1 Lv.4, 1 Lv.5; then place under a [Three Musketeers] trait Digimon | `EX7-071-effect1.yaml` | lowers, asserts pass — **oracle state divergence predicted** (below) |
-| `EX7-071#effect#2` — `[Security]` delete 1 Lv.3, 1 Lv.4, 1 Lv.5 | `EX7-071-effect2.yaml` | lowers, asserts pass — **same prediction** |
+| `EX7-071#security#0` — `[Security]` delete 1 Lv.3, 1 Lv.4, 1 Lv.5 | `EX7-071-effect2.yaml` | lowers, asserts pass — **same prediction** |
 
 Book for all three: `qa/dcgo-exams/EX7/three_musketeers_pool.json`
 (`three-musketeers` / `quiet-opponent`).

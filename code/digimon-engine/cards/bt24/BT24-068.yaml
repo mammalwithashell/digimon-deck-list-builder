@@ -3,10 +3,18 @@ name: DemiDevimon
 kind: digimon
 level: 3
 color: [purple]
-cost: 0
+cost: 3
+dp: 1000
 traits: [Evil]
 attribute: Virus
-# A "Digimon without a DP value": the printed DP is "-" (no `dp:` field → None).
-# Vanilla — no [Main]/[On Play]/inherited effects on the printed card.
-# Authored as the vehicle for FAQ NV-1 (a no-DP Digimon cannot gain DP);
-# pinned by rules_faq::no_level_no_value::nv1_*.
+# PARTIAL: stats only. Authored 2026-06-03 as a vanilla, no-DP vehicle for FAQ
+# NV-1 from a pre-release cards.json stub (cost 0, no DP, no text). The card
+# prints 1000 DP and two effects, neither implemented yet:
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Evil] or
+#   [Fallen Angel] trait and 1 card with the [Seven Great Demon Lords] trait among
+#   them to the hand. Return the rest to the bottom of the deck. Then, trash 1
+#   card in your hand.
+#   Inherited: [When Attacking] [Once Per Turn] Trash the top card of both
+#   players' decks.
+# qa/qa-reports/validated_cards_dsl.json marks it PARTIAL so the training gate
+# leaves out decks that use it.

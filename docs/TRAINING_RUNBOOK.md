@@ -723,6 +723,19 @@ model = MaskablePPO.load("models/pilot_ppo_20260228_120000")
 model = MaskableRecurrentPPO.load("models/pilot_ppo_abc12345")
 ```
 
+### Models trained before 2026-10-03 never saw EX12 card identities
+
+From the EX12 ingest (2026-07-05) until 2026-10-03, the 77 EX12 cards had no `index` in
+`data/cards.json`, so `CardRegistry` encoded every one of them as `0`, the empty-slot id
+(see `docs/TENSOR_SPEC.md` "Card Identity Encoding"). A model trained in that window
+could not tell EX12 cards apart, or from an empty slot, and its embedding rows for the
+indices EX12 now has (4402–4478) were never updated. Run against today's data, such a
+model reads those cards through untrained rows instead of padding. Treat it as unproven
+on any deck with EX12 cards (Toho Braves, for one): fine-tune or retrain, and judge it on
+anchored evaluation (rule 30), not on its old numbers. `code/tools/train_card_autoencoder.py`
+could not build `card_embeddings.npy` at all in that window (`KeyError: 'index'`); a table
+built earlier has no rows for those indices.
+
 ### Using as Opponent
 
 ```python

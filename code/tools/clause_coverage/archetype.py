@@ -10,8 +10,9 @@ raw count. The published Toho Braves report describes its core as ">=33 of 45
 lists"; hardcoding 33 would silently redefine the core for an archetype with a
 different corpus size. 0.7 reproduces that figure's *card set* exactly (the
 same 18 cards) -- though the true threshold is `ceil(45 * 0.7) = 32`, not the
-report's rounded "33"; `test_real_library_reproduces_the_published_toho_figures`
-pins the computed 32 alongside the 18-card core.
+report's rounded "33"; `test_published_toho_lists_reproduce_the_report_figures`
+pins the computed 32 and those 18 cards against a frozen copy of the 45 lists
+the report used, because the live library keeps growing under it.
 
 Standard library only.
 """

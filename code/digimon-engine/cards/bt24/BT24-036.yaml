@@ -1,0 +1,93 @@
+# BT24-036 Medicmon — Digimon, Lv.4, Yellow, DP 4000, Play Cost 4.
+# Form: Sup./Appmon | Trait: Medical | Attribute: Life
+#
+# Official text (data/card_bundles/BT24-036.md — official Bandai DB):
+#   Digivolve: Yellow Lv.3 / cost 2
+#   [Security] At the end of the battle, play this card without paying the cost.
+#   [On Play] [On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.
+#   Link DP: DP+3000
+#   Link Condition: <Link> [Appmon] trait: Cost 2
+#   Link Effect: [On Deletion] 1 of your opponent's Digimon gets -5000 DP for the turn.
+#
+# DCGO BT24_036.cs (behavioral authority):
+#   - AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, cost 2)
+#       → alt_path from { trait_has: "Stnd." } cost 2 (no level/colour gate,
+#         same reading as near-twin BT21-043 Sociamon).
+#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 2)
+#       → kind: link_condition, cost 2, filter trait_has: Appmon.
+#   - PlaySelfDigimonAfterBattleSecurityEffect → when: on_security,
+#       play_from_security: {} (same as BT21-043 / BT25-036).
+#   - Shared [On Play] / [On Deletion]: SelectPermanentEffect canNoSelect:false,
+#       ChangeDigimonDP -3000 UntilEachTurnEnd → mandatory select +
+#       add_dp_modifier expiry end_of_turn.
+#   - Link [On Deletion] (OnDestroyedAnyone, SetIsLinkedEffect(true)): same body,
+#       -5000 → scope: linked, when: on_deletion. The host's OnDeletion enqueue
+#       scans its linked_cards for `.linked()` effects before the batch trash.
+#   - Link DP +3000 is data-driven (Permanent.cs LinkDP) → scope: linked aura.
+
+card: BT24-036
+name: Medicmon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+traits: ["Sup.", Appmon, Medical]
+attribute: Life
+
+alt_paths:
+  # Printed standard circle: "Yellow Lv.3 / cost 2" (official DB).
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+  # DCGO special condition: HasStandardAppTraits ([Stnd.] Appmon) → cost 2.
+  - kind: digivolve
+    from: { trait_has: "Stnd." }
+    cost: 2
+
+effects:
+  # ─── [Security] At the end of the battle, play this card without paying the cost
+  - when: on_security
+    summary: "[Security] At the end of the battle, play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # ─── [On Play][On Deletion] 1 opponent Digimon gets -3000 DP for the turn ─────
+  - when: [on_play, on_deletion]
+    summary: "[On Play][On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -3000 DP for the turn"
+      - add_dp_modifier:
+          target: tgt
+          value: -3000
+          expiry: end_of_turn
+
+  # ─── <Link> [Appmon] trait: Cost 2 ──────────────────────────────────────────
+  - kind: link_condition
+    cost: 2
+    filter: { trait_has: Appmon }
+    summary: "<Link> [Appmon] trait: Cost 2"
+
+  # ─── Link DP +3000 ──────────────────────────────────────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] +3000 DP to the linked Digimon"
+
+  # ─── Link Effect: [On Deletion] 1 opponent Digimon gets -5000 DP for the turn
+  - scope: linked
+    when: on_deletion
+    summary: "[Link][On Deletion] 1 of your opponent's Digimon gets -5000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: link_tgt
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -5000 DP for the turn"
+      - add_dp_modifier:
+          target: link_tgt
+          value: -5000
+          expiry: end_of_turn
