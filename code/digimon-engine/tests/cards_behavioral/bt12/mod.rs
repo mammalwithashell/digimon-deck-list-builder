@@ -15,3 +15,4 @@ mod bt12_092;
 mod bt12_112;
 mod bt12_011;
 mod bt12_030;
+mod bt12_024;

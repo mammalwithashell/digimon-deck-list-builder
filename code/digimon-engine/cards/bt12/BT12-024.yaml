@@ -1,0 +1,98 @@
+# BT12-024 Lanamon — Digimon, Lv.4, Blue, DP 4000, Cost 5.
+# Traits: Fairy. Attribute: Variable. Form: Hybrid.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT12-024.md; card image
+# confirms):
+#   Digivolve: Blue Lv.3 / cost 2
+#   [Digivolve] 0 from [Calmaramon]
+#
+#   You may digivolve this card from your hand onto one of your blue Tamers
+#   as if the Tamer is a level 3 blue Digimon. [When Digivolving] By placing a
+#   blue level 3 Digimon card from your hand as the bottom digivolution card
+#   of 1 of your blue Digimon, this Digimon gains <Jamming> for the turn.
+#   (This Digimon can't be deleted in battles against Security Digimon.)
+#
+#   Official Q&A: the Tamer is treated as a Digimon that digivolves — "when a
+#   Digimon would digivolve" / "when a Digimon digivolves" effects trigger,
+#   and a "Digimon can't digivolve" effect blocks this route too.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT12/Blue/BT12_024.cs
+#   EffectTiming.None ×2 → AddSelfDigivolutionRequirementStaticEffect:
+#     (a) TopCard names contain "Calmaramon", cost 0;
+#     (b) TopCard blue && IsTamer, cost 2, condition: card in owner's hand.
+#   OnEnterFieldAnyone [When Digivolving] (optional): SelectHandEffect over
+#     own blue Lv.3 Digimon cards (canNoSelect) → SelectPermanentEffect over
+#     own non-token blue battle-area Digimon → AddDigivolutionCardsBottom →
+#     GainJamming(this permanent, UntilEachTurnEnd) only if the card was added.
+#
+# Hybrid route: BT7-071 Loweemon idiom (`tests/dsl/hybrid_tamer_digivolve.rs`
+# substrate) — `from:` gates the base to an own blue Tamer and
+# `source_treated_as: level_3_blue_digimon` makes the Tamer satisfy the Blue
+# Lv.3 circle; the digivolution routes through the normal digivolve action so
+# "when a Digimon digivolves" observers fire (Q&A) and "can't digivolve"
+# effects gate it.
+#
+# [When Digivolving]: RB1-010 Siriusmon "By placing X from hand as bottom
+# source" idiom (`select_hand { optional, cost }`) with the host picked by a
+# `select_own_permanent` (BT25-083 idiom), then `grant_keyword` Jamming on
+# this Digimon until end of turn. Declining the hand pick pays no cost and
+# grants nothing.
+
+card: BT12-024
+name: Lanamon
+kind: digimon
+level: 4
+color: [blue]
+cost: 5
+dp: 4000
+traits: [Fairy]
+attribute: Variable
+
+alt_paths:
+  # Printed circle: Blue Lv.3 / cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 2
+
+  # [Digivolve] 0 from [Calmaramon].
+  - kind: digivolve
+    from: { name_is: Calmaramon }
+    cost: 0
+
+  # Hybrid: onto one of your blue Tamers as if a Lv.3 blue Digimon.
+  - kind: digivolve
+    from: { kind: tamer, color_is: blue }
+    source_treated_as: level_3_blue_digimon
+    cost: 2
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] By placing a blue Lv.3 Digimon card from hand as the bottom digivolution card of 1 of your blue Digimon, this Digimon gains <Jamming> for the turn"
+    process:
+      - select_hand:
+          of: you
+          bind_as: placed
+          optional: true
+          cost: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: blue
+              - level_eq: 3
+          prompt: "You may place 1 blue level 3 Digimon card from your hand as the bottom digivolution card of 1 of your blue Digimon to have this Digimon gain <Jamming> for the turn"
+          then:
+            - select_own_permanent:
+                bind_as: host
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - color_is: blue
+                    - not: { kind: token }
+                prompt: "Choose 1 of your blue Digimon to receive the card as its bottom digivolution card"
+            - place_as_bottom_source:
+                source: placed
+                target: host
+            - grant_keyword:
+                target: source
+                keyword: Jamming
+                expiry: end_of_turn

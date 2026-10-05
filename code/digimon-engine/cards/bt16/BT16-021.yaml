@@ -1,0 +1,101 @@
+# BT16-021 Togemogumon — Digimon, Lv.4, Blue/Green, DP 5000, Cost 5.
+# Form: Armor Form. Traits: Mammal. Attribute: Free.
+#
+# Digivolution (official Bandai DB — data/card_bundles/BT16-021.md):
+#   Blue Lv.3 / cost 3; Green Lv.3 / cost 3  (cards.json drops the green circle)
+#   [Digivolve] [Wormmon]: Cost 2
+#
+# Printed text (official):
+#   <Blocker> <Armor Purge> [All Turns] [Once Per Turn] When an opponent's
+#   Digimon becomes suspended, trash the top digivolution card of 1 of their
+#   Digimon. Then, 1 of their Digimon with no digivolution cards can't attack or
+#   block until the end of their turn.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT16/Blue/BT16_021.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#  * Alt-digivolve: AddSelfDigivolutionRequirementStaticEffect(
+#      TopCard.CardNames.Contains("Wormmon"), cost 2,
+#      ignoreDigivolutionRequirement: false) → `name_contains: "Wormmon"`.
+#  * BlockerSelfStaticEffect → grant_keyword Blocker.
+#  * ArmorPurgeEffect → grant_keyword ArmorPurge.
+#  * OnTappedAnyone ActivateClass, maxCountPerTurn 1, not optional;
+#    CanUseCondition = self on battle area AND the suspended permanent is an
+#    opponent battle-area Digimon → on_suspend + event_target_owner opponent +
+#    event_target_kind digimon + once_per_turn, all turns.
+#    Step 1: SelectPermanentEffect, canNoSelect: false, ANY opponent Digimon
+#      (no "has digivolution cards" filter) → TrashDigivolutionCardsFromTopOrBottom
+#      (1, fromTop) → select_opponent_permanent (mandatory) +
+#      trash_top_stacked_sources count 1 (top card stays).
+#    Step 2: only if an opponent Digimon with NO digivolution cards exists
+#      (evaluated AFTER step 1, so the step-1 target can become eligible):
+#      SelectPermanentEffect canNoSelect false → GainCanNotAttack +
+#      GainCanNotBlock, EffectDuration.UntilOpponentTurnEnd →
+#      add_modifier CannotAttack/CannotBlock, expiry end_of_opponents_turn
+#      (expires at the end of the next turn ended by the opponent — i.e. the
+#      current turn when triggered on the opponent's turn).
+
+card: BT16-021
+name: Togemogumon
+kind: digimon
+level: 4
+color: [blue, green]
+cost: 5
+dp: 5000
+traits: [Mammal]
+attribute: Free
+form: Armor Form
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { name_contains: "Wormmon" }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    summary: "<Armor Purge> — may trash the top card of this Digimon to prevent its deletion"
+
+  - when: on_suspend
+    active_when: { all_turns: true }
+    once_per_turn: true
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    summary: "[All Turns][Once Per Turn] When an opponent's Digimon becomes suspended, trash the top digivolution card of 1 of their Digimon; then 1 of their Digimon with no digivolution cards can't attack or block until the end of their turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: strip_target
+          filter: { kind: digimon }
+          prompt: "Trash the top digivolution card of 1 of your opponent's Digimon"
+      - trash_top_stacked_sources:
+          target: strip_target
+          count: 1
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 0
+          prompt: "1 of your opponent's Digimon with no digivolution cards can't attack or block until the end of their turn"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotAttack
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: lock_target
+          modifier: CannotBlock
+          value: 1
+          expiry: end_of_opponents_turn

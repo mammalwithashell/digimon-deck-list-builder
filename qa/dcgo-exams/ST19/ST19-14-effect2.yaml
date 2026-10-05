@@ -119,7 +119,7 @@ steps:
   - actor: 1
     do: { play: { card: ST19-10, from: hand.0 } }
     expect: { prompt: main_phase }
-  # Turn 3 (p0, memory 3): not enough to play P-136 and keep the turn; pass.
+  # Turn 3 (p0, memory 3): pass (the line keeps its original 5-turn prefix).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -133,7 +133,7 @@ steps:
   - actor: 1
     do: { play: { card: ST19-10, from: hand.0 } }
     expect: { prompt: main_phase }
-  # Turn 5 (p0, memory 4): play P-136 (4 -> 0, turn continues).
+  # Turn 5 (p0, memory 4): play P-136 (cost 3: 4 -> 1, turn continues).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -177,4 +177,4 @@ assert:
   - at: 17
     that:
       p1.security: 4
-      p0.memory: 0
+      p0.memory: 1

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-04",
+  "last_updated": "2026-10-05",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -14106,6 +14106,77 @@
         "inherited-opp-security-removed-opt"
       ],
       "notes": "Cost reduction counts red Tamers with distinct names incl. Takuya (official Q&A)."
+    },
+    "BT16-021": {
+      "card_name": "Togemogumon",
+      "validated_date": "2026-10-05",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BG Imperial follow-up (2026-10-05)",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_021.rs",
+      "test_count": 17,
+      "patterns": [
+        "static-keyword",
+        "replacement-keyword-armor-purge",
+        "alt-digivolve-name",
+        "opt-on-suspend-observer",
+        "trash-top-source",
+        "cannot-attack-block-lock"
+      ],
+      "notes": "[All Turns][OPT] opponent Digimon suspended → trash top source of 1 of theirs, then 1 with no sources can't attack/block until end of their turn. Green Lv.3 circle from the official bundle (cards.json drops it)."
+    },
+    "ST9-04": {
+      "card_name": "ExVeemon",
+      "validated_date": "2026-10-05",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BG Imperial follow-up (2026-10-05)",
+      "yaml_path": "code/digimon-engine/cards/st9/ST9-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st9/st9_04.rs",
+      "test_count": 9,
+      "patterns": [
+        "D2",
+        "G4"
+      ],
+      "notes": "Mirror of ST9-09 Stingmon: self play-cost -1 with a green Digimon; inherited [When Attacking] +1000 DP for the turn (green carrier counts, per Q&A)."
+    },
+    "BT12-024": {
+      "card_name": "Lanamon",
+      "validated_date": "2026-10-05",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BG Imperial follow-up (2026-10-05)",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_024.rs",
+      "test_count": 16,
+      "patterns": [
+        "hybrid-tamer-digivolve",
+        "alt-digivolve-name",
+        "optional-cost-place-bottom-source",
+        "timed-keyword-grant"
+      ],
+      "notes": "Digivolve onto a blue Tamer via source_treated_as (BT7-071 idiom); WD optional place blue Lv.3 from hand under 1 of your blue Digimon → Jamming for the turn."
+    },
+    "BT16-017": {
+      "card_name": "Veemon",
+      "validated_date": "2026-10-05",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BG Imperial follow-up (2026-10-05)",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-017.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_017.rs",
+      "test_count": 13,
+      "patterns": [
+        "observer-played-or-digivolves",
+        "D4",
+        "alt-digivolve-name"
+      ],
+      "notes": "Digivolve circle is green/purple Lv.2 cost 1 (confirmed on enlarged card face); [Your Turn][OPT] other green/[Free] Digimon played or digivolves → gain 1 memory."
     }
   }
 }
