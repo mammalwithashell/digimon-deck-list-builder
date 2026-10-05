@@ -16,3 +16,10 @@ data/card_meta/** text eol=lf
 # Union merge concatenates both sides instead of conflicting; the log is
 # one JSON object per line precisely so this is correct.
 qa/qa-reports/exam-log.jsonl merge=union
+
+# card-loop ledgers (openspec add-card-authoring-loop, design D11): append-only
+# JSONL written by concurrent runs on different branches. Union merge keeps
+# every side's rows; LF so a Windows checkout never mixes line endings.
+qa/card-loop/attempts.jsonl merge=union text eol=lf
+qa/card-loop/corrections.jsonl merge=union text eol=lf
+qa/card-loop/audits.jsonl merge=union text eol=lf
