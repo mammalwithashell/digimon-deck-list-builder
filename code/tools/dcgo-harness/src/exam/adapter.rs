@@ -1940,6 +1940,15 @@ fn build_selection_row(
     Ok((row, wire))
 }
 
+/// Guard that detects when the driver (harness) sent a trailing PASS to close a
+/// prompt, as opposed to a decline or the engine auto-resolving.
+///
+/// Returns false for a row's own scripted decline (payload_pick_count == 0),
+/// which emits PASS as the decline itself, not a trailing close.
+fn is_driver_trailing_pass(action_id: u16, picks_done: usize, n_picks: usize) -> bool {
+    action_id == digimon_engine::action::space::PASS && n_picks > 0 && picks_done >= n_picks
+}
+
 /// Advance the lowering game through one selection row with the SAME resolver
 /// the replay driver uses (`resolve_next` + `decode_action` until `Ok(None)`),
 /// so later steps lower against the post-selection state. Reused, not
@@ -1965,9 +1974,7 @@ fn advance_through_selection(
         match resolve_next(game, row, picks_done) {
             Ok(None) => return Ok(()),
             Ok(Some(id)) => {
-                if id == digimon_engine::action::space::PASS
-                    && picks_done >= payload_pick_count(row)
-                {
+                if is_driver_trailing_pass(id, picks_done, payload_pick_count(row)) {
                     let kind = game.pending_selection.as_ref().map(|p| p.kind);
                     println!(
                         "  note: step {i} the DRIVER sent a trailing PASS to close {kind:?} \
@@ -2819,5 +2826,22 @@ steps:
         let err =
             ScenarioAdapter::from_scenario(&s, deck.clone(), deck, &card_data).unwrap_err();
         assert!(err.contains("ZZ99-999"), "got: {err}");
+    }
+
+    #[test]
+    fn is_driver_trailing_pass_guards_against_scripted_decline() {
+        use digimon_engine::action::space::PASS;
+
+        // False for scripted decline: (PASS, 0, 0) — the row's own decline.
+        assert!(!is_driver_trailing_pass(PASS, 0, 0));
+
+        // True for trailing PASS after the row's one pick: (PASS, 1, 1).
+        assert!(is_driver_trailing_pass(PASS, 1, 1));
+
+        // False for non-PASS action even after picks: (some_id, 1, 1).
+        assert!(!is_driver_trailing_pass(99, 1, 1));
+
+        // False for PASS as the row's own first answer: (PASS, 0, 1).
+        assert!(!is_driver_trailing_pass(PASS, 0, 1));
     }
 }
