@@ -2665,7 +2665,15 @@ impl Game {
                 // card sits in its owner's security stack — never from the
                 // battle area. Mirrors `Game::is_adoptable_effect`, which
                 // already excludes `security` clauses.
-                if effect.security {
+                //
+                // `SecuritySkill` itself is exempt: the engine only ever
+                // dispatches it through `TriggerSource::SecurityRevealed`
+                // (`enqueue_from_security_card`), never to a battle-area
+                // permanent, so the exemption is unreachable in play. It is
+                // kept because ~20 per-card tests drive a card's [Security]
+                // body by enqueueing `SecuritySkill` on a placed permanent;
+                // converting them to real reveals is a follow-up.
+                if effect.security && timing != EffectTiming::SecuritySkill {
                     continue;
                 }
                 // An inherited effect (the lower portion of a digi card) is
