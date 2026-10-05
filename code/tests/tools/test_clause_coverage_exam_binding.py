@@ -369,3 +369,33 @@ def test_bind_passes_triage_and_citation_through(tmp_path):
     assert row["verdict"] == "diverged"
     assert row["triage"] == "ours_wrong"
     assert row["citation"] == "general_rule.pdf 15-8-3-2"
+
+
+def test_bind_drops_triage_when_the_verdict_is_downgraded_by_text_drift(tmp_path):
+    # A stored diverged+dcgo_quirk adjudication belongs to the clause text it was
+    # recorded against. Once text drift downgrades the row to `unmeasured` it must
+    # not carry that stale triage/citation (Plan 2 consumes this contract).
+    clause = _first_clause("EX12-073")
+    verdicts_path = tmp_path / "verdicts.json"
+    _write_verdicts(
+        verdicts_path,
+        [
+            {
+                "clause_id": clause["id"],
+                "card_id": "EX12-073",
+                "verdict": "diverged",
+                "text_sha256": "stale-sha-from-different-text",
+                "recorded_at": "2026-08-21T00:00:00Z",
+                "triage": "dcgo_quirk",
+                "citation": "general_rule.pdf 15-1-2; some-gap",
+            }
+        ],
+    )
+    result = bind(["EX12-073"], None, verdicts_path)
+    row = next(
+        c for c in result["cards"]["EX12-073"]["clauses"] if c["clause_id"] == clause["id"]
+    )
+    assert row["verdict"] == "unmeasured"
+    assert row["invalidated"] is True
+    assert row["triage"] is None
+    assert row["citation"] is None
