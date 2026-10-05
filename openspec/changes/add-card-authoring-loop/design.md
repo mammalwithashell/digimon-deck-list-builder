@@ -99,7 +99,7 @@ Model-authored combo interactions from `qa/archetype-qa/*-model.md` are examined
 
 `textual` and `not_examinable` are terminating calls, so D5 applies.
 
-**Adding a family is a promotion, not an edit.** A new family version gates only after it is explicitly promoted, because promotion drops affected cards out of readiness.
+**Adding a family is a promotion, not an edit.** A new family version gates only after it is explicitly promoted, because promotion drops affected cards out of readiness. Promotion can name a subset of a version's families (`promotion.json` `"families": [...]`). Decided 2026-10-05: official rulings plus `optional_decline`, `scope`, `granted_keyword` and `leave_play` gate; `timing_gate`, `once_per_turn_multi`, `would_replacement` and `immunity` are generated but non-gating until promoted.
 
 *Alternatives.* Gate on model-authored "critical interactions": rejected, because the gate would move whenever a prompt changed. Gate on Q&A only: rejected, because most past bugs (scope, decline) have no ruling.
 

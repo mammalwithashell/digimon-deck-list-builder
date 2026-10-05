@@ -167,8 +167,63 @@ def test_load_promotion_defaults_unlisted_versions_to_unpromoted(tmp_path):
         den.load_promotion(p, reg)
 
 
-def test_the_committed_promotion_file_promotes_the_base_families():
-    assert den.load_promotion(den.DEFAULT_PROMOTION) == {"families@1": True}
+INITIAL_GATING = frozenset({"optional_decline", "scope", "granted_keyword", "leave_play"})
+
+
+def test_the_committed_promotion_file_gates_the_decided_families():
+    # Decided 2026-10-05: rulings + optional_decline, scope, granted_keyword, leave_play.
+    assert den.load_promotion(den.DEFAULT_PROMOTION) == {"families@1": INITIAL_GATING}
+
+
+def test_load_promotion_reads_a_family_subset(tmp_path):
+    p = tmp_path / "promotion.json"
+    p.write_text(json.dumps({"families@1": {"promoted": True, "families": ["scope", "leave_play"]}}),
+                 encoding="utf-8")
+    assert den.load_promotion(p) == {"families@1": frozenset({"scope", "leave_play"})}
+
+
+def test_load_promotion_normalises_a_full_subset_to_true(tmp_path):
+    every = [f.name for f in FAMILY_VERSIONS["families@1"]]
+    p = tmp_path / "promotion.json"
+    p.write_text(json.dumps({"families@1": {"promoted": True, "families": every}}), encoding="utf-8")
+    assert den.load_promotion(p) == {"families@1": True}
+
+
+@pytest.mark.parametrize("entry, match", [
+    ({"promoted": True, "families": ["scope", "vibes"]}, "vibes"),
+    ({"promoted": True, "families": []}, "non-empty"),
+    ({"promoted": False, "families": ["scope"]}, "promoted is false"),
+    ({"promoted": True, "families": "scope"}, "non-empty"),
+])
+def test_load_promotion_rejects_bad_family_subsets(tmp_path, entry, match):
+    p = tmp_path / "promotion.json"
+    p.write_text(json.dumps({"families@1": entry}), encoding="utf-8")
+    with pytest.raises(ValueError, match=match):
+        den.load_promotion(p)
+
+
+def test_a_family_subset_gates_only_its_families_and_rulings_always_gate(clauses, card_qa):
+    art = build(clauses, card_qa, promoted={"families@1": frozenset({"scope", "optional_decline"})})
+    probes = [r for r in art["interactions"].values() if r["source"] == "probe"]
+    assert probes, "fixture universe must produce probes"
+    for rec in probes:
+        assert rec["gating"] is (rec["family"] in {"scope", "optional_decline"}), rec
+    assert all(r["gating"] for r in art["interactions"].values() if r["source"] == "qa")
+    head = art["families"]["families@1"]
+    assert head["promoted"] is True
+    assert head["gating_families"] == ["optional_decline", "scope"]
+    assert set(head["families"]) > set(head["gating_families"])
+
+
+def test_promotion_report_covers_the_unpromoted_families_of_a_partly_promoted_version(clauses, card_qa):
+    art = build(clauses, card_qa, promoted={"families@1": frozenset({"scope"})})
+    report = den.promotion_report(art, "families@1")
+    ungated = {i for i, r in art["interactions"].items()
+               if r["source"] == "probe" and r["family"] != "scope"}
+    assert report["new_gating_probes"] == len(ungated)
+    only = den.promotion_report(art, "families@1", family="optional_decline")
+    assert only["new_gating_probes"] == sum(
+        1 for r in art["interactions"].values() if r.get("family") == "optional_decline")
 
 
 # --- CLI: build / --check -------------------------------------------------------
@@ -241,10 +296,22 @@ def test_the_card_loop_dispatcher_routes_interactions(tmp_path):
 
 def test_promotion_report_cli_says_when_everything_is_promoted(tmp_path, capsys):
     out = tmp_path / "d.json"
-    assert den.cli(["build", *_args(out)]) == 0
+    every = FIX / "promotion_all.json"
+    assert den.cli(["build", *_args(out), "--promotion", str(every)]) == 0
     capsys.readouterr()
     assert den.cli(["promotion-report", "--out", str(out), "--verdicts", str(tmp_path / "none")]) == 0
     assert "already promoted" in capsys.readouterr().out
+
+
+def test_promotion_report_cli_reports_a_partly_promoted_version(tmp_path, capsys):
+    out = tmp_path / "d.json"
+    assert den.cli(["build", *_args(out)]) == 0  # the committed (subset) promotion
+    capsys.readouterr()
+    assert den.cli(["promotion-report", "--out", str(out), "--verdicts", str(tmp_path / "none")]) == 0
+    text = capsys.readouterr().out
+    assert "already promoted" not in text
+    assert "families@1 (promoted: True)" in text
+    assert "gating families: granted_keyword, leave_play, optional_decline, scope" in text
 
 
 def test_promotion_report_cli_lists_cards_an_unpromoted_version_would_drop(tmp_path, capsys):

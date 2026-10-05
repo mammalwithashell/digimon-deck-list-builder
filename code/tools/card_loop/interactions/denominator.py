@@ -7,7 +7,8 @@ Per card, the gating interactions are
    adjudicated once and counted for each of them;
 2. every probe the `probes` generator emits from the card's extracted clauses,
    as ``probe:<clause-id>:<family>[:neg]`` -- gating only when the probe's
-   family version is PROMOTED (`promotion.json`). An unpromoted family's probes
+   family is PROMOTED (`promotion.json`: a version is promoted whole, or only
+   the subset its ``"families"`` list names). An unpromoted family's probes
    are still listed here (so a scenario may name them and be examined) but carry
    ``"gating": false``.
 
@@ -20,7 +21,7 @@ listed: a model-written list is not a stable denominator.
 Artifact shape (``version: 1``)::
 
     {"version": 1,
-     "families": {"families@1": {"promoted": true, "families": [...]}},
+     "families": {"families@1": {"promoted": true, "families": [...], "gating_families": [...]}},
      "universe": {"mode": "all"} | {"mode": "cards", "source": "<path>"},
      "summary": {...counts...},
      "cards": {card_id: [interaction ids: qa first (Q-number order), then probes]},
@@ -105,22 +106,52 @@ def load_card_qa(path: Path | str) -> dict:
     return data
 
 
-def load_promotion(path: Path | str, registry: Mapping[str, tuple[Family, ...]] = FAMILY_VERSIONS) -> dict[str, bool]:
-    """`{version: promoted}` for every registry version; an unlisted version is
-    UNPROMOTED (the safe default: a family never gates by accident)."""
+Promotion = Mapping[str, "bool | frozenset[str]"]
+
+
+def load_promotion(path: Path | str,
+                   registry: Mapping[str, tuple[Family, ...]] = FAMILY_VERSIONS) -> dict[str, bool | frozenset]:
+    """`{version: gating}` for every registry version.
+
+    `gating` is False (unpromoted), True (every family of the version gates), or
+    a frozenset naming the subset that gates -- an entry's optional
+    `"families": [...]`, which requires `"promoted": true`. A subset naming every
+    family normalises to True. An unlisted version is UNPROMOTED (the safe
+    default: a family never gates by accident).
+    """
     p = Path(path)
     raw = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
     unknown = sorted(set(raw) - set(registry))
     if unknown:
         raise ValueError(f"{p} names family versions the generator does not define: {unknown}")
-    out = {}
-    for version in registry:
+    out: dict[str, bool | frozenset] = {}
+    for version, fams in registry.items():
         entry = raw.get(version) or {}
         promoted = entry.get("promoted", False)
         if not isinstance(promoted, bool):
             raise ValueError(f"{p}: {version}.promoted must be true or false")
-        out[version] = promoted
+        subset = entry.get("families")
+        if subset is None:
+            out[version] = promoted
+            continue
+        if not promoted:
+            raise ValueError(f"{p}: {version}.families is set but promoted is false")
+        if not isinstance(subset, list) or not subset or not all(isinstance(x, str) for x in subset):
+            raise ValueError(f"{p}: {version}.families must be a non-empty list of family names")
+        known = {f.name for f in fams}
+        bad = sorted(set(subset) - known)
+        if bad:
+            raise ValueError(f"{p}: {version}.families names families {version} does not define: {bad}")
+        out[version] = True if set(subset) == known else frozenset(subset)
     return out
+
+
+def family_gates(promoted: Promotion, version: str, family: str) -> bool:
+    """Whether probes of `family` (in `version`) gate under `promoted`."""
+    gating = promoted.get(version, False)
+    if isinstance(gating, bool):
+        return gating
+    return family in gating
 
 
 def read_card_ids(path: Path | str) -> list[str]:
@@ -222,7 +253,7 @@ def build_denominator(
     card_ids: Iterable[str],
     clauses: Iterable[Mapping],
     card_qa: Mapping,
-    promoted: Mapping[str, bool],
+    promoted: Promotion,
     *,
     registry: Mapping[str, tuple[Family, ...]] = FAMILY_VERSIONS,
     universe_desc: Mapping | None = None,
@@ -242,7 +273,7 @@ def build_denominator(
             "family": p.family,
             "family_version": p.family_version,
             "kind": p.kind,
-            "gating": bool(promoted.get(p.family_version, False)),
+            "gating": family_gates(promoted, p.family_version, p.family),
             "text_sha256": sha256_text(text_by_clause.get(p.clause_id, "")),
             "why": p.why,
         }
@@ -262,7 +293,11 @@ def build_denominator(
     return {
         "version": ARTIFACT_VERSION,
         "families": {
-            v: {"promoted": bool(promoted.get(v, False)), "families": [f.name for f in fams]}
+            v: {
+                "promoted": bool(promoted.get(v, False)),
+                "families": [f.name for f in fams],
+                "gating_families": sorted(f.name for f in fams if family_gates(promoted, v, f.name)),
+            }
             for v, fams in registry.items()
         },
         "universe": dict(universe_desc or {"mode": "all"}),
@@ -354,12 +389,27 @@ def drift_is_empty(d: Mapping) -> bool:
                                   "header_changed"))
 
 
+def _gating_families(entry: Mapping) -> list[str]:
+    """A header entry's gating families (artifacts predating `gating_families`
+    gate all-or-nothing on `promoted`)."""
+    if "gating_families" in entry:
+        return list(entry["gating_families"])
+    return list(entry.get("families", [])) if entry.get("promoted") else []
+
+
+def fully_promoted(entry: Mapping) -> bool:
+    return set(_gating_families(entry)) == set(entry.get("families", []))
+
+
 def promotion_report(
     artifact: Mapping,
     version: str,
     verdicts: Mapping[str, Mapping] | None = None,
+    *,
+    family: str | None = None,
 ) -> dict:
-    """Cards whose gating set would GROW if `version` were promoted.
+    """Cards whose gating set would GROW if the rest of `version` were promoted
+    (or only `family`, when given).
 
     Every such card drops out of readiness until the new probes are
     adjudicated, except where a stored verdict already adjudicates them
@@ -368,11 +418,15 @@ def promotion_report(
     fams = artifact.get("families", {})
     if version not in fams:
         raise ValueError(f"unknown family version {version!r}; known: {sorted(fams)}")
+    if family is not None and family not in fams[version].get("families", []):
+        raise ValueError(f"{version} defines no family {family!r}")
     verdicts = verdicts or {}
     growing: dict[str, list[str]] = {}
     already: Counter = Counter()
     for iid, rec in artifact.get("interactions", {}).items():
         if rec.get("family_version") != version or rec.get("gating"):
+            continue
+        if family is not None and rec.get("family") != family:
             continue
         for card in rec["card_ids"]:
             growing.setdefault(card, []).append(iid)
@@ -383,6 +437,8 @@ def promotion_report(
     return {
         "version": version,
         "promoted": bool(fams[version].get("promoted")),
+        "gating_families": _gating_families(fams[version]),
+        "family": family,
         "cards_with_new_gating_probes": len(cards),
         "new_gating_probes": sum(len(v) for v in cards.values()),
         "cards_that_would_drop": would_drop,
@@ -453,7 +509,9 @@ def cli(argv: list[str] | None = None) -> int:
     parser.add_argument("--overrides", type=Path)
     parser.add_argument("--official", type=Path)
     parser.add_argument("--version", dest="family_version",
-                        help="promotion-report: the family version (default: every unpromoted one)")
+                        help="promotion-report: the family version (default: every not-fully-promoted one)")
+    parser.add_argument("--family",
+                        help="promotion-report: only this family of the version")
     parser.add_argument("--verdicts", type=Path, default=DEFAULT_VERDICTS,
                         help="promotion-report: exam verdicts, to discount adjudicated probes")
     parser.add_argument("--json", type=Path, help="promotion-report: also write the report here")
@@ -491,19 +549,21 @@ def cli(argv: list[str] | None = None) -> int:
         # promotion-report
         artifact = load_denominator(args.out)
         versions = ([args.family_version] if args.family_version else
-                    [v for v, e in artifact["families"].items() if not e.get("promoted")])
+                    [v for v, e in artifact["families"].items() if not fully_promoted(e)])
         if not versions:
             print("promotion-report: every family version is already promoted; nothing would change")
             return 0
         from tools.clause_coverage.exam_binding import load_interaction_verdicts
 
         stored = load_interaction_verdicts(args.verdicts)
-        reports = [promotion_report(artifact, v, stored) for v in versions]
+        reports = [promotion_report(artifact, v, stored, family=args.family) for v in versions]
         for r in reports:
-            print(f"promotion-report {r['version']} (promoted: {r['promoted']}): "
+            scope = f" family {r['family']}" if r["family"] else ""
+            print(f"promotion-report {r['version']} (promoted: {r['promoted']}){scope}: "
                   f"{r['new_gating_probes']} probes would start gating across "
                   f"{r['cards_with_new_gating_probes']} cards; "
                   f"{len(r['cards_that_would_drop'])} would drop out of readiness")
+            print(f"  gating families: {', '.join(r['gating_families']) or 'none'}")
             _print_ids("cards that would drop", r["cards_that_would_drop"])
         if args.json:
             args.json.write_text(json.dumps(reports, indent=2, sort_keys=True) + "\n", encoding="utf-8")
