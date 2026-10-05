@@ -653,6 +653,16 @@ pub struct CostReductionBody {
     /// Used by BT5-092 (Nokia Shiramine). `G-COST-REDUCTION-DIGIVOLVE-INTO`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub when_any_ally_digivolves_into: Option<PredicateSpec>,
+    /// "When one of your Digimon digivolves into THIS card from your hand" —
+    /// the reducer is hosted by the HAND card being digivolved into (the
+    /// digivolve-side twin of `when_playing_this`). It is collected only for a
+    /// digivolve cost whose target is this exact card coming from hand, and is
+    /// never offered from a field/source position. Models ＜Digisorption -N＞
+    /// (16-9: "by suspending 1 of your Digimon" — authored as an `optional`
+    /// reducer with a `select_own_permanent` → `suspend` pay_cost).
+    /// BT3-054 / BT8-054. `G-ENGINE-DIGISORPTION`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub when_digivolving_into_this: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub condition: Option<PredicateSpec>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]

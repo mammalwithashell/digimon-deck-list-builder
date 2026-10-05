@@ -1,0 +1,33 @@
+# BT9-047 Pomumon — Digimon, Lv.3, Green, DP 2000, Cost 3. Vegetation / Rookie / Data.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT9-047.md):
+#   [All Turns] Players can't play Digimon by effects.
+#
+# Reprint of the BT9-033 Pillomon / BT14-009 Gotsumon effect (identical printed
+# text) — same flood_gate shape. DCGO has no per-card BT9_047.cs; the C# entity
+# reuses the shared CannotPlayByEffect static.
+# Official Q&A: moving a Digimon out of the breeding area is not "playing" it,
+# so hatching/moving is unaffected (the modifier only gates effect plays).
+
+card: BT9-047
+name: Pomumon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+traits: [Vegetation]
+form: Rookie
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+
+effects:
+  - kind: flood_gate
+    scope: face_up
+    active_when: { all_turns: true }
+    modifier: CannotPlayDigimonByEffect
+    target_player: any
+    summary: "Players can't play Digimon by effects"

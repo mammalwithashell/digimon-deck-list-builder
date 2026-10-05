@@ -1,0 +1,68 @@
+# BT8-054 Pistmon — Digimon, Lv.5, Green, DP 7000, Cost 7.
+# Vegetation / Ultimate / Virus. Digivolve: green Lv.4, cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT8-054.md):
+#   ＜Digisorption -2＞ (When one of your Digimon digivolves into this card from
+#   your hand, you may suspend 1 of your Digimon to reduce the memory cost of
+#   the digivolution by 2.)
+#   Inherited: [All Turns] This Digimon gets +1000 DP for each of your other
+#   suspended Digimon.
+#
+# DCGO oracle: DCGO/Assets/Scripts/CardEffect/BT8/Green/BT8_054.cs
+#   - Digisorption -2: same BeforePayCost shape as BT3-054 (see that file).
+#   - Inherited ChangeDPClass (isInheritedEffect): +1000 x count of the owner's
+#     battle-area Digimon that are suspended and are not this permanent.
+#
+# Digisorption lowering: `cost_reduction` + `when_digivolving_into_this`
+# (G-ENGINE-DIGISORPTION) — see BT3-054.yaml for the full rationale.
+
+card: BT8-054
+name: Pistmon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 7000
+traits: [Vegetation]
+form: Ultimate
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_digivolving_into_this: true
+    optional: true
+    amount: 2
+    pay_cost:
+      - select_own_permanent:
+          bind_as: absorbed
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "<Digisorption -2> Suspend 1 of your Digimon to reduce the digivolution cost by 2"
+      - suspend: { target: absorbed }
+    summary: "<Digisorption -2> When digivolving into this card from hand, you may suspend 1 of your Digimon to reduce the cost by 2"
+
+  # Inherited [All Turns] +1000 DP per other own suspended Digimon.
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier_fn:
+      base: 0
+      per:
+        card_count_in_zone:
+          of: you
+          zone: battle_area
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+              - other: true
+      delta: 1000
+    summary: "[All Turns] This Digimon gets +1000 DP for each of your other suspended Digimon"

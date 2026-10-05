@@ -440,6 +440,14 @@ pub fn lookup_keyword(name: &str, value: Option<i32>) -> Option<Keyword> {
         // DSL grant path just needed the string mapping so `grant_keyword:
         // Retaliation` (BT25-078, BT25-081) actually installs it.
         "Retaliation" => Keyword::Retaliation,
+        // Scapegoat — replacement-type keyword (16-31). A target-set aura
+        // grant lands in `ModifierRegistry::permanent_keywords`, which the
+        // WhenWouldBeDeleted candidate scan (`replacement.rs`, the
+        // `granted_keywords(h)` loop) already synthesizes into the keyword's
+        // replacement body on the RECIPIENT, so the grant is behavioral, not
+        // a bare `has_keyword` tag (BT25-097 Guardian Palace;
+        // G-ENGINE-AURA-GRANT-REPLACEMENT-KEYWORD).
+        "Scapegoat" => Keyword::Scapegoat,
         _ => return None,
     })
 }

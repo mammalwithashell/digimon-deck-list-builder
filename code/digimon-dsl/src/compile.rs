@@ -2369,6 +2369,7 @@ fn compile_declarative(
                         errors,
                     )
                 }),
+                when_digivolving_into_this: c.when_digivolving_into_this,
                 condition: c
                     .condition
                     .as_ref()

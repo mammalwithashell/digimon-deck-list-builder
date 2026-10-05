@@ -906,10 +906,13 @@ impl Game {
         // `cost_target` still threads into candidate inspection below so
         // target-aware predicates keep firing. Caught by
         // `tests/alt_path_reachability.rs` (BT18-073).
-        let source_scan_target = cost_target.filter(|t| !t.is_digivolve);
-        for info in
-            self.before_pay_cost_source_infos(acting_player, source_scan_target.map(|t| t.card))
-        {
+        //
+        // The digivolve twin (`when_digivolving_into_this`, ＜Digisorption＞)
+        // IS hosted by the target card, so the target is threaded with its
+        // cost kind and `before_pay_cost_source_infos` picks the matching
+        // block. `G-ENGINE-DIGISORPTION`.
+        let source_scan_target = cost_target.map(|t| (t.card, t.is_digivolve));
+        for info in self.before_pay_cost_source_infos(acting_player, source_scan_target) {
             let key = CostReductionKey {
                 source_card: info.source_card,
                 source_permanent: info.source_permanent,

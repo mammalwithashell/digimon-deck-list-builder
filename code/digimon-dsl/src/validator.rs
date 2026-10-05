@@ -2968,6 +2968,7 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "ArmorPurge",
     "Fragment",
     "Retaliation",
+    "Scapegoat",
     "Execute",
     "Engage",
     "Guard",

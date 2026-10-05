@@ -58,6 +58,7 @@ pub fn lower(
         false,
         None,
         None,
+        false,
         None,
     )
 }
@@ -76,6 +77,10 @@ pub fn lower_with_formula(
     when_playing_this: bool,
     when_any_ally_played: Option<CompiledPredicate>,
     when_any_ally_digivolves_into: Option<CompiledPredicate>,
+    // ＜Digisorption＞ host flag: the reducer lives on the hand card being
+    // digivolved into and fires only for that card's own digivolve-from-hand
+    // cost. `G-ENGINE-DIGISORPTION`.
+    when_digivolving_into_this: bool,
     // When set, this reducer shares its once-per-turn accounting slot with any
     // sibling reducer carrying the same group id. Used to give the two
     // `scope: both` copies (FaceUp + Inherited) ONE shared OPT lockout so a
@@ -107,6 +112,9 @@ pub fn lower_with_formula(
     }
     if when_playing_this {
         builder = builder.when_playing_this();
+    }
+    if when_digivolving_into_this {
+        builder = builder.when_digivolving_into_this();
     }
     let condition_active_when = active_when.clone();
     let condition_condition = condition.clone();
@@ -175,6 +183,10 @@ pub fn lower_with_formula(
                 return false;
             }
         }
+        // ＜Digisorption＞: only this card's own digivolve-from-hand cost.
+        if when_digivolving_into_this && !digivolving_into_this_from_hand(rctx) {
+            return false;
+        }
         // Do not offer when the interactive cost has no eligible target.
         if let Some(guard) = &pay_cost_guard {
             if !guard(rctx) {
@@ -216,6 +228,9 @@ pub fn lower_with_formula(
             if !eval_predicate(wdi, rctx, PredicateSubject::Card(target)) {
                 return 0;
             }
+        }
+        if when_digivolving_into_this && !digivolving_into_this_from_hand(rctx) {
+            return 0;
         }
         amount_fn
             .as_ref()
@@ -285,6 +300,14 @@ pub fn lower_with_formula(
         effect.activation_cost_kind = Some(crate::effect::ActivationCostKind::SuspendSelf);
     }
     effect
+}
+
+/// ＜Digisorption＞ gate: the cost being computed is a DIGIVOLVE whose target
+/// (the card digivolved into) is this reducer's own card, coming from hand.
+fn digivolving_into_this_from_hand(rctx: &EffectReadContext<'_>) -> bool {
+    rctx.cost_is_digivolve
+        && rctx.cost_target_from_hand
+        && rctx.cost_target_card == Some(rctx.source_card)
 }
 
 /// True when `pay_cost` is exactly a single self-targeted `suspend` step —

@@ -266,6 +266,7 @@ impl CardEffect for DslCardEffect {
                         when_playing_this,
                         when_any_ally_played,
                         when_any_ally_digivolves_into,
+                        when_digivolving_into_this,
                         condition,
                         optional,
                         once_per_turn,
@@ -290,6 +291,7 @@ impl CardEffect for DslCardEffect {
                         // `active_when` instead of dropping the clause silently.
                         // (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET.)
                         if !*when_playing_this
+                            && !*when_digivolving_into_this
                             && when_any_ally_played.is_none()
                             && when_any_ally_digivolves_into.is_none()
                             && active_when.is_none()
@@ -354,6 +356,7 @@ impl CardEffect for DslCardEffect {
                                     *when_playing_this,
                                     when_any_ally_played.clone(),
                                     when_any_ally_digivolves_into.clone(),
+                                    *when_digivolving_into_this,
                                     shared_opt_group,
                                 ));
                             }

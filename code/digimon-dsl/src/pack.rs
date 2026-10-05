@@ -661,6 +661,7 @@ mod tests {
                     when_playing_this: true,
                     when_any_ally_played: None,
                     when_any_ally_digivolves_into: None,
+                    when_digivolving_into_this: false,
                     condition: None,
                     optional: false,
                     once_per_turn: false,

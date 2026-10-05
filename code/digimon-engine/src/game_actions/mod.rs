@@ -2614,10 +2614,15 @@ impl Game {
             .unwrap_or(0)
     }
 
+    /// `cost_target` is `(target card, is_digivolve)`. The target card hosts
+    /// its own `when_playing_this` reducers for a PLAY cost and its own
+    /// `when_digivolving_into_this` reducers (＜Digisorption＞) for a DIGIVOLVE
+    /// cost — never the other kind (BT18-073: a play-cost reducer must not be
+    /// offered when digivolving into the card).
     fn before_pay_cost_source_infos(
         &self,
         acting_player: PlayerId,
-        cost_target_card: Option<crate::card_source::CardHandle>,
+        cost_target: Option<(crate::card_source::CardHandle, bool)>,
     ) -> Vec<BeforePayCostSourceInfo> {
         let mut infos = Vec::new();
         self.push_breeding_cost_sources(acting_player, &mut infos);
@@ -2662,13 +2667,18 @@ impl Game {
                 self.push_breeding_cost_sources(player_id, &mut infos);
             }
         }
-        if let Some(target) = cost_target_card {
+        if let Some((target, is_digivolve)) = cost_target {
             if let Some((card_id, controller)) = self.card_id_and_owner_for_handle(target) {
                 let Some(effects) = self.effects_for_card(&card_id, target) else {
                     return infos;
                 };
                 for (slot, effect) in effects.iter().enumerate() {
-                    if effect.timing == EffectTiming::BeforePayCost && effect.when_playing_this {
+                    let hosted = if is_digivolve {
+                        effect.when_digivolving_into_this
+                    } else {
+                        effect.when_playing_this
+                    };
+                    if effect.timing == EffectTiming::BeforePayCost && hosted {
                         infos.push(BeforePayCostSourceInfo {
                             source_permanent: None,
                             source_card: target,
@@ -2742,6 +2752,12 @@ impl Game {
                 continue;
             }
             if effect.when_playing_this && !allow_when_playing_this {
+                continue;
+            }
+            // ＜Digisorption＞ reducers are hosted only by the digivolve
+            // target in hand (see `before_pay_cost_source_infos`); a field or
+            // source copy of the card never reduces another digivolution.
+            if effect.when_digivolving_into_this {
                 continue;
             }
             infos.push(BeforePayCostSourceInfo {

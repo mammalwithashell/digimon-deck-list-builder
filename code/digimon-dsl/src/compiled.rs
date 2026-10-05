@@ -1227,6 +1227,10 @@ pub enum CompiledDeclarativeClause {
         /// cost whose target card matches this predicate.
         /// `G-COST-REDUCTION-DIGIVOLVE-INTO`.
         when_any_ally_digivolves_into: Option<CompiledPredicate>,
+        /// Hosted by the hand card being digivolved INTO (＜Digisorption＞).
+        /// `G-ENGINE-DIGISORPTION`.
+        #[serde(default)]
+        when_digivolving_into_this: bool,
         condition: Option<CompiledPredicate>,
         optional: bool,
         once_per_turn: bool,

@@ -6,3 +6,4 @@ mod bt3_096;
 mod bt3_103;
 mod bt3_105;
 mod bt3_109;
+mod bt3_054;

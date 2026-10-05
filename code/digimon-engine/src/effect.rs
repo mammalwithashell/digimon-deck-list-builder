@@ -467,6 +467,13 @@ pub struct Effect {
     /// `scan_before_pay_cost_reduction_for_hand_card` (which evaluates it).
     pub when_playing_this: bool,
 
+    /// When `true`, this `BeforePayCost` cost-reduction effect is hosted by the
+    /// HAND card being digivolved into ("when one of your Digimon digivolves
+    /// into this card from your hand" — ＜Digisorption＞, 16-9). It is collected
+    /// only from the digivolve cost target and never from a field / source
+    /// position. Set by `.when_digivolving_into_this()`. `G-ENGINE-DIGISORPTION`.
+    pub when_digivolving_into_this: bool,
+
     /// When `true`, a lone triggered firing of this OPTIONAL effect installs
     /// an explicit outer accept/decline `PendingSelection` before its body
     /// runs (DCGO "you may" gate). Set by the DSL lowering for an
@@ -917,6 +924,7 @@ impl EffectBuilder {
                 training: false,
                 linked: false,
                 when_playing_this: false,
+                when_digivolving_into_this: false,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
                 pay_cost_self_gated: false,
@@ -931,6 +939,13 @@ impl EffectBuilder {
     /// separately in `scan_before_pay_cost_reduction_for_hand_card`.
     pub fn when_playing_this(mut self) -> Self {
         self.inner.when_playing_this = true;
+        self
+    }
+
+    /// Mark this `BeforePayCost` effect as hosted by the hand card being
+    /// digivolved into (＜Digisorption＞). `G-ENGINE-DIGISORPTION`.
+    pub fn when_digivolving_into_this(mut self) -> Self {
+        self.inner.when_digivolving_into_this = true;
         self
     }
 

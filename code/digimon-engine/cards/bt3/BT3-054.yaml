@@ -1,0 +1,57 @@
+# BT3-054 Blossomon — Digimon, Lv.5, Green, DP 7000, Cost 7.
+# Vegetation / Ultimate / Data. Digivolve: green Lv.4, cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT3-054.md):
+#   ＜Digisorption -3＞ (When one of your Digimon digivolves into this card from
+#   your hand, you may suspend 1 of your Digimon to reduce the memory cost of
+#   the digivolution by 3.)
+#
+# DCGO oracle: DCGO/Assets/Scripts/CardEffect/BT3/Green/BT3_054.cs
+#   BeforePayCost ActivateClass, isOptional, CanUse only when hashtable Card ==
+#   this card AND isEvolution AND the digivolving permanent is the owner's; the
+#   activation selects 1 of the owner's battle-area Digimon that is
+#   unsuspended and can suspend (`CanTapWhenAbsorbEvolution` — the digivolving
+#   Digimon itself is a legal pick), suspends it (Mode.Tap), then applies
+#   "Digivolution Cost -3".
+#
+# Rules 16-9 (Opt-cost→Mand): suspending is the optional cost; once paid the
+# reduction is mandatory; cost floors at 0.
+#
+# Lowering: `cost_reduction` hosted by THIS hand card for its own
+# digivolve-from-hand cost (`when_digivolving_into_this`,
+# G-ENGINE-DIGISORPTION). `optional: true` surfaces the accept/decline gate;
+# the interactive pay_cost then surfaces WHICH Digimon to suspend (player
+# choice, mandatory once accepted). The reducer is not offered when no own
+# Digimon can be suspended (pay_cost first-step candidate guard).
+
+card: BT3-054
+name: Blossomon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 7000
+traits: [Vegetation]
+form: Ultimate
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_digivolving_into_this: true
+    optional: true
+    amount: 3
+    pay_cost:
+      - select_own_permanent:
+          bind_as: absorbed
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "<Digisorption -3> Suspend 1 of your Digimon to reduce the digivolution cost by 3"
+      - suspend: { target: absorbed }
+    summary: "<Digisorption -3> When digivolving into this card from hand, you may suspend 1 of your Digimon to reduce the cost by 3"
