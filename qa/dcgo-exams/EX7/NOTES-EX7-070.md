@@ -10,7 +10,7 @@ exist): all three are `unmeasured` until the oracle pass.
 |---|---|---|
 | `EX7-070#effect#0` | `EX7-070-effect0.yaml` | lowers, asserts pass (re-authored 2026-09-18, below) |
 | `EX7-070#effect#1` | `EX7-070-effect1.yaml` | lowers, asserts pass (prefix re-authored: BeelStarmon can no longer be `play:`ed) |
-| `EX7-070#effect#2` | `EX7-070-effect2.yaml` | lowers, asserts pass (unchanged since `c9c3ccf49`) |
+| `EX7-070#security#0` | `EX7-070-effect2.yaml` | lowers, asserts pass (unchanged since `c9c3ccf49`) |
 
 Book: `qa/dcgo-exams/EX7/three_musketeers_pool.json`.
 

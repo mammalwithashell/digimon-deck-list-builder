@@ -126,7 +126,7 @@ Two oracle runs:
 - `exam-BT25-083-effect2-r2` (recording `20260918T091206Z_3d49d468…`) aborted at
   step 19, `expected 'SelectPermanentEffect' but DCGO asked 'OptionalSkill'`.
   **Attacker slot-addressing artefact, not a clause finding** (same family as
-  EX7-070#effect#2 / EX7-071#effect#2): `attack: field.N` reaches DCGO as a
+  EX7-070#security#0 / EX7-071#security#0): `attack: field.N` reaches DCGO as a
   COMPACT index into `Player.GetFieldPermanents()` (frame-id order,
   `InputDriver.cs` ~343-363), and `CardSource.PreferredFrame()` seats P0's
   Digimon centre-out (frame 4, 3, 5, …). With two Digimon DCGO's order is the

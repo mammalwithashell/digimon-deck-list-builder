@@ -32,7 +32,7 @@ The draft had P1 field **Biyomon + Dracomon** and attack with `field.0` /
 `field.1`. DCGO seats Digimon centre-out (`CardSource.PreferredFrame`: frames 4,
 3, 5, …) and `attack: field.N` reaches it as a COMPACT frame-order index, so on
 a two-Digimon board `field.0` names the OTHER Digimon there — the artefact that
-cost `EX7-070#effect#2`, `P-180#effect#2` and `BT25-083#inherited#0` an oracle
+cost `EX7-070#security#0`, `P-180#security#0` and `BT25-083#inherited#0` an oracle
 run each (`../BT25/NOTES-BT25-083.md`: "never address a slot on a TWO-Digimon
 board"). After the T6 attack the projected `suspended` flags would have
 differed (ours: Biyomon suspended; DCGO: Dracomon). Repaired by fielding **two

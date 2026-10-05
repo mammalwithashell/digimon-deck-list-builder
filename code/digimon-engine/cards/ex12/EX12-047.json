@@ -1,4 +1,6 @@
 {
+  "index": 4448,
+  "norm_id": 0.2224,
   "card_id": "EX12-047",
   "card_index": 47,
   "card_name_eng": "Amaterasumon",
@@ -17,7 +19,8 @@
     "Shaman",
     "Sanmyojin",
     "Tentei Hachibushu",
-    "Shambala"
+    "Shambala",
+    "TB"
   ],
   "form_eng": [],
   "attribute_eng": [

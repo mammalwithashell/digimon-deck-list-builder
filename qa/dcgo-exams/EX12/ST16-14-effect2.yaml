@@ -1,4 +1,4 @@
-# Exam scenario: ST16-14 (Matt Ishida), clause ST16-14#effect#2 --
+# Exam scenario: ST16-14 (Matt Ishida), clause ST16-14#security#0 --
 # "[Security] Play this card without paying the cost."
 #
 # Matt is a cost-4 Tamer with a [Start of Your Turn] memory-set and an
@@ -47,7 +47,7 @@
 # The witness is the Tamer standing on P0's FIELD (played, not trashed) with
 # P1's memory untouched at 3 -- "without paying the cost".
 card: ST16-14
-clause: ST16-14#effect#2
+clause: ST16-14#security#0
 seed: 424242
 decks:
   p0:

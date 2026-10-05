@@ -1,4 +1,4 @@
-# Exam scenario: BT11-089 (Akiho Rindou), clause BT11-089#effect#3 --
+# Exam scenario: BT11-089 (Akiho Rindou), clause BT11-089#security#0 --
 # "[Security] Play this card without paying the cost."
 #
 # THE SECURITY-TRIGGER SKELETON (see EX1-066-effect2.yaml for the full
@@ -57,7 +57,7 @@
 # BT11-089#effect#0; it is out of this file's scope and is reported
 # separately rather than fixed here.)
 card: BT11-089
-clause: BT11-089#effect#3
+clause: BT11-089#security#0
 seed: 424242
 decks:
   p0:

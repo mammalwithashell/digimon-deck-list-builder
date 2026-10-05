@@ -1,10 +1,16 @@
 {
+  "index": 4106,
+  "norm_id": 0.2053,
   "card_id": "BT25-019",
+  "card_index": 19,
   "card_name_eng": "UltimateBrachiomon",
-  "card_kind": 0,
-  "level": 6,
-  "dp": 13000,
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT25_019",
   "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
   "card_colors": [
     0,
     5
@@ -16,19 +22,24 @@
     "TS",
     "Dinosaur"
   ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] Delete 1 of your opponent's highest DP Digimon.\r\n[End of Your Turn] [Once Per Turn] If your opponent has 5 or more memory, their Digimon effects don't affect this Digimon until their turn ends. Then, if they have 5 or less, their Option effects don't affect this Digimon until their turn ends.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
   "evo_costs": [
     {
       "card_color": 0,
       "level": 5,
       "memory_cost": 5
+    },
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 5
     }
   ],
-  "dna_costs": null,
-  "attribute_eng": [
-    "Data"
-  ],
-  "effect_description_eng": "＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] Delete 1 of your opponent's highest DP Digimon.\r\n[End of Your Turn] [Once Per Turn] If your opponent has 5 or more memory, their Digimon effects don't affect this Digimon until their turn ends. Then, if they have 5 or less, their Option effects don't affect this Digimon until their turn ends.",
-  "inherited_effect_description_eng": "|applinkdp =",
-  "security_effect_description_eng": "",
-  "form_eng": []
+  "xros_req": "[Digivolve] Lv.5 w/[Dinosaur]/[TS] trait: Cost 4"
 }

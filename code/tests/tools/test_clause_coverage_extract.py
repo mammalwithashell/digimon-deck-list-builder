@@ -99,6 +99,32 @@ def test_digimon_kind_card_gets_inherited_zone_clause():
     assert "＜Draw 1＞" in inherited[0]["text"]
 
 
+def test_every_official_security_effect_section_is_in_the_security_zone():
+    """The official DB labels a card's security box "Security Effect" (817
+    cards on 2026-10-03). Zoned as "effect", that clause takes an effect index,
+    so its id -- and every exam verdict keyed by it -- moves whenever the effect
+    box's clause count changes. The synthetic fixtures said "Security", a label
+    the official DB never prints, which is how that went unnoticed; this checks
+    the real mirror."""
+    import json
+
+    from tools.clause_coverage.extract import DEFAULT_OFFICIAL_JSON
+
+    with open(DEFAULT_OFFICIAL_JSON, encoding="utf-8") as f:
+        official = json.load(f)["cards"]
+    card_ids = sorted(
+        cid
+        for cid, entry in official.items()
+        if any(s.get("label") == "Security Effect" for s in entry.get("text_sections") or [])
+    )
+    assert card_ids, "no 'Security Effect' section in the official mirror -- did its labels change?"
+
+    clauses = run(card_ids, "test:official-security-effect")["clauses"]
+    misfiled = [c["id"] for c in clauses if c["label"] == "Security Effect" and c["zone"] != "security"]
+    assert not misfiled, f"{len(misfiled)} Security Effect clauses outside the security zone: {misfiled[:5]}"
+    assert {c["card_id"] for c in clauses if c["zone"] == "security"} == set(card_ids)
+
+
 def test_full_vb_deck_denominator_counts_are_internally_consistent():
     from pathlib import Path
 

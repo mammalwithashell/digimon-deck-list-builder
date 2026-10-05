@@ -1,4 +1,6 @@
 {
+  "index": 4405,
+  "norm_id": 0.22025,
   "card_id": "EX12-004",
   "card_index": 4,
   "card_name_eng": "Onibimon",
@@ -19,8 +21,8 @@
   ],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "Inherited Effect [Your Turn] This Digimon with the [TB] trait gains ＜Execute＞ (At the end of your turn, this Digimon may attack. At the end of that attack, delete this Digimon. Your opponent's unsuspended Digimon can also be attacked with this effect.)",
-  "inherited_effect_description_eng": "This Digimon with the [TB] trait gains",
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon with the [TB] trait gains ＜Execute＞.",
   "security_effect_description_eng": "",
   "evo_costs": [],
   "xros_req": ""

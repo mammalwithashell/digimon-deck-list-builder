@@ -20,8 +20,8 @@
       "scenario_path": "qa/dcgo-exams/BT24/BT24-088-effect1.yaml",
       "recorded_at": "2026-09-18T07:55:23.045198200+00:00"
     },
-    "BT24-088#effect#2": {
-      "clause_id": "BT24-088#effect#2",
+    "BT24-088#security#0": {
+      "clause_id": "BT24-088#security#0",
       "card_id": "BT24-088",
       "verdict": "confirmed",
       "label": "Security Effect",

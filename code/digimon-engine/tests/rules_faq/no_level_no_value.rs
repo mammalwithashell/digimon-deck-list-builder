@@ -8,8 +8,8 @@
 //! phase? If the Digimon has DP, it can." (General Rules/FAQ.)
 //!
 //! Vehicle: BT23-072 King Drasil_7D6 — the only implemented no-Level Digimon
-//! (Lv '-', DP 9000). NV-1 (no-DP Digimon can't gain DP) is BLOCK-CARD: zero
-//! implemented no-DP Digimon (authoring candidate, tasks.md §4).
+//! (Lv '-', DP 9000). NV-1 (a no-DP Digimon can't gain DP) uses a Lv.2 Digi-Egg:
+//! no Digimon card in the pool prints DP '-'.
 
 #![allow(unused_imports)]
 
@@ -62,22 +62,22 @@ fn nl2_no_level_digimon_with_dp_is_breeding_eligible() {
 
 /// NV-1 — "My Level 2 Digimon has no DP value. Can it gain DP from other
 /// effects? No, even if an effect is applying +X000 DP the Digimon is treated as
-/// having no DP value." (General Rules/FAQ.) Vehicle: BT24-068 DemiDevimon (a
-/// Lv3 Digimon whose printed DP is "-").
+/// having no DP value." (General Rules/FAQ.) Vehicle: BT10-003 Pickmons, a Lv.2
+/// Digi-Egg — the FAQ's own subject; no Digimon card in the pool prints DP "-".
+/// Until 2026-10-03 the vehicle was BT24-068 DemiDevimon, read off a pre-release
+/// cards.json stub with no DP; that card prints 1000.
 #[test]
 fn nv1_no_dp_digimon_cannot_gain_dp() {
     let mut r = DebugRunner::builder()
-        .dsl_card("BT24-068")
-        .expect("BT24-068 (DemiDevimon) in embedded DSL pack")
+        .dsl_card("BT10-003")
+        .expect("BT10-003 (Pickmons) in embedded DSL pack")
         .start();
-    let c = card(&r, "BT24-068");
-    assert!(
-        c.dp.is_none(),
-        "precondition: DemiDevimon has no printed DP value"
-    );
+    let c = card(&r, "BT10-003");
+    assert_eq!(c.level, Some(2), "precondition: a Level 2 Digimon");
+    assert!(c.dp.is_none(), "precondition: Pickmons prints no DP value");
 
     let p = r.turn_player();
-    let h = r.place_on_field(p, "BT24-068", Some(0));
+    let h = r.place_on_field(p, "BT10-003", Some(0));
     assert_eq!(r.effective_dp(h), None, "a no-DP Digimon has no DP value");
 
     // Apply a +3000 DP modifier — the Digimon still has NO DP value.

@@ -38,7 +38,7 @@ card: BT25-019
 name: UltimateBrachiomon
 kind: digimon
 level: 6
-color: [white, black]
+color: [red, black]
 cost: 13
 dp: 13000
 traits: [Cyborg, X Antibody, Titan, TS, Dinosaur]

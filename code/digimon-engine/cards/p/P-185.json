@@ -13,7 +13,8 @@
   "rarity": 5,
   "card_colors": [
     3,
-    0
+    0,
+    1
   ],
   "type_eng": [
     "Dragon Warrior"
@@ -30,6 +31,16 @@
   "evo_costs": [
     {
       "card_color": 3,
+      "level": 5,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 1,
       "level": 5,
       "memory_cost": 4
     }

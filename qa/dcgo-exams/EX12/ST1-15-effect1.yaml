@@ -1,4 +1,4 @@
-# Exam scenario: ST1-15 (Giga Destroyer), clause ST1-15#effect#1 --
+# Exam scenario: ST1-15 (Giga Destroyer), clause ST1-15#security#0 --
 # "[Security] Activate this card's [Main] effect."
 #
 # The printed sentence is ONE clause; the extractor splits it at the
@@ -52,7 +52,7 @@
 # (EX12-020), so DCGO resolves the same answer against its own candidate
 # list rather than against one of our indices.
 card: ST1-15
-clause: ST1-15#effect#1
+clause: ST1-15#security#0
 seed: 424242
 decks:
   p0:

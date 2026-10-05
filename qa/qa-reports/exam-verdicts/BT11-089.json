@@ -11,8 +11,8 @@
       "scenario_path": "qa/dcgo-exams/BT11/BT11-089-effect0.yaml",
       "recorded_at": "2026-08-23T22:11:25.759422900+00:00"
     },
-    "BT11-089#effect#3": {
-      "clause_id": "BT11-089#effect#3",
+    "BT11-089#security#0": {
+      "clause_id": "BT11-089#security#0",
       "card_id": "BT11-089",
       "verdict": "confirmed",
       "label": "Security Effect",

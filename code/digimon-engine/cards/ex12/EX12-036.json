@@ -1,4 +1,6 @@
 {
+  "index": 4437,
+  "norm_id": 0.22185,
   "card_id": "EX12-036",
   "card_index": 36,
   "card_name_eng": "Ryugumon",
@@ -17,7 +19,9 @@
     "Mollusk",
     "Sanmyojin",
     "Tentei Hachibushu",
-    "Shambala"
+    "Shambala",
+    "TB",
+    "Aquatic"
   ],
   "form_eng": [],
   "attribute_eng": [

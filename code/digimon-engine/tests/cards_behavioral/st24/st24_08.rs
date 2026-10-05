@@ -104,7 +104,8 @@ fn st24_08_metadata_and_alt_path() {
     assert_eq!(card.kind, CompiledCardKind::Digimon);
     assert_eq!(card.level, Some(3));
     assert_eq!(card.cost, Some(3));
-    assert_eq!(card.dp, Some(1000));
+    // The card prints 2000 DP (image and official DB); the API and DCGO say 1000.
+    assert_eq!(card.dp, Some(2000));
     assert!(card.traits.contains(&"DATA SQUAD".to_string()));
     let ds = card.alt_paths.iter().any(|p| {
         p.from

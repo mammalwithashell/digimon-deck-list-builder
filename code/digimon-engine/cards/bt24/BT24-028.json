@@ -6,8 +6,8 @@
   "card_name_eng": "Divermon",
   "card_name_jpn": "",
   "card_effect_class_name": "BT24_028",
-  "play_cost": 0,
-  "dp": null,
+  "play_cost": 6,
+  "dp": 6000,
   "level": 5,
   "card_kind": 0,
   "rarity": 2,
@@ -23,9 +23,15 @@
   "attribute_eng": [
     "Data"
   ],
-  "effect_description_eng": "",
-  "inherited_effect_description_eng": "",
+  "effect_description_eng": "[On Play] [When Digivolving] By placing 1 level 5 or lower blue [TS] trait Digimon card from your hand as this Digimon's bottom digivolution card, until your opponent's turn ends, this Digimon can't be deleted in battle and gains ＜Blocker＞.\r\n[Your Turn] When this Digimon unsuspends, it may digivolve into [Neptunemon] in the hand without paying the cost.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may play 1 level 4 or lower blue Digimon card with the [TS] trait from this Digimon's digivolution cards without paying the cost.",
   "security_effect_description_eng": "",
-  "evo_costs": [],
-  "xros_req": ""
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Aqua] or [Sea Animal] in any trait or w/[TS] trait: Cost 3"
 }

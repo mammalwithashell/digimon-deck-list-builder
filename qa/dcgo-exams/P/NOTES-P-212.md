@@ -15,7 +15,7 @@ stage left were audited against `P_212.cs` and re-lowered unchanged on
 | `P-212#effect#0` | `[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.` | `P-212-effect0.yaml` (T5 opens 3 → 4) |
 | `P-212#effect#1` | `[On Play]` (the extractor's timing half; empty text) | `P-212-effect1.yaml` |
 | `P-212#effect#2` | `<Draw 1> and trash 1 card in your hand. If this effect trashed a card with the [Three Musketeers] or [TS] trait, delete 1 of your opponent's level 3 Digimon.` | `P-212-effect2.yaml` (same line; the trashed card is the second Asuna, a [TS] Tamer → the rider deletes Biyomon) |
-| `P-212#effect#3` | `[Security] Play this card without paying the cost.` | `P-212-effect3.yaml` |
+| `P-212#security#0` | `[Security] Play this card without paying the cost.` | `P-212-effect3.yaml` |
 
 `effect#1` / `effect#2` are ONE printed sentence the extractor splits at the
 `<Draw 1>` keyword; the two files run the same line and differ only in

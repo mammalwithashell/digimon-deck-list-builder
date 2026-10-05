@@ -101,7 +101,7 @@ card: EX9-021
 name: "Omnimon Alter-S"
 kind: digimon
 level: 7
-color: [blue, white]
+color: [blue, white, red]
 cost: 15
 dp: 15000
 traits: [Holy Warrior, DM, Ver.1, Ver.2]

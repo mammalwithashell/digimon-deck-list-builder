@@ -13,7 +13,7 @@ with `tm_bt6_105_pool.json` (decks `tm-gewalt`, `quiet-opponent`), authored
 |---|---|---|
 | `BT6-105#effect#0` | `If you have a Digimon with [Three Musketeers] in its type in play, you may use this Option card without meeting its color requirements.` | `BT6-105-effect0.yaml` |
 | `BT6-105#effect#1` | `[Main] Delete all Digimon with play costs of 7 or less.` | `BT6-105-effect1.yaml` |
-| `BT6-105#effect#2` | `[Security] Add this card to its owner's hand.` | `BT6-105-effect2.yaml` |
+| `BT6-105#security#0` | `[Security] Add this card to its owner's hand.` | `BT6-105-effect2.yaml` |
 
 ## Authoring decisions
 

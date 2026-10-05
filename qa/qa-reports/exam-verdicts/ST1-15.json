@@ -11,8 +11,8 @@
       "scenario_path": "qa/dcgo-exams/ST1/ST1-15-effect0.yaml",
       "recorded_at": "2026-08-23T22:14:49.849919200+00:00"
     },
-    "ST1-15#effect#1": {
-      "clause_id": "ST1-15#effect#1",
+    "ST1-15#security#0": {
+      "clause_id": "ST1-15#security#0",
       "card_id": "ST1-15",
       "verdict": "confirmed",
       "label": "Security Effect",
