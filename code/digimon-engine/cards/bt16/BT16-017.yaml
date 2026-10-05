@@ -1,0 +1,62 @@
+# BT16-017 Veemon — blue/red Lv.3, Mini Dragon, Free.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT16-017.md):
+#   [Digivolve] [DemiVeemon]: Cost 0
+#   [Your Turn][Once Per Turn] When one of your other Digimon is played or
+#   digivolves, if it has the [Free] trait or is green, gain 1 memory.
+#   Inherited: [Your Turn] This Digimon gets +2000 DP.
+# Official Q&A: the check reads the Digimon after it digivolves.
+#
+# Digivolve circle: one Lv.2 / cost 1 circle split green/purple (official DB
+# codes 3 = green, 6 = purple; confirmed on an enlarged card face).
+#
+# DCGO BT16_017.cs:
+#   - AddSelfDigivolutionRequirementStaticEffect: top card name contains
+#     "DemiVeemon", cost 0, requirements not ignored.
+#   - OnEnterFieldAnyone, maxCount 1: IsOwnerTurn, the played/digivolved permanent
+#     is on our battle area, is not this permanent, is a Digimon, and its TOP card
+#     is green or has the [Free] trait → AddMemory(1). Mandatory.
+#   - Inherited ChangeSelfDPStaticEffect(+2000) while IsOwnerTurn.
+card: BT16-017
+name: Veemon
+kind: digimon
+level: 3
+color: [blue, red]
+cost: 3
+dp: 2000
+traits: [Mini Dragon]
+form: Rookie
+attribute: Free
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 1
+  - kind: digivolve
+    from: { name_contains: "DemiVeemon" }
+    cost: 0
+
+effects:
+  - when: [on_ally_played, on_digivolve]
+    active_when: { your_turn: true }
+    once_per_turn: true
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_is_source: false
+        - any_of:
+            - event_target_color_any_of: [green]
+            - event_target_trait_has: Free
+    summary: "[Your Turn][OPT] When another of your Digimon is played or digivolves, if it is green or has [Free], gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"
