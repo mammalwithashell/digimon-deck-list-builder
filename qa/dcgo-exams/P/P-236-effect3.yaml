@@ -1,4 +1,4 @@
-# Exam scenario: Glowing Dawn (P-236, green Option), clause P-236#effect#3 --
+# Exam scenario: Glowing Dawn (P-236, green Option), clause P-236#security#0 --
 # "[Security] Place this card in the battle area."
 #
 # P-236 is pinned as P0's TOP security card (stack[9]) and flipped by a P1
@@ -23,7 +23,7 @@
 # PROMPT SHAPE (cards/p/P-236.yaml DCGO crosscheck):
 #   PlaceSelfDelayOptionSecurityEffect -- no selection prompt on either side.
 card: P-236
-clause: P-236#effect#3
+clause: P-236#security#0
 seed: 424242
 decks:
   p0:

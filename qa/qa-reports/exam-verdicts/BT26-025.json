@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T15:01:05.744667+00:00",
+  "clauses": {
+    "BT26-025#effect#0": {
+      "clause_id": "BT26-025#effect#0",
+      "card_id": "BT26-025",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "4118206f5da32cf670da3e20b402bf481416f0e22e690221fb44cf7cdeed4bca",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT26-025-effect0.yaml",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "BT26-025#effect#1": {
+      "clause_id": "BT26-025#effect#1",
+      "card_id": "BT26-025",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "9ad29ae1e711f080768506f827ed5a6caa5d3dd8f2f3ac69fb9187c587b7fc86",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT26-025-effect1.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 3 of 10 ours / 3 dcgo steps)",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "BT26-025#effect#2": {
+      "clause_id": "BT26-025#effect#2",
+      "card_id": "BT26-025",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "4be7a704197434530b82298d6768f4958719a7066333dbd8e1bd38c5911c27c5",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT26-025-effect2.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 2 of 10 ours / 2 dcgo steps)",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "BT26-025#inherited#0": {
+      "clause_id": "BT26-025#inherited#0",
+      "card_id": "BT26-025",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "4a315b6f4b3b3b20cd2691c6c96be1cb1835e5643e733a2f29ba7dc5f56aae28",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT26-025-inherited0.yaml",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    }
+  }
+}

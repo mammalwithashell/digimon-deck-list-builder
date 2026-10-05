@@ -1,5 +1,5 @@
 # Exam scenario: Tomoro Tenma & Kyo Sawashiro (ST23-13), clause
-# ST23-13#effect#2 -- "[Security] Play this card without paying the cost."
+# ST23-13#security#0 -- "[Security] Play this card without paying the cost."
 #
 # PROVISIONAL: the assert block is OUR engine's result, not backfilled from
 # DCGO. It stays unconfirmed until the oracle pass.
@@ -23,7 +23,7 @@
 # (SetIntSelection) is P0's decision on P1's turn. P1's hand keeps Digimon,
 # so DCGO's CanSelect() stays true for the trailing pass.
 card: ST23-13
-clause: ST23-13#effect#2
+clause: ST23-13#security#0
 seed: 424242
 decks:
   p0:

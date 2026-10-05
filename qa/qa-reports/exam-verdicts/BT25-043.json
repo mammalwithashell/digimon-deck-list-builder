@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T15:01:05.744667+00:00",
+  "clauses": {
+    "BT25-043#effect#0": {
+      "clause_id": "BT25-043#effect#0",
+      "card_id": "BT25-043",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "6eaaf96d3ff8dffc07658072ad74b5b22cdca0eb60dd8f3c332eb53828be8cb2",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT25-043-effect0.yaml",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "BT25-043#effect#1": {
+      "clause_id": "BT25-043#effect#1",
+      "card_id": "BT25-043",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT25-043-effect1.yaml",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "BT25-043#effect#2": {
+      "clause_id": "BT25-043#effect#2",
+      "card_id": "BT25-043",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "4744f0cc94fdefae680275bdd103ac6f7895cee07aad024721b2186c3053bfd8",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT25-043-effect2.yaml",
+      "reason": "DIVERGED at step 11 (compared 19 of 23 ours / 21 dcgo steps (4 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "BT25-043#effect#3": {
+      "clause_id": "BT25-043#effect#3",
+      "card_id": "BT25-043",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "5f8643c369b3c69e64c454c43d2ed01d9f39d8d151ddaea1518f57298541cdd7",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT25-043-effect3.yaml",
+      "reason": "DIVERGED at step 15 (compared 13 of 16 ours / 15 dcgo steps (3 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "BT25-043#effect#4": {
+      "clause_id": "BT25-043#effect#4",
+      "card_id": "BT25-043",
+      "verdict": "confirmed",
+      "label": "DUAL Effect",
+      "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT25-043-effect4.yaml",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "BT25-043#effect#5": {
+      "clause_id": "BT25-043#effect#5",
+      "card_id": "BT25-043",
+      "verdict": "confirmed",
+      "label": "DUAL Effect",
+      "text_sha256": "b127b32421a87bf5d40dc866015a138210a7681e89ed2ea9f264a6ddb3d2973f",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT25-043-effect5.yaml",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "BT25-043#effect#6": {
+      "clause_id": "BT25-043#effect#6",
+      "card_id": "BT25-043",
+      "verdict": "confirmed",
+      "label": "DUAL Rule",
+      "text_sha256": "f47d9bc85635eee2013e33028330c63f170fed1f2762dc0a1bddfe1be343ebe8",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT25-043-effect6.yaml",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T15:01:50.218127800+00:00",
+  "clauses": {
+    "P-236#effect#0": {
+      "clause_id": "P-236#effect#0",
+      "card_id": "P-236",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
+      "scenario_path": "D:/card-loop-iter0/gd\\P-236-effect0.yaml",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "P-236#effect#1": {
+      "clause_id": "P-236#effect#1",
+      "card_id": "P-236",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "a82aef0739621eb1a3e03ea8d0564db57025818c9e0c1100a5d49fb69e0258e0",
+      "scenario_path": "D:/card-loop-iter0/gd\\P-236-effect1.yaml",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "P-236#effect#2": {
+      "clause_id": "P-236#effect#2",
+      "card_id": "P-236",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "ba4bbc30484f190d76f26322b22415110ad2e23d6daf36c54ab053d2eb4dddcf",
+      "scenario_path": "D:/card-loop-iter0/gd\\P-236-effect2.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 14 of 16 ours / 14 dcgo steps)",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "P-236#security#0": {
+      "clause_id": "P-236#security#0",
+      "card_id": "P-236",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "6931865ac48e8e08cdc6db2cf42272e7e1c5a18de272c3544f34aaf5b3c94f55",
+      "scenario_path": "D:/card-loop-iter0/gd-fix\\P-236-effect3.yaml",
+      "recorded_at": "2026-10-05T15:01:50.218127800+00:00"
+    }
+  }
+}

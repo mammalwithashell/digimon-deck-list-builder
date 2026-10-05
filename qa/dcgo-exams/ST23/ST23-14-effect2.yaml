@@ -1,5 +1,5 @@
 # Exam scenario: Reina Sakuya & Makoto Kuonji (ST23-14, purple/black
-# Tamer, cost 4), clause ST23-14#effect#2 -- "[Security] Play this card
+# Tamer, cost 4), clause ST23-14#security#0 -- "[Security] Play this card
 # without paying the cost."
 #
 # ST23-14 is pinned as P0's TOP security card (stack[9]) and flipped by a P1
@@ -27,7 +27,7 @@
 #   PlaySelfTamerSecurityEffect -- no prompt for the play itself; the
 #   follow-on [On Play] is ST23_14.cs' internal Yes/No (as ST23-13).
 card: ST23-14
-clause: ST23-14#effect#2
+clause: ST23-14#security#0
 seed: 424242
 decks:
   p0:

@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T15:01:50.218127800+00:00",
+  "clauses": {
+    "ST23-14#effect#0": {
+      "clause_id": "ST23-14#effect#0",
+      "card_id": "ST23-14",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "908aba9658cb19bfbdb39b7ba13ba7e86f3593cde2ff5614af3478748498892f",
+      "scenario_path": "D:/card-loop-iter0/gd\\ST23-14-effect0.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 2 of 9 ours / 2 dcgo steps)",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "ST23-14#effect#1": {
+      "clause_id": "ST23-14#effect#1",
+      "card_id": "ST23-14",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "072bb0e31672bafaa217f9f3a3b5353e39ba06aefe1be141f30d29cdd3768791",
+      "scenario_path": "D:/card-loop-iter0/gd\\ST23-14-effect1.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 2 of 14 ours / 2 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "ST23-14#security#0": {
+      "clause_id": "ST23-14#security#0",
+      "card_id": "ST23-14",
+      "verdict": "diverged",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "D:/card-loop-iter0/gd-fix\\ST23-14-effect2.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 9 of 11 ours / 9 dcgo steps)",
+      "recorded_at": "2026-10-05T15:01:50.218127800+00:00"
+    }
+  }
+}

@@ -1,4 +1,4 @@
-# Exam scenario: Tomoro Tenma (BT25-090), clause BT25-090#effect#3 --
+# Exam scenario: Tomoro Tenma (BT25-090), clause BT25-090#security#0 --
 # "[Security] Play this card without paying the cost."
 #
 # PROVISIONAL: the assert block is OUR engine's result, not backfilled from
@@ -21,7 +21,7 @@
 # PROMPT SHAPE (BT25-090.yaml DCGO crosscheck): SecuritySkill
 # PlaySelfTamerSecurityEffect -- no prompt on either side.
 card: BT25-090
-clause: BT25-090#effect#3
+clause: BT25-090#security#0
 seed: 424242
 decks:
   p0:

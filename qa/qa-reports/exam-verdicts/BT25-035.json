@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T15:01:05.744667+00:00",
+  "clauses": {
+    "BT25-035#effect#0": {
+      "clause_id": "BT25-035#effect#0",
+      "card_id": "BT25-035",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "877731aa0d6e85e4d6cfc00284dda7d4e8e7f7a79b71b564d5da0d8d7c6f2419",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT25-035-effect0.yaml",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "BT25-035#effect#1": {
+      "clause_id": "BT25-035#effect#1",
+      "card_id": "BT25-035",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "d23a1a3a56737928d8331388e923995e55ee3868b9ee138cf10e8884618ea69d",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT25-035-effect1.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 3 of 22 ours / 3 dcgo steps (3 sim-only row(s) with no DCGO prompt))",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    },
+    "BT25-035#inherited#0": {
+      "clause_id": "BT25-035#inherited#0",
+      "card_id": "BT25-035",
+      "verdict": "diverged",
+      "label": "Inherited Effect",
+      "text_sha256": "a21b668cef733b509ed7fd63595f875b81a6eb29bbf53cf047e8a1d26e2a7558",
+      "scenario_path": "D:/card-loop-iter0/gd\\BT25-035-inherited0.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 7 of 11 ours / 7 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
+      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+    }
+  }
+}
