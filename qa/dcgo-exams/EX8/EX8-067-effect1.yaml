@@ -122,17 +122,10 @@ steps:
   - actor: 0
     do: { select: { yes: true, dcgo_only: true } }
     expect: { prompt: OptionalSkill }
-  # KNOWN TOOLING BLOCKER -- this line does NOT measure the clause (verdict:
-  # unmeasured). The gate row below (`targets: [own.field.2]`) is followed by
-  # resolve_next's trailing PASS the instant the NEXT prompt is our
-  # CountCappedMultiSelect with PASS legal (selection_resolve.rs:546-552), which
-  # silently declines the "up to 2" trash pick: our side places 0 cards and the
-  # oracle diff reports `p0.field[1].sources ours=[EX11-038]
-  # dcgo=[BT21-055,EX11-038,EX8-047]`. That is the tool eating the prompt, NOT our
-  # engine (the sim reports "our engine auto-resolved" only because the PASS already
-  # ran). `cards: [EX8-067, ...]` cannot name the gate (card picks do not resolve
-  # against OwnField prompts) and a bool/targets/decline payload all hit the same
-  # trailing PASS, so no row shape reaches the pick.
+  # Gate pick on our side only (DCGO answered its OptionalSkill above). Since the
+  # trailing-PASS guard (190cf276c + a6a7587d3) the fresh "up to 2" CountCappedMultiSelect
+  # that this pick installs is no longer declined by the driver, so the next row places
+  # both trash cards. Oracle re-diff 2026-10-04: CLEAN, verdict confirmed.
   - actor: 0
     do: { select: { targets: [own.field.2], sim_only: true } }
   - actor: 0

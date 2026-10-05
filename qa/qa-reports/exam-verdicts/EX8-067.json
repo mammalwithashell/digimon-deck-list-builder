@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-04T13:38:36.520893800+00:00",
+  "last_updated": "2026-10-05T03:33:29.332605+00:00",
   "clauses": {
     "EX8-067#effect#0": {
       "clause_id": "EX8-067#effect#0",
@@ -10,6 +10,15 @@
       "text_sha256": "319624210e2fd10fc6781bcaf75494dee931c5e0c3a25e3b14dea109f1bd1ebc",
       "scenario_path": "qa/dcgo-exams/EX8/EX8-067-effect0.yaml",
       "recorded_at": "2026-10-04T13:38:35.940268800+00:00"
+    },
+    "EX8-067#effect#1": {
+      "clause_id": "EX8-067#effect#1",
+      "card_id": "EX8-067",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "cbb97844c9c2f8803bfd8f8313e02585e3211c412efa7a82ebeea47469db32c8",
+      "scenario_path": "qa/dcgo-exams/EX8/EX8-067-effect1.yaml",
+      "recorded_at": "2026-10-05T03:33:29.332605+00:00"
     },
     "EX8-067#effect#2": {
       "clause_id": "EX8-067#effect#2",

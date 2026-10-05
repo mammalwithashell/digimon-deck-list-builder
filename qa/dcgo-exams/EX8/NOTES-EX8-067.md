@@ -73,3 +73,11 @@ No oracle job was emitted: the diff would only re-report the tool declining our 
 row is already `cards: [EX8-047, BT21-055]`, so the brief's scenario fix does not apply.
 Fix to unblock (code, out of scope for the acceptance task): in `resolve_next`, require the resume-frame
 branch to also see `picked > 0` (or no fresh-prompt signal) before spending the trailing PASS.
+
+## 2026-10-04 (later) -- RESOLVED: effect#1 confirmed (supersedes the "blocked" entry above)
+After a6a7587d3 (trailing-PASS guard holds under a MultiPickStep frame) the sim-only line completes with no
+"DRIVER sent a trailing PASS" note. One oracle round-trip (job `exam-EX8-067-effect1`, recording
+`20261005T033256Z_eaf351960e3940e8a439a576aa8afb02`): `CLEAN (compared 15 of 21 ours / 20 dcgo steps ...)`
+-> verdict `confirmed` recorded for `EX8-067#effect#1`. Backfill skipped by design (6 sim-only rows, so the
+oracle observed only some rows). The scenario's trash-pick row was already `cards: [EX8-047, BT21-055]`; only
+its stale "KNOWN TOOLING BLOCKER" comment was replaced. EX8-067 is now 3 clauses: 3 confirmed.
