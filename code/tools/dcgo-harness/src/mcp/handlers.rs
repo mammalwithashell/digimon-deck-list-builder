@@ -595,14 +595,16 @@ pub fn node_health(
     params: &serde_json::Value,
     root: Option<&Path>,
 ) -> Result<serde_json::Value, String> {
-    let root = root
+    let root_buf = root
         .map(|r| r.to_path_buf())
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
+        .or_else(crate::node::default_harness_root)
+        .ok_or("no harness root: pass --root to the MCP or set DCGO_HARNESS_ROOT")?;
+    let root = root_buf.as_path();
     let build = tools::opt_str_arg(params, "build").map(std::path::PathBuf::from);
 
     // node::health never fails -- a node that cannot answer must produce a
     // readable report, not an error string.
-    let h = crate::node::health(&root, build.as_deref());
+    let h = crate::node::health(root, build.as_deref());
     Ok(serde_json::json!({
         "go": h.go,
         "checks": h.checks.iter().map(|c| serde_json::json!({
