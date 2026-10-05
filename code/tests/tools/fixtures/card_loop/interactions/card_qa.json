@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "source": "fixture: shape of tools/scrape_official_qa.py output (rulings are illustrative)",
+  "card_count": 4,
+  "qa_count": 4,
+  "cards": {
+    "BT21-029": ["Q2003"],
+    "BT7-056": ["Q999", "Q2001", "Q2002"],
+    "EX4-030": ["Q2002"],
+    "ST1-02": []
+  },
+  "qa": {
+    "Q999": {
+      "q_id": "Q999",
+      "date": "2024-03-28",
+      "question": "Does this card's inherited effect activate when an effect places a card under this Digimon during my opponent's turn?",
+      "answer": "No, it doesn't.",
+      "card_ids": ["BT7-056"]
+    },
+    "Q2001": {
+      "q_id": "Q2001",
+      "date": "2024-03-28",
+      "question": "Can I choose to add no cards to my hand with this card's [On Play] effect?",
+      "answer": "No. If there is a card you can add, you must add it.",
+      "card_ids": ["BT7-056"]
+    },
+    "Q2002": {
+      "q_id": "Q2002",
+      "date": "2024-06-01",
+      "question": "Is this card treated as having the [X Antibody] trait while in the trash?",
+      "answer": "Yes, it is.",
+      "card_ids": ["BT7-056", "EX4-030"]
+    },
+    "Q2003": {
+      "q_id": "Q2003",
+      "date": "2025-01-10",
+      "question": "If my opponent's Digimon is deleted while I have 2 copies of this Digimon in play, do both effects activate?",
+      "answer": "Yes. Each copy's effect activates once.",
+      "card_ids": ["BT21-029"]
+    }
+  },
+  "failed": [],
+  "conflicts": []
+}

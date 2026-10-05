@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "last_updated": "2026-10-02T00:00:00Z",
+  "clauses": {},
+  "interactions": {
+    "qa:Q2002": {
+      "interaction_id": "qa:Q2002",
+      "card_ids": [
+        "BT7-056",
+        "EX4-030"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "ruling-sha",
+      "scenario_path": "qa/dcgo-exams/BT7/BT7-056-qa-Q2002.yaml",
+      "recorded_at": "2026-10-02T00:00:00Z",
+      "produced_by": "att-0001"
+    }
+  }
+}

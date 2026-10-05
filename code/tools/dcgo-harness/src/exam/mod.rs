@@ -58,7 +58,7 @@ pub mod verdict;
 pub mod test_support;
 
 pub use adapter::ScenarioAdapter;
-pub use assertions::{check_assertions, ASSERTION_KEYS};
+pub use assertions::{check_assertions, check_ruling, ASSERTION_KEYS};
 pub use backfill::{backfill, backfill_from_diff, GENERATED_MARKER};
 pub use dcgo_pool::has_dcgo_script;
 pub use deckbook::{ordered_deck, DeckBook, DeckEntry};
@@ -74,7 +74,9 @@ pub use projection::{
 };
 pub use run::{lower_and_run, run_one, LoweredRun, DEFAULT_CARDS_JSON, DEFAULT_DECK_POOL};
 pub use scenario::{
-    Assertion, Expect, Scenario, ScenarioDecks, ScenarioSeat, ScenarioStep, SelectPayload,
-    StepAction, STEP_VERBS,
+    Assertion, Expect, ExpectRuling, Interaction, InteractionKind, InteractionSource, Scenario,
+    ScenarioDecks, ScenarioSeat, ScenarioStep, SelectPayload, StepAction, STEP_VERBS,
 };
-pub use verdict::{ClauseVerdict, Verdict, VerdictStore, VerdictSummary};
+pub use verdict::{
+    ClauseVerdict, InteractionBook, InteractionVerdict, Verdict, VerdictStore, VerdictSummary,
+};

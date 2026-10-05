@@ -8,7 +8,7 @@
 
 use crate::exam::backfill::GENERATED_MARKER;
 use crate::exam::projection::StateProjection;
-use crate::exam::scenario::Scenario;
+use crate::exam::scenario::{Assertion, Scenario};
 
 pub const ASSERTION_KEYS: &[&str] = &[
     "turn",
@@ -28,10 +28,27 @@ pub const ASSERTION_KEYS: &[&str] = &[
 /// skip: silently ignoring it would let a typo'd assertion report a pass while
 /// checking nothing.
 pub fn check_assertions(s: &Scenario, projections: &[StateProjection]) -> (u32, Vec<String>) {
+    check_rows(&s.assertions, projections)
+}
+
+/// Check a Q&A scenario's `expect_ruling:` -- the publisher's answer -- against
+/// the projected trace with the SAME checker `assert:` uses, so "ours agrees
+/// with the ruling" (the third leg of design D7) means exactly what an
+/// assertion pass means. `None` when the scenario carries no ruling.
+pub fn check_ruling(
+    s: &Scenario,
+    projections: &[StateProjection],
+) -> Option<(u32, Vec<String>)> {
+    s.expect_ruling
+        .as_ref()
+        .map(|r| check_rows(&r.assertions, projections))
+}
+
+fn check_rows(rows: &[Assertion], projections: &[StateProjection]) -> (u32, Vec<String>) {
     let mut checked = 0u32;
     let mut failures = Vec::new();
 
-    for a in &s.assertions {
+    for a in rows {
         let Some(p) = projections.iter().find(|p| p.step == a.at) else {
             failures.push(format!(
                 "at {}: no projected state for that step (the trace has {:?})",
@@ -127,4 +144,59 @@ fn render_value(v: &serde_yml::Value) -> String {
         .unwrap_or_else(|_| format!("{v:?}"))
         .trim_end()
         .replace('\n', " ")
+}
+
+#[cfg(test)]
+mod ruling_tests {
+    use super::*;
+    use crate::exam::projection::SeatProjection;
+
+    fn seat() -> SeatProjection {
+        SeatProjection { security: 5, hand: vec![], trash: vec![], field: vec![] }
+    }
+
+    fn trace() -> Vec<StateProjection> {
+        (0..3)
+            .map(|step| StateProjection {
+                step,
+                turn: 1,
+                phase: "main".to_string(),
+                memory: i64::from(step),
+                p0: seat(),
+                p1: seat(),
+            })
+            .collect()
+    }
+
+    fn scenario(extra: &str) -> Scenario {
+        Scenario::from_yaml(&format!(
+            "card: BT7-056\nclause: BT7-056#effect#0\nseed: 1\ndecks:\n  p0: {{ rest: x }}\n  p1: {{ rest: x }}\nsteps:\n  - actor: 0\n    do: {{ pass: {{}} }}\n  - actor: 1\n    do: {{ pass: {{}} }}\n{extra}"
+        ))
+        .unwrap()
+    }
+
+    const RULING: &str = "interaction: { id: \"qa:Q1601\", source: qa, kind: positive }\nexpect_ruling:\n  q_id: Q1601\n  assert:\n    - at: 2\n      that: { p0.memory: MEM }\n";
+
+    #[test]
+    fn no_ruling_means_no_third_leg() {
+        assert!(check_ruling(&scenario(""), &trace()).is_none());
+    }
+
+    #[test]
+    fn the_ruling_is_checked_with_the_assert_checker() {
+        let (checked, failures) =
+            check_ruling(&scenario(&RULING.replace("MEM", "2")), &trace()).unwrap();
+        assert_eq!((checked, failures.len()), (1, 0));
+
+        let (_, failures) =
+            check_ruling(&scenario(&RULING.replace("MEM", "5")), &trace()).unwrap();
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("p0.memory"), "{failures:?}");
+    }
+
+    #[test]
+    fn the_ruling_does_not_leak_into_the_assert_block() {
+        let s = scenario(&RULING.replace("MEM", "5"));
+        assert_eq!(check_assertions(&s, &trace()), (0, vec![]));
+    }
 }
