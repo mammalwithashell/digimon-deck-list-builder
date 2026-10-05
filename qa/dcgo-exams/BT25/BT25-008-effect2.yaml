@@ -1,0 +1,69 @@
+# Exam scenario: Coronamon (BT25-008), clause BT25-008#effect#2 -- the
+# [On Play] timing + body of "[When Moving] [On Play] By trashing up to 2
+# [Iliad] or [TS] trait cards from your hand, <Draw 1> for each card trashed."
+# (#effect#1 = the [When Moving] marker, BT25-008-effect1.yaml, which trashes
+#  the MAX of 2; this line trashes ONE and stops -- the "up to" branch.)
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`).
+#
+# THE LINE:
+#   T1 (P0, 0): pass breeding; hard-play Coronamon (3 -> memory -3). THE
+#      CLAUSE: trash Hyokomon BT26-009 ([TS]) -> <Draw 1> (stack[10]
+#      BT26-085); decline the 2nd trash although Aegiomon BT24-034 ([TS]) is
+#      still eligible. Memory -3 -> P1's turn.
+#
+# WITNESS (at 4 = P1's first decision vs at 2 = before the pick): hand loses
+# BT26-009 and gains BT26-085 (4 -> 4); trash = [BT26-009] only (Aegiomon
+# stayed in hand); Coronamon on the field; memory -3 (P1's turn).
+#
+# PROMPT SHAPE: DCGO = ONE SelectHandEffect (maxCount 2, canNoSelect,
+# canEndNotMax; ActivateClassesForSharedEffects optional:false -> no
+# OptionalSkill) answered with [BT26-009] and ended short. Ours = two
+# sequential optional single picks: the first is SHARED, the second (declined)
+# is sim_only -- the same cardinality gap as BT25-008-effect1.yaml.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT25-008
+clause: BT25-008#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-008, BT26-009, BT24-034, BT8-097, BT26-087,
+            BT26-092, BT26-092, BT26-087, BT26-078, BT26-073,
+            BT26-085, BT26-060]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-008, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-009] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 2
+    that:
+      turn: 1
+      p0.memory: -3
+      p0.hand: [BT24-034, BT26-009, BT26-087, BT8-097]
+      p0.trash: []
+  - at: 4
+    that:
+      turn: 2
+      p0.memory: -3
+      p0.hand: [BT24-034, BT26-085, BT26-087, BT8-097]
+      p0.trash: [BT26-009]
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }

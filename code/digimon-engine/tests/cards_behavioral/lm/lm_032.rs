@@ -818,47 +818,62 @@ fn lm_032_delay_body_play_from_trash_only_when_no_field_digimon() {
 // Section 4 — Clause C: [Security] (Inherited)
 // ===========================================================================
 
-/// Security clause fires without panic when the engine triggers it with empty
-/// trash (the optional play selection has no eligible targets).
+/// LM-032's [Security] clause is active only while the card is revealed from
+/// its owner's security stack. Sitting in the battle area (where its own
+/// effects place it), it stays dormant when its owner's security is checked
+/// by a REAL attack — even with an eligible small purple Digimon in the trash.
 #[test]
-fn lm_032_security_clause_no_panic_with_empty_trash() {
+fn lm_032_security_clause_dormant_in_battle_area() {
+    let mut attacker = make_filler("LM-032-DORMANT-ATK");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.dp = Some(6000);
+
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("LM-032 YAML parses")
+        .add_card(make_small_purple_digimon("LM032-DORMANT-PURPLE"))
+        .add_card(attacker)
         .add_card(make_filler("FILL"))
         .memory(10)
         .deck(0, &["FILL"; 5])
-        .deck(1, &["FILL"; 5])
+        .deck(1, &["LM032-DORMANT-PURPLE"])
+        .security(1, &["FILL"])
         .start();
 
-    let field_handle = runner.place_on_field(0, "LM-032", Some(0));
+    let trash_seed = runner.game.players[1].deck.pop().expect("seed in deck");
+    runner.game.players[1].trash.push(trash_seed);
+    runner.place_on_field(1, "LM-032", Some(0));
+    let attacker = runner.place_on_field(0, "LM-032-DORMANT-ATK", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let _ = runner.attack_player(attacker, 1, false);
+
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "the filler security card was checked"
     );
-    runner.game.drain_effect_queue();
-
-    // Drain any pending selections.
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 20 {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        runner.game.resolve_selection(player, action).ok();
-        runner.game.drain_effect_queue();
-        steps += 1;
-    }
-    // No panic is the primary assertion.
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "the battle-area LM-032 must not offer its [Security] trash play"
+    );
+    let ids: Vec<String> = runner.game.players[1]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        ids,
+        vec!["LM-032".to_string()],
+        "nothing played; LM-032 stays on the field"
+    );
+    assert_eq!(runner.hand_size(1), 0, "LM-032 is not added to the hand");
+    assert!(
+        runner.game.players[1]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "LM032-DORMANT-PURPLE"),
+        "the eligible Digimon stays in the trash"
+    );
 }
 
 /// When the defender's trash has a small purple Digimon, a real attack on the

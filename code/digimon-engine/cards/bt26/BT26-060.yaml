@@ -19,7 +19,9 @@
 # ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
 # Alt-digivolve: level 6 + TopCard.HasText("Chronomon"), cost 5; TopCard
 #   ContainsCardName("Giant Slayer"), cost 5.
-# Security A. +1 / Reboot / Blocker → aura security_attack + grant_keyword ×2.
+# Security A. +1 / Reboot / Blocker → grant_keyword ×3 (SecurityAttackPlus is a
+#   grant, not a self `security_attack` aura — the aura double-counted the
+#   printed keyword, G-ENGINE-SECURITY-ATTACK-AURA-PLUS-FACE-DOUBLE-COUNT).
 # Succession: cardCondition HasLevel && Level == 6 && ContainsCardName
 #   ("Chronomon") → `kind: succession` (G-ENGINE-SUCCESSION-KEYWORD).
 # OP / WD (not optional; needs an opponent Digimon): mandatory pick of min(3, n)
@@ -61,9 +63,9 @@ alt_paths:
     cost: 5
 
 effects:
-  - kind: aura
-    target: {}
-    security_attack: 1
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
     summary: "<Security A. +1>"
   - kind: grant_keyword
     keyword: Reboot

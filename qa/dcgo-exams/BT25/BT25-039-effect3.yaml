@@ -1,0 +1,110 @@
+# Exam scenario: Sirenmon (BT25-039), clause BT25-039#effect#3 --
+# "[On Deletion] You may place this card face up as the bottom security card."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon`
+# vs `tm-quiet-red`). No variant.
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# SAME LINE AS BT25-039-effect2.yaml up to the deletion: Sirenmon's own
+# #effect#2 protection is what deletes it (P1's Gaia Force security effect
+# targets Coronamon; P0 pays by deleting Sirenmon).
+#
+# THE LINE:
+#   T1 (P0, 0): hard-play Sirenmon (6) -> -6.
+#   T2 (P1, 6): all-pass -> P0 3.
+#   T3 (P0, 3): Coronamon (3 -> 0), decline its [On Play]. Sirenmon attacks;
+#      Gaia Force (P1 stack[9]) -> P1 targets Coronamon -> P0 accepts the
+#      #effect#2 replacement -> Sirenmon deleted (post-trash, rule 25).
+#      THE CLAUSE: accept the [On Deletion] -> Sirenmon leaves the trash and
+#      becomes P0's face-up bottom security card (5 -> 6). Pass.
+#
+# WITNESS: at 10 (before the answer) Sirenmon in P0's trash, security 5; at
+# 11 trash empty, security 6. (Face-up-ness and the BOTTOM position are not
+# in the state projection; BT25-039-effect1.yaml leans on the face-up half --
+# our engine only fires a {Security} effect from a FACE-UP card, and the
+# Sirenmon placed here does fire at the end of that turn there.)
+#
+# PROMPT SHAPE: as BT25-039-effect2.yaml; the [On Deletion] is ours
+# OptionalSkill gate vs DCGO OnDeletionClass optional:true -> OptionalSkill
+# (additionalActivateCondition Owner.CanAddSecurity: 5 < max, true).
+card: BT25-039
+clause: BT25-039#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-039, BT25-008, BT8-097, BT24-083, BT26-088,     # hand
+            BT24-102, BT24-102, BT24-102, BT24-102, BT26-092,    # security (never flipped)
+            BT26-092]                                            # T3 draw
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,            # hand
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-16,          # security; [9] = Gaia Force (top)
+            ST1-02, ST1-04]                                      # T2 / T4 draws
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): hard-play Sirenmon (0 -> -6).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-039, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 6): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Coronamon (3 -> 0), decline its [On Play].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-008, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # Sirenmon attacks; Gaia Force flips.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P1's Gaia Force: delete Coronamon (P0 slot 1).
+  - actor: 1
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Sirenmon's #effect#2 protection: delete Sirenmon so Coronamon doesn't
+  # leave -- this is what deletes the carrier.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE: Sirenmon's [On Deletion] -- accept; it goes face up to the
+  # BOTTOM of P0's security.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 10
+    that:
+      p0.security: 5
+      p0.trash: [BT25-039]
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
+  - at: 11
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.security: 6
+      p0.trash: []
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
+      p1.security: 4
+      p1.trash: [ST1-16]

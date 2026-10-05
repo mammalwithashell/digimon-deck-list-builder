@@ -207,8 +207,8 @@ traits: [Dragonkin]
 alt_paths:
   - kind: dna_digivolve
     materials:
-      - { level_eq: 4, color: red }
-      - { level_eq: 4, color: purple }
+      - { level_eq: 4, color_is: red }
+      - { level_eq: 4, color_is: purple }
     cost: 0
 effects: []
 "#;

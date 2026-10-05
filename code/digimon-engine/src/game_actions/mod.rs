@@ -1008,6 +1008,21 @@ impl Game {
         let use_cost = self.option_use_cost(card, player_id);
         let memory_min = self.rules.memory_range.0;
         let mut modes = classify_option_modes(&effects);
+        // `play_option_core` charges the use cost net of the `OptionUse`
+        // before-pay reducers it offers (Standard / Delay / Training only —
+        // a Link play pays the flat link cost) after the
+        // `BeforePayCostObserve` memory gains, so an Option whose cost fits
+        // the -10 floor only after them is usable (declare-then-pay, rule
+        // 1-3-11-1). Previewed lazily: only when a mode is otherwise
+        // unaffordable. G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION
+        // follow-up (2).
+        let cost_target = CostTargetContext {
+            card: card.handle(),
+            from_hand: matches!(source, OptionSource::Hand(_)),
+            is_digivolve: false,
+            target_permanents: [None, None],
+        };
+        let mut use_reduction: Option<i32> = None;
         modes.retain(|mode| {
             let cost = match mode {
                 OptionPlayMode::Link { cost } => (*cost as i32
@@ -1015,7 +1030,26 @@ impl Game {
                 .max(0) as i16,
                 _ => use_cost as i16,
             };
-            (self.memory - cost) >= memory_min
+            if (self.memory - cost) >= memory_min {
+                return true;
+            }
+            let reduction = if mode.is_link() {
+                0
+            } else {
+                *use_reduction.get_or_insert_with(|| {
+                    self.preview_before_pay_cost_reduction(
+                        player_id,
+                        cost_target,
+                        CostReductionKind::OptionUse,
+                    )
+                })
+            };
+            self.affordable_after_before_pay_effects(
+                player_id,
+                cost_target,
+                i32::from(cost),
+                reduction,
+            )
         });
         if modes.iter().any(|m| m.is_link())
             && self

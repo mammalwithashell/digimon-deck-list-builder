@@ -80,17 +80,31 @@ fn bt26_080_metadata_and_alt_path() {
 fn bt26_080_security_attack_plus_one() {
     let mut r = setup();
     let b = r.place_on_field(0, CARD_ID, Some(0));
-    let _ = b;
-    let c = r.compiled_card(CARD_ID).unwrap();
+    let c = r.compiled_card(CARD_ID).unwrap().clone();
+    // `grant_keyword: SecurityAttackPlus`, not a self `security_attack` aura
+    // (the aura double-counted the printed keyword in real-text games —
+    // G-ENGINE-SECURITY-ATTACK-AURA-PLUS-FACE-DOUBLE-COUNT).
     assert!(c.effects.iter().any(|e| matches!(
         e,
         digimon_dsl::compiled::CompiledClause::Declarative(
+            digimon_dsl::compiled::CompiledDeclarativeClause::GrantKeyword {
+                keyword,
+                value: Some(1),
+                ..
+            }
+        ) if keyword == "SecurityAttackPlus"
+    )));
+    assert!(!c.effects.iter().any(|e| matches!(
+        e,
+        digimon_dsl::compiled::CompiledClause::Declarative(
             digimon_dsl::compiled::CompiledDeclarativeClause::Aura {
-                security_attack: Some(1),
+                security_attack: Some(_),
                 ..
             }
         )
     )));
+    r.game.tick_declarative_effects();
+    assert_eq!(r.game.effective_security_strike(b), 2);
 }
 
 #[test]

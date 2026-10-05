@@ -152,7 +152,25 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     let cast_time_reduction =
                         game.cast_time_assembly_play_reduction_for_hand_card(player_id, i) as i16;
                     let cost = (printed - assembly_reduction - cast_time_reduction).max(0);
-                    if (game.memory - cost) < game.rules.memory_range.0 {
+                    // `before_pay_cost` reducers (the card's own
+                    // `when_playing_this` reduction — BT24-051 Merukimon —
+                    // field-granted ones such as BT26-088 Hiroko's, and paid
+                    // ones whose cost is payable now: BT25-088's face-down
+                    // trash, BT18-073's delete, BT23-057's trash return, …)
+                    // lower the cost the payment chain charges, and
+                    // `BeforePayCostObserve` "gain N memory" observers raise
+                    // the gauge before it is paid, so both participate in
+                    // declare-then-pay legality. Previewed only when the play
+                    // is otherwise unaffordable (the common case pays nothing
+                    // for the scan).
+                    // G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION.
+                    if (game.memory - cost) < game.rules.memory_range.0
+                        && !game.hand_play_affordable_after_before_pay_effects(
+                            player_id,
+                            i,
+                            i32::from(cost),
+                        )
+                    {
                         continue;
                     }
                     if me.battle_area.len() >= game.rules.field_slots as usize {

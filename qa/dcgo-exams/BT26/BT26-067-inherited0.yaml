@@ -1,0 +1,107 @@
+# Exam scenario: Wizardmon (BT26-067), clause BT26-067#inherited#0 --
+# Inherited "<Retaliation> (When only this Digimon is deleted in battle,
+#  delete the Digimon it battled.)"
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container.
+#
+# THE LINE:
+#   T1 (P0, 0): pass breeding; play Wizardmon (4: 0 -> -4); [On Play] draw
+#      stack[10], trash BT26-088.
+#   T2 (P1, 4): pass breeding; play ST1-10 (Lv.6 12000, cost 10: 4 -> -6).
+#   T3 (P0, 6): digivolve Wizardmon -> BT25-039 (Yellow/Green Lv.5 6000; only
+#      the Lv.4 w/[TS] route applies to a purple/red Lv.4: 6 -> 3); attack
+#      security with it (Wizardmon in play since T1) -- ST1-02 (3000) flips
+#      and loses; P1 security 5 -> 4. Pass (BT25-039 now SUSPENDED).
+#   T4 (P1): pass breeding; ST1-10 (12000) attacks the suspended BT25-039
+#      (6000). Only BT25-039 is deleted in battle -> THE CLAUSE (inherited from
+#      Wizardmon): Retaliation deletes ST1-10. BT25-039's own [On Deletion]
+#      (may place itself as bottom security) triggers simultaneously -> P0
+#      orders: Retaliation first; then decline the [On Deletion].
+#
+# WITNESS: at 10 (before the attack) ST1-10 on P1's field; at 12 (after the
+# Retaliation resolves) P1 field empty, ST1-10 in P1 trash; at 13 BT25-039 +
+# Wizardmon in P0 trash (the [On Deletion] declined).
+#
+# PROMPT SHAPE: trigger order = ours TriggerOrder over [BT25-039 (On
+# Deletion), BT26-067 <Retaliation>] -> DCGO MultipleSkills, answered with
+# `trigger: Retaliation` (portable). The [On Deletion] gate = ours
+# Replacement -> DCGO OptionalSkill (declined). NOTE: our engine names the
+# Retaliation candidate by the SOURCE card (BT26-067), not the top card; if
+# DCGO's MultipleSkills lists the inherited effect under BT25-039 the
+# oracle will abort here with "not on card" -- re-author `cards:` from the
+# abort message (a representation difference, not a rules finding).
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-067
+clause: BT26-067#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-067, BT25-039, BT24-102, BT25-034, BT26-088,
+            BT24-034, BT24-034, BT24-041, BT24-041, BT25-022,
+            BT25-008, BT24-102, BT25-008, BT24-102, BT25-022, BT26-081]
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-10, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-067, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-088] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-039 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-067], trigger: Retaliation } }
+    expect: { prompt: MultipleSkills }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 4
+      p1.security: 4
+      p0.field:
+        - { card_id: BT25-039, dp: 6000, suspended: true, sources: [BT26-067] }
+      p1.field:
+        - { card_id: ST1-10, dp: 12000, suspended: false, sources: [] }
+  - at: 12
+    that:
+      p1.field: []
+      p1.trash: [ST1-02, ST1-10]
+  - at: 13
+    that:
+      p0.field: []
+      p0.trash: [BT25-039, BT26-067, BT26-088]
+      p1.field: []

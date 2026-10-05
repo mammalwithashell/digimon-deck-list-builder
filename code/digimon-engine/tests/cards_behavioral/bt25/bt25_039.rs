@@ -325,6 +325,43 @@ fn bt25_039_end_of_turn_does_not_fire_outside_security() {
     );
 }
 
+/// Negative (G-ENGINE-SECURITY-SCOPED-CLAUSE-FIRES-FROM-BATTLE-AREA): with
+/// Sirenmon on the owner's FIELD and Ceresmon in hand, ending the turn must
+/// not fire the `{Security}`-scoped clause — it is dormant outside the
+/// security stack. Before the fix the battle-area top-card scan
+/// (`enqueue_from_permanent`) enqueued it and the Ceresmon pick opened.
+#[test]
+fn bt25_039_end_of_turn_does_not_fire_from_battle_area() {
+    let mut runner = base().hand(0, &["CERESMON"]).start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+
+    runner.end_turn();
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "Sirenmon on the field must not fire its {{Security}}[End of Your Turn] clause"
+    );
+    assert!(
+        !field_contains(&runner, 0, "CERESMON"),
+        "Ceresmon must not be played"
+    );
+}
+
+/// Negative (same gap, breeding scan): a Sirenmon top card in the breeding
+/// area must not fire its `{Security}`-scoped clause either.
+#[test]
+fn bt25_039_end_of_turn_does_not_fire_from_breeding_area() {
+    let mut runner = base().hand(0, &["CERESMON"]).start();
+    runner.place_in_breeding(0, CARD_ID);
+
+    runner.end_turn();
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "Sirenmon in the breeding area must not fire its {{Security}}[End of Your Turn] clause"
+    );
+}
+
 /// Negative: with no Ceresmon in hand, the optional pick has no legal
 /// candidate and must not install / must cleanly no-op.
 #[test]

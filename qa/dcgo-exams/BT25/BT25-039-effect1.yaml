@@ -1,0 +1,154 @@
+# Exam scenario: Sirenmon (BT25-039), clause BT25-039#effect#1 --
+# "{Security} [End of Your Turn] You may play 1 [Ceresmon] from your hand
+#  with the cost reduced by 7. If this effect played, you may place this card
+#  as the played Digimon's bottom digivolution card."
+#
+# Book: $S/book-F.json = chronomon_mervamon_pool.json + variants-F.json.
+# P0 = VARIANT `cm-ts-mervamon-ceres` (bt26-ts-mervamon with BT24-051
+# Merukimon x1 -> BT25-059 Ceresmon x1: the list plays no [Ceresmon]);
+# P1 = `tm-quiet-red`.
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# WHY SIRENMON IS PUT INTO SECURITY THIS WAY. Our engine fires a {Security}
+# effect only from a FACE-UP security card (rule 15-14-5 / BT26-082 Q&A,
+# G-ENGINE-SECURITY-ICON-REQUIRES-FACE-UP); DCGO's CanUseCondition is
+# IsExistInSecurity(card, false) -- face-down also counts. A Sirenmon simply
+# stacked face-down into security is therefore an EXPECTED DIVERGENCE (DCGO
+# fires, we don't) and is NOT what this line measures. Instead the line uses
+# Sirenmon's own [On Deletion] (#effect#3) to place it FACE UP at the bottom
+# of security mid-T3, and the clause fires at the end of that same turn --
+# both engines agree it should fire there.
+# Ceresmon is NOT in the opening hand on purpose: it is drawn on T3
+# (stack[10]). With Sirenmon on the FIELD at T1's end and a Ceresmon in hand,
+# our engine offers this {Security} clause from the battle area (finding
+# G-ENGINE-SECURITY-SCOPED-CLAUSE-FIRES-FROM-BATTLE-AREA, see the report).
+#
+# THE LINE:
+#   T1 (P0, 0): hard-play Sirenmon (6) -> -6.
+#   T2 (P1, 6): all-pass -> P0 3.
+#   T3 (P0, 3): draw Ceresmon (stack[10]); Coronamon (3 -> 0), decline its
+#      [On Play]. Sirenmon attacks; P1's top security Gaia Force ST1-16 ->
+#      P1 deletes Coronamon -> P0 accepts Sirenmon's #effect#2 (Sirenmon is
+#      deleted instead) -> accept #effect#3 (face-up bottom security, 5 -> 6).
+#      Pass (0 -> -3). End of turn -- THE CLAUSE: pick Ceresmon BT25-059 from
+#      hand, played at 12 - 7 = 5 (-3 -> -8); then YES to "place this card as
+#      the played Digimon's bottom digivolution card" -> Sirenmon leaves
+#      security (6 -> 5) and sits under Ceresmon.
+#
+# WITNESS: at 12 (before the pick) memory -3, security 6, Ceresmon in hand;
+# at 13 (before the placement answer) Ceresmon on the field with no sources,
+# memory -8 (cost 5, not 12); at 15 Ceresmon's sources = [BT25-039] and
+# security back to 5.
+#
+# PROMPT SHAPE: the pick is ours Hand (declinable) vs DCGO SelectHandEffect
+# (PlayForCost, canNoSelect:true) -- DCGO's ActivateClass is "skippable"; if
+# the oracle aborts on an OptionalSkill first, add an optional_gate_fold. The
+# placement is ours a two-branch EffectChoice ("Place ..." / "Don't place
+# ...", yes-maps to branch 0) vs DCGO's Yes/No selection ("Will you place
+# Sirenmon under Ceresmon?") -> generic_bool.
+# CERESMON'S [On Play] (step 14): the end-of-turn play fires Ceresmon's own
+# [On Play] ("You may suspend up to 2 Digimon"), ours an AnyField up-to-2 pick
+# vs DCGO SelectPermanentEffect (canNoSelect:true, BT25-059 DCGO notes); both
+# engines ask it and the line declines it. (Until 2026-10-04 this row was
+# `dcgo_only`: the exam lowering's trailing PASS after the placement row
+# silently declined the freshly parked prompt sim-side --
+# G-TOOLING-EXAM-TRAILING-PASS-EATS-FRESH-FIELD-MULTIPICK, now resolved.)
+card: BT25-039
+clause: BT25-039#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-039, BT25-008, BT8-097, BT24-083, BT26-088,     # hand
+            BT24-102, BT24-102, BT24-102, BT24-102, BT26-092,    # security (never flipped)
+            BT25-059]                                            # T3 draw: Ceresmon
+    rest: cm-ts-mervamon-ceres
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,            # hand
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-16,          # security; [9] = Gaia Force (top)
+            ST1-02, ST1-04]                                      # T2 / T4 draws
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): hard-play Sirenmon (0 -> -6).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-039, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 6): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Coronamon (3 -> 0), decline its [On Play].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-008, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # Sirenmon attacks; Gaia Force flips; P1 deletes Coronamon.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # #effect#2: delete Sirenmon instead.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # #effect#3: Sirenmon face up to the bottom of security.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # End the turn (0 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: {Security}[End of Your Turn] -- play Ceresmon at -7.
+  - actor: 0
+    do: { select: { cards: [BT25-059] } }
+    expect: { prompt: SelectHandEffect }
+  # ... and place Sirenmon as its bottom digivolution card.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: generic_bool }
+  # Ceresmon's [On Play] suspend-up-to-2 pick: decline (see header).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 12
+    that:
+      p0.memory: -3
+      p0.security: 6
+      p0.hand: [BT24-083, BT25-059, BT26-088, BT8-097]
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
+  - at: 13
+    that:
+      p0.memory: -8
+      p0.security: 6
+      p0.hand: [BT24-083, BT26-088, BT8-097]
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
+        - { card_id: BT25-059, dp: 12000, suspended: false, sources: [] }
+  - at: 15
+    that:
+      turn: 4
+      p0.memory: -8
+      p0.security: 5
+      p0.trash: []
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
+        - { card_id: BT25-059, dp: 12000, suspended: false, sources: [BT25-039] }

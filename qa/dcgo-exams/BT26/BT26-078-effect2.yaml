@@ -1,0 +1,120 @@
+# Exam scenario: Cherubimon (BT26-078), clause BT26-078#effect#2 --
+# "[Trash] [Your Turn] When any of your [Chronomon] text or [Titan] trait
+#  Digimon are played, if your opponent has 5 or more memory, by returning
+#  this card to the bottom of the deck, 1 of them gains <Rush> and <Execute>
+#  for the turn."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE (memory is the whole puzzle: the played Digimon must take P0 to
+# -5 or lower, i.e. opponent at 5+, and the cheapest qualifying [Chronomon]-
+# text Digimon with no reachable [On Play] is Buraimon (5), so P0 must sit at
+# EXACTLY 0 in its own main phase):
+#   T1 (P0, 0): play Hyokomon BT26-009 (3) -> -3.
+#   T2 (P1, 3): play Agumon ST1-03 (3) -> 0, play Biyomon ST1-02 (2) -> -2:
+#      P0 starts T3 at 2.
+#   T3 (P0, 2): draw stack[10] Hyokomon #2. Hyokomon's [Start of Your Main
+#      Phase]: trash Cherubimon (it has [Chronomon] in its text), <Draw 1>
+#      (stack[11] BT25-092), +1 memory -> 3. Play Hyokomon #2 (3) -> 0 (turn
+#      continues). Play Buraimon BT26-011 (5) -> -5. Buraimon's own [On Play]
+#      is gated on a [Chronomon]/[Shaman] card in hand -- none left -- so it
+#      does not trigger on either side. THE CLAUSE: Cherubimon (in trash)
+#      triggers; accept -> it goes to the deck bottom, Buraimon gains <Rush>
+#      and <Execute>. Memory -5 -> end-of-turn window: <Execute> attacks the
+#      player (Buraimon was played THIS turn -- <Rush> is what lets it attack).
+#      <Raid> (Buraimon's own) declined. Security ST1-04 (4000) loses to 5000.
+#      End of attack: <Execute> deletes Buraimon.
+#
+# WITNESS: at 9 (before the accept) BT26-078 in p0.trash, memory -5; at 13
+# (T4) BT26-078 gone from trash (deck bottom -- deck is unobservable), p1
+# security 5 -> 4, Buraimon in trash (deleted by <Execute>). Rush and Execute
+# are both witnessed by the end-of-turn attack of a just-played Digimon.
+#
+# PROMPT SHAPE: the trigger is optional (BT26-078.yaml DCGO notes:
+# isOptional true) -> DCGO OptionalSkill; ours a Replacement gate answered
+# `yes:` (1:1). "1 of them": only one Digimon was played, so DCGO's pick is
+# auto (no row). <Execute>: the documented end-of-turn fold (one `attack:` row
+# with `expect: OptionalSkill`). <Raid>: DCGO OptionalSkill, ours a declinable
+# OppField pick -> the harness folds it (optional_gate_fold). The trailing
+# bare `pass` is our sim-only EndOfTurnAction exit.
+card: BT26-078
+clause: BT26-078#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-009, BT26-092, BT26-011, BT26-078, BT26-092,
+            BT26-087, BT26-087, BT25-008, BT25-008, BT25-008,
+            BT26-009, BT25-092]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-03, ST1-02, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 2): Hyokomon [Start of Your Main Phase] trashes Cherubimon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [BT26-078] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: BT26-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT26-011, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: Cherubimon's [Trash] trigger on Buraimon's play, accepted.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # <Execute> end-of-turn attack on the player (fold: OptionalSkill + attack).
+  - actor: 0
+    do: { attack: { attacker: field.2, target: security } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: -5
+      p0.trash: [BT26-078]
+      p1.security: 5
+      p0.field:
+        - { card_id: BT26-009, dp: 2000, suspended: false, sources: [] }
+        - { card_id: BT26-009, dp: 2000, suspended: false, sources: [] }
+        - { card_id: BT26-011, dp: 5000, suspended: false, sources: [] }
+  - at: 13
+    that:
+      turn: 4
+      p0.trash: [BT26-011]
+      p1.security: 4
+      p0.hand: [BT25-092, BT26-092, BT26-092]
+      p0.field:
+        - { card_id: BT26-009, dp: 2000, suspended: false, sources: [] }
+        - { card_id: BT26-009, dp: 2000, suspended: false, sources: [] }

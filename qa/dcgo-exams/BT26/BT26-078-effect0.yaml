@@ -1,0 +1,83 @@
+# Exam scenario: Cherubimon (BT26-078), clause BT26-078#effect#0 --
+# Special digivolution condition "[Digivolve] Lv.5 w/[TS] trait: Cost 5".
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# ISOLATION: the printed circles are Purple Lv.5 / 5 and Green Lv.5 / 5 -- the
+# same COST as this clause, so the cost alone cannot separate them. The base
+# does: Butenmon BT26-015 is a RED/YELLOW Lv.5 [TS], which no printed circle
+# accepts. The digivolve is legal only through this clause, and it costs 5
+# (memory 3 -> -2).
+#
+# THE LINE:
+#   T1 (P0, 0): play Butenmon (7) -> -7 (its [On Play] is silent: no opponent
+#      Digimon, empty trash).
+#   T2 (P1, 7): pass -> P0 at 3.
+#   T3 (P0, 3): draw stack[10]; THE CLAUSE: digivolve Butenmon -> Cherubimon
+#      (3 -> -2), draw stack[11]. Cherubimon's [When Digivolving] (effect#3)
+#      gate is declined. Memory -2: the turn passes.
+#
+# WITNESS: at 5 memory 3 with Butenmon alone; at 7 (T4) Cherubimon on top of
+# Butenmon, memory -2.
+#
+# PROMPT SHAPE: a plain digivolve action (one open route -> no
+# SelectCountEffect on either side; a DCGO cost prompt here would itself be a
+# finding). WD gate: DCGO OptionalSkill (optional: true) -> ours Replacement
+# gate, `decline:` 1:1.
+card: BT26-078
+clause: BT26-078#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-015, BT26-078, BT26-092, BT26-092, BT25-008,
+            BT26-087, BT26-087, BT25-008, BT25-008, BT25-008,
+            BT26-092, BT25-092]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-03, ST1-02, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-015, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: red/yellow Lv.5 [TS] Butenmon -> Cherubimon for 5.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-078 } }
+    expect: { prompt: main_phase }
+  # Cherubimon's [When Digivolving] gate (effect#3): declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 5
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.field:
+        - { card_id: BT26-015, dp: 7000, suspended: false, sources: [] }
+  - at: 7
+    that:
+      turn: 4
+      p0.memory: -2
+      p0.trash: []
+      p0.field:
+        - { card_id: BT26-078, dp: 13000, suspended: false, sources: [BT26-015] }

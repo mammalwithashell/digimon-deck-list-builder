@@ -1,0 +1,118 @@
+# Exam scenario: Ceresmon (BT26-032, DUAL), clause BT26-032#effect#3 --
+# "[When Digivolving] All of your opponent's suspended Digimon get -5000 DP
+#  until their turn ends. Then, by suspending 1 Digimon, if it's your turn,
+#  you may play or use 1 [Vegetation] or [TS] trait card from your hand with
+#  the cost reduced by 5. (Rule) Trait: Has [Vegetation] Type."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`). No DCGO checkout in the authoring container.
+#
+# THE LINE:
+#   T1 (P0, 0): pass breeding; play BT26-015 Chronomon line Lv.5 (Red/Yellow,
+#      cost 7: 0 -> -7). Its [On Play] has no opponent Digimon / no trash ->
+#      parks nothing.
+#   T2 (P1, 7): play Biyomon ST1-02 and Monodramon BT1-009 (3000 each,
+#      7 -> 3); pass -> P0 at 3.
+#   T3 (P0, 3): digivolve Ceresmon onto BT26-015 (printed Yellow Lv.5 circle,
+#      cost 5: 3 -> -2; single route). THE CLAUSE: no opponent Digimon is
+#      suspended yet; "by suspending 1 Digimon" -> suspend Monodramon
+#      (opp.field.1). The -5000 is CONTINUOUS over "opponent's suspended
+#      Digimon" (YAML DCGO notes: a player-level conditional effect), so
+#      Monodramon -- suspended AFTER the debuff was installed -- gets it too:
+#      3000 -> 0. It is your turn -> play BT26-092 Shota ([TS] Tamer, cost 3
+#      -> 0) from hand. Rule check: Monodramon (0 DP) deleted.
+#   T4 (P1): trailing breeding decision.
+#
+# WITNESS: at 9 (after the suspend, before the hand pick) Monodramon
+# suspended at DP 0 (continuous -5000), still on the field (deleted only at
+# the rule check -- official Q&A); at 10 Monodramon in P1's trash, Biyomon
+# untouched (unsuspended -> no -5000), Shota on P0's field, memory still -2
+# (cost 3 reduced by 5 -> 0).
+#
+# PARTIAL: (a) the -5000 on a Digimon ALREADY suspended when the effect
+# resolves is not separately witnessed (P1 cannot have a suspended Digimon by
+# T3); (b) the "if it's your turn" negative branch (Ceresmon digivolving on
+# the opponent's turn) is not reachable in a short line; (c) "(Rule) Trait:
+# Has [Vegetation] Type" is not observable -- every [Vegetation] card in the
+# pool also carries [TS].
+#
+# PROMPT SHAPE: suspend pick = ours AnyField -> DCGO SelectPermanentEffect
+# canNoSelect:true; hand pick = ours Hand -> DCGO SelectHandEffect
+# canNoSelect:true. Target opp.field.1 = Monodramon. (An AnyField pick now
+# resolves only the absolute id 100+player*15+slot; before 2026-10-04
+# `opp.field.0` resolved to OUR slot 0 -- it suspended Ceresmon while the wire
+# said ST1-02 -- G-TOOLING-EXAM-ANYFIELD-SIDE-IMPLICIT-FIRST, now resolved.)
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-032
+clause: BT26-032#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-015, BT26-032, BT26-092, BT25-008, BT26-011,
+            BT26-009, BT26-009, BT26-087, BT26-078, BT26-073,
+            BT26-085, BT26-060, BT24-034, BT26-011]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-02, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-03, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-015, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-032 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { cards: [BT26-092] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 8
+    that:
+      turn: 3
+      p0.memory: -2
+      p0.field:
+        - { card_id: BT26-032, dp: 13000, suspended: false, sources: [BT26-015] }
+      p1.field:
+        - { card_id: BT1-009, dp: 3000, suspended: false, sources: [] }
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+  - at: 9
+    that:
+      p1.trash: []
+      p1.field:
+        - { card_id: BT1-009, dp: 0, suspended: true, sources: [] }
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -2
+      p0.hand: [BT25-008, BT26-011, BT26-060, BT26-085]
+      p0.field:
+        - { card_id: BT26-032, dp: 13000, suspended: false, sources: [BT26-015] }
+        - { card_id: BT26-092, dp: -1, suspended: false, sources: [] }
+      p1.trash: [BT1-009]
+      p1.field:
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }

@@ -1,0 +1,124 @@
+# Exam scenario: Angemon (BT25-034), clause BT25-034#effect#1 --
+# "When effects trash this card from the security stack, you may play 1
+#  level 4 or lower [Angel] or [Iliad] trait card from your hand without
+#  paying the cost."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon`
+# vs `tm-quiet-red`). No variant.
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE TRASHING EFFECT is P0's own Aegiomon BT24-034 <Barrier> ("When this
+# Digimon would be deleted in battle, by trashing the top card of your
+# security stack, prevent that deletion"): an EFFECT that trashes Angemon,
+# stacked as P0's TOP security card (stack[9]).
+#
+# THE LINE:
+#   T1 (P0, 0): no hatch; hard-play Aegiomon (5) -> -5. Its [On Play]
+#      ("by adding your top security card to the hand, you may play 1 [TS]
+#      Tamer") is gated on security > 0 only (BT24_034.cs
+#      SharedCanActivateCondition; §15-7-5; BT24-034.yaml since bdd80afd), so
+#      BOTH engines ask its OptionalSkill -- declined (accepting would move
+#      Angemon, the top security card, to the hand and void the line).
+#   T2 (P1, 5): all-pass -> P0 3.
+#   T3 (P0, 3): draw stack[10]; Aegiomon (5000) attacks security; P1's top
+#      card is Phoenixmon ST1-10 (12000) -> Aegiomon would be deleted in
+#      battle -> accept <Barrier>: P0's top security (Angemon) is trashed by
+#      the effect. THE CLAUSE: play Coronamon BT25-008 (Lv.3, [Iliad]) from
+#      hand for free (memory stays 3); decline Coronamon's own optional
+#      [On Play]. Pass.
+#
+# WITNESS: at 8 (before the pick) P0 security 4, Angemon in P0's trash,
+# Coronamon in hand, Aegiomon alive; at 10 (before T3's pass) Coronamon on the
+# field, memory still 3 (free play).
+#
+# PROMPT SHAPE: Aegiomon's [On Play] gate = OptionalSkill on both sides
+# (shared row, re-authored 2026-10-04 after BT24-034.yaml dropped the
+# [TS]-Tamer-in-hand condition; our prompt is a Replacement-kind optional
+# "You may activate BT24-034's triggered effect"). Barrier = OptionalSkill on
+# both sides (EX12-043-inherited0 idiom). The clause = ours ONE declinable Hand pick (`optional: true` +
+# optional select_hand -> the pick is the gate); DCGO SelectHandEffect
+# (PlayForFree, canNoSelect:true) -- if DCGO asks OptionalSkill first, add
+# an optional_gate_fold. Coronamon's [On Play] decline = SelectHandEffect.
+card: BT25-034
+clause: BT25-034#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT24-034, BT25-008, BT8-097, BT26-081, BT24-041,   # hand (Coronamon = the only Lv.<=4 [Angel]/[Iliad] left)
+            BT24-102, BT24-102, BT24-102, BT24-102, BT25-034,  # security; [9] = Angemon (top)
+            BT8-097]                                           # T3 draw
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,          # hand
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-10,        # security; [9] = Phoenixmon 12000 (top)
+            ST1-02, ST1-04]                                    # T2 / T4 draws
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): hard-play Aegiomon (0 -> -5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-034, from: hand } }
+    expect: { prompt: main_phase }
+  # Aegiomon's [On Play] OptionalSkill (security > 0): decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # T2 (P1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Aegiomon attacks into Phoenixmon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Aegiomon <Barrier>: trash the top security card (Angemon).
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # THE CLAUSE: play Coronamon from hand for free.
+  - actor: 0
+    do: { select: { cards: [BT25-008] } }
+    expect: { prompt: SelectHandEffect }
+  # Coronamon's own [On Play]: decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 7
+    that:
+      p0.security: 5
+      p0.trash: []
+  - at: 8
+    that:
+      p0.memory: 3
+      p0.security: 4
+      p0.trash: [BT25-034]
+      p0.hand: [BT24-041, BT25-008, BT26-081, BT8-097, BT8-097]
+      p0.field:
+        - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
+  - at: 10
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.security: 4
+      p0.trash: [BT25-034]
+      p0.hand: [BT24-041, BT26-081, BT8-097, BT8-097]
+      p0.field:
+        - { card_id: BT24-034, dp: 5000, suspended: true, sources: [] }
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
+      p1.trash: [ST1-10]

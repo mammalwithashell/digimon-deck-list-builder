@@ -926,20 +926,54 @@ fn ex8_070_buffs_expire_after_opponents_turn_ends() {
 // deleted the lowest battle-area index (a rule-17 violation).
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/// Card ids on the card owner's OPPONENT's field. In these tests EX8-070 is
+/// checked from P1's security stack, so its opponent is P0 (the attacker).
 fn opponent_card_ids(runner: &DebugRunner) -> Vec<String> {
-    runner.game.players[1]
+    runner.game.players[0]
         .battle_area
         .iter()
         .map(|perm| perm.top_card().card_id(&runner.game.card_data).to_string())
         .collect()
 }
 
+/// A play-cost-10 attacker: P0 attacks P1, checking EX8-070 from P1's security
+/// stack, so the [Security] clause runs through the REAL security-reveal path
+/// (`SecurityRevealed`). Its high play cost keeps it out of the lowest-cost
+/// target set whenever a cheaper opponent Digimon is on the field.
+fn security_attacker() -> CardData {
+    let mut atk = make_test_card("SEC-ATK", "Security Attacker");
+    atk.play_cost = 10;
+    atk.level = Some(6);
+    atk.dp = Some(9000);
+    atk
+}
+
+/// Runner with EX8-070 as P1's only security card plus the given opponent
+/// (P0) Digimon; returns the runner and the attacker handle.
+fn security_runner(
+    extra: Vec<CardData>,
+) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut builder = DebugRunner::builder()
+        .dsl_card("EX8-070")
+        .expect("EX8-070 YAML parses and compiles")
+        .add_card(security_attacker())
+        .security(1, &["EX8-070"])
+        .memory(10);
+    let ids: Vec<String> = extra.iter().map(|c| c.card_id.clone()).collect();
+    for card in extra {
+        builder = builder.add_card(card);
+    }
+    let mut runner = builder.start();
+    for id in &ids {
+        runner.place_on_field(0, id, Some(0));
+    }
+    let attacker = runner.place_on_field(0, "SEC-ATK", Some(0));
+    (runner, attacker)
+}
+
 /// Security effect deletes the (unique) opponent Digimon with the lowest play cost.
 #[test]
 fn ex8_070_security_deletes_lowest_cost_digimon() {
-    use digimon_engine::enums::EffectTiming;
-    use digimon_engine::selection::TriggerSource;
-
     let mut cheap = make_test_card("CHEAP-S", "Cheap Security Target");
     cheap.play_cost = 2;
     cheap.level = Some(4);
@@ -947,27 +981,10 @@ fn ex8_070_security_deletes_lowest_cost_digimon() {
     expensive.play_cost = 8;
     expensive.level = Some(6);
 
-    let mut runner = DebugRunner::builder()
-        .dsl_card("EX8-070")
-        .expect("EX8-070 YAML parses and compiles")
-        .add_card(cheap)
-        .add_card(expensive)
-        .memory(10)
-        .start();
+    let (mut runner, attacker) = security_runner(vec![cheap, expensive]);
+    assert_eq!(runner.battle_area_size(0), 3);
 
-    // For an Option card security test, use place_on_field + enqueue_triggered
-    // with SecuritySkill timing (the engine timing for on_security effects).
-    let security_handle = runner.place_on_field(0, "EX8-070", None);
-    runner.place_on_field(1, "CHEAP-S", Some(0));
-    runner.place_on_field(1, "EXPEN-S", Some(0));
-
-    assert_eq!(runner.battle_area_size(1), 2);
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(security_handle),
-    );
-    runner.game.drain_effect_queue();
+    runner.attack_player(attacker, 1, false);
 
     // Only the cheap Digimon is at the minimum play cost, so it is the sole legal
     // target. Resolve the selection (whether the engine exposes a 1-option
@@ -976,16 +993,11 @@ fn ex8_070_security_deletes_lowest_cost_digimon() {
         runner.auto_resolve().expect("resolve lowest-cost target");
     }
 
-    // The cheap Digimon (cost 2) is deleted; expensive (cost 8) survives.
-    assert_eq!(
-        runner.battle_area_size(1),
-        1,
-        "security delete must remove the lowest-play-cost Digimon"
-    );
+    assert_eq!(runner.security_count(1), 0, "EX8-070 was checked");
     assert_eq!(
         opponent_card_ids(&runner),
-        vec!["EXPEN-S".to_string()],
-        "the surviving Digimon must be the higher-cost one (cheap was deleted, not auto-index)"
+        vec!["EXPEN-S".to_string(), "SEC-ATK".to_string()],
+        "the cost-2 Digimon is deleted (not auto-index); cost-8 and the cost-10 attacker survive"
     );
 }
 
@@ -993,9 +1005,6 @@ fn ex8_070_security_deletes_lowest_cost_digimon() {
 /// must be offered a CHOICE (pending_selection) rather than an auto-pick.
 #[test]
 fn ex8_070_security_tie_exposes_player_choice() {
-    use digimon_engine::enums::EffectTiming;
-    use digimon_engine::selection::TriggerSource;
-
     let mut a = make_test_card("TIE-A", "Tie Target A");
     a.play_cost = 3;
     a.level = Some(4);
@@ -1003,29 +1012,23 @@ fn ex8_070_security_tie_exposes_player_choice() {
     b.play_cost = 3;
     b.level = Some(4);
 
-    let mut runner = DebugRunner::builder()
-        .dsl_card("EX8-070")
-        .expect("EX8-070 YAML parses and compiles")
-        .add_card(a)
-        .add_card(b)
-        .memory(10)
-        .start();
+    let (mut runner, attacker) = security_runner(vec![a, b]);
+    assert_eq!(runner.battle_area_size(0), 3);
 
-    let security_handle = runner.place_on_field(0, "EX8-070", None);
-    runner.place_on_field(1, "TIE-A", Some(0));
-    runner.place_on_field(1, "TIE-B", Some(0));
-    assert_eq!(runner.battle_area_size(1), 2);
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(security_handle),
-    );
-    runner.game.drain_effect_queue();
+    runner.attack_player(attacker, 1, false);
 
     // Both Digimon share the lowest play cost → the choice MUST be surfaced.
-    assert!(
-        runner.game.pending_selection.is_some(),
-        "a tie at the lowest play cost must surface a player choice, not auto-pick"
+    let view = runner
+        .pending_selection_view()
+        .expect("a tie at the lowest play cost must surface a player choice, not auto-pick");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        2,
+        "both tied cost-3 Digimon are offered; the cost-10 attacker is not"
+    );
+    assert_eq!(
+        view.selecting_player, 1,
+        "the security card's owner chooses"
     );
 
     // Resolve the choice; exactly one of the tied Digimon is deleted.
@@ -1033,34 +1036,71 @@ fn ex8_070_security_tie_exposes_player_choice() {
         .auto_resolve()
         .expect("resolve the tied lowest-cost target selection");
     assert_eq!(
-        runner.battle_area_size(1),
-        1,
+        runner.battle_area_size(0),
+        2,
         "exactly one tied Digimon is deleted after the player chooses"
+    );
+    assert!(opponent_card_ids(&runner).contains(&"SEC-ATK".to_string()));
+}
+
+/// When the attacker is the opponent's ONLY Digimon it is, by definition, the
+/// lowest-play-cost one — the [Security] delete takes it (a real security check
+/// always has at least the attacking Digimon on the opponent's field).
+#[test]
+fn ex8_070_security_deletes_lone_attacker() {
+    let (mut runner, attacker) = security_runner(Vec::new());
+
+    runner.attack_player(attacker, 1, false);
+    if runner.game.pending_selection.is_some() {
+        runner.auto_resolve().expect("resolve the forced target");
+    }
+
+    assert_eq!(runner.security_count(1), 0, "EX8-070 was checked");
+    assert_eq!(
+        runner.battle_area_size(0),
+        0,
+        "the lone attacker is the lowest-cost opponent Digimon and is deleted"
     );
 }
 
-/// Security effect: no crash when opponent has no Digimon.
+/// Engine guard (G-ENGINE-SECURITY-SCOPED-CLAUSE-FIRES-FROM-BATTLE-AREA):
+/// a `[Security]` clause is never dispatched from the battle area, for ANY
+/// timing — `SecuritySkill` included. Enqueueing it on a battle-area copy of
+/// EX8-070 is inert (it used to be exempt so tests could drive [Security]
+/// bodies that way; real play only reaches [Security] through
+/// `TriggerSource::SecurityRevealed`).
 #[test]
-fn ex8_070_security_no_crash_when_opponent_has_no_digimon() {
+fn ex8_070_security_clause_dormant_on_battle_area() {
     use digimon_engine::enums::EffectTiming;
     use digimon_engine::selection::TriggerSource;
 
+    let mut cheap = make_test_card("CHEAP-F", "Cheap Field Target");
+    cheap.play_cost = 2;
     let mut runner = DebugRunner::builder()
         .dsl_card("EX8-070")
         .expect("EX8-070 YAML parses and compiles")
+        .add_card(cheap)
         .memory(10)
         .start();
 
-    let security_handle = runner.place_on_field(0, "EX8-070", None);
+    let field_copy = runner.place_on_field(0, "EX8-070", None);
+    runner.place_on_field(1, "CHEAP-F", Some(0));
 
     runner.game.enqueue_triggered(
         EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(security_handle),
+        TriggerSource::Permanent(field_copy),
     );
     runner.game.drain_effect_queue();
 
-    assert!(runner.game.pending_selection.is_none());
-    assert_eq!(runner.battle_area_size(1), 0);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "a battle-area EX8-070 must not run its [Security] delete"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "the opponent's Digimon survives"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

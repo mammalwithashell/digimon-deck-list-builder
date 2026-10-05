@@ -426,3 +426,91 @@ fn decline_token(runner: &mut DebugRunner) {
             .expect("decline token via effect-choice branch");
     }
 }
+
+// ─── Section 4: G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION follow-up (1)
+// The return-3-from-trash reduction is payable iff 3 eligible named cards are
+// in the trash; the RL mask counts it exactly then, and the payment path must
+// not credit it when fewer than 3 exist (the min-3 multi-select is unpayable).
+
+fn hand_play_offered(runner: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+fn gankoomon_with_named_trash(named: usize) -> DebugRunner {
+    let mut runner = gankoomon_runner()
+        .add_card(huckmon("HUCK-A"))
+        .add_card(vanilla("PLAIN", "Random"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["PLAIN", "PLAIN", "PLAIN"])
+        .deck(1, &["PLAIN"])
+        .start();
+    for _ in 0..named {
+        push_to_trash(&mut runner, 0, "HUCK-A");
+    }
+    push_to_trash(&mut runner, 0, "PLAIN");
+    runner
+}
+
+#[test]
+fn bt23_057_mask_offers_play_payable_only_after_trash_return_reduction() {
+    let mut runner = gankoomon_with_named_trash(3);
+    // Printed 11 from -4 → -15 (illegal); reduced 6 → -10 (legal).
+    runner.game.set_memory(-4);
+    assert!(
+        hand_play_offered(&runner),
+        "3 named trash cards pay the return cost → 11 - 5 = 6 is payable from -4"
+    );
+    let mut runner = gankoomon_with_named_trash(2);
+    runner.game.set_memory(-4);
+    assert!(
+        !hand_play_offered(&runner),
+        "2 named trash cards cannot pay a return-3 cost → no reduction"
+    );
+}
+
+#[test]
+fn bt23_057_unpayable_trash_return_credits_no_reduction() {
+    let mut runner = gankoomon_with_named_trash(2);
+    runner.game.set_memory(10);
+    let events_before = runner.game.events.len();
+    runner.play(0, 0);
+    // Accept the cost-reduction gate if it is offered; the min-3 return can't
+    // be paid with 2 eligible cards, so nothing may be credited.
+    for _ in 0..4 {
+        let is_gate = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .is_some_and(|p| p.prompt.contains("reduce play cost"));
+        if !is_gate {
+            break;
+        }
+        let view = runner.pending_selection_view().expect("gate");
+        let accept = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|a| *a != PASS)
+            .expect("accept");
+        runner
+            .execute_action(view.selecting_player, accept)
+            .expect("accept the gate");
+    }
+    let paid: i16 = runner.game.events[events_before..]
+        .iter()
+        .filter_map(|e| match e {
+            digimon_engine::events::GameEvent::MemoryChange { delta, .. } => Some(*delta),
+            _ => None,
+        })
+        .sum();
+    assert_eq!(
+        paid, -11,
+        "an unpaid return cost must not reduce the play cost"
+    );
+    assert_eq!(
+        runner.game.players[0].trash.len(),
+        3,
+        "nothing was returned from the trash"
+    );
+}

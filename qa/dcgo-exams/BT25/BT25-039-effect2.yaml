@@ -1,0 +1,117 @@
+# Exam scenario: Sirenmon (BT25-039), clause BT25-039#effect#2 --
+# "[All Turns] When any of your other [Shaman] or [Iliad] trait Digimon or
+#  Tamers would leave the battle area other than by your effects, by
+#  deleting this Digimon, they don't leave."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon`
+# vs `tm-quiet-red`). No variant.
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE OPPONENT'S EFFECT is P1's top security card, Gaia Force ST1-16
+# ("[Security] Activate this card's [Main] effects" -> "Delete 1 of your
+# opponent's Digimon"), flipped by Sirenmon's own attack. That is a deletion
+# "other than by your effects" (DCGO: !IsByEffect(IsOwnerEffect)) aimed at
+# Coronamon BT25-008 (traits Beast/Iliad/TS -> an OTHER [Iliad] Digimon).
+#
+# THE LINE:
+#   T1 (P0, 0): no hatch; hard-play Sirenmon (6) -> -6.
+#   T2 (P1, 6): all-pass -> P0 3.
+#   T3 (P0, 3): draw stack[10]; hard-play Coronamon (3) -> 0, decline its
+#      optional [On Play] hand-trash. Sirenmon attacks security; P1's top
+#      card (stack[9]) is Gaia Force -> P1 picks Coronamon (opp.field.1) to
+#      delete. THE CLAUSE: P0 accepts -> Sirenmon is deleted instead and
+#      Coronamon stays. Sirenmon's [On Deletion] (#effect#3) then offers the
+#      face-up bottom-security placement -> DECLINED here (so Sirenmon ends in
+#      the trash; #effect#3 is the accept branch, BT25-039-effect3.yaml).
+#      Pass.
+#
+# WITNESS: at 9 (before the replacement answer) Sirenmon + Coronamon both on
+# the field; at 11 (before T3's pass) Coronamon is still on the field,
+# Sirenmon is in P0's trash, P0 security unchanged (5), Gaia Force in P1's
+# trash.
+#
+# PROMPT SHAPE: Coronamon decline = ours Hand pick (declinable), DCGO
+# SelectHandEffect canNoSelect. Gaia Force pick = P1 SelectPermanentEffect on
+# both sides. The protection = ours Replacement yes/no (`optional: true`,
+# cost delete_self) -> DCGO OptionalSkill on the WhenRemoveField
+# ActivateClass. The [On Deletion] decline = ours OptionalSkill gate, DCGO
+# OnDeletionClass optional:true -> OptionalSkill.
+card: BT25-039
+clause: BT25-039#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-039, BT25-008, BT8-097, BT24-083, BT26-088,     # hand
+            BT24-102, BT24-102, BT24-102, BT24-102, BT26-092,    # security (never flipped)
+            BT26-092]                                            # T3 draw
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,            # hand
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-16,          # security; [9] = Gaia Force (top)
+            ST1-02, ST1-04]                                      # T2 / T4 draws
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): hard-play Sirenmon (0 -> -6).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-039, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 6): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Coronamon (3 -> 0), decline its [On Play].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-008, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # Sirenmon attacks; Gaia Force flips.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P1's Gaia Force: delete Coronamon (P0 slot 1).
+  - actor: 1
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: delete Sirenmon so Coronamon doesn't leave.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Sirenmon's [On Deletion] (#effect#3): decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 9
+    that:
+      p0.field:
+        - { card_id: BT25-039, dp: 6000, suspended: true, sources: [] }
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
+      p0.trash: []
+  - at: 11
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.security: 5
+      p0.field:
+        - { card_id: BT25-008, dp: 1000, suspended: false, sources: [] }
+      p0.trash: [BT25-039]
+      p1.security: 4
+      p1.trash: [ST1-16]

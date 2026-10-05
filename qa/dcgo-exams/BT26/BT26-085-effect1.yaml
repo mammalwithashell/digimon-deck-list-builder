@@ -1,0 +1,107 @@
+# Exam scenario: Giant Slayer (BT26-085), clause BT26-085#effect#1 --
+# "<Reboot>" (This Digimon also unsuspends in your opponent's unsuspend phase.)
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs `tm-quiet-red`;
+# no variant). Every card the line names is stacked.
+#
+# THE LINE (shared by BT26-085 effect0 / effect1):
+#   T1 (P0, 0): pass.
+#   T2 (P1, 3): play Monodramon BT1-009 (2: 3 -> 1); pass (P0 gets 3).
+#   T3 (P0, 3): hard-play Giant Slayer BT26-085 (12: 3 -> -9).
+#   T4 (P1, 9): pass (P0 gets 3).
+#   T5 (P0, 3): Giant Slayer attacks P1's SECURITY. <Collision>: Monodramon
+#      gains <Blocker> and must block -> P1's (non-declinable) blocker prompt,
+#      answered with Monodramon. 14000 vs 3000: Monodramon deleted, no
+#      security check. P0 passes.
+#   T6 (P1, 3): unsuspend phase (<Reboot>), breeding pass, main pass.
+#
+# WITNESS: at 12 (after its T5 attack) Giant Slayer is suspended: true; at 13
+# (P1's T6 breeding decision, after P1's unsuspend phase -- still P1's turn)
+# it is suspended: false.
+#
+# SLOT HYGIENE: every `attack:` is taken while both sides have exactly ONE
+# battle-area permanent (no Tamers) -- `field.N` reaches DCGO as a compact
+# frame index over centre-out seating (NOTES-BT24-081.md "Slot hygiene").
+# Selections are answered by card identity.
+#
+# PROMPT SHAPE: the forced block -> ours an OwnField "Declare a blocker" pick
+# with no decline, answered by P1 (actor 1); DCGO SelectPermanentEffect for
+# P1 -- the EX12-019-effect1.yaml <Collision> idiom (CLEAN-proven there).
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-085
+clause: BT26-085#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-085, BT26-060, BT26-011, BT26-015, BT25-008,
+            BT26-078, BT26-078, BT26-078, BT26-073, BT26-073,
+            BT26-011, BT26-015, BT25-008, BT26-009, BT26-009]
+    rest: bt26-chronomon
+  p1:
+    stack: [BT1-009, ST1-03, ST1-04, BT3-007, ST1-02,
+            ST1-03, ST1-04, BT3-007, ST1-02, BT1-009,
+            BT3-007, ST1-04, ST1-03, ST1-02]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-085, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that:
+      turn: 5
+      p0.field:
+        - { card_id: BT26-085, dp: 14000, suspended: true, sources: [] }
+  - at: 13
+    that:
+      turn: 6
+      p0.field:
+        - { card_id: BT26-085, dp: 14000, suspended: false, sources: [] }
+  - at: 14
+    that:
+      turn: 6
+      p0.field:
+        - { card_id: BT26-085, dp: 14000, suspended: false, sources: [] }

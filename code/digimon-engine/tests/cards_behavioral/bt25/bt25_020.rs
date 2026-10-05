@@ -258,16 +258,15 @@ fn bt25_020_has_shared_op_wd_wa_clause_not_opt() {
         has_dp_mod,
         "shared clause must add a DP modifier to an own Digimon"
     );
-    let has_battle = clause
-        .process
-        .iter()
-        .any(|s| matches!(s, CompiledStep::Battle { .. }))
-        || clause.process.iter().any(|s| {
-            matches!(s, CompiledStep::If { then, .. }
-                if then.iter().any(|s2| matches!(s2, CompiledStep::Battle { .. })))
-        });
+    fn contains_battle(steps: &[CompiledStep]) -> bool {
+        steps.iter().any(|s| match s {
+            CompiledStep::Battle { .. } => true,
+            CompiledStep::If { then, .. } => contains_battle(then),
+            _ => false,
+        })
+    }
     assert!(
-        has_battle,
+        contains_battle(&clause.process),
         "shared clause must include a battle step (directly or nested under an if)"
     );
 }
@@ -738,5 +737,40 @@ fn bt25_020_does_not_fire_on_direct_player_attack() {
     assert!(
         runner.security_count(1) >= sec_before.saturating_sub(1),
         "a direct player attack must not cause an EXTRA security trash beyond its own security check"
+    );
+}
+
+/// With NO opponent Digimon, "1 of your Digimon may battle 1 of your
+/// opponent's Digimon" has nothing to battle: DCGO only opens the attacker
+/// pick when the opponent has a Digimon, so after the mandatory DP buff no
+/// further prompt may open (a dead "may battle" pick would be a spurious RL
+/// decision with no effect).
+#[test]
+fn bt25_020_no_may_battle_prompt_with_empty_opponent_board() {
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::TriggerSource;
+
+    let mut runner = base().memory(3).start();
+    let marsmon = place_marsmon(&mut runner);
+    runner.place_on_field(0, "OWN-A", Some(0));
+    assert_eq!(runner.battle_area_size(1), 0);
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(marsmon),
+    );
+    runner.game.drain_effect_queue();
+
+    // The mandatory +3000 DP pick still opens.
+    let view = runner.pending_selection_view().expect("DP buff prompt");
+    assert!(!view.is_optional, "the +3000 DP pick is mandatory");
+    let player = runner.pending_selection().unwrap().selecting_player;
+    runner
+        .execute_action(player, view.valid_action_ids[0])
+        .expect("resolve DP buff");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no opponent Digimon → the 'may battle' attacker pick must not open"
     );
 }

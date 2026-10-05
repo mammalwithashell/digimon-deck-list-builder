@@ -1,8 +1,9 @@
 //! ST5 option cards: Laser Eye and Dark Side Attack.
 
+use digimon_engine::action::space::encode_attack;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming};
-use digimon_engine::selection::{SelectionKind, TriggerSource};
+use digimon_engine::enums::CardKind;
+use digimon_engine::selection::SelectionKind;
 
 fn digimon(id: &str, name: &str, level: u8, play_cost: u16) -> digimon_engine::card_data::CardData {
     let mut card = make_test_card(id, name);
@@ -10,6 +11,16 @@ fn digimon(id: &str, name: &str, level: u8, play_cost: u16) -> digimon_engine::c
     card.level = Some(level);
     card.play_cost = play_cost;
     card.dp = Some(3000);
+    card
+}
+
+/// A cost-10 / level-6 attacker for P0. The [Security] tests check the option
+/// from P1's security stack with a REAL attack, so the [Security] body runs
+/// through `SecurityRevealed` (the battle-area scan skips `security` clauses).
+/// The option's owner is P1; its opponent is P0.
+fn security_attacker() -> digimon_engine::card_data::CardData {
+    let mut card = digimon("SEC-ATK", "Security Attacker", 6, 10);
+    card.dp = Some(9000);
     card
 }
 
@@ -57,24 +68,26 @@ fn st5_15_security_activates_laser_eye_main_effect() {
         .expect("ST5-15 YAML parses")
         .add_card(digimon("ST5-15-SEC3", "Laser Eye Security Target 3", 3, 3))
         .add_card(digimon("ST5-15-SEC4", "Laser Eye Security Target 4", 4, 5))
-        .build();
-    let option = runner.place_on_field(0, "ST5-15", None);
-    runner.place_stack(1, &["ST5-15-SEC3", "ST5-15-SEC4"]);
+        .add_card(security_attacker())
+        .security(1, &["ST5-15"])
+        .start();
+    let stack = runner.place_stack(0, &["ST5-15-SEC3", "ST5-15-SEC4"]);
+    let attacker = runner.place_on_field(0, "SEC-ATK", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(option),
-    );
-    runner.game.drain_effect_queue();
+    runner.attack_player(attacker, 1, false);
 
     assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
-    let pick = runner.pending_selection_view().unwrap().valid_action_ids[0];
+    let view = runner.pending_selection_view().unwrap();
+    assert_eq!(view.selecting_player, 1, "the option's owner picks");
+    let pick = encode_attack(0, stack.index as u16);
+    assert!(view.valid_action_ids.contains(&pick));
     runner
-        .execute_action(0, pick)
+        .execute_action(1, pick)
         .expect("select security Laser Eye target");
     runner.auto_resolve().expect("finish Laser Eye security");
 
-    assert_eq!(stack_sources(&runner, 1, 0), 1);
+    assert_eq!(runner.security_count(1), 0, "ST5-15 was checked");
+    assert_eq!(stack_sources(&runner, 0, stack.index as usize), 1);
 }
 
 #[test]
@@ -114,23 +127,34 @@ fn st5_16_security_activates_dark_side_attack_main_effect() {
         .dsl_card("ST5-16")
         .expect("ST5-16 YAML parses")
         .add_card(digimon("ST5-16-SEC", "Dark Side Security Target", 4, 7))
-        .build();
-    let option = runner.place_on_field(0, "ST5-16", None);
-    runner.place_on_field(1, "ST5-16-SEC", Some(0));
+        .add_card(security_attacker())
+        .security(1, &["ST5-16"])
+        .start();
+    runner.place_on_field(0, "ST5-16-SEC", Some(0));
+    let attacker = runner.place_on_field(0, "SEC-ATK", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(option),
-    );
-    runner.game.drain_effect_queue();
+    runner.attack_player(attacker, 1, false);
 
     assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
-    let pick = runner.pending_selection_view().unwrap().valid_action_ids[0];
+    let view = runner.pending_selection_view().unwrap();
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "play_cost_lte: 7 excludes the cost-10 attacker"
+    );
     runner
-        .execute_action(0, pick)
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
         .expect("delete security target");
+    runner
+        .auto_resolve()
+        .expect("finish Dark Side Attack security");
 
-    assert_eq!(runner.battle_area_size(1), 0);
+    let survivors: Vec<String> = runner.game.players[0]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(survivors, vec!["SEC-ATK".to_string()]);
 }
 
 #[test]

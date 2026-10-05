@@ -35,6 +35,66 @@ fn push_to_hand(runner: &mut DebugRunner, player: u8, card_id: &str) {
         .push(CardSource::new(data_index, player, instance_id));
 }
 
+/// G-ENGINE-DUPLICATE-ASCENSION-TRIGGER (same shape): with the real printed
+/// text, `＜Material Save 1＞` starts a line after prose and is not an innate
+/// face keyword, so the top card's own `grant_keyword` clause and the
+/// aura-grant dispatch both queued it — a TriggerOrder over two
+/// <Material Save 1> copies. Exactly one may trigger.
+#[test]
+fn bt10_111_deletion_offers_exactly_one_material_save() {
+    use digimon_engine::debug_runner::make_test_card;
+    use digimon_engine::enums::CardKind;
+    use digimon_engine::replacement::ReplacementCause;
+    use digimon_engine::selection::SelectionKind;
+
+    let mut xh = make_test_card("XH-SOURCE", "Xros Source");
+    xh.card_kind = CardKind::Digimon;
+    xh.level = Some(3);
+    xh.traits = vec!["Xros Heart".to_string()];
+    let mut tamer = make_test_card("XH-TAMER", "Tamer");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT10-111 YAML loads")
+        .add_card(xh)
+        .add_card(tamer)
+        .start();
+    {
+        // Mirror `CardData::load` (cards.json printed text + parsed keywords).
+        let effect = "[On Play] You may return 1 card with a DigiXros requirement from your trash to your hand. When you would DigiXros this turn, this Digimon may replace 1 of the DigiXros requirements.\r\n＜Material Save 1＞ (When this Digimon would be deleted, you may place 1 card in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)";
+        let inherited =
+            "[Your Turn] While this Digimon has [Shoutmon]\u{a0}in its name, it gets +2000 DP.";
+        let cd = std::sync::Arc::make_mut(&mut runner.game.card_data.0)
+            .iter_mut()
+            .find(|c| c.card_id == CARD_ID)
+            .expect("BT10-111 registered");
+        cd.effect_text = effect.to_string();
+        cd.inherited_text = inherited.to_string();
+        cd.keywords = digimon_engine::card_data::parse_printed_keywords(effect, inherited, "");
+    }
+    runner.place_on_field(0, "XH-TAMER", Some(0));
+    let king = runner.place_stack(0, &["XH-SOURCE", CARD_ID]);
+    runner.game.tick_declarative_effects();
+    runner
+        .game
+        .delete_permanents_batch(vec![king], ReplacementCause::OpponentEffect);
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("<Material Save 1> offers its Tamer pick");
+    assert_ne!(
+        pending.kind,
+        SelectionKind::TriggerOrder,
+        "exactly one <Material Save 1> may trigger"
+    );
+    assert_eq!(pending.kind, SelectionKind::OwnField);
+}
+
 #[test]
 fn bt10_111_on_play_wildcard_can_replace_one_missing_digixros_requirement_this_turn() {
     let mut runner = DebugRunner::builder()

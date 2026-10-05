@@ -1277,3 +1277,84 @@ fn bt18_073_inherited_redirect_opt_blocks_second_activation_same_turn() {
         "[Once Per Turn] must lock a second redirect attempt in the same turn"
     );
 }
+
+// ─── G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION follow-up (1) ─────────
+// The RL mask counts the "by deleting 1 of your [Composite] Digimon" reduction
+// when that cost is payable right now (a Composite Digimon exists): accepting
+// it is then always a legal choice, so a play whose cost fits the -10 floor
+// only after the reduction is declarable (rule 1-3-11-1).
+
+fn hand_play_offered(runner: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+fn memory_paid_since(runner: &DebugRunner, events_before: usize) -> i16 {
+    runner.game.events[events_before..]
+        .iter()
+        .filter_map(|e| match e {
+            digimon_engine::events::GameEvent::MemoryChange { delta, .. } => Some(*delta),
+            _ => None,
+        })
+        .sum()
+}
+
+#[test]
+fn bt18_073_mask_offers_play_payable_only_after_delete_reduction() {
+    let mut runner = machinedramon_runner()
+        .add_card(make_composite_digimon("COMP-OWN", 4, 5000))
+        .deck(0, &["COMP-OWN", "COMP-OWN", "COMP-OWN"])
+        .deck(1, &["COMP-OWN"])
+        .hand(0, &[CARD_ID])
+        .start();
+    runner.place_on_field(0, "COMP-OWN", None);
+    // Printed 11 from -3 → -14 (illegal); reduced 7 → -10 (legal).
+    runner.game.set_memory(-3);
+    assert!(
+        hand_play_offered(&runner),
+        "a Composite Digimon can pay the delete cost → 11 - 4 = 7 is payable from -3"
+    );
+    let events_before = runner.game.events.len();
+    let _ = runner.play(0, 0);
+    let sel = runner
+        .pending_selection()
+        .expect("cost-reduction prompt must install");
+    let action = sel
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != PASS)
+        .expect("accept action");
+    let player = sel.selecting_player;
+    runner.game.resolve_selection(player, action).ok();
+    let _ = runner.auto_resolve();
+    assert!(
+        has_named_on_field(&runner, 0, "Machinedramon"),
+        "Machinedramon resolved onto the field at the reduced cost"
+    );
+    assert!(!has_named_on_field(&runner, 0, "COMP-OWN"));
+    assert_eq!(
+        memory_paid_since(&runner, events_before),
+        -7,
+        "paid the reduced cost 7"
+    );
+}
+
+#[test]
+fn bt18_073_mask_hides_play_when_no_composite_can_pay_the_delete_cost() {
+    let mut runner = machinedramon_runner()
+        .add_card(make_digimon("FILLER", 3, 3000))
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER"])
+        .hand(0, &[CARD_ID])
+        .start();
+    runner.place_on_field(0, "FILLER", None);
+    runner.game.set_memory(-3);
+    assert!(
+        !hand_play_offered(&runner),
+        "no [Composite] Digimon → no reduction → printed 11 from -3 overdraws"
+    );
+    // +1 - 11 = -10: legal at the printed cost.
+    runner.game.set_memory(1);
+    assert!(hand_play_offered(&runner));
+}

@@ -1,0 +1,128 @@
+# Exam scenario: Butenmon (BT26-015), clause BT26-015#effect#1 --
+# "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -4000 DP
+#  until their turn ends. Then, by returning 1 card in your trash to the
+#  bottom of the deck, delete 1 of your opponent's 5000 DP or lower Digimon."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`).
+#
+# THE LINE:
+#   T1 (P0, 0): hard-play the Lv.4 BT26-011 (5: 0 -> -5); its [On Play]
+#      trashes BT24-034 ([Shaman]) from hand -> <Draw 2> (BT26-060, BT26-085).
+#      This seeds P0's trash with the one card the "by" cost returns.
+#   T2 (P1, 5): play Birdramon ST1-05 (5000; 4: 5 -> 1), pass -> P0 3.
+#   T3 (P0, 3): draw BT26-078; pass.
+#   T4 (P1, 3): play Biyomon ST1-02 (3000; 2: 3 -> 1), pass -> P0 3.
+#   T5 (P0, 3): draw BT26-078; digivolve Butenmon onto BT26-011 (both the Red
+#      circle (4) and the [TS] condition (3) apply -> cost choice, value 3;
+#      3 -> 0). Bonus draw BT26-060. THE CLAUSE ([When Digivolving]):
+#      -4000 on Birdramon (5000 -> 1000); then return BT24-034 from trash to
+#      the deck bottom and delete Biyomon (3000 <= 5000).
+#      That bottom-deck fires Butenmon's own #effect#2 ("When your effects add
+#      to decks ... may get +3000 and attack"); its own-Digimon pick is
+#      DECLINED here (measured in BT26-015-effect2.yaml).
+#
+# WITNESS: at 12 Birdramon 5000 / Biyomon 3000 / P0 trash [BT24-034]; at 18
+# Birdramon 1000 (the -4000), Biyomon in P1's trash (the delete), P0 trash
+# empty (the "by" return), Butenmon 7000 unsuspended (#effect#2 declined).
+#
+# PROMPT SHAPE: cost choice (DCGO SelectCountEffect, value 3); mandatory -4000
+# pick (SelectPermanentEffect); optional trash pick (DCGO SelectCardEffect,
+# canNoSelect:true); mandatory <=5000 delete pick (SelectPermanentEffect);
+# #effect#2's declinable own-Digimon pick (SelectPermanentEffect,
+# canNoSelect:true) -> cancel. Un-witnessed branch: declining the trash
+# return (no delete) -- PARTIAL only in that sense.
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-015
+clause: BT26-015#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-011, BT26-015, BT24-034, BT26-092, BT26-087,
+            BT26-009, BT26-009, BT25-008, BT25-008, BT26-073,
+            BT26-060, BT26-085, BT26-078, BT26-078, BT26-060]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-05, ST1-02, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-011, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT24-034] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-05, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-015 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { cards: [BT24-034] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.trash: [BT24-034]
+      p1.field:
+        - { card_id: ST1-05, dp: 5000, suspended: false, sources: [] }
+        - { card_id: ST1-02, dp: 3000, suspended: false, sources: [] }
+  - at: 18
+    that:
+      turn: 5
+      p0.memory: 0
+      p0.trash: []
+      p1.trash: [ST1-02]
+      p0.hand: [BT26-060, BT26-060, BT26-078, BT26-078, BT26-085, BT26-087, BT26-092]
+      p0.field:
+        - { card_id: BT26-015, dp: 7000, suspended: false, sources: [BT26-011] }
+      p1.field:
+        - { card_id: ST1-05, dp: 1000, suspended: false, sources: [] }

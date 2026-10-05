@@ -121,6 +121,53 @@ fn bt26_088_non_matching_digimon_not_reduced() {
     assert_eq!(r.memory(), mem - 5);
 }
 
+// ─── G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION (field-granted half) ──
+// Hiroko's optional "by suspending this Tamer" reduction is a legal choice the
+// player can always make while she is unsuspended, so the RL mask offers a
+// [TS]/[Boss] play whose cost is payable only after it (rule 1-3-11-1).
+
+fn hand_play_offered(r: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&r.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+#[test]
+fn bt26_088_mask_offers_ts_play_payable_only_after_suspending_hiroko() {
+    let mut r = setup();
+    let h = r.place_on_field(0, CARD_ID, Some(0));
+    r.game.players[0].hand.clear();
+    push_hand(&mut r, 0, "TS5");
+    // 5 printed, -2 with no Digimon → 3. From -7: printed → -12 (illegal),
+    // reduced → -10 (legal).
+    r.game.set_memory(-7);
+    assert!(hand_play_offered(&r));
+    r.play(0, 0);
+    r.accept_optional_trigger().expect("accept");
+    assert!(r.game.players[0].battle_area[h.index as usize].is_suspended);
+    assert!(field_ids(&r, 0).contains(&"TS5".to_string()));
+    // Paid 5 - 2 = 3 from -7 → -10; the resolved action's turn-end check then
+    // hands the turn over, so the gauge reads +10 from the opponent's side.
+    assert_eq!(r.turn_player(), 1, "memory went negative → turn passed");
+    assert_eq!(r.memory(), 10, "our -10 is the opponent's 10");
+
+    // Suspended Hiroko can't pay → no reduction → not offered.
+    let mut r = setup();
+    let h = r.place_on_field(0, CARD_ID, Some(0));
+    r.game.players[0].battle_area[h.index as usize].is_suspended = true;
+    r.game.players[0].hand.clear();
+    push_hand(&mut r, 0, "TS5");
+    r.game.set_memory(-7);
+    assert!(!hand_play_offered(&r));
+
+    // A non-matching Digimon gets no reduction → not offered.
+    let mut r = setup();
+    r.place_on_field(0, CARD_ID, Some(0));
+    r.game.players[0].hand.clear();
+    push_hand(&mut r, 0, "PLAIN5");
+    r.game.set_memory(-7);
+    assert!(!hand_play_offered(&r));
+}
+
 #[test]
 fn bt26_088_already_suspended_cannot_pay() {
     let mut r = setup();

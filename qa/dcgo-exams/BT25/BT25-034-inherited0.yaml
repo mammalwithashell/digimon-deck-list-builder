@@ -1,0 +1,99 @@
+# Exam scenario: Angemon (BT25-034), clause BT25-034#inherited#0 --
+# "<Barrier> (When this Digimon would be deleted in battle, by trashing your
+#  top security card, it isn't deleted.)"
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon`
+# vs `tm-quiet-red`). No variant.
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# Line shape follows EX12-043-inherited0.yaml: put the carrier of the
+# inherited <Barrier> under a Digimon, attack into a bigger security Digimon,
+# accept the single prevention prompt.
+#
+# THE LINE:
+#   T1 (P0, 0): no hatch; hard-play Angemon (5) -> -5.
+#   T2 (P1, 5): all-pass -> P0 3.
+#   T3 (P0, 3): draw stack[10]; digivolve Angemon -> Sirenmon BT25-039.
+#      Angemon is YELLOW (Sirenmon's Yellow Lv.4 / 4 circle) AND [TS]
+#      (Lv.4 w/[TS] / 3) -> cost choice (ours EffectChoice, DCGO
+#      SelectCountEffect): take 3 (3 -> 0); digivolve-draw stack[11].
+#      Sirenmon (6000, Angemon underneath) attacks security; P1's top card is
+#      Phoenixmon ST1-10 (12000) -> Sirenmon would be deleted in battle.
+#      THE CLAUSE: accept the inherited <Barrier> -> P0's top security card
+#      (BT24-102, stack[9]) is trashed and Sirenmon stays. Pass.
+#      (Sirenmon's own #effect#2 is for OTHER Digimon -- it does not fire.)
+#
+# WITNESS: at 8 (before the Barrier answer) security 5, trash empty; at 9
+# (before T3's pass) Sirenmon still on the field (suspended, sources
+# [BT25-034]), P0 security 4, BT24-102 in P0's trash.
+#
+# PROMPT SHAPE: Barrier = OptionalSkill on both sides (EX12-043-inherited0).
+card: BT25-034
+clause: BT25-034#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-034, BT25-039, BT8-097, BT24-083, BT26-088,   # hand
+            BT8-097, BT24-102, BT24-102, BT24-102, BT24-102,   # security; [9] = BT24-102 (top, Barrier's cost)
+            BT26-092, BT26-092]                                # T3 draw, T3 digivolve-draw
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,          # hand
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-10,        # security; [9] = Phoenixmon 12000 (top)
+            ST1-02, ST1-04]                                    # T2 / T4 draws
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): hard-play Angemon (0 -> -5).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-034, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Angemon -> Sirenmon (cost 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-039 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  # Sirenmon attacks into Phoenixmon.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: inherited <Barrier> -- trash the top security card.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 8
+    that:
+      p0.security: 5
+      p0.trash: []
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.security: 4
+      p0.trash: [BT24-102]
+      p0.field:
+        - { card_id: BT25-039, dp: 6000, suspended: true, sources: [BT25-034] }
+      p1.security: 4
+      p1.trash: [ST1-10]

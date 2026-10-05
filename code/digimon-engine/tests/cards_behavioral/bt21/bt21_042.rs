@@ -755,14 +755,23 @@ fn bt21_042_observer_once_per_turn_lockout_and_clear() {
     }
     runner.auto_resolve().ok();
 
-    // Second Marcus Damon play SAME turn → [Once Per Turn] suppresses.
+    // Second Marcus Damon play SAME turn → the DECLINED first offer was not
+    // an activation (rules 15-9-2: the folded "you may" pick is the optional
+    // gate; DCGO RemoveUse), so [Once Per Turn] is unspent (15-14-1) and the
+    // observer is offered again. G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING.
     let hand_idx = find_hand_index(&runner, 0, "MARCUS-B").expect("MARCUS-B in hand");
     runner.play(0, hand_idx).expect("second Marcus Damon plays");
     runner.game.drain_effect_queue();
-    assert!(
-        runner.pending_selection().is_none(),
-        "[Once Per Turn] must suppress a second observer activation in the same turn"
-    );
+    {
+        let s = runner
+            .pending_selection()
+            .expect("a declined activation leaves [Once Per Turn] unspent");
+        let player = s.selecting_player;
+        runner
+            .execute_action(player, digimon_engine::action::space::PASS)
+            .expect("decline the second offer too");
+    }
+    runner.auto_resolve().ok();
 
     // After a full turn cycle the OPT gate clears. Set positive memory before
     // each turn-end and re-enter Main so the memory-swing-back guard in

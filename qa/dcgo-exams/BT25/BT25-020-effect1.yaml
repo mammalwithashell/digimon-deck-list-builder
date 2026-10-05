@@ -1,0 +1,114 @@
+# Exam scenario: Marsmon (BT25-020), clause BT25-020#effect#1 --
+# "When this card would be played, if there is a Digimon with 13000 DP or
+#  more, reduce the cost by 5."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-ts-mervamon`
+# vs `tm-quiet-red`). No variant.
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE (shared by BT25-020-effect1/2/3.yaml):
+#   T1 (P0, 0): all-pass -> P1 3.   T2 (P1, 3): all-pass -> P0 3.
+#   T3 (P0, 3): hard-play Mervamon BT26-081 (13): 3 -> -10. Mervamon is 13000
+#      printed, 15000 with its own [All Turns] +2000 to [Iliad] Digimon.
+#   T4 (P1, 10): play Biyomon ST1-02 (2) -> 8, pass -> P0 3.
+#   T5 (P0, 3): hard-play Marsmon BT25-020: #effect#1 makes it 12 - 5 = 7
+#      (3 -> -4). [On Play] (#effect#2): +3000 for the turn to one own
+#      Digimon, then one own Digimon battles Biyomon (opp.field.0); Biyomon
+#      (3000) is deleted, the [TS] winner triggers #effect#3: P1's top
+#      security (BT1-009) is trashed. Memory -4 ends the turn.
+#
+# WITNESS: memory 3 at 10 (before the play) -> -4 at 11 (after it): cost 7,
+# not 12 (-9). The 13000+ DP Digimon is P0's own Mervamon (DCGO's condition
+# reads either field). The reduction is mandatory and prompts nothing.
+# PROMPT SHAPE: three SelectPermanentEffect picks on both sides -- the +3000
+# target (mandatory, canNoSelect:false), the battling Digimon (optional,
+# canNoSelect:true), the opponent's Digimon (canNoSelect:true). #effect#3 is
+# mandatory and target-less (IDestroySecurity) -> no prompt.
+card: BT25-020
+clause: BT25-020#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-081, BT25-020, BT8-097, BT24-083, BT26-088,   # hand (no [Iliad] card of cost <= 8)
+            BT24-102, BT24-102, BT24-102, BT24-102, BT8-097,   # security (never flipped)
+            BT26-092, BT26-092]                                # T3 / T5 draws
+    rest: bt26-ts-mervamon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,   # hand: Biyomon + filler
+            BT1-014, BT4-010, BT3-007, ST1-04, BT1-009, # security; [9] = BT1-009 (top)
+            ST1-05, ST1-04]                             # T2 / T4 draws
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): hard-play Mervamon (13, 3 -> -10). Its [On Play] is
+  # silent: no [Iliad] card of play cost <= 8 in hand (Marsmon is 12), empty
+  # trash, and no opponent Digimon for the -4000.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-081, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 10): Biyomon (10 -> 8), keep the turn, pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): hard-play Marsmon. A 13000+ DP Digimon exists
+  # (Mervamon 15000) -> cost 12 - 5 = 7 (3 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-020, from: hand } }
+    expect: { prompt: main_phase }
+  # [On Play]: +3000 for the turn.
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # "Then, 1 of your Digimon may battle ..." -- the battler ...
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # ... and its opponent: Biyomon. Effect battle; Biyomon deleted.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T6 (P1): one step past the clause.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 10
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.hand: [BT24-083, BT25-020, BT26-088, BT26-092, BT26-092, BT8-097]
+      p0.field:
+        - { card_id: BT26-081, dp: 15000, suspended: false, sources: [] }
+  - at: 11
+    that:
+      turn: 5
+      p0.memory: -4
+      p0.hand: [BT24-083, BT26-088, BT26-092, BT26-092, BT8-097]
+      p0.field:
+        - { card_id: BT26-081, dp: 15000, suspended: false, sources: [] }
+        - { card_id: BT25-020, dp: 14000, suspended: false, sources: [] }

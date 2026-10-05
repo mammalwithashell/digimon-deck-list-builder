@@ -1,0 +1,114 @@
+# Exam scenario: Ceresmon (BT26-032, DUAL), clause BT26-032#effect#0 --
+# Special Digivolution Condition "[Digivolve] Play cost 12 [Ceresmon]: Cost 2".
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json + VARIANT
+# `cm-chronomon-ceres2` (variants-E.json, merged into the scenario book):
+# `bt26-chronomon` -1 BT9-103 +1 BT25-059 Ceresmon (green/yellow Lv.6,
+# PLAY COST 12, [TS]) -- the only "play cost 12 [Ceresmon]" printing, absent
+# from both real Chronomon lists. Opponent `tm-quiet-red`. No DCGO checkout in
+# the authoring container: prompt shapes are inferred from the card YAML's
+# DCGO crosscheck block + sibling exams.
+#
+# THE LINE (shared by BT26-032-effect0 / -effect2):
+#   T1 (P0, 0): pass, pass (a cost-12 card is unplayable from 0: cap is +10).
+#   T2 (P1): pass, pass -> P0 at 3.
+#   T3 (P0, 3): play BT25-059 (12: 3 -> -9). Its [On Play] "you may suspend up
+#      to 2 Digimon" -- declined.
+#   T4 (P1, 9): play Biyomon ST1-02 (3000); pass -> P0 at 3.
+#   T5 (P0, 3): digivolve Ceresmon onto BT25-059. BT25-059 is Lv.6, so the
+#      printed Yellow/Green Lv.5 circles cannot apply: ONLY the
+#      "Play cost 12 [Ceresmon]: Cost 2" route admits it (3 -> 1).
+#      Two [When Digivolving] stack: Ceresmon's own (effect#3) and BT25-059's,
+#      gained via <Succession ([Ceresmon])>. Ours orders them (TriggerOrder,
+#      candidates [BT26-032, BT25-059]) -> Ceresmon's first: no suspended
+#      opponent Digimon; its "by suspending 1 Digimon" pick declined. Then
+#      BT25-059's copied "suspend up to 2" pick declined.
+#
+# WITNESS: at 11 (before the digivolve) memory 3, BT25-059 alone; at 13
+# Ceresmon on the field with BT25-059 as its only source, memory 1 (3 - 2).
+# Isolated from the printed circles by LEVEL (a Lv.6 base).
+#
+# PROMPT SHAPE: no cost-route prompt (single route). Trigger order = ours
+# TriggerOrder -> DCGO MultipleSkills. CAUTION: our engine names the gained
+# WD by its source card (BT25-059); DCGO may list both WDs under BT26-032
+# (then re-author with `ordinal:` from the abort message). Ceresmon WD pick =
+# ours AnyField -> DCGO SelectPermanentEffect canNoSelect:true (declined);
+# BT25-059's "up to 2" = ours budgeted pick -> DCGO SelectPermanentEffect
+# (declined).
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-032
+clause: BT26-032#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-059, BT26-032, BT26-092, BT25-008, BT26-011,
+            BT26-009, BT26-009, BT26-087, BT26-078, BT26-073,
+            BT26-085, BT26-060, BT26-015, BT24-034, BT26-011]
+    rest: cm-chronomon-ceres2
+  p1:
+    stack: [ST1-02, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-03, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-059, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # T5: THE CLAUSE -- Ceresmon onto the cost-12 Ceresmon.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-032 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-032] } }
+    expect: { prompt: MultipleSkills }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 11
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.field:
+        - { card_id: BT25-059, dp: 12000, suspended: false, sources: [] }
+  - at: 13
+    that:
+      turn: 5
+      p0.memory: 1
+      p0.hand: [BT25-008, BT26-011, BT26-015, BT26-060, BT26-085, BT26-092]
+      p0.field:
+        - { card_id: BT26-032, dp: 13000, suspended: false, sources: [BT25-059] }

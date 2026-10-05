@@ -213,3 +213,67 @@ fn bt25_034_effect_trash_moves_angemon_to_trash() {
         "Angemon must be in the controller's trash after the effect-trash"
     );
 }
+
+// ─── <Ascension> on a real-text card (G-ENGINE-DUPLICATE-ASCENSION-TRIGGER) ──
+
+/// Mirror `CardData::load`: cards.json carries the printed text and parses
+/// `keywords` out of it. The embedded DSL pack leaves the text empty, which
+/// hid the duplicate: with real text, `＜Ascension＞` starts a line after
+/// prose and is NOT classified as an innate face keyword.
+fn restore_printed_text(runner: &mut DebugRunner) {
+    let effect = "When effects trash this card from the security stack, you may play 1 level 4 or lower [Angel] or [Iliad]\u{a0}trait card from your hand without paying the cost.\r\n＜Ascension＞ (When this Digimon is deleted, you may place this card as the top security card.)";
+    let inherited = "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)";
+    let cd = std::sync::Arc::make_mut(&mut runner.game.card_data.0)
+        .iter_mut()
+        .find(|c| c.card_id == CARD_ID)
+        .expect("BT25-034 registered");
+    cd.effect_text = effect.to_string();
+    cd.inherited_text = inherited.to_string();
+    cd.keywords = digimon_engine::card_data::parse_printed_keywords(effect, inherited, "");
+}
+
+/// A deleted Angemon offers exactly ONE <Ascension> — the yes/no directly,
+/// never a TriggerOrder over two <Ascension> copies (one synthesized from the
+/// top card's own `grant_keyword`, one from the aura-grant dispatch). DCGO
+/// registers a single `AscensionSelfEffect` (BT25_034.cs).
+#[test]
+fn bt25_034_deletion_offers_exactly_one_ascension() {
+    let mut runner = base().start();
+    restore_printed_text(&mut runner);
+    let sec_before = runner.security_count(0);
+    let angemon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.tick_declarative_effects();
+    runner.game.delete_permanents_batch(
+        vec![angemon],
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+
+    let (player, action) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("<Ascension> asks its yes/no");
+        assert_ne!(
+            pending.kind,
+            digimon_engine::selection::SelectionKind::TriggerOrder,
+            "exactly one <Ascension> may trigger — no TriggerOrder over duplicates"
+        );
+        (pending.selecting_player, pending.valid_action_ids[0])
+    };
+    // Accept: the first valid action of the Ascension choice is "yes".
+    runner
+        .game
+        .resolve_selection(player, action)
+        .expect("accept <Ascension>");
+    let _ = runner.auto_resolve();
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no second <Ascension> prompt follows"
+    );
+    assert_eq!(
+        runner.security_count(0),
+        sec_before + 1,
+        "<Ascension> placed Angemon as the top security card"
+    );
+}

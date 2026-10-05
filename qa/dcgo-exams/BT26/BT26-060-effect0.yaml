@@ -1,0 +1,131 @@
+# Exam scenario: Chronomon: Destroy Mode (BT26-060), clause BT26-060#effect#0 --
+# special digivolution condition "[Digivolve] Lv.6 w/[Chronomon] in text /
+#  [Giant Slayer]: Cost 5".
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs `tm-quiet-red`;
+# no variant). Every card the line names is stacked.
+#
+# THE LINE (the "Giant Slayer -> Destroy Mode" spine, shared by BT26-060
+# effect0 / effect5 / effect6):
+#   T1 (P0, 0): pass.
+#   T2 (P1, 3): play Monodramon BT1-009 (2: 3 -> 1); pass (P0 gets 3).
+#   T3 (P0, 3): hard-play Giant Slayer BT26-085 (12: 3 -> -9). Its [On Play]
+#      protection grant asks nothing.
+#   T4 (P1, 9): Monodramon -> Kokatorimon BT1-014 (2: 9 -> 7, draw 1); play
+#      Phoenixmon ST1-10 (10: 7 -> -3). P0 gets 3.
+#   T5 (P0, 3): digivolve Giant Slayer -> Chronomon: Destroy Mode BT26-060 for
+#      5 through the "[Giant Slayer]" special condition (3 -> -2; digivolve
+#      draw 1). [When Digivolving] (effect#5): pick BOTH of P1's Digimon
+#      (min(3, 2)); Kokatorimon's stack returns its top min(stack-1, 5) = 1
+#      card (Kokatorimon) to the TOP of P1's deck, Phoenixmon (one card) gives
+#      nothing. That deck-add is P0's own effect -> effect#6 ("[All Turns][OPT]
+#      When your effects add to decks, you may delete ...") opens its gate.
+#      The turn then passes (memory -2).
+#   T6 (P1, 2): breeding decision -- P1 has drawn the returned Kokatorimon.
+#   (effect#6's gate is declined here.)
+#
+# ISOLATION: the [Giant Slayer] branch. Giant Slayer BT26-085 is a WHITE
+# Digimon with NO level, so neither printed circle (Black Lv.6 / Red Lv.6, cost
+# 6) can apply -- the digivolve is legal only through this clause, at cost 5.
+# PARTIAL: the "Lv.6 w/[Chronomon] in text" branch is crossed only in
+# BT26-060-effect4.yaml, over Holy Mode BT26-016 (red Lv.6, where the red
+# circle ALSO applies: our engine offers "cost 5 | cost 6" and the line takes
+# 5), so that branch is witnessed by cost only, never isolated from the circle.
+#
+# WITNESS: at 11 Giant Slayer is on the field, Destroy Mode in hand, memory 3;
+# at 12 Destroy Mode sits on Giant Slayer (sources [BT26-085]), memory is -2
+# (cost 5 paid), and the digivolve draw (BT25-008) is in hand.
+#
+# SLOT HYGIENE: every slot-addressed step (`digivolve from:`, `attack:`) is
+# taken while the addressed side has exactly ONE permanent in its battle area
+# (no Tamers), because `field.N` reaches DCGO as a compact frame index and DCGO
+# seats permanents centre-out (NOTES-BT24-081.md "Slot hygiene"). Every
+# selection is answered by card identity.
+#
+# PROMPT SHAPE (ours vs expected DCGO, BT26-060.yaml DCGO notes):
+#   * Digivolve onto Giant Slayer: ONE applicable path (no printed Lv.6 circle
+#     can apply to a level-less white Digimon) -> no cost-choice prompt.
+#   * effect#5: mandatory pick of min(3, n) -> ours one OppField multi-pick
+#     answered with both targets (by identity); DCGO one SelectPermanentEffect
+#     (maxCount 2). One card returned -> no ordering prompt on either side
+#     (DCGO orders only 2+ cards).
+#   * effect#6: optional + canNoSelect pick -> ours an outer gate (Replacement
+#     kind -> OptionalSkill) then the OppField pick; DCGO OptionalSkill then
+#     SelectPermanentEffect (canNoSelect).
+#
+# PROVISIONAL: assert block is our engine's result, not backfilled from DCGO -- unconfirmed until the oracle pass.
+card: BT26-060
+clause: BT26-060#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-085, BT26-060, BT26-011, BT26-015, BT25-008,
+            BT26-078, BT26-078, BT26-078, BT26-073, BT26-073,
+            BT26-011, BT26-015, BT25-008, BT26-009, BT26-009]
+    rest: bt26-chronomon
+  p1:
+    stack: [BT1-009, ST1-10, BT1-014, ST1-03, ST1-04,
+            ST1-03, ST1-04, BT3-007, ST1-02, BT1-009,
+            BT3-007, ST1-04, ST1-03, ST1-02]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-085, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: field.0, using: BT1-014 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-060 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0, opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 11
+    that:
+      turn: 5
+      p0.memory: 3
+      p0.hand: [BT25-008, BT26-011, BT26-011, BT26-015, BT26-015, BT26-060]
+      p0.field:
+        - { card_id: BT26-085, dp: 14000, suspended: false, sources: [] }
+  - at: 12
+    that:
+      turn: 5
+      p0.memory: -2
+      p0.hand: [BT25-008, BT25-008, BT26-011, BT26-011, BT26-015, BT26-015]
+      p0.field:
+        - { card_id: BT26-060, dp: 16000, suspended: false, sources: [BT26-085] }

@@ -148,6 +148,29 @@ pub fn lower_for_kind_with_clause_index(
         // effect before its OPT is recorded, i.e. DCGO `RemoveUse`).
         let needs_outer_optional =
             clause.optional && (clause.outer_prompt || !body_first_step_is_declinable(&body_steps));
+        // Data twin of a `before_pay_cost_observe` body that is exactly
+        // "gain N memory" (BT12-022 / BT12-050): the observer scan runs it
+        // unconditionally before the memory is paid, so read-only
+        // affordability checks add N to the gauge.
+        // `G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION` follow-up (3).
+        let observer_memory_gain = match body_steps.as_slice() {
+            [CompiledStep::GainMemory(n)]
+                if engine_timing == EffectTiming::BeforePayCostObserve
+                    && activation_cost_kind.is_none() =>
+            {
+                Some(*n)
+            }
+            _ => None,
+        };
+        // G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING: a folded "you may"
+        // (no outer confirm — the first step's PASS is the decline) whose
+        // first-step decline leaves nothing else for the body to do declines
+        // the whole activation, so that PASS must refund the [Once Per Turn]
+        // use the queue records before the body runs.
+        let folded_decline_refunds_opt = clause.optional
+            && !needs_outer_optional
+            && (clause.once_per_turn || clause.max_per_turn.is_some())
+            && folded_first_step_decline_declines_clause(&body_steps);
         // Guard predicate: when the body's first step is a selection, the
         // outer prompt only installs if it has >=1 candidate. `None` ⇒ no
         // guard (always prompt). A FORCED outer prompt (`outer_prompt: true`)
@@ -233,6 +256,9 @@ pub fn lower_for_kind_with_clause_index(
             // framework installs its own accept/decline prompt for an optional
             // `WhenWouldLink` effect, so an outer-optional prompt would
             // double-prompt and never reach the replacement dispatch (Gap 5).
+            if folded_decline_refunds_opt && !is_would_link_to_this {
+                builder = builder.folded_decline_refunds_opt();
+            }
             if needs_outer_optional && !is_would_link_to_this {
                 builder = builder.needs_outer_optional_prompt();
                 // Suppress the prompt when the body's first selection step
@@ -388,7 +414,9 @@ pub fn lower_for_kind_with_clause_index(
             });
         }
 
-        out.push(builder.build());
+        let mut effect = builder.build();
+        effect.before_pay_cost_memory_gain = observer_memory_gain;
+        out.push(effect);
     }
     out
 }
@@ -470,6 +498,70 @@ fn steps_contain_refund_opt(steps: &[CompiledStep]) -> bool {
         } => steps_contain_refund_opt(then) || steps_contain_refund_opt(else_branch),
         CompiledStep::ForEach { body, .. } => steps_contain_refund_opt(body),
         _ => false,
+    })
+}
+
+/// True when declining the body's FIRST step (a PASS-able selection) leaves
+/// the rest of the body with nothing to do — i.e. the first step's PASS
+/// declines the whole clause, not just one optional part of it. Holds when:
+/// - the first step is a `cost: true` select (declining aborts the clause via
+///   `Game::dsl_clause_aborted`), or
+/// - the first step binds its pick (`bind_as`) and EVERY later top-level step
+///   references that binding (a target / index / selection / `binding_exists`
+///   gate) without testing its absence (`binding_absent` runs work exactly
+///   when the pick was declined). Steps scoped in the select's own `then:`
+///   tail run only on a pick and are dependent by construction.
+///
+/// "You may unsuspend 1 of your Digimon" (BT24-051) qualifies; "You may return
+/// 1 Digimon. Then, by trashing …, this Digimon unsuspends." (BT25-027) does
+/// not — its `Then` leg runs on a declined bounce, so the effect activated.
+/// G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING.
+pub(crate) fn folded_first_step_decline_declines_clause(body: &[CompiledStep]) -> bool {
+    let Some((first, rest)) = body.split_first() else {
+        return false;
+    };
+    if !body_first_step_is_declinable(std::slice::from_ref(first)) {
+        return false;
+    }
+    let Ok(first_json) = serde_json::to_value(first) else {
+        return false;
+    };
+    // Externally tagged enum: `{ "SelectHand": { ... } }`.
+    let Some(fields) = first_json
+        .as_object()
+        .and_then(|m| m.values().next())
+        .and_then(|v| v.as_object())
+    else {
+        return false;
+    };
+    if fields.get("cost").and_then(|v| v.as_bool()) == Some(true) {
+        return true;
+    }
+    let Some(bind) = fields.get("bind_as").and_then(|v| v.as_str()) else {
+        return false;
+    };
+    fn mentions(v: &serde_json::Value, bind: &str) -> bool {
+        match v {
+            serde_json::Value::String(s) => s == bind,
+            serde_json::Value::Array(items) => items.iter().any(|i| mentions(i, bind)),
+            serde_json::Value::Object(map) => map.values().any(|i| mentions(i, bind)),
+            _ => false,
+        }
+    }
+    fn tests_absence(v: &serde_json::Value, bind: &str) -> bool {
+        match v {
+            serde_json::Value::Array(items) => items.iter().any(|i| tests_absence(i, bind)),
+            serde_json::Value::Object(map) => map.iter().any(|(k, val)| {
+                (k == "binding_absent" && val.as_str() == Some(bind)) || tests_absence(val, bind)
+            }),
+            _ => false,
+        }
+    }
+    rest.iter().all(|step| {
+        let Ok(v) = serde_json::to_value(step) else {
+            return false;
+        };
+        mentions(&v, bind) && !tests_absence(&v, bind)
     })
 }
 

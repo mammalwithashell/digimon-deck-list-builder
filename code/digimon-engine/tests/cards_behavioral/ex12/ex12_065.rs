@@ -24,6 +24,60 @@ fn ex12_065_has_fortitude_and_grants_blocker_retaliation_to_puppet_or_tb() {
     assert!(runner.game.has_keyword(puppet, Keyword::Retaliation));
 }
 
+/// G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING. The [OP][WD][WA][OPT]
+/// trash-play folds its "you may" into the trash pick; declining that pick
+/// declines the activation (§15-9-2), so the [Once Per Turn] is not spent
+/// (§15-14-1 counts activations) and a later [When Attacking] the same turn
+/// offers it again. Accepting spends it.
+#[test]
+fn ex12_065_declined_trash_play_does_not_spend_once_per_turn() {
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::{SelectionKind, TriggerSource};
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-065 YAML loads")
+        .add_card(puppet_tb("PUPPET-LOW", 4))
+        .start();
+    push_to_trash(&mut runner, 0, "PUPPET-LOW");
+    let kaguyamon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.turn_count = 1;
+
+    let fire_wa = |runner: &mut DebugRunner| {
+        runner.game.enqueue_triggered(
+            EffectTiming::WhenAttacking,
+            TriggerSource::Permanent(kaguyamon),
+        );
+        runner.game.drain_effect_queue();
+    };
+
+    fire_wa(&mut runner);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Trash));
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the trash play");
+    assert!(runner.pending_selection_view().is_none());
+    assert!(!field_contains(&runner, 0, "PUPPET-LOW"));
+
+    fire_wa(&mut runner);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Trash),
+        "a declined activation leaves [Once Per Turn] unspent"
+    );
+    select_first_non_pass(&mut runner);
+    let _ = runner.auto_resolve();
+    assert!(field_contains(&runner, 0, "PUPPET-LOW"));
+
+    push_to_trash(&mut runner, 0, "PUPPET-LOW");
+    fire_wa(&mut runner);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "an accepted activation spends [Once Per Turn]"
+    );
+}
+
 #[test]
 fn ex12_065_on_play_plays_low_cost_puppet_from_trash() {
     let mut runner = DebugRunner::builder()

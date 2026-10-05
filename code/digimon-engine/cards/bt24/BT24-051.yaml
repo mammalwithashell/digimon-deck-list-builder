@@ -27,7 +27,9 @@ effects:
     when_playing_this: true
     condition:
       count_gte:
-        filter: { zone: [battle_area], kind: digimon }
+        # "if there are 3 or more Digimon" counts BOTH players' Digimon
+        # (BT25-059 / BT25-050 / BT25-055 idiom; `count_*` defaults to `you`).
+        filter: { owner: any, zone: [battle_area], kind: digimon }
         n: 3
     amount: 5
     summary: "When played while there are 3 or more Digimon, reduce play cost by 5"

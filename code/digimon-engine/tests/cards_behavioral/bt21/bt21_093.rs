@@ -951,36 +951,32 @@ fn bt21_093_delay_does_not_activate_without_reptile_or_dragonkin_digimon() {
 // § 6  Clause 4 — inherited [Security] highest-DP delete (behavioral)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// The inherited [Security] clause deletes the opponent's highest-DP Digimon.
-/// Driven clause-isolated through the effect queue with an `OnSecurity`
-/// trigger so the same `select_opponent_permanent` (selector: highest_dp) +
-/// `delete_permanent` body runs as for [Main].
+/// The [Security] clause deletes the opponent's highest-DP Digimon.
+/// Driven through a REAL security check (`attack_player`): a `{Security}` /
+/// `[Security]` clause is active only while the card is revealed from its
+/// owner's security stack, never from the battle area
+/// (G-ENGINE-SECURITY-SCOPED-CLAUSE-FIRES-FROM-BATTLE-AREA — the battle-area
+/// scan no longer dispatches `security` clauses, so the old shortcut of
+/// enqueueing `SecuritySkill` on a battle-area carrier is gone).
 #[test]
 fn bt21_093_inherited_security_deletes_highest_dp_opponent_digimon() {
-    // P1 plays BT21-093 as a battle-area Option permanent so its inherited
-    // security body can be exercised through the OnSecurity timing; the
-    // opponent of the BT21-093 controller (P0) holds the Digimon to delete.
+    // BT21-093 is P1's top security card; P0's 12000-DP Digimon attacks and
+    // reveals it. P0 also holds a 2000-DP Digimon.
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-093")
         .expect("BT21-093 in embedded pack")
         .add_card(digimon("FOE-LOW", "FoeLow", 2000, &[]))
         .add_card(digimon("FOE-HIGH", "FoeHigh", 12000, &[]))
+        .security(1, &["BT21-093"])
         .memory(20)
         .start();
 
-    // BT21-093 carrier on P1's field; P0 holds the opponent Digimon.
-    let carrier = runner.place_on_field(1, "BT21-093", Some(0));
     runner.place_on_field(0, "FOE-LOW", None);
-    runner.place_on_field(0, "FOE-HIGH", None);
+    let attacker = runner.place_on_field(0, "FOE-HIGH", None);
     assert_eq!(runner.battle_area_size(0), 2, "2 opponent Digimon staged");
 
-    // Fire the inherited [Security] body from the carrier.
-    // DSL `on_security` lowers to `EffectTiming::SecuritySkill`.
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(carrier),
-    );
-    runner.game.drain_effect_queue();
+    runner.game.turn_count = 3; // no summoning sickness on the attacker
+    runner.attack_player(attacker, 1, false);
 
     // Highest-DP selection installs against P1's opponent (P0).
     let view = runner
@@ -1013,5 +1009,54 @@ fn bt21_093_inherited_security_deletes_highest_dp_opponent_digimon() {
     assert!(
         !remaining_dp.contains(&12000),
         "[Security] must delete the highest-DP (12000) Digimon; remaining: {remaining_dp:?}"
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § Option-use affordability counts the automatic use-cost reduction
+// (G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION follow-up (2))
+// ─────────────────────────────────────────────────────────────────────────────
+
+fn option_use_offered(runner: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+fn option_mask_runner(opp_security: usize) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-093")
+        .expect("BT21-093 in embedded pack")
+        .add_card(digimon("ALLY-RED", "AllyRed", 3000, &[]))
+        .hand(0, &["BT21-093"])
+        .security(1, &vec!["BT21-093"; opp_security])
+        .deck(0, &["ALLY-RED"; 3])
+        .deck(1, &["ALLY-RED"; 3])
+        .start();
+    // A red Digimon satisfies the Option's color requirement.
+    runner.place_on_field(0, "ALLY-RED", None);
+    runner
+}
+
+#[test]
+fn bt21_093_mask_offers_use_payable_only_after_the_security_reduction() {
+    // Printed 8 from -3 → -11 (illegal); reduced 4 → -7 (legal).
+    let mut runner = option_mask_runner(3);
+    runner.game.set_memory(-3);
+    assert!(
+        option_use_offered(&runner),
+        "opponent at 3 security: 8 - 4 = 4 is payable from -3"
+    );
+    runner.play(0, 0);
+    let _ = runner.auto_resolve();
+    assert!(
+        runner.game.players[0].hand.is_empty(),
+        "the Option was used at the reduced cost"
+    );
+
+    let mut runner = option_mask_runner(4);
+    runner.game.set_memory(-3);
+    assert!(
+        !option_use_offered(&runner),
+        "opponent at 4 security: no reduction, 8 from -3 overdraws"
     );
 }

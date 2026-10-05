@@ -1,0 +1,102 @@
+# Exam scenario: Cross Arts (BT26-101), clause BT26-101#effect#0 --
+# "<Use Req. ([TS] trait)> (Specified cards let you ignore color
+#  requirements.)"
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# ISOLATION: Cross Arts is WHITE; `bt26-chronomon` holds no white Digimon or
+# Tamer at all, and P0's board is ONE red [TS] Digimon (Hyokomon). The Option
+# is therefore usable ONLY through this clause's color-requirement ignore.
+# (The negative -- no [TS] permanent, use refused -- cannot be asserted: a
+# scenario cannot assert an action's illegality.)
+#
+# THE LINE (also walks effect#1's "no [Dan Yuki]/[Kanan Yuki] Tamer" side and
+# its UNSUSPEND branch, which BT26-101-effect1.yaml does not):
+#   T1 (P0, 0): play Hyokomon BT26-009 (3) -> -3.
+#   T2 (P1, 3): pass -> P0 at 3.
+#   T3 (P0, 3): draw; no Hyokomon [Start of Your Main Phase] prompt (no
+#      [Chronomon]/[Shaman] card in hand). Hyokomon attacks security: Tai
+#      Kamiya ST1-12 is flipped and plays itself (no battle). THE CLAUSE: use
+#      Cross Arts (4) -> -1. Its [Main]: no Dan/Kanan Tamer -> no Blocker / no
+#      +3000; branch "1 of your [TS] trait Digimon unsuspends" -> Hyokomon.
+#
+# WITNESS: at 6 (before the use) Hyokomon suspended, memory 3 -> at 10 (T4)
+# Cross Arts in p0.trash, memory -1 (paid 4), Hyokomon UNSUSPENDED and still
+# 2000 DP (no Dan/Kanan buff).
+#
+# PROMPT SHAPE: the use is a plain PlayCardAction. Branch choice: ours
+# EffectChoice (sim_only `choice:`), DCGO generic_int (dcgo_only `value:` --
+# guessed). Unsuspend pick: DCGO mandatory SelectPermanentEffect -> ours
+# OwnField (1:1).
+card: BT26-101
+clause: BT26-101#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-009, BT26-101, BT26-092, BT26-087, BT25-008,
+            BT26-087, BT25-008, BT26-016, BT26-016, BT26-016,
+            BT25-008]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-12,
+            ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-009, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # T3 (P0, 3): Hyokomon attacks (to have something to unsuspend). P1's top
+  # security is Tai Kamiya ST1-12 -- [Security] plays itself, no battle.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: use the WHITE Option with only a red [TS] Digimon in play.
+  - actor: 0
+    do: { play: { card: BT26-101, from: hand } }
+    expect: { prompt: main_phase }
+  # [Main] (effect#1, no Dan/Kanan Tamer -> no buff): the 2-way branch
+  # choice. SIM-ONLY our EffectChoice; DCGO-ONLY its SetIntSelection
+  # (generic_int) -- VALUE 1 IS A GUESS (no DCGO source in this container):
+  # read the real value off the oracle abort message if it differs.
+  - actor: 0
+    do: { select: { choice: "unsuspends", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 6
+    that:
+      turn: 3
+      p0.memory: 3
+      p1.security: 4
+      p0.trash: []
+      p0.field:
+        - { card_id: BT26-009, dp: 2000, suspended: true, sources: [] }
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -1
+      p0.trash: [BT26-101]
+      p0.field:
+        - { card_id: BT26-009, dp: 2000, suspended: false, sources: [] }

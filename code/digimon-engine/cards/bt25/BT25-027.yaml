@@ -41,20 +41,38 @@ alt_paths:
 
 effects:
   # ─── WD/WA: bounce opp lvl<=4, then trash face-down → unsuspend self ──────
+  # `outer_prompt: true`: the clause's "you may" is the activation itself
+  # (DCGO optional ActivateClass — the OptionalSkill Yes/No comes first), and
+  # the bounce pick is a separate canNoSelect select. Without the outer confirm
+  # the optional gate folds into the bounce pick, and (without
+  # `continue_on_decline` on the pick) declining the bounce dropped the whole
+  # body — including the independent "Then, by trashing …
+  # unsuspends" leg, which DCGO runs either way. Declining the outer confirm
+  # drops the entry before the [Once Per Turn] use is recorded (no OPT spent);
+  # accepting and then declining only the bounce still runs the Then-leg and
+  # is an activation (OPT spent).
   - when: [when_digivolving, when_attacking]
     optional: true
+    outer_prompt: true
     once_per_turn: true
     summary: "[WD][WA][OPT] May bounce opp lvl<=4; then trash FD under a Tamer to unsuspend self"
     process:
+      # continue_on_decline: declining the bounce must NOT abort the clause —
+      # the Then-leg below is independent (DCGO: canNoSelect bounce, then the
+      # Tamer select runs either way).
       - select_opponent_permanent:
           bind_as: bounce_target
           optional: true
+          continue_on_decline: true
           filter:
             all_of:
               - kind: digimon
               - level_lte: 4
           prompt: "You may return 1 of your opponent's level 4 or lower Digimon to the hand"
-      - return_to_hand: { target: bounce_target }
+      - if:
+          condition: { binding_present: bounce_target }
+          then:
+            - return_to_hand: { target: bounce_target }
       # "Then, by trashing the bottom face-down card from under any of your
       # Tamers, this Digimon unsuspends." The unsuspend is the tail of the
       # trash cost — runs only if a face-down source was trashed.

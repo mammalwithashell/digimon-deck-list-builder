@@ -65,7 +65,9 @@
 #      direct battle, NOT IAttack (no security check; matches the Official
 #      Q&A). → select_own_permanent (mandatory) for the DP buff →
 #      add_dp_modifier value 3000 expiry end_of_turn; then select_own_permanent
-#      (optional) bind attacker_pick → select_opponent_permanent (optional,
+#      (optional; the attacker/defender/battle branch sits under an
+#      opponent-Digimon-exists `if`) bind attacker_pick →
+#      select_opponent_permanent (optional,
 #      nested under `if binding_present: attacker_pick`) bind defender_pick →
 #      battle { attacker: attacker_pick, defender: defender_pick } (the
 #      `battle` step itself no-ops gracefully if either binding is absent, so
@@ -176,22 +178,32 @@ effects:
       # step itself no-ops if either binding is absent, and nesting the
       # defender pick under `binding_present: attacker_pick` mirrors DCGO's
       # short-circuit (no attacker chosen ⇒ defender prompt never installs).
-      - select_own_permanent:
-          bind_as: attacker_pick
-          optional: true
-          filter: { kind: digimon }
-          prompt: "You may choose 1 of your Digimon to battle 1 of your opponent's Digimon"
+      # The whole branch is gated on an opponent Digimon existing: DCGO opens
+      # the attacker pick only then, so an empty opponent board asks nothing
+      # (no dead "may battle" decision).
       - if:
-          condition: { binding_present: attacker_pick }
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
           then:
-            - select_opponent_permanent:
-                bind_as: defender_pick
+            - select_own_permanent:
+                bind_as: attacker_pick
                 optional: true
                 filter: { kind: digimon }
-                prompt: "Choose 1 of your opponent's Digimon to battle"
-            - battle:
-                attacker: attacker_pick
-                defender: defender_pick
+                prompt: "You may choose 1 of your Digimon to battle 1 of your opponent's Digimon"
+            - if:
+                condition: { binding_present: attacker_pick }
+                then:
+                  - select_opponent_permanent:
+                      bind_as: defender_pick
+                      optional: true
+                      filter: { kind: digimon }
+                      prompt: "Choose 1 of your opponent's Digimon to battle"
+                  - battle:
+                      attacker: attacker_pick
+                      defender: defender_pick
 
   # ─── Clause C: [All Turns][OPT] any ally [TS] Digimon wins a battle → trash opp top security ─
   #

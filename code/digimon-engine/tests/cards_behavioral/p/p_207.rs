@@ -807,12 +807,21 @@ fn p_207_when_attacking_declining_leaves_candidate_in_trash() {
 #[test]
 fn p_207_when_attacking_opt_blocks_second_attack_same_turn() {
     let mut runner = attack_and_get_trash_prompt(&["Beast"], 4);
-    // Decline the first offer to keep state simple (still counts as an
-    // activation per DCGO — the OPT counter increments on trigger firing,
-    // not on accepting the pick; the trigger fired and installed a prompt).
+    // ACCEPT the first offer: an accepted activation spends the OPT. (A
+    // DECLINED offer would not — the folded pick is the clause's optional
+    // gate, so declining it is no activation; rules 15-9-2 / 15-14-1,
+    // G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING.)
+    let pick = runner
+        .pending_selection_view()
+        .expect("free-play prompt")
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != PASS)
+        .expect("a trash candidate");
     runner
-        .execute_action(0, PASS)
-        .expect("decline the first free play");
+        .execute_action(0, pick)
+        .expect("accept the first free play");
     let _ = runner.auto_resolve();
 
     // Second attack in the same turn: manually unsuspend the attacker first

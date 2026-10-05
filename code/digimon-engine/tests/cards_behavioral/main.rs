@@ -28,6 +28,7 @@ mod de_digivolve;
 mod dsl_card_data;
 mod dsl_omnimon_slice;
 mod scope_both_shared_opt_reducer;
+mod security_attack_real_text;
 mod test_cards;
 mod tokens;
 mod trash_count_binding_primitive;

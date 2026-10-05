@@ -556,3 +556,41 @@ fn compiled_bt24_040() -> digimon_dsl::compiled::CompiledCard {
         .expect("BT24-040 in registry")
         .clone()
 }
+
+// ─── G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION ──────────────────────
+// The RL mask offers the hand play against the REDUCED cost (declare-then-pay,
+// rule 1-3-11-1): 12 - 5 = 7 is payable from 0 memory at <= 3 security.
+
+fn venusmon_mask_runner(memory: i16, security: usize) -> DebugRunner {
+    let sec = vec!["SEC"; security];
+    venusmon_runner()
+        .add_card(make_test_card("SEC", "Security Filler"))
+        .hand(0, &["BT24-040"])
+        .security(0, &sec)
+        .memory(memory)
+        .start()
+}
+
+fn venusmon_play_offered(runner: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+#[test]
+fn bt24_040_mask_offers_play_at_three_security_zero_memory_and_pays_seven() {
+    let mut runner = venusmon_mask_runner(0, 3);
+    assert_eq!(runner.security_count(0), 3);
+    assert!(venusmon_play_offered(&runner));
+    runner
+        .play(0, 0)
+        .expect("Venusmon plays at the reduced cost");
+    assert_eq!(runner.memory(), -7, "paid 12 - 5");
+}
+
+#[test]
+fn bt24_040_mask_keeps_printed_cost_above_three_security() {
+    // 4 security: the reduction's condition is false, printed 12 from 0 → -12.
+    let runner = venusmon_mask_runner(0, 4);
+    assert_eq!(runner.security_count(0), 4);
+    assert!(!venusmon_play_offered(&runner));
+}

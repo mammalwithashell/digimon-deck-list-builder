@@ -789,3 +789,59 @@ fn bt22_094_cost_reduction_can_be_declined() {
 fn _unused_silencer() {
     let _ = make_cs_option("X", "X", 0);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RL mask counts the return-self-to-deck reduction
+// (G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION follow-up (1))
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fn hand_play_offered(runner: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+/// "By returning this Tamer to the bottom of the deck" is payable whenever
+/// Yuugo is on the field, so the mask counts its -2 on a [CS] play.
+#[test]
+fn bt22_094_mask_offers_cs_play_payable_only_after_returning_yuugo() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT22-094 in embedded DSL pack")
+        .add_card(make_cs_digimon("CS-DIGI", "CS Digimon", 5))
+        .add_card(make_non_cs_digimon("PLAIN", "Plain Digimon", 5))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER"])
+        .hand(0, &["CS-DIGI", "PLAIN"])
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    // Printed 5 from -7 → -12 (illegal); reduced 3 → -10 (legal).
+    runner.game.set_memory(-7);
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    let start = digimon_engine::action::space::PLAY_HAND_START as usize;
+    assert_eq!(mask[start], 1.0, "the [CS] play is payable after the -2");
+    assert_eq!(mask[start + 1], 0.0, "a non-[CS] play gets no reduction");
+
+    let _ = runner.play(0, 0);
+    drive_accept(&mut runner, 0);
+    let _ = runner.auto_resolve();
+    assert!(runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "CS-DIGI"));
+}
+
+#[test]
+fn bt22_094_mask_without_yuugo_hides_the_cs_play() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT22-094 in embedded DSL pack")
+        .add_card(make_cs_digimon("CS-DIGI", "CS Digimon", 5))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER"])
+        .hand(0, &["CS-DIGI"])
+        .start();
+    runner.game.set_memory(-7);
+    assert!(!hand_play_offered(&runner));
+}

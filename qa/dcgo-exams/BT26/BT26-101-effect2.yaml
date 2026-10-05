@@ -1,0 +1,96 @@
+# Exam scenario: Cross Arts (BT26-101), clause BT26-101#effect#2 --
+# "[Security] You may play 1 play cost 4 or lower [TS] trait card from your
+#  hand or trash without paying the cost."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# Cross Arts is pinned at P0's stack[9] = TOP security card.
+#
+# THE LINE:
+#   T1 (P0, 0): all-pass -> P1 3.
+#   T2 (P1, 3): play Agumon ST1-03 (3) -> 0, pass -> P0 3.
+#   T3 (P0, 3): all-pass (no Hyokomon in play, nothing triggers) -> P1 3.
+#   T4 (P1, 3): Agumon attacks security. THE CLAUSE: Cross Arts is flipped;
+#      P0 plays Hyokomon BT26-009 ([TS], cost 3) from the hand for free.
+#      Option -> no battle; Cross Arts is trashed, the attack ends.
+#
+# WITNESS: at 8 p0.security 5, P0 field empty, Hyokomon in hand; at 10
+# p0.security 4, Hyokomon on P0's field, Cross Arts in p0.trash, memory still
+# -3 from P0's side (the play was free and on P1's turn).
+#
+# PARTIAL: only the HAND branch (P0's trash is empty, so DCGO's
+# "From hand / From trash / Don't play" generic_int collapses -- auto-picked
+# when only one zone qualifies, BT26-101.yaml DCGO notes). The trash branch
+# and the cost-4 boundary are not walked.
+#
+# PROMPT SHAPE: DCGO PlayByEffect over Root.Hand -> SelectHandEffect
+# (EX12-074-security0.yaml verified the Hand branch parks SelectHandEffect);
+# ours one UnionZone pick over hand+trash (not asserted sim-side).
+card: BT26-101
+clause: BT26-101#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-009, BT26-092, BT26-087, BT25-008, BT25-008,
+            BT26-087, BT25-008, BT26-016, BT26-016, BT26-101,
+            BT26-092, BT26-092]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            BT4-010, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # T4: THE CLAUSE -- Agumon flips Cross Arts.
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P0 (the security owner) plays Hyokomon from hand for free.
+  - actor: 0
+    do: { select: { cards: [BT26-009] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      turn: 4
+      p0.security: 5
+      p0.field: []
+      p0.hand: [BT25-008, BT25-008, BT26-009, BT26-087, BT26-092, BT26-092]
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -3
+      p0.security: 4
+      p0.trash: [BT26-101]
+      p0.hand: [BT25-008, BT25-008, BT26-087, BT26-092, BT26-092]
+      p0.field:
+        - { card_id: BT26-009, dp: 2000, suspended: false, sources: [] }

@@ -1,0 +1,101 @@
+# Exam scenario: Cherubimon (BT26-078), clause BT26-078#effect#3 --
+# "[On Play] [When Digivolving] By deleting this Digimon, you may play 1 play
+#  cost 12 or lower [Chronomon] text or [Titan] trait card from your trash
+#  without paying the cost."
+#
+# Book: qa/dcgo-exams/BT26/chronomon_mervamon_pool.json (`bt26-chronomon` vs
+# `tm-quiet-red`). PROVISIONAL: assert block is our engine's result, not
+# backfilled from DCGO -- unconfirmed until the oracle pass.
+#
+# THE LINE (the [When Digivolving] branch; shares its spine with
+# BT26-078-effect0.yaml, which declines the same gate):
+#   T1 (P0, 0): play Butenmon BT26-015 (7) -> -7. Its [On Play] is silent (no
+#      opponent Digimon, empty trash).
+#   T2 (P1, 7): pass -> P0 at 3.
+#   T3 (P0, 3): draw stack[10]; digivolve Butenmon -> Cherubimon for 5 (the
+#      Lv.5 w/[TS] route, effect#0) -> -2; draw stack[11]. THE CLAUSE: accept
+#      -> Cherubimon is deleted (its stack, incl. Butenmon, goes to trash);
+#      play Butenmon from the trash for free. Butenmon qualifies: cost 7 <= 12
+#      and "[Chronomon] text" scans the whole card -- its INHERITED text names
+#      [Chronomon] (official Q&A on BT26-078). Cherubimon itself (cost 13) is
+#      not a candidate. Replayed Butenmon's [On Play]: its "by returning 1
+#      trash card" cost is offered (Cherubimon is in trash) -> declined.
+#      Cherubimon's own [Trash] clause does NOT fire on Butenmon's play: the
+#      opponent has only 2 memory.
+#
+# WITNESS: at 6 Cherubimon on top of Butenmon (memory -2); at 9 (T4) Butenmon
+# alone on the field with NO sources (a fresh play, not the old stack),
+# Cherubimon in p0.trash, memory unchanged at -2 (the play was free).
+#
+# PARTIAL: the [On Play] branch (hard-play Cherubimon, 13) is not exercised;
+# the body is shared (DCGO "shared, optional: true"), so this measures it.
+#
+# PROMPT SHAPE: DCGO OptionalSkill (optional: true) -> ours Replacement gate
+# (1:1 `yes:`); then PlayByEffect over Root.Trash -> SelectCardEffect
+# (canNoSelect) -> ours Trash pick (1:1). Butenmon's [On Play] cost pick:
+# DCGO SelectCardEffect canNoSelect:true over the trash (BT26-015.yaml DCGO
+# notes) -> ours declinable Trash pick, `decline:` 1:1. Its first half (the
+# -4000 pick) is skipped on both sides (no opponent Digimon).
+card: BT26-078
+clause: BT26-078#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-015, BT26-078, BT26-092, BT26-092, BT25-008,
+            BT26-087, BT26-087, BT25-008, BT25-008, BT25-008,
+            BT26-092, BT25-092]
+    rest: bt26-chronomon
+  p1:
+    stack: [ST1-03, ST1-02, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-04,
+            ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-015, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-078 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: accept, delete Cherubimon, replay Butenmon from trash.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT26-015] } }
+    expect: { prompt: SelectCardEffect }
+  # Replayed Butenmon's [On Play] trash-return cost: declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 6
+    that:
+      turn: 3
+      p0.memory: -2
+      p0.trash: []
+      p0.field:
+        - { card_id: BT26-078, dp: 13000, suspended: false, sources: [BT26-015] }
+  - at: 9
+    that:
+      turn: 4
+      p0.memory: -2
+      p0.trash: [BT26-078]
+      p0.hand: [BT25-008, BT25-092, BT26-092, BT26-092, BT26-092]
+      p0.field:
+        - { card_id: BT26-015, dp: 7000, suspended: false, sources: [] }

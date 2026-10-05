@@ -64,6 +64,47 @@ pub type PayCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'sta
 /// during `BeforePayCost` cost calculation for plays/digivolves.
 pub type ActivationCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'static>;
 
+/// One distinct game object a `BeforePayCost` reducer's `pay_cost` would
+/// consume (a Digimon deleted / suspended, a card trashed / returned /
+/// placed). Two reducers can never spend the same token, which is how the
+/// read-only affordability preview keeps reducers that draw on one pool
+/// ("the bottom face-down card under any of your Tamers") from being counted
+/// twice. `G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PayCostToken {
+    Permanent(PermanentHandle),
+    Card(CardHandle),
+}
+
+/// One "pick N of these" part of a reducer's `pay_cost`, as seen read-only.
+#[derive(Debug, Clone, Default)]
+pub struct PayCostDemand {
+    /// Tokens the cost MUST consume; fewer available ⇒ the cost is unpayable.
+    pub required: usize,
+    /// Extra tokens the payer MAY add on top (`up to N` picks).
+    pub optional_max: usize,
+    /// The eligible tokens, each with the extra reduction consuming it
+    /// credits beyond the reducer's own amount (a deleted Digimon's play cost
+    /// for BT13-103, a DigiXros pre-attach's `cost_delta` for BT12-112 /
+    /// BT10-093; `0` for a plain cost).
+    pub options: Vec<(PayCostToken, i32)>,
+}
+
+/// Read-only shape of a reducer's `pay_cost` at the current game state.
+#[derive(Debug, Clone, Default)]
+pub struct PayCostPreview {
+    pub demands: Vec<PayCostDemand>,
+}
+
+/// Read-only payability probe for a `BeforePayCost` reducer's `pay_cost`:
+/// `None` when the cost's shape is not provable read-only (the preview then
+/// does not count the reducer), else the tokens it would consume. The
+/// probe MUST agree with the `pay_cost_fn` it describes: whenever it reports
+/// a payable demand set, running the pay_cost with those picks credits the
+/// reduction. Built by the DSL cost-reduction lowering.
+pub type PayCostProbeFn =
+    Arc<dyn Fn(&EffectReadContext) -> Option<PayCostPreview> + Send + Sync + 'static>;
+
 /// The *shape* of an effect's activation cost, carried as DATA alongside
 /// [`ActivationCostFn`].
 ///
@@ -487,6 +528,18 @@ pub struct Effect {
     /// pre-evaluated). `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     pub outer_optional_guard: Option<ConditionFn>,
 
+    /// When `true`, this OPTIONAL once-per-turn effect folds its "you may"
+    /// into its first body step (no outer accept/decline prompt), and
+    /// declining that first step declines the WHOLE activation: the rest of
+    /// the body is a no-op without the first step's pick (every later step
+    /// depends on its binding) or the pick is a `cost: true` select that
+    /// aborts the clause. A PASS on the first prompt the body parks therefore
+    /// refunds the once-per-turn use the queue recorded before the body ran,
+    /// exactly as the outer-confirm decline drops the entry before recording
+    /// it (§15-9-2 / §15-14-1; DCGO `RemoveUse`;
+    /// G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING).
+    pub folded_decline_refunds_opt: bool,
+
     /// `BeforePayCost` cost reducers only: when `true`, this reducer's
     /// `pay_cost_fn` begins with a declinable (PASS-able) selection, so
     /// running it surfaces the player's own opt-in/opt-out rather than
@@ -515,6 +568,19 @@ pub struct Effect {
     /// synchronous trash idioms leave this `false`.
     /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
     pub pay_cost_interactive: bool,
+
+    /// `BeforePayCost` cost reducers only: read-only payability probe for
+    /// `pay_cost_fn` (see [`PayCostProbeFn`]). Lets the action mask / Option
+    /// mode check count a paid reducer's reduction exactly when its cost can
+    /// be paid right now. `G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION`.
+    pub pay_cost_probe: Option<PayCostProbeFn>,
+
+    /// `BeforePayCostObserve` effects only: data twin of a `process` that is
+    /// exactly "gain N memory" (BT12-022 / BT12-050). The observer scan runs
+    /// such a body unconditionally before the memory is paid, so read-only
+    /// affordability checks add this gain to the gauge.
+    /// `G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION` follow-up (3).
+    pub before_pay_cost_memory_gain: Option<i32>,
 }
 
 impl std::fmt::Debug for Effect {
@@ -919,8 +985,11 @@ impl EffectBuilder {
                 when_playing_this: false,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
+                folded_decline_refunds_opt: false,
                 pay_cost_self_gated: false,
                 pay_cost_interactive: false,
+                pay_cost_probe: None,
+                before_pay_cost_memory_gain: None,
             },
         }
     }
@@ -1068,6 +1137,13 @@ impl EffectBuilder {
         self
     }
 
+    /// Mark a folded optional clause whose first-step decline declines the
+    /// whole activation. See `Effect::folded_decline_refunds_opt`.
+    pub fn folded_decline_refunds_opt(mut self) -> Self {
+        self.inner.folded_decline_refunds_opt = true;
+        self
+    }
+
     /// Attach a guard for the outer optional prompt — the prompt installs
     /// only when `f` returns `true`. See `Effect::outer_optional_guard`.
     pub fn outer_optional_guard<F>(mut self, f: F) -> Self
@@ -1093,6 +1169,27 @@ impl EffectBuilder {
     /// of the scan. See `Effect::pay_cost_interactive`.
     pub fn pay_cost_interactive(mut self, v: bool) -> Self {
         self.inner.pay_cost_interactive = v;
+        self
+    }
+
+    /// Attach a read-only payability probe to a `BeforePayCost` reducer's
+    /// `pay_cost_fn`. See `Effect::pay_cost_probe`.
+    pub fn pay_cost_probe<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext) -> Option<PayCostPreview> + Send + Sync + 'static,
+    {
+        self.inner.pay_cost_probe = Some(Arc::new(f));
+        self
+    }
+
+    /// `BeforePayCostObserve` "gain N memory" body plus its data twin, so the
+    /// observer both gains the memory when it runs and is visible to
+    /// read-only affordability checks. See `Effect::before_pay_cost_memory_gain`.
+    pub fn before_pay_cost_gain_memory(mut self, amount: i32) -> Self {
+        self.inner.before_pay_cost_memory_gain = Some(amount);
+        self.inner.process = Some(Box::new(move |ctx: &mut EffectContext| {
+            ctx.gain_memory(amount as i16);
+        }));
         self
     }
 

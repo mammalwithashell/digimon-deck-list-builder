@@ -636,7 +636,7 @@ fn bt13_012_does_not_fire_for_own_green_or_purple_tamer() {
 /// wired in `run_queued_effect_inner`. Same caveat as BT24-018 clause (f) and
 /// BT17-018 clause(s) marked in their YAML files.
 #[test]
-fn bt13_012_opt_lockout_blocks_second_activation_in_same_turn() {
+fn bt13_012_opt_lockout_counts_activations_not_declines() {
     let mut runner = fresh_runner(vec![
         make_tamer("RED-TAMER-A", vec![CardColor::Red]),
         make_tamer("YELLOW-TAMER-B", vec![CardColor::Yellow]),
@@ -666,11 +666,33 @@ fn bt13_012_opt_lockout_blocks_second_activation_in_same_turn() {
         .execute_action(player, PASS)
         .expect("decline resolves");
 
-    // Second suspend same turn → prompt must NOT install (OPT lockout).
+    // G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING: the declined pick IS the
+    // folded "you may" — the effect did not activate (rules 15-9-2), so the
+    // [Once Per Turn] is unspent (15-14-1) and the second suspend re-offers.
     runner.game.suspend(yel);
+    let (player, pick) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("a declined activation leaves the OPT unspent");
+        let pick = *pending
+            .valid_action_ids
+            .iter()
+            .find(|a| **a != PASS)
+            .expect("an opponent Digimon target");
+        (pending.selecting_player, pick)
+    };
+    runner
+        .execute_action(player, pick)
+        .expect("accept: delete one");
+
+    // Accepted: NOW the OPT is spent — a third suspend offers nothing.
+    runner.game.players[0].battle_area[red.index as usize].is_suspended = false;
+    runner.game.suspend(red);
     assert!(
         runner.game.pending_selection.is_none(),
-        "OPT must lock the second activation in the same turn"
+        "OPT must lock activation after an accepted one in the same turn"
     );
 }
 
