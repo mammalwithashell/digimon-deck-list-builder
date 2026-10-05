@@ -29,6 +29,8 @@ Player `scripted-v18` (DCGO `b9a0638cd`, main's pinned commit; action space `711
 Seven Security Effect scenarios (BT25-088, BT25-090, BT26-089, P-236, ST23-13, ST23-14, ST23-15) were re-keyed `#effect#N` -> `#security#0` (main's `ebc225e17` zoning): 4 confirmed, 3 diverged.
 50 of 113 jobs ended `failed` on the DCGO side, as predicted below (no C# was consulted when these were written):
 
+**Re-run on `scripted-v19` (same day):** DCGO `8b6c39ea1` + harness `99986fa96` resolve the battle-area permanents of attack / `[Main]` / digivolve rows by identity instead of by slot (add-card-authoring-loop 10.1). **113 clauses: 63 confirmed, 50 diverged.** P-236-effect2 and ST23-09-effect6 (slot addressing) plus BT26-075-effect2 and BT25-043-effect2 flipped to confirmed; nothing regressed. The remaining 50 are the prompt-shape re-authoring round below and the `memory` divergences.
+
 | Pattern | Jobs | Examples |
 |---|---|---|
 | `generic_int prompt needs select_value, got: select_bool=true` | 26 | BT25-035-effect1, BT25-041-effect0/1/2 -- one authoring pattern: the line answers a bool where DCGO asks an int |

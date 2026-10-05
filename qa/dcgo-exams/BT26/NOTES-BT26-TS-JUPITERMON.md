@@ -33,6 +33,8 @@ Player `scripted-v18` (DCGO `b9a0638cd`, main's pinned commit; action space `711
 **86 clauses: 66 confirmed, 17 diverged, 3 unmeasured** (the three printed-"ー" inherited clauses), 0 unreachable, 0 unavailable.
 Four Security Effect scenarios (BT24-083, BT24-102, BT26-090, BT26-092) were re-keyed `#effect#N` -> `#security#0` (main's `ebc225e17` zoning) and confirmed.
 
+**Re-run on `scripted-v19` (same day):** DCGO `8b6c39ea1` + harness `99986fa96` resolve the battle-area permanents of attack / `[Main]` / digivolve rows by identity instead of by slot (add-card-authoring-loop 10.1). **86 clauses: 73 confirmed, 10 diverged, 3 unmeasured.** The whole battle-area slot addressing family (BT24-041-effect3, BT25-025-effect4, BT26-103-effect1/2/3/6) and BT26-033-effect2 flipped to confirmed; nothing regressed. Verdicts now record their `qa/dcgo-exams/...` scenario paths.
+
 | Family | Scenarios | Lead field | Read |
 |---|---|---|---|
 | Reveal-bucket hand timing | BT24-031-effect1, -inherited0, BT24-034-effect0, BT24-101-effect4, BT25-022-effect1, -inherited0 | `p0.hand` at step 3 | Predicted ("RevealBucket on the simplified reveal path" above): DCGO moves each pick to hand as its prompt closes |

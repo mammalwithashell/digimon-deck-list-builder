@@ -28,6 +28,8 @@ Player `scripted-v18` (DCGO `b9a0638cd`, main's pinned commit; action space `711
 
 For the four cards with scenarios (15 clauses): **3 confirmed, 1 diverged, 11 unmeasured** (no scenario). The wider 14-card / 50-clause pool still has 46 clauses without a scenario.
 
+**Re-run on `scripted-v19` (same day):** DCGO `8b6c39ea1` + harness `99986fa96` resolve the battle-area permanents of attack / `[Main]` / digivolve rows by identity instead of by slot (add-card-authoring-loop 10.1). Unchanged: 3 confirmed, 1 diverged (BT26-065-effect1, reveal timing).
+
 - BT26-036-effect2, BT26-072-effect2, BT26-094-effect0: confirmed.
 - BT26-065-effect1 (Falcomon two-bucket reveal): diverged at step 3 on `p0.hand` only -- the reveal-bucket hand-timing pattern (DCGO moves each pick to hand as its prompt closes).
 
