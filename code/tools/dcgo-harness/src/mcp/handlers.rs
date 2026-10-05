@@ -598,7 +598,7 @@ pub fn node_health(
     let root_buf = root
         .map(|r| r.to_path_buf())
         .or_else(crate::node::default_harness_root)
-        .ok_or("no harness root: pass --root to the MCP or set DCGO_HARNESS_ROOT")?;
+        .ok_or("no harness root: set DCGO_HARNESS_ROOT (the MCP's --root also relocates the verdict and claim stores, so it is not a substitute)")?;
     let root = root_buf.as_path();
     let build = tools::opt_str_arg(params, "build").map(std::path::PathBuf::from);
 

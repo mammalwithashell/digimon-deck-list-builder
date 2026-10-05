@@ -17,7 +17,8 @@ use crate::{daemon, manifest};
 
 /// The harness root an oracle node uses when none is passed: the
 /// `DCGO_HARNESS_ROOT` override, else the DCGO player's LocalLow directory
-/// when it exists.
+/// when it exists. The `USERPROFILE` fallback is Windows-only: on any other
+/// platform `USERPROFILE` is unset and only `DCGO_HARNESS_ROOT` can supply a root.
 pub fn default_harness_root() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("DCGO_HARNESS_ROOT") {
         if !p.trim().is_empty() {
