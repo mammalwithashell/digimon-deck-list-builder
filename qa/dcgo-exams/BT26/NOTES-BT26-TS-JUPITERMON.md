@@ -26,6 +26,20 @@ says so. No verdict files were written.
 Several scenarios deliberately assert behaviour we believe is wrong, so the oracle shows
 it as a divergence. See "Expected aborts and divergences" below.
 
+## Oracle pass 2026-10-05
+
+Player `scripted-v18` (DCGO `b9a0638cd`, main's pinned commit; action space `711d23bf24fb`), run through `D:/card-loop-iter0/run_set.sh` (add-card-authoring-loop iteration 0). Divergences below are **untriaged**: `general_rule.pdf` outranks DCGO; read the card, the rule and the C# first.
+
+**86 clauses: 66 confirmed, 17 diverged, 3 unmeasured** (the three printed-"ー" inherited clauses), 0 unreachable, 0 unavailable.
+Four Security Effect scenarios (BT24-083, BT24-102, BT26-090, BT26-092) were re-keyed `#effect#N` -> `#security#0` (main's `ebc225e17` zoning) and confirmed.
+
+| Family | Scenarios | Lead field | Read |
+|---|---|---|---|
+| Reveal-bucket hand timing | BT24-031-effect1, -inherited0, BT24-034-effect0, BT24-101-effect4, BT25-022-effect1, -inherited0 | `p0.hand` at step 3 | Predicted ("RevealBucket on the simplified reveal path" above): DCGO moves each pick to hand as its prompt closes |
+| Battle-area slot addressing | BT24-041-effect3, BT25-025-effect4, BT26-103-effect1/2/3/6 | `field[i].suspended` swapped between two slots | **Likely a translation bug, not a rules finding**: DCGO's sidecar orders the battle area by frame (a later-played Digimon can be slot 0), ours by play order, so the same lowered `attacker: field.0` attacked with a different Digimon in each engine |
+| Homeros double listing | BT24-102-effect1 | `p0.security` 3 vs 4 | Predicted above ("our engine is right") |
+| DCGO-side prompt mismatch (job `failed`) | BT24-041-effect2, BT25-025-effect3 (actor 1 vs 0); BT24-101-effect4 (OptionalSkill vs main_phase); BT26-029-inherited0 (main_phase vs SelectCountEffect); BT26-033-effect2 (SelectPermanentEffect vs OptionalSkill) | -- | Re-check each line's prompt shape against the C#; the two actor mismatches may share the slot-addressing cause |
+
 ## Deck book
 
 `qa/dcgo-exams/BT26/ts_jupitermon_pool.json`. This one file resolves every scenario in

@@ -22,6 +22,16 @@ shared `tm-quiet-red` opponent.
 Their `assert:` blocks were written from OUR engine's result, not backfilled from
 DCGO, so they are unconfirmed until the oracle pass.
 
+## Oracle pass 2026-10-05
+
+Player `scripted-v18` (DCGO `b9a0638cd`, main's pinned commit; action space `711d23bf24fb`), run through `D:/card-loop-iter0/run_set.sh` (add-card-authoring-loop iteration 0). Divergences below are **untriaged**: `general_rule.pdf` outranks DCGO; read the card, the rule and the C# first.
+
+For the four cards with scenarios (15 clauses): **3 confirmed, 1 diverged, 11 unmeasured** (no scenario). The wider 14-card / 50-clause pool still has 46 clauses without a scenario.
+
+- BT26-036-effect2, BT26-072-effect2, BT26-094-effect0: confirmed.
+- BT26-065-effect1 (Falcomon two-bucket reveal): diverged at step 3 on `p0.hand` only -- the reveal-bucket hand-timing pattern (DCGO moves each pick to hand as its prompt closes).
+
+
 ## Running the oracle pass (local, Unity in Play)
 
 ```bash

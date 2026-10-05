@@ -21,6 +21,22 @@ pinned. All nine were re-authored; none needed an engine fix. DCGO C# was read f
 | `BT26-075-effect1` | DUAL cards open end-of-turn windows | Witnesses `<Execute>` (attack, delete, `<Ascension>`) |
 | `BT26-075-effect6` | Same | Declines the new `<Execute>` window |
 
+## Oracle pass 2026-10-05
+
+Player `scripted-v18` (DCGO `b9a0638cd`, main's pinned commit; action space `711d23bf24fb`), run through `D:/card-loop-iter0/run_set.sh` (add-card-authoring-loop iteration 0). Divergences below are **untriaged**: `general_rule.pdf` outranks DCGO; read the card, the rule and the C# first. Drained by two concurrent players.
+
+**113 clauses: 59 confirmed, 54 diverged, 0 unmeasured**, 0 unreachable, 0 unavailable.
+Seven Security Effect scenarios (BT25-088, BT25-090, BT26-089, P-236, ST23-13, ST23-14, ST23-15) were re-keyed `#effect#N` -> `#security#0` (main's `ebc225e17` zoning): 4 confirmed, 3 diverged.
+50 of 113 jobs ended `failed` on the DCGO side, as predicted below (no C# was consulted when these were written):
+
+| Pattern | Jobs | Examples |
+|---|---|---|
+| `generic_int prompt needs select_value, got: select_bool=true` | 26 | BT25-035-effect1, BT25-041-effect0/1/2 -- one authoring pattern: the line answers a bool where DCGO asks an int |
+| Other prompt-shape mismatches (OptionalSkill / main_phase / SelectPermanentEffect / MultipleSkills / SelectHandEffect vs generic_int) | 22 | BT25-057-effect0..3, ST23-04-effect0..2, BT25-049-inherited0 |
+| Battle-area slot addressing (see TS Jupitermon notes) | 2 | P-236-effect2 (`[Main]` sub-slot on field slot 1 names no activatable effect), ST23-09-effect6 (wanted candidate not offered) |
+
+State divergences at the lead step: `memory` x7 (new, untriaged), `p0.hand` x2 (reveal timing), `field[i].suspended` x2 (slot addressing), `p0.security` x1.
+
 ## State
 
 Pool: the 9 Glowing Dawn lists in the BT26 window (2026-09-04 → 2026-09-12, dcg-nexus) in

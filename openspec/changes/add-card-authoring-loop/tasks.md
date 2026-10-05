@@ -65,7 +65,7 @@ Groups 1–5 do not depend on the oracle-readiness plans and can proceed in para
 
 ## 8. Pilot and documentation
 
-- [ ] 8.1 Iteration 0: drain the 211 authored-but-never-oracled scenarios through the driver; record outcomes and any harness issues
+- [x] 8.1 Iteration 0: drain the 211 authored-but-never-oracled scenarios through the driver; record outcomes and any harness issues — DONE BY HAND 2026-10-05 (driver not built) on new player `scripted-v18` (DCGO b9a0638cd): TS Jupitermon 86 clauses 66 confirmed / 17 diverged / 3 unmeasured; Glowing Dawn 113: 59 / 54 / 0; Data Squad (4 cards) 15: 3 / 1 / 11. Two concurrent players gave 1.73× (≈16 s/job vs 30 s). Harness issues found → group 10
 - [ ] 8.2 Pilot run on one archetype (`--archetype`) end to end, including Q&A interactions; compare per-clause cost with Track A's $1.72 and record the first scorecard
 - [ ] 8.3 `docs/CARD_LOOP.md` operating manual (inputs, preflight, run/resume, escalation handling, audit, scorecard, adding a risk family); link from `docs/INDEX.md` and CLAUDE.md
 - [ ] 8.4 Resolve the design's open questions (audit rate, ruling-only adjudication without DCGO, default concurrency/budget, gating switch-on timing) and record the decisions in `design.md`
@@ -84,3 +84,12 @@ Groups 1–5 do not depend on the oracle-readiness plans and can proceed in para
 - [ ] 9.10 Codex: root-cause the one-off ≈518 s first sandboxed command (≈1.07M input tokens from "still waiting" turns) — consider a preflight warm-up per pool worktree; override the `dcgo-exam` MCP entry's hardcoded base-repo `CARGO_TARGET_DIR` per worktree; confirm sccache works inside the sandbox
 - [ ] 9.11 Treat worker timeouts as non-transient for long stages (today a timeout retries up to 4× and is paid each time)
 - [ ] 9.12 Add `jsonschema` to the tools requirements (installed locally, listed nowhere; a fallback validator runs without it)
+
+## 10. Follow-ups from iteration 0 (2026-10-05)
+
+- [ ] 10.1 Battle-area slot addressing differs between the engine and DCGO: DCGO orders the battle area by frame (a later-played Digimon can be slot 0), the engine by play order, so a lowered `attacker: field.0` / `targets: [own.field.N]` can name different permanents in each engine (TS Jupitermon: BT24-041-effect3, BT25-025-effect4, BT26-103-effect1/2/3/6; Glowing Dawn: P-236-effect2, ST23-09-effect6 + 2). Confirm, then fix the slot mapping in the lowering / action-space decode (one side's order must be canonical) — likely also affects `dcgo-replay` and BC recordings; re-run the affected scenarios after
+- [ ] 10.2 Glowing Dawn re-authoring round: 26 jobs fail on `generic_int prompt needs select_value, got: select_bool` (one pattern) and 22 on other prompt-shape mismatches — first real workload for the loop's `author_clause` stage (read the DCGO C# per line)
+- [ ] 10.3 Triage the untriaged divergences with the structured `triage` field once readiness plan 1 lands: reveal-bucket hand timing (7 across sets, predicted DCGO quirk), Homeros double listing (predicted, ours right), `memory` lead divergences ×7 in Glowing Dawn (new), TS Jupitermon's 5 prompt mismatches
+- [ ] 10.4 Scan every `qa/dcgo-exams/**.yaml` for `clause:` ids orphaned by main's Security Effect zoning (`ebc225e17` only migrated scenarios that already had a verdict): 11 found and re-keyed in this pass (4 TS Jupitermon, 7 Glowing Dawn); add a lint so an orphaned header fails sim-only CI instead of being refused at verdict time
+- [ ] 10.5 Data Squad: author scenarios for the remaining 46 of 50 clauses (14-card pool) — a natural first `--archetype`/`--cards` run for the loop once the driver exists
+- [ ] 10.6 Multi-oracle prerequisites before going past 2 players: (a) Photon — the build uses upstream DCGO's `PhotonServerSettings.asset` (never changed by the fork), so harness players appear to count against the community app's CCU; spike PUN `OfflineMode` in the mod, else inject our own app id at harness build time; (b) per-player pid/heartbeat files + `watch --players N` (today `harness.pid` / `harness.heartbeat` are single per root, and every player on a machine shares the root); (c) the verdict-write fix (readiness plan 1 defect 3) — every `--verdicts` run rewrites ≈98 unrelated files, so concurrent diff steps would race
