@@ -53,7 +53,7 @@ pub const DEFAULT_DECK_POOL: &str = "qa/dcgo-exams/EX12/toho_pool.json";
 /// the same override) -- can point this at the real repo without mutating the
 /// process's working directory, which would race every other test thread
 /// sharing that CWD.
-fn resolve_default(rel: &str) -> std::path::PathBuf {
+pub(crate) fn resolve_default(rel: &str) -> std::path::PathBuf {
     match std::env::var("DIGIMON_REPO_ROOT") {
         Ok(root) => std::path::Path::new(&root).join(rel),
         Err(_) => std::path::PathBuf::from(rel),
@@ -163,44 +163,34 @@ pub fn lower_and_run(
     })
 }
 
+/// The deck book a scenario's `rest:` names live in: a pool beside it, else
+/// anywhere under `qa/dcgo-exams/` ([`crate::exam::deckbook::book_for`]),
+/// else [`DEFAULT_DECK_POOL`] (the stock starter decks resolve under any book).
+pub fn deck_book_for(scenario: &Path, s: &Scenario) -> std::path::PathBuf {
+    crate::exam::deckbook::book_for(
+        scenario,
+        &[s.decks.p0.rest.as_str(), s.decks.p1.rest.as_str()],
+        &resolve_default("qa/dcgo-exams"),
+    )
+    .unwrap_or_else(|| resolve_default(DEFAULT_DECK_POOL))
+}
+
 /// Run one scenario **sim-only** and report what happened, without touching
-/// the verdict store or emitting a DCGO job.
-///
-/// `sim_only: false` is refused rather than faked: an oracle diff needs a
-/// DCGO state sidecar next to a real recording, and nothing upstream of this
-/// call (a freshly-written probe scratch file, or a scenario path handed to
-/// `run_scenario`) has run Unity to produce one. Pretending to answer that
-/// question with sim-only data is exactly the mistake this tool exists to
-/// prevent -- see the module doc and `SIM_ONLY_NOTE` in `mcp::handlers`.
-///
-/// `root` is accepted for the day this queues a real harness job against
-/// `root`'s job directories and polls for the sidecar it writes; today it is
-/// unused because that queueing does not exist yet.
-pub fn run_one(
-    scenario: &Path,
-    sim_only: bool,
-    root: Option<&Path>,
-) -> Result<DiffReport, String> {
+/// the verdict store or emitting a DCGO job. `decks` overrides the deck book
+/// [`deck_book_for`] would pick. The oracle route is
+/// [`crate::exam::oracle::run_oracle_exam`].
+pub fn run_one(scenario: &Path, decks: Option<&Path>) -> Result<DiffReport, String> {
     let text = std::fs::read_to_string(scenario)
         .map_err(|e| format!("reading {}: {e}", scenario.display()))?;
     let s = Scenario::from_yaml(&text)?;
 
-    if !sim_only {
-        let _ = root;
-        return Err(
-            "oracle mode (sim_only: false) needs a DCGO state sidecar next to a real \
-             recording, and this probe has not run one -- there is no Unity trace behind \
-             a scratch scenario or a bare scenario path. Run the CLI's \
-             `dcgo-harness exam --sidecar <dir>` against a recording captured through the \
-             harness queue once one exists."
-                .to_string(),
-        );
-    }
-
     let cards_json = resolve_default(DEFAULT_CARDS_JSON);
     let card_data = dcgo_replay::load_card_data_at(&cards_json)
         .map_err(|e| format!("loading {}: {e}", cards_json.display()))?;
-    let deck_pool = resolve_default(DEFAULT_DECK_POOL);
+    let deck_pool = match decks {
+        Some(d) => d.to_path_buf(),
+        None => deck_book_for(scenario, &s),
+    };
     let book = DeckBook::load(Some(&deck_pool), &cards_json)?;
     let deck_p0 = ordered_deck(&s.decks.p0, &book)?;
     let deck_p1 = ordered_deck(&s.decks.p1, &book)?;

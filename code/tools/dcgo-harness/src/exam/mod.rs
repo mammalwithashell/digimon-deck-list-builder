@@ -64,7 +64,7 @@ pub use adapter::ScenarioAdapter;
 pub use assertions::{check_assertions, check_ruling, ASSERTION_KEYS};
 pub use backfill::{backfill, backfill_from_diff, GENERATED_MARKER};
 pub use dcgo_pool::has_dcgo_script;
-pub use deckbook::{ordered_deck, DeckBook, DeckEntry};
+pub use deckbook::{book_for, ordered_deck, DeckBook, DeckEntry};
 pub use differ::{diff, diff_paired, DiffReport, FieldDiff, StepDivergence};
 pub use drafter::{draft_test, Provenance};
 pub use ledger::{
