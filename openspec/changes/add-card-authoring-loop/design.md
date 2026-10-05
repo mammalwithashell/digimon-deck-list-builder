@@ -4,6 +4,8 @@
 
 **What is approved but not built.** The oracle-readiness design (`docs/superpowers/specs/2026-10-04-dcgo-oracle-readiness-design.md` and five plans, branch `worktree-dcgo-effect-translation`, b2a3f914d / 6cba79462): harness defect fixes, structured `triage` on diverged rows, one-call `exam --oracle` + `exam_probe(sim_only:false)`, step introspection, lints, a per-archetype scenario library, a lean `/dcgo-exam`, `/readiness-batch`, a cost report, the committed readiness artifact `data/oracle_readiness.json`, and an always-on training gate. This change builds on those and does not re-specify them.
 
+**Update 2026-10-05:** Plan 1 (harness defect fixes, structured `triage` on diverged verdicts, `--backfill`, verdict writes that touch only changed cards) is built and merged into this change's branch. Plans 2–5 remain.
+
 **Measured economics.** Track A: ~$1.72/clause on Sonnet 5.5 (Fable runs ~$8), ~70% of spend is cache reads of a ~200k context re-read every turn, oracle plumbing ~27% of spend, 2.5 oracle round trips per confirmed clause. Campaign orchestration: $704 of $4,210. Turns × context is the cost lever; a cheaper model is a smaller one.
 
 **State of the denominator.** ~3,620 printed clauses across ~1,035 YAML cards, ~370 verdicts (347 confirmed). 211 authored scenarios have never been run against the oracle. Official Q&A: the old mirror held one answer per card for 2,590 cards with no questions; the real data is several rulings per card (BT7-056: 4), each with a stable Q-number.
