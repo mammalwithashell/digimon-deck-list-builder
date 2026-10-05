@@ -271,6 +271,7 @@ fn bt16_012_minus_7000_can_reduce_into_delete_range() {
     // Drive manually: choose an order that resolves -7000 first if offered.
     for _ in 0..12 {
         let Some(v) = r.pending_selection_view() else { break };
+        eprintln!("DBG {:?} {:?} {:?} {:?}", v.kind, v.prompt, v.valid_action_ids, v.effect_choices);
         if v.kind == SelectionKind::OppField {
             pick_opp(&mut r, "OPP9K");
         } else {

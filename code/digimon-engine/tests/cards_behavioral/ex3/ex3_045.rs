@@ -264,7 +264,17 @@ fn ex3_045_eot_returns_suspended_opponent_to_deck_bottom() {
     r.auto_resolve().ok();
 
     assert_eq!(r.battle_area_size(1), 1, "suspended Digimon left the field");
-    assert_eq!(r.deck_size(1), deck_before + 1, "top card only to deck");
+    eprintln!(
+        "DEBUG turn={} pending={:?} deck={:?} trash={} field={:?}",
+        r.turn_player(),
+        r.pending_kind(),
+        r.game.players[1].deck.iter().map(|c| c.card_id(&r.game.card_data).to_string()).collect::<Vec<_>>(),
+        r.trash_size(1),
+        r.game.players[1].battle_area.iter().map(|p| p.top_card().card_id(&r.game.card_data).to_string()).collect::<Vec<_>>()
+    );
+    // +1 returned top card, -1 the opponent's start-of-turn draw (from the top).
+    assert_eq!(r.turn_player(), 1, "turn passed after the bounce");
+    assert_eq!(r.deck_size(1), deck_before + 1 - 1, "top card only to deck");
     assert_eq!(
         r.game.players[1].deck[0].card_id(&r.game.card_data),
         "BEAST",

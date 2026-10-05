@@ -111,13 +111,34 @@ fn bt10_057_has_wd_clause_and_two_your_turn_auras() {
             _ => None,
         })
         .expect("WD clause");
-    assert!(wd.process.iter().any(|s| matches!(s, CompiledStep::GainMemory { .. })));
-    let auras = card
-        .effects
-        .iter()
-        .filter(|c| matches!(c, CompiledClause::Declarative(CompiledDeclarativeClause::Aura { .. })))
-        .count();
-    assert_eq!(auras, 2, "DP aura + Security A. aura");
+    // The steps after the optional pick are composed into its `then` tail.
+    let body = format!("{:?}", wd.process);
+    assert!(body.contains("GainMemory"), "WD gains memory");
+    assert!(body.contains("Unsuspend"), "WD conditionally unsuspends this Digimon");
+    assert!(body.contains("Piercing"), "WD conditionally grants <Piercing>");
+    let has_dp_fn = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
+                dp_modifier_fn: Some(_),
+                ..
+            })
+        )
+    });
+    let has_sa_fn = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
+                security_attack_fn: Some(_),
+                ..
+            })
+        )
+    });
+    assert!(
+        has_dp_fn && has_sa_fn,
+        "DP formula aura + Security A. formula aura; effects = {:#?}",
+        card.effects.iter().map(|c| format!("{c:?}").chars().take(60).collect::<String>()).collect::<Vec<_>>()
+    );
 }
 
 // ─── [When Digivolving] ─────────────────────────────────────────────────────

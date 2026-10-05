@@ -29,7 +29,7 @@
 #
 # Implementation status (faithfulness diff):
 # | Std digivolve Lv.5 Green / Cost 4                           | IMPLEMENTED (alt_paths) |
-# | [WD] may suspend 1 of your Digimon                          | IMPLEMENTED (optional select_own_permanent + suspend) |
+# | [WD] may suspend 1 of your Digimon                          | IMPLEMENTED (optional select_own_permanent continue_on_decline + suspend) |
 # | [WD] gain 1 memory per own suspended Veg/Plant/Fairy Digimon | IMPLEMENTED (gain_memory card_count_in_zone formula) |
 # | [WD] if gained >= 2: unsuspend self + <Piercing> for turn   | IMPLEMENTED (if count_gte 2 → unsuspend source + grant_keyword end_of_turn) |
 # | [Your Turn] +2000 DP per 2 own suspended Digimon            | IMPLEMENTED (aura dp_modifier_fn multiply(floor_div)) |
@@ -58,6 +58,9 @@ effects:
       - select_own_permanent:
           bind_as: to_suspend
           optional: true
+          # DCGO: a declined SelectPermanentEffect resolves empty and the
+          # coroutine continues — "Then, gain ..." runs either way.
+          continue_on_decline: true
           filter:
             all_of:
               - kind: digimon

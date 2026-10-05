@@ -30,10 +30,15 @@
 #   until the end of their turn. DCGO: separate ActivateClass on
 #   OnEnterFieldAnyone, CanActivateCondition = IsJogress(hashtable),
 #   mandatory SelectPermanentEffect (canNoSelect: false), ChangeDigimonDP
-#   -7000 UntilOpponentTurnEnd. Modeled as a standalone `on_dna_digivolve`
-#   clause (BT16-025 / BT23-032 precedent — fires iff the digivolve was DNA;
-#   G-ENGINE-DNA-ORIGIN-PRED keeps the in-process `dna_origin` leaf off the
-#   table) + `add_dp_modifier` expiry `end_of_opponents_turn`.
+#   -7000 UntilOpponentTurnEnd. Modeled as its own `when_digivolving` clause
+#   gated `active_when: { dna_origin: true }` (BT20-045 / BT17-078 idiom) +
+#   `add_dp_modifier` expiry `end_of_opponents_turn`. Deliberately NOT
+#   `on_dna_digivolve`: the engine drains OnDnaDigivolve in a SEPARATE pass
+#   after WhenDigivolving, which would force the delete clause to resolve
+#   first. Both are printed [When Digivolving] effects triggering together, so
+#   the turn player must be able to order them (e.g. -7000 a 9000 DP Digimon
+#   first, then delete it at 2000 DP) — sharing the WhenDigivolving timing
+#   puts both in one trigger bundle with a player-chosen order.
 #
 # Clause 2 — [When Digivolving] [When Attacking] Delete 1 opp Digimon with
 #   4000 DP or less. DCGO: two ActivateClasses (OnEnterFieldAnyone /
@@ -76,7 +81,8 @@ effects:
     exclude_cause: [own_effect, battle]
 
   # ─── Clause 1: [When Digivolving] if DNA → 1 opp Digimon -7000 DP ─────────
-  - when: on_dna_digivolve
+  - when: when_digivolving
+    active_when: { dna_origin: true }
     summary: "[When Digivolving] If DNA digivolving, 1 of your opponent's Digimon gets -7000 DP until the end of their turn"
     process:
       - select_opponent_permanent:
