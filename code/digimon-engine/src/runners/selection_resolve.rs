@@ -455,7 +455,10 @@ fn zone_card_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, Strin
 /// `encode_source_select(field_index, source_index)` — mirror of the installer
 /// in `effect_context/selections.rs`. Match by card identity; `carrier` (a
 /// battle-area index from the row's `targets:`) disambiguates two carriers
-/// holding the same card.
+/// holding the same card. Equivalent copies under ONE carrier are the same
+/// pick (first match wins); ambiguity is reported only across distinct
+/// carriers. Breeding-area carriers (`encode_breeding_source_select`) are not
+/// matched.
 fn union_zone_source_pick(
     game: &Game,
     owner: crate::PlayerId,
@@ -476,7 +479,9 @@ fn union_zone_source_pick(
             }
             if let Some(id) = encode_source_select(pi as u16, si as u16) {
                 if valid.contains(&id) {
+                    // Equivalent copies under this carrier: keep the first.
                     hits.push(id);
+                    break;
                 }
             }
         }
@@ -631,7 +636,22 @@ pub fn resolve_next(
     let accepts = |id: u16| valid.contains(&id);
 
     // ── Field-permanent picks ────────────────────────────────────────────
-    if let Some(targets) = &payload.targets {
+    //
+    // Exception: a row carrying BOTH `cards:` and `targets:` on a UnionZone
+    // prompt that offers digivolution sources names the SOURCE by identity and
+    // its CARRIER by battle-area slot; the card-identity branch below reads the
+    // target as that carrier hint, so this branch must not consume it.
+    let union_source_with_carrier = payload.card_ids.is_some()
+        && matches!(
+            pending.kind,
+            SelectionKind::UnionZone { zones }
+                if zones.contains(crate::selection::UnionZoneSet::MATERIAL)
+        );
+    if let Some(targets) = payload
+        .targets
+        .as_ref()
+        .filter(|_| !union_source_with_carrier)
+    {
         let t = targets[picks_done];
         // DCGO's `SelectAttackEffect.SetAttackTarget` (the attack-target
         // prompt's chokepoint) uses `SecurityIndex = -1` as a sentinel for
@@ -1184,6 +1204,46 @@ mod tests {
         park_union_zone_material(&mut runner.game, vec![x, y]);
         let err = resolve_next(&runner.game, &one_card_row("SRC"), 0).unwrap_err();
         assert!(err.contains("ambiguous"), "got: {err}");
+    }
+
+    #[test]
+    fn union_zone_source_pick_honours_a_targets_carrier() {
+        use crate::action::space::encode_source_select;
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("SRC", "SRC"))
+            .add_card(make_test_card("TOP1", "TOP1"))
+            .add_card(make_test_card("TOP2", "TOP2"))
+            .memory(0)
+            .start();
+        runner.place_stack(0, &["SRC", "TOP1"]);
+        runner.place_stack(0, &["SRC", "TOP2"]);
+        let x = encode_source_select(0, 0).unwrap();
+        let y = encode_source_select(1, 0).unwrap();
+        park_union_zone_material(&mut runner.game, vec![x, y]);
+        let mut row = one_card_row("SRC");
+        row.targets = Some(vec![FrameTarget {
+            player: 0,
+            frame: 1,
+        }]);
+        assert_eq!(resolve_next(&runner.game, &row, 0), Ok(Some(y)));
+    }
+
+    #[test]
+    fn union_zone_duplicate_copies_on_one_carrier_are_not_ambiguous() {
+        use crate::action::space::encode_source_select;
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("SRC", "SRC"))
+            .add_card(make_test_card("TOP", "TOP"))
+            .memory(0)
+            .start();
+        runner.place_stack(0, &["SRC", "SRC", "TOP"]);
+        let first = encode_source_select(0, 0).unwrap();
+        let second = encode_source_select(0, 1).unwrap();
+        park_union_zone_material(&mut runner.game, vec![first, second]);
+        assert_eq!(
+            resolve_next(&runner.game, &one_card_row("SRC"), 0),
+            Ok(Some(first))
+        );
     }
 
     #[test]
