@@ -28,7 +28,7 @@
 //! {...}}`, mirroring `qa/qa-reports/validated_cards_dsl.json`
 //! (`version` / `last_updated` / `cards`) so the QA artifacts read alike.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -158,6 +158,9 @@ pub struct VerdictStore {
     clauses: BTreeMap<String, ClauseVerdict>,
     #[serde(skip)]
     current_text_shas: BTreeMap<String, String>,
+    /// Card ids whose rows changed since load; `save_dir` writes only these.
+    #[serde(skip)]
+    dirty: BTreeSet<String>,
 }
 
 impl Default for VerdictStore {
@@ -167,6 +170,7 @@ impl Default for VerdictStore {
             last_updated: String::new(),
             clauses: BTreeMap::new(),
             current_text_shas: BTreeMap::new(),
+            dirty: BTreeSet::new(),
         }
     }
 }
@@ -196,6 +200,14 @@ impl VerdictStore {
         }
         let mut text = self.to_json()?;
         text.push('\n');
+        // Keep the file's existing line endings: core.autocrlf checkouts hold
+        // CRLF, and an LF rewrite shows up as a modified file for no reason.
+        let existing_crlf = std::fs::read(path)
+            .map(|b| b.windows(2).any(|w| w == b"\r\n"))
+            .unwrap_or(false);
+        if existing_crlf {
+            text = text.replace('\n', "\r\n");
+        }
         std::fs::write(path, text)
             .map_err(|e| format!("failed to write verdict store {}: {e}", path.display()))
     }
@@ -276,7 +288,12 @@ impl VerdictStore {
         }
 
         for (card_id, per) in by_card.iter() {
-            per.save(&dir.join(card_file_name(card_id)))?;
+            let file = dir.join(card_file_name(card_id));
+            // Only cards whose rows changed this run are rewritten; a file that
+            // does not exist yet is always written.
+            if self.dirty.contains(card_id) || !file.exists() {
+                per.save(&file)?;
+            }
         }
 
         // Prune files for cards we no longer carry.
@@ -338,9 +355,10 @@ impl VerdictStore {
         Ok(store)
     }
 
-    /// Insert or replace one clause's verdict.
+    /// Insert or replace one clause's verdict, marking its card file dirty.
     pub fn record(&mut self, v: ClauseVerdict) {
         self.last_updated = v.recorded_at.clone();
+        self.dirty.insert(v.card_id.clone());
         self.clauses.insert(v.clause_id.clone(), v);
     }
 
@@ -943,5 +961,44 @@ mod tests {
             assert_eq!(after.text_sha256, before.text_sha256);
             assert_eq!(after.recorded_at, before.recorded_at);
         }
+    }
+
+    #[test]
+    fn save_dir_rewrites_only_touched_cards_and_keeps_crlf() {
+        let dir = std::env::temp_dir().join("verdict-dirty-only-test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let row = |card: &str| {
+            format!(
+                "{{\r\n  \"version\": 1,\r\n  \"last_updated\": \"2026-01-01T00:00:00Z\",\r\n  \
+                 \"clauses\": {{\r\n    \"{card}#effect#0\": {{\r\n      \"clause_id\": \"{card}#effect#0\",\r\n      \
+                 \"card_id\": \"{card}\",\r\n      \"verdict\": \"confirmed\",\r\n      \"label\": \"Effect\",\r\n      \
+                 \"text_sha256\": \"abc\",\r\n      \"recorded_at\": \"2026-01-01T00:00:00Z\"\r\n    }}\r\n  }}\r\n}}\r\n"
+            )
+        };
+        std::fs::write(dir.join("BT1-001.json"), row("BT1-001")).unwrap();
+        std::fs::write(dir.join("BT1-002.json"), row("BT1-002")).unwrap();
+        let untouched_before = std::fs::read(dir.join("BT1-002.json")).unwrap();
+
+        let mut store = VerdictStore::load_dir(&dir).unwrap();
+        store.record(ClauseVerdict {
+            clause_id: "BT1-001#effect#0".into(),
+            card_id: "BT1-001".into(),
+            verdict: Verdict::Diverged,
+            label: "Effect".into(),
+            text_sha256: "abc".into(),
+            scenario_path: None,
+            reason: Some("DIVERGED at step 1".into()),
+            dcgo_build: None,
+            job_id: None,
+            recorded_at: "2026-02-01T00:00:00Z".into(),
+        });
+        store.save_dir(&dir).unwrap();
+
+        assert_eq!(std::fs::read(dir.join("BT1-002.json")).unwrap(), untouched_before);
+        let touched = std::fs::read_to_string(dir.join("BT1-001.json")).unwrap();
+        assert!(touched.contains("\"diverged\""));
+        assert!(touched.contains("\r\n"), "an existing CRLF file must stay CRLF");
+        assert!(!touched.replace("\r\n", "").contains('\n'), "no bare LF lines");
     }
 }
