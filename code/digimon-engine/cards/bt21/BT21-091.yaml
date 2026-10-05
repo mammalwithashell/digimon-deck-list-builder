@@ -1,0 +1,167 @@
+# BT21-091 Spirit Evolution! — Option, Red, Cost 3.
+# Traits: Ten Warriors
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT21-091.md):
+#   While you have a Tamer with inherited effects, you can ignore this card's
+#   color requirements.
+#   [Main] By trashing 1 card with the [Hybrid] trait from your hand,
+#   <Draw 2>. Then, place this card in the battle area.
+#   [All Turns] When any of your Tamers with inherited effects are played,
+#   <Delay>.
+#   ・1 of your Tamers may digivolve into a Digimon card with the [Hybrid]
+#     trait in the hand without paying the cost.
+#   [Security] You may play 1 Tamer card with inherited effects from your hand
+#   or trash without paying the cost. Then, add this card to the hand.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Red/BT21_091.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 0 — `EffectTiming.None` IgnoreColorConditionClass; CanUseCondition =
+#   HasMatchConditionPermanent(own && IsTamer && TopCard.HasInheritedEffect);
+#   CardCondition = this card only. → card-level `use_requirement` over an
+#   own battle-area Tamer whose top card has inherited effects
+#   (`has_inherited: {}`, the BT21-013 "Tamer with inherited effects" leaf).
+#
+# Clause 1 — `EffectTiming.OptionSkill` ([Main]). If a [Hybrid] card is in
+#   hand: SelectHandEffect (Mode.Discard, maxCount 1, canNoSelect: true) — the
+#   trash is an optional cost; <Draw 2> only if a card was actually trashed.
+#   Then `PlaceDelayOptionCards` UNCONDITIONALLY (outside the hand-check `if`).
+#   → optional `select_hand` (NOT `cost: true` — that would abort the rest of
+#   the clause on decline, dropping the unconditional placement) + `if
+#   binding_present` → trash + draw 2; trailing `place_self_as_delay_option`
+#   OUTSIDE the `if` (placement happens even when the cost is declined /
+#   unpayable, per DCGO).
+#   ([Hybrid] is the printed form; the engine folds `form_eng` into traits, so
+#   `trait_has: Hybrid` matches it — same as BT21-013.)
+#
+# Clause 2 — `EffectTiming.OnEnterFieldAnyone`, `isOptional: true`:
+#   CanTriggerOnPermanentPlay(own permanent && TopCard.IsTamer &&
+#   TopCard.HasInheritedEffect) && CanDeclareOptionDelayEffect. No turn gate
+#   ([All Turns]). Body: delete (trash) this card; on success, if a Tamer with
+#   a [Hybrid] digivolve candidate exists, SelectPermanentEffect (own Tamer,
+#   canNoSelect: true) → DigivolveIntoHandOrTrashCard(Hybrid Digimon, payCost:
+#   false, isHand: true).
+#   → `kind: delay, trigger: on_ally_played` (event-gated Delay; the engine
+#   supplies the after-placing-turn window, the optional §16-16-2 activation
+#   prompt and the trash-this-card cost — BT24-098 / EX12-071 precedent).
+#   active_when: all_turns + event_target_owner you + event_target_kind tamer +
+#   `event_target_has_inherited: true` (G-DSL-EVENT-TARGET-HAS-INHERITED —
+#   widened for this card; DCGO `TopCard.HasInheritedEffect`).
+#   Body: optional `select_own_permanent` over Tamers with a Hybrid hand
+#   candidate (`has_digivolve_candidate` = DCGO CanPlayCardTargetFrame gate),
+#   then `select_hand` filtered `can_digivolve_onto`, then
+#   `effect_initiated_digivolve { cost: free }` (requirements still apply).
+#
+# Clause 3 — `EffectTiming.SecuritySkill` (not optional at trigger level;
+#   the card pick is canNoSelect: true). Zone bool (hand / trash) then pick a
+#   Tamer with inherited effects → PlayPermanentCards(payCost: false); then
+#   AddThisCardToHand unconditionally.
+#   → inherited `on_security`: optional `select_union_zone [hand, trash]`
+#   (one pick spanning both zones = DCGO's zone-then-card two-step; BT24-098
+#   precedent) → `play_union_bound_free`; `add_this_option_to_hand`.
+
+card: BT21-091
+name: "Spirit Evolution!"
+kind: option
+color: [red]
+cost: 3
+traits: ["Ten Warriors"]
+
+# ─── Clause 0: color-requirement bypass ───────────────────────────────────────
+# "While you have a Tamer with inherited effects, you can ignore this card's
+# color requirements." — the card-level `use_requirement` is the mechanism the
+# Option-use mask/decoder actually consult (`option_color_requirement_bypass`
+# on the [Main] effect; BT8-095 / EX12-071 / BT25-094 precedent). A
+# `flood_gate` IgnoreColorRequirement carried by a card in HAND never
+# registers, so it would not make the card usable.
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: tamer
+    has_inherited: {}
+
+effects:
+  # ─── Clause 1: [Main] trash 1 [Hybrid] → <Draw 2>; then place this card ─────
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] By trashing 1 [Hybrid] card from hand, <Draw 2>. Then, place this card in the battle area"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter: { trait_has: Hybrid }
+          prompt: "Trash 1 card with the [Hybrid] trait from your hand to <Draw 2>"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+      - place_self_as_delay_option: {}
+
+  # ─── Clause 2: [All Turns] own Tamer w/ inherited played → <Delay> ──────────
+  - kind: delay
+    trigger: on_ally_played
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_has_inherited: true
+    summary: "[All Turns] When your Tamer with inherited effects is played, <Delay>: 1 of your Tamers may digivolve into a [Hybrid] Digimon in hand without paying the cost"
+    process:
+      - select_own_permanent:
+          bind_as: tamer_base
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - trait_has: Hybrid
+          prompt: "Select 1 of your Tamers to digivolve into a [Hybrid] Digimon"
+      - if:
+          condition: { binding_present: tamer_base }
+          then:
+            - select_hand:
+                of: you
+                bind_as: hybrid_evo
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: Hybrid
+                    - can_digivolve_onto: tamer_base
+                prompt: "Digivolve into a [Hybrid] Digimon card in your hand without paying the cost"
+            - effect_initiated_digivolve:
+                target: tamer_base
+                from_hand: hybrid_evo
+                cost: free
+                ignore_requirements: false
+
+  # ─── Clause 3: [Security] may play 1 Tamer w/ inherited from hand/trash ─────
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: tamer_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - has_inherited: {}
+          prompt: "You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost"
+      - if:
+          condition: { binding_present: tamer_pick }
+          then:
+            - play_union_bound_free: { binding: tamer_pick }
+      - add_this_option_to_hand: {}

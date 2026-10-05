@@ -4915,3 +4915,24 @@ The failing seed moved with the implemented-deck pool (decks are drawn from full
    any trigger activates — `drain_effect_queue` runs the check first). Test (red before):
    `cards_behavioral::ex12::ex12_036::ex12_036_decode_declined_once_on_a_simultaneous_zero_dp_deletion`.
 - After all three: the default 4-game fuzz and a 40-game sweep (`INVARIANT_FUZZ_GAMES=40`, 4394 steps) pass.
+
+## Findings from the pet-deck blocker batch (2026-10-04)
+
+### Hand-held `flood_gate IgnoreColorRequirement` may never register  [G-ENGINE-HAND-FLOOD-GATE-COLOR-BYPASS] — SUSPECTED, unverified
+- **Observed while authoring BT21-091** ("While you have a Tamer with inherited effects, you can ignore
+  this card's color requirements"): a `kind: flood_gate, modifier: IgnoreColorRequirement` clause on the
+  Option itself did not make the card usable from hand in a behavioral test; the card-level
+  `use_requirement` (BT8-095 / EX12-071 idiom) did. Flood-gates appear to be installed from cards on the
+  field, not cards in hand.
+- **Possibly affected:** Options that author their own color bypass as a flood-gate (e.g. BT22-099,
+  BT23-096, BT19-093 — grep `IgnoreColorRequirement` in `code/digimon-engine/cards/`). Their tests may
+  be structural only. Not re-verified here — needs a mask-level test per card (`build_action_mask` with
+  only an off-color permanent satisfying the printed condition).
+- `option_use_requirement_or_color_available` (`src/action/mask.rs`) does honour a *player-scoped*
+  `IgnoreColorRequirement` modifier; the open question is only whether a hand card's flood-gate ever
+  installs it.
+
+### Duplicate attack-target-lock modifiers  [G-ENGINE-DUP-SWITCH-TARGET-MODIFIER] — note
+- `CanNotSwitchAttackTarget` and `CannotSwitchAttackTarget` both exist; only the latter suppresses
+  Block/Raid/redirects (BT26-021). AD1-011 Paildramon uses `CannotSwitchAttackTarget`. Candidate for
+  consolidation; AD1-012's inherited aura uses the other spelling and should be checked.

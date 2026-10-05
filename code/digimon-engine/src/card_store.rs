@@ -143,9 +143,27 @@ pub fn shared_card_store(all_card_data: &HashMap<String, CardData>) -> Arc<Share
         return existing;
     }
     let built = Arc::new(build_shared_card_store(all_card_data));
-    cache().lock().unwrap().insert(fp, built.clone());
+    let mut cache = cache().lock().unwrap();
+    if cache.len() >= CACHE_SOFT_CAP {
+        evict_unused(&mut cache);
+    }
+    cache.insert(fp, built.clone());
     built
 }
+
+/// Past this many distinct DB fingerprints, an insert first drops every entry no
+/// live `Game` still holds. Production keys one stable DB, so it never gets here;
+/// test suites key one store per distinct card set, and without eviction the map
+/// grew ~2 MB per test until a full `cards_behavioral` run was OOM-killed.
+const CACHE_SOFT_CAP: usize = 16;
+
+/// Drop entries whose only owner is the cache. The build is deterministic
+/// (sorted `data_index`), so a later miss rebuilds an identical store — eviction
+/// is behavior-neutral; games already holding an `Arc` keep theirs.
+fn evict_unused(cache: &mut HashMap<u64, Arc<SharedCardStore>>) {
+    cache.retain(|_, store| Arc::strong_count(store) > 1);
+}
+
 
 /// The reference build — the exact clone+enrich+index+token-absorb sequence
 /// previously inline in `Game::new`. The cache-miss path; also the oracle baseline.
@@ -194,8 +212,13 @@ pub fn build_shared_card_store(all_card_data: &HashMap<String, CardData>) -> Sha
     // Absorb the global (deck-independent) token rows. They also need index
     // entries so `card_data_by_id` and printed-keyword auto-effect synthesis
     // can resolve token card IDs.
+    // Sorted by card_id, like the DB cards above: the registry is a `HashMap`, and
+    // its iteration order differs per instance, which would make two builds of the
+    // same fingerprint (e.g. after `evict_unused`) disagree on token indices.
     let token_registry = crate::token_registry::build_registry();
-    for def in token_registry.iter() {
+    let mut token_defs: Vec<_> = token_registry.iter().collect();
+    token_defs.sort_by(|a, b| a.card_id.cmp(&b.card_id));
+    for def in token_defs {
         let idx = data.len();
         index.insert(def.card_id.clone(), idx);
         data.push(def.to_card_data());
@@ -206,5 +229,55 @@ pub fn build_shared_card_store(all_card_data: &HashMap<String, CardData>) -> Sha
         index: Arc::new(index),
         #[cfg(feature = "dsl-yaml-loader")]
         alt_paths: Arc::new(alt_path_registry),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn empty_store() -> Arc<SharedCardStore> {
+        Arc::new(SharedCardStore {
+            data: Arc::new(Vec::new()),
+            index: Arc::new(HashMap::new()),
+            #[cfg(feature = "dsl-yaml-loader")]
+            alt_paths: Arc::new(HashMap::new()),
+        })
+    }
+
+    #[test]
+    fn evict_unused_keeps_only_stores_a_game_still_holds() {
+        let held = empty_store();
+        let mut cache: HashMap<u64, Arc<SharedCardStore>> = HashMap::new();
+        cache.insert(1, held.clone());
+        for fp in 2..=20 {
+            cache.insert(fp, empty_store());
+        }
+
+        evict_unused(&mut cache);
+
+        assert_eq!(cache.len(), 1, "only the held store survives");
+        assert!(Arc::ptr_eq(&cache[&1], &held));
+    }
+
+    #[test]
+    fn evicted_fingerprint_rebuilds_an_identical_store() {
+        let mut db = HashMap::new();
+        db.insert(
+            "EVICT-TEST-1".to_string(),
+            crate::debug_runner::make_test_card("EVICT-TEST-1", "Evict Test"),
+        );
+        let first = shared_card_store(&db);
+        let ids: Vec<String> = first.data.iter().map(|c| c.card_id.clone()).collect();
+        let index = (*first.index).clone();
+        drop(first);
+        // Force the fingerprint out (other tests may share the global map, so
+        // evict through the same path an over-cap insert uses).
+        evict_unused(&mut cache().lock().unwrap());
+
+        let rebuilt = shared_card_store(&db);
+        let rebuilt_ids: Vec<String> = rebuilt.data.iter().map(|c| c.card_id.clone()).collect();
+        assert_eq!(rebuilt_ids, ids);
+        assert_eq!(*rebuilt.index, index);
     }
 }

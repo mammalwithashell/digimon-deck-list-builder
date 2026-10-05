@@ -618,6 +618,9 @@ pub struct CompiledPredicate {
     /// card — name + aliases + traits + printed text.
     #[serde(default)]
     pub event_target_in_text_contains: Option<String>,
+    /// Event-target top card has inherited effects. G-DSL-EVENT-TARGET-HAS-INHERITED.
+    #[serde(default)]
+    pub event_target_has_inherited: Option<bool>,
     pub event_target_is_player: Option<bool>,
     pub event_target_is_source: Option<bool>,
     pub event_target_was_self: Option<bool>,

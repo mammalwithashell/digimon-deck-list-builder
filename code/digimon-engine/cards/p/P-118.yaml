@@ -1,0 +1,89 @@
+card: P-118
+name: Wormmon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Larva]
+form: Rookie
+attribute: Free
+
+# Official text (data/card_bundles/P-118.md):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 green or blue card
+#   with 2 or more colors and 1 Tamer card with [Ken Ichijoji] in its name
+#   among them to the hand. Return the rest to the bottom of the deck.
+#   Inherited: [End of Your Turn] This Digimon and another of your Digimon may
+#   DNA digivolve into a Digimon card in your hand.
+# Official Q&A: even if only one of the applicable cards is revealed, you can
+# still add it to your hand.
+#
+# DCGO (P_118.cs):
+#   OnPlay — SimplifiedRevealDeckTopCardsAndSelect(revealCount 3) with two
+#     AddHand conditions (maxCount 1 each):
+#       (a) CardColors.Count >= 2 && (Blue || Green)
+#       (b) IsTamer && ContainsCardName("Ken Ichijoji")
+#     remainder → DeckBottom. Same two-bucket shape as BT12-047 Wormmon.
+#   OnEndTurn (inherited, optional) — CanActivate: owner's turn, hand >= 1,
+#     another own Digimon exists. DNADigivolvePermanentsIntoHandOrTrashCard(
+#     payCost: true, isHand: true, permanentConditions: [this permanent]) —
+#     the hand card must be a legal DNA target (CanJogressFromTargetPermanent)
+#     and the printed DNA cost is paid. `may_dna_digivolve_now` with
+#     `ignore_requirements: false` checks the DNA requirements for the
+#     {this, partner} pair and charges the target's printed DNA cost.
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 green/blue card with 2+ colors and 1 [Ken Ichijoji] Tamer; rest to bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: multicolor_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - self_color_count_gte: 2
+                  - any_of:
+                      - color_is: green
+                      - color_is: blue
+            - bind_as: ken_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: tamer
+                  - name_contains: "Ken Ichijoji"
+          no_duplicate_cards: true
+          prompt: "Select 1 green or blue card with 2 or more colors and 1 [Ken Ichijoji] Tamer"
+      - add_to_hand_from_reveal: { of: you, card: multicolor_pick }
+      - add_to_hand_from_reveal: { of: you, card: ken_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - when: end_of_your_turn
+    scope: inherited
+    optional: true
+    summary: "[End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in your hand"
+    process:
+      - may_dna_digivolve_now:
+          partner_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+          target_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+          ignore_requirements: false
+          optional: true
+          prompt: "Choose another of your Digimon to DNA digivolve with this Digimon"
