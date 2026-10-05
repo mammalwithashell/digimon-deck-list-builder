@@ -133,6 +133,10 @@ enum Command {
         /// diverged from that count instead of reading them.
         #[arg(long, alias = "verbose")]
         all_diffs: bool,
+        /// On a CLEAN oracle diff, write the confirmed state into the scenario's
+        /// `assert:` block (rows marked `_backfilled`). Oracle mode only.
+        #[arg(long)]
+        backfill: bool,
     },
     /// Build a standalone DCGO player and stamp its manifest.
     Build {
@@ -457,6 +461,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             clause_text_json,
             emit_job,
             all_diffs,
+            backfill,
         } => run_exam(
             scenario,
             *sim_only,
@@ -467,6 +472,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             clause_text_json.as_deref(),
             emit_job.as_deref(),
             *all_diffs,
+            *backfill,
         ),
         Command::Build {
             unity,
@@ -648,6 +654,7 @@ fn run_exam(
     clause_text_json: Option<&Path>,
     emit_job: Option<&Path>,
     all_diffs: bool,
+    backfill: bool,
 ) -> Result<ExitCode, String> {
     use dcgo_harness::exam::verdict::{ClauseTextBook, VerdictStore};
 
@@ -658,6 +665,9 @@ fn run_exam(
              to an assertion-only run would report oracle agreement nobody measured."
                 .to_string(),
         );
+    }
+    if backfill && sim_only {
+        return Err("--backfill needs an oracle run (--sidecar); sim-only confirms nothing".into());
     }
     if emit_job.is_some() && !sim_only {
         return Err(
@@ -733,6 +743,7 @@ fn run_exam(
             &book,
             emit_job,
             all_diffs,
+            backfill,
             &mut lowered,
             &mut ran,
             &mut diffed,
@@ -844,6 +855,7 @@ fn exam_one(
     book: &DeckBook,
     emit_job: Option<&Path>,
     all_diffs: bool,
+    backfill: bool,
     lowered: &mut u32,
     ran: &mut u32,
     diffed: &mut u32,
@@ -1033,6 +1045,17 @@ fn exam_one(
         }
     } else {
         println!("  {report}");
+    }
+
+    if backfill && report.is_clean() {
+        // Our projections equal DCGO's on every compared field when the diff is
+        // clean; ours carry exactly one row per step plus the trailing state
+        // the `assert:` block wants.
+        let updated =
+            dcgo_harness::exam::backfill::backfill_from_diff(&text, &projections, &report)?;
+        std::fs::write(path, updated)
+            .map_err(|e| format!("writing backfilled scenario {}: {e}", path.display()))?;
+        println!("  backfill: wrote confirmed state into {}", path.display());
     }
 
     // What this run established about the clause, for the verdict store: a

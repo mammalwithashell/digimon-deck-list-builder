@@ -1,103 +1,440 @@
-# Exam scenario: Close (EX8-067), clause EX8-067#effect#2 (Security Effect) --
-# "[Security] Play this card without paying the cost."
-#
-# THE LINE (shape of EX12-070-security0.yaml): Close is stacked as P0's TOP
-# security card (stack[9]); P1 plays Ukkomon (BT16-082) on T2, lets it shake
-# summoning sickness, and attacks security on T4. The flipped Close's [Security]
-# effect plays it onto P0's battle area free (memory is not touched).
-#   T1 (P0): pass everything (memory 3 to P1).
-#   T2 (P1): play Ukkomon (3 -> 0), pass (memory 3 to P0).
-#   T3 (P0): pass everything (memory 3 to P1).
-#   T4 (P1, memory 3): THE CLAUSE -- Ukkomon attacks security; Close flips.
-# P0's field is empty so no blocker window precedes the check. Close is not a
-# Digimon, so no security battle follows; Ukkomon keeps attacking state.
 card: EX8-067
 clause: EX8-067#effect#2
 seed: 424242
 decks:
   p0:
     stack:
-      # hand (0-4)
-      - EX10-032
-      - EX10-032
-      - EX10-032
-      - EX10-032
-      - EX10-033
-      # security (5-9): [9] = TOP, the card under exam
-      - EX10-033
-      - EX10-033
-      - EX10-036
-      - EX10-036
-      - EX8-067
-      # (10) T3 turn draw
-      - EX10-036
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    - EX10-033
+    - EX10-033
+    - EX10-036
+    - EX10-036
+    - EX8-067
+    - EX10-036
+    - P-107
     rest: rocks-exam
   p1:
     stack:
-      # hand (0-4)
-      - BT16-082
-      - EX10-032
-      - EX10-032
-      - EX10-032
-      - EX10-032
-      # security (5-9): never checked
-      - EX10-033
-      - EX10-033
-      - EX10-033
-      - EX10-036
-      - EX10-036
-      # (10) T2 draw, (11) T4 draw
-      - EX10-036
-      - EX8-047
+    - BT16-082
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    - EX10-033
+    - EX10-033
+    - EX10-036
+    - EX10-036
+    - EX10-036
+    - EX8-047
     rest: rocks-exam
 steps:
-  # T1 (P0, memory 0): pass everything.
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: breeding_action }
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  # T2 (P1, memory 3): the attacker arrives.
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: breeding_action }
-  - actor: 1
-    do: { play: { card: BT16-082, from: hand } }
-    expect: { prompt: main_phase }
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  # T3 (P0, memory 3): pass everything.
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: breeding_action }
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  # T4 (P1, memory 3): attack into the security option.
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: breeding_action }
-  - actor: 1
-    do: { attack: { attacker: field.0, target: security } }
-    expect: { prompt: main_phase }
-  # Trailing step: P1 keeps the turn (attacking costs no memory).
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: main_phase }
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+    count: null
+    candidates: []
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+    count: null
+    candidates: []
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+    count: null
+    candidates: []
+- actor: 1
+  do:
+    play:
+      card: BT16-082
+      from: hand
+  expect:
+    prompt: main_phase
+    count: null
+    candidates: []
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+    count: null
+    candidates: []
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+    count: null
+    candidates: []
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+    count: null
+    candidates: []
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+    count: null
+    candidates: []
+- actor: 1
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+    count: null
+    candidates: []
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+    count: null
+    candidates: []
 assert:
-  # Backfilled from the DCGO oracle (job exam-EX8-067-effect2, CLEAN 10 of 10):
-  # security 5 -> 4, Close on P0's field free (memory untouched at -3 from
-  # P1's perspective of the turn), P1's Ukkomon suspended from attacking.
-  - at: 9
-    that:
-      turn: 4
-      p0.memory: -3
-      p0.security: 4
-      p0.trash: []
-      p0.field:
-        - { card_id: EX8-067, dp: -1, suspended: false, sources: [] }
-      p1.security: 5
-      p1.field:
-        - { card_id: BT16-082, dp: 2000, suspended: true, sources: [] }
+- at: 9
+  that:
+    p0.field:
+    - card_id: EX8-067
+      dp: -1
+      suspended: false
+      sources: []
+    p0.memory: -3
+    p0.security: 4
+    p0.trash: []
+    p1.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: true
+      sources: []
+    p1.security: 5
+    turn: 4
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT16-082
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT16-082
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT16-082
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-036
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 2
+- at: 3
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT16-082
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-036
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 4
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-036
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 5
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    - EX10-036
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-036
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 3
+- at: 6
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    - EX10-036
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-036
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 7
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    - EX10-036
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-036
+    - EX8-047
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 4
+- at: 8
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    - EX10-036
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-036
+    - EX8-047
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 4
+- at: 9
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: EX8-067
+      dp: -1
+      suspended: false
+      sources: []
+    p0.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    - EX10-036
+    p0.security: 4
+    p0.trash: []
+    p1.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: true
+      sources: []
+    p1.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-036
+    - EX8-047
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 4
+- at: 10
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: EX8-067
+      dp: -1
+      suspended: false
+      sources: []
+    p0.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-033
+    - EX10-036
+    - P-107
+    p0.security: 4
+    p0.trash: []
+    p1.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: true
+      sources: []
+    p1.hand:
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-032
+    - EX10-036
+    - EX8-047
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 5
