@@ -561,7 +561,18 @@ pub fn resolve_next(
         // is the SAME prompt
         // awaiting its stop (DCGO `canEndNotMax: true` recorded as one row
         // with fewer than max targets — BT8-084's "up to 4" picking 1).
+        //
+        // Kinds that carry their own `picked` counter (`SourceMulti`,
+        // `CountCappedMultiSelect`) are excluded: the kind-specific check below
+        // is authoritative for them. A fresh `CountCappedMultiSelect { picked: 0 }`
+        // also installs a `MultiPickStep` frame, so the frame test alone would
+        // misread it as this row's still-open prompt and spend a PASS that
+        // declines it (Close EX8-067's "up to 2" trash pick).
         let open_field_multi_pick = picks_done > 0
+            && !matches!(
+                pending.kind,
+                SelectionKind::SourceMulti { .. } | SelectionKind::CountCappedMultiSelect { .. }
+            )
             && game.pending_selection_resume.as_ref().is_some_and(|stack| {
                 stack.frames.iter().rev().any(|f| {
                     matches!(
@@ -1265,6 +1276,35 @@ mod tests {
         park_count_capped(&mut runner.game, 1);
         let payload = one_card_row("EX8-047");
         assert_eq!(resolve_next(&runner.game, &payload, 1), Ok(Some(PASS)));
+    }
+
+    #[test]
+    fn trailing_pass_does_not_decline_a_fresh_count_capped_prompt_under_multipick_frame() {
+        // Close EX8-067's real shape: the fresh "up to 2" trash pick installs a
+        // `MultiPickStep` frame, so the frame-based open-field heuristic is true
+        // (picks_done = 1) — but the kind's own `picked: 0` is authoritative.
+        let mut runner = DebugRunner::new();
+        park_count_capped(&mut runner.game, 0);
+        runner.game.pending_selection_resume = Some(ResumeStack {
+            frames: vec![multipick_frame(0, 0, CountCappedZone::Trash, TRASH_EFFECT_START, vec![0])],
+        });
+        assert_eq!(
+            resolve_next(&runner.game, &one_card_row("EX8-047"), 1),
+            Ok(None)
+        );
+    }
+
+    #[test]
+    fn trailing_pass_still_closes_an_open_count_capped_prompt_under_multipick_frame() {
+        let mut runner = DebugRunner::new();
+        park_count_capped(&mut runner.game, 1);
+        runner.game.pending_selection_resume = Some(ResumeStack {
+            frames: vec![multipick_frame(0, 0, CountCappedZone::Trash, TRASH_EFFECT_START, vec![0])],
+        });
+        assert_eq!(
+            resolve_next(&runner.game, &one_card_row("EX8-047"), 1),
+            Ok(Some(PASS))
+        );
     }
 
     #[test]
@@ -2234,6 +2274,18 @@ mod tests {
             Ok(Some(TRASH_EFFECT_START)),
             "pick 0 resolves by identity"
         );
+        // After the engine applies pick 0 it re-parks the prompt with `picked`
+        // bumped (`accum.len()`); model that post-pick state. (A static
+        // `picked: 0` here is the FRESH-prompt shape the trailing-PASS guard
+        // deliberately leaves alone.)
+        if let Some(SelectionKind::CountCappedMultiSelect { picked, .. }) = runner
+            .game
+            .pending_selection
+            .as_mut()
+            .map(|p| &mut p.kind)
+        {
+            *picked = 1;
+        }
         assert_eq!(
             resolve_next(&runner.game, &row, 1),
             Ok(Some(PASS)),
