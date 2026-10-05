@@ -648,22 +648,6 @@ enum ExamOutcome {
     CheckFailed,
 }
 
-/// What one oracle-mode scenario run established about its clause, before the
-/// verdict store gets involved.
-struct VerdictEvent {
-    /// Every clause the line covers (`covers:`, default `[clause]`). A clause
-    /// scenario's verdict is recorded for each.
-    clause_ids: Vec<String>,
-    /// Set on an interaction exam: the verdict is filed under this id INSTEAD
-    /// of any clause -- a passing negative probe proves a clause did NOT fire,
-    /// which must never read as that clause confirmed.
-    interaction_id: Option<String>,
-    card: String,
-    verdict: dcgo_harness::exam::verdict::Verdict,
-    reason: Option<String>,
-    scenario_path: String,
-}
-
 #[allow(clippy::too_many_arguments)]
 fn run_exam(
     scenario: &Path,
@@ -679,7 +663,7 @@ fn run_exam(
     explain_selects: bool,
     backfill: bool,
 ) -> Result<ExitCode, String> {
-    use dcgo_harness::exam::verdict::{ClauseTextBook, InteractionBook, VerdictStore};
+    use dcgo_harness::exam::oracle::VerdictRecorder;
 
     if !sim_only && sidecar.is_none() {
         return Err(
@@ -703,7 +687,7 @@ fn run_exam(
 
     // Resolve the verdict store up front so a bad path or missing clause-text
     // file fails before any scenario runs.
-    let mut verdict_ctx: Option<(PathBuf, ClauseTextBook, VerdictStore)> = match verdicts {
+    let mut verdict_ctx: Option<(PathBuf, VerdictRecorder)> = match verdicts {
         Some(path) if sim_only => {
             println!(
                 "exam: --verdicts ignored under --sim-only -- sim-only cannot confirm \
@@ -719,9 +703,8 @@ fn run_exam(
                  label and text sha256 from the clause_coverage denominator."
                     .to_string()
             })?;
-            let book = ClauseTextBook::load(ctj)?;
-            let store = VerdictStore::load_dir(path)?;
-            Some((path.to_path_buf(), book, store))
+            let recorder = VerdictRecorder::load(path, ctj, interaction_denominator)?;
+            Some((path.to_path_buf(), recorder))
         }
         None => None,
     };
@@ -752,7 +735,7 @@ fn run_exam(
     let mut ran = 0u32;
     let mut diffed = 0u32;
     let mut outcomes: Vec<ExamOutcome> = Vec::new();
-    let mut events: Vec<VerdictEvent> = Vec::new();
+    let mut events: Vec<dcgo_harness::exam::oracle::VerdictEvent> = Vec::new();
 
     for path in &paths {
         seen += 1;
@@ -788,46 +771,12 @@ fn run_exam(
     // AND fails the run: a scenario keyed outside the denominator is a
     // scenario that covers nothing, whatever its diff said.
     let mut verdicts_refused = 0usize;
-    if let Some((store_path, book, store)) = verdict_ctx.as_mut() {
+    if let Some((store_path, recorder)) = verdict_ctx.as_mut() {
         let recorded_at = chrono::Utc::now().to_rfc3339();
-        // Loaded on first use: a clause-only run never needs the interaction
-        // denominator, and must not fail for its absence.
-        let mut interaction_book: Option<Result<InteractionBook, String>> = None;
         for ev in &events {
-            let ids: Vec<String> = match &ev.interaction_id {
-                Some(id) => vec![id.clone()],
-                None => ev.clause_ids.clone(),
-            };
-            for id in ids {
-                let result = if ev.interaction_id.is_some() {
-                    match interaction_book
-                        .get_or_insert_with(|| InteractionBook::load(interaction_denominator))
-                    {
-                        Ok(ib) => dcgo_harness::exam::verdict::record_interaction_verdict(
-                            store,
-                            ib,
-                            &id,
-                            std::slice::from_ref(&ev.card),
-                            ev.verdict,
-                            Some(ev.scenario_path.clone()),
-                            ev.reason.clone(),
-                            recorded_at.clone(),
-                        ),
-                        Err(e) => Err(format!("refusing interaction {id}: {e}")),
-                    }
-                } else {
-                    dcgo_harness::exam::verdict::record_scenario_verdict(
-                        store,
-                        book,
-                        &id,
-                        ev.verdict,
-                        Some(ev.scenario_path.clone()),
-                        ev.reason.clone(),
-                        recorded_at.clone(),
-                    )
-                };
+            for result in recorder.record(ev, &recorded_at) {
                 match result {
-                    Ok(()) => println!(
+                    Ok(id) => println!(
                         "exam: verdict {} recorded for {} ({})",
                         ev.verdict, id, ev.scenario_path
                     ),
@@ -838,20 +787,8 @@ fn run_exam(
                 }
             }
         }
-        // Tell the store what every clause's text hashes to right now, so
-        // stale verdicts from before a text change report as invalidated.
-        let all_ids = book.clause_ids();
-        for id in &all_ids {
-            if let Some(ct) = book.get(id) {
-                store.set_current_text_sha(id, &dcgo_harness::exam::verdict::sha256_hex(&ct.text));
-            }
-        }
-        store.save_dir(store_path)?;
-        println!(
-            "exam: verdict store {} -- {}",
-            store_path.display(),
-            store.summary(&all_ids).describe()
-        );
+        let summary = recorder.save(store_path)?;
+        println!("exam: verdict store {} -- {}", store_path.display(), summary);
     }
 
     let lower_failed = outcomes
@@ -913,7 +850,7 @@ fn exam_one(
     lowered: &mut u32,
     ran: &mut u32,
     diffed: &mut u32,
-) -> Result<(ExamOutcome, Option<VerdictEvent>), String> {
+) -> Result<(ExamOutcome, Option<dcgo_harness::exam::oracle::VerdictEvent>), String> {
     use dcgo_harness::exam::run::lower_and_run;
     use dcgo_harness::exam::scenario::Scenario;
 
@@ -1094,32 +1031,13 @@ fn exam_one(
     // agree with the ruling (design D7: ours = DCGO but not the ruling is
     // `ours_wrong`, never `confirmed`).
     let ruling_ok = ruling_leg(&s, &od.projections);
-    let clean = report.is_clean() && ruling_ok != Some(false);
-    let reason = if clean {
-        None
-    } else {
-        let lead = format!("{report}").lines().next().unwrap_or_default().to_string();
-        Some(match ruling_ok {
-            Some(false) => format!(
-                "ours contradicts ruling qa:{} (ours vs DCGO: {}); {lead}",
-                s.expect_ruling.as_ref().map(|r| r.q_id.as_str()).unwrap_or_default(),
-                if report.is_clean() { "agree" } else { "diverge" }
-            ),
-            _ => lead,
-        })
-    };
-    let event = VerdictEvent {
-        clause_ids: s.covered_clauses(),
-        interaction_id: s.interaction.as_ref().map(|i| i.id.clone()),
-        card: s.card.clone(),
-        verdict: if clean {
-            dcgo_harness::exam::verdict::Verdict::Confirmed
-        } else {
-            dcgo_harness::exam::verdict::Verdict::Diverged
-        },
-        reason,
-        scenario_path: path.display().to_string(),
-    };
+    let event = dcgo_harness::exam::oracle::VerdictEvent::from_diff(
+        &s,
+        &report,
+        ruling_ok,
+        path.display().to_string(),
+    );
+    let clean = event.verdict == dcgo_harness::exam::verdict::Verdict::Confirmed;
 
     Ok((
         if clean {

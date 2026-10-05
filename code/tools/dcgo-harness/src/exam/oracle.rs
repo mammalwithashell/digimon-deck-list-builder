@@ -9,6 +9,12 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use crate::exam::differ::DiffReport;
+use crate::exam::scenario::Scenario;
+use crate::exam::verdict::{
+    record_interaction_verdict, record_scenario_verdict, sha256_hex, ClauseTextBook,
+    InteractionBook, Verdict, VerdictStore,
+};
 use crate::job::{JobOutcome, JobResult, DIR_DONE, DIR_FAILED, DIR_JOBS};
 
 /// What DCGO filed for one submitted job.
@@ -90,6 +96,156 @@ pub fn submit_and_wait(
             ));
         }
         std::thread::sleep(poll);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Verdicts: what one oracle run established, and filing it in the store.
+// Shared by `exam --sidecar --verdicts` and `exam --oracle`, so the two routes
+// can never disagree about what a run confirms or where it is filed.
+// ---------------------------------------------------------------------------
+
+/// What one oracle-mode scenario run established about its clauses (or its
+/// interaction), before the verdict store gets involved.
+#[derive(Debug, Clone)]
+pub struct VerdictEvent {
+    /// Every clause the line covers (`covers:`, default `[clause]`). A clause
+    /// scenario's verdict is recorded for each.
+    pub clause_ids: Vec<String>,
+    /// Set on an interaction exam: the verdict is filed under this id INSTEAD
+    /// of any clause -- a passing negative probe proves a clause did NOT fire,
+    /// which must never read as that clause confirmed.
+    pub interaction_id: Option<String>,
+    pub card: String,
+    pub verdict: Verdict,
+    pub reason: Option<String>,
+    pub scenario_path: String,
+}
+
+impl VerdictEvent {
+    /// Classify one diffed run. A CLEAN oracle diff confirms; anything else
+    /// (divergence or truncation) is a finding to triage. A Q&A exam also
+    /// needs our engine to agree with the ruling (`ruling_ok`, `None` when the
+    /// scenario carries none): ours = DCGO but not the ruling is `ours_wrong`,
+    /// never `confirmed` (card-loop design D7).
+    pub fn from_diff(
+        s: &Scenario,
+        report: &DiffReport,
+        ruling_ok: Option<bool>,
+        scenario_path: String,
+    ) -> VerdictEvent {
+        let clean = report.is_clean() && ruling_ok != Some(false);
+        let reason = if clean {
+            None
+        } else {
+            let lead = format!("{report}").lines().next().unwrap_or_default().to_string();
+            Some(match ruling_ok {
+                Some(false) => format!(
+                    "ours contradicts ruling qa:{} (ours vs DCGO: {}); {lead}",
+                    s.expect_ruling.as_ref().map(|r| r.q_id.as_str()).unwrap_or_default(),
+                    if report.is_clean() { "agree" } else { "diverge" }
+                ),
+                _ => lead,
+            })
+        };
+        VerdictEvent {
+            clause_ids: s.covered_clauses(),
+            interaction_id: s.interaction.as_ref().map(|i| i.id.clone()),
+            card: s.card.clone(),
+            verdict: if clean { Verdict::Confirmed } else { Verdict::Diverged },
+            reason,
+            scenario_path,
+        }
+    }
+
+    /// The ids this event is filed under: the interaction id instead of any
+    /// clause, else every covered clause.
+    pub fn ids(&self) -> Vec<String> {
+        match &self.interaction_id {
+            Some(id) => vec![id.clone()],
+            None => self.clause_ids.clone(),
+        }
+    }
+}
+
+/// Files [`VerdictEvent`]s into a verdict store, refusing any id outside its
+/// denominator (the orphan rule): clause ids against the clause-text book,
+/// interaction ids against the interaction denominator (loaded on first use,
+/// so a clause-only run never needs it).
+pub struct VerdictRecorder {
+    pub store: VerdictStore,
+    clause_book: ClauseTextBook,
+    interaction_denominator: PathBuf,
+    interaction_book: Option<Result<InteractionBook, String>>,
+}
+
+impl VerdictRecorder {
+    pub fn load(
+        store_dir: &Path,
+        clause_text_json: &Path,
+        interaction_denominator: &Path,
+    ) -> Result<VerdictRecorder, String> {
+        let clause_book = ClauseTextBook::load(clause_text_json)?;
+        let store = VerdictStore::load_dir(store_dir)?;
+        Ok(VerdictRecorder {
+            store,
+            clause_book,
+            interaction_denominator: interaction_denominator.to_path_buf(),
+            interaction_book: None,
+        })
+    }
+
+    /// Record one event: one entry per id it is filed under, `Ok(id)` when
+    /// recorded and `Err(why)` when refused.
+    pub fn record(&mut self, ev: &VerdictEvent, recorded_at: &str) -> Vec<Result<String, String>> {
+        let mut out = Vec::new();
+        for id in ev.ids() {
+            let result = if ev.interaction_id.is_some() {
+                let denominator = &self.interaction_denominator;
+                match self
+                    .interaction_book
+                    .get_or_insert_with(|| InteractionBook::load(denominator))
+                {
+                    Ok(ib) => record_interaction_verdict(
+                        &mut self.store,
+                        ib,
+                        &id,
+                        std::slice::from_ref(&ev.card),
+                        ev.verdict,
+                        Some(ev.scenario_path.clone()),
+                        ev.reason.clone(),
+                        recorded_at.to_string(),
+                    ),
+                    Err(e) => Err(format!("refusing interaction {id}: {e}")),
+                }
+            } else {
+                record_scenario_verdict(
+                    &mut self.store,
+                    &self.clause_book,
+                    &id,
+                    ev.verdict,
+                    Some(ev.scenario_path.clone()),
+                    ev.reason.clone(),
+                    recorded_at.to_string(),
+                )
+            };
+            out.push(result.map(|()| id));
+        }
+        out
+    }
+
+    /// Tell the store what every clause's text hashes to right now (so stale
+    /// verdicts report as invalidated), write the touched card files, and
+    /// return the store summary over the clause-text denominator.
+    pub fn save(&mut self, dir: &Path) -> Result<String, String> {
+        let all_ids = self.clause_book.clause_ids();
+        for id in &all_ids {
+            if let Some(ct) = self.clause_book.get(id) {
+                self.store.set_current_text_sha(id, &sha256_hex(&ct.text));
+            }
+        }
+        self.store.save_dir(dir)?;
+        Ok(self.store.summary(&all_ids).describe())
     }
 }
 
@@ -203,5 +359,96 @@ mod tests {
         h.join().unwrap();
         assert_eq!(run.recording_path, None);
         assert_eq!(run.sidecar_path, None);
+    }
+}
+
+#[cfg(test)]
+mod verdict_event_tests {
+    use super::*;
+    use crate::exam::differ::{DiffReport, FieldDiff, StepDivergence};
+    use crate::exam::scenario::Scenario;
+    use crate::exam::verdict::Verdict;
+
+    const BASE: &str = "card: BT7-056\nclause: BT7-056#effect#0\nseed: 7\ndecks:\n  p0: { stack: [BT7-056], rest: vb-standard }\n  p1: { stack: [], rest: vb-standard }\nsteps:\n  - actor: 0\n    do: { hatch: {} }\n  - actor: 0\n    do: { pass: {} }\n";
+
+    fn scenario(extra: &str) -> Scenario {
+        Scenario::from_yaml(&format!("{BASE}{extra}")).unwrap()
+    }
+
+    fn clean() -> DiffReport {
+        DiffReport { compared_steps: 2, ours_steps: 2, dcgo_steps: 2, ours_unpairable: 0, dcgo_unpairable: 0, divergences: vec![] }
+    }
+
+    fn diverged() -> DiffReport {
+        let mut r = clean();
+        r.divergences.push(StepDivergence {
+            step: 1,
+            diffs: vec![FieldDiff { path: "memory".into(), ours: "3".into(), dcgo: "2".into() }],
+            downstream: false,
+        });
+        r
+    }
+
+    #[test]
+    fn a_clean_diff_confirms_every_covered_clause() {
+        let s = scenario("covers: [BT7-056#effect#0, BT7-056#inherited#0]\n");
+        let ev = VerdictEvent::from_diff(&s, &clean(), None, "x.yaml".into());
+        assert_eq!(ev.verdict, Verdict::Confirmed);
+        assert_eq!(ev.reason, None);
+        assert_eq!(ev.ids(), vec!["BT7-056#effect#0".to_string(), "BT7-056#inherited#0".to_string()]);
+    }
+
+    #[test]
+    fn a_divergence_is_diverged_with_the_reports_lead_line() {
+        let ev = VerdictEvent::from_diff(&scenario(""), &diverged(), None, "x.yaml".into());
+        assert_eq!(ev.verdict, Verdict::Diverged);
+        let lead = format!("{}", diverged()).lines().next().unwrap().to_string();
+        assert_eq!(ev.reason.as_deref(), Some(lead.as_str()));
+    }
+
+    #[test]
+    fn contradicting_the_ruling_is_diverged_even_when_dcgo_agrees() {
+        let s = scenario("interaction: { id: \"qa:Q1601\", source: qa, kind: positive }\nexpect_ruling: { q_id: Q1601, assert: [ { at: 1, that: { memory: 0 } } ] }\n");
+        let ev = VerdictEvent::from_diff(&s, &clean(), Some(false), "x.yaml".into());
+        assert_eq!(ev.verdict, Verdict::Diverged);
+        let reason = ev.reason.unwrap();
+        assert!(reason.starts_with("ours contradicts ruling qa:Q1601 (ours vs DCGO: agree)"), "{reason}");
+    }
+
+    #[test]
+    fn an_interaction_is_filed_under_its_id_instead_of_any_clause() {
+        let s = scenario("interaction: { id: \"probe:BT7-056#effect#0:scope:neg\", source: probe, kind: negative }\n");
+        let ev = VerdictEvent::from_diff(&s, &clean(), None, "x.yaml".into());
+        assert_eq!(ev.ids(), vec!["probe:BT7-056#effect#0:scope:neg".to_string()]);
+    }
+
+    fn recorder(dir: &std::path::Path) -> VerdictRecorder {
+        let book = dir.join("clauses.json");
+        std::fs::write(&book, r#"{"clauses":[{"id":"BT7-056#effect#0","label":"[On Play]","text":"t"}]}"#).unwrap();
+        VerdictRecorder::load(&dir.join("store"), &book, &dir.join("no-denominator.json")).unwrap()
+    }
+
+    #[test]
+    fn the_recorder_files_known_clauses_and_refuses_orphans() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut rec = recorder(dir.path());
+        let s = scenario("covers: [BT7-056#effect#0, BT7-056#inherited#0]\n");
+        let ev = VerdictEvent::from_diff(&s, &clean(), None, "x.yaml".into());
+        let out = rec.record(&ev, "2026-10-05T00:00:00Z");
+        assert_eq!(out.len(), 2);
+        assert_eq!(out[0].as_ref().unwrap(), "BT7-056#effect#0");
+        assert!(out[1].as_ref().unwrap_err().contains("refusing"), "{:?}", out[1]);
+        let summary = rec.save(&dir.path().join("store")).unwrap();
+        assert!(summary.contains("1/1 confirmed"), "{summary}");
+    }
+
+    #[test]
+    fn an_interaction_without_a_denominator_is_refused_by_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut rec = recorder(dir.path());
+        let s = scenario("interaction: { id: \"qa:Q1601\", source: qa, kind: positive }\n");
+        let ev = VerdictEvent::from_diff(&s, &clean(), None, "x.yaml".into());
+        let out = rec.record(&ev, "2026-10-05T00:00:00Z");
+        assert!(out[0].as_ref().unwrap_err().starts_with("refusing interaction qa:Q1601:"), "{:?}", out[0]);
     }
 }
