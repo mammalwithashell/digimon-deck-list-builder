@@ -219,7 +219,10 @@ fn bt25_027_wa_bounce_lv4_trash_facedown_unsuspends_self() {
 /// trashing ..., this Digimon unsuspends" leg does not depend on the bounce, so
 /// declining the bounce is NOT a decline of the activation and the clause must
 /// not be marked as refunding its [Once Per Turn] use (only a folded clause
-/// whose every later step depends on the first pick is).
+/// whose every later step depends on the first pick is). The "may" of the
+/// whole activation is the explicit outer confirm (`outer_prompt: true`),
+/// whose decline drops the entry before the use is recorded — see
+/// `bt25_027_declining_outer_confirm_keeps_opt`.
 #[test]
 fn bt25_027_bounce_decline_is_not_an_activation_decline() {
     let runner = runner_field_mach_suspended_with_stash_and_opp();
@@ -231,9 +234,6 @@ fn bt25_027_bounce_decline_is_not_an_activation_decline() {
         .game
         .effects_for_card(CARD_ID, top)
         .expect("BT25-027 effects");
-    // (Separately, and not this gap: declining the bounce currently also
-    // skips the Then-leg at run time, although DCGO runs it — a card-spec
-    // issue for BT25-027, which probably wants `outer_prompt: true`.)
     let opt_arms: Vec<_> = effects
         .iter()
         .filter(|e| e.max_per_turn > 0 && e.optional && e.process.is_some())
@@ -242,6 +242,116 @@ fn bt25_027_bounce_decline_is_not_an_activation_decline() {
     assert!(
         opt_arms.iter().all(|e| !e.folded_decline_refunds_opt),
         "the bounce decline leaves the independent Then-leg -- no refund"
+    );
+}
+
+/// Attack with MachGaogamon (unsuspended first) — fires the WD/WA clause.
+fn attack_with_mach(runner: &mut DebugRunner) {
+    let mach = find_field(runner, 0, CARD_ID).expect("mach on field");
+    runner.game.players[0].battle_area[mach.index as usize].is_suspended = false;
+    runner.attack_player(mach, 1, false);
+}
+
+fn runner_for_attacks() -> DebugRunner {
+    let mut runner = runner_field_mach_suspended_with_stash_and_opp();
+    runner.game.turn_count = 3; // no summoning sickness
+    runner.game.players[1].security.clear();
+    runner
+}
+
+fn take_first_non_pass(runner: &mut DebugRunner) {
+    let a = runner
+        .pending_selection()
+        .expect("a selection is pending")
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != PASS)
+        .expect("a non-PASS action is offered");
+    runner.execute_action(0, a).expect("action resolves");
+}
+
+/// "You may return ... Then, by trashing ..., this Digimon unsuspends." The
+/// Then-leg is independent of the bounce (DCGO BT25_027.cs: the bounce select
+/// is canNoSelect and the coroutine continues into the Tamer select either
+/// way). Accepting the activation and DECLINING the bounce pick must still
+/// offer and run the trash -> unsuspend leg; and since the activation
+/// resolved, the [Once Per Turn] use is spent (a second attack the same turn
+/// offers nothing).
+#[test]
+fn bt25_027_declined_bounce_still_runs_then_unsuspend_and_spends_opt() {
+    let mut runner = runner_for_attacks();
+    let opp_hand_before = runner.hand_size(1);
+    let trash_before = runner.trash_size(0);
+
+    attack_with_mach(&mut runner);
+
+    // Outer "you may" confirm for the activation — accept it.
+    assert_eq!(
+        runner.pending_selection().map(|p| p.kind.clone()),
+        Some(SelectionKind::Replacement),
+        "the first prompt is the activation's outer Yes/No confirm"
+    );
+    take_first_non_pass(&mut runner);
+
+    // The bounce pick — decline it.
+    assert!(
+        runner.pending_is_optional(),
+        "the bounce pick is declinable (\"you may return\")"
+    );
+    runner.execute_action(0, PASS).expect("decline the bounce");
+
+    // The Then-leg still runs: take every remaining prompt.
+    drive_take_targets(&mut runner);
+
+    assert_eq!(runner.hand_size(1), opp_hand_before, "nothing bounced");
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 1,
+        "the Then-leg trashed the bottom face-down stash source"
+    );
+    let mach = find_field(&runner, 0, CARD_ID).expect("mach on field");
+    assert!(
+        !runner.game.players[0].battle_area[mach.index as usize].is_suspended,
+        "the Then-leg unsuspended MachGaogamon despite the declined bounce"
+    );
+
+    // The activation happened -> OPT spent: a second attack offers nothing.
+    let _ = runner.auto_resolve();
+    attack_with_mach(&mut runner);
+    assert!(
+        runner.pending_selection().is_none(),
+        "[Once Per Turn] is spent once the activation resolved"
+    );
+}
+
+/// Declining the activation's outer confirm outright is "not activating" (rule
+/// 15-9-2; DCGO RemoveUse): nothing happens and the [Once Per Turn] use is NOT
+/// spent — a second attack the same turn offers the activation again.
+#[test]
+fn bt25_027_declining_outer_confirm_keeps_opt() {
+    let mut runner = runner_for_attacks();
+    let opp_hand_before = runner.hand_size(1);
+    let trash_before = runner.trash_size(0);
+
+    attack_with_mach(&mut runner);
+    assert_eq!(
+        runner.pending_selection().map(|p| p.kind.clone()),
+        Some(SelectionKind::Replacement),
+        "outer Yes/No confirm first"
+    );
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the activation");
+    let _ = runner.auto_resolve();
+
+    assert_eq!(runner.hand_size(1), opp_hand_before, "nothing bounced");
+    assert_eq!(runner.trash_size(0), trash_before, "nothing trashed");
+
+    attack_with_mach(&mut runner);
+    assert!(
+        runner.pending_selection().is_some(),
+        "declining the activation must not spend [Once Per Turn]"
     );
 }
 
@@ -433,6 +543,12 @@ fn bt25_027_inherited_save_not_offered_without_name_or_trait() {
 #[test]
 fn bt25_027_inherited_save_offered_for_gaogamon_name_without_trait() {
     let (offered, stayed) = gate_delete_carrier("NAME-TOP");
-    assert!(offered, "a [Gaogamon]-named carrier is offered the inherited save");
-    assert!(stayed, "accepting the save keeps the [Gaogamon]-named carrier");
+    assert!(
+        offered,
+        "a [Gaogamon]-named carrier is offered the inherited save"
+    );
+    assert!(
+        stayed,
+        "accepting the save keeps the [Gaogamon]-named carrier"
+    );
 }

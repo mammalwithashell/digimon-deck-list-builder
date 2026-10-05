@@ -7,7 +7,13 @@
 //! `--printed` enables the security-icon check: `scope: security` clauses must
 //! match a pink `{Security}` (face-up) effect on the printed card and
 //! `when: on_security` clauses a blue `[Security]` effect
-//! (`digimon_dsl::security_icon_lint`).
+//! (`digimon_dsl::security_icon_lint`). It also enables the error
+//! `spec-lint/SecurityAttackAuraDoubleCountsPrintedKeyword`: an unconditional
+//! self `security_attack` aura on a card whose printed face carries an innate
+//! `<Security A. ±N>` (the engine counts both; `digimon_dsl::spec_lint`).
+//!
+//! Always on: the warning `spec-lint/CappedMultiMinZeroWithoutOptionalZero`
+//! (`select_count_capped_multi { min: 0 }` without `optional_zero`).
 //!
 //! Exit codes:
 //!   0 — no diagnostics
@@ -18,7 +24,11 @@
 use digimon_engine::dsl::loader;
 use digimon_engine::dsl::raw_rust_registry::StubRegistry;
 use digimon_engine::dsl::security_icon_lint::{check_security_icons, PrintedSection};
+use digimon_engine::dsl::spec_lint::{
+    check_capped_multi_min_zero, check_security_attack_self_aura,
+};
 use digimon_engine::dsl::validator::{validate, ValidationContext};
+use digimon_engine::enums::Keyword;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -127,6 +137,25 @@ fn load_printed(path: &Path) -> Result<PrintedDb, String> {
         .collect())
 }
 
+/// Whether the printed FACE text (the official "Effect" section — what the
+/// engine's `face_keywords` parses, not the inherited / security sections)
+/// carries an innate `<Security A. ±N>`, judged by the engine's own parser.
+fn face_prints_security_attack(sections: &[PrintedSection]) -> bool {
+    sections
+        .iter()
+        .filter(|s| s.label.eq_ignore_ascii_case("Effect"))
+        .any(|s| {
+            digimon_engine::card_data::parse_printed_keywords(&s.text, "", "")
+                .iter()
+                .any(|k| {
+                    matches!(
+                        k,
+                        Keyword::SecurityAttackPlus(_) | Keyword::SecurityAttackMinus(_)
+                    )
+                })
+        })
+}
+
 fn lint_file(
     path: &Path,
     adapter: Option<&dyn digimon_engine::dsl::loader::CardDataDb>,
@@ -173,6 +202,30 @@ fn lint_file(
                 severity: Severity::Error,
                 path: f.path,
                 message: format!("security-icon/{:?}: {}", f.rule, f.message),
+            });
+        }
+    }
+
+    if let Some(sections) = printed.and_then(|p| p.get(&spec.card)) {
+        if face_prints_security_attack(sections) {
+            for f in check_security_attack_self_aura(&spec, true) {
+                diags.push(Diagnostic {
+                    file: file.clone(),
+                    severity: Severity::Error,
+                    path: f.path,
+                    message: format!("spec-lint/{:?}: {}", f.rule, f.message),
+                });
+            }
+        }
+    }
+
+    if let Ok(raw) = std::fs::read_to_string(path) {
+        for f in check_capped_multi_min_zero(&raw) {
+            diags.push(Diagnostic {
+                file: file.clone(),
+                severity: Severity::Warning,
+                path: f.path,
+                message: format!("spec-lint/{:?}: {}", f.rule, f.message),
             });
         }
     }
@@ -294,5 +347,105 @@ fn real_main() -> ExitCode {
         ExitCode::from(2)
     } else {
         ExitCode::SUCCESS
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sec(label: &str, text: &str) -> PrintedSection {
+        PrintedSection {
+            label: label.into(),
+            text: text.into(),
+        }
+    }
+
+    #[test]
+    fn innate_face_security_attack_is_detected() {
+        assert!(face_prints_security_attack(&[sec(
+            "Effect",
+            "＜Security A. +1＞ ＜Reboot＞ ＜Blocker＞ [On Play] Delete 1 Digimon."
+        )]));
+        assert!(face_prints_security_attack(&[sec(
+            "Effect",
+            "＜Security A. -1＞ (This Digimon checks 1 fewer security card.)"
+        )]));
+    }
+
+    #[test]
+    fn granted_inherited_or_absent_security_attack_is_not_face() {
+        // Granted by prose ("gains") — a conditional DSL effect, not innate.
+        assert!(!face_prints_security_attack(&[sec(
+            "Effect",
+            "[Your Turn] This Digimon gains ＜Security A. +1＞."
+        )]));
+        // Printed only in the inherited section.
+        assert!(!face_prints_security_attack(&[
+            sec("Effect", "[On Play] Draw 1."),
+            sec("Inherited Effect", "＜Security A. +1＞"),
+        ]));
+        assert!(!face_prints_security_attack(&[]));
+    }
+
+    /// End to end over a temp YAML: the real lint pass reports the aura as an
+    /// error when the printed face carries the keyword, and nothing otherwise.
+    #[test]
+    fn lint_file_flags_self_sa_aura_only_with_printed_keyword() {
+        let dir = std::env::temp_dir().join(format!("dsl-lint-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("TEST-SA.yaml");
+        std::fs::write(
+            &file,
+            "card: TEST-SA\nname: T\nkind: digimon\nlevel: 6\ncolor: [red]\ncost: 10\n\
+             dp: 12000\neffects:\n  - kind: aura\n    target: {}\n    security_attack: 1\n",
+        )
+        .unwrap();
+
+        let mut printed = PrintedDb::new();
+        printed.insert(
+            "TEST-SA".into(),
+            vec![sec(
+                "Effect",
+                "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+            )],
+        );
+        let mut diags = Vec::new();
+        lint_file(&file, None, Some(&printed), &mut diags);
+        assert!(
+            diags.iter().any(|d| d.severity == Severity::Error
+                && d.message
+                    .contains("SecurityAttackAuraDoubleCountsPrintedKeyword")),
+            "{diags:?}"
+        );
+
+        printed.insert("TEST-SA".into(), vec![sec("Effect", "[On Play] Draw 1.")]);
+        let mut diags = Vec::new();
+        lint_file(&file, None, Some(&printed), &mut diags);
+        assert!(diags.is_empty(), "{diags:?}");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn lint_file_warns_on_capped_multi_min_zero() {
+        let dir = std::env::temp_dir().join(format!("dsl-lint-test-cm-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("TEST-CM.yaml");
+        std::fs::write(
+            &file,
+            "card: TEST-CM\nname: T\nkind: digimon\nlevel: 6\ncolor: [red]\ncost: 10\n\
+             dp: 12000\neffects:\n  - when: on_play\n    process:\n      \
+             - select_count_capped_multi: { of: you, zone: trash, max: 3, min: 0, filter: {}, prompt: p }\n",
+        )
+        .unwrap();
+        let mut diags = Vec::new();
+        lint_file(&file, None, None, &mut diags);
+        assert!(
+            diags.iter().any(|d| d.severity == Severity::Warning
+                && d.message.contains("CappedMultiMinZeroWithoutOptionalZero")),
+            "{diags:?}"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
