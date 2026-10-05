@@ -59,3 +59,17 @@ Fix to unblock: in `resolve_next`, treat a fresh `CountCappedMultiSelect { picke
 `data/card_official.json` / the bundle print Close's play cost as 3; the card image and
 `cards.json` / `EX8-067.yaml` say 4. The line ran with 4 and both engines agreed with the
 oracle (DCGO `action_detail` for Close is not logged here; T1 memory -4 was consistent across both).
+
+## 2026-10-04 -- re-measure attempt after the trailing-PASS guard (0 oracle round-trips; still unmeasured)
+Sim-only lowering (`exam --sim-only`, job emitted to a scratch dir, NOT to the oracle queue) still prints
+`step 17 the DRIVER sent a trailing PASS to close Some(CountCappedMultiSelect { min: 0, max: 2, picked: 0, ... })
+after the row's 1 pick(s)` and `step 18 select answered no live prompt`. The 190cf276c guard
+(`picked > 0` for `CountCappedMultiSelect`) is bypassed here: `resolve_next` computes
+`open_field_multi_pick = picks_done > 0 && resume stack has MultiPickStep/NonDslCountCappedStep/
+CountCappedPermanentsStep` BEFORE the kind match (selection_resolve.rs:557-573), and the DSL "up to N"
+trash pick installs a `MultiPickStep` frame (dsl_cards/step/selections.rs:3301), so the fresh prompt is
+still PASSed. The guard's unit tests park the prompt with no resume frame, so they did not catch it.
+No oracle job was emitted: the diff would only re-report the tool declining our prompt. The trash-pick
+row is already `cards: [EX8-047, BT21-055]`, so the brief's scenario fix does not apply.
+Fix to unblock (code, out of scope for the acceptance task): in `resolve_next`, require the resume-frame
+branch to also see `picked > 0` (or no fresh-prompt signal) before spending the trailing PASS.
