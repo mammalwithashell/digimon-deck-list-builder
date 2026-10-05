@@ -1,4 +1,4 @@
-# Exam scenario: Homeros (BT24-102), clause BT24-102#effect#2 --
+# Exam scenario: Homeros (BT24-102), clause BT24-102#security#0 --
 # "[Security] Play this card without paying the cost."
 #
 # Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
@@ -25,7 +25,7 @@
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.
 card: BT24-102
-clause: BT24-102#effect#2
+clause: BT24-102#security#0
 seed: 424242
 decks:
   p0:

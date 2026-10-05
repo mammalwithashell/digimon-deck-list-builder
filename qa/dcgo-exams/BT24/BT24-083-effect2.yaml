@@ -1,4 +1,4 @@
-# Exam scenario: Hiroko Sagisaka (BT24-083), clause BT24-083#effect#2 --
+# Exam scenario: Hiroko Sagisaka (BT24-083), clause BT24-083#security#0 --
 # "[Security] Play this card without paying the cost."
 #
 # Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
@@ -27,7 +27,7 @@
 #   - [Start of Your Turn] (optional, BT24_083.cs:20, memory 3 <= 4) ->
 #     OptionalSkill, declined.
 card: BT24-083
-clause: BT24-083#effect#2
+clause: BT24-083#security#0
 seed: 424242
 decks:
   p0:

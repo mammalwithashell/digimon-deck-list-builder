@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T14:29:46.957613100+00:00",
+  "last_updated": "2026-10-05T14:32:15.387227200+00:00",
   "clauses": {
     "BT26-092#effect#0": {
       "clause_id": "BT26-092#effect#0",
@@ -19,6 +19,15 @@
       "text_sha256": "f6d89359d9d03676b6282e700f8c18a7fd08a23e56808b9465f222d6201d289e",
       "scenario_path": "D:/card-loop-iter0/tsj\\BT26-092-effect1.yaml",
       "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    },
+    "BT26-092#security#0": {
+      "clause_id": "BT26-092#security#0",
+      "card_id": "BT26-092",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "D:/card-loop-iter0/tsj-fix\\BT26-092-effect2.yaml",
+      "recorded_at": "2026-10-05T14:32:15.387227200+00:00"
     }
   }
 }

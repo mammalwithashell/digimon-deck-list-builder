@@ -1,4 +1,4 @@
-# Exam scenario: Shota Kuroi (BT26-092), clause BT26-092#effect#2 -- the Security
+# Exam scenario: Shota Kuroi (BT26-092), clause BT26-092#security#0 -- the Security
 # Effect "[Security] Play this card without paying the cost."
 #
 # Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
@@ -30,7 +30,7 @@
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.
 card: BT26-092
-clause: BT26-092#effect#2
+clause: BT26-092#security#0
 seed: 424242
 decks:
   p0:
