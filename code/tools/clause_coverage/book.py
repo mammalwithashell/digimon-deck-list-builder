@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -29,7 +30,30 @@ _CODE = Path(__file__).resolve().parents[2]
 if str(_CODE) not in sys.path:
     sys.path.insert(0, str(_CODE))
 
+from data_paths import CARD_OVERRIDES, CARDS_JSON  # noqa: E402
+from tools.clause_coverage.card_sources import (  # noqa: E402
+    load_cards_index,
+    load_official_index,
+    load_overrides_index,
+)
+from tools.clause_coverage.extract import DEFAULT_OFFICIAL_JSON  # noqa: E402
 from tools.clause_coverage.extract import run as extract_run  # noqa: E402
+
+
+class UnknownCardIds(ValueError):
+    """Requested card ids that no card source knows (typo, wrong case, empty)."""
+
+
+def known_card_ids() -> set[str]:
+    """Every id the extractor can resolve: cards.json, the official mirror, or an override.
+
+    Extraction itself never fails on an unknown id -- it emits a phantom
+    `image-required` security clause -- so the book must check before writing.
+    """
+    ids: set[str] = set(load_cards_index(CARDS_JSON))
+    ids |= set(load_official_index(DEFAULT_OFFICIAL_JSON))
+    ids |= set(load_overrides_index(CARD_OVERRIDES))
+    return ids
 
 
 def _denominator(cards: list[str], clauses: list[dict]) -> dict:
@@ -47,7 +71,30 @@ def _denominator(cards: list[str], clauses: list[dict]) -> dict:
     }
 
 
-def merge_into_book(book_path: Path, card_ids: list[str], *, extract=extract_run) -> list[str]:
+def _write_atomic(path: Path, payload: bytes) -> None:
+    """Sibling temp file + `os.replace`, so a crash never leaves a torn book."""
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    try:
+        tmp.write_bytes(payload)
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
+def merge_into_book(
+    book_path: Path,
+    card_ids: list[str],
+    *,
+    extract=extract_run,
+    resolve=known_card_ids,
+) -> list[str]:
+    """Extract and append the cards the book lacks; return the ids added.
+
+    Raises `UnknownCardIds` (writing nothing) if any missing id is not known to
+    `resolve()`: an unresolvable id would otherwise be persisted with a phantom
+    clause and inflate the denominator forever.
+    """
     if book_path.exists():
         raw = book_path.read_bytes().decode("utf-8")
         data = json.loads(raw)
@@ -60,6 +107,13 @@ def merge_into_book(book_path: Path, card_ids: list[str], *, extract=extract_run
     missing = sorted({cid for cid in card_ids if cid not in known})
     if not missing:
         return []
+    known_cards = resolve()
+    unknown = [cid for cid in missing if cid not in known_cards]
+    if unknown:
+        raise UnknownCardIds(
+            f"unknown card id(s) {unknown}: not in cards.json, card_official.json or "
+            "card_overrides.json -- check spelling/case; nothing was written to the book"
+        )
     fresh = extract(missing, f"book add ({len(missing)} ids)")
     existing_ids = {c["id"] for c in data.get("clauses", [])}
     new_clauses = sorted(
@@ -75,7 +129,7 @@ def merge_into_book(book_path: Path, card_ids: list[str], *, extract=extract_run
         text = text.replace("\n", newline)
     if trailing:
         text += newline
-    book_path.write_bytes(text.encode("utf-8"))
+    _write_atomic(book_path, text.encode("utf-8"))
     return missing
 
 
@@ -86,7 +140,11 @@ def main(argv: list[str] | None = None) -> int:
     add.add_argument("--book", type=Path, default=Path("qa/exam-clause-text.json"))
     add.add_argument("--card-ids", nargs="+", required=True)
     args = parser.parse_args(argv)
-    added = merge_into_book(args.book, args.card_ids)
+    try:
+        added = merge_into_book(args.book, args.card_ids)
+    except UnknownCardIds as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
     print(json.dumps({"added": added}))
     return 0
 
