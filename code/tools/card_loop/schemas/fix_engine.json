@@ -1,0 +1,40 @@
+{
+  "title": "card-loop fix_engine result v1",
+  "description": "Stage `fix_engine` (design D4 FIX, D13: engine-touching diffs go on their own `card-loop/<run>/engine-<gap>` branch for human merge; CLAUDE.md rule 28: widen the substrate). The worker changed engine / DSL code in its worktree to close a gap or an `ours_wrong` engine divergence. Same gate as fix_card: `citation`, `tests` that fail at the base and pass with the fix, verbatim `test_result_lines`, green scoped `cards_behavioral`. `gaps`: further substrate still missing after this change (non-empty => the item stays parked). Strict-mode compatible.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["files", "tests", "test_result_lines", "gaps", "citation", "notes"],
+  "properties": {
+    "files": {"type": "array", "items": {"type": "string"}, "description": "Repo-relative paths changed."},
+    "tests": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Regression tests that fail before the fix and pass after it."
+    },
+    "test_result_lines": {"type": "array", "items": {"type": "string"}},
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "id", "summary"],
+        "properties": {
+          "kind": {"type": "string", "enum": ["dsl", "engine"]},
+          "id": {"type": "string"},
+          "summary": {"type": "string"}
+        }
+      }
+    },
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "description": "rule = general_rule.pdf section, ruling = `qa:<Q-number>`, dcgo = `<path>.cs:<line>`.",
+      "properties": {
+        "kind": {"type": "string", "enum": ["rule", "ruling", "dcgo"]},
+        "ref": {"type": "string"}
+      }
+    },
+    "notes": {"type": "string"}
+  }
+}

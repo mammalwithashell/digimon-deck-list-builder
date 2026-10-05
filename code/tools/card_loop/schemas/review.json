@@ -1,0 +1,23 @@
+{
+  "title": "card-loop review result v1",
+  "description": "Stage `review` (design D11/D12: a reviewer of the other family audits another attempt's worktree diff read-only; a reject is an immediate correction of that attempt). `verdict`: accept | reject. `directives`: on reject, each concrete change required (`path` repo-relative or null when not file-specific); may also carry non-blocking notes on accept. `summary`: one paragraph. Strict-mode compatible.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdict", "directives", "summary"],
+  "properties": {
+    "verdict": {"type": "string", "enum": ["accept", "reject"]},
+    "directives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "directive"],
+        "properties": {
+          "path": {"type": ["string", "null"]},
+          "directive": {"type": "string"}
+        }
+      }
+    },
+    "summary": {"type": "string"}
+  }
+}

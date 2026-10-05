@@ -1,0 +1,28 @@
+{
+  "title": "card-loop triage result v1",
+  "description": "Stage `triage` (design D4/D5): classify one oracle divergence between our engine and DCGO. `ours_wrong` -> fix gate (no second opinion; the gate arbitrates). `dcgo_quirk` / `unreachable` are TERMINATING calls: both families must independently agree and each must cite a source, else the item escalates. `undetermined` escalates. `citation`: general_rule.pdf section (`rule`, e.g. `16-36`; the PDF outranks DCGO for rules), official ruling (`ruling`, `qa:<Q-number>`), or DCGO C# (`dcgo`, `<path>.cs:<line>`); null only when no source supports the call (which escalates a terminating call). `reasoning`: the argument, including for `unreachable` the measured reason no legal line reaches the clause. Strict-mode compatible.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["classification", "citation", "reasoning"],
+  "properties": {
+    "classification": {
+      "type": "string",
+      "enum": ["ours_wrong", "dcgo_quirk", "unreachable", "undetermined"]
+    },
+    "citation": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "ref"],
+          "properties": {
+            "kind": {"type": "string", "enum": ["rule", "ruling", "dcgo"]},
+            "ref": {"type": "string"}
+          }
+        }
+      ]
+    },
+    "reasoning": {"type": "string"}
+  }
+}
