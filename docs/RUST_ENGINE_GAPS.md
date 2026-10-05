@@ -2720,7 +2720,13 @@ probably one bug seen from two angles rather than two.
 
 ## G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE
 
-**Status:** open seam, not a defect. Logged 2026-08-28 while building the exam MCP.
+**Status:** Closed 2026-10-05 (oracle-readiness Plan 3). `exam_probe` /
+`run_scenario` with `sim_only: false` and the CLI's `exam --oracle` now run the
+one-call loop in `exam::oracle`: preflight, submit `exam-<stem>`, wait on that
+job's own `done/<job-id>.result.json`, diff its sidecar, record and backfill. See
+`docs/DCGO_EXAM.md` "The agent surface (MCP)". The original entry follows.
+
+**Original status:** open seam, not a defect. Logged 2026-08-28 while building the exam MCP.
 
 `exam_probe(sim_only: false)` returns a clear, actionable error rather than an
 oracle answer. `exam::run::run_one` explains why at the call site: an oracle

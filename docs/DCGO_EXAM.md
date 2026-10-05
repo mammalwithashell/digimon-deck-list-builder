@@ -43,6 +43,22 @@ name, and the EX12 pool and the starter book are separate books, so a run over
 the whole tree needs a merged one.
 
 ```bash
+# One call: preflight, submit, wait for this job's own result, diff, record, backfill.
+# Prints one JSON line per scenario (verdict confirmed / diverged / unmeasured,
+# first divergence, compared-row counts, job id, sidecar); the denominator goes
+# to stderr. --root may be omitted when DCGO_HARNESS_ROOT or the player's
+# default LocalLow root exists. Refuses before submitting on NO-GO or when no
+# player is live.
+dcgo-harness --root "$ROOT" exam --oracle --build <player-dir> \
+    --scenario qa/dcgo-exams/EX10/EX10-025-effect0.yaml --cards-json data/cards.json \
+    --decks qa/dcgo-exams/EX10/rocks_pool.json \
+    --verdicts --clause-text-json qa/exam-clause-text.json --backfill
+
+# Our live prompt (kind, optional, candidates by card) and the board BEFORE
+# step 11 -- works on a line that stalls or fails its asserts.
+dcgo-harness exam --scenario qa/dcgo-exams/EX10/EX10-025-effect0.yaml --sim-only \
+    --cards-json data/cards.json --decks qa/dcgo-exams/EX10/rocks_pool.json --inspect 11
+
 # Every EX12 scenario, our engine only. No Unity. Milliseconds.
 cargo run -p dcgo-harness -- --root "$ROOT" exam --scenario qa/dcgo-exams/EX12 \
     --sim-only --cards-json data/cards.json --decks qa/dcgo-exams/EX12/toho_pool.json
@@ -891,6 +907,20 @@ has gone home.
 This is what makes `assert:` load-bearing rather than decorative, and it is the
 only reason the Unity-free CI half has anything to check.
 
+Backfill asserts only what both engines can stand behind:
+
+- **Only the rows the differ paired.** A step that put nothing on the DCGO wire
+  (a sim-only row) or that only DCGO decides was never observed by the oracle,
+  so it gets no assertion; the steps around it still do.
+- **No `phase` the differ did not compare** (our selection phases, our
+  `EndOfTurnAction` against DCGO's `Main`).
+- **Only values the sim-only replay reproduces.** A card drawn from beyond
+  `stack:` comes from DCGO's own seeded shuffle in the oracle run but from the
+  deck book's order in CI, so asserting it would fail the gate on a line that
+  agrees with DCGO. Such values are left out and named in the backfill line
+  ("left out N value(s) ... at 3: p1.hand"); stack the cards they depend on to
+  assert them.
+
 ### Test drafter
 
 Emits a draft `#[test]` into `code/digimon-engine/tests/cards_behavioral/<set>/`
@@ -1127,11 +1157,11 @@ large outputs) was the largest single line item of the first campaign.
 |---|---|
 | `exam_status` | Per-clause verdict summary for a card (or an explicit card list), over the full printed denominator (a `clause_coverage extract` output); always all five classes, so a card is never "passed". |
 | `exam_plan` | The outstanding (non-confirmed, non-unavailable) clauses for a card (or an explicit card list) — what still needs work, including a clause with no stored verdict at all. |
-| `exam_validate` | Lints a draft scenario YAML before running it — unknown clause ids, bad verbs/prompts, missing stack cards. |
+| `exam_validate` | Lints a draft scenario YAML before running it — unknown clause ids, bad verbs/prompts, missing stack cards, and `deck-budget` (a `stack:` holding more copies than the `rest:` deck's main deck, or an unknown `rest:` deck; against `decks`, else the pool naming the scenario's decks). |
 | `exam_authoring_guide` | The scenario-composition contract by topic (`format`, `steps`, `prompts`, `decks`, `assert`, `verdicts`). |
 | `exam_keyword_brief` | A keyword's optional-vs-mandatory kind, its rule section, and the exact `general_rule.pdf` pages. |
-| `run_scenario` | Runs one committed scenario file and returns the structured diff report. |
-| `exam_probe` | Tries a line without committing a scenario file — see the `sim_only` note below. |
+| `run_scenario` | Runs one committed scenario file: sim-only (the default) returns the diff report; `sim_only: false` runs the one-call oracle loop, records the verdict and backfills. |
+| `exam_probe` | Tries a line without committing a scenario file; `inspect_step: N` adds our live prompt and the board before step N; `sim_only: false` asks the oracle but records nothing (a confirmed probe returns `backfilled_yaml`). |
 | `claim` | Takes advisory leases on cards so another node does not duplicate the work. |
 | `release` | Releases this job's claims; never removes another job's claim. |
 | `node_health` | Preflight — every check (build present, action-space hash, …) with a status and, on `fail`, a remedy; never errors, so a node that cannot answer still produces a readable report. |
@@ -1140,13 +1170,21 @@ large outputs) was the largest single line item of the first campaign.
 > divergence**. They re-check what an oracle previously confirmed. Only an
 > oracle pass moves a clause to `confirmed`.
 
-**`exam_probe`'s `sim_only: false` mode is not implemented yet.** It returns a
-clear error until an oracle node can be queued — there is no wiring today from
-a probe call to a live DCGO/Unity job. This is tracked as
-`G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE` in `docs/RUST_ENGINE_GAPS.md`. To get a
-real oracle answer today, submit the scenario through the phase-1 harness
-queue (`--emit-job`, see "Quick start" above) and diff against the sidecar it
-writes, rather than expecting `exam_probe` to do it.
+**`sim_only: false` is the one-call oracle route** (`exam::oracle`, the same
+loop as `exam --oracle`): preflight the node, lower the line (a line our engine
+cannot finish is refused before any Unity time), submit `exam-<stem>`, wait on
+`done/<job-id>.result.json` -- never the newest recording -- diff that job's own
+sidecar, then record and backfill. Whatever the oracle does is a result:
+`confirmed`, `diverged` (including a job DCGO stopped after a divergence, with
+DCGO's message), or `unmeasured` with the reason (a timeout, a quarantine, a job
+DCGO stopped before any divergence) -- an unmeasured run writes nothing.
+`run_scenario` files the verdict under the server's `--root`; `exam_probe`
+records nothing. The oracle harness root is the `harness_root` argument, else
+`DCGO_HARNESS_ROOT` / the player's default root -- never the server's `--root`,
+which relocates the verdict and claim stores. Both tools find the scenario's
+deck book the way CI's `exam_sim_all.py` does (beside it, else any pool under
+`qa/dcgo-exams/`) unless `decks` names one. `G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE`
+is closed.
 
 **`claim`/`release` are per card, not per archetype.** Archetype card pools
 genuinely overlap — one archetype's cards can be a strict subset of another's
@@ -1216,11 +1254,11 @@ same gate but land on their own branch, flagged for human review, not merged
 inline. Anything that can't be justified by citation is a **logged finding,
 not a fix** — see "Known gaps" above.
 
-**The oracle route today.** `exam_probe(sim_only: false)` is not wired to a
-live job yet (`G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE`, "The agent surface (MCP)"
-above) — a campaign still gets its oracle answers by committing the scenario,
-submitting it through the phase-1 harness queue, and running `/dcgo-exam`, the
-same route "Quick start" describes.
+**The oracle route today.** `exam_probe(sim_only: false)` and `exam --oracle`
+submit the scenario, wait on `done/<job-id>.result.json`, diff against that
+job's own sidecar, record the verdict, and backfill asserts -- one call, about
+12-25 s per scenario on a warm player. `G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE` is
+closed.
 
 A campaign needs a warm oracle node, preflighted with `node_health` before any
 authoring — never author "in the meantime" on a NO-GO. Provisioning, the

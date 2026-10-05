@@ -110,22 +110,21 @@ For each outstanding clause, core first:
    `format`, `steps`, `prompts`, `decks`, `assert`, `verdicts`.
 3. `exam_validate(yaml)` — milliseconds, catches the orphan clause id, an
    unstacked card, a prompt kind outside the 13.
-4. `exam_probe(yaml, sim_only=true)` — does it lower? This is the only working
-   mode today. **`exam_probe(sim_only=false)` is not currently possible** — it
-   returns a clear, actionable error rather than an oracle answer, because an
-   oracle result needs a DCGO state sidecar written next to a real recording,
-   and a scratch scenario has no Unity trace behind it. This is logged as
-   `G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE` in `docs/RUST_ENGINE_GAPS.md`. Do not
-   call it expecting an oracle answer — it will error, not confirm, and the
-   error is not a sign your scenario is wrong.
+4. `exam_probe(yaml, sim_only=true)` — does it lower? Add `inspect_step: N`
+   to see our live prompt and the board before step N. `exam_probe(yaml,
+   sim_only=false)` asks the oracle in one call (~15-60 s, preflighted) and
+   records nothing; a committed scenario is recorded with
+   `run_scenario(path, sim_only=false)` or `dcgo-harness exam --oracle`
+   (`docs/DCGO_EXAM.md` "The agent surface (MCP)").
 5. Fix and repeat until the scenario lowers cleanly. A clean sim-only result is
    **not** confirmation — it says nothing about DCGO's prompt sequence, which is
    where lines actually break.
 6. Commit the scenario file (`qa/dcgo-exams/<SET>/<CARD-ID>.yaml`) and get the
-   oracle answer through the **existing route**: submit it through the harness
-   queue and run **`/dcgo-exam`**, which drives the run and records the verdict.
-   That composition — not an in-loop probe — is how a clause reaches
-   `confirmed` today.
+   oracle answer in one call: `run_scenario(path, sim_only=false)` (or
+   `dcgo-harness exam --oracle --verdicts --backfill`) submits it, waits for that
+   job's own result, diffs, records the verdict and backfills asserts. A probe
+   never records -- only a committed scenario's run moves a clause to
+   `confirmed`.
 
 ## Phase 5 — Triage divergences
 
@@ -180,7 +179,8 @@ Then:
 
 - Fleet design: `docs/superpowers/specs/2026-08-27-archetype-campaign-fleet-design.md`
 - Exam manual: `docs/DCGO_EXAM.md`; node runbook: `docs/runbooks/oracle-node.md`
-- Tooling gap: `docs/RUST_ENGINE_GAPS.md` (`G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE`)
+- One-call oracle route: `docs/DCGO_EXAM.md` "The agent surface (MCP)"
+  (`G-TOOLING-EXAM-PROBE-NO-ORACLE-MODE`, closed 2026-10-05)
 - Composes: `/batch-implement-cards-rust-dsl`, `/dcgo-exam`
 - What to dispatch next: `qa/qa-reports/exam-index.md`, and the ranked shortlist
   in `docs/superpowers/specs/2026-08-22-unimplemented-winning-decks.md`
