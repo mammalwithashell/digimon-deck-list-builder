@@ -630,6 +630,19 @@ pub fn run_scenario(
     Ok(value)
 }
 
+/// A scratch file of the probe's own: content hash plus process id plus a
+/// per-process counter. Keyed by content alone, two probes of the same YAML
+/// (parallel tests, two servers) truncated and deleted each other's file.
+fn probe_scratch_path(yaml: &str) -> PathBuf {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    std::env::temp_dir().join(format!(
+        "exam-probe-{}-{}-{n}.yaml",
+        &crate::exam::verdict::sha256_hex(yaml)[..16],
+        std::process::id()
+    ))
+}
+
 pub fn exam_probe(
     params: &serde_json::Value,
     root: Option<&Path>,
@@ -662,10 +675,7 @@ pub fn exam_probe(
     }
 
     // Scratch file: a probe never commits a scenario.
-    let scratch = std::env::temp_dir().join(format!(
-        "exam-probe-{}.yaml",
-        crate::exam::verdict::sha256_hex(&yaml)[..16].to_string()
-    ));
+    let scratch = probe_scratch_path(&yaml);
     std::fs::write(&scratch, &yaml)
         .map_err(|e| format!("writing the probe scratch file: {e}"))?;
 
@@ -1344,6 +1354,13 @@ steps:
         let rules: Vec<&str> = v["findings"].as_array().unwrap().iter()
             .filter_map(|f| f["rule"].as_str()).collect();
         assert!(rules.contains(&"deck-budget"), "{v}");
+    }
+
+    #[test]
+    fn each_probe_gets_its_own_scratch_file() {
+        // Keyed by content alone, two probes of the same YAML (parallel tests,
+        // two servers) truncated and deleted each other's file.
+        assert_ne!(probe_scratch_path(GOOD_YAML), probe_scratch_path(GOOD_YAML));
     }
 
     #[test]

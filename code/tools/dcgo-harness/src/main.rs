@@ -752,7 +752,8 @@ fn run_oracle(
         poll: std::time::Duration::from_secs(1),
     };
 
-    let (mut confirmed, mut diverged, mut unmeasured, mut errors) = (0usize, 0usize, 0usize, 0usize);
+    let (mut confirmed, mut diverged, mut unmeasured, mut refused, mut errors) =
+        (0usize, 0usize, 0usize, 0usize, 0usize);
     for (i, path) in paths.iter().enumerate() {
         // A player that died mid-batch stops the batch here, instead of every
         // remaining scenario timing out one by one.
@@ -764,6 +765,7 @@ fn run_oracle(
         match run_oracle_exam_loaded(path, &opts, &card_data, &book) {
             Ok(r) => {
                 match r.verdict.as_str() {
+                    _ if !r.refused.is_empty() => refused += 1,
                     "confirmed" => confirmed += 1,
                     "diverged" => diverged += 1,
                     _ => unmeasured += 1,
@@ -781,7 +783,7 @@ fn run_oracle(
     }
     eprintln!(
         "exam --oracle: scenarios {} / confirmed {confirmed} / diverged {diverged} / \
-         unmeasured {unmeasured} / errors {errors}",
+         unmeasured {unmeasured} / refused {refused} / errors {errors}",
         paths.len()
     );
     Ok(if confirmed == paths.len() { ExitCode::SUCCESS } else { ExitCode::from(1) })
@@ -1175,7 +1177,13 @@ fn exam_one(
         let sim = ordered_deck(&s.decks.p0, book)
             .and_then(|p0| Ok((p0, ordered_deck(&s.decks.p1, book)?)))
             .and_then(|(p0, p1)| lower_and_run(&s, p0, p1, card_data))
-            .map(|r| r.projections);
+            .and_then(|r| {
+                if r.complete {
+                    Ok(r.projections)
+                } else {
+                    Err(format!("it stalls after {} of {} steps", r.steps_run, r.steps_total))
+                }
+            });
         println!(
             "  {}",
             match sim {

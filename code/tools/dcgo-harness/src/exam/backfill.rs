@@ -246,6 +246,14 @@ fn write_assertions(scenario_yaml: &str, confirmed: &[Observed]) -> Result<Backf
         }
         generated.push(a);
     }
+    if generated.is_empty() {
+        return Err(format!(
+            "refusing to backfill: nothing the oracle observed is something the sim-only \
+             replay reproduces ({} value(s) left out), so the scenario would gain no guard \
+             and lose any it has",
+            dropped.len()
+        ));
+    }
 
     let text = splice_assertions(scenario_yaml, &generated)?;
 
@@ -620,6 +628,17 @@ steps:
         assert!(!at1.that.contains_key("p1.hand"), "the shuffle-dependent hand must not be asserted");
         assert!(at1.that.contains_key("p0.hand"), "what the replay reproduces is still asserted");
         assert!(generated(&s).iter().find(|a| a.at == 0).unwrap().that.contains_key("p1.hand"));
+    }
+
+    #[test]
+    fn nothing_the_sim_replay_reproduces_is_a_refusal_not_an_empty_block() {
+        // A sim replay that stalled (no rows) reproduces nothing: refuse, and
+        // leave an existing generated block alone instead of wiping it.
+        let ours = compared_rows();
+        let report = diff(&ours, &ours);
+        let once = backfill(LINE, &ours).unwrap();
+        let err = backfill_from_diff(&once, &ours, &ours, &one_to_one(2), &report, &[]).unwrap_err();
+        assert!(err.contains("sim-only replay reproduces"), "{err}");
     }
 
     #[test]

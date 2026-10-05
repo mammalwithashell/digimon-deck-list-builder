@@ -43,6 +43,15 @@ pub fn submit_and_wait(
     timeout: Duration,
     poll: Duration,
 ) -> Result<OracleRun, String> {
+    let claimed = root.join(crate::job::DIR_CLAIMED).join(format!("{job_id}.json"));
+    if claimed.exists() {
+        return Err(format!(
+            "an earlier {job_id} is still running on a player ({} exists): submitting now \
+             would hand back THAT run's result. Wait for it to finish, or clear an orphaned \
+             claim with `dcgo-harness --root <root> status --sweep`.",
+            claimed.display()
+        ));
+    }
     let done = root.join(DIR_DONE);
     let failed = root.join(DIR_FAILED).join(format!("{job_id}.json"));
     let result_path = done.join(format!("{job_id}.result.json"));
@@ -60,12 +69,30 @@ pub fn submit_and_wait(
     std::fs::rename(&tmp, &dest).map_err(|e| format!("submitting {}: {e}", dest.display()))?;
 
     let started = Instant::now();
+    // DCGO writes the result with File.WriteAllText -- not atomic -- so a poll
+    // can land between the truncate and the write. An unreadable result is
+    // "not yet" until it has stayed unreadable this long.
+    const UNREADABLE_FOR: Duration = Duration::from_secs(2);
+    let mut unreadable_since: Option<Instant> = None;
     loop {
         if result_path.exists() {
-            let text = std::fs::read_to_string(&result_path)
-                .map_err(|e| format!("reading {}: {e}", result_path.display()))?;
-            let result = JobResult::from_json(&text)
-                .map_err(|e| format!("parsing {}: {e}", result_path.display()))?;
+            let parsed = std::fs::read_to_string(&result_path)
+                .map_err(|e| format!("reading {}: {e}", result_path.display()))
+                .and_then(|text| {
+                    JobResult::from_json(&text)
+                        .map_err(|e| format!("parsing {}: {e}", result_path.display()))
+                });
+            let result = match parsed {
+                Ok(r) => r,
+                Err(e) => {
+                    let since = *unreadable_since.get_or_insert_with(Instant::now);
+                    if since.elapsed() >= UNREADABLE_FOR {
+                        return Err(e);
+                    }
+                    std::thread::sleep(poll);
+                    continue;
+                }
+            };
             let recording = result.recording_path.trim();
             let (recording_path, sidecar_path) = if recording.is_empty() {
                 (None, None)
@@ -269,6 +296,7 @@ pub struct OracleExamResult {
     pub verdict: String,
     /// The differ's lead line when the diff was not clean.
     pub first_divergence: Option<String>,
+    pub divergence: Option<DivergenceAt>,
     /// Why the verdict is not `confirmed`.
     pub reason: Option<String>,
     /// The differ's compared-row counts, when a diff ran.
@@ -304,6 +332,24 @@ pub struct OracleExamOptions<'a> {
     pub backfill: bool,
     pub timeout: Duration,
     pub poll: Duration,
+}
+
+/// The first divergence as fields (spec 4.2(6)): the scenario step it was
+/// reported at and its first differing projection field.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct DivergenceAt {
+    pub step: u32,
+    pub field: String,
+    pub ours: String,
+    pub dcgo: String,
+}
+
+impl OracleExamResult {
+    /// `confirmed` AND filed: a verdict the store refused (an id outside the
+    /// denominator -- the orphan rule) covers nothing, whatever the diff said.
+    pub fn is_clean_confirmation(&self) -> bool {
+        self.verdict == "confirmed" && self.refused.is_empty()
+    }
 }
 
 /// Refuse before any submission when the node cannot answer: `node::health`
@@ -443,6 +489,7 @@ pub fn run_oracle_exam_loaded(
         },
         verdict: "unmeasured".to_string(),
         first_divergence: None,
+        divergence: None,
         reason: None,
         denominator: None,
         job_id: job.job_id.clone(),
@@ -488,6 +535,14 @@ pub fn run_oracle_exam_loaded(
     result.denominator = Some(od.report.denominator());
     if !od.report.is_clean() {
         result.first_divergence = format!("{}", od.report).lines().next().map(str::to_string);
+        result.divergence = od.report.first().and_then(|d| {
+            d.diffs.first().map(|f| DivergenceAt {
+                step: d.step,
+                field: f.path.clone(),
+                ours: f.ours.clone(),
+                dcgo: f.dcgo.clone(),
+            })
+        });
     }
     // DCGO stopped the line early (a prompt mismatch, a turn cap) and nothing
     // diverged before it did: the clause was not measured.
@@ -590,6 +645,40 @@ mod tests {
         assert_eq!(run.outcome, JobOutcome::Completed);
         assert_eq!(run.sidecar_path, Some(t.path().join("rec.state.jsonl")));
         assert!(t.path().join("jobs/exam-X-effect0.json").exists());
+    }
+
+    #[test]
+    fn a_previous_submission_still_claimed_is_refused_not_adopted() {
+        // A timed-out earlier run of the same stem still on the player would
+        // file ITS result first, and we would diff the new line against it.
+        let t = root();
+        std::fs::write(t.path().join("claimed/exam-X-effect0.json"), "{}").unwrap();
+        let started = std::time::Instant::now();
+        let err = submit_and_wait(t.path(), "exam-X-effect0", "{}", Duration::from_secs(5),
+                                  Duration::from_millis(20)).unwrap_err();
+        assert!(started.elapsed() < Duration::from_secs(1), "refused up front, not after waiting");
+        assert!(err.contains("still running") && err.contains("exam-X-effect0.json"), "{err}");
+        assert!(!t.path().join("jobs/exam-X-effect0.json").exists(), "nothing may be submitted");
+    }
+
+    #[test]
+    fn a_result_caught_mid_write_is_retried_not_misread() {
+        // DCGO writes result.json with File.WriteAllText: a poll can land
+        // between the truncate and the write.
+        let t = root();
+        let rec = t.path().join("rec.jsonl");
+        let r = t.path().to_path_buf();
+        let rec2 = rec.clone();
+        let h = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(60));
+            std::fs::write(r.join("done/exam-P-effect0.result.json"), "{").unwrap();
+            std::thread::sleep(Duration::from_millis(120));
+            write_result(&r, "exam-P-effect0", "completed", &rec2, "");
+        });
+        let run = submit_and_wait(t.path(), "exam-P-effect0", "{}", Duration::from_secs(5),
+                                  Duration::from_millis(20)).unwrap();
+        h.join().unwrap();
+        assert_eq!(run.outcome, JobOutcome::Completed);
     }
 
     #[test]
@@ -730,6 +819,35 @@ mod verdict_event_tests {
         assert!(m.contains("left out 1 value(s)") && m.ends_with("at 3: p1.hand)"), "{m}");
         assert!(!m.contains("  "), "no runs of spaces: {m}");
         assert_eq!(backfill_message(Path::new("s.yaml"), &[]), "wrote confirmed state into s.yaml");
+    }
+
+    fn result(verdict: &str, refused: &[&str]) -> OracleExamResult {
+        OracleExamResult {
+            scenario: "s.yaml".into(),
+            clause: "BT7-056#effect#0".into(),
+            ids: vec!["BT7-056#effect#0".into()],
+            verdict: verdict.into(),
+            first_divergence: None,
+            divergence: None,
+            reason: None,
+            denominator: None,
+            job_id: "exam-s".into(),
+            job_outcome: Some("completed".into()),
+            sidecar: None,
+            backfilled: false,
+            backfill_note: None,
+            recorded: vec![],
+            refused: refused.iter().map(|s| s.to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn a_confirmed_run_whose_verdict_was_refused_is_not_a_clean_confirmation() {
+        // The orphan rule: a verdict keyed outside the denominator covers
+        // nothing, whatever the diff said.
+        assert!(result("confirmed", &[]).is_clean_confirmation());
+        assert!(!result("confirmed", &["refusing ... orphan"]).is_clean_confirmation());
+        assert!(!result("diverged", &[]).is_clean_confirmation());
     }
 
     fn recorder(dir: &std::path::Path) -> VerdictRecorder {
@@ -931,6 +1049,10 @@ mod oracle_exam_tests {
         assert!(!r.backfilled);
         assert_eq!(std::fs::read_to_string(&sc).unwrap(), before);
         assert_eq!(b.stored("ST23-04#effect#0").unwrap().verdict, Verdict::Diverged);
+        // Spec 4.2(6): the first divergence as fields, not only a line of text.
+        let d = r.divergence.expect("structured first divergence");
+        assert_eq!(d.step, 14);
+        assert!(!d.field.is_empty() && d.ours != d.dcgo, "{d:?}");
     }
 
     #[test]
