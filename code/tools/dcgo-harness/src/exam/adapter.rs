@@ -514,7 +514,8 @@ impl ScenarioAdapter {
                         LowerError::Ambiguous { intent, matches } => format!(
                             "step {i}: {intent} is ambiguous -- {matches:?} all match. \
                              Narrow the step; picking arbitrarily would silently answer \
-                             a different question than the scenario asks."
+                             a different question than the scenario asks.{}",
+                            hand_slot_hint(&matches)
                         ),
                     })?;
 
@@ -614,7 +615,8 @@ impl ScenarioAdapter {
                         LowerError::Ambiguous { intent, matches } => format!(
                             "step {i}: {intent} is ambiguous -- {matches:?} all match. \
                              Narrow the step; picking arbitrarily would silently answer \
-                             a different question than the scenario asks."
+                             a different question than the scenario asks.{}",
+                            hand_slot_hint(&matches)
                         ),
                     })?;
 
@@ -1881,6 +1883,21 @@ fn build_dcgo_only_wire(payload: &SelectPayload) -> Result<SelectWire, String> {
 }
 
 /// The live prompt's source, if one is parked (see [`SelectSource`]).
+/// When every ambiguous match is a play from hand, name the `hand.<i>` slots
+/// that pin one (`from: hand.<i>`); empty otherwise.
+fn hand_slot_hint(matches: &[u16]) -> String {
+    use digimon_engine::action::space::{PLAY_HAND_END, PLAY_HAND_START};
+    let slots: Vec<String> = matches
+        .iter()
+        .filter(|id| (PLAY_HAND_START..PLAY_HAND_END).contains(*id))
+        .map(|id| format!("hand.{}", id - PLAY_HAND_START))
+        .collect();
+    if slots.is_empty() || slots.len() != matches.len() {
+        return String::new();
+    }
+    format!(" Pin one with `from: hand.<i>`: {}.", slots.join(", "))
+}
+
 fn select_source(game: &Game, step: usize) -> Option<SelectSource> {
     let p = game.pending_selection.as_ref()?;
     Some(SelectSource {
@@ -3167,6 +3184,37 @@ steps:
         let p0 = st1_deck_stacked(&[]);
         let p1 = st1_deck_stacked(&["ST1-02", "ST1-03", "ST1-05", "ST1-06", "ST1-07"]);
         ScenarioAdapter::from_scenario(&s, p0, p1, &card_data).expect("line lowers")
+    }
+
+    #[test]
+    fn an_ambiguous_hand_play_suggests_pinning_a_hand_slot() {
+        // Two Koromon-line Agumon copies in hand: `play: {card: ST1-03}`
+        // matches both, and the refusal should say how to pick one.
+        let card_data = test_support::load_card_data();
+        let text = r#"
+card: ST1-03
+clause: ST1-03#effect#0
+seed: 7
+decks:
+  p0: { stack: [], rest: simple }
+  p1: { stack: [ST1-03, ST1-03, ST1-05, ST1-06, ST1-07], rest: simple }
+steps:
+  - actor: 0
+    do: { pass: {} }
+  - actor: 0
+    do: { pass: {} }
+  - actor: 1
+    do: { pass: {} }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+"#;
+        let s = Scenario::from_yaml(text).unwrap();
+        let p0 = st1_deck_stacked(&[]);
+        let p1 = st1_deck_stacked(&["ST1-03", "ST1-03", "ST1-05", "ST1-06", "ST1-07"]);
+        let err = ScenarioAdapter::from_scenario(&s, p0, p1, &card_data).err().expect("ambiguous");
+        assert!(err.contains("is ambiguous"), "{err}");
+        assert!(err.contains("Pin one with `from: hand.<i>`"), "{err}");
+        assert_eq!(err.matches("hand.").count() - 1, 2, "one hint per matching copy: {err}");
     }
 
     #[test]

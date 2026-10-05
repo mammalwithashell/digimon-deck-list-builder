@@ -387,11 +387,12 @@ pub fn exam_validate(params: &serde_json::Value) -> Result<serde_json::Value, St
         ),
     };
     let (interaction_book, interaction_note) = load_interaction_book(params);
-    let findings = crate::exam::validate::validate_scenario(
+    let mut findings = crate::exam::validate::validate_scenario(
         &yaml,
         known_ids.as_deref(),
         interaction_denominator(&interaction_book),
     );
+    findings.extend(deck_budget_findings(params, &yaml));
     Ok(serde_json::json!({
         "clean": findings.is_empty(),
         "findings": findings.iter().map(|f| serde_json::json!({
@@ -399,6 +400,33 @@ pub fn exam_validate(params: &serde_json::Value) -> Result<serde_json::Value, St
         })).collect::<Vec<_>>(),
         "note": format!("{note}; {interaction_note}"),
     }))
+}
+
+/// The `deck-budget` lint for YAML text: against the `decks` argument, else the
+/// pool under `qa/dcgo-exams/` that names the scenario's `rest:` decks, else
+/// the default pool. Nothing when the text does not parse (its own finding)
+/// or no book loads.
+fn deck_budget_findings(params: &serde_json::Value, yaml: &str) -> Vec<crate::exam::validate::Finding> {
+    use crate::exam::run::{resolve_default, DEFAULT_CARDS_JSON, DEFAULT_DECK_POOL};
+    let decks = match tools::opt_str_arg(params, "decks") {
+        Some(d) => PathBuf::from(d),
+        None => {
+            let Ok(s) = crate::exam::scenario::Scenario::from_yaml(yaml) else {
+                return Vec::new();
+            };
+            let exams = resolve_default("qa/dcgo-exams");
+            crate::exam::deckbook::book_for(
+                &exams.join("_"),
+                &[s.decks.p0.rest.as_str(), s.decks.p1.rest.as_str()],
+                &exams,
+            )
+            .unwrap_or_else(|| resolve_default(DEFAULT_DECK_POOL))
+        }
+    };
+    match crate::exam::deckbook::DeckBook::load(Some(&decks), &resolve_default(DEFAULT_CARDS_JSON)) {
+        Ok(book) => crate::exam::validate::deck_budget(yaml, &book),
+        Err(_) => Vec::new(),
+    }
 }
 
 /// The interaction denominator for this call (`interaction_denominator`
@@ -617,11 +645,12 @@ pub fn exam_probe(
     // compared AND no divergence) is a completely different question. Naming
     // both `clean` would let one answer be read as the other.
     let (interaction_book, _) = load_interaction_book(params);
-    let findings = crate::exam::validate::validate_scenario(
+    let mut findings = crate::exam::validate::validate_scenario(
         &yaml,
         None,
         interaction_denominator(&interaction_book),
     );
+    findings.extend(deck_budget_findings(params, &yaml));
     if !findings.is_empty() {
         return Ok(serde_json::json!({
             "lint_clean": false,
@@ -1303,6 +1332,18 @@ steps:
         let v = exam_probe(&json!({"arguments": {"yaml": GOOD_YAML, "inspect_step": 9}}), None)
             .expect("an out-of-range step is reported, not fatal");
         assert!(v["inspect_error"].as_str().unwrap_or("").contains("out of range"), "{v}");
+    }
+
+    #[test]
+    fn exam_validate_checks_the_deck_budget_against_the_given_book() {
+        let root = repo_root();
+        let yaml = "card: EX10-025\nclause: EX10-025#effect#0\nseed: 1\ndecks:\n  p0: { stack: [EX10-025, EX10-025, EX10-025, EX10-025, EX10-025], rest: rocks-exam }\n  p1: { stack: [], rest: rocks-exam }\nsteps:\n  - actor: 0\n    do: { pass: {} }\n";
+        let v = exam_validate(&json!({"arguments": {"yaml": yaml,
+            "decks": root.join("qa/dcgo-exams/EX10/rocks_pool.json").display().to_string()}}))
+            .unwrap();
+        let rules: Vec<&str> = v["findings"].as_array().unwrap().iter()
+            .filter_map(|f| f["rule"].as_str()).collect();
+        assert!(rules.contains(&"deck-budget"), "{v}");
     }
 
     #[test]

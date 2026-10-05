@@ -60,11 +60,13 @@ pub fn list() -> Vec<serde_json::Value> {
             "description": "Lint a draft scenario BEFORE running it. Catches unknown clause ids \
                 (when a clause-text book is available — see `clause_text_json`), verbs outside \
                 the vocabulary, prompt kinds outside the 13, a stack: missing a card the line \
-                names, and asserts over security contents. Milliseconds; cheaper than sim-only \
-                and far cheaper than Unity.",
+                names, asserts over security contents, and (deck-budget) a stack: holding more \
+                copies than the rest: deck's main deck, or an unknown rest: deck. Milliseconds; \
+                cheaper than sim-only and far cheaper than Unity.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
+                    "decks": {"type": "string", "description": "Deck-book JSON for the deck-budget rule; default: the pool naming the scenario's decks"},
                     "yaml": {"type": "string", "description": "Scenario YAML text"},
                     "clause_text_json": {"type": "string",
                         "description": "Path to a `clause_coverage extract` output; defaults to \

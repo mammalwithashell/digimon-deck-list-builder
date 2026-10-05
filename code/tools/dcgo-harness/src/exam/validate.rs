@@ -133,6 +133,65 @@ pub fn validate_yaml(text: &str, known_clause_ids: Option<&[String]>) -> Vec<Fin
     )
 }
 
+/// [`validate_yaml`] plus the `deck-budget` rule ([`deck_budget`]) when a
+/// deck book is given.
+pub fn validate_yaml_with_decks(
+    text: &str,
+    known_clause_ids: Option<&[String]>,
+    book: Option<&crate::exam::deckbook::DeckBook>,
+) -> Vec<Finding> {
+    let mut out = validate_yaml(text, known_clause_ids);
+    if let Some(book) = book {
+        out.extend(deck_budget(text, book));
+    }
+    out
+}
+
+/// `deck-budget`: each seat's `stack:` must be suppliable from its `rest:`
+/// deck's MAIN deck -- `stack:` orders the main deck (DCGO shuffles the egg
+/// deck), and the job builder refuses a stacked card the main deck cannot
+/// supply. Caught here, before lowering, it reads as the copy-count error it
+/// is rather than as `stacked card X is not in deck`. An unknown `rest:` deck
+/// is reported too. An unparseable scenario yields nothing (the `unparseable`
+/// rule reports it).
+pub fn deck_budget(text: &str, book: &crate::exam::deckbook::DeckBook) -> Vec<Finding> {
+    let Ok(parsed) = serde_yml::from_str::<RawScenario>(text) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for seat in ["p0", "p1"] {
+        let Some(seat_v) = parsed.decks.get(seat) else { continue };
+        let Some(rest) = seat_v.get("rest").and_then(|v| v.as_str()) else { continue };
+        let stack: Vec<String> = seat_v
+            .get("stack")
+            .and_then(|v| v.as_sequence())
+            .map(|s| s.iter().filter_map(|c| c.as_str().map(str::to_string)).collect())
+            .unwrap_or_default();
+        let entry = match book.resolve(rest) {
+            Ok(e) => e,
+            Err(e) => {
+                out.push(Finding::new("deck-budget", format!("{seat}: {e}"), "decks"));
+                continue;
+            }
+        };
+        let mut stacked: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+        for id in &stack {
+            *stacked.entry(id.as_str()).or_default() += 1;
+        }
+        for (id, k) in stacked {
+            let m = entry.main.iter().filter(|c| c.as_str() == id).count();
+            if k > m {
+                out.push(Finding::new(
+                    "deck-budget",
+                    format!("{seat} stacks {k}x {id} but deck `{rest}` holds {m} in its main deck"),
+                    "decks",
+                ));
+            }
+        }
+    }
+    out
+}
+
 /// Lint `text` against both denominators. An empty result is clean.
 pub fn validate_scenario(
     text: &str,
@@ -722,5 +781,61 @@ steps:
         assert_eq!(rules(&lint(empty)), vec!["empty-ruling"]);
         let secret = ok.replace("p0.memory: 3", "p1.security.0: EX12-004");
         assert_eq!(rules(&lint(&secret)), vec!["security-contents-assert"]);
+    }
+}
+
+#[cfg(test)]
+mod deck_budget_tests {
+    use super::*;
+
+    fn rocks_book() -> crate::exam::deckbook::DeckBook {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+        crate::exam::deckbook::DeckBook::load(
+            Some(root.join("qa/dcgo-exams/EX10/rocks_pool.json").as_path()),
+            root.join("data/cards.json").as_path(),
+        )
+        .unwrap()
+    }
+
+    fn line(p0_stack: &str, p0_rest: &str) -> String {
+        format!(
+            "card: EX10-025\nclause: EX10-025#effect#0\nseed: 1\ndecks:\n  p0: {{ stack: [{p0_stack}], rest: {p0_rest} }}\n  p1: {{ stack: [], rest: rocks-exam }}\nsteps:\n  - actor: 0\n    do: {{ pass: {{}} }}\n"
+        )
+    }
+
+    #[test]
+    fn deck_budget_flags_more_stacked_copies_than_the_deck_holds() {
+        let yaml = line("EX10-025, EX10-025, EX10-025, EX10-025, EX10-025", "rocks-exam");
+        let findings = validate_yaml_with_decks(&yaml, None, Some(&rocks_book()));
+        let f = findings.iter().find(|f| f.rule == "deck-budget").expect("deck-budget finding");
+        assert!(f.message.contains("5x EX10-025") && f.message.contains("rocks-exam"), "{}", f.message);
+    }
+
+    #[test]
+    fn a_stack_the_deck_can_supply_passes_the_budget() {
+        let findings = validate_yaml_with_decks(&line("EX10-025", "rocks-exam"), None, Some(&rocks_book()));
+        assert!(!findings.iter().any(|f| f.rule == "deck-budget"), "{findings:?}");
+    }
+
+    #[test]
+    fn an_unknown_rest_deck_is_a_deck_budget_finding() {
+        let findings = validate_yaml_with_decks(&line("", "no-such-deck"), None, Some(&rocks_book()));
+        let f = findings.iter().find(|f| f.rule == "deck-budget").expect("deck-budget finding");
+        assert!(f.message.contains("no-such-deck"), "{}", f.message);
+    }
+
+    #[test]
+    fn a_card_only_the_egg_deck_holds_cannot_be_stacked() {
+        // `stack:` orders the MAIN deck; the job builder refuses an egg there.
+        let book = rocks_book();
+        let egg = book.resolve("rocks-exam").unwrap().eggs[0].clone();
+        let findings = validate_yaml_with_decks(&line(&egg, "rocks-exam"), None, Some(&book));
+        assert!(findings.iter().any(|f| f.rule == "deck-budget"), "{findings:?}");
+    }
+
+    #[test]
+    fn without_a_book_there_is_no_budget_check() {
+        let yaml = line("EX10-025, EX10-025, EX10-025, EX10-025, EX10-025", "rocks-exam");
+        assert!(!validate_yaml_with_decks(&yaml, None, None).iter().any(|f| f.rule == "deck-budget"));
     }
 }
