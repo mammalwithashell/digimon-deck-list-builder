@@ -126,8 +126,15 @@ impl Game {
                     continue;
                 };
                 for effect in effects.iter() {
+                    // Only the top card's OWN face grants: a `scope: linked`
+                    // grant applies to a host only while the card is linked
+                    // (BT26-010's link <Progress>), and `[Trash]` /
+                    // `{Security}` grants are zone-scoped elsewhere.
                     if !effect.declarative
                         || !Game::source_effect_is_active(source_index, stack_size, false, effect)
+                        || effect.linked
+                        || effect.trash_zone
+                        || effect.security
                         || effect.granted_keyword != Some(keyword)
                     {
                         continue;
