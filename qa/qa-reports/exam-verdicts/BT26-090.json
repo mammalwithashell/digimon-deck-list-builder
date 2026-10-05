@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T14:29:46.957613100+00:00",
+  "clauses": {
+    "BT26-090#effect#0": {
+      "clause_id": "BT26-090#effect#0",
+      "card_id": "BT26-090",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "3b17ed74de1ace124e5d21a26df7a8bc475b1f7d4fe69ded58a9548f7ddace96",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-090-effect0.yaml",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    }
+  }
+}

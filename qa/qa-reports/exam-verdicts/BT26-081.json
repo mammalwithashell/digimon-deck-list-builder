@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T14:29:46.957613100+00:00",
+  "clauses": {
+    "BT26-081#effect#0": {
+      "clause_id": "BT26-081#effect#0",
+      "card_id": "BT26-081",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "610b391fb1a50e693c53c0d82f6fa775cc58b02761998c56416fe5be8dd63970",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-081-effect0.yaml",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    },
+    "BT26-081#effect#1": {
+      "clause_id": "BT26-081#effect#1",
+      "card_id": "BT26-081",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "1ee53a215d53bc5d3a5a862de8b15e399444669c0ed4f49877414c3941270bed",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-081-effect1.yaml",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    },
+    "BT26-081#effect#2": {
+      "clause_id": "BT26-081#effect#2",
+      "card_id": "BT26-081",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "95da466c2a3b9691c84953cc128940a6ef13e39125943b3e3ee2bf61451dba69",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-081-effect2.yaml",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    },
+    "BT26-081#effect#3": {
+      "clause_id": "BT26-081#effect#3",
+      "card_id": "BT26-081",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "f0e5d87e35a67200a9b1d919a02d88c3616d9c4228e2d8a45e1c0571b6e3f389",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-081-effect3.yaml",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    },
+    "BT26-081#effect#4": {
+      "clause_id": "BT26-081#effect#4",
+      "card_id": "BT26-081",
+      "verdict": "confirmed",
+      "label": "Special Play Condition",
+      "text_sha256": "27284f7e45a0a74f86aa649c3ee3058bcdee993cc12b95c7acc5cfec356b9c25",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-081-effect4.yaml",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    }
+  }
+}

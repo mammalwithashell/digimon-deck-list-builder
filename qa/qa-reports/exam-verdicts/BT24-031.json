@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T14:29:46.957613100+00:00",
+  "clauses": {
+    "BT24-031#effect#0": {
+      "clause_id": "BT24-031#effect#0",
+      "card_id": "BT24-031",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "39e459441c3cdb81288d588a179bd3ff2704b55b69a250a215d7d263e163bc29",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT24-031-effect0.yaml",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    },
+    "BT24-031#effect#1": {
+      "clause_id": "BT24-031#effect#1",
+      "card_id": "BT24-031",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "096779226b8a1fc93447bfcbfc2e077ef135f1e309a7d31fe7c458c5ecc965f0",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT24-031-effect1.yaml",
+      "reason": "DIVERGED at step 3 (compared 5 of 6 ours / 5 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    },
+    "BT24-031#inherited#0": {
+      "clause_id": "BT24-031#inherited#0",
+      "card_id": "BT24-031",
+      "verdict": "diverged",
+      "label": "Inherited Effect",
+      "text_sha256": "6ca32077e3664265da8baa498b54186e6f5a7c103a7b96ecc1813b92775531d8",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT24-031-inherited0.yaml",
+      "reason": "DIVERGED at step 3 (compared 11 of 14 ours / 12 dcgo steps (3 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    }
+  }
+}

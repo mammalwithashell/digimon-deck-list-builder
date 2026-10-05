@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T14:29:46.957613100+00:00",
+  "clauses": {
+    "BT26-073#effect#0": {
+      "clause_id": "BT26-073#effect#0",
+      "card_id": "BT26-073",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "a502a1a41475266b481a1f93be444611768a8b68fb97bb6ebe55aa085624e077",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-073-effect0.yaml",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    },
+    "BT26-073#effect#1": {
+      "clause_id": "BT26-073#effect#1",
+      "card_id": "BT26-073",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "6d9fc748ba84e0ad99e615dc93a9df8450dbb56f3ecabb833be7c259dfb6bf4f",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-073-effect1.yaml",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    },
+    "BT26-073#effect#2": {
+      "clause_id": "BT26-073#effect#2",
+      "card_id": "BT26-073",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "f30661bdcf078b1e0f74d6d96a408c8a83be9d1b3fa1242d44b5b54db1893a34",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-073-effect2.yaml",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    },
+    "BT26-073#effect#3": {
+      "clause_id": "BT26-073#effect#3",
+      "card_id": "BT26-073",
+      "verdict": "confirmed",
+      "label": "Special Play Condition",
+      "text_sha256": "03bc4db5be9a16d18ac9b8b230ca5f1060c88b403d9cb1645418951c0a2ce26c",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-073-effect3.yaml",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    },
+    "BT26-073#inherited#0": {
+      "clause_id": "BT26-073#inherited#0",
+      "card_id": "BT26-073",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "6023e4c1fc29ad27f281823b07e60eac231f2b4c6500dbc8080695cdc3b9ca6f",
+      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-073-inherited0.yaml",
+      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+    }
+  }
+}
