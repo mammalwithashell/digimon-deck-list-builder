@@ -128,3 +128,28 @@ fn bt12_112_preattaches_shoutmon_reduces_cost_and_unlocks_trash_materials() {
         "trash material should be consumed into the DigiXros stack"
     );
 }
+
+// ─── G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION follow-up (1) ─────────
+// The "by placing 1 [Shoutmon] … reduce the cost by 1" hook is payable iff a
+// [Shoutmon] Digimon is on the field; the RL mask counts its -1 then.
+
+fn hand_play_offered(runner: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+#[test]
+fn bt12_112_mask_counts_the_shoutmon_placement_reduction() {
+    let mut runner = superior_mode_runner();
+    // Printed 15 from 4 → -11 (illegal); with the Shoutmon -1 → 14 → -10.
+    runner.game.set_memory(4);
+    assert!(
+        !hand_play_offered(&runner),
+        "no [Shoutmon] to place → no reduction"
+    );
+    runner.place_on_field(0, "BT10-008", Some(0));
+    assert!(
+        hand_play_offered(&runner),
+        "a [Shoutmon] on the field pays the -1 placement reduction"
+    );
+}

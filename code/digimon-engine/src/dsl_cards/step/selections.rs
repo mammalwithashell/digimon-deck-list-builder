@@ -3832,6 +3832,11 @@ pub fn try_install(
                 // cost-then-cancel guard: an unpayable cost aborts the whole
                 // process rather than letting the cancel fire for free.
                 debug_assert!(min_unpayable);
+                // Flag it so a `cost_reduction` `pay_cost_fn` does NOT credit
+                // a reduction for a cost that was never paid (BT23-057 /
+                // P-170 "by returning 3 … from your trash" with fewer than 3).
+                // `G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION`.
+                ctx.cost_unpayable = true;
                 InstallResult::TailAlreadyRan
             }
         }

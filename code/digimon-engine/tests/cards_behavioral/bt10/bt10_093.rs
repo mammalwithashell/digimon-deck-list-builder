@@ -170,3 +170,35 @@ fn bt10_093_declining_hook_plays_at_full_cost() {
         "ChuuChuumon must stay under Yuu Amano when the hook is declined"
     );
 }
+
+// ─── G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION follow-up (1) ─────────
+// "Reduce by 2 for each card placed" (up to 3 purple Digimon cards from under
+// your Tamers): the RL mask counts 2 × the placeable cards (capped at 3).
+
+fn hand_play_offered(r: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&r.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+#[test]
+fn bt10_093_mask_counts_two_per_placeable_under_tamer_card() {
+    let mut r = yuu_runner();
+    // One ChuuChuumon under Yuu: 7 - 2 = 5. From -5 → -10 (legal).
+    r.game.set_memory(-5);
+    assert!(hand_play_offered(&r), "one placeable card pays -2");
+    // From -6 one card is not enough (5 → -11).
+    r.game.set_memory(-6);
+    assert!(!hand_play_offered(&r), "-2 is not enough from -6");
+    // A second purple Digimon under Yuu: 7 - 4 = 3 → -9.
+    let yuu = r.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == "BT10-093")
+        .expect("Yuu on field");
+    let yuu = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: yuu as u8,
+    };
+    r.push_source(yuu, "EX10-039");
+    assert!(hand_play_offered(&r), "two placeable cards pay -4");
+}

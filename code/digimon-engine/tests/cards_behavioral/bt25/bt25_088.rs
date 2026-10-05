@@ -408,3 +408,95 @@ fn bt25_088_no_reduction_when_no_face_down_stash() {
         "no stash → cost paid in full (3), no reduction credited"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 6 — RL mask counts the face-down-trash reduction when payable
+// (G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION follow-up (1))
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fn hand_play_offered(runner: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+fn mask_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .add_card(kyo())
+        .add_card(make_glowing_dawn_digimon("GD"))
+        .add_card(make_filler("STASH"))
+        .hand(0, &["GD"])
+        .deck(0, &["STASH"; 5])
+        .deck(1, &["STASH"; 5])
+        .start()
+}
+
+/// A Kyo whose stack carries `face_down` face-down sources under it.
+fn place_kyo_with_stash(runner: &mut DebugRunner, face_down: usize) {
+    let mut ids = vec!["STASH"; face_down];
+    ids.push(CARD_ID);
+    let kyo_perm = runner.place_stack(0, &ids);
+    for i in 0..face_down {
+        runner.game.players[0].battle_area[kyo_perm.index as usize].card_sources[i].face_down =
+            true;
+    }
+}
+
+#[test]
+fn bt25_088_mask_offers_play_payable_only_after_face_down_trash() {
+    let mut runner = mask_runner();
+    place_kyo_with_stash(&mut runner, 1);
+    // Printed 3 from -8 → -11 (illegal); reduced 2 → -10 (legal).
+    runner.game.set_memory(-8);
+    assert!(
+        hand_play_offered(&runner),
+        "a face-down card under Kyo pays the -1"
+    );
+    runner.play(0, 0);
+    runner.accept_optional_trigger().expect("accept the -1");
+    let _ = runner.auto_resolve();
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "GD"),
+        "the play resolved at the reduced cost 2"
+    );
+}
+
+#[test]
+fn bt25_088_mask_hides_play_without_a_face_down_card_to_trash() {
+    let mut runner = mask_runner();
+    place_kyo_with_stash(&mut runner, 0);
+    runner.game.set_memory(-8);
+    assert!(
+        !hand_play_offered(&runner),
+        "no face-down card under any Tamer → the -1 is unpayable"
+    );
+}
+
+/// Two Kyo copies each offer their own [Once Per Turn] -1, but both trash a
+/// face-down card from the SAME pool ("under any of your Tamers"): with only
+/// one face-down card in total, only one of them can be paid.
+#[test]
+fn bt25_088_mask_two_reducers_sharing_one_face_down_card_count_once() {
+    let mut runner = mask_runner();
+    place_kyo_with_stash(&mut runner, 1);
+    place_kyo_with_stash(&mut runner, 0);
+    // -2 would be needed from -9 (3 → -12; 2 → -11; 1 → -10).
+    runner.game.set_memory(-9);
+    assert!(
+        !hand_play_offered(&runner),
+        "one face-down card pays only one of the two -1 reductions"
+    );
+    runner.game.set_memory(-8);
+    assert!(hand_play_offered(&runner), "-1 is still reachable");
+
+    let mut runner = mask_runner();
+    place_kyo_with_stash(&mut runner, 1);
+    place_kyo_with_stash(&mut runner, 1);
+    runner.game.set_memory(-9);
+    assert!(
+        hand_play_offered(&runner),
+        "two face-down cards pay both reductions: 3 - 2 = 1 from -9 → -10"
+    );
+}

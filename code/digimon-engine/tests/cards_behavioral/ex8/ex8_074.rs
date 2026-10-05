@@ -660,3 +660,48 @@ fn ex8_074_keywords_alliance_and_vortex_in_compiled_card() {
         "Vortex must appear in grant_keyword clauses; found: {keyword_names:?}"
     );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § RL mask counts the suspend-2-Digimon reduction
+// (G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION follow-up (1))
+// ─────────────────────────────────────────────────────────────────────────────
+
+fn hand_play_offered(runner: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+fn mask_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX8-074 YAML loads")
+        .add_card(make_test_card("ALLY", "Ally Digimon"))
+        .add_card(make_test_card("OPP", "Opp Digimon"))
+        .deck(0, &["ALLY", "ALLY", "ALLY"])
+        .deck(1, &["OPP", "OPP"])
+        .hand(0, &["EX8-074"])
+        .start()
+}
+
+/// "By suspending 2 Digimon" (either side's) pays -4 once two unsuspended
+/// Digimon exist: 11 - 4 = 7 from -3 → -10.
+#[test]
+fn ex8_074_mask_offers_play_payable_only_after_suspending_two_digimon() {
+    let mut runner = mask_runner();
+    runner.place_on_field(0, "ALLY", None);
+    runner.game.set_memory(-3);
+    assert!(
+        !hand_play_offered(&runner),
+        "one unsuspended Digimon cannot pay a suspend-2 cost"
+    );
+    runner.place_on_field(1, "OPP", None);
+    assert!(
+        hand_play_offered(&runner),
+        "two unsuspended Digimon (any side) pay the suspend-2 cost"
+    );
+    runner.game.players[1].battle_area[0].is_suspended = true;
+    assert!(
+        !hand_play_offered(&runner),
+        "a suspended Digimon cannot be suspended again for the cost"
+    );
+}

@@ -1011,3 +1011,52 @@ fn bt21_093_inherited_security_deletes_highest_dp_opponent_digimon() {
         "[Security] must delete the highest-DP (12000) Digimon; remaining: {remaining_dp:?}"
     );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § Option-use affordability counts the automatic use-cost reduction
+// (G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION follow-up (2))
+// ─────────────────────────────────────────────────────────────────────────────
+
+fn option_use_offered(runner: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+fn option_mask_runner(opp_security: usize) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-093")
+        .expect("BT21-093 in embedded pack")
+        .add_card(digimon("ALLY-RED", "AllyRed", 3000, &[]))
+        .hand(0, &["BT21-093"])
+        .security(1, &vec!["BT21-093"; opp_security])
+        .deck(0, &["ALLY-RED"; 3])
+        .deck(1, &["ALLY-RED"; 3])
+        .start();
+    // A red Digimon satisfies the Option's color requirement.
+    runner.place_on_field(0, "ALLY-RED", None);
+    runner
+}
+
+#[test]
+fn bt21_093_mask_offers_use_payable_only_after_the_security_reduction() {
+    // Printed 8 from -3 → -11 (illegal); reduced 4 → -7 (legal).
+    let mut runner = option_mask_runner(3);
+    runner.game.set_memory(-3);
+    assert!(
+        option_use_offered(&runner),
+        "opponent at 3 security: 8 - 4 = 4 is payable from -3"
+    );
+    runner.play(0, 0);
+    let _ = runner.auto_resolve();
+    assert!(
+        runner.game.players[0].hand.is_empty(),
+        "the Option was used at the reduced cost"
+    );
+
+    let mut runner = option_mask_runner(4);
+    runner.game.set_memory(-3);
+    assert!(
+        !option_use_offered(&runner),
+        "opponent at 4 security: no reduction, 8 from -3 overdraws"
+    );
+}

@@ -148,6 +148,20 @@ pub fn lower_for_kind_with_clause_index(
         // effect before its OPT is recorded, i.e. DCGO `RemoveUse`).
         let needs_outer_optional =
             clause.optional && (clause.outer_prompt || !body_first_step_is_declinable(&body_steps));
+        // Data twin of a `before_pay_cost_observe` body that is exactly
+        // "gain N memory" (BT12-022 / BT12-050): the observer scan runs it
+        // unconditionally before the memory is paid, so read-only
+        // affordability checks add N to the gauge.
+        // `G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION` follow-up (3).
+        let observer_memory_gain = match body_steps.as_slice() {
+            [CompiledStep::GainMemory(n)]
+                if engine_timing == EffectTiming::BeforePayCostObserve
+                    && activation_cost_kind.is_none() =>
+            {
+                Some(*n)
+            }
+            _ => None,
+        };
         // G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING: a folded "you may"
         // (no outer confirm — the first step's PASS is the decline) whose
         // first-step decline leaves nothing else for the body to do declines
@@ -400,7 +414,9 @@ pub fn lower_for_kind_with_clause_index(
             });
         }
 
-        out.push(builder.build());
+        let mut effect = builder.build();
+        effect.before_pay_cost_memory_gain = observer_memory_gain;
+        out.push(effect);
     }
     out
 }

@@ -1,4 +1,5 @@
 mod activation_cost;
+mod before_pay_cost_observe_mask;
 mod before_pay_cost_scan_hygiene;
 mod behavioral_end_to_end;
 mod cost_reduction_fn;

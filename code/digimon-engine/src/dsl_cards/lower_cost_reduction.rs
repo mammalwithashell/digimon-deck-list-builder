@@ -7,15 +7,19 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{CompiledFormula, CompiledPredicate, CompiledScope, CompiledStep};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledFormula, CompiledPlayerRef, CompiledPredicate, CompiledScope,
+    CompiledStep, CompiledZone,
+};
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::dsl_cards::step::{run_steps_with_runtime, RunOutcome, StepRuntime};
-use crate::effect::Effect;
+use crate::effect::{Effect, PayCostDemand, PayCostPreview, PayCostToken};
 use crate::effect_context::EffectReadContext;
+use crate::enums::PlayerId;
 use crate::permanent::PermanentHandle;
 
 fn evaluate_amount(
@@ -223,6 +227,9 @@ pub fn lower_with_formula(
             .unwrap_or(0)
     });
     let pay_cost_self_suspend = pay_cost_is_self_suspend(&pay_cost);
+    if let Some(demands) = parse_pay_cost_probe(pay_cost.as_ref()) {
+        builder = builder.pay_cost_probe(move |rctx| run_pay_cost_probe(&demands, rctx));
+    }
     if !pay_cost.is_empty() {
         // When the `pay_cost` begins with a declinable (PASS-able) selection
         // — e.g. BT12-112's optional "place 1 [Shoutmon]" — running it
@@ -285,6 +292,434 @@ pub fn lower_with_formula(
         effect.activation_cost_kind = Some(crate::effect::ActivationCostKind::SuspendSelf);
     }
     effect
+}
+
+// ─── Read-only pay_cost payability probe ─────────────────────────────────────
+//
+// `G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION` follow-ups (1)/(2): the
+// action mask and the Option mode check must count a PAID reducer's reduction
+// exactly when the player could pay its cost right now. The probe is derived
+// from the same compiled `pay_cost` steps the `pay_cost_fn` runs, and mirrors
+// how that run credits the reduction:
+//
+// - an INTERACTIVE first step credits as soon as it parks
+//   (`apply_cost_reduction_candidate(.., true)`), and it parks iff it has
+//   candidates — so the demand is "≥ `required` candidates exist";
+// - a SYNCHRONOUS step credits iff it completes without `cost_unpayable`.
+//
+// Shapes that are not recognised yield `None` (not provable → not counted).
+
+/// Extra reduction one consumed token credits beyond the reducer's amount.
+#[derive(Clone, Copy)]
+enum ProbeBonus {
+    None,
+    /// `preattach_digixros_material { cost_delta }` — `-cost_delta` per card.
+    Fixed(i32),
+    /// `delete_for_cost_reduction` — the deleted permanent's printed play cost
+    /// (DCGO credits nothing for a 0-cost deletion).
+    DeletedPlayCost,
+}
+
+#[derive(Clone)]
+enum ProbeDemand {
+    /// "by suspending this Tamer" (synchronous): the source is unsuspended and
+    /// may be suspended. Mirrors `suspend_self_as_cost`.
+    SuspendSelf,
+    /// "by returning this Tamer to the bottom of the deck" (synchronous):
+    /// payable while the source is on the field.
+    SourceOnField,
+    /// "by trashing the bottom face-down card from under any of your Tamers".
+    FaceDownUnderTamers { of: CompiledPlayerRef, count: usize },
+    /// A battle-area pick (`select_own_permanent` / `select_any_permanent`)
+    /// consumed by the next step.
+    FieldPick {
+        any_side: bool,
+        filter: CompiledPredicate,
+        required: usize,
+        optional_max: usize,
+        bonus: ProbeBonus,
+    },
+    /// `select_under_tamer_sources` (`SelectOwnSources`, no target) feeding a
+    /// per-card pre-attach.
+    OwnSources {
+        filter: CompiledPredicate,
+        min: usize,
+        max: usize,
+        bonus: ProbeBonus,
+    },
+    /// A hand / trash pick (`select_count_capped_multi`, `select_hand`,
+    /// `select_trash`). The card being played is never a candidate: it is the
+    /// object of the play, not a payment for it.
+    ZonePick {
+        of: CompiledPlayerRef,
+        hand: bool,
+        filter: CompiledPredicate,
+        required: usize,
+    },
+}
+
+fn binding_name(r: &CompiledBindingRef) -> Option<&str> {
+    match r {
+        CompiledBindingRef::Named(n)
+        | CompiledBindingRef::Binding(n)
+        | CompiledBindingRef::Permanent(n) => Some(n.as_str()),
+        _ => None,
+    }
+}
+
+fn is_self_ref(r: &CompiledBindingRef) -> bool {
+    matches!(r, CompiledBindingRef::Source | CompiledBindingRef::SelfRef)
+}
+
+/// What the step right after a field pick does with the picked permanent.
+fn field_pick_consumer(next: Option<&CompiledStep>, bound: &str) -> Option<ProbeBonus> {
+    let refers = |r: &CompiledBindingRef| binding_name(r) == Some(bound);
+    match next? {
+        CompiledStep::DeletePermanent { target } | CompiledStep::Suspend { target }
+            if refers(target) =>
+        {
+            Some(ProbeBonus::None)
+        }
+        CompiledStep::DeleteForCostReduction { target } if refers(target) => {
+            Some(ProbeBonus::DeletedPlayCost)
+        }
+        CompiledStep::PreattachDigixrosMaterial { card, cost_delta } if refers(card) => {
+            Some(ProbeBonus::Fixed(-i32::from(*cost_delta)))
+        }
+        _ => None,
+    }
+}
+
+/// Parse a cost reducer's `pay_cost` into read-only demands, or `None` when
+/// its shape is not provable.
+fn parse_pay_cost_probe(steps: &[CompiledStep]) -> Option<Vec<ProbeDemand>> {
+    let mut out = Vec::new();
+    // Once an interactive step has parked, the reduction is already credited;
+    // later steps cannot take it back, so an unrecognised TAIL is harmless.
+    let mut parked = false;
+    let mut i = 0;
+    while i < steps.len() {
+        let next = steps.get(i + 1);
+        match &steps[i] {
+            CompiledStep::Suspend { target } if is_self_ref(target) && !parked => {
+                out.push(ProbeDemand::SuspendSelf);
+                i += 1;
+            }
+            CompiledStep::ReturnToDeck { target, .. } if is_self_ref(target) && !parked => {
+                out.push(ProbeDemand::SourceOnField);
+                i += 1;
+            }
+            CompiledStep::AllowDigixrosMaterialZone { .. } => i += 1,
+            CompiledStep::TrashBottomFaceDownSourceUnderTamer { of, .. } => {
+                out.push(ProbeDemand::FaceDownUnderTamers { of: *of, count: 1 });
+                parked = true;
+                i += 1;
+            }
+            CompiledStep::TrashBottomFaceDownSourcesUnderTamers { of, count } => {
+                out.push(ProbeDemand::FaceDownUnderTamers {
+                    of: *of,
+                    count: *count as usize,
+                });
+                parked = true;
+                i += 1;
+            }
+            CompiledStep::SelectOwnPermanent {
+                filter,
+                bind_as: Some(bound),
+                selector: None,
+                optional,
+                then,
+                ..
+            }
+            | CompiledStep::SelectAnyPermanent {
+                filter,
+                bind_as: Some(bound),
+                selector: None,
+                optional,
+                then,
+                ..
+            } if then.is_empty() => {
+                let any_side = matches!(steps[i], CompiledStep::SelectAnyPermanent { .. });
+                let Some(bonus) = field_pick_consumer(next, bound) else {
+                    if parked {
+                        break;
+                    }
+                    return None;
+                };
+                out.push(ProbeDemand::FieldPick {
+                    any_side,
+                    filter: filter.clone(),
+                    required: usize::from(!*optional),
+                    optional_max: usize::from(*optional),
+                    bonus,
+                });
+                parked = true;
+                i += 2;
+            }
+            CompiledStep::SelectOwnSources {
+                target: None,
+                filter,
+                min,
+                max,
+                bind_as: Some(bound),
+                then,
+                ..
+            } if then.is_empty() => {
+                let bonus = match next {
+                    Some(CompiledStep::PerSelected {
+                        selection,
+                        bind_as: each,
+                        body,
+                    }) if selection == bound => match body.as_slice() {
+                        [CompiledStep::PreattachDigixrosMaterial { card, cost_delta }]
+                            if binding_name(card) == Some(each.as_str()) =>
+                        {
+                            ProbeBonus::Fixed(-i32::from(*cost_delta))
+                        }
+                        _ => return None,
+                    },
+                    _ => return None,
+                };
+                out.push(ProbeDemand::OwnSources {
+                    filter: filter.clone(),
+                    min: *min as usize,
+                    max: *max as usize,
+                    bonus,
+                });
+                parked = true;
+                i += 2;
+            }
+            CompiledStep::SelectCountCappedMulti {
+                of,
+                zone: zone @ (CompiledZone::Hand | CompiledZone::Trash),
+                min,
+                clamp_to_available: false,
+                optional_zero: false,
+                distinct_by: None,
+                filter,
+                ..
+            } if *min > 0 => {
+                out.push(ProbeDemand::ZonePick {
+                    of: *of,
+                    hand: matches!(zone, CompiledZone::Hand),
+                    filter: filter.clone(),
+                    required: *min as usize,
+                });
+                parked = true;
+                i += 1;
+            }
+            CompiledStep::SelectHand {
+                of,
+                filter,
+                optional: false,
+                then,
+                ..
+            }
+            | CompiledStep::SelectTrash {
+                of,
+                filter,
+                optional: false,
+                then,
+                ..
+            } if then.is_empty() => {
+                out.push(ProbeDemand::ZonePick {
+                    of: *of,
+                    hand: matches!(steps[i], CompiledStep::SelectHand { .. }),
+                    filter: filter.clone(),
+                    required: 1,
+                });
+                parked = true;
+                i += 1;
+            }
+            _ if parked => break,
+            _ => return None,
+        }
+    }
+    (!out.is_empty()).then_some(out)
+}
+
+fn probe_player(rctx: &EffectReadContext<'_>, of: CompiledPlayerRef) -> PlayerId {
+    // Mirrors `dsl_cards::step::resolve_player` (`Any` resolves to the
+    // controller there too).
+    match of {
+        CompiledPlayerRef::You | CompiledPlayerRef::Any => rctx.player,
+        CompiledPlayerRef::Opponent => rctx.opponent_id(),
+        CompiledPlayerRef::Active => rctx.game.turn_player(),
+    }
+}
+
+fn run_pay_cost_probe(
+    demands: &[ProbeDemand],
+    rctx: &EffectReadContext<'_>,
+) -> Option<PayCostPreview> {
+    let game = rctx.game;
+    let mut preview = PayCostPreview::default();
+    for demand in demands {
+        match demand {
+            ProbeDemand::SuspendSelf => {
+                if !crate::effect::ActivationCostKind::SuspendSelf
+                    .is_payable(game, rctx.source_permanent)
+                {
+                    return None;
+                }
+            }
+            ProbeDemand::SourceOnField => {
+                let on_field = rctx.source_permanent.is_some_and(|h| {
+                    game.player(h.player)
+                        .battle_area
+                        .get(h.index as usize)
+                        .is_some()
+                });
+                if !on_field {
+                    return None;
+                }
+            }
+            ProbeDemand::FaceDownUnderTamers { of, count } => {
+                // Same Tamer filter as the step
+                // (`{ kind: tamer, has_face_down_source: true }`).
+                let tamer_filter = CompiledPredicate {
+                    kind: Some(digimon_dsl::compiled::CompiledCardKind::Tamer),
+                    has_face_down_source: Some(true),
+                    ..CompiledPredicate::default()
+                };
+                let player = probe_player(rctx, *of);
+                let mut options = Vec::new();
+                for (index, perm) in game.player(player).battle_area.iter().enumerate() {
+                    let handle = PermanentHandle {
+                        player,
+                        index: index as u8,
+                    };
+                    if !eval_predicate(&tamer_filter, rctx, PredicateSubject::Permanent(handle)) {
+                        continue;
+                    }
+                    options.extend(
+                        perm.card_sources
+                            .iter()
+                            .filter(|c| c.face_down)
+                            .map(|c| (PayCostToken::Card(c.handle()), 0)),
+                    );
+                }
+                preview.demands.push(PayCostDemand {
+                    required: *count,
+                    optional_max: 0,
+                    options,
+                });
+            }
+            ProbeDemand::FieldPick {
+                any_side,
+                filter,
+                required,
+                optional_max,
+                bonus,
+            } => {
+                let players: Vec<PlayerId> = if *any_side {
+                    (0..game.players.len() as PlayerId).collect()
+                } else {
+                    vec![rctx.player]
+                };
+                let mut options = Vec::new();
+                for player in players {
+                    for (index, perm) in game.player(player).battle_area.iter().enumerate() {
+                        let handle = PermanentHandle {
+                            player,
+                            index: index as u8,
+                        };
+                        if !eval_predicate(filter, rctx, PredicateSubject::Permanent(handle)) {
+                            continue;
+                        }
+                        let extra = match bonus {
+                            ProbeBonus::None => 0,
+                            ProbeBonus::Fixed(n) => *n,
+                            ProbeBonus::DeletedPlayCost => {
+                                i32::from(perm.top_card().play_cost(&game.card_data))
+                            }
+                        };
+                        options.push((PayCostToken::Permanent(handle), extra));
+                    }
+                }
+                preview.demands.push(PayCostDemand {
+                    required: *required,
+                    optional_max: *optional_max,
+                    options,
+                });
+            }
+            ProbeDemand::OwnSources {
+                filter,
+                min,
+                max,
+                bonus,
+            } => {
+                // Mirrors `source_multi_candidates`: every below-top card of
+                // the controller's battle-area permanents, filtered on
+                // `PredicateSubject::Source`.
+                let extra = match bonus {
+                    ProbeBonus::Fixed(n) => *n,
+                    _ => 0,
+                };
+                let player = rctx.player;
+                let mut options = Vec::new();
+                for (field_index, perm) in game.player(player).battle_area.iter().enumerate() {
+                    if perm.card_sources.len() <= 1 {
+                        continue;
+                    }
+                    for source_index in 0..(perm.card_sources.len() - 1) {
+                        let card = perm.card_sources[source_index].handle();
+                        let source = crate::selection::SourceSelectionRef {
+                            permanent: PermanentHandle {
+                                player,
+                                index: field_index as u8,
+                            },
+                            field_index: field_index as u8,
+                            source_index: source_index as u8,
+                            card,
+                        };
+                        if crate::action::space::encode_source_select(
+                            field_index as u16,
+                            source_index as u16,
+                        )
+                        .is_none()
+                        {
+                            continue;
+                        }
+                        if eval_predicate(filter, rctx, PredicateSubject::Source(source)) {
+                            options.push((PayCostToken::Card(card), extra));
+                        }
+                    }
+                }
+                preview.demands.push(PayCostDemand {
+                    required: *min,
+                    optional_max: max.saturating_sub(*min),
+                    options,
+                });
+            }
+            ProbeDemand::ZonePick {
+                of,
+                hand,
+                filter,
+                required,
+            } => {
+                let player = probe_player(rctx, *of);
+                let zone = if *hand {
+                    &game.player(player).hand
+                } else {
+                    &game.player(player).trash
+                };
+                let options = zone
+                    .iter()
+                    .map(|c| c.handle())
+                    .filter(|h| Some(*h) != rctx.cost_target_card)
+                    .filter(|h| eval_predicate(filter, rctx, PredicateSubject::Card(*h)))
+                    .map(|h| (PayCostToken::Card(h), 0))
+                    .collect();
+                preview.demands.push(PayCostDemand {
+                    required: *required,
+                    optional_max: 0,
+                    options,
+                });
+            }
+        }
+    }
+    Some(preview)
 }
 
 /// True when `pay_cost` is exactly a single self-targeted `suspend` step —
