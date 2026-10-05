@@ -542,9 +542,13 @@ pub fn resolve_next(
                 // makes PASS legal — and the trailing PASS declined the card's
                 // printed cost before its own row was reached.
                 // `G-TOOLING-EXAM-TRAILING-PASS-EATS-NEXT-PROMPT`.
-                SelectionKind::SourceMulti { picked, .. } => picked > 0,
-                SelectionKind::CountCappedMultiSelect { .. }
-                | SelectionKind::RevealBucket { .. }
+                //
+                // A count-capped prompt with NO accepted pick is a FRESH prompt the
+                // row's last pick installed (Close EX8-067: the OwnField gate pick
+                // installs the "up to 2" trash pick). Same trap as SourceMulti above.
+                SelectionKind::SourceMulti { picked, .. }
+                | SelectionKind::CountCappedMultiSelect { picked, .. } => picked > 0,
+                SelectionKind::RevealBucket { .. }
                 | SelectionKind::DpBudget { .. }
                 | SelectionKind::PlayCostBudget { .. } => true,
                 _ => false,
@@ -1014,6 +1018,72 @@ mod tests {
             on_decline: None,
             zone_owner: None,
         });
+    }
+
+    fn park_count_capped(game: &mut Game, picked: u8) {
+        game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::CountCappedMultiSelect {
+                min: 0,
+                max: 2,
+                picked,
+                distinct: true,
+            },
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: vec![TRASH_EFFECT_START, PASS],
+            is_optional: true,
+            prompt: "Choose up to 2 cards".to_string(),
+            effect_choices: None,
+            source_card: CardHandle(0),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            zone_owner: None,
+        });
+    }
+
+    fn one_card_row(card_id: &str) -> SelectionRow {
+        SelectionRow {
+            step: 0,
+            actor: 0,
+            prompt: "SelectPermanentEffect".to_string(),
+            phase: String::new(),
+            targets: None,
+            card_ids: Some(vec![card_id.to_string()]),
+            indexes: None,
+            count: None,
+            candidates: None,
+            int_value: None,
+            bool_value: None,
+            cancel: None,
+            board_p0: None,
+            board_p1: None,
+            memory: None,
+            mechanic: None,
+            zone: None,
+        }
+    }
+
+    #[test]
+    fn trailing_pass_does_not_decline_a_fresh_count_capped_prompt() {
+        // The row's one pick went to the PREVIOUS prompt (Close EX8-067's OwnField
+        // gate); resolving it installed a fresh "up to 2" trash pick with nothing
+        // picked yet. Sending PASS here would decline that unrelated prompt.
+        let mut runner = DebugRunner::new();
+        park_count_capped(&mut runner.game, 0);
+        let payload = one_card_row("EX8-047");
+        assert_eq!(resolve_next(&runner.game, &payload, 1), Ok(None));
+    }
+
+    #[test]
+    fn trailing_pass_still_closes_an_open_count_capped_prompt() {
+        // Same prompt after >= 1 accepted pick: this IS the row's own prompt
+        // awaiting its stop, so PASS is still the right answer.
+        let mut runner = DebugRunner::new();
+        park_count_capped(&mut runner.game, 1);
+        let payload = one_card_row("EX8-047");
+        assert_eq!(resolve_next(&runner.game, &payload, 1), Ok(Some(PASS)));
     }
 
     #[test]
