@@ -1965,6 +1965,16 @@ fn advance_through_selection(
         match resolve_next(game, row, picks_done) {
             Ok(None) => return Ok(()),
             Ok(Some(id)) => {
+                if id == digimon_engine::action::space::PASS
+                    && picks_done >= payload_pick_count(row)
+                {
+                    let kind = game.pending_selection.as_ref().map(|p| p.kind);
+                    println!(
+                        "  note: step {i} the DRIVER sent a trailing PASS to close {kind:?} \
+                         after the row's {} pick(s) -- not the engine",
+                        payload_pick_count(row)
+                    );
+                }
                 game.decode_action(id, actor);
                 picks_done += 1;
                 // Same safety valve as the replay driver: a payload cannot
