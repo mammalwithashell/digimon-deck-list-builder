@@ -1351,6 +1351,24 @@ struct ScriptedInput {
     /// own. `HarnessJob.cs`'s `dna_materials` is that channel.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     dna_materials: Vec<String>,
+    /// The battle-area permanents a main-phase action names, as TOP-CARD ids
+    /// -- `HarnessJob.cs`'s `attacker_card_id` / `attack_target_card_id` /
+    /// `permanent_card_id` / `digivolve_target_card_id`. Set only on a
+    /// `LoweredStep::FieldAction` row: DCGO's compact field is frame-ordered
+    /// and ours is play-ordered, so the raw slot in `action_id` can name a
+    /// different permanent there (add-card-authoring-loop 10.1).
+    /// `InputDriver.BuildMainPhaseAction` resolves these against DCGO's own
+    /// field; an older player ignores the unknown keys (`JsonUtility`) and
+    /// falls back to the slot. Like `dna_materials`, deliberately NOT
+    /// selection fields, so `IsSelection` stays false on the row.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    attacker_card_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    attack_target_card_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    permanent_card_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    digivolve_target_card_id: Option<String>,
 }
 
 /// One seat's flat job deck in DCGO's top-first convention: full main deck
@@ -1491,6 +1509,21 @@ fn build_exam_job(
                     expect_candidates,
                     ..ScriptedInput::default()
                 }],
+                // The same one `main_phase` row, plus the identities of the
+                // battle-area permanents the action names, which DCGO resolves
+                // against its own frame-ordered field (see `ScriptedInput`).
+                LoweredStep::FieldAction { action_id, refs } => vec![ScriptedInput {
+                    actor: step.actor,
+                    action_id: Some(*action_id),
+                    expect_prompt,
+                    expect_count,
+                    expect_candidates,
+                    attacker_card_id: refs.attacker.clone(),
+                    attack_target_card_id: refs.attack_target.clone(),
+                    permanent_card_id: refs.permanent.clone(),
+                    digivolve_target_card_id: refs.digivolve_target.clone(),
+                    ..ScriptedInput::default()
+                }],
                 // A DNA digivolution is ONE `main_phase` row on DCGO's side --
                 // a single `PlayCardAction` carrying `JogressEvoRootsFrameIDs`
                 // -- so the action id rides it together with both materials'
@@ -1578,6 +1611,10 @@ fn build_exam_job(
                     select_bool: w.bool_answer.unwrap_or(false),
                     select_cancel: w.cancel,
                     dna_materials: Vec::new(),
+                    attacker_card_id: None,
+                    attack_target_card_id: None,
+                    permanent_card_id: None,
+                    digivolve_target_card_id: None,
                 }],
                 // task_69f10a66 Family 1 surface mapping: our EndOfTurnAction
                 // phase park (the §16-37-3 "may attack at end of turn" for
@@ -1667,7 +1704,7 @@ fn build_exam_job(
 #[cfg(test)]
 mod emit_job_tests {
     use super::*;
-    use dcgo_harness::exam::adapter::{EotAttackTarget, LoweredStep, SelectWire};
+    use dcgo_harness::exam::adapter::{EotAttackTarget, FieldRefs, LoweredStep, SelectWire};
     use dcgo_harness::exam::scenario::Scenario;
 
     /// Shorthand: a lowered line of plain action ids.
@@ -1979,6 +2016,45 @@ steps:
     }
 
     #[test]
+    /// add-card-authoring-loop 10.1: a `FieldAction` row carries its action id
+    /// AND the named battle-area permanents' identities under the C#
+    /// `HarnessJobStep` field names, so DCGO resolves them against its own
+    /// frame-ordered field instead of trusting the raw slot.
+    #[test]
+    fn a_field_action_carries_identities_beside_its_action_id() {
+        let s = Scenario::from_yaml(LINE).unwrap();
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::FieldAction {
+            action_id: 100,
+            refs: FieldRefs {
+                attacker: Some("ST1-03".to_string()),
+                attack_target: Some("ST1-02".to_string()),
+                ..FieldRefs::default()
+            },
+        });
+        let v = job_json(&s, &lowered);
+        let row = &v["inputs"][2];
+        assert_eq!(row["action_id"], 100);
+        assert_eq!(row["attacker_card_id"], "ST1-03");
+        assert_eq!(row["attack_target_card_id"], "ST1-02");
+        assert!(row.get("permanent_card_id").is_none());
+        assert!(row.get("digivolve_target_card_id").is_none());
+        // `HarnessJobStep.IsSelection` keys off the select_* fields: a field
+        // action must still read as an action-id answer on the C# side.
+        assert!(row.get("select_card_ids").is_none());
+        assert!(row.get("dna_materials").is_none());
+    }
+
+    #[test]
+    fn a_plain_action_wears_no_field_identities() {
+        let s = Scenario::from_yaml(LINE).unwrap();
+        let v = job_json(&s, &actions(&[62, 62, 62]));
+        for key in ["attacker_card_id", "attack_target_card_id", "permanent_card_id", "digivolve_target_card_id"] {
+            assert!(v["inputs"][0].get(key).is_none(), "{key} leaked onto a plain action row");
+        }
+    }
+
+    #[test]
     fn an_action_step_wears_no_ordinal() {
         // On the C# side `IsSelection` keys off the selection fields'
         // presence, and `select_ordinal` is one of them -- a stray one would
@@ -2131,6 +2207,15 @@ steps:
                     + digimon_engine::action::space::FIELD_EFFECT_SLOT_FOR_LINK,
             ),
             LoweredStep::SimOnlyAction(62),
+            // A main-phase action naming battle-area permanents: still ONE
+            // `main_phase` row, the identities riding beside the action id.
+            LoweredStep::FieldAction {
+                action_id: 100,
+                refs: FieldRefs {
+                    attacker: Some("ST1-03".to_string()),
+                    ..FieldRefs::default()
+                },
+            },
             // A `dna:` step: ONE main_phase row carrying the DNA_DIGIVOLVE
             // action id AND both materials' identities (DCGO takes them in the
             // same `PlayCardAction`), never a second row for the material

@@ -211,6 +211,33 @@ pub enum LoweredStep {
         /// The two materials' TOP-CARD ids, in declaration order.
         material_ids: Vec<String>,
     },
+    /// A main-phase action that names a BATTLE-AREA permanent -- an attack
+    /// (attacker, and the defender when it is not security), a `[Main]` /
+    /// link activation on a permanent, or a digivolve onto one.
+    ///
+    /// The two engines order the battle area differently: ours is play order,
+    /// DCGO's compact field is FRAME order, and permanents migrate between
+    /// frames at runtime (`ActionEncoder.BattleAreaCardIds` documents the same
+    /// gap for the recording direction). A raw slot in the action id can
+    /// therefore name a different permanent on the DCGO side -- the oracle pass
+    /// of 2026-10-05 attacked with different Digimon on the two sides
+    /// (add-card-authoring-loop task 10.1). The row carries the action id AND
+    /// the named permanents' TOP-CARD identities, resolved against our live
+    /// board at lowering time; `InputDriver.BuildMainPhaseAction` resolves them
+    /// against DCGO's own field, as it already does for DNA materials.
+    FieldAction { action_id: u16, refs: FieldRefs },
+}
+
+/// The battle-area permanents a [`LoweredStep::FieldAction`] names, as TOP-CARD
+/// ids. Each is `None` when the action does not name that role (a security
+/// attack has no defender; only a digivolve has a digivolve target).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct FieldRefs {
+    pub attacker: Option<String>,
+    pub attack_target: Option<String>,
+    /// The permanent whose `[Main]` / link effect is activated.
+    pub permanent: Option<String>,
+    pub digivolve_target: Option<String>,
 }
 
 impl LoweredStep {
@@ -237,6 +264,9 @@ impl LoweredStep {
             // `ActivatePermanentAction`). The host pick both engines then
             // park is the NEXT scenario step's row, not this one's.
             LoweredStep::Action(_) => 1,
+            // The same one `main_phase` row, with the named permanents'
+            // identities riding beside the action id.
+            LoweredStep::FieldAction { .. } => 1,
             // One `main_phase` row carrying the action id AND both material
             // identities; DCGO asks no material prompt.
             LoweredStep::DnaDeclaration { .. } => 1,
@@ -671,6 +701,7 @@ impl ScenarioAdapter {
             .iter()
             .filter_map(|l| match l {
                 LoweredStep::Action(id) => Some(*id),
+                LoweredStep::FieldAction { action_id, .. } => Some(*action_id),
                 LoweredStep::DnaDeclaration { action_id, .. } => Some(*action_id),
                 LoweredStep::EndOfTurnGate { action_id, .. } => Some(*action_id),
                 LoweredStep::SimOnlyAction(id) => Some(*id),
@@ -1332,12 +1363,12 @@ fn classify_lowered_action(
 ) -> Result<LoweredStep, String> {
     use digimon_engine::action::explain::{explain_action, ActionKind, ActionZone};
     if game.current_phase != digimon_engine::enums::GamePhase::EndOfTurnAction {
-        return Ok(LoweredStep::Action(action_id));
+        return field_or_plain_action(game, actor, action_id);
     }
     // The park belongs to the turn player; a step someone else answers at
     // this phase is not the gate.
     if actor != game.turn_player() {
-        return Ok(LoweredStep::Action(action_id));
+        return field_or_plain_action(game, actor, action_id);
     }
     let e = explain_action(game, actor, action_id);
     match e.kind {
@@ -1394,8 +1425,60 @@ fn classify_lowered_action(
         // raw id — extending the wire mapping for those surfaces is future
         // work, and passing the id through is at worst the pre-mapping
         // behavior, not a regression.
-        _ => Ok(LoweredStep::Action(action_id)),
+        _ => field_or_plain_action(game, actor, action_id),
     }
+}
+
+/// `FieldAction` when `action_id` names a BATTLE-AREA permanent (attacker /
+/// defender, `[Main]` or link carrier, digivolve target), else `Action`.
+///
+/// Identities are the permanents' TOP-CARD ids on our live board -- the same
+/// convention `targets:` picks and DNA materials use -- because DCGO resolves
+/// the row against its own frame-ordered field, where the raw slot can name a
+/// different permanent (see [`LoweredStep::FieldAction`]). Breeding-area and
+/// security targets are not slots, so they need no identity.
+fn field_or_plain_action(game: &Game, actor: PlayerId, action_id: u16) -> Result<LoweredStep, String> {
+    use digimon_engine::action::explain::{explain_action, ActionKind, ActionZone};
+    let e = explain_action(game, actor, action_id);
+    let top = |player: PlayerId, slot: Option<u16>, role: &str| -> Result<String, String> {
+        let slot = slot.ok_or_else(|| {
+            format!("action {action_id} ({}) names a battle-area {role} with no slot", e.label)
+        })?;
+        game.player(player)
+            .battle_area
+            .get(slot as usize)
+            .map(|p| p.top_card().card_id(&game.card_data).to_string())
+            .ok_or_else(|| {
+                format!(
+                    "action {action_id} ({}) names player {player}'s battle slot {slot} as its \
+                     {role}, but that player has {} permanent(s)",
+                    e.label,
+                    game.player(player).battle_area.len()
+                )
+            })
+    };
+    let battle = |zone: Option<ActionZone>| zone == Some(ActionZone::Battle);
+    let refs = match e.kind {
+        ActionKind::Attack if battle(e.source_zone) => FieldRefs {
+            attacker: Some(top(actor, e.source_index, "attacker")?),
+            attack_target: if battle(e.target_zone) {
+                Some(top(1 - actor, e.target_index, "attack target")?)
+            } else {
+                None
+            },
+            ..FieldRefs::default()
+        },
+        ActionKind::FieldEffect if battle(e.source_zone) => FieldRefs {
+            permanent: Some(top(actor, e.source_index, "effect carrier")?),
+            ..FieldRefs::default()
+        },
+        ActionKind::Digivolve if battle(e.target_zone) => FieldRefs {
+            digivolve_target: Some(top(actor, e.target_index, "digivolve target")?),
+            ..FieldRefs::default()
+        },
+        _ => return Ok(LoweredStep::Action(action_id)),
+    };
+    Ok(LoweredStep::FieldAction { action_id, refs })
 }
 
 /// Resolve one authored `select: { cards: [ID], ordinal|trigger }` answer
@@ -2969,6 +3052,97 @@ steps:
             vec![true, false, true]
         );
         assert_eq!(fold_wire_rows_by_owner(&lowered, &owners, 3), vec![1, 1, 1]);
+    }
+
+    /// Battle-area slot addressing (add-card-authoring-loop task 10.1). DCGO
+    /// decodes a raw attack / `[Main]` / digivolve id against its FRAME-ordered
+    /// compact field; ours is play order. After P1 plays Agumon then Biyomon,
+    /// our `field.1` is Biyomon while DCGO's compact slot 1 can be Agumon -- the
+    /// oracle pass of 2026-10-05 attacked with different Digimon on the two
+    /// sides (BT26-103-effect1 and five more). So a main-phase action that names
+    /// a battle-area permanent must carry that permanent's IDENTITY, resolved
+    /// against our live board at lowering time, exactly as `targets:` picks and
+    /// DNA materials already do.
+    const TWO_DIGIMON_LINE: &str = r#"
+card: ST1-03
+clause: ST1-03#effect#0
+seed: 7
+decks:
+  p0: { stack: [], rest: simple }
+  p1: { stack: [ST1-02, ST1-03, ST1-05], rest: simple }
+steps:
+  - actor: 0
+    do: { pass: {} }
+  - actor: 0
+    do: { pass: {} }
+  - actor: 1
+    do: { pass: {} }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+  - actor: 0
+    do: { pass: {} }
+  - actor: 0
+    do: { pass: {} }
+  - actor: 1
+    do: { pass: {} }
+"#;
+
+    fn two_digimon_line(last: &str) -> ScenarioAdapter {
+        let card_data = test_support::load_card_data();
+        let text = format!("{TWO_DIGIMON_LINE}  - actor: 1\n    do: {last}\n");
+        let s = Scenario::from_yaml(&text).unwrap();
+        // `from_scenario` takes ORDERED decks: stack P1's opening hand so
+        // Agumon, Biyomon and the ST1-05 digivolution are all in it.
+        let p0 = st1_deck_stacked(&[]);
+        let p1 = st1_deck_stacked(&["ST1-02", "ST1-03", "ST1-05", "ST1-06", "ST1-07"]);
+        ScenarioAdapter::from_scenario(&s, p0, p1, &card_data).expect("line lowers")
+    }
+
+    #[test]
+    fn an_attack_carries_the_attackers_identity_not_just_its_slot() {
+        let a = two_digimon_line("{ attack: { attacker: field.1, target: security } }");
+        match a.lowered_steps().last().unwrap() {
+            LoweredStep::FieldAction { refs, .. } => {
+                assert_eq!(refs.attacker.as_deref(), Some("ST1-03"), "field.1 is the 2nd-played Digimon");
+                assert_eq!(refs.attack_target, None, "a security attack names no defender");
+                assert_eq!(refs.permanent, None);
+                assert_eq!(refs.digivolve_target, None);
+            }
+            other => panic!("expected a FieldAction, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_digivolve_carries_the_targets_identity_not_just_its_slot() {
+        let a = two_digimon_line("{ digivolve: { from: field.1, using: ST1-05 } }");
+        match a.lowered_steps().last().unwrap() {
+            LoweredStep::FieldAction { refs, .. } => {
+                assert_eq!(refs.digivolve_target.as_deref(), Some("ST1-03"));
+                assert_eq!(refs.attacker, None);
+            }
+            other => panic!("expected a FieldAction, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn actions_that_name_no_battle_permanent_stay_plain() {
+        let a = two_digimon_line("{ pass: {} }");
+        let steps = a.lowered_steps();
+        // pass, pass, pass, play, play, pass, pass, pass, pass
+        assert!(matches!(steps[3], LoweredStep::Action(_)), "play-from-hand: {:?}", steps[3]);
+        assert!(matches!(steps[4], LoweredStep::Action(_)), "play-from-hand: {:?}", steps[4]);
+        assert!(steps.iter().all(|s| !matches!(s, LoweredStep::FieldAction { .. })), "{steps:?}");
+    }
+
+    #[test]
+    fn a_field_action_writes_one_wire_row_and_keeps_its_action_id() {
+        let a = two_digimon_line("{ attack: { attacker: field.1, target: security } }");
+        let last = a.lowered_steps().last().unwrap().clone();
+        assert_eq!(last.dcgo_wire_rows(), 1);
+        let LoweredStep::FieldAction { action_id, .. } = last else { unreachable!() };
+        assert_eq!(a.lowered_action_ids().last().copied(), Some(action_id));
     }
 
     #[test]
