@@ -1048,11 +1048,12 @@ fn exam_one(
     }
 
     if backfill && report.is_clean() {
-        // Our projections equal DCGO's on every compared field when the diff is
-        // clean; ours carry exactly one row per step plus the trailing state
-        // the `assert:` block wants.
+        // Our rows equal DCGO's on every compared field when the diff is clean.
+        // Pass only the compared slice: the trailing post-final-step row in
+        // `projections` was never observed by the oracle, so an `_backfilled`
+        // assertion over it would claim more than DCGO confirmed.
         let updated =
-            dcgo_harness::exam::backfill::backfill_from_diff(&text, &projections, &report)?;
+            dcgo_harness::exam::backfill::backfill_from_diff(&text, &ours_for_diff, &report)?;
         std::fs::write(path, updated)
             .map_err(|e| format!("writing backfilled scenario {}: {e}", path.display()))?;
         println!("  backfill: wrote confirmed state into {}", path.display());
