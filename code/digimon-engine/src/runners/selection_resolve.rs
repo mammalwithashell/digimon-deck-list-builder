@@ -765,27 +765,38 @@ pub fn resolve_next(
                 )
             }),
             SelectionKind::UnionZone { zones } => {
-                let in_hand_or_trash = find_id(
-                    &zone_card_ids(&game.player(zone_owner).hand),
-                    PLAY_HAND_START,
-                )
-                .or_else(|| {
-                    find_id(
-                        &zone_card_ids(&game.player(zone_owner).trash),
-                        TRASH_EFFECT_START,
+                // A row that names a CARRIER (`targets:` + `cards:`) is naming a
+                // digivolution source under that Digimon, so resolve ONLY
+                // through the carrier — a hand/trash copy of the same id must
+                // not shadow it. Rows without `targets:` keep the historical
+                // order: hand, trash, then sources.
+                let named_carrier = payload
+                    .targets
+                    .as_ref()
+                    .filter(|t| !t.is_empty())
+                    .map(|t| t.get(picks_done).or_else(|| t.first()))
+                    .and_then(|t| t.and_then(|t| usize::try_from(t.frame).ok()));
+                let material = zones.contains(crate::selection::UnionZoneSet::MATERIAL);
+                if material && named_carrier.is_some() {
+                    union_zone_source_pick(game, zone_owner, want, valid, named_carrier)?
+                } else {
+                    let in_hand_or_trash = find_id(
+                        &zone_card_ids(&game.player(zone_owner).hand),
+                        PLAY_HAND_START,
                     )
-                });
-                match in_hand_or_trash {
-                    Some(id) => Some(id),
-                    None if zones.contains(crate::selection::UnionZoneSet::MATERIAL) => {
-                        let carrier = payload
-                            .targets
-                            .as_ref()
-                            .and_then(|t| t.first())
-                            .and_then(|t| usize::try_from(t.frame).ok());
-                        union_zone_source_pick(game, zone_owner, want, valid, carrier)?
+                    .or_else(|| {
+                        find_id(
+                            &zone_card_ids(&game.player(zone_owner).trash),
+                            TRASH_EFFECT_START,
+                        )
+                    });
+                    match in_hand_or_trash {
+                        Some(id) => Some(id),
+                        None if material => {
+                            union_zone_source_pick(game, zone_owner, want, valid, None)?
+                        }
+                        None => None,
                     }
-                    None => None,
                 }
             }
             SelectionKind::Trash => find_id(
@@ -1237,6 +1248,60 @@ mod tests {
             frame: 1,
         }]);
         assert_eq!(resolve_next(&runner.game, &row, 0), Ok(Some(y)));
+    }
+
+    /// Park a HAND|MATERIAL union prompt (EX8-067-effect1's `UnionZoneSet(5)`).
+    fn park_union_zone_hand_material(game: &mut Game, valid_action_ids: Vec<u16>) {
+        park_union_zone_material(game, valid_action_ids);
+        if let Some(p) = game.pending_selection.as_mut() {
+            p.kind = SelectionKind::UnionZone {
+                zones: crate::selection::UnionZoneSet::HAND
+                    | crate::selection::UnionZoneSet::MATERIAL,
+            };
+        }
+    }
+
+    #[test]
+    fn union_zone_named_carrier_wins_over_a_hand_copy() {
+        use crate::action::space::encode_source_select;
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("X", "X"))
+            .add_card(make_test_card("TOP1", "TOP1"))
+            .add_card(make_test_card("TOP2", "TOP2"))
+            .memory(0)
+            .start();
+        runner.add_to_hand(0, "X");
+        runner.place_stack(0, &["X", "TOP1"]);
+        runner.place_stack(0, &["X", "TOP2"]);
+        let hand = PLAY_HAND_START;
+        let x = encode_source_select(0, 0).unwrap();
+        let y = encode_source_select(1, 0).unwrap();
+        park_union_zone_hand_material(&mut runner.game, vec![hand, x, y]);
+        let mut row = one_card_row("X");
+        row.targets = Some(vec![FrameTarget {
+            player: 0,
+            frame: 1,
+        }]);
+        assert_eq!(resolve_next(&runner.game, &row, 0), Ok(Some(y)));
+    }
+
+    #[test]
+    fn union_zone_without_a_carrier_still_prefers_the_hand_copy() {
+        use crate::action::space::encode_source_select;
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("X", "X"))
+            .add_card(make_test_card("TOP1", "TOP1"))
+            .memory(0)
+            .start();
+        runner.add_to_hand(0, "X");
+        runner.place_stack(0, &["X", "TOP1"]);
+        let hand = PLAY_HAND_START;
+        let x = encode_source_select(0, 0).unwrap();
+        park_union_zone_hand_material(&mut runner.game, vec![hand, x]);
+        assert_eq!(
+            resolve_next(&runner.game, &one_card_row("X"), 0),
+            Ok(Some(hand))
+        );
     }
 
     #[test]
