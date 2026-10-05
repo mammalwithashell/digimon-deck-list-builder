@@ -20,8 +20,8 @@
       "scenario_path": "qa/dcgo-exams/LM/LM-032-effect1.yaml",
       "recorded_at": "2026-09-19T20:49:59.446232800+00:00"
     },
-    "LM-032#effect#2": {
-      "clause_id": "LM-032#effect#2",
+    "LM-032#security#0": {
+      "clause_id": "LM-032#security#0",
       "card_id": "LM-032",
       "verdict": "confirmed",
       "label": "Security Effect",

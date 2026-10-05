@@ -32,6 +32,11 @@
       "card_color": 1,
       "level": 3,
       "memory_cost": 3
+    },
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
     }
   ],
   "xros_req": "[Digivolve] [Veemon]: Cost 2"

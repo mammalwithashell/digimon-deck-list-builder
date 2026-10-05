@@ -619,9 +619,16 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     .security
                     .is_empty()
             })
-            .replacement_condition(|ctx, _subject| {
+            // Self-scope at CANDIDATE collection ("when THIS Digimon would be
+            // deleted"): `collect_candidates` walks every battle-area
+            // permanent, so without the subject check the opponent's Digimon
+            // losing a battle to the carrier parked a phantom, outcome-free
+            // "<Barrier>" accept prompt (the process below no-op'd).
+            // G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED.
+            .replacement_condition(|ctx, subject| {
                 use crate::replacement::ReplacementCause;
-                matches!(ctx.replacement_cause(), Some(ReplacementCause::Battle))
+                matches!(subject, ReplacementSubject::Permanent(h) if Some(*h) == ctx.source_permanent)
+                    && matches!(ctx.replacement_cause(), Some(ReplacementCause::Battle))
             })
             .replacement_process(|rctx| {
                 // Only replace the subject's own deletion (the keyword is
@@ -755,14 +762,19 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
             //
             // The condition is evaluated inside `collect_candidates` with
             // `source_permanent` set to the carrier — so we read the stack
-            // size off `source_permanent()`. Subject-mismatch self-scoping
-            // can't be done here (the condition signature has no subject
-            // parameter); the closure body handles that.
+            // size off `source_permanent()`.
             .condition(move |ctx| {
                 let Some(perm) = ctx.source_permanent() else {
                     return false;
                 };
                 perm.card_sources.len() >= (n as usize) + 1
+            })
+            // Self-scope at CANDIDATE collection ("when THIS Digimon would be
+            // deleted"), so a neighbour's deletion never parks a phantom
+            // "<Fragment>" accept prompt whose process then no-ops (same
+            // defect class as G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED).
+            .replacement_condition(|ctx, subject| {
+                matches!(subject, ReplacementSubject::Permanent(h) if Some(*h) == ctx.source_permanent)
             })
             .replacement_process(move |rctx| {
                 // Self-scope guard: only fire on the carrier's own deletion.
@@ -1097,7 +1109,8 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // nested selection; on accept, `rctx.substitute(...)` runs in-place
         // and the dispatcher commits via the `Substituted` arm.
         //
-        // Filters (in body, not condition):
+        // Filters (in `replacement_condition` at candidate collection, and
+        // re-checked in the body):
         //   1. `subject != me_perm` — never self-redirect (would loop on
         //      the substituted deletion firing Decoy again).
         //   2. `subject.player == me_perm.player` — same controller only;
@@ -1105,13 +1118,16 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         //   3. Subject's top card must be a Digimon (DCGO restricts to
         //      `[Digimon]`-typed allies, not Tamers).
         //
-        // Note on UX: the outer optional dialog is parked at candidate-
-        // collection time, BEFORE the body runs. So when the body's filter
-        // would reject (subject==self, cross-controller, non-Digimon, or
-        // color-mismatch under a non-zero color_mask), the dialog still
-        // appears. On accept, the body falls through without setting an
-        // outcome and the original deletion proceeds. This matches the
-        // Phase C `nested_select_decoy.rs` precedent.
+        // The outer optional dialog is parked at candidate-collection time,
+        // BEFORE the body runs, so the filters must gate the candidate —
+        // otherwise a deletion Decoy cannot protect parked a phantom accept
+        // prompt (G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED class).
+        //   4. Cause gate: the deletion must be caused by an OPPONENT's
+        //      effect (rules 16-17, keyword-semantics.md; DCGO
+        //      `Decoy.cs:55-61` `IsByEffect(... EffectSourceCard.Owner ==
+        //      card.Owner.Enemy)`). The cause is subject-relative and the
+        //      subject is always the Decoy controller's, so
+        //      `ReplacementCause::OpponentEffect` is exactly that.
         //
         // Color filter (Track G close): `Keyword::Decoy(u8)` carries a
         // CardColor bitmask. `0` = no filter (un-parameterized printed form
@@ -1131,6 +1147,46 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 .as_str(),
             )
             .optional()
+            // The body's filters, applied at CANDIDATE collection so the outer
+            // accept dialog is never parked for a deletion Decoy cannot
+            // protect (self, an opponent's permanent, a non-Digimon, or a
+            // colour mismatch) — same defect class as
+            // G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED. The body keeps its
+            // re-checks (a same-chain replacement can change state between
+            // collection and process).
+            .replacement_condition(move |ctx, subject| {
+                let Some(me) = ctx.source_permanent else {
+                    return false;
+                };
+                let ReplacementSubject::Permanent(subject) = *subject else {
+                    return false;
+                };
+                if subject == me || subject.player != me.player {
+                    return false;
+                }
+                if !matches!(
+                    ctx.replacement_cause(),
+                    Some(crate::replacement::ReplacementCause::OpponentEffect)
+                ) {
+                    return false;
+                }
+                let game = ctx.game;
+                let Some(subject_perm) = game
+                    .players
+                    .get(subject.player as usize)
+                    .and_then(|p| p.battle_area.get(subject.index as usize))
+                else {
+                    return false;
+                };
+                if !subject_perm.is_digimon(&game.card_data) {
+                    return false;
+                }
+                color_mask == 0
+                    || subject_perm
+                        .colors_for_rules(&game.card_data, &game.modifiers, subject)
+                        .iter()
+                        .any(|c| (color_mask & (1u8 << (*c as u8))) != 0)
+            })
             .replacement_process(move |rctx| {
                 // Self-scope guard: never substitute self for self
                 // (infinite-loop prevention).

@@ -29,8 +29,8 @@
       "scenario_path": "qa/dcgo-exams/BT25/BT25-091-effect2.yaml",
       "recorded_at": "2026-09-21T10:21:53.148367600+00:00"
     },
-    "BT25-091#effect#3": {
-      "clause_id": "BT25-091#effect#3",
+    "BT25-091#security#0": {
+      "clause_id": "BT25-091#security#0",
       "card_id": "BT25-091",
       "verdict": "confirmed",
       "label": "Security Effect",

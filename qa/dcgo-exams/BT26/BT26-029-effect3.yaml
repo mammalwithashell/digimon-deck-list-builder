@@ -30,14 +30,19 @@
 # Not witnessed: the DP-reduction and return-to-hand/deck arms of the
 # protection (no single cheap opponent line exercises them alongside).
 #
-# PROMPT SHAPE / anticipated oracle quirks:
-#   - WD: OptionalSkill (yes) then a MANDATORY own-Digimon pick
-#     (SelectPermanentEffect, canNoSelect false per the YAML crosscheck), 1:1.
-#   - De-Digivolve target: we still OFFER the protected BT26-029 as a target
-#     (the protection makes the strip a no-op rather than an illegal target).
-#     If DCGO filters protected Digimon out of the candidate list, the pick
-#     has no legal target on its side and the row will diverge on prompt
-#     presence -- triage against §16 De-Digivolve / immunity wording.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - Cost route by VALUE 3 (SelectCountEffect over [4, 3]).
+#   - WD (BT26_029.cs shared OP/WD, optional: true): OptionalSkill(yes), then
+#     IDestroySecurity and a MANDATORY own-Digimon SelectPermanentEffect
+#     (canNoSelect false) -> 1:1. The removal queues BT26-029's own
+#     [All Turns][OPT]; its SelectPermanentEffect has maxCount min(3, 0) = 0
+#     -> SelectPermanentEffect.active() false, no prompt.
+#   - De-Digivolve target: BT25-025's filter (BT25/Blue/BT25_025.cs
+#     isOpponentDigimon) does NOT exclude the protected Digimon, so DCGO also
+#     OFFERS BT26-029 (mandatory pick, Mode.Degenerate); the strip is then
+#     voided inside IDegeneration.Degeneration (CardController.cs ~5121
+#     `ImmuneFromStackTrashing` -> yield break). Same as ours. P1 security 5
+#     > 3 -> no unsuspend pick.
 card: BT26-029
 clause: BT26-029#effect#3
 seed: 424242

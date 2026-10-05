@@ -1,0 +1,91 @@
+# Exam scenario: Liollmon (BT26-025), clause BT26-025#inherited#0 --
+# "[When Attacking] [Once Per Turn] You may add your top security card to the
+# hand. Then, if you have 0 security cards, <Recovery +1>."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 hatches Kekkomon and digivolves it in breeding into Liollmon
+#      (Lv.2 [Glowing Dawn] route) [0 -> 0], draw stack[10] BT26-089. Pass.
+#   T2 p1 passes both phases (p0 gets 3).
+#   T3 P0 draws stack[11] ST23-06, moves Liollmon (its [When Moving] is
+#      silent -- no [Glowing Dawn] Tamer), digivolves it into Armalizamon
+#      (BT25-049, green: only the "Lv.3 w/[Glowing Dawn]: Cost 2" route
+#      matches) [3 -> 1], draw stack[12] BT25-046. Armalizamon's [When
+#      Digivolving] "may suspend" has no target (p1 has no Digimon).
+#      Armalizamon attacks security: Liollmon's inherited text fires; with 5
+#      security the "add" is answered YES -> top security stack[9] ST23-09
+#      goes to hand (security 5 -> 4); 4 != 0, so no <Recovery>. The check
+#      flips p1's top security ST1-02 (3000) which loses to 4000 DP.
+#   Kekkomon's inherited [When Attacking] is silent (no Tamer with a
+#   face-down card -- its "by trashing" cost cannot be paid).
+# WITNESS: ST23-09 in p0's hand, p0 security 4.
+# NOT WITNESSED here: the "Then, if 0 security, <Recovery +1>" tail (needs a
+# 0- or 1-security line; out of reach in a short line).
+#
+# PROMPT SHAPE (BT26-025.yaml DCGO crosscheck: OnAllyAttack, not optional;
+# "if security >= 1 a Yes/No"): our engine parks a 2-way EffectChoice
+# ("Add" / "Don't add"); DCGO's Yes/No is likely a generic_bool or
+# OptionalSkill row -- the sim side cannot assert the EffectChoice mapping,
+# so no `expect:` is pinned on that row. If the oracle aborts on the answer
+# form, re-author it as a `choice:` sim_only row + a dcgo_only row.
+card: BT26-025
+clause: BT26-025#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-025, BT25-049, BT26-070, ST23-12, ST23-15,
+            ST23-15, BT25-090, BT26-089, ST23-06, ST23-09,
+            BT26-089, ST23-06, BT25-046, BT25-057, ST23-12]
+    rest: gd-bt26-4th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-025 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-049 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Liollmon's inherited [When Attacking][OPT]: 5 security >= 1 -> the
+  # "add your top security card to the hand?" Yes/No. Yes = branch 0.
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.security: 4
+      p1.security: 4
+      p0.trash: []
+      p1.trash: [ST1-02]
+      p0.hand: [BT25-046, BT26-070, BT26-089, ST23-06, ST23-09, ST23-12, ST23-15]
+      p0.field:
+        - card_id: BT25-049
+          dp: 4000
+          suspended: true
+          sources: [BT26-025, ST23-01]

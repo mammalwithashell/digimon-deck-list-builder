@@ -32,12 +32,29 @@
 # action for it, "no legal action matches Attack field.0"). at 15 BT26-083 is unsuspended with 5 P1 security;
 # at 16 it is SUSPENDED, P1 security is 4 and BT1-009 is in P1's trash.
 #
-# PROMPT SHAPE. Asuna [On Play]: ours one declinable SelectHandEffect; DCGO
-# may prepend OptionalSkill (optional_gate_fold candidate). Asuna [Start of
-# Your Turn]: ours TriggerOrder(1) -> OptionalSkill; DCGO OptionalSkill, then
-# possibly an EMPTY SelectCardEffect over trash (should be skipped at 0
-# candidates). Assembly / delete pick: see BT26-083-effect7.yaml. Attack:
-# SelectAttackEffect none (security target via main-phase action).
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - T1 Asuna [On Play] is optional (BT24_088.cs:112) -> OptionalSkill, then
+#     SelectHandEffect canNoSelect (BT24_088.cs:143): authored as the
+#     optional_gate_fold (`expect: OptionalSkill` over our Hand pick).
+#     FIXED 2026-10-04: was a bare `expect: SelectHandEffect` row, which DCGO
+#     would have aborted on (it asks OptionalSkill first).
+#   - T3 Asuna [Start of Your Turn] (BT24_088.cs:20, optional) -> OptionalSkill
+#     yes; after the deck-bounce cost the trash pick has maxCount =
+#     min(1, candidates) = 0 and SelectCardEffect.active() is false with no
+#     candidates (SelectCardEffect.cs:311-320) -> no row.
+#   - T5 Assembly is ONE SelectCardEffect over the trash (root Trash,
+#     canNoSelect true, maxCount = elementCount 1) from
+#     SelectAssemblyClass.SelectTrashCard, called from the play flow
+#     (CardController.cs:928-932). There is NO separate "use Assembly?"
+#     gate: if the trash can fulfil the element the pick just opens.
+#   - The delete pick is ONE SelectPermanentEffect maxCount = min(trashed,
+#     opp Digimon), canNoSelect false (BT26_083.cs:85-99); asked even when
+#     candidates == maxCount (the forced auto-pick is human-UI only,
+#     SelectPermanentEffect.cs ~376-407). 0 candidates -> no prompt
+#     (`if (deleteCount >= 1)`). The OP/WD is optional:false
+#     (BT26_083.cs:115): no OptionalSkill.
+#   - Attack: main-phase action; BT26-083 ends T5 suspended -> no <Execute>
+#     gate (CanActivateExecute requires CanAttack).
 card: BT26-083
 clause: BT26-083#effect#1
 seed: 424242
@@ -63,7 +80,7 @@ steps:
     expect: { prompt: main_phase }
   - actor: 0
     do: { select: { cards: [BT25-044] } }
-    expect: { prompt: SelectHandEffect }
+    expect: { prompt: OptionalSkill }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }

@@ -1,0 +1,99 @@
+# Exam scenario: e-Pulse (ST23-15), clause ST23-15#effect#1 --
+# "[Main] You may play 1 [BEATBREAK] trait card with a play cost of 4 or less
+#  from your hand or trash without paying the cost. Then, place this card in
+#  the battle area."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory, P0's view):
+#   T1 P0 (0): hard-play Tomoro & Kyo (0 -> -4); place yes: stack[10] ST23-03.
+#   T2 P1 (4): pass -> P0 3.
+#   T3 P0 (3): draw stack[11]; Tamer SOMP place yes: stack[12] ST23-04. Use
+#      e-Pulse (3 -> 0; colour via the Use Req. -- ST23-13 is BEATBREAK).
+#      [Main]: play Armalizamon BT25-049 (cost 4) from hand for free; then
+#      e-Pulse is placed in the battle area.
+# WITNESS: BT25-049 on the field at no memory cost; ST23-15 on the field.
+# (The "or trash" branch is not exercised: an empty trash keeps DCGO's zone
+# menu out of the line.) ST23-15-effect2.yaml continues this line to T5.
+#
+# PROMPT SHAPE (ST23-15.yaml DCGO crosscheck): OptionSkill -> Hand/Trash/
+# Don't-play SetIntSelection (collapsed: no trash candidates) ->
+# SelectHandEffect PlayForFree -> PlaceDelayOptionCards.
+card: ST23-15
+clause: ST23-15#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-13, ST23-15, BT25-049, BT16-082, BT25-043,
+            BT25-041, BT25-041, BT25-041, BT25-032, BT25-032,
+            ST23-03, BT25-057, ST23-04]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, BT1-009, ST1-05, BT3-007, ST1-08,
+            ST1-02, ST1-04, BT1-014, BT4-010, BT1-009,
+            ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST23-13, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
+    do: { play: { card: ST23-15, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE's pick: P0's trash is EMPTY, so DCGO's Hand/Trash/Don't-play
+  # SetIntSelection collapses to the hand side (EX12-074-security0 precedent)
+  # and asks SelectHandEffect (PlayForFree). Armalizamon BT25-049 is a
+  # [BEATBREAK] Digimon with play cost 4 (the other hand cards are not
+  # BEATBREAK / not cost<=4). Its [On Play] suspend has no target -> silent.
+  - actor: 0
+    do: { select: { cards: [BT25-049] } }
+    expect: { prompt: SelectHandEffect }
+  # SIM-ONLY: our 9-1-5 "used Option vs pending trigger" order prompt (no
+  # DCGO counterpart). The Option's disposal goes first; it is PLACED in the
+  # battle area ("Then, place this card in the battle area") although the
+  # label reads "Trash".
+  - actor: 0
+    do: { select: { choice: "Trash the used Option", sim_only: true } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # T3 after the Option resolved (before P0's pass): memory 3 -> 0 is the
+  # Option's use cost only -- Armalizamon (cost 4) came free; e-Pulse is in
+  # the battle area, not the trash.
+  - at: 10
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.trash: []
+      p0.hand: [BT16-082, BT25-043, BT25-057]
+      p0.field:
+        - card_id: BT25-049
+          dp: 4000
+          suspended: false
+          sources: []
+        - card_id: ST23-13
+          dp: -1
+          suspended: false
+          sources: [ST23-03, ST23-04]
+        - card_id: ST23-15
+          dp: -1
+          suspended: false
+          sources: []

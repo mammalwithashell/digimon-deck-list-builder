@@ -80,16 +80,16 @@ cargo run -p dcgo-harness -- --root "$ROOT" exam --scenario "$TSJ" \
     --verdicts --clause-text-json "$TSJ/clauses.json" --all-diffs
 ```
 
-The DCGO build must be at or after `fc67f9ae6` (`scripted-v16`), which adds the `dna:`
-and `link:` support. None of these lines use either verb. A DCGO card-script check
-(`$BASE/DCGO/Assets/Scripts/CardEffect/<SET>/<COLOR>/<ID>.cs`) is still owed for each
-card before reading anything as `unavailable`.
+The DCGO build must be at or after `fc67f9ae6` (`scripted-v16`); the pinned submodule
+commit `b9a0638cd` contains it. None of these lines use the `dna:` or `link:` verbs.
 
-**DCGO C# could not be consulted for this authoring pass.** The cloud container has no
-DCGO checkout, neither the local placeholder nor the base repo. Every expectation about
-DCGO's prompt shape below comes from sibling exam files, the DCGO notes in the card YAML,
-and `docs/DCGO_EXAM.md`. Treat each one as a guess for the oracle's abort message to
-confirm or refute.
+**Checked against DCGO C# (2026-10-04, pinned commit `b9a0638cd`).** All 17 cards (plus
+BT25-044 Junomon) have a DCGO script, so none is `unavailable`. None register
+`SetIsBackgroundProcess(true)`, so none is structurally unmeasurable. Every scenario's
+DCGO-side rows (`expect:` prompts, `dcgo_only` rows, OptionalSkill folds, `value:`
+answers) were derived from the card scripts and the shared selection classes. Each
+scenario header carries its C# citations. The `assert:` blocks are still our engine's
+result: only the oracle pass can confirm them.
 
 ## Scenario ↔ clause table
 
@@ -101,7 +101,7 @@ confirm or refute.
 | `#effect#0` | [Digivolve] Lv.5 w/[TS]: Cost 4 | `BT26-033-effect0.yaml` | onto P-213, memory 3→−1 |
 | `#effect#1` | `<Raid>` | `BT26-033-effect1.yaml` | redirect to Biyomon; P1 security stays 5 |
 | `#effect#2` | `<Alliance>` | `BT26-033-effect2.yaml` | one attack checks 2 (5→3) |
-| `#effect#3` | `<Engage>` | `BT26-033-effect3.yaml` | **asserts NO end-of-turn window: engine bug, expected oracle abort** |
+| `#effect#3` | `<Engage>` | `BT26-033-effect3.yaml` | end-of-turn attack on security (re-authored after the DUAL end-of-turn fix, 2026-10-04) |
 | `#effect#4` | [WD] top security → hand, play [Iliad]/[TS] at −5 | `BT26-033-effect4.yaml` | security 5→4; Inori played for 0 |
 | `#effect#5` | [All Turns] protect [TS] by placing top card as bottom security | `BT26-033-effect5.yaml` | Elecmon survives Gaia Force; security 4→5 |
 | `#effect#6` | DUAL: +1 use cost per security card | `BT26-033-effect6.yaml` | memory 0→−7 (2+5) |
@@ -134,7 +134,7 @@ confirm or refute.
 | `#effect#2` | `<Reboot>` | `BT26-103-effect2.yaml` | unsuspends at P1's turn |
 | `#effect#3` | `<Blocker>` | `BT26-103-effect3.yaml` | blocks Biyomon; see the [Counter] note |
 | `#effect#4` | `<Succession ([Jupitermon])>` | `BT26-103-effect4.yaml` | copied WD and [All Turns] both observed |
-| `#effect#5` | [WD][Counter][OPT] trash top security, Recovery +2 | `BT26-103-effect5.yaml` | partial: [When Digivolving] arm only; the [Counter] arm cannot fire (DSL bug) |
+| `#effect#5` | [WD][Counter][OPT] trash top security, Recovery +2 | `BT26-103-effect5.yaml` | partial: [When Digivolving] arm only; the [Counter] arm now fires in combat (DSL bug fixed 2026-10-04) but has no scenario yet |
 | `#effect#6` | [All Turns][OPT] security removed → −15000 | `BT26-103-effect6.yaml` | the chosen Phoenixmon is deleted |
 | `#inherited#0` | "ー" | **unreachable** | no inherited effect; Lv.7, so nothing can digivolve onto it either |
 | **BT26-083 Junomon: Hysteric Mode** |||
@@ -181,7 +181,7 @@ confirm or refute.
 | `#effect#0` | [Digivolve] Lv.5 [Beastkin]/[Dark Dragon]/[TS]: Cost 3 | `BT24-041-effect0.yaml` | onto red P-213 |
 | `#effect#1` | play cost −5 with an [Iliad] Digimon/Tamer | `BT24-041-effect1.yaml` | 3→−4 |
 | `#effect#2` | OP/WD/OnDel: play an [Iliad] ≤5 free; `<De-Digivolve 1>` per own Digimon | `BT24-041-effect2.yaml` | strips 2 |
-| `#effect#3` | [Opp Turn] [Iliad] gain `<Reboot>`, `<Blocker>` | `BT24-041-effect3.yaml` | **the Reboot half asserts our engine's wrong result (expected divergence)** |
+| `#effect#3` | [Opp Turn] [Iliad] gain `<Reboot>`, `<Blocker>` | `BT24-041-effect3.yaml` | both halves (Reboot fixed 2026-10-04) |
 | **BT25-022 Lunamon** |||
 | `#effect#0` | [Digivolve] Lv.2 w/[TS]: Cost 0 | `BT25-022-effect0.yaml` | |
 | `#effect#1` | [On Play] reveal 3, add [Iliad] + [TS] | `BT25-022-effect1.yaml` | |
@@ -195,7 +195,7 @@ confirm or refute.
 | `#inherited#0` | [All Turns][OPT] security removed → a [Shaman] may unsuspend | `BT25-025-inherited0.yaml` | |
 | **P-213 Aegiochusmon** |||
 | `#effect#0` | [Digivolve] [Aegiomon]: Cost 3 | `P/P-213-effect0.yaml` | |
-| `#effect#1` | `<Raid>` | `P/P-213-effect1.yaml` | carries a phantom-Barrier `sim_only` row (engine bug) |
+| `#effect#1` | `<Raid>` | `P/P-213-effect1.yaml` | the phantom-Barrier row was removed after the fix |
 | `#effect#2` | `<Decode>` | `P/P-213-effect2.yaml` | |
 | `#effect#3` | [WD] ≤3 security → Rush + 3000, may attack | `P/P-213-effect3.yaml` | partial: the DP and attack are observed; Rush on its own is not |
 | `#effect#4` | Rule: Trait [Dragonkin] | `P/P-213-effect4.yaml` | BT21-007 recovers it from the trash only through the grant (variant deck) |
@@ -205,94 +205,109 @@ confirm or refute.
 
 `diverged` is not proof we are wrong. `general_rule.pdf` outranks DCGO.
 
-**Deliberate. Each pins an engine bug we already logged.**
-- `BT26-033-effect3`: our engine never opens `<Engage>` on a DUAL card
-  (`G-ENGINE-DUAL-END-OF-TURN-WINDOW`). DCGO's end-of-turn OptionalSkill is left
-  unanswered, so the oracle aborts there. That abort is the finding. Separately,
-  `BT26-033-effect0/1/2/4/5/9` each carry `dcgo_only` decline rows for DCGO's Engage
-  gate. If DCGO does not ask that gate when the turn ended on negative memory, those
-  lines abort on that row.
-- `BT24-041-effect3`: aura-granted `<Reboot>` does not unsuspend in our engine
-  (`G-ENGINE-AURA-REBOOT-NOT-APPLIED`). The step-16 assert says `suspended: true`; DCGO
-  should say `false`.
-- `BT26-103-effect3`: DCGO will likely run Wrath Mode's [Counter] arm and then `#effect#6`'s
-  pick before the block prompt. Ours runs neither (`G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG`).
-- `BT26-081-effect4`: our engine skips Mervamon's [On Play] pick after an Assembly play
-  (`G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK`). DCGO will ask it.
-- `P-213-effect1`, `BT24-041-effect3`: a `sim_only` row answers our phantom `<Barrier>`
-  prompt to player 1 (`G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED`). DCGO asks nothing.
-- `BT26-103-effect4`: three extra TriggerOrder rows from `#effect#6` being re-queued
-  (`G-ENGINE-OPT-NOOP-REQUEUE`).
-- `BT24-102-effect1`: a `sim_only` "on_play vs when_digivolving" choice for one combined
-  effect (`G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING`).
-- `BT26-090-effect0`: a `sim_only` "Play as Digimon / Use as Option" choice that the card
-  does not grant (`G-DSL-USE-OPTION-ONLY`).
+### Predicted divergences (from the C# read)
 
-**Translation shapes. Guessed without DCGO C#; fix the row, not the engine.**
-- **Cost-route menus:** our `EffectChoice` against DCGO's `SelectCountEffect`, answered by
-  `value:` (BT26-029, BT26-033, BT26-103, BT24-101-effect1, BT25-025-inherited0). DCGO may
-  list a different number of routes, or auto-take the cheapest one.
-- **BT26-073 cost menu:** a `sim_only` `choice:` plus a `dcgo_only` `generic_int`. The
-  values (1 delete / 2 return / 3 don't pay) are copied from BT25-083's menu. DCGO may skip
-  the menu when there is no Lv.≤5 target (073-effect0/3/inherited0).
-- **OptionalSkill gates:** `optional_gate_fold` and `dcgo_only` yes/no rows assume DCGO
-  gates these optional picks before the pick: Asuna, Hiroko, Junomon and Minervamon
-  [On Play]; Raid; Decode; Ascension (`generic_bool`); BT24-034-effect2; BT26-092-effect1;
-  BT24-102-effect1. A DCGO that gives no gate, or picks without one, aborts on the row.
-- **Empty optional picks:** our engine skips a pick with no candidates (Minervamon
-  [On Play] in BT26-103/BT24-041 lines; Asuna [Start of Your Turn]). DCGO may open an
-  empty prompt (EX12-047 class, `docs/DCGO_EXAM.md` Known gaps).
-- **Prompts we ask with no candidates:** Aegiomon BT25-033's optional [On Play] / [When
-  Digivolving] with no opponent Digimon (BT26-073-effect0, BT25-022-inherited0,
-  BT24-031-inherited0). DCGO may skip it.
-- **RevealBucket** (BT24-031-effect1, BT25-022-effect1, BT24-083-effect1, and the
-  reveal-carrying lines): a one-field `p0.hand` diff on the second pick row is the
-  documented DCGO per-bucket add, a DCGO quirk. Also expect a possible leading
-  `generic_bool`, and the OrderedPermutation N=1 leftover row is `sim_only`.
-- **Mervamon's free-play pick (BT26-081):** a `sim_only` + `dcgo_only SelectHandEffect`
-  pair (`G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE`). DCGO may loop a hand/trash/stop zone menu.
-- **BT24-031-inherited0:** "you may add your top security card" is our Security pick.
-  The harness refuses an OptionalSkill fold on that kind, so expect a prompt-class
-  mismatch (`G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD`). Aegiomon over the yellow [TS] Elecmon
-  also has two digivolve routes at the same cost: we ask nothing, DCGO may ask.
-- **Single-candidate mandatory picks** (BT26-073 delete, BT26-081 DP pick, BT26-083
-  `#effect#5` 2-of-2 delete): we always park these; DCGO may auto-resolve with no row.
-- **Trigger ordering:** BT26-029-effect1 resolves Aegiomon's [On Play] then `<Ascension>`
-  with no ordering prompt (DCGO may ask `MultipleSkills`: a decision missing on our side).
-  BT26-029-inherited0 answers a Junomon-vs-inherited `MultipleSkills` by identity (DCGO may
-  drop Junomon's trigger). The 9-1-5 Option-trash order is a `sim_only` row in
-  BT26-029-effect4 and inherited0, and in BT25-025-inherited0.
-- **BT26-029-effect3:** our `<De-Digivolve>` still offers the protected Digimon as a
-  target. If DCGO filters it out, the prompts will differ.
-- **BT26-083 `<Execute>` gate:** it opens whenever BT26-083 ends a turn unsuspended,
-  including on negative memory (effect0/5/7).
+- **`BT24-102-effect1`: our engine is right.** DCGO lists BT24-101's combined
+  [On Play]/[When Digivolving] effect twice (two `ActivateClass` objects; `BT24_102.cs`
+  "Select 1 effect to activate."), which the scenario answers with a `dcgo_only` row.
+  Homeros then reads the choice through an index callback, and the harness passes
+  `Indicies = null` (`SelectCardEffect.cs` ~706-718, ~881), so DCGO re-activates nothing.
+  At the assert step, expect DCGO `p0.security` one higher than ours.
+- **`BT26-103-effect4`: prompt shape only, end state equal.** DCGO labels Succession-copied
+  triggers with the host card's id (`CopiedEffects.cs`). So the rows stay split
+  `sim_only` / `dcgo_only`, even though both engines now ask the same two ordering prompts.
+- **`P-213-effect4`: DCGO data risk.** If DCGO's card data lacks P-213's rule-granted
+  [Dragonkin] trait, BT21-007's trash pick will not offer it. An abort there is a DCGO
+  data gap, not an engine finding.
+
+### Translation facts, verified
+
+- **Gates:**
+  - **OptionalSkill gates DCGO really asks:** Asuna BT24-088 [On Play] and
+    [Start of Your Turn]; Hiroko [Start of Your Turn]; Aegiomon BT24-034 (whenever
+    security > 0); Aegiomon BT25-033 (whenever security > 0, even with no opponent
+    Digimon); Homeros [End of Your Turn] (whenever Homeros can suspend); `<Raid>`;
+    `<Decode>`; `<Execute>` and `<Engage>` (including when the turn ended on negative
+    memory, `AutoProcessing.cs` `EndTurnCheck`); BT21-007 [On Play]; Kanan [End of Your
+    Turn]; Shota's redirect; and Wrath Mode's [Counter] (`CounterClass` forces optional).
+  - **Not gated** (DCGO opens the pick directly, which you can decline):
+    - Minervamon BT24-041 [On Play]/[When Digivolving] and Junomon BT25-044
+      [On Play]/[When Digivolving].
+    - `<Alliance>`, Mervamon's free-play pick, BT26-033's [When Digivolving], and
+      BT26-073's cost menu (always asked whenever either cost is payable).
+  - **`<Ascension>`** is a mandatory `generic_bool`, with no OptionalSkill before it.
+- **Empty picks:** a pick with no candidates opens no prompt in DCGO
+  (`SelectHandEffect.active` / `SelectCardEffect` maxCount ≤ 0).
+- **Single-candidate picks:** DCGO asks them under the harness. The auto-pick exists only
+  for a pick you can't decline with exactly as many candidates as required, in the
+  human-UI branch.
+- **Menus:**
+  - **Cost routes:** `SelectCountEffect` over the distinct costs. Equal costs are
+    de-duplicated, which gives no prompt (`BT24-101-effect0`).
+  - **BT26-073 menu values:** Delete=1 / Return=2 / Don't use=3 (`BT26_073.cs:116-118`),
+    asked even with no Lv.≤5 target.
+  - **Zone menus:** skipped silently when only one zone qualifies
+    (Mervamon, Dark's [On Deletion]).
+  - **Mervamon's loop:** re-asks only if something still fits the remaining budget.
+- **RevealBucket on the simplified reveal path:**
+  - No leading `generic_bool`.
+  - One `SelectCardEffect` per bucket. Each pick goes to the hand as its prompt closes,
+    which gives the known one-field `p0.hand` diff on the second pick row. That is a DCGO
+    quirk.
+  - A single leftover card is bottomed with no prompt; a 2-card leftover is one
+    multi-pick.
+- **BT24-031 inherited:** a mandatory `generic_bool` (`SetBoolSelection`) with no card
+  widget, so the line carries a `sim_only` pick plus a `dcgo_only` `generic_bool` row.
+- **Counter:** DCGO enters Counter timing on every attack, including attacks on the
+  player (`AttackProcess.cs` ~242).
+- **Trigger order:**
+  - **Inactive triggers:** `MultipleSkills` drops triggers that can't activate and asks
+    no ordering prompt for a lone one.
+  - **Decode:** the played Digimon's [On Play] waits on the main queue until the carrier
+    has left. It is then ordered against the carrier's [On Deletion]/`<Ascension>`.
+  - **9-1-5 Option-trash order:** DCGO asks nothing, so the row is `sim_only`.
+- **BT26-029-effect3:** DCGO also offers the protected Digimon to the `<De-Digivolve>`
+  pick, and the immunity then cancels the strip (`IDegeneration`).
 - **Field slots:** DCGO lists Tamers after Digimon. Lines that `attack: field.0` were
   built so the target is the only permanent, or the first Digimon.
 
-## Bugs found while authoring (logged, not fixed)
+## Defects found and fixed (stacked PR #708)
 
-All of these are in `docs/RUST_ENGINE_GAPS.md` § "TS Jupitermon exam-authoring findings
-(2026-10-04)" and `qa/dsl-vocab-gaps.md` (same heading):
+Each fix is marked RESOLVED in `docs/RUST_ENGINE_GAPS.md` / `qa/dsl-vocab-gaps.md`.
+Every engine fix was cross-checked against the DCGO C# and agrees with it.
 
-- **Engine:** `G-ENGINE-DUAL-END-OF-TURN-WINDOW` (confirmed in code),
-  `G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK` (confirmed in code, impact unverified),
-  `G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED`, `G-ENGINE-AURA-REBOOT-NOT-APPLIED`,
-  `G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH` (BT24-101, BT25-044),
-  `G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK`, `G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES`,
-  `G-ENGINE-OPT-NOOP-REQUEUE`, `G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING`.
-- **Data:** `G-DATA-BT25-044-COLOR-ATTRIBUTE`. The YAML says yellow/white and Vaccine; the
-  official card is Yellow/Purple and Virus, with a Purple Lv.5 circle.
-- **DSL:** `G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG`, `G-DSL-USE-OPTION-ONLY`.
-- **Exam tooling:** `G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE`, `G-TOOLING-EXAM-ACTOR-UNCHECKED`,
-  `G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD`.
+- **Engine:**
+  - `G-ENGINE-DUAL-END-OF-TURN-WINDOW`
+  - `G-ENGINE-AURA-REBOOT-NOT-APPLIED`
+  - `G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK`
+  - `G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED` (with Fragment and Decoy)
+  - `G-ENGINE-DECOY-CAUSE-GATE`
+  - `G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH`
+  - `G-ENGINE-OPT-NOOP-REQUEUE`
+  - `G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES`
+  - `G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING`
+  - `G-ENGINE-TRIGGER-ORDER-DERIVED-FIRST`
+  - `G-ENGINE-TRIGGER-ORDER-PICK-MAPPING`
+  - `G-ENGINE-TRIGGER-ORDER-UNACTIVATABLE`
+- **DSL / cards / data:**
+  - `G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG`
+  - `G-DSL-USE-OPTION-ONLY`
+  - `G-DSL-PLACE-ON-SECURITY-OWNER-AND-SUCCESS`
+  - `G-DATA-BT25-044-COLOR-ATTRIBUTE`
+  - BT25-044, BT24-034 and BT24-102 now match DCGO and §15-7-5.
+- **Exam tooling:**
+  - `G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE`
+  - `G-TOOLING-EXAM-ACTOR-UNCHECKED`
+  - The trailing-PASS resolver: this was the real cause of the reported
+    "Assembly skips [On Play]".
+  - `G-TOOLING-EXAM-SECURITY-PICK-NO-FOLD` is superseded: the fold was retired.
 
 ## Authoring notes
 
 - A card costing more than 10 cannot be hard-played from 0 memory (−10 is the floor), so
   Lv.6/7 lines play on T3 or later.
-- `actor:` is not checked on `pass` steps (`G-TOOLING-EXAM-ACTOR-UNCHECKED`). The agents
-  checked `turn`/`phase` with asserts at key points to make sure no step lands on the
-  wrong seat.
-- A security card's own `[All Turns]` trigger fires as it leaves security
-  (`G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH`), so lines that remove security keep BT24-101
-  and BT25-044 off the top of the stack.
+- `actor:` is now checked on every action step (`G-TOOLING-EXAM-ACTOR-UNCHECKED`,
+  resolved 2026-10-04): a wrong-seat step refuses to lower. No TS Jupitermon scenario
+  had one.
+- Before `G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH` was fixed, lines that remove security
+  kept BT24-101 and BT25-044 off the top of the stack. They still do, which is harmless.

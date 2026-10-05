@@ -8,7 +8,7 @@
     "card_colors": [
       2,
       1,
-      4
+      5
     ],
     "evo_costs": [
       {
@@ -54,7 +54,8 @@
         "level": 6,
         "memory_cost": 6
       }
-    ]
+    ],
+    "play_cost": 9
   },
   "_evo_costs_comment": "BT12-022 (ExVeemon) and BT12-050 (Stingmon) have a second digivolve path that the digimoncard.io ingest dropped. DCGO BT12_022.asset / BT12_050.asset list both paths (Blue Lv.3 cost 2 + Green Lv.3 cost 2). These overrides re-establish the alt-digivolve so Imperialdramon DNA support behaves correctly.",
   "BT12-022": {
@@ -99,6 +100,11 @@
         "level": 6,
         "memory_cost": 5
       }
+    ],
+    "card_colors": [
+      0,
+      4,
+      1
     ]
   },
   "EX12-073": {
@@ -264,6 +270,11 @@
         "level": 6,
         "memory_cost": 5
       }
+    ],
+    "card_colors": [
+      3,
+      0,
+      1
     ]
   },
   "BT20-076": {
@@ -311,6 +322,11 @@
         "level": 6,
         "memory_cost": 5
       }
+    ],
+    "card_colors": [
+      3,
+      0,
+      1
     ]
   },
   "BT23-064": {
@@ -329,7 +345,11 @@
         "level": 2,
         "memory_cost": 0
       }
-    ]
+    ],
+    "play_cost": 3,
+    "dp": 1000,
+    "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Evil] or [Fallen Angel] trait and 1 card with the [Seven Great Demon Lords] trait among them to the hand. Return the rest to the bottom of the deck. Then, trash 1 card in your hand.",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Trash the top card of both players' decks."
   },
   "EX6-029": {
     "evo_costs": [
@@ -801,7 +821,8 @@
         "level": 3,
         "memory_cost": 3
       }
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "BT25-038": {
     "evo_costs": [
@@ -835,6 +856,9 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "attribute_eng": [
+      "Virus"
     ]
   },
   "BT25-051": {
@@ -921,7 +945,8 @@
         "level": 5,
         "memory_cost": 5
       }
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "BT25-059": {
     "evo_costs": [
@@ -942,7 +967,10 @@
       "Iliad",
       "TS",
       "Vegetation"
-    ]
+    ],
+    "inherited_effect_description_eng": "",
+    "effect_description_eng": "When this card would be played, if there are 2 or more suspended Digimon, reduce the cost by 5.\r\n[On Play] [When Digivolving] You may suspend up to 2 Digimon. Then, none of your suspended [Vegetation] or [TS] trait Digimon are affected by your opponent's Digimon effects until their turn ends.\r\n[All Turns] [Once Per Turn] When any Digimon suspend, to 1 of your opponent's Digimon, give -3000 DP until their turn ends for each suspended Digimon.",
+    "xros_req": "[Digivolve] Lv.5 w/[Vegetation]/[TS] trait: Cost 3"
   },
   "BT25-067": {
     "evo_costs": [
@@ -1014,7 +1042,8 @@
         "level": 5,
         "memory_cost": 4
       }
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "BT25-082": {
     "evo_costs": [
@@ -1052,7 +1081,8 @@
       6,
       0,
       3
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "BT5-112": {
     "evo_costs": [
@@ -1225,6 +1255,11 @@
         "level": 6,
         "memory_cost": 5
       }
+    ],
+    "card_colors": [
+      1,
+      4,
+      0
     ]
   },
   "EX9-032": {
@@ -1437,6 +1472,14 @@
         "level": 5,
         "memory_cost": 5
       }
+    ],
+    "card_colors": [
+      0,
+      5,
+      1
+    ],
+    "attribute_eng": [
+      "Data"
     ]
   },
   "AD1-013": {
@@ -1645,6 +1688,11 @@
     "attribute_eng": [
       "Vaccine",
       "Free"
+    ],
+    "card_colors": [
+      4,
+      1,
+      3
     ]
   },
   "BT19-008": {
@@ -1855,7 +1903,8 @@
         "level": 5,
         "memory_cost": 3
       }
-    ]
+    ],
+    "play_cost": 12
   },
   "BT20-102": {
     "evo_costs": [
@@ -1869,6 +1918,11 @@
         "level": 6,
         "memory_cost": 6
       }
+    ],
+    "card_colors": [
+      1,
+      4,
+      0
     ]
   },
   "BT21-018": {
@@ -1951,6 +2005,11 @@
         "level": 6,
         "memory_cost": 6
       }
+    ],
+    "card_colors": [
+      0,
+      4,
+      1
     ]
   },
   "BT23-035": {
@@ -2125,7 +2184,8 @@
       "Titan",
       "TS",
       "Dinosaur"
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "BT25-025": {
     "evo_costs": [
@@ -2165,7 +2225,8 @@
       "Iliad",
       "TS",
       "Angel"
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "BT25-053": {
     "evo_costs": [
@@ -2438,6 +2499,11 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "card_colors": [
+      0,
+      1,
+      2
     ]
   },
   "EX9-012": {
@@ -3138,7 +3204,8 @@
     "form_eng": [
       "God",
       "Appmon"
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "BT21-043": {
     "type_eng": [
@@ -3448,7 +3515,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "dp": 1000
   },
   "BT23-009": {
     "type_eng": [
@@ -5227,7 +5295,8 @@
         "level": 5,
         "memory_cost": 4
       }
-    ]
+    ],
+    "xros_req": "[Digivolve] [Seraphimon]: Cost 1"
   },
   "BT15-011": {
     "evo_costs": [
@@ -6290,7 +6359,8 @@
         "level": 2,
         "memory_cost": 1
       }
-    ]
+    ],
+    "play_cost": 3
   },
   "BT17-045": {
     "evo_costs": [
@@ -6603,6 +6673,11 @@
         "level": 5,
         "memory_cost": 5
       }
+    ],
+    "card_colors": [
+      0,
+      3,
+      1
     ]
   },
   "BT18-021": {
@@ -6760,6 +6835,11 @@
         "level": 5,
         "memory_cost": 5
       }
+    ],
+    "card_colors": [
+      2,
+      6,
+      5
     ]
   },
   "BT18-043": {
@@ -7544,6 +7624,11 @@
         "level": 6,
         "memory_cost": 6
       }
+    ],
+    "card_colors": [
+      0,
+      6,
+      5
     ]
   },
   "BT2-058": {
@@ -8156,7 +8241,8 @@
       "Cyborg",
       "X Antibody",
       "Ghost"
-    ]
+    ],
+    "xros_req": "[Digivolve] [Phantomon]: Cost 1"
   },
   "BT20-074": {
     "evo_costs": [
@@ -8306,7 +8392,8 @@
         "level": 3,
         "memory_cost": 3
       }
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "BT21-036": {
     "evo_costs": [
@@ -8419,6 +8506,11 @@
         "level": 6,
         "memory_cost": 6
       }
+    ],
+    "card_colors": [
+      3,
+      0,
+      1
     ]
   },
   "BT21-063": {
@@ -8942,7 +9034,8 @@
         "level": 3,
         "memory_cost": 3
       }
-    ]
+    ],
+    "dp": 5000
   },
   "BT23-017": {
     "evo_costs": [
@@ -9088,7 +9181,8 @@
         "level": 5,
         "memory_cost": 4
       }
-    ]
+    ],
+    "dp": 12000
   },
   "BT23-038": {
     "evo_costs": [
@@ -9383,7 +9477,12 @@
         "level": 4,
         "memory_cost": 3
       }
-    ]
+    ],
+    "play_cost": 6,
+    "dp": 6000,
+    "effect_description_eng": "[On Play] [When Digivolving] By placing 1 level 5 or lower blue [TS] trait Digimon card from your hand as this Digimon's bottom digivolution card, until your opponent's turn ends, this Digimon can't be deleted in battle and gains ＜Blocker＞.\r\n[Your Turn] When this Digimon unsuspends, it may digivolve into [Neptunemon] in the hand without paying the cost.",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may play 1 level 4 or lower blue Digimon card with the [TS] trait from this Digimon's digivolution cards without paying the cost.",
+    "xros_req": "[Digivolve] Lv.4 w/[Aqua] or [Sea Animal] in any trait or w/[TS] trait: Cost 3"
   },
   "BT24-033": {
     "evo_costs": [
@@ -9490,7 +9589,12 @@
         "level": 4,
         "memory_cost": 3
       }
-    ]
+    ],
+    "play_cost": 6,
+    "dp": 7000,
+    "effect_description_eng": "[On Play] [When Digivolving] Return 1 of your opponent's play cost 3 or lower Digimon or Tamers to the top of the deck.",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] ＜De-Digivolve 1＞ 1 of your opponent's Digimon.",
+    "xros_req": "[Digivolve] Lv.4 w/[TS] trait: Cost 3"
   },
   "BT24-064": {
     "evo_costs": [
@@ -9547,7 +9651,11 @@
         "level": 5,
         "memory_cost": 5
       }
-    ]
+    ],
+    "play_cost": 13,
+    "dp": 13000,
+    "effect_description_eng": "[Trash] [Your Turn] When one of your [Creepymon] attacks, if your opponent has 10 or more cards in their trash, by digivolving it into this card without paying the cost, trash your opponent's top security card.\r\n[When Digivolving] Delete all of your opponent's lowest level Digimon. Then, you may play up to 4 play cost's total worth of [Evil] or [Fallen Angel] trait cards from your trash without paying the cost. For every 10 cards in your opponent's trash, add 4 to this effect's play cost maximum.",
+    "xros_req": "[Digivolve] [Creepymon]: Cost 2"
   },
   "BT24-081": {
     "evo_costs": [
@@ -9582,7 +9690,8 @@
         "level": 5,
         "memory_cost": 4
       }
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "BT25-029": {
     "evo_costs": [
@@ -9596,7 +9705,8 @@
         "level": 5,
         "memory_cost": 4
       }
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "BT25-039": {
     "evo_costs": [
@@ -9696,7 +9806,8 @@
         "level": 5,
         "memory_cost": 4
       }
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "BT25-079": {
     "evo_costs": [
@@ -9791,7 +9902,8 @@
       "Iliad",
       "TS",
       "Olympos XII"
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "BT25-104": {
     "evo_costs": [
@@ -11494,6 +11606,11 @@
         "level": 5,
         "memory_cost": 6
       }
+    ],
+    "card_colors": [
+      0,
+      6,
+      1
     ]
   },
   "EX10-015": {
@@ -12081,6 +12198,13 @@
         "level": 5,
         "memory_cost": 5
       }
+    ],
+    "play_cost": 13,
+    "dp": 13000,
+    "card_colors": [
+      2,
+      0,
+      1
     ]
   },
   "EX12-065": {
@@ -12102,7 +12226,8 @@
         "level": 5,
         "memory_cost": 4
       }
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "EX12-076": {
     "type_eng": [
@@ -12895,7 +13020,8 @@
         "level": 4,
         "memory_cost": 4
       }
-    ]
+    ],
+    "play_cost": 8
   },
   "EX4-048": {
     "evo_costs": [
@@ -13791,6 +13917,11 @@
         "level": 6,
         "memory_cost": 6
       }
+    ],
+    "card_colors": [
+      3,
+      2,
+      5
     ]
   },
   "EX7-038": {
@@ -14096,6 +14227,11 @@
       "Cyborg",
       "DS",
       "Aquatic"
+    ],
+    "card_colors": [
+      1,
+      5,
+      2
     ]
   },
   "EX8-033": {
@@ -14226,6 +14362,11 @@
         "level": 6,
         "memory_cost": 5
       }
+    ],
+    "card_colors": [
+      6,
+      5,
+      2
     ]
   },
   "EX9-011": {
@@ -14371,6 +14512,11 @@
         "level": 6,
         "memory_cost": 5
       }
+    ],
+    "card_colors": [
+      3,
+      2,
+      1
     ]
   },
   "EX9-056": {
@@ -15012,6 +15158,11 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "card_colors": [
+      3,
+      0,
+      1
     ]
   },
   "P-187": {
@@ -15736,7 +15887,10 @@
         "level": 2,
         "memory_cost": 1
       }
-    ]
+    ],
+    "play_cost": 3,
+    "dp": 1000,
+    "effect_description_eng": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Among them, add 1 [DATA SQUAD] trait card to the hand and place 1 such card face down under any of your [DATA SQUAD] trait Tamers. Return the rest to the bottom of the deck."
   },
   "ST24-05": {
     "evo_costs": [
@@ -15836,7 +15990,8 @@
         "level": 5,
         "memory_cost": 4
       }
-    ]
+    ],
+    "inherited_effect_description_eng": ""
   },
   "ST9-02": {
     "evo_costs": [
@@ -16051,7 +16206,8 @@
       "Iliad",
       "TS",
       "Aquatic"
-    ]
+    ],
+    "xros_req": "[Digivolve] Lv.3 w/[TS] trait: Cost 2"
   },
   "BT24-027": {
     "type_eng": [
@@ -16090,7 +16246,8 @@
       "Mollusk",
       "LIBERATOR",
       "Aquatic"
-    ]
+    ],
+    "dp": 1000
   },
   "EX11-018": {
     "type_eng": [
@@ -16503,6 +16660,7 @@
     ],
     "inherited_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with the lowest level."
   },
+  "_note_BT26-073": "BT26-073 Aegiochusmon: Dark prints a Special Play Condition, \"Assembly -2: Lv.4 or lower Digimon card w/[Chronomon] in text or w/[TS] trait\" (official Bandai DB, data/card_official.json), which the digimoncard.io API drops from xros_req (still missing on 2026-10-03). Restored in the API's own Assembly line format after the [Digivolve] line the API does carry; apply_overrides re-derives digixros_costs from it.",
   "BT26-073": {
     "type_eng": [
       "Shaman",
@@ -16521,7 +16679,8 @@
         "level": 4,
         "memory_cost": 4
       }
-    ]
+    ],
+    "xros_req": "[Digivolve] [Aegiomon]: Cost 3\r\nAssembly Requirements [Assembly -2] Lv.4 or lower Digimon card w/[Chronomon] in text or w/[TS] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
   },
   "BT26-082": {
     "type_eng": [
@@ -18155,6 +18314,13 @@
       "Machine"
     ]
   },
+  "_note_store_tournament_2026_vol3": "P-239 DemiDevimon, P-240 Arcturusmon and P-244 Unique Emblem: Ragnarok Attainer (Official Store Tournament 2026 Vol.3) were ingested as pre-release stubs: play cost 0, no DP, no digivolve circles and no text, with |applinkdp = residue in the inherited field. The digimoncard.io API has since filled them in, and on 2026-10-03 their cards.json entries were refreshed from it (code/tools/archive/refresh_promo_stubs_rb1_10.py). These overrides correct what the API still gets wrong against the official Bandai DB (world.digimoncard.com, mirrored in data/card_official.json): P-239's form (Rookie) and its [On Deletion] wording, where the API says \"this Digimon card ... in your hand\" for the card's \"this card from your trash ... in the hand\"; P-240's form (Mega), its Black Lv.5 digivolve circle (the API drops the second colour) and its xros_req, which gains the [Digivolve] special digivolution line the API omits; and P-244's <Delay> trigger, which the official DB gives as [Your Turn] where the API says [All Turns]. Keyword reminder text follows the API's rendering, as elsewhere in cards.json. Source: the official DB pages fetched 2026-10-03; not yet checked against the card images.",
+  "P-239": {
+    "form_eng": [
+      "Rookie"
+    ],
+    "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Deletion] By placing this card from your trash as the bottom digivolution card of 1 of your Digimon with [Myotismon] in its text, that Digimon may digivolve into a Digimon card with [Myotismon] in its name in the hand without paying the cost."
+  },
   "P-240": {
     "card_colors": [
       6,
@@ -18187,7 +18353,7 @@
     ],
     "effect_description_eng": "＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and your opponent blocks if possible.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n＜Blocker＞ (At blocker timing, by suspending this Digimon, the opponent's attacking Digimon attacks it instead.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 3＞ 1 of your opponent's Digimon. Then, by placing 2 cards with [Gammamon] in their texts or the [VB] trait from your trash as this Digimon's bottom digivolution cards, give 1 of your opponent's Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends.\r\n[On Deletion] You may play 1 [Proximamon] from your hand or trash without paying the cost.",
     "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon.",
-    "xros_req": "[Digivolve] Lv.5 w/[Gammamon] in text or w/[VB] trait: Cost 4\r\n[Assembly -6] Lv.5 × Lv.4 × Lv.3, all w/[Gammamon] in text or w/[VB] trait"
+    "xros_req": "[Digivolve] Lv.5 w/[Gammamon] in text or w/[VB] trait: Cost 4\r\nAssembly Requirements [Assembly -6] Lv.5 × Lv.4 × Lv.3, all w/[Gammamon] in text or w/[VB] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
   },
   "P-244": {
     "card_colors": [
@@ -18197,8 +18363,135 @@
     "type_eng": [
       "LIBERATOR"
     ],
-    "effect_description_eng": "[Main] You may play 1 [Vemmon] or [Zenith] from your hand or trash without paying the cost. Then, place this card in the battle area.\r\n[Your Turn] When effects place [Vemmon] as any of your Digimon's digivolution cards, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon with [Vemmon] in its text may digivolve into a Digimon card with [Vemmon] in its text in the hand or trash with the digivolution cost reduced by 3.",
-    "inherited_effect_description_eng": "",
-    "security_effect_description_eng": "[Security] Activate this card's [Main] effect."
+    "effect_description_eng": "[Main] You may play 1 [Vemmon] or [Zenith] from your hand or trash without paying the cost. Then, place this card in the battle area.\r\n[Your Turn] When effects place [Vemmon] as any of your Digimon's digivolution cards, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon with [Vemmon] in its text may digivolve into a Digimon card with [Vemmon] in its text in the hand or trash with the cost reduced by 3."
+  },
+  "_note_cards_json_drift_2026_10": "2026-10-03 reconciliation against the official Bandai DB; every value checked against the card image and the DCGO card asset (code/tools/archive/reconcile_cards_json_drift_2026_10.py lists them). The API still serves these wrong unless noted: pre-release stubs BT24-028/061/068/078 (cost 0, no DP, no text, no special digivolution condition), BT24-044 and ST23-06 (cost 0, no DP); ST24-04 (the API now has its cost/DP, but its text is still the stale pre-release text); play cost or DP; the third colour of three-colour cards (the API has two colour fields; BT16-102's earlier override said white for black); '|applinkdp =' residue as inherited text; stale or misfiled text (EX11-033 and ST24-04 print [When Moving]; BT25-088's effect held its security text; Digi-Eggs BT13-006/BT22-001 keep inherited text in the inherited field); missing traits (P-169's LIBERATOR is a type, as printed); special digivolution conditions missing from xros_req. Where the official mirror itself is wrong, cards.json keeps the printed value: see PRINTED_OVER_MIRROR in code/tests/test_cards_json_integrity.py.",
+  "AD1-020": {
+    "card_colors": [
+      1,
+      0,
+      3
+    ]
+  },
+  "AD1-023": {
+    "card_colors": [
+      5,
+      2,
+      6
+    ]
+  },
+  "BT13-006": {
+    "inherited_effect_description_eng": "[On Deletion] By trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon.",
+    "effect_description_eng": ""
+  },
+  "BT18-095": {
+    "card_colors": [
+      0,
+      3,
+      1
+    ]
+  },
+  "BT18-097": {
+    "card_colors": [
+      2,
+      6,
+      5
+    ]
+  },
+  "BT19-014": {
+    "card_colors": [
+      0,
+      2,
+      5
+    ]
+  },
+  "BT19-091": {
+    "card_colors": [
+      0,
+      2,
+      3
+    ]
+  },
+  "BT21-019": {
+    "play_cost": 5
+  },
+  "BT21-030": {
+    "inherited_effect_description_eng": ""
+  },
+  "BT22-001": {
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When effects place Digimon cards with [Aqua] or [Sea Animal] in any of their traits in this Digimon's digivolution cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
+    "effect_description_eng": ""
+  },
+  "BT23-005": {
+    "play_cost": 3
+  },
+  "BT23-044": {
+    "play_cost": 7
+  },
+  "BT24-020": {
+    "attribute_eng": [
+      "Vaccine"
+    ]
+  },
+  "BT24-022": {
+    "attribute_eng": [
+      "Vaccine"
+    ]
+  },
+  "BT24-044": {
+    "play_cost": 3,
+    "dp": 1000
+  },
+  "BT25-076": {
+    "inherited_effect_description_eng": ""
+  },
+  "ST23-06": {
+    "play_cost": 3,
+    "dp": 1000
+  },
+  "ST24-08": {
+    "dp": 2000
+  },
+  "BT25-088": {
+    "play_cost": 4,
+    "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When your security stack is removed from, by suspending this Tamer, you may place the top 2 cards of your deck face down under this Tamer.\r\n[Your Turn] [Once Per Turn] When any of your [Glowing Dawn] trait cards would be played, by trashing the bottom face-down card from under any of your Tamers, reduce the cost by 1."
+  },
+  "BT8-061": {
+    "effect_description_eng": "The name of this card/Digimon is also treated as [Mamemon]."
+  },
+  "EX10-069": {
+    "type_eng": [
+      "LIBERATOR"
+    ]
+  },
+  "EX11-033": {
+    "dp": 7000,
+    "effect_description_eng": "[When Moving] [When Digivolving] You may play 1 [Maquinamon] from your hand or this Digimon's link cards without paying the cost.\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, suspend 1 of your opponent's Digimon. Then, 1 of their Digimon can't unsuspend until their turn ends."
+  },
+  "EX7-074": {
+    "card_colors": [
+      3,
+      2,
+      6
+    ]
+  },
+  "EX9-039": {
+    "play_cost": 5
+  },
+  "P-136": {
+    "play_cost": 3
+  },
+  "P-168": {
+    "play_cost": 3
+  },
+  "P-169": {
+    "play_cost": 3,
+    "type_eng": [
+      "LIBERATOR"
+    ],
+    "attribute_eng": []
+  },
+  "ST23-05": {
+    "inherited_effect_description_eng": ""
   }
 }

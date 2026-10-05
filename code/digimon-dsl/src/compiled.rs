@@ -618,6 +618,9 @@ pub struct CompiledPredicate {
     /// card — name + aliases + traits + printed text.
     #[serde(default)]
     pub event_target_in_text_contains: Option<String>,
+    /// Event-target top card has inherited effects. G-DSL-EVENT-TARGET-HAS-INHERITED.
+    #[serde(default)]
+    pub event_target_has_inherited: Option<bool>,
     pub event_target_is_player: Option<bool>,
     pub event_target_is_source: Option<bool>,
     pub event_target_was_self: Option<bool>,
@@ -2158,6 +2161,10 @@ pub enum CompiledStep {
         target: CompiledBindingRef,
         position: CompiledStackPosition,
         face_up: bool,
+        /// Place into the placed card's OWNER's security (ignores `of`).
+        to_owner: bool,
+        /// Bind the placed card under this name on a successful placement.
+        bind_placed_as: Option<String>,
     },
     PlacePermanentOnSecurityAndHandleReplacement {
         of: CompiledPlayerRef,

@@ -1,0 +1,57 @@
+# Exam scenario: NightChiropmon (BT26-070), clause BT26-070#effect#1 --
+# the "[On Play] [When Digivolving]" header of "[On Play] [When Digivolving]
+# <Draw 1> and trash 1 card in your hand." The extractor emits the header
+# with EMPTY text (the <Draw 1> keyword is swallowed) and puts "and trash 1
+# card in your hand." in effect#2. This file binds effect#1 to the header +
+# its <Draw 1>, measured through the [On Play] arm; effect#2 measures the
+# trash tail through the [When Digivolving] arm.
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE: T1 P0 (memory 0, no draw on T1) hard-plays NightChiropmon
+# [0 -> -5]. [On Play]: <Draw 1> draws stack[10] ST23-09, then the
+# mandatory discard trashes that same ST23-09. Turn passes to p1.
+# WITNESS: the drawn card (not in the opening hand) is the one in trash; the
+# opening hand minus NightChiropmon is intact (4 cards).
+#
+# PROMPT SHAPE (BT26-070.yaml DCGO crosscheck: shared [On Play]/[When
+# Digivolving], optional:false; Draw 1 then, if hand >= 1, a mandatory
+# canNoSelect:false SelectHandEffect): 1:1 with our Hand pick.
+card: BT26-070
+clause: BT26-070#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-070, BT25-090, ST23-15, ST23-12, BT25-046,
+            ST23-15, BT25-090, BT26-089, ST23-06, ST23-09,
+            ST23-09, ST23-06, BT25-057]
+    rest: gd-bt26-4th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-070, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST23-09] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 3
+    that:
+      turn: 2
+      p0.memory: -5
+      p0.trash: [ST23-09]
+      p0.hand: [BT25-046, BT25-090, ST23-12, ST23-15]
+      p0.field:
+        - card_id: BT26-070
+          dp: 5000
+          suspended: false
+          sources: []

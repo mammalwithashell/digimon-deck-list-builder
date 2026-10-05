@@ -1,0 +1,158 @@
+# Exam scenario: NightChiropmon (BT26-070), clause BT26-070#effect#3 --
+# "[Main] [Once Per Turn] By trashing 2 bottom face-down cards from under any
+# of your Tamers, you may use 1 Option card with the [Glowing Dawn] trait
+# from your trash with the cost reduced by 2."
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger in brackets):
+#   T1 P0 hard-plays NightChiropmon [0 -> -5]; its [On Play] <Draw 1>
+#      (stack[10] BT25-049) + trash pick puts Atratusmon (ST23-09, the DUAL
+#      [Glowing Dawn] Option, use cost 5) into the trash.
+#   T2 p1 passes (p0 gets 3).
+#   T3 P0 plays Kyo Sawashiro (BT26-089) [3 -> 0], passes (p1 gets 3).
+#   T4 p1 passes (p0 gets 3).
+#   T5 Kyo's [Start of Your Main Phase]: places ST23-15 from hand face down
+#      under Kyo, <Draw 1> + 1 memory [3 -> 4]. Pass.
+#   T6 p1 passes (p0 gets 3).
+#   T7 Kyo again: places BT25-046 face down [3 -> 4] (Kyo now holds 2).
+#      [Main] on NightChiropmon: trash both face-down cards from under Kyo,
+#      then use Atratusmon from the trash at 5 - 2 = 3 [4 -> 1]. Its [Main]
+#      (suspend / bottom-deck) has no opponent Digimon to touch; its <Arts
+#      Digivolve> has no Lv.5 to digivolve from, so it goes back to trash.
+# WITNESS: Kyo's sources 2 -> 0 (both in trash), memory 4 -> 1 (= cost 3,
+# i.e. the -2 applied), Atratusmon in trash after use.
+#
+# WHY KYO, NOT TOMORO & KYO (ST23-13): the first draft used ST23-13 as the
+# Tamer. ST23-13's "[Your Turn] When effects trash cards from under this
+# Tamer" trigger then fires BETWEEN our two per-card trash picks and resolves
+# BEFORE the Option-use half of this [Main] (probe:
+# qa/archetype-qa/glowing-dawn-repros/repro-tamer-trash-trigger-mid-cost.yaml; state at its step 14
+# shows 1 of 2 cards trashed with the trigger already offered) -- see ENGINE
+# FINDING in the fragment. That sequencing would abort the oracle on prompt
+# order and measure nothing about THIS clause, so the measured line uses Kyo,
+# whose text has no trash-from-under trigger.
+#
+# PROMPT SHAPE (BT26-070.yaml DCGO crosscheck of BT26_070.cs: OnDeclaration,
+# maxCount 1; Tamer multi-pick (1 Tamer with 2, or 2 Tamers x 1) -> trash the
+# bottom face-down card(s); then canNoSelect:true trash pick ->
+# PlayOptionCards(payCost) with a one-shot -2 ChangeCost). Kyo's SoMP is
+# DCGO's skippable canNoSelect:true SelectHandEffect (BT26-089.yaml) <-> our
+# optional Hand pick.
+card: BT26-070
+clause: BT26-070#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-070, BT26-089, ST23-09, ST23-15, BT25-046,
+            ST23-15, BT25-090, BT26-089, ST23-06, ST23-12,
+            BT25-049, ST23-06, BT26-025, BT25-057, ST23-12,
+            BT25-090, BT26-026]
+    rest: gd-bt26-4th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-070, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST23-09] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-089, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST23-15] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [BT25-046] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { main: { on: field.0 } }
+    expect: { prompt: main_phase }
+  # Cost: trash 2 bottom face-down cards from under Tamers. One Tamer holds
+  # both, so DCGO's Tamer multi-pick is ONE SelectPermanentEffect row; ours
+  # re-parks once per card -> the 2nd pick is sim_only.
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { targets: [own.field.1], sim_only: true } }
+  # The optional (canNoSelect:true) trash pick of the Option to use.
+  - actor: 0
+    do: { select: { cards: [ST23-09] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Before the [Main]: Kyo holds the 2 face-down cards, memory 3 + 1 = 4.
+  - at: 17
+    that:
+      turn: 7
+      p0.memory: 4
+      p0.trash: [ST23-09]
+      p0.field:
+        - card_id: BT26-070
+          dp: 5000
+          suspended: false
+          sources: []
+        - card_id: BT26-089
+          dp: -1
+          suspended: false
+          sources: [BT25-046, ST23-15]
+  # After: both face-down cards trashed, Atratusmon used from trash for
+  # 5 - 2 = 3 (4 -> 1) and back in the trash.
+  - at: 21
+    that:
+      turn: 7
+      p0.memory: 1
+      p0.trash: [BT25-046, ST23-09, ST23-15]
+      p0.hand: [BT25-049, BT25-057, BT25-090, BT26-025, ST23-06, ST23-12]
+      p0.field:
+        - card_id: BT26-070
+          dp: 5000
+          suspended: false
+          sources: []
+        - card_id: BT26-089
+          dp: -1
+          suspended: false
+          sources: []

@@ -1094,6 +1094,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }
@@ -1139,6 +1140,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }

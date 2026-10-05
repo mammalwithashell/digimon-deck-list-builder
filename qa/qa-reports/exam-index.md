@@ -11,13 +11,14 @@ Source: qa\qa-reports\exam-verdicts
 | Eaters | 139 | 522 | 46 | 0 | 0 | 0 | 476 | 9% |
 | Shakkoumon | 118 | 451 | 7 | 0 | 0 | 0 | 444 | 2% |
 | Jesmon | 129 | 418 | 18 | 0 | 0 | 0 | 400 | 4% |
-| TS Olympos | 126 | 428 | 40 | 0 | 0 | 0 | 388 | 9% |
+| TS Olympos | 126 | 428 | 41 | 0 | 0 | 0 | 387 | 10% |
 | Machinedramon | 101 | 386 | 3 | 0 | 0 | 0 | 383 | 1% |
 | Leviamon | 120 | 405 | 23 | 0 | 0 | 0 | 382 | 6% |
-| Rapidmon | 124 | 395 | 14 | 0 | 0 | 0 | 381 | 4% |
+| Rapidmon | 124 | 396 | 14 | 0 | 0 | 0 | 382 | 4% |
 | DNA Omnimon | 101 | 385 | 6 | 0 | 0 | 0 | 379 | 2% |
 | Royal Base | 91 | 356 | 5 | 0 | 0 | 0 | 351 | 1% |
 | Millenniummon | 113 | 372 | 25 | 0 | 0 | 0 | 347 | 7% |
+| TS Jupitermon | 102 | 398 | 57 | 0 | 0 | 0 | 341 | 14% |
 | Yellow Vax | 100 | 347 | 11 | 0 | 0 | 0 | 336 | 3% |
 | Magnamon Armors | 103 | 344 | 11 | 0 | 0 | 0 | 333 | 3% |
 | Royal Knights | 89 | 341 | 8 | 0 | 0 | 0 | 333 | 2% |
@@ -39,47 +40,48 @@ Source: qa\qa-reports\exam-verdicts
 | Justimon | 75 | 274 | 6 | 0 | 0 | 0 | 268 | 2% |
 | Numemon | 86 | 284 | 16 | 0 | 0 | 1 | 267 | 6% |
 | Machindramon | 104 | 271 | 4 | 1 | 0 | 0 | 266 | 2% |
-| Zephagamon | 85 | 261 | 3 | 0 | 0 | 0 | 258 | 1% |
-| TS Jupitermon | 102 | 314 | 57 | 0 | 0 | 0 | 257 | 18% |
+| TS Toolbox | 83 | 324 | 61 | 0 | 1 | 0 | 262 | 19% |
+| Zephagamon | 85 | 262 | 3 | 0 | 0 | 0 | 259 | 1% |
 | Dark Masters | 78 | 278 | 23 | 0 | 0 | 0 | 255 | 8% |
 | BG Imperial | 85 | 274 | 23 | 0 | 0 | 0 | 251 | 8% |
 | Hunters | 66 | 258 | 10 | 0 | 0 | 0 | 248 | 4% |
 | ShineGreymon | 81 | 256 | 12 | 0 | 0 | 0 | 244 | 5% |
+| Data Squad | 77 | 255 | 12 | 0 | 0 | 0 | 243 | 5% |
 | Xros Heart | 60 | 243 | 3 | 0 | 0 | 0 | 240 | 1% |
 | Gigaseadramon | 76 | 243 | 5 | 0 | 0 | 0 | 238 | 2% |
 | TS Merukimon | 75 | 279 | 42 | 0 | 0 | 0 | 237 | 15% |
 | Phoenixmon | 67 | 236 | 0 | 0 | 0 | 0 | 236 | 0% |
+| TS Angels | 73 | 274 | 40 | 0 | 0 | 0 | 234 | 15% |
 | 7DL | 76 | 248 | 16 | 0 | 0 | 0 | 232 | 6% |
 | Abbadomon | 65 | 255 | 28 | 0 | 0 | 1 | 226 | 11% |
 | Black Machinedramon | 63 | 228 | 3 | 0 | 0 | 0 | 225 | 1% |
-| Shoes-Puppet | 73 | 231 | 7 | 0 | 0 | 0 | 224 | 3% |
-| TS Toolbox | 83 | 286 | 61 | 0 | 1 | 0 | 224 | 22% |
 | Xros | 56 | 233 | 9 | 0 | 0 | 0 | 224 | 4% |
 | LordKnightmon | 63 | 229 | 6 | 0 | 0 | 0 | 223 | 3% |
+| Shoes-Puppet | 73 | 231 | 8 | 0 | 0 | 0 | 223 | 3% |
+| TS Ceresmon | 73 | 251 | 29 | 0 | 0 | 0 | 222 | 12% |
 | Omni AlterS | 62 | 222 | 3 | 0 | 0 | 0 | 219 | 1% |
 | Medusamon | 66 | 234 | 20 | 0 | 0 | 0 | 214 | 9% |
-| TS Angels | 73 | 254 | 40 | 0 | 0 | 0 | 214 | 16% |
 | Megidramon | 72 | 228 | 15 | 0 | 0 | 0 | 213 | 7% |
 | Shinegreymon | 63 | 214 | 3 | 0 | 0 | 0 | 211 | 1% |
 | Ragnaloardmon | 72 | 221 | 12 | 0 | 0 | 0 | 209 | 5% |
-| Data Squad | 77 | 218 | 12 | 0 | 0 | 0 | 206 | 6% |
+| Titans | 68 | 243 | 36 | 0 | 0 | 0 | 207 | 15% |
 | Gaiamon | 47 | 225 | 19 | 0 | 0 | 0 | 206 | 8% |
 | RoyalKnight | 59 | 214 | 8 | 0 | 0 | 0 | 206 | 4% |
+| TS Vulcanusmon | 67 | 270 | 63 | 1 | 0 | 0 | 206 | 24% |
 | Titamon | 66 | 232 | 27 | 0 | 0 | 0 | 205 | 12% |
 | Hunter | 52 | 209 | 8 | 0 | 0 | 0 | 201 | 4% |
+| Apps Reboot | 44 | 213 | 14 | 0 | 0 | 0 | 199 | 7% |
+| Gammamon | 54 | 202 | 3 | 0 | 0 | 0 | 199 | 1% |
 | Virus Imperialdramon | 71 | 221 | 23 | 0 | 0 | 0 | 198 | 10% |
 | Invisimon | 52 | 208 | 11 | 0 | 0 | 0 | 197 | 5% |
 | Purple Hybrid | 81 | 233 | 38 | 0 | 1 | 0 | 194 | 17% |
 | Dinomon | 54 | 196 | 3 | 0 | 0 | 0 | 193 | 2% |
-| TS Vulcanusmon | 67 | 257 | 63 | 1 | 0 | 0 | 193 | 25% |
-| Puppets | 70 | 213 | 21 | 0 | 0 | 0 | 192 | 10% |
 | Garuru Alter-S | 55 | 197 | 6 | 0 | 0 | 0 | 191 | 3% |
-| Gammamon | 54 | 191 | 3 | 0 | 0 | 0 | 188 | 2% |
-| Apps Reboot | 44 | 200 | 14 | 0 | 0 | 0 | 186 | 7% |
+| Puppets | 70 | 213 | 22 | 0 | 0 | 0 | 191 | 10% |
+| Glowing Dawn | 52 | 192 | 3 | 0 | 0 | 0 | 189 | 2% |
 | Adventure | 46 | 186 | 1 | 0 | 0 | 0 | 185 | 1% |
 | ADVENTURE | 47 | 187 | 3 | 0 | 0 | 0 | 184 | 2% |
 | Rocks | 59 | 194 | 9 | 0 | 0 | 1 | 184 | 5% |
-| TS Ceresmon | 73 | 213 | 29 | 0 | 0 | 0 | 184 | 14% |
 | Rosemon | 59 | 183 | 0 | 0 | 0 | 0 | 183 | 0% |
 | Bagra Army | 49 | 184 | 3 | 0 | 0 | 0 | 181 | 2% |
 | Poseidomon | 38 | 180 | 0 | 0 | 0 | 0 | 180 | 0% |
@@ -87,11 +89,11 @@ Source: qa\qa-reports\exam-verdicts
 | TS Slop | 57 | 223 | 47 | 1 | 0 | 0 | 175 | 22% |
 | Magnamon | 58 | 184 | 13 | 0 | 0 | 0 | 171 | 7% |
 | Omni Nokia | 49 | 177 | 6 | 0 | 0 | 0 | 171 | 3% |
+| Milleniummon | 57 | 179 | 10 | 0 | 0 | 0 | 169 | 6% |
 | BlackWargrey | 48 | 167 | 0 | 0 | 0 | 0 | 167 | 0% |
 | Fenriloogamon | 55 | 182 | 15 | 0 | 0 | 0 | 167 | 8% |
-| Milleniummon | 57 | 176 | 10 | 0 | 0 | 0 | 166 | 6% |
+| Deep Savers | 52 | 174 | 9 | 0 | 0 | 0 | 165 | 5% |
 | Omni Ladder | 44 | 171 | 6 | 0 | 0 | 0 | 165 | 4% |
-| Deep Savers | 52 | 173 | 9 | 0 | 0 | 0 | 164 | 5% |
 | Metal Empire | 47 | 177 | 12 | 0 | 0 | 1 | 164 | 7% |
 | Silphymon | 55 | 190 | 26 | 0 | 0 | 0 | 164 | 14% |
 | Rebootmon | 38 | 175 | 14 | 0 | 0 | 0 | 161 | 8% |
@@ -99,13 +101,11 @@ Source: qa\qa-reports\exam-verdicts
 | Beelzemon | 58 | 167 | 9 | 0 | 0 | 0 | 158 | 5% |
 | Blue Ulforce | 64 | 158 | 0 | 0 | 0 | 0 | 158 | 0% |
 | Sea animals | 51 | 169 | 11 | 0 | 0 | 0 | 158 | 7% |
-| Titans | 68 | 193 | 36 | 0 | 0 | 0 | 157 | 19% |
 | XrosHeart | 41 | 160 | 3 | 0 | 0 | 0 | 157 | 2% |
-| TS Marsmon | 51 | 198 | 43 | 1 | 0 | 0 | 154 | 22% |
+| TS Marsmon | 51 | 198 | 44 | 1 | 0 | 0 | 153 | 23% |
 | CS Alphamon | 42 | 157 | 4 | 1 | 0 | 0 | 152 | 3% |
 | Creepymon | 59 | 172 | 20 | 0 | 0 | 0 | 152 | 12% |
 | Diaboromon | 57 | 159 | 6 | 0 | 0 | 1 | 152 | 4% |
-| Glowing Dawn | 52 | 154 | 3 | 0 | 0 | 0 | 151 | 2% |
 | RoyalBase | 37 | 150 | 0 | 0 | 0 | 0 | 150 | 0% |
 | Blue Flare | 56 | 155 | 6 | 0 | 0 | 0 | 149 | 4% |
 | FunBeemon | 36 | 148 | 0 | 0 | 0 | 0 | 148 | 0% |
@@ -119,8 +119,10 @@ Source: qa\qa-reports\exam-verdicts
 | D-Brigade | 43 | 138 | 0 | 0 | 0 | 0 | 138 | 0% |
 | Myotis Loop | 54 | 148 | 12 | 0 | 0 | 0 | 136 | 8% |
 | SHINE | 40 | 145 | 9 | 0 | 0 | 0 | 136 | 6% |
+| Chronomon | 39 | 159 | 24 | 0 | 0 | 0 | 135 | 15% |
 | Galacticmon | 39 | 135 | 0 | 0 | 0 | 1 | 134 | 1% |
-| Puppet Kaguya | 45 | 137 | 4 | 0 | 0 | 0 | 133 | 3% |
+| Apps Dantemon | 30 | 144 | 11 | 0 | 0 | 0 | 133 | 8% |
+| Puppet Kaguya | 45 | 137 | 5 | 0 | 0 | 0 | 132 | 4% |
 | Valkyrimon | 46 | 149 | 17 | 0 | 0 | 0 | 132 | 11% |
 | Seven Great Demon Lords | 41 | 143 | 12 | 0 | 0 | 0 | 131 | 8% |
 | Takemikazuchi | 41 | 141 | 10 | 0 | 0 | 0 | 131 | 7% |
@@ -134,6 +136,7 @@ Source: qa\qa-reports\exam-verdicts
 | KaiserHybrid | 43 | 137 | 9 | 0 | 0 | 0 | 128 | 7% |
 | Beelze | 48 | 142 | 16 | 0 | 0 | 0 | 126 | 11% |
 | Hexeblaumon | 38 | 126 | 0 | 0 | 0 | 0 | 126 | 0% |
+| TS Cosmic Area | 39 | 157 | 31 | 0 | 0 | 0 | 126 | 20% |
 | Chronicle | 36 | 125 | 0 | 0 | 0 | 0 | 125 | 0% |
 | Blue Galaxy Toolbox | 32 | 126 | 4 | 0 | 0 | 0 | 122 | 3% |
 | D-Reaper | 31 | 129 | 7 | 0 | 0 | 0 | 122 | 5% |
@@ -148,8 +151,10 @@ Source: qa\qa-reports\exam-verdicts
 | Purple Beelzemon | 43 | 126 | 7 | 0 | 0 | 0 | 119 | 6% |
 | DM kimera | 29 | 121 | 3 | 0 | 0 | 0 | 118 | 2% |
 | TS Titans | 44 | 147 | 29 | 0 | 0 | 0 | 118 | 20% |
+| Virus Busters | 29 | 124 | 6 | 0 | 0 | 0 | 118 | 5% |
 | BT23 Jesmon | 41 | 129 | 12 | 0 | 0 | 0 | 117 | 9% |
 | Miragegaogamon | 44 | 117 | 0 | 0 | 0 | 0 | 117 | 0% |
+| Plutomon | 39 | 126 | 9 | 0 | 0 | 0 | 117 | 7% |
 | Yellow Vaccine | 42 | 126 | 9 | 0 | 0 | 0 | 117 | 7% |
 | Alphamon Oryuken | 35 | 118 | 1 | 1 | 0 | 0 | 116 | 2% |
 | BWGX | 43 | 116 | 0 | 0 | 0 | 0 | 116 | 0% |
@@ -163,12 +168,11 @@ Source: qa\qa-reports\exam-verdicts
 | RapidX | 38 | 114 | 3 | 0 | 0 | 0 | 111 | 3% |
 | Accel | 29 | 113 | 3 | 0 | 0 | 0 | 110 | 3% |
 | Guil-Phoenix | 34 | 110 | 0 | 0 | 0 | 0 | 110 | 0% |
-| TS Bears | 44 | 160 | 49 | 1 | 0 | 0 | 110 | 31% |
 | Alphamon Kyoko | 29 | 112 | 3 | 0 | 0 | 0 | 109 | 3% |
 | ImperialVirus | 40 | 125 | 16 | 0 | 0 | 0 | 109 | 13% |
+| TS Bears | 44 | 160 | 50 | 1 | 0 | 0 | 109 | 32% |
 | Imperial Virus | 37 | 129 | 22 | 0 | 0 | 0 | 107 | 17% |
 | UNKNOWN | 33 | 118 | 11 | 0 | 0 | 0 | 107 | 9% |
-| Virus Busters | 29 | 113 | 6 | 0 | 0 | 0 | 107 | 5% |
 | Green Leopad | 30 | 106 | 0 | 0 | 0 | 0 | 106 | 0% |
 | Leo Tribal | 31 | 108 | 3 | 0 | 0 | 0 | 105 | 3% |
 | Olympos Megazoo | 37 | 130 | 25 | 0 | 0 | 0 | 105 | 19% |
@@ -179,10 +183,10 @@ Source: qa\qa-reports\exam-verdicts
 | RedHybrid Emperor | 35 | 106 | 3 | 0 | 0 | 0 | 103 | 3% |
 | Styracomon | 39 | 125 | 23 | 0 | 0 | 0 | 102 | 18% |
 | Ice-Snow | 32 | 100 | 0 | 0 | 0 | 0 | 100 | 0% |
+| Mineral | 34 | 111 | 11 | 0 | 0 | 0 | 100 | 10% |
 | BeatBreak | 27 | 99 | 0 | 0 | 0 | 0 | 99 | 0% |
 | DM Ver2 | 25 | 105 | 6 | 0 | 0 | 0 | 99 | 6% |
 | MagnaGaruru | 30 | 99 | 0 | 0 | 0 | 0 | 99 | 0% |
-| Mineral | 34 | 110 | 11 | 0 | 0 | 0 | 99 | 10% |
 | BlackWargreymon | 37 | 101 | 3 | 0 | 0 | 0 | 98 | 3% |
 | CS Soup | 25 | 97 | 0 | 0 | 0 | 0 | 97 | 0% |
 | Cross Heart | 25 | 100 | 3 | 0 | 0 | 0 | 97 | 3% |
@@ -209,6 +213,7 @@ Source: qa\qa-reports\exam-verdicts
 | Eater | 22 | 92 | 3 | 0 | 0 | 0 | 89 | 3% |
 | Dukemon X | 25 | 88 | 0 | 0 | 0 | 0 | 88 | 0% |
 | Green Ranger | 28 | 91 | 3 | 0 | 0 | 0 | 88 | 3% |
+| MaloMyotismon | 34 | 95 | 7 | 0 | 0 | 0 | 88 | 7% |
 | Omnimon | 21 | 88 | 0 | 0 | 0 | 0 | 88 | 0% |
 | Tyrant | 40 | 91 | 3 | 0 | 0 | 0 | 88 | 3% |
 | Adventure-Zepha | 23 | 87 | 0 | 0 | 0 | 0 | 87 | 0% |
@@ -219,18 +224,15 @@ Source: qa\qa-reports\exam-verdicts
 | Necromon | 35 | 101 | 15 | 0 | 0 | 0 | 86 | 15% |
 | Rose-Leopad | 23 | 86 | 0 | 0 | 0 | 0 | 86 | 0% |
 | Ulforce | 31 | 86 | 0 | 0 | 0 | 0 | 86 | 0% |
-| Biyomon Rush | 31 | 89 | 4 | 0 | 0 | 0 | 85 | 4% |
 | Garuru-AlterS | 23 | 85 | 0 | 0 | 0 | 0 | 85 | 0% |
 | LegendArms(52 cards) | 20 | 85 | 0 | 0 | 0 | 0 | 85 | 0% |
-| MaloMyotismon | 34 | 92 | 7 | 0 | 0 | 0 | 85 | 8% |
-| TS Cosmic Area | 39 | 116 | 31 | 0 | 0 | 0 | 85 | 27% |
 | Yellow Purple Sec Con | 38 | 90 | 5 | 0 | 0 | 0 | 85 | 6% |
+| Biyomon Rush | 31 | 89 | 5 | 0 | 0 | 0 | 84 | 6% |
 | Galaxy Toolbox | 23 | 84 | 0 | 0 | 0 | 0 | 84 | 0% |
 | Red Hybrid Kaiser | 28 | 87 | 3 | 0 | 0 | 0 | 84 | 3% |
 | Shoemon | 28 | 84 | 0 | 0 | 0 | 0 | 84 | 0% |
 | Takemika | 29 | 101 | 17 | 0 | 0 | 0 | 84 | 17% |
 | Wargreymon | 30 | 84 | 0 | 0 | 0 | 0 | 84 | 0% |
-| Apps Dantemon | 30 | 94 | 11 | 0 | 0 | 0 | 83 | 12% |
 | Devas | 19 | 86 | 3 | 0 | 0 | 0 | 83 | 3% |
 | Diaboro | 30 | 83 | 0 | 0 | 0 | 0 | 83 | 0% |
 | Hadesmon | 18 | 83 | 0 | 0 | 0 | 0 | 83 | 0% |
@@ -248,18 +250,19 @@ Source: qa\qa-reports\exam-verdicts
 | AncientHybrid | 26 | 85 | 6 | 0 | 0 | 0 | 79 | 7% |
 | Guil-Bird | 24 | 79 | 0 | 0 | 0 | 0 | 79 | 0% |
 | Hybrid Beowolf | 27 | 82 | 3 | 0 | 0 | 0 | 79 | 4% |
-| Plutomon | 39 | 88 | 9 | 0 | 0 | 0 | 79 | 10% |
 | Pulse Tribal | 23 | 79 | 0 | 0 | 0 | 0 | 79 | 0% |
 | Ragnalord | 19 | 82 | 3 | 0 | 0 | 0 | 79 | 4% |
+| Toho Braves | 50 | 195 | 115 | 0 | 2 | 0 | 78 | 60% |
 | GalaxyToolbox | 23 | 80 | 3 | 0 | 0 | 0 | 77 | 4% |
 | Hero Appmon | 19 | 77 | 0 | 0 | 0 | 0 | 77 | 0% |
 | DM Justimon | 18 | 76 | 0 | 0 | 0 | 0 | 76 | 0% |
 | Megidra | 30 | 91 | 15 | 0 | 0 | 0 | 76 | 16% |
 | Omnimon Ace | 18 | 76 | 0 | 0 | 0 | 0 | 76 | 0% |
-| Pheonixmon | 26 | 80 | 4 | 0 | 0 | 0 | 76 | 5% |
 | AdventureAlterS | 19 | 75 | 0 | 0 | 0 | 0 | 75 | 0% |
 | HeavyLeomon | 22 | 75 | 0 | 0 | 0 | 0 | 75 | 0% |
+| Pheonixmon | 26 | 80 | 5 | 0 | 0 | 0 | 75 | 6% |
 | TS Central Town | 36 | 91 | 16 | 0 | 0 | 0 | 75 | 18% |
+| TS Mervamon | 22 | 83 | 8 | 0 | 0 | 0 | 75 | 10% |
 | Omnimon ACE | 22 | 77 | 3 | 0 | 0 | 0 | 74 | 4% |
 | TS Fish | 27 | 105 | 31 | 0 | 0 | 0 | 74 | 30% |
 | TS Tidal Zone | 26 | 94 | 20 | 0 | 0 | 0 | 74 | 21% |
@@ -286,6 +289,7 @@ Source: qa\qa-reports\exam-verdicts
 | BlueFlare | 22 | 71 | 3 | 0 | 0 | 0 | 68 | 4% |
 | Fish | 23 | 73 | 5 | 0 | 0 | 0 | 68 | 7% |
 | Magna Armor | 23 | 68 | 0 | 0 | 0 | 0 | 68 | 0% |
+| Vemmon | 21 | 68 | 0 | 0 | 0 | 0 | 68 | 0% |
 | Mirage | 25 | 67 | 0 | 0 | 0 | 0 | 67 | 0% |
 | PurpleHybrid-Duke | 26 | 76 | 9 | 0 | 0 | 0 | 67 | 12% |
 | Yellow Vaccine Armor | 26 | 73 | 6 | 0 | 0 | 0 | 67 | 8% |
@@ -304,18 +308,18 @@ Source: qa\qa-reports\exam-verdicts
 | Dukemon(53 cards) | 22 | 71 | 6 | 0 | 0 | 0 | 65 | 8% |
 | ExMaquinamon | 16 | 65 | 0 | 0 | 0 | 0 | 65 | 0% |
 | GankooX | 19 | 65 | 0 | 0 | 0 | 0 | 65 | 0% |
-| Vemmon | 21 | 65 | 0 | 0 | 0 | 0 | 65 | 0% |
 | Wind Guardians | 17 | 65 | 0 | 0 | 0 | 0 | 65 | 0% |
 | BlackWargryDM2 | 17 | 64 | 0 | 0 | 0 | 0 | 64 | 0% |
 | Dorbik Omni | 24 | 67 | 3 | 0 | 0 | 0 | 64 | 4% |
 | Hina Linkz | 24 | 64 | 0 | 0 | 0 | 0 | 64 | 0% |
 | IceSnow | 18 | 64 | 0 | 0 | 0 | 0 | 64 | 0% |
-| Sistermon Puppets | 22 | 65 | 1 | 0 | 0 | 0 | 64 | 2% |
 | Zephaga Adventure | 18 | 64 | 0 | 0 | 0 | 0 | 64 | 0% |
 | Bunny Alliance | 23 | 66 | 3 | 0 | 0 | 0 | 63 | 5% |
 | Megid-Duke | 21 | 66 | 3 | 0 | 0 | 0 | 63 | 5% |
+| Sistermon Puppets | 22 | 65 | 2 | 0 | 0 | 0 | 63 | 3% |
 | CS Ceresmon | 22 | 62 | 0 | 0 | 0 | 0 | 62 | 0% |
 | Cerberus-Levia | 23 | 72 | 10 | 0 | 0 | 0 | 62 | 14% |
+| Green TyrantKabuterimon | 19 | 62 | 0 | 0 | 0 | 0 | 62 | 0% |
 | Guil-Levia | 24 | 71 | 9 | 0 | 0 | 0 | 62 | 13% |
 | Marine Aegis | 19 | 62 | 0 | 0 | 0 | 0 | 62 | 0% |
 | Yellow Monzaemon | 24 | 72 | 9 | 0 | 0 | 1 | 62 | 14% |
@@ -338,11 +342,9 @@ Source: qa\qa-reports\exam-verdicts
 | JimmyKEN | 27 | 62 | 3 | 0 | 0 | 0 | 59 | 5% |
 | Leo Chaos | 16 | 59 | 0 | 0 | 0 | 0 | 59 | 0% |
 | Sea Fish | 17 | 59 | 0 | 0 | 0 | 0 | 59 | 0% |
-| Toho Braves | 50 | 174 | 113 | 0 | 2 | 0 | 59 | 66% |
 | purple Hybrid | 25 | 68 | 9 | 0 | 0 | 0 | 59 | 13% |
 | Aquatic | 20 | 67 | 9 | 0 | 0 | 0 | 58 | 13% |
 | Belphy Apocaly | 24 | 68 | 10 | 0 | 0 | 0 | 58 | 15% |
-| Chronomon | 39 | 82 | 24 | 0 | 0 | 0 | 58 | 29% |
 | Darkknightmon | 18 | 59 | 0 | 0 | 0 | 1 | 58 | 2% |
 | Duke-Levia | 22 | 64 | 6 | 0 | 0 | 0 | 58 | 9% |
 | Duke_levia | 22 | 64 | 6 | 0 | 0 | 0 | 58 | 9% |
@@ -353,18 +355,17 @@ Source: qa\qa-reports\exam-verdicts
 | Blue MelgaX | 16 | 57 | 0 | 0 | 0 | 0 | 57 | 0% |
 | Omnimon Zoo | 16 | 60 | 3 | 0 | 0 | 0 | 57 | 5% |
 | SisterPuppet | 21 | 63 | 6 | 0 | 0 | 0 | 57 | 10% |
-| TS Mervamon | 22 | 65 | 8 | 0 | 0 | 0 | 57 | 12% |
 | CS Maste | 16 | 56 | 0 | 0 | 0 | 0 | 56 | 0% |
 | Galaxy-Leopad | 18 | 56 | 0 | 0 | 0 | 0 | 56 | 0% |
 | Heavymetaldramon | 18 | 56 | 0 | 0 | 0 | 0 | 56 | 0% |
 | MetalGaruru | 22 | 56 | 0 | 0 | 0 | 0 | 56 | 0% |
 | Red Greymon | 20 | 62 | 6 | 0 | 0 | 0 | 56 | 10% |
 | BlueHybrid | 21 | 61 | 6 | 0 | 0 | 0 | 55 | 10% |
-| Byomon Rush | 20 | 59 | 4 | 0 | 0 | 0 | 55 | 7% |
 | DexDoru | 17 | 61 | 6 | 0 | 0 | 0 | 55 | 10% |
 | Gankoomon X | 22 | 64 | 9 | 0 | 0 | 0 | 55 | 14% |
 | Red Hybid | 24 | 61 | 6 | 0 | 0 | 0 | 55 | 10% |
 | Belphy Pocoly | 22 | 64 | 10 | 0 | 0 | 0 | 54 | 16% |
+| Byomon Rush | 20 | 59 | 5 | 0 | 0 | 0 | 54 | 8% |
 | RoyaKnight | 20 | 60 | 6 | 0 | 0 | 0 | 54 | 10% |
 | Shine Greymon | 19 | 57 | 3 | 0 | 0 | 0 | 54 | 5% |
 | AlphamonAce | 16 | 53 | 0 | 0 | 0 | 0 | 53 | 0% |
@@ -376,9 +377,9 @@ Source: qa\qa-reports\exam-verdicts
 | Cerberus-Master | 18 | 56 | 4 | 0 | 0 | 0 | 52 | 7% |
 | Cerberusmon-Guil | 19 | 55 | 3 | 0 | 0 | 0 | 52 | 5% |
 | Gankomon | 21 | 58 | 6 | 0 | 0 | 0 | 52 | 10% |
+| Saiyu Warriors | 26 | 105 | 52 | 0 | 1 | 0 | 52 | 50% |
 | Garuru-Myotis | 21 | 60 | 9 | 0 | 0 | 0 | 51 | 15% |
 | TS Galaxy | 17 | 67 | 16 | 0 | 0 | 0 | 51 | 24% |
-| Saiyu Warriors | 26 | 102 | 52 | 0 | 1 | 0 | 49 | 52% |
 | Blue Green Granku Bancho | 21 | 48 | 0 | 0 | 0 | 0 | 48 | 0% |
 | Galactic | 18 | 51 | 3 | 0 | 0 | 0 | 48 | 6% |
 | Red Megid Dukemon | 19 | 48 | 0 | 0 | 0 | 0 | 48 | 0% |
@@ -389,7 +390,6 @@ Source: qa\qa-reports\exam-verdicts
 | Red Purple Imperial | 18 | 53 | 8 | 0 | 0 | 0 | 45 | 15% |
 | Mirage Leomon | 19 | 44 | 0 | 0 | 0 | 0 | 44 | 0% |
 | Yellow Armor | 14 | 44 | 0 | 0 | 0 | 0 | 44 | 0% |
-| Green TyrantKabuterimon | 19 | 43 | 0 | 0 | 0 | 0 | 43 | 0% |
 | Lilith Mill Loop | 18 | 45 | 3 | 0 | 0 | 0 | 42 | 7% |
 | Yellow Purple Security Control | 20 | 47 | 5 | 0 | 0 | 0 | 42 | 11% |
 | fenrilooga | 18 | 56 | 14 | 0 | 0 | 0 | 42 | 25% |
@@ -413,7 +413,7 @@ Source: qa\qa-reports\exam-verdicts
 | ST-4 Giga Green | 16 | 18 | 0 | 0 | 0 | 0 | 18 | 0% |
 | ST-5 Machine Black | 16 | 18 | 0 | 0 | 0 | 0 | 18 | 0% |
 | ST-1 Gaia Red | 16 | 18 | 3 | 0 | 0 | 0 | 15 | 17% |
+| Three Musketeers | 64 | 235 | 216 | 4 | 1 | 1 | 13 | 94% |
 | 3Musketeers | 22 | 73 | 68 | 1 | 0 | 0 | 4 | 95% |
 | Beelstar 3Musketeers | 20 | 68 | 65 | 1 | 0 | 0 | 2 | 97% |
-| Three Musketeers | 64 | 224 | 216 | 4 | 1 | 1 | 2 | 99% |
 | Beelstar (53 cards) | 16 | 58 | 57 | 1 | 0 | 0 | 0 | 100% |

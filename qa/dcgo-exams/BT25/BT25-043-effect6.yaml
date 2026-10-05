@@ -1,0 +1,118 @@
+# Exam scenario: Habakirimon / Habakiri (BT25-043), clause BT25-043#effect#6
+# -- the DUAL rule
+#   "<Arts Digivolve> (Instead of trashing after use, your cards may digivolve
+#    into this card without paying the cost.)"
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE WITNESS. Habakiri is used for 6 (3 -> -3) with Murasamemon BT25-041
+# (yellow Lv.5 [Glowing Dawn]) in play -- which both admits the use (Use Req.;
+# it is yellow too) and is a legal Arts target. After the [Main], instead of
+# being trashed, the Option digivolves onto Murasamemon FOR FREE: memory stays
+# at exactly -3 (= 3 - 6, no digivolve cost), P0's trash stays EMPTY and
+# Habakirimon stands on BT25-041. The arts-digivolved Habakirimon's own [When
+# Digivolving] (#effect#1/#2) then runs: <Recovery +1> (P0 security 5 -> 6)
+# and the security-trash menu, declined. DCGO's ArtsDigivolveEffect plays with
+# activateETB: true (NOTES-BT25-085.md), so the trigger is expected there too.
+#
+# THE LINE (memory ledger):
+#   T1 P0 (0): hard-play Murasamemon BT25-041 (7): 0 -> -7        -> P1 7
+#   T2 P1 (7): Biyomon ST1-02 (2): 7 -> 5; passes                  -> P0 3
+#   T3 P0 (3): USE Habakiri (6): 3 -> -3. [Main]: Biyomon -8000 (deleted);
+#              mass -5000 declined. THE CLAUSE: Arts Digivolve onto BT25-041.
+#              [When Digivolving]: Recovery +1, trash declined. Turn ends.
+#
+# PROMPT SHAPE.
+#   * [Main] + its Yes/No: as BT25-043-effect4.yaml.
+#   * <Arts Digivolve>: DCGO ArtsDigivolveEffect(card) (BT25-043.yaml
+#     crosscheck) -> SelectPermanentEffect("Select 1 Digimon to Arts
+#     Digivolve.", canNoSelect: true), ONE candidate, still asked; ours
+#     install_arts_digivolve_selection (optional OwnField pick). Both
+#     Habakirimon routes from BT25-041 would cost 3 or 4, but an Arts digivolve
+#     pays nothing, so no cost-route prompt is expected on either side
+#     (measured: none on ours).
+#   * [When Digivolving] menu: sim_only `choice:` + dcgo_only `value: 3`
+#     ("Don't trash" -- a GUESS, see BT25-043-effect0.yaml).
+card: BT25-043
+clause: BT25-043#effect#6
+seed: 424242
+decks:
+  p0:
+    # hand (0-4); security (5-9, stack[9] top); stack[10] T3 draw,
+    # stack[11] Arts-digivolve bonus draw, stack[12] the <Recovery +1> card.
+    stack: [BT25-041, BT25-043, BT16-082, BT16-082, BT25-090,
+            ST23-03, ST23-03, ST23-03, ST23-04, ST23-04,
+            BT25-049, ST23-12, ST23-06, ST23-13]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, BT3-007, ST1-04, BT1-009, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hard-play Murasamemon for 7 (0 -> -7).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-041, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, 7): Biyomon (7 -> 5), pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): use Habakiri for 6 (3 -> -3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-043, from: hand } }
+    expect: { prompt: main_phase }
+  # [Main]: Biyomon -8000 (deleted) ...
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # ... and decline the mass -5000.
+  - actor: 0
+    do: { select: { choice: "Don't trash", sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  # THE CLAUSE: Arts Digivolve onto Murasamemon, free.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # The arts-digivolved Habakirimon's [When Digivolving]: after Recovery +1,
+  # decline the security trash.
+  - actor: 0
+    do: { select: { choice: "Don't trash", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 3, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # T4 (P1): one step past the clause; P0's -3 handed the turn over (P1 3).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 13
+    that:
+      turn: 4
+      p1.memory: 3
+      p0.security: 6
+      p0.trash: []
+      # 3 left from the opening + T3 draw + ONE Arts-digivolve bonus draw.
+      p0.hand: [BT16-082, BT16-082, BT25-049, BT25-090, ST23-12]
+      p0.field:
+        - card_id: BT25-043
+          dp: 12000
+          suspended: false
+          sources: [BT25-041]
+      p1.field: []
+      p1.trash: [ST1-02]

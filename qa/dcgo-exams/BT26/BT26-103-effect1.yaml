@@ -31,9 +31,33 @@
 # field; after it, p1.security 4 and P1's trash holds Biyomon AND the checked
 # security card BT1-014.
 #
-# PROMPT SHAPE: T4 block offer = our declinable OwnField pick (DCGO's blocker
-# prompt; answered `decline`). T5 cost route by VALUE 5. Piercing itself asks
-# nothing (no OptionalSkill).
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   * T3 Minervamon [On Play] (BT24/Yellow/BT24_041.cs shared OP/WD/OD,
+#     optional false): its "may play" SelectHandEffect has maxCount 0 (no
+#     cost<=5 [Iliad] card in hand) -> SelectHandEffect.active() returns false
+#     (`_maxCount <= 0`), NO prompt and no OptionalSkill; then the mandatory
+#     De-Digivolve SelectPermanentEffect (HasMatchConditionPermanent true) ->
+#     1:1 with our pick.
+#   * T4 block offer: Minervamon's [Opponent's Turn] grants [Iliad] Digimon
+#     <Blocker>; AttackProcess.cs BlockTiming opens SelectPermanentEffect
+#     (canNoSelect = !Collision) -> plain `decline:` (select_cancel). The
+#     Counter window before it (CounterTiming) stacks nothing: no
+#     OnCounterTiming effect is on P0's side yet.
+#   * T5 cost route: CardController.cs SelectCost asks SelectCountEffect
+#     over the DISTINCT cost list [6 (Yellow Lv.6 circle), 5 (Olympos XII
+#     route)] (~720) -> answered by VALUE 5; ours is an EffectChoice.
+#   * Wrath Mode's WD (BT26_103.cs ActivateClassesForSharedEffects, optional:
+#     false, OPT hash "BT26_103_WD_Counter") is the lone WD trigger
+#     (<Succession> copies nothing off a non-[Jupitermon] source) -> no
+#     MultipleSkills, no OptionalSkill. Its IDestroySecurity queues effect#6
+#     ([All Turns][OPT], fires on EITHER player's removal), which resolves
+#     after the WD: mandatory SelectPermanentEffect (maxCount 1, canNoSelect
+#     false; a sole candidate is still asked). Two P1 candidates here; we pick the T2 Phoenixmon
+#     (opp.field.1).
+#   * Piercing: PierceEffect (CardEffectFactory/KeyWordEffects/Pierce.cs) is
+#     `SetUpActivateClass(..., false, ...)` -> no OptionalSkill, no prompt.
+#     P1's security removal re-fires nothing (effect#6 OPT "BT26_103_AT"
+#     spent).
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

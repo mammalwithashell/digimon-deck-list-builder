@@ -30,9 +30,13 @@
 # PROMPT SHAPE: T1 = RevealBucket x2 + OrderedPermutation N=1 (sim_only) -- see
 # BT25-022-effect1.yaml for the DCGO quirks of that block. T3: Aegiomon's WD
 # is an optional cost-gated trigger; our engine asks it even with no P1 Digimon
-# (Replacement kind -> OptionalSkill) and it is declined. DCGO may instead skip
-# it when there is no -5000 target (BT25_033.cs not readable here) -- a
-# prompt-count mismatch to triage, not a Jamming finding.
+# (Replacement kind -> OptionalSkill) and it is declined. VERIFIED (DCGO C#,
+# 2026-10-04): DCGO asks it too -- BT25_033.cs ActivateClassesForSharedEffects
+# (optional: true) with additionalActivateCondition `SecurityCards.Any()`
+# only; the -5000 target is checked inside the body. Single cost route (Blue
+# Lunamon: only the level-3 [TS] alt condition, cost 2). Jamming is a static
+# CanNotBeDestroyedByBattleClass (KeyWordEffects/Jamming.cs) -> no prompt,
+# so Aegiomon's <Barrier> never opens.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

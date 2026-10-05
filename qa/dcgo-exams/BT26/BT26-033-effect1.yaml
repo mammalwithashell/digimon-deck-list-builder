@@ -3,8 +3,9 @@
 #  1 of your opponent's unsuspended Digimon with the highest DP.)"
 #
 # Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
-# `tm-quiet-red`). No DCGO checkout in the authoring container: prompt shapes
-# below are inferred from the YAML's DCGO crosscheck block + sibling exams.
+# `tm-quiet-red`). DCGO-VERIFIED 2026-10-04: the prompt shapes below were
+# read off DCGO C# at the pinned submodule (b9a0638cd) -- BT26_033.cs plus the
+# shared classes it calls; each row's comment cites the file/method.
 #
 # THE LINE: T1 P-213 (0 -> -7); T2 P1 passes; T3 Jupitermon onto P-213 (cost
 # 4, 3 -> -1); T4 P1 plays Biyomon ST1-02 (vanilla 3000, 1 -> -1); T5 (P0,
@@ -21,6 +22,14 @@
 # MultipleSkills ordering on either side. P-213 prints its own <Raid> but it
 # is NOT inherited (its inherited text is <Decode>), so only Jupitermon's
 # fires.
+# VERIFIED vs DCGO C#: <Raid> = CardEffectFactory RaidEffect (Raid.cs:40,
+# isOptional true) -> OptionalSkill, then RaidProcess's SelectPermanentEffect
+# (canNoSelect true, so SelectPermanentEffect.cs:370's forced auto-pick does
+# NOT apply to the single candidate). <Alliance> stacks too (OnAllyAttack)
+# but CanActivateAlliance is false with no other Digimon, so MultipleSkills
+# (MultipleSkills.cs:219) filters it out and the lone Raid is asked as a bare
+# OptionalSkill -- no MultipleSkills row. P_213.cs:36 registers its <Raid>
+# with isInheritedEffect false.
 # PROVISIONAL: the assert block is OUR engine's result, not backfilled from
 # DCGO -- unconfirmed until the oracle pass.
 card: BT26-033
@@ -60,6 +69,9 @@ steps:
   # printed Red Lv.5 circle (5) and the [Digivolve] Lv.5 w/[TS] circle (4)
   # are open, so both engines ask which cost to pay (ours EffectChoice, DCGO
   # SelectCountEffect over the distinct cost list) -- answered by VALUE 4.
+  # Verified: CardController.cs PlayCardClass.SelectCost (~:620-740) builds
+  # CostList.Distinct() = [5, 4] and, at Count >= 2, opens SelectCountEffect
+  # "Which digivolution cost do you pay?" (CanNoSelect false).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -72,20 +84,31 @@ steps:
   # Jupitermon's [When Digivolving] (effect#4, measured in its own file):
   # top security -> hand (mandatory), then the optional "play or use 1
   # [Iliad]/[TS] card with the cost reduced by 5" hand pick -- DECLINED.
+  # Verified (BT26_033.cs:56-135): SetUpActivateClass(..., isOptional false)
+  # -> no OptionalSkill; one SelectHandEffect (canNoSelect true, maxCount 1),
+  # opened only if a hand card passes CanPlayOrUse at max(0, cost - 5) --
+  # Inori / Aegiomon / Shota do here (MaxMemoryCost = |10 - memory| = 11).
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
-  # T3's end (memory -1 -> the turn ends). DCGO-ONLY ROW: Jupitermon (on
-  # P-213, in play since T1, unsuspended) has <Engage>, so DCGO's
-  # EndTurnProcess asks the <Engage> OptionalSkill gate. Our engine NEVER
-  # parks it for a DUAL top card (suspected engine bug -- see
-  # BT26-033-effect3.yaml): `Game::has_end_of_turn_keywords`
-  # (game_phases.rs ~596) skips any permanent whose top card fails
-  # `CardSource::is_digimon` (card_kind == Digimon), and a board-resident DUAL
-  # card is CardKind::Dual. Declined on the DCGO side only; this row's
-  # EXISTENCE is the measurement of that gap.
+  # T3's end (memory -1 -> the turn ends): Jupitermon (on P-213, in play
+  # since T1, unsuspended) has <Engage>, so the end-of-turn attack window
+  # opens in BOTH engines -- ours parks EndOfTurnAction, DCGO's EndTurnProcess
+  # asks the <Engage> OptionalSkill gate. Declined (a `pass` at the park folds
+  # to OptionalSkill "no"). This row was dcgo_only until
+  # G-ENGINE-DUAL-END-OF-TURN-WINDOW was fixed (2026-10-04): our engine used
+  # to skip the park for a DUAL top card (CardKind::Dual).
+  # Verified, including on this NEGATIVE-memory turn end:
+  # AutoProcessing.cs EndTurnCheck (:635) runs EndTurnProcess as soon as the
+  # non-turn player has >= 1 memory, and EndTurnProcess (:679) stacks
+  # EffectTiming.OnEndTurn BEFORE moving to phase.End -- the same path as a
+  # pass. <Engage> is CardEffectFactory EngageEffect (Engage.cs:37,
+  # isOptional true -> OptionalSkill as the lone stacked effect), CanUse =
+  # owner's turn + IsPermanentExistsOnBattleAreaDigimon (Permanent.IsDigimon
+  # is true for the DUAL top card: CardSource.IsDigimon = cardKind contains
+  # Digimon), CanActivate = CanActivateEngage (CanAttack && !IsAttacking).
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { pass: {} }
     expect: { prompt: OptionalSkill }
   # T4 (P1, memory 1): Biyomon (2): 1 -> -1 -> P0 at 1.
   - actor: 1

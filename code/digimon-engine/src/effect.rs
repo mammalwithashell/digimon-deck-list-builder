@@ -320,6 +320,15 @@ pub struct Effect {
     /// per-slot keying. See `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
     pub shared_opt_group: Option<u8>,
 
+    /// Printed-clause identity for effects lowered from ONE multi-timing
+    /// clause (`when: [on_play, when_digivolving]`). Every lowered effect of
+    /// such a clause carries the same `Some(clause_index)`; single-timing
+    /// effects carry `None`. Consumers that enumerate "effects" as printed
+    /// objects (the Homeros-style `refire_effect` "activate 1 [On Play] or
+    /// [When Digivolving] effect") collapse a group to ONE choice.
+    /// `G-ENGINE-REFIRE-SPLITS-COMBINED-TIMING`.
+    pub clause_group: Option<u32>,
+
     // Behavior
     pub condition: Option<ConditionFn>,
     /// Context-aware candidate filter for `WhenWouldBe*` replacement timings.
@@ -877,6 +886,7 @@ impl EffectBuilder {
                 blast_digivolve: false,
                 max_per_turn: 0,
                 shared_opt_group: None,
+                clause_group: None,
                 condition: None,
                 replacement_condition: None,
                 process: None,
@@ -1039,6 +1049,13 @@ impl EffectBuilder {
     /// See `Effect::shared_opt_group` and `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
     pub fn shared_opt_group(mut self, group: u8) -> Self {
         self.inner.shared_opt_group = Some(group);
+        self
+    }
+
+    /// Tag this effect as one timing of a multi-timing printed clause.
+    /// See `Effect::clause_group`.
+    pub fn clause_group(mut self, group: u32) -> Self {
+        self.inner.clause_group = Some(group);
         self
     }
 

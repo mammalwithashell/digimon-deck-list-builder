@@ -19,10 +19,15 @@
 # read -1 and hand the turn over), with BT26-029 standing on the Aegiomon.
 # Security untouched (5) -- the WD was declined.
 #
-# PROMPT SHAPE: the cost route is our `EffectChoice` vs DCGO's
-# `SelectCountEffect` over the distinct cost list, both answered by VALUE
-# (EX12-015 precedent). Aegiomon's [On Play] and BT26-029's WD are each a lone
-# optional trigger -> `OptionalSkill` (decline).
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - the cost route is our `EffectChoice` vs DCGO's
+#     SelectCountEffect over the DISTINCT cost list (CardController.cs
+#     SelectCost ~650-740: Yellow Lv.4 circle 4 + [Aegiomon] 3 -> [4, 3]),
+#     both answered by VALUE.
+#   - Aegiomon's [On Play] (BT25/Yellow/BT25_033.cs shared OP/WD, optional:
+#     true) and BT26-029's [When Digivolving] (BT26/Yellow/BT26_029.cs shared
+#     OP/WD, optional: true) are each a lone optional trigger -> OptionalSkill
+#     (decline); MultipleSkills short-circuits at one active skill.
 card: BT26-029
 clause: BT26-029#effect#0
 seed: 424242

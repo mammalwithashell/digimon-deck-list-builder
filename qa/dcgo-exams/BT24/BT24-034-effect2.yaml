@@ -21,14 +21,25 @@
 # security card moved.
 #
 # PROMPT SHAPE.
-#   Ours (BT24-034.yaml): a 2-branch EffectChoice ("Add top security to hand
-#   and play a TS Tamer" / "Decline") -> answered by the sim-only `choice:` row,
-#   then `select_hand` (Hand <-> SelectHandEffect) over the [TS] Tamers.
-#   DCGO (expected, BT24_034.cs not readable in this container): an
-#   OptionalSkill yes/no for the "you may" -> the `dcgo_only` yes row -- then
-#   a SelectHandEffect for the Tamer. If DCGO instead gates on the cost with a
-#   different widget (generic_bool) or skips the gate, the run aborts at the
-#   dcgo_only row and THAT is the finding.
+#   DCGO -- VERIFIED against BT24_034.cs (2026-10-04): the [On Play]
+#   ActivateClass is SetUpActivateClass(SharedCanActivateCondition, ..., -1,
+#   true, ...) -> an OptionalSkill yes/no; the body then adds SecurityCards[0]
+#   to the hand + IReduceSecurity, and, since the hand holds a ValidTamer
+#   ([TS] Tamer, name not on a field Tamer, CanPlayAsNewPermanent), opens ONE
+#   SelectHandEffect (maxCount 1, canNoSelect true) -> the Inori row;
+#   PlayPermanentCards(payCost: false, activateETB: true). Inori BT24-084 has
+#   no [On Play]; her [All Turns] OnLoseSecurity is NOT on the stack -- DCGO
+#   stacks OnLoseSecurity skill infos at the removal (CardController.cs
+#   StackSkillInfos(..., OnLoseSecurity)), while she is still in the hand.
+#   Ours: the same OptionalSkill-shaped outer gate + a declinable Hand pick ->
+#   both rows shared.
+#
+# FIXED 2026-10-04 (G-CARD-BY-X-GATE-NEEDS-PAYOFF): ours used to gate on a
+# [TS] Tamer in hand BEFORE the cost, behind a 2-branch EffectChoice, and
+# forced the Tamer pick (a `sim_only` choice row + a `dcgo_only` yes row).
+# BT24-034.yaml now mirrors DCGO (optional gate on security > 0, cost first,
+# declinable pick; §15-7-5), so the gate is one shared OptionalSkill row.
+
 card: BT24-034
 clause: BT24-034#effect#2
 seed: 424242
@@ -48,13 +59,10 @@ steps:
   - actor: 0
     do: { play: { card: BT24-034, from: hand } }
     expect: { prompt: main_phase }
-  # DCGO-ONLY: the expected OptionalSkill gate for "you may".
+  # The "By adding your top security card" OptionalSkill gate: accept.
   - actor: 0
-    do: { select: { yes: true, dcgo_only: true } }
+    do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
-  # SIM-ONLY: our EffectChoice branch for the same decision.
-  - actor: 0
-    do: { select: { choice: "Add top security", sim_only: true } }
   # THE CLAUSE: play Inori Misono from hand for free.
   - actor: 0
     do: { select: { cards: [BT24-084] } }
@@ -63,7 +71,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 5
+  - at: 4
     that:
       turn: 2
       p0.memory: -5

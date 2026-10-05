@@ -27,6 +27,10 @@
 # PROMPT SHAPE: T3 one mandatory SelectPermanentEffect (de-digivolve). T4 the
 # blocker window: DCGO SelectPermanentEffect, ours the OwnField "Declare a
 # blocker" prompt, answered own.field.0 (P0 has one Digimon -> slot-safe).
+# VERIFIED (DCGO C#, 2026-10-04): AttackProcess.cs BlockTiming = ONE
+# SelectPermanentEffect over the defender's Blocker Digimon; BT25_025.cs
+# [On Play] = one mandatory Degenerate SelectPermanentEffect, unsuspend half
+# off at 5 security.
 card: BT25-025
 clause: BT25-025#effect#1
 seed: 424242

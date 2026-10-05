@@ -20,8 +20,8 @@
       "scenario_path": "qa/dcgo-exams/EX12/P-130-effect1.yaml",
       "recorded_at": "2026-08-24T02:07:42.203340100+00:00"
     },
-    "P-130#effect#2": {
-      "clause_id": "P-130#effect#2",
+    "P-130#security#0": {
+      "clause_id": "P-130#security#0",
       "card_id": "P-130",
       "verdict": "confirmed",
       "label": "Security Effect",

@@ -13,7 +13,7 @@ impl Game {
     /// internals. Every `HashMap`/`HashSet` contribution is sorted first.
     pub fn verification_digest(&self) -> u64 {
         let mut h = Sha256::new();
-        token(&mut h, "digimon-engine.verification-digest.v1");
+        token(&mut h, "digimon-engine.verification-digest.v2");
 
         field(&mut h, "rules.player_count", self.rules.player_count);
         field(&mut h, "rules.security_count", self.rules.security_count);
@@ -130,6 +130,12 @@ impl Game {
                     "pending_selection.zone_owner",
                     &selection.zone_owner,
                 );
+                // Two consecutive prompts of one effect can agree on every
+                // field above (same kind / chooser / candidates / source —
+                // ST23-09's "Suspend 1 …" then "Return 1 … suspended …" with a
+                // single opponent Digimon), so the prompt text and the
+                // resume continuation below are what tell them apart.
+                field(&mut h, "pending_selection.prompt", &selection.prompt);
                 if let Some(choices) = &selection.effect_choices {
                     for choice in choices {
                         token(&mut h, "effect_choice");
@@ -144,6 +150,8 @@ impl Game {
             }
             None => token(&mut h, "pending_selection=none"),
         }
+
+        write_resume_stack(&mut h, self.pending_selection_resume.as_ref());
 
         debug_field(&mut h, "pending_attack", &self.pending_attack);
         debug_field(&mut h, "pending_security", &self.pending_security);
@@ -341,6 +349,38 @@ fn write_effect_queue(hasher: &mut Sha256, queue: &std::collections::VecDeque<Qu
             "queued.granted_effect_id",
             &effect.granted_effect_id,
         );
+    }
+}
+
+/// Stable fingerprint of the parked selection continuation
+/// (`Game::pending_selection_resume`): per frame its variant name and, for a
+/// DSL `RunTail`, the slot it binds and how much body is left. Not the full
+/// `Debug` dump — `Bindings` keeps a `HashMap`, whose order is not stable
+/// across separately-built games (recording vs replay).
+fn write_resume_stack(hasher: &mut Sha256, stack: Option<&crate::resume::ResumeStack>) {
+    let Some(stack) = stack else {
+        token(hasher, "pending_selection_resume=none");
+        return;
+    };
+    section(hasher, "pending_selection_resume", stack.frames.len());
+    for frame in &stack.frames {
+        let dump = format!("{frame:?}");
+        let variant = dump
+            .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+            .next()
+            .unwrap_or("");
+        field(hasher, "resume.frame", variant);
+        if let crate::resume::ResumeFrame::RunTail {
+            bind_as,
+            inner_tail,
+            outer_conts,
+            ..
+        } = frame
+        {
+            debug_field(hasher, "resume.bind_as", bind_as);
+            field(hasher, "resume.inner_tail", inner_tail.len());
+            field(hasher, "resume.outer_conts", outer_conts.len());
+        }
     }
 }
 

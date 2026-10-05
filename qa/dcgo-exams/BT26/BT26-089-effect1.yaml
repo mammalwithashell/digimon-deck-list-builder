@@ -1,0 +1,124 @@
+# Exam scenario: Kyo Sawashiro (BT26-089, yellow Tamer), clause
+# BT26-089#effect#1 -- "[All Turns] When your security stack is removed from,
+# by suspending this Tamer, place the top card of your deck face down under
+# this Tamer. After, if removed from by effects, give 1 of your opponent's
+# Digimon <Security A. -1> until their turn ends."
+#
+# Measured through the BY-EFFECTS arm (the whole clause): P0's own Liollmon
+# (BT26-025) [On Play] places P0's top security card face down under
+# BT26-089 -- a security removal BY AN EFFECT. BT26-089 then suspends, takes
+# the deck top as a face-down source, and gives P1's Agumon <Security A. -1>.
+# The -1 is then made VISIBLE on P1's next turn: Agumon (1 check) attacks
+# security and checks 0 cards, so P0's security count does not move.
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger, P0 perspective):
+#   T1 (0): pass breeding; hard-play BT26-089 (3) -> -3, turn ends.
+#   T2 (P1, 3): play Agumon ST1-03 (3 -> 0); pass -> P0 at 3.
+#   T3 (3): draw stack[10] ST23-13; BT26-089 SOMP: ST23-03 under it, draw
+#       stack[11] BT25-049, +1 -> 4. Play Liollmon BT26-025 (3) -> 1. Its
+#       [On Play]: top security stack[9] ST23-15 goes face down under
+#       BT26-089 (security 5 -> 4), then <Recovery +1> takes stack[12]
+#       BT25-057 (-> 5). THE CLAUSE (queued, resolves after): suspend
+#       BT26-089, place deck top stack[13] BT25-043 face down under it; the
+#       removal was by an effect -> Agumon gets <Security A. -1> until the
+#       end of P1's turn. Pass -> P1 gets 3.
+#   T4 (P1): Agumon attacks security: Security Attack 1 - 1 = 0 checks.
+#   Witness (at 12, end of T3 effects): BT26-089 suspended with sources
+#   {ST23-03, ST23-15, BT25-043}, security 5. Witness (at 16, after the T4
+#   attack): P0 security STILL 5, trash empty, Agumon suspended.
+#
+# PROMPT SHAPE (cards/bt26/BT26-089.yaml + cards/bt26/BT26-025.yaml DCGO
+# crosschecks):
+#   - BT26_025.cs [On Play] is optional:false with a canNoSelect:true
+#     SelectPermanentEffect over own [Glowing Dawn] Tamers -- DCGO ASKS the
+#     pick even with one candidate. OURS parks a 1-pending TriggerOrder
+#     (declinable; maps to OptionalSkill) and then auto-resolves the
+#     single-candidate Tamer pick. Authored as a sim_only yes + a dcgo_only
+#     SelectPermanentEffect row. EXPECTED PROMPT-SHAPE RISK (see frag-E.md).
+#   - BT26_089.cs OnLoseSecurity is optional TRUE -> OptionalSkill (ours:
+#     TriggerOrder, 1 declinable candidate -> OptionalSkill). Then
+#     IsByEffect(hashtable) -> canNoSelect:false SelectPermanentEffect over
+#     P1's Digimon -> ChangeDigimonSAttack(-1, UntilOpponentTurnEnd).
+#     DCGO asks the opp pick even with 1 candidate; ours parks it (OppField).
+card: BT26-089
+clause: BT26-089#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-089, BT26-025, ST23-03, ST23-09, ST23-06,
+            ST23-03, ST23-04, ST23-06, ST23-13, ST23-15,
+            ST23-13, BT25-049, BT25-057, BT25-043, ST23-04]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-089, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST23-03] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: BT26-025, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT26-089], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 12
+    that:
+      turn: 3
+      p0.memory: 1
+      p0.security: 5
+      p0.hand: [BT25-049, ST23-06, ST23-09, ST23-13]
+      p0.field:
+        - { card_id: BT26-025, dp: 1000, suspended: false, sources: [] }
+        - { card_id: BT26-089, dp: -1, suspended: true, sources: [BT25-043, ST23-03, ST23-15] }
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: false, sources: [] }
+  - at: 15
+    that:
+      turn: 4
+      p0.security: 5
+      p0.trash: []
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: true, sources: [] }

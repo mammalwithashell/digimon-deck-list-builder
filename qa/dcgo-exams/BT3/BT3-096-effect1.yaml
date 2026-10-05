@@ -1,4 +1,4 @@
-# Exam scenario: Mimi Tachikawa (BT3-096), clause BT3-096#effect#1 --
+# Exam scenario: Mimi Tachikawa (BT3-096), clause BT3-096#security#0 --
 # "[Security] Play this card without paying its memory cost."
 #
 # DECK NOTE. `tm-mimi-purple` (qa/dcgo-exams/BT3/tm_bt3_096_pool.json): see
@@ -16,7 +16,7 @@
 # P0's battle area is empty until the flip, so no blocker window precedes the
 # check; P0's hand is filler that never plays.
 card: BT3-096
-clause: BT3-096#effect#1
+clause: BT3-096#security#0
 seed: 424242
 decks:
   p0:

@@ -23,12 +23,18 @@
 # hand; at 8 Hiroko is gone (and NOT in the trash -- she went to the deck),
 # Elecmon BT25-030 is on the field, and memory is still 3 (free play).
 #
-# PROMPT SHAPE. Ours: TriggerOrder(1) -> OptionalSkill (the "by returning"
-# cost gate), then a declinable SelectHandEffect over the [TS] <=5000 DP Digimon in
-# hand (BT24-034, BT25-033, BT25-030). DCGO:
-# OptionalSkill then SelectHandEffect (canNoSelect) -- or the pick may come
-# first with the return as its cost; watch the order. Elecmon BT25-030 SoMP:
-# DCGO OptionalSkill.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - T1 [On Play] (BT24_083.cs:107, mandatory): SimplifiedRevealDeckTopCards-
+#     AndSelect -> one SelectCardEffect for the single [TS] bucket, then
+#     ReturnRevealedCardsToLibraryBottom asks ONE SelectCardEffect with
+#     maxCount = 2 over the leftovers even when they are identical copies
+#     (RevealLibrary.cs:469-515; the auto-order shortcut is human-UI only).
+#   - T3 [Start of Your Turn] is optional (BT24_083.cs:20) -> OptionalSkill;
+#     on yes the deck-bounce COST is paid first, then SelectHandEffect
+#     (maxCount = min(1, candidates), canNoSelect, BT24_083.cs:58-75). Order
+#     confirmed: gate, then pick.
+#   - Elecmon BT25-030 [Start of Your Main Phase] is optional (BT25_030.cs:30)
+#     -> OptionalSkill, declined.
 card: BT24-083
 clause: BT24-083#effect#0
 seed: 424242

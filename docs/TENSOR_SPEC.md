@@ -348,7 +348,10 @@ Start at `+7`, bottom-to-top ordering.
 Card identities are encoded as integer registry indices (float-cast):
 
 - `0` means empty/padding
-- Production card indices come from stable explicit `index` values in `data/cards.json`
+- Production card indices come from stable explicit `index` values in `data/cards.json`.
+  A card without one also encodes as `0`, indistinguishable from an empty slot; after an
+  ingest, `python code/tools/build_registry.py --offline` assigns the next free indices,
+  and `code/tests/test_cards_json_integrity.py` fails while any card lacks one
 - Legacy/test card data without explicit indices uses a deterministic sorted fallback
 - `CardRegistry` rejects duplicate explicit indices
 - The `CardEmbeddingExtractor` contains a trainable `nn.Embedding(20000, 16)` that maps

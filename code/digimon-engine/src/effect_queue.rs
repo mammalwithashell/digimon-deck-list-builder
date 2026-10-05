@@ -170,6 +170,7 @@ impl Game {
             dna_origin_context: None,
             granted_effect_id: None,
             keyword_effect: None,
+            trigger_batch: 0,
         }
     }
 
@@ -838,6 +839,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }
@@ -909,6 +911,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: None,
+                    trigger_batch: 0,
                 });
             }
         }
@@ -980,6 +983,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }
@@ -1356,7 +1360,35 @@ impl Game {
                 }
             }
 
-            let Some(chooser) = self.next_chooser() else {
+            // §15-4-5-2/3 (digest.md): an effect that triggers while a
+            // pending effect is being resolved ("derived triggering") is
+            // activated BEFORE the effects that were already pending. Stamp
+            // every not-yet-stamped entry -- everything enqueued since the
+            // previous iteration, i.e. by the effect that just resolved (or by
+            // the action / rule processing that started this drain) -- with a
+            // fresh batch id, then stage ONLY the newest batch. Batches nest
+            // naturally: a derived batch's own derived triggers get a still
+            // higher id, and an older batch resumes once every newer one has
+            // emptied. DCGO: `MultipleSkills.cs` resolves newly triggered
+            // effects in a nested `TriggeredSkillProcess` before returning to
+            // the still-pending list. G-ENGINE-TRIGGER-ORDER-DERIVED-FIRST.
+            if self.effect_queue.iter().any(|qe| qe.trigger_batch == 0) {
+                self.trigger_batch_seq = self.trigger_batch_seq.wrapping_add(1).max(1);
+                let batch = self.trigger_batch_seq;
+                for qe in self.effect_queue.iter_mut() {
+                    if qe.trigger_batch == 0 {
+                        qe.trigger_batch = batch;
+                    }
+                }
+            }
+            let top_batch = self
+                .effect_queue
+                .iter()
+                .map(|qe| qe.trigger_batch)
+                .max()
+                .unwrap_or(0);
+
+            let Some(chooser) = self.next_chooser_in_batch(top_batch) else {
                 self.effect_chain_depth = 0;
                 return;
             };
@@ -1382,19 +1414,26 @@ impl Game {
             // condition and fires the "1 of your Omnimon may attack a
             // player" prompt in the SAME EoT batch, matching DCGO.
             //
-            // Source-liveness and once-per-turn checks are NOT applied
-            // here: source-liveness can become false mid-drain due to a
-            // sibling trigger's body trashing the source, and the
-            // run-time check handles that case; OPT lockout is
-            // accounting-only and doesn't change user-visible choice.
-            let non_firing: Vec<usize> = self.non_firing_queued_effect_indices_for(chooser);
+            // Source-liveness is NOT checked here: it can become false
+            // mid-drain due to a sibling trigger's body trashing the source,
+            // and the run-time check handles that case. An EXHAUSTED
+            // once-per-turn count IS excluded (it only rises within a turn):
+            // an OPT-spent entry left in the bundle forced a dead
+            // `TriggerOrder` decision whose pick resolved as a no-op
+            // (G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER /
+            // G-ENGINE-OPT-NOOP-REQUEUE).
+            let non_firing: Vec<usize> =
+                self.non_firing_queued_effect_indices_for(chooser, top_batch);
 
             let bundle: Vec<usize> = self
                 .effect_queue
                 .iter()
                 .enumerate()
                 .filter_map(|(i, qe)| {
-                    (qe.controller == chooser && !non_firing.contains(&i)).then_some(i)
+                    (qe.controller == chooser
+                        && qe.trigger_batch == top_batch
+                        && !non_firing.contains(&i))
+                    .then_some(i)
                 })
                 .collect();
 
@@ -2306,6 +2345,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }
@@ -2373,10 +2413,24 @@ impl Game {
             if !timing_flag_matches(effect, timing) {
                 continue;
             }
-            // Security trigger specifically: ignore effects that don't carry
-            // the security flag. Matches Python's
-            // `if getattr(effect, 'is_security_effect', False)` filter.
-            if timing == EffectTiming::SecuritySkill && !effect.security {
+            // `SecuritySkill` / `OnLoseSecurity`: only `[Security]`-scoped
+            // effects are live on a card that is leaving / has left the
+            // security stack — it is not a battle-area permanent (§13-1-5 "in
+            // no area"; §15-14-5). In particular a removed card's own
+            // `[All Turns]` "when your security stack is removed from"
+            // observer (BT24-101, BT25-044) must not fire for its own
+            // removal; the battle-area observer scan in `enqueue_triggered`
+            // is where such observers are collected.
+            // G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH. (For `SecuritySkill` this
+            // is the long-standing Python `is_security_effect` filter.)
+            // Other timings (e.g. `OnDiscardSecurity`, BT13-106's "when this
+            // card is trashed from security") are the card's own self-
+            // referential clauses and keep firing here.
+            if matches!(
+                timing,
+                EffectTiming::SecuritySkill | EffectTiming::OnLoseSecurity
+            ) && !effect.security
+            {
                 continue;
             }
             self.effect_queue.push_back(QueuedEffect {
@@ -2397,6 +2451,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }
@@ -2468,6 +2523,7 @@ impl Game {
                 dna_origin_context: self.current_dna_origin,
                 granted_effect_id: None,
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
     }
@@ -2585,6 +2641,7 @@ impl Game {
                 bypass_once_per_turn: false,
                 granted_effect_id: Some(body_id),
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
 
@@ -2633,6 +2690,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: None,
+                    trigger_batch: 0,
                 });
             }
         }
@@ -2718,6 +2776,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: Some(keyword),
+                    trigger_batch: 0,
                 });
             }
         }
@@ -2783,6 +2842,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: None,
+                    trigger_batch: 0,
                 });
             }
         }
@@ -2874,6 +2934,7 @@ impl Game {
                         dna_origin_context: self.current_dna_origin,
                         granted_effect_id: None,
                         keyword_effect: None,
+                        trigger_batch: 0,
                     });
                 }
             }
@@ -2947,6 +3008,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: None,
+                    trigger_batch: 0,
                 });
             }
         }
@@ -3019,6 +3081,7 @@ impl Game {
                 bypass_once_per_turn: false,
                 granted_effect_id: Some(body_id),
                 keyword_effect: None,
+                trigger_batch: 0,
             });
         }
 
@@ -3048,6 +3111,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: None,
+                    trigger_batch: 0,
                 });
             }
         }
@@ -3095,6 +3159,7 @@ impl Game {
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
                     keyword_effect: None,
+                    trigger_batch: 0,
                 });
             }
         }
@@ -3102,24 +3167,31 @@ impl Game {
 
     /// Who gets to choose the next effect to resolve. Turn player first,
     /// then clockwise through the remaining players.
-    fn next_chooser(&self) -> Option<PlayerId> {
-        if self.effect_queue.is_empty() {
-            return None;
-        }
-        if let Some(qe) = self.effect_queue.iter().find(|qe| qe.is_turn_player) {
+    /// Within §15-4-5 trigger batch `batch` (see `QueuedEffect::trigger_batch`)
+    /// — the turn player's entries are staged first (15-4-3-5).
+    fn next_chooser_in_batch(&self, batch: u32) -> Option<PlayerId> {
+        let in_batch = |pid: Option<PlayerId>, turn_player: bool| {
+            self.effect_queue.iter().find(|qe| {
+                qe.trigger_batch == batch
+                    && pid.map_or(true, |p| qe.controller == p)
+                    && (!turn_player || qe.is_turn_player)
+            })
+        };
+        let first = in_batch(None, false)?;
+        if let Some(qe) = in_batch(None, true) {
             return Some(qe.controller);
         }
         let n = self.turn_order.len();
         for offset in 0..n {
             let idx = (self.turn_player_idx + offset) % n;
             let pid = self.turn_order[idx];
-            if self.effect_queue.iter().any(|qe| qe.controller == pid) {
+            if in_batch(Some(pid), false).is_some() {
                 return Some(pid);
             }
         }
         // Defensive fallback — if somehow no turn-order player owns any
-        // queued effect (e.g. eliminated controller), use the front entry.
-        self.effect_queue.front().map(|qe| qe.controller)
+        // queued effect (e.g. eliminated controller), use the first entry.
+        Some(first.controller)
     }
 
     /// Return the indices of queued effects owned by `chooser` whose
@@ -3157,17 +3229,78 @@ impl Game {
     /// are NEVER excluded — their bodies have no `Effect` metadata and
     /// no clause-level condition, so the "would no-op" predicate is
     /// undefined for them. They keep their existing run-time path.
-    fn non_firing_queued_effect_indices_for(&mut self, chooser: PlayerId) -> Vec<usize> {
+    fn non_firing_queued_effect_indices_for(&mut self, chooser: PlayerId, batch: u32) -> Vec<usize> {
         let mut to_skip: Vec<usize> = Vec::new();
         for i in 0..self.effect_queue.len() {
-            if self.effect_queue[i].controller != chooser {
+            if self.effect_queue[i].controller != chooser
+                || self.effect_queue[i].trigger_batch != batch
+            {
                 continue;
             }
-            if !self.queued_effect_condition_passes(i) {
+            if self.queued_effect_opt_exhausted(i)
+                || !self.queued_effect_condition_passes(i)
+                || !self.queued_effect_index_is_live(i)
+            {
                 to_skip.push(i);
             }
         }
         to_skip
+    }
+
+    /// True when `effect_queue[i]` is a `[X Per Turn]` effect whose per-turn
+    /// count is already used up (and the entry does not bypass OPT). Such an
+    /// entry "does not activate again" (§15-14-1: `[X Per Turn]` counts each
+    /// activation), so the run-time path would skip it; it must not be an
+    /// orderable `TriggerOrder` entry either. Activation counts only rise
+    /// within a turn, so excluding it is never premature.
+    /// G-ENGINE-OPT-NOOP-REQUEUE / G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER.
+    fn queued_effect_opt_exhausted(&self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if qe.bypass_once_per_turn || qe.granted_effect_id.is_some() {
+            return false;
+        }
+        let Some(perm_handle) = qe.source_permanent else {
+            return false;
+        };
+        let Some(effects) = self.effects_for_queued(qe) else {
+            return false;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return false;
+        };
+        if effect.max_per_turn == 0 {
+            return false;
+        }
+        let opt_key = self.queued_opt_key(effect, qe);
+        matches!(
+            self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key),
+            Some(count) if count >= effect.max_per_turn
+        )
+    }
+
+    /// Staging-time liveness (G-PERMANENT-HANDLE-POSITIONAL-STALENESS part 3,
+    /// DCGO's `CanActivate` re-filter in MultipleSkills): an entry whose source
+    /// has left (15-4-4-3 — it became a new card) can never resolve, so it must
+    /// not be offered as a `TriggerOrder` branch. Live once a parked
+    /// replacement's leave commits before its triggers are staged
+    /// (G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES). Granted bodies and
+    /// entries whose effect can't be looked up stay (the run-time path decides).
+    fn queued_effect_index_is_live(&self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if qe.granted_effect_id.is_some() {
+            return true;
+        }
+        let Some(effects) = self.effects_for_queued(qe) else {
+            return true;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return true;
+        };
+        self.queued_effect_source_is_live(qe, effect)
     }
 
     /// Evaluate the clause-level condition of `effect_queue[i]` against the
@@ -4587,6 +4720,7 @@ impl Game {
             }
         }
         let capped = bundle.len().min(HAND_MAIN_LIMIT);
+        let offered: Vec<usize> = bundle[..capped].to_vec();
         let mut valid_action_ids: Vec<u16> = Vec::with_capacity(capped);
         let mut choices: Vec<EffectChoiceEntry> = Vec::with_capacity(capped);
         for pos in 0..capped {
@@ -4677,31 +4811,26 @@ impl Game {
             source_card,
             source_permanent,
             source_kind,
-            callback: Box::new(move |game: &mut Game, action_id: u16| {
-                let pos = action_id.saturating_sub(HAND_EFFECT_START) as usize;
-                // Find the i-th entry in `game.effect_queue` controlled by
-                // `chooser` — this is the same bundle position the prompt
-                // offered. Recompute defensively; single-threaded + paused
-                // selection guarantees the queue hasn't shifted.
-                let target_idx = game
-                    .effect_queue
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, qe)| qe.controller == chooser)
-                    .nth(pos)
-                    .map(|(i, _)| i);
-                if let Some(idx) = target_idx {
-                    if let Some(qe) = game.effect_queue.remove(idx) {
-                        game.run_queued_effect(qe);
+            callback: Box::new({
+                let bundle = offered.clone();
+                move |game: &mut Game, action_id: u16| {
+                    let pos = action_id.saturating_sub(HAND_EFFECT_START) as usize;
+                    // The prompt's position -> the queue index it offered
+                    // (single-threaded + paused selection: the queue hasn't
+                    // shifted).
+                    if let Some(&idx) = bundle.get(pos) {
+                        if let Some(qe) = game.effect_queue.remove(idx) {
+                            game.run_queued_effect(qe);
+                        }
                     }
+                    // Generic resolver will call `drain_effect_queue` after we
+                    // return — no need to drain from inside the callback.
                 }
-                // Generic resolver will call `drain_effect_queue` after we
-                // return — no need to drain from inside the callback.
             }),
             on_decline: if allow_decline_all {
+                let bundle = offered.clone();
                 Some(Box::new(move |game: &mut Game| {
-                    game.effect_queue
-                        .retain(|qe| !(qe.controller == chooser && qe.is_optional));
+                    Self::drop_declined_trigger_bundle(game, &bundle);
                     // Drain is the generic resolver's responsibility.
                 }))
             } else {
@@ -4713,10 +4842,25 @@ impl Game {
                 crate::resume::TriggerOrderSelectionState {
                     chooser,
                     allow_decline_all,
+                    bundle: offered,
                     outer_conts: Vec::new(),
                 },
             )],
         });
+    }
+
+    /// Decline-all on a `TriggerOrder`: drop the OPTIONAL entries among the
+    /// offered queue indices (an all-optional bundle by construction).
+    fn drop_declined_trigger_bundle(game: &mut Game, bundle: &[usize]) {
+        let mut idxs: Vec<usize> = bundle
+            .iter()
+            .copied()
+            .filter(|&i| game.effect_queue.get(i).is_some_and(|qe| qe.is_optional))
+            .collect();
+        idxs.sort_unstable();
+        for i in idxs.into_iter().rev() {
+            game.effect_queue.remove(i);
+        }
     }
 
     pub(crate) fn run_trigger_order_selection_step(
@@ -4727,21 +4871,13 @@ impl Game {
     ) {
         if is_pass {
             if state.allow_decline_all {
-                self.effect_queue
-                    .retain(|qe| !(qe.controller == state.chooser && qe.is_optional));
+                Self::drop_declined_trigger_bundle(self, &state.bundle);
             }
             return;
         }
 
         let pos = action_id.saturating_sub(HAND_EFFECT_START) as usize;
-        let target_idx = self
-            .effect_queue
-            .iter()
-            .enumerate()
-            .filter(|(_, qe)| qe.controller == state.chooser)
-            .nth(pos)
-            .map(|(i, _)| i);
-        if let Some(idx) = target_idx {
+        if let Some(&idx) = state.bundle.get(pos) {
             if let Some(qe) = self.effect_queue.remove(idx) {
                 self.run_queued_effect(qe);
             }
@@ -4837,6 +4973,18 @@ impl Game {
             }
         } else {
             (sel.callback)(self, action_id);
+        }
+        // G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES: when this selection
+        // was the last nested pick of a replacement process (e.g. <Decode>'s
+        // source pick, which PLAYS a Digimon), the parked replacement's commit
+        // — the original event completing, e.g. the carrier leaving — is
+        // still part of the same immediate-effect processing (§16-35; an
+        // immediate effect's processing completes before waiting triggered
+        // effects resolve). Commit it INSIDE the deferred-drain scope so
+        // triggers the process raised (the played Digimon's [On Play]) wait
+        // until the carrier has actually left.
+        if self.pending_selection.is_none() && !self.parked_replacement.is_empty() {
+            crate::replacement::try_drain_parked_replacement_with_guard(self);
         }
         self.exit_deferred_drain_and_flush();
 
@@ -5174,14 +5322,24 @@ impl Game {
     /// next chooser, so the turn player's bucket still resolves ahead of a
     /// non-turn player's Option trash (15-4-3-5-2).
     fn option_orderable_trigger_indices(&mut self, owner: PlayerId) -> Vec<usize> {
-        if self.effect_queue.is_empty() || self.next_chooser() != Some(owner) {
+        // The newest §15-4-5 batch: still-unstamped entries (caused by the
+        // Option body that just finished) when there are any, else the
+        // highest stamped batch.
+        let batch = if self.effect_queue.iter().any(|qe| qe.trigger_batch == 0) {
+            0
+        } else {
+            self.effect_queue.iter().map(|qe| qe.trigger_batch).max().unwrap_or(0)
+        };
+        if self.effect_queue.is_empty() || self.next_chooser_in_batch(batch) != Some(owner) {
             return Vec::new();
         }
-        let non_firing = self.non_firing_queued_effect_indices_for(owner);
+        let non_firing = self.non_firing_queued_effect_indices_for(owner, batch);
         self.effect_queue
             .iter()
             .enumerate()
-            .filter(|(i, qe)| qe.controller == owner && !non_firing.contains(i))
+            .filter(|(i, qe)| {
+                qe.controller == owner && qe.trigger_batch == batch && !non_firing.contains(i)
+            })
             .map(|(i, _)| i)
             .collect()
     }

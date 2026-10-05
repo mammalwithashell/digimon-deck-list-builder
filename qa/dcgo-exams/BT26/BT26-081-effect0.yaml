@@ -25,17 +25,26 @@
 # paid exactly 2 (memory 3 -> 1); hand = 5 opening - 2 played + T3/T5 draws +
 # digivolve bonus draw.
 #
-# PROMPT SHAPE / DCGO quirks to triage:
-#   - Minervamon [On Play]: ours = one declinable hand pick; authored as the
-#     OptionalSkill fold. If DCGO's effect is non-optional, change to
-#     SelectHandEffect.
-#   - Mervamon WD pick: ours parks a PlayCostBudget trampoline (adapter maps it
-#     to SelectPermanentEffect, which is wrong for this card -- DCGO loops a
-#     zone menu hand/trash/stop then picks from the zone widget). Authored as
-#     a sim_only decline + a dcgo_only SelectHandEffect decline, GUESSING that
-#     DCGO skips the zone menu when only the hand qualifies (trash empty). If
-#     DCGO asks the menu, replace the dcgo_only row with its "stop" generic_int
-#     value from the oracle abort message.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - T3 Minervamon [On Play] -- FIXED 2026-10-04 (was an OptionalSkill fold):
+#     Minervamon BT24-041 OP/WD is NOT optional (SetUpActivateClass(..., false),
+#     BT24_041.cs:149/167): DCGO opens SelectHandEffect directly
+#     (maxCount = min(1, candidates), canNoSelect true, BT24_041.cs:79-93),
+#     so the decline is a select_cancel on SelectHandEffect -- NOT an
+#     OptionalSkill fold. Its De-Digivolve half is skipped when the
+#     opponent has no Digimon (HasMatchConditionPermanent guard).
+#   - T5 Mervamon's free-play loop (BT26_081.cs:101-187): optional:false
+#     (BT26_081.cs:253) so no OptionalSkill. Each iteration: when ONLY the
+#     hand qualifies the zone menu is skipped via SetInt(1)
+#     (BT26_081.cs:127 -- no row recorded), then ONE multi-pick
+#     SelectHandEffect (maxCount = candidates, canNoSelect, canEndNotMax,
+#     cost-budget ByPreSelectedList). A 0-card answer sets stop
+#     (afterSelectCardCoroutine, BT26_081.cs:91-98; SelectHandEffect.cs
+#     ~768 calls it with the empty list on cancel). After a NON-empty
+#     pick the loop re-evaluates and asks AGAIN if anything still fits the
+#     remaining budget; if nothing fits it breaks silently (line 107).
+#     Here: trash empty -> no zone menu; the one shared decline row is the
+#     whole DCGO sequence. The -4000 half is skipped (no opponent Digimon).
 card: BT26-081
 clause: BT26-081#effect#0
 seed: 424242
@@ -69,7 +78,7 @@ steps:
     expect: { prompt: main_phase }
   - actor: 0
     do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
+    expect: { prompt: SelectHandEffect }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -83,15 +92,13 @@ steps:
     do: { digivolve: { from: field.0, using: BT26-081 } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-  - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 13
+  - at: 12
     that:
       turn: 5
       p0.memory: 1

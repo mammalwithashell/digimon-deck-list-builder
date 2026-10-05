@@ -2,7 +2,7 @@ card: BT20-102
 name: Omnimon (X Antibody)
 kind: digimon
 level: 7
-color: [red, blue]
+color: [blue, white, red]
 cost: 16
 dp: 16000
 traits: [Holy Warrior, X Antibody, Royal Knight, LIBERATOR]

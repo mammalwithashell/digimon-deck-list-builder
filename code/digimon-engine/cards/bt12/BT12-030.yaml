@@ -1,0 +1,115 @@
+# BT12-030 Imperialdramon: Dragon Mode — Digimon, Lv.6, Blue/Green, DP 12000, Cost 12.
+# Traits: Ancient Dragon   Form: Mega   Attribute: Free
+# Evo (official Bandai DB): Blue Lv.5 / 4, Green Lv.5 / 4, Blue Lv.4 / 3, Green Lv.4 / 3
+# [Digivolve] 3 from [Paildramon] or [Dinobeemon]
+#
+# Printed card text (official, data/card_bundles/BT12-030.md):
+#
+#   [When Digivolving] If this Digimon has a blue digivolution card, unsuspend
+#   this Digimon. If it has a green digivolution card, suspend 1 of your
+#   opponent's Digimon. [End of Attack] This Digimon may digivolve into a
+#   Digimon card with [Imperialdramon] in its name in your hand for the
+#   digivolution cost. When this Digimon would digivolve by this effect,
+#   reduce the digivolution cost by 2.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT12/Blue/BT12_030.cs
+#   - AddSelfDigivolutionRequirementStaticEffect(TopCard name Paildramon ||
+#     Dinobeemon, cost 3) — no level/color gate.
+#   - OnEnterFieldAnyone (WD, non-optional): if DigivolutionCards has a blue
+#     card → unsuspend self; if it has a green card → SelectPermanentEffect
+#     (opponent Digimon, max 1, canNoSelect false, Mode.Tap).
+#   - OnEndAttack (optional): DigivolveIntoHandOrTrashCard(name contains
+#     "Imperialdramon", IsDigimon, payCost, reduceCost 2, isHand).
+
+card: BT12-030
+name: "Imperialdramon: Dragon Mode"
+kind: digimon
+level: 6
+color: [blue, green]
+cost: 12
+dp: 12000
+traits: [Ancient Dragon]
+form: Mega
+attribute: Free
+
+alt_paths:
+  # ─── Standard digivolve circles (printed) ──────────────────────────────────
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+
+  # ─── [Digivolve] [Paildramon] / [Dinobeemon]: Cost 3 ─────────────────────────
+  # DCGO: TopCard.CardNames.Contains("Paildramon"|"Dinobeemon") (exact name,
+  # not substring) — `name_is`.
+  - kind: digivolve
+    from:
+      any_of:
+        - { name_is: "Paildramon" }
+        - { name_is: "Dinobeemon" }
+    cost: 3
+
+effects:
+  # ─── [When Digivolving] blue source → unsuspend; green source → suspend 1 ──
+  #
+  # Two independent checks against this Digimon's digivolution cards (the
+  # sources beneath the top card — DCGO `DigivolutionCards`). The suspend is a
+  # mandatory pick of 1 opponent Digimon (DCGO canNoSelect: false); it is the
+  # player's choice, never auto-picked. No eligible target → silently skipped.
+  - when: when_digivolving
+    summary: "[When Digivolving] If it has a blue digivolution card, unsuspend this Digimon; if it has a green digivolution card, suspend 1 opponent Digimon"
+    process:
+      - if:
+          condition:
+            self_source_count:
+              filter: { color_is: blue }
+              op: gte
+              value: 1
+          then:
+            - unsuspend: { target: source }
+      - if:
+          condition:
+            self_source_count:
+              filter: { color_is: green }
+              op: gte
+              value: 1
+          then:
+            - select_opponent_permanent:
+                bind_as: suspend_target
+                filter: { kind: digimon }
+                prompt: "Suspend 1 of your opponent's Digimon"
+            - suspend: { target: suspend_target }
+
+  # ─── [End of Attack] may digivolve into [Imperialdramon] in hand, cost −2 ──
+  #
+  # Optional (DCGO isOptional: true; "may"). Only hand Digimon with a legal
+  # route onto this Digimon are offered. EX13-004 / AD1-011 idiom.
+  - when: end_of_attack
+    summary: "[End of Attack] This Digimon may digivolve into an [Imperialdramon]-named Digimon in hand with the cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: imperial
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Imperialdramon"
+              - can_digivolve_onto: source
+          prompt: "This Digimon may digivolve into a Digimon card with [Imperialdramon] in its name with the digivolution cost reduced by 2"
+      - if:
+          condition: { binding_present: imperial }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: imperial
+                cost: { reduce: 2 }
+                ignore_requirements: false

@@ -1,0 +1,98 @@
+# Exam scenario: Atratusmon (ST23-09), clause ST23-09#effect#4 --
+# "[When Digivolving] [When Attacking] [Once Per Turn] Your opponent's Digimon
+#  effects don't affect this Digimon until their turn ends. Then, delete 1 of
+#  your opponent's Digimon with the lowest DP."
+#
+# This file exercises the [When Digivolving] arm.
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE WITNESS. P1 holds Biyomon ST1-02 (3000) and Agumon BT3-007 (4000) when
+# Atratusmon digivolves. Only the LOWEST-DP Digimon is a legal pick, so the
+# single-candidate pick takes Biyomon and the assertion reads Agumon still
+# standing and Biyomon in P1's trash. The immunity half has nothing to act on
+# in this line (P1's quiet red list has no Digimon effects) -- it is the
+# delete that the state witnesses; the immunity is NOT witnessed here.
+#
+# THE LINE (memory ledger):
+#   T1 P0 (0): hard-play Murasamemon BT25-041 (7): 0 -> -7    -> P1 7
+#   T2 P1 (7): Biyomon (2) 7 -> 5, Agumon (2) 5 -> 3; passes   -> P0 3
+#   T3 P0 (3): digivolve Atratusmon onto BT25-041 via the [Glowing Dawn]
+#              route (3): 3 -> 0. [When Digivolving] fires.
+#
+# PROMPT SHAPE (ST23-09.yaml DCGO crosscheck, hash ST23_09_WD_WA): no
+# activation cost, not optional -> no OptionalSkill. Self
+# DigimonEffectImmunity (UntilOpponentTurnEnd) is silent, then a MANDATORY
+# SelectPermanentEffect (Mode.Destroy, IsMinDP, canNoSelect false) over the
+# lowest-DP opponent Digimon -- asked with ONE candidate here (Biyomon is the
+# unique minimum). Ours: `select_opponent_permanent { selector: lowest_dp }`,
+# measured parking with count 1. If DCGO's IsMinDP pick auto-selects a lone
+# candidate instead of asking, the job aborts on this row -- read it as a
+# prompt-shape asymmetry, not a rules finding.
+card: ST23-09
+clause: ST23-09#effect#4
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-041, ST23-09, BT16-082, BT16-082, BT25-090,
+            ST23-03, ST23-03, ST23-03, ST23-04, ST23-04,
+            BT25-049, BT25-049, BT25-049]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, BT3-007, ST1-04, BT1-009, ST1-03,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0, 0): hard-play Murasamemon for 7 (0 -> -7).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-041, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, 7): Biyomon and Agumon (7 -> 3), then pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): digivolve Atratusmon for 3 (3 -> 0) -- [When Digivolving].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: ST23-09 } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: delete the lowest-DP opponent Digimon (Biyomon, 3000).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # One step past the clause; P0 still holds the turn on 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 9
+    that:
+      turn: 3
+      p0.memory: 0
+      p0.field:
+        - card_id: ST23-09
+          dp: 12000
+          suspended: false
+          sources: [BT25-041]
+      p1.field:
+        - card_id: BT3-007
+          dp: 4000
+          suspended: false
+          sources: []
+      p1.trash: [ST1-02]

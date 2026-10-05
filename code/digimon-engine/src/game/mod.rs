@@ -565,6 +565,9 @@ pub struct Game {
     /// Consumed by the drainer in PR2.
     #[allow(dead_code)]
     pub(crate) effect_chain_depth: u16,
+    /// Last §15-4-5 trigger-batch id handed out by the drainer (see
+    /// `QueuedEffect::trigger_batch`). Monotonic within a game.
+    pub(crate) trigger_batch_seq: u32,
 
     /// Re-entrancy depth for the state-based ≤0-DP rules-check
     /// (`run_state_based_rules_check`). `drain_effect_queue` is called

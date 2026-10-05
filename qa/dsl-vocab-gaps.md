@@ -8781,7 +8781,26 @@ pins that the turn scan does not trash such a marker.
 
 ## TS Jupitermon exam-authoring findings (2026-10-04) — OPEN, logged not fixed
 
-### `[Counter]` timing never marks the effect as a Counter effect  [G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG]
+### `place_on_security` could not target the placed card's owner or report success  [G-DSL-PLACE-ON-SECURITY-OWNER-AND-SUCCESS] — **RESOLVED 2026-10-04**
+- **Card:** BT25-044 Junomon "By placing 1 other Digimon as the top security card, trash both players' top
+  security cards" — the Digimon may be either player's, goes to its OWNER's security (DCGO
+  `CardObjectController.cs:1099-1120`), and the tail runs only if the placement happened
+  (`PlacePermanentInSecurityAndProcessAccordingToResult`).
+- **Fix:** `place_on_security` (permanent source, no disposition) gains `to_owner: bool` (ignore `of`, use the
+  top card's owner) and `bind_placed_as: <name>` (bound only on success, gate the tail with `binding_present`).
+  Lowered onto `CompiledStep::PlacePermanentOnSecurity { to_owner, bind_placed_as }`
+  (`dsl_cards/step/permanent_mutations.rs`). Test:
+  `cards_behavioral -- bt25_044_on_play_offers_opponent_digimon_and_places_it_in_opponents_security`.
+
+### `[Counter]` timing never marks the effect as a Counter effect  [G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG] — **RESOLVED 2026-10-04**
+- **RESOLVED — the flag half is main's G-ENGINE-DSL-FIELD-COUNTER-WINDOW (2026-10-03, root cause (1); see
+  `qa/resolved-gaps.md`):** `lower_triggered::new_builder` lowers `CounterEffect` with `.counter()` (this branch's
+  duplicate setter was dropped at the merge). **Additive here:** the field-Counter candidate scan in
+  `try_enter_counter` skips a spent [Once Per Turn] / max-per-turn ability or one whose activation `condition`
+  fails (no phantom offer; e.g. BT25-085 with no Option in any own stack). Tests:
+  `cards_behavioral::bt26::bt26_103::bt26_103_counter_arm_offered_in_real_combat_digimon_target`,
+  `...::bt26_103_counter_arm_not_offered_once_opt_is_spent`,
+  `cards_behavioral::bt25::bt25_085::bt25_085_counter_window_respects_activation_condition`.
 - **Card:** BT26-103 Jupitermon: Wrath Mode `[When Digivolving] [Counter] [Once Per Turn] Trash your top security card and <Recovery +2>`.
 - **Symptom:** `when: [when_digivolving, counter]` lowers to the counter timing but nothing under
   `code/digimon-engine/src/dsl_cards/` calls `Effect::counter()` (only grant_keyword's
@@ -8792,9 +8811,25 @@ pins that the turn scan does not trash such a marker.
   `qa/dcgo-exams/BT26/BT26-103-effect3.yaml` / `-effect5.yaml` (the [When Digivolving] arm only).
   See also `docs/RUST_ENGINE_GAPS.md` §G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK.
 
-### "Use 1 Option card" offers the Digimon face of a DUAL card  [G-DSL-USE-OPTION-ONLY]
+### "Use 1 Option card" offers the Digimon face of a DUAL card  [G-DSL-USE-OPTION-ONLY] — RESOLVED 2026-10-04
+- **RESOLVED 2026-10-04:** `use_option_bound` now also accepts a `select_hand` binding (hand index) as
+  the USE-ONLY sibling of `play_or_use_from_hand`: an Option or DUAL card goes straight to the Option-use
+  path (no "Play as Digimon" face choice); a Digimon/Tamer bound there is a no-op
+  (`dsl_cards/step/play_digivolve.rs`, doc on `UseOptionBoundArgs`). Switched every "use 1 ... Option
+  card from your hand" card that used `play_or_use_from_hand`: BT26-090, BT26-026 (x2), EX12-066,
+  EX13-072. Test: `bt26_090_dual_card_is_used_as_option_never_played`; scenario `BT26-090-effect0` drops
+  its sim_only `choice:` row.
 - **Card:** BT26-090 Kanan Yuki `[End of Your Turn] By suspending this Tamer, you may use 1 Option card with the [TS] trait from your hand…`.
 - **Symptom:** the YAML uses `play_or_use_from_hand`, which for a DUAL card (BT26-033) asks "Play as
   Digimon / Use as Option"; the Digimon branch really puts Jupitermon on the field. The printed text
   only permits USING the Option face. Needs a use-only variant (or a `mode: use` flag). Pinned by
   `qa/dcgo-exams/BT26/BT26-090-effect0.yaml` (answers "Use as Option" with a `sim_only` `choice:` row).
+
+### Event-target "has inherited effects" leaf  [G-DSL-EVENT-TARGET-HAS-INHERITED] — RESOLVED 2026-10-04
+- **Card:** BT21-091 Spirit Evolution! `[All Turns] When any of your Tamers with inherited effects are played, <Delay>. …`
+- **Gap:** the card/permanent leaf `has_inherited: {}` existed, but no event-target sibling for
+  on_ally_played gating.
+- **RESOLVED:** new predicate leaf `event_target_has_inherited: bool` (DCGO `TopCard.HasInheritedEffect`:
+  non-empty printed inherited text on the event target's top card). Spec/compiled/compile in
+  `code/digimon-dsl/src/{predicate,compiled,compile}.rs`; evaluated in `eval_event_fields`
+  (`code/digimon-engine/src/dsl_cards/predicate.rs`). Tests: `cards_behavioral::bt21::bt21_091`.

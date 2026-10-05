@@ -20,12 +20,13 @@
 # WITNESS: P0 security 5 -> 6 with BT26-029 in NEITHER trash nor field; its
 # lone source Aegiomon BT25-033 is the only card in P0's trash.
 #
-# PROMPT SHAPE / anticipated oracle quirks:
-#   - <Decode> decline: our Replacement gate (OptionalSkill, cancel). DCGO's
-#     Decode gate is an OptionalSkill too -> 1:1.
-#   - <Ascension>: ours is an EffectChoice Yes/No ("yes: true" -> branch 0);
-#     DCGO raises it as `generic_bool` via SetBoolSelection (EX12-047
-#     precedent), hence `expect: generic_bool` (not asserted sim-side).
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - <Decode> decline: optional DecodeSelfEffect -> OptionalSkill(no); no
+#     SelectCardEffect follows a "no".
+#   - <Ascension>: the only trigger left on the main stack -> no
+#     MultipleSkills; mandatory ActivateClass whose AscensionProcess asks
+#     SetBoolSelection Yes/No -> `generic_bool` (expect not asserted
+#     sim-side). Ours is an EffectChoice Yes/No ("yes: true" -> branch 0).
 card: BT26-029
 clause: BT26-029#effect#2
 seed: 424242

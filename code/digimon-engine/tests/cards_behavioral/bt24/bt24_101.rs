@@ -341,6 +341,68 @@ fn bt24_101_when_own_security_is_removed_trashes_opponent_top_security_once() {
     );
 }
 
+/// G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH: when Jupitermon is ITSELF the
+/// security card being removed, its `[All Turns]` clause is not live — the
+/// card is not a battle-area permanent (a card leaving security only has its
+/// `[Security]` effects active, §15-14-5 / §13-1-5) — so the opponent's
+/// security is untouched and nothing is queued.
+#[test]
+fn bt24_101_all_turns_does_not_fire_when_it_is_the_removed_security_card() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT24-101")
+        .expect("BT24-101 YAML loads")
+        .add_card(make_test_card("SRC", "Effect source"))
+        .add_card(make_test_card("MY-SEC-A", "My Security A"))
+        .add_card(make_test_card("OPP-SEC-A", "Opponent Security A"))
+        .add_card(make_test_card("OPP-SEC-B", "Opponent Security B"))
+        .security(0, &["MY-SEC-A", "BT24-101"])
+        .security(1, &["OPP-SEC-A", "OPP-SEC-B"])
+        .start();
+    runner.place_on_field(0, "SRC", Some(0));
+    let source_card = runner.game.players[0].battle_area[0].top_card().handle();
+    {
+        let mut ctx = digimon_engine::effect_context::EffectContext::new(
+            &mut runner.game,
+            source_card,
+            None,
+            0,
+        );
+        assert!(ctx.trash_top_security(0));
+    }
+    assert!(trash_contains(&runner, 0, "BT24-101"));
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(
+        runner.security_count(1),
+        2,
+        "a removed security card's [All Turns] clause must not fire"
+    );
+}
+
+/// Same, via a security check: Jupitermon flipped as a Security Digimon is
+/// "in no area" (§13-1-5/13-1-6), not a battle-area permanent.
+#[test]
+fn bt24_101_all_turns_does_not_fire_when_flipped_by_security_check() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT24-101")
+        .expect("BT24-101 YAML loads")
+        .add_card(make_trait_digimon("ATK", 3, 1000, &[]))
+        .add_card(make_test_card("MY-SEC-A", "My Security A"))
+        .add_card(make_test_card("OPP-SEC-A", "Opponent Security A"))
+        .add_card(make_test_card("OPP-SEC-B", "Opponent Security B"))
+        .security(0, &["OPP-SEC-A", "OPP-SEC-B"])
+        .security(1, &["MY-SEC-A", "BT24-101"])
+        .start();
+    let attacker = runner.place_on_field(0, "ATK", Some(0));
+    let _ = runner.attack_player(attacker, 1, false);
+    let _ = runner.auto_resolve();
+    assert!(trash_contains(&runner, 1, "BT24-101"));
+    assert_eq!(
+        runner.security_count(0),
+        2,
+        "the flipped Jupitermon's [All Turns] clause must not trash its opponent's security"
+    );
+}
+
 #[test]
 fn bt24_101_protects_own_ts_digimon_or_tamer_by_trashing_top_security() {
     let mut runner = DebugRunner::builder()

@@ -1,0 +1,85 @@
+# Exam scenario: Reina Sakuya & Makoto Kuonji (ST23-14, purple/black
+# Tamer, cost 4), clause ST23-14#effect#2 -- "[Security] Play this card
+# without paying the cost."
+#
+# ST23-14 is pinned as P0's TOP security card (stack[9]) and flipped by a P1
+# Agumon (ST1-03) security attack. Witness: ST23-14 lands on P0's field (no
+# cost: P1 keeps its 3), the trash stays empty. ST23-14 has no
+# security-loss trigger of its own, and an effect PLAY is not [On Play]-
+# exempt: ST23-14's "[On Play] You may place the top card..." DOES fire
+# (played by an effect is still played). Its place prompt is answered yes;
+# P1 has a Digimon (Agumon) so P0 also gains 1 memory -- on P1's turn the
+# gauge moves toward P0 (P1 3 -> 2, read as p0.memory -2).
+#
+# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (memory ledger, P1 perspective):
+#   T1 (P0, 0): pass breeding, pass main -> P1 gets 3.
+#   T2 (P1, 3): play Agumon ST1-03 (3 -> 0); pass -> P0 gets 3.
+#   T3 (P0, 3): draw stack[10]; pass breeding, pass main -> P1 gets 3.
+#   T4 (P1, 3): Agumon attacks security. THE CLAUSE: the check flips
+#       ST23-14 -> played to P0's field for free. Tamer: no battle. Its
+#       [On Play]: place yes -> deck top stack[11] ST23-15 face down under
+#       it; P1 has Agumon -> P0 +1 (P1 3 -> 2).
+#
+# PROMPT SHAPE (cards/st23/ST23-14.yaml DCGO crosscheck):
+#   PlaySelfTamerSecurityEffect -- no prompt for the play itself; the
+#   follow-on [On Play] is ST23_14.cs' internal Yes/No (as ST23-13).
+card: ST23-14
+clause: ST23-14#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [ST23-03, ST23-09, ST23-12, ST23-06, ST23-07,
+            ST23-03, ST23-04, ST23-06, ST23-08, ST23-14,
+            ST23-13, ST23-15]
+    rest: gd-bt26-7th
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # ST23-14's [On Play] (fired by the effect play): place the top card.
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 10
+    that:
+      turn: 4
+      p0.memory: -2
+      p0.security: 4
+      p0.trash: []
+      p0.field:
+        - { card_id: ST23-14, dp: -1, suspended: false, sources: [ST23-15] }
+      p1.field:
+        - { card_id: ST1-03, dp: 2000, suspended: true, sources: [] }

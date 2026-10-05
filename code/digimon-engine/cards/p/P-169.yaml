@@ -49,7 +49,7 @@ card: P-169
 name: Close
 kind: tamer
 color: [black]
-cost: 4
+cost: 3
 traits: [LIBERATOR]
 
 effects:

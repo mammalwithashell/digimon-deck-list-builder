@@ -31,20 +31,35 @@
 # BT26-033 in P0's trash, Kanan suspended. T3 main -> memory 4.
 #
 # PROMPT SHAPE (end-of-turn half): ours = see the steps (an optional window,
-# then the [TS] Option hand pick). DCGO (YAML crosscheck of BT26_090.cs):
+# then the [TS] Option hand pick). DCGO -- VERIFIED 2026-10-04 against
+# BT26_090.cs at the pinned submodule (b9a0638cd):
 # OnEndTurn optional -> OptionalSkill; SuspendPermanent; canNoSelect hand pick
 # (SelectHandEffect) over affordable [TS] Options at cost - opponent memory;
 # PlayOptionCards(payCost: true). The DUAL card's use-cost formula and the
 # <Use Req.> colour waiver both have to agree across engines for the cost to
 # match. End-of-turn window: ours EndOfTurnAction vs DCGO Main (the
 # documented end-of-turn pair). The SoMP half is mandatory with no prompt.
+# Citations: BT26_090.cs:48 SetUpActivateClass(..., true) -> OptionalSkill;
+# CanActivate (:68-70) = on field + CanActivateSuspendCostEffect only (no
+# hand-candidate check, so the T3 gate is asked with no [TS] Option in hand,
+# as ours does); SuccessProcess (:80-145) opens SelectHandEffect (canNoSelect
+# true) only if a hand card passes IsOption && HasTSTraits && affordable at
+# cost - opponent memory (reduceCost read at selection time = 3), then a
+# paying-cost ChangeCostClass -3 + PlayOptionCards(payCost true). The DUAL
+# card's +5 is a card-cost ChangeCostClass (BT26_033.cs:288), so 2 + 5 - 3 =
+# 4. Arts: no own Digimon -> ArtsDigivolve CanResolve false -> trashed, no
+# prompt. Both gates fire on memory-overflow / pass turn ends alike
+# (AutoProcessing.cs EndTurnCheck :635 -> EndTurnProcess :679). SoMP
+# (:17-37) isOptional false. Kanan is the only [TS] Tamer, so <Use Req.>
+# holds (CardEffectFactory.UseRequirements, CardEffectFactory.cs:706).
 #
-# SUSPECTED ENGINE/DSL BUG (flagged, not fixed): after the hand pick our
-# engine parks an EffectChoice "Play as Digimon or use as Option" for the DUAL
-# card (BT26-090.yaml's `play_or_use_from_hand`). Kanan prints "you may USE 1
-# Option card", so the Digimon face should not be offered; the branch is
-# answered "Use as Option" as a sim_only row. DCGO (PlayOptionCards) should
-# ask nothing there.
+# FIXED 2026-10-04 (G-DSL-USE-OPTION-ONLY): our engine used to park an
+# EffectChoice "Play as Digimon or use as Option" for the DUAL card after the
+# hand pick (BT26-090.yaml's `play_or_use_from_hand`). Kanan prints "you may
+# USE 1 Option card", so BT26-090.yaml now uses the use-only
+# `use_option_bound` over the `select_hand` binding: the DUAL card goes
+# straight to its Option face and no face choice is asked -- matching DCGO's
+# PlayOptionCards, so the former sim_only `choice:` row is gone.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.
@@ -75,11 +90,6 @@ steps:
   - actor: 0
     do: { select: { cards: [BT26-033] } }
     expect: { prompt: SelectHandEffect }
-  # SIM-ONLY: our engine then asks "Play as Digimon or use as Option" for the
-  # DUAL card. Kanan's text says "use 1 Option card", so only the Option face
-  # is legal -- see the SUSPECTED ENGINE/DSL BUG note in the header.
-  - actor: 0
-    do: { select: { choice: "Option", sim_only: true } }
   # T2 (P1, memory 7)
   - actor: 1
     do: { pass: {} }
@@ -99,7 +109,7 @@ steps:
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
 assert:
-  - at: 5
+  - at: 4
     that:
       turn: 2
       p0.memory: -7
@@ -107,7 +117,7 @@ assert:
       p0.trash: [BT26-033]
       p0.field:
         - { card_id: BT26-090, dp: -1, suspended: true, sources: [] }
-  - at: 8
+  - at: 7
     that:
       turn: 3
       p0.memory: 4

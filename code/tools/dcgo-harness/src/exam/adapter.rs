@@ -456,6 +456,7 @@ impl ScenarioAdapter {
                 // two slot references then answer our chained `Material`
                 // prompts as one two-pick sim-only row.
                 StepAction::Dna { materials, .. } => {
+                    check_actor_is_decider(&game, i, actor)?;
                     let action_id = lower_step(&game, actor, &step.act).map_err(|e| match e {
                         LowerError::NoMatch { intent, legal } => format!(
                             "step {i}: no legal action matches {intent}\n  legal here:\n    {}",
@@ -555,6 +556,7 @@ impl ScenarioAdapter {
                     lowered_owner.push(i);
                 }
                 _ => {
+                    check_actor_is_decider(&game, i, actor)?;
                     let action_id = lower_step(&game, actor, &step.act).map_err(|e| match e {
                         LowerError::NoMatch { intent, legal } => format!(
                             "step {i}: no legal action matches {intent}\n  legal here:\n    {}",
@@ -903,16 +905,24 @@ fn dcgo_prompt_name(kind: &SelectionKind) -> Option<&'static str> {
         // exactly this.
         SelectionKind::Replacement => Some("OptionalSkill"),
 
-        // Both budget kinds are ONE `SelectPermanentEffect` on DCGO's side,
-        // with `maxCount` + a `canTargetCondition_ByPreSelecetedList` re-filter
-        // + a `canEndSelectCondition` running-sum check -- BT17_018.cs:101-116
-        // (DP <= 15000) and EX4_073.cs:133-147 (play cost <= 6). Same
-        // semantics as our per-pick trampoline, drawn at a different widget
-        // boundary, so the class is stable and only the cardinality differs
-        // (N picks + PASS vs one `targets` array).
-        SelectionKind::DpBudget { .. } | SelectionKind::PlayCostBudget { .. } => {
-            Some("SelectPermanentEffect")
-        }
+        // A DP budget is ONE `SelectPermanentEffect` on DCGO's side, with
+        // `maxCount` + a `canTargetCondition_ByPreSelecetedList` re-filter +
+        // a `canEndSelectCondition` running-sum check -- BT17_018.cs:101-116
+        // (DP <= 15000). Same semantics as our per-pick trampoline, drawn at
+        // a different widget boundary, so the class is stable and only the
+        // cardinality differs (N picks + PASS vs one `targets` array).
+        SelectionKind::DpBudget { .. } => Some("SelectPermanentEffect"),
+
+        // CONDITIONAL -- see `dcgo_prompt_name_for` /
+        // `play_cost_budget_prompt_name`. A play-cost budget is NOT always
+        // over permanents (G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE): EX4_073.cs:
+        // 133-147 ("play cost <= 6" of the opponent's Digimon) is a
+        // `SelectPermanentEffect`, but BT26-081 Mervamon's "play up to 8 play
+        // cost's total worth of [Iliad] cards from your hand or trash" parks
+        // the SAME kind over hand/trash CARDS (the zone-card picker,
+        // `dsl_cards/step/zone_cards.rs`), which DCGO asks through the zone's
+        // own widget. The kind does not carry the zone; the live candidates do.
+        SelectionKind::PlayCostBudget { .. } => None,
 
         // ── unmapped, each with its reason ────────────────────────────────
 
@@ -1088,7 +1098,10 @@ fn is_digivolution_source_pick(game: &Game) -> bool {
 /// The second context-dependent kind is `TriggerOrder`, decided by the live
 /// prompt's CANDIDATE COUNT (see [`trigger_order_prompt_name`]).
 ///
-/// Everything except `Material` and `TriggerOrder` defers to
+/// The third is `PlayCostBudget`, decided by the live prompt's CANDIDATE ZONE
+/// (see [`play_cost_budget_prompt_name`]).
+///
+/// Everything except `Material`, `TriggerOrder` and `PlayCostBudget` defers to
 /// [`dcgo_prompt_name`] unchanged.
 fn dcgo_prompt_name_for(
     game: &Game,
@@ -1112,7 +1125,69 @@ fn dcgo_prompt_name_for(
         }
         return trigger_order_prompt_name(pending.valid_action_ids.len(), pending.is_optional);
     }
+    if matches!(kind, SelectionKind::PlayCostBudget { .. }) {
+        // Same live-prompt rule as `TriggerOrder`: the zone is read off the
+        // parked prompt's candidates, so a kind that is not the live one
+        // stays unasserted.
+        let pending = game.pending_selection.as_ref()?;
+        if !matches!(pending.kind, SelectionKind::PlayCostBudget { .. }) {
+            return None;
+        }
+        return play_cost_budget_prompt_name(&pending.valid_action_ids);
+    }
     dcgo_prompt_name(kind)
+}
+
+/// DCGO's class for a live `SelectionKind::PlayCostBudget` prompt, from the
+/// ZONE its candidates sit in (G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE).
+///
+/// Our engine parks the one budget kind for two different pickers, and the
+/// action-id range of each candidate says which (`action/space.rs`):
+///
+/// * **permanents** (`ATTACK_START..ATTACK_END`, `encode_attack(0, slot)` --
+///   `install_budget_resume_step` / `install_play_cost_budget_selection`) ->
+///   `SelectPermanentEffect` (EX4_073.cs:133-147).
+/// * **hand cards** (`PLAY_HAND_START..PLAY_HAND_END`, the zone-card picker's
+///   `encode_zone_card`) -> `SelectHandEffect`, DCGO's only hand widget
+///   (`Root.Hand` -> `SelectHandEffect`, PlayEffects.cs:34-38) -- the same
+///   zone rule `CountCappedMultiSelect` follows.
+/// * **trash cards** (`TRASH_EFFECT_START..TRASH_EFFECT_END`) ->
+///   `SelectCardEffect` (`Root.Trash`, PlayEffects.cs:39-49).
+///
+/// A candidate set that SPANS hand and trash (or any other mix, or a
+/// digivolution-source id) stays unasserted: DCGO asks that as a `generic_int`
+/// zone menu ("From hand" / "From trash" / "Do not play", AD1_002.cs:172-194)
+/// FOLLOWED by the chosen zone's widget -- the `UnionZone` shape -- so no ONE
+/// class is right for our single prompt. ASSUMPTION (unverified against the
+/// oracle; no DCGO checkout in the environment that wrote this): when only one
+/// zone holds candidates DCGO opens that zone's widget directly rather than a
+/// one-option menu.
+fn play_cost_budget_prompt_name(valid_action_ids: &[u16]) -> Option<&'static str> {
+    use digimon_engine::action::space::{
+        ATTACK_END, ATTACK_START, PASS, PLAY_HAND_END, PLAY_HAND_START, TRASH_EFFECT_END,
+        TRASH_EFFECT_START,
+    };
+    let class_of = |id: u16| -> Option<&'static str> {
+        if (PLAY_HAND_START..PLAY_HAND_END).contains(&id) {
+            Some("SelectHandEffect")
+        } else if (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(&id) {
+            Some("SelectCardEffect")
+        } else if (ATTACK_START..ATTACK_END).contains(&id) {
+            Some("SelectPermanentEffect")
+        } else {
+            None
+        }
+    };
+    let mut class: Option<&'static str> = None;
+    for &id in valid_action_ids.iter().filter(|&&id| id != PASS) {
+        let c = class_of(id)?;
+        match class {
+            None => class = Some(c),
+            Some(prev) if prev == c => {}
+            Some(_) => return None,
+        }
+    }
+    class
 }
 
 /// DCGO's class for a live `SelectionKind::TriggerOrder` prompt, from its
@@ -1212,6 +1287,37 @@ fn check_select_expectations(
             Ok(())
         }
     }
+}
+
+/// G-TOOLING-EXAM-ACTOR-UNCHECKED: refuse an action step (`pass`, `hatch`,
+/// `move`, `play`, `digivolve`, `dna`, `attack`, `main`) whose `actor:` is not
+/// the player our engine is waiting on.
+///
+/// `build_action_mask(game, actor)` does not gate on whose decision it is, so a
+/// `pass` written for player 0 during player 1's breeding phase used to lower
+/// AND apply (as player 1's pass) with no error -- a wrong-seat step that a
+/// sim-only run could not see, and that DCGO would answer for a different seat
+/// or hang on. The deciding player is the engine's own routing rule
+/// (`policies::current_decision_player`: the mulligan decider, else the parked
+/// selection's `selecting_player`, else the turn player) -- the same one every
+/// runner and policy uses. `select:` steps already carry the equivalent check
+/// in `build_selection_row`.
+fn check_actor_is_decider(game: &Game, i: usize, actor: PlayerId) -> Result<(), String> {
+    let decider = digimon_engine::policies::current_decision_player(game);
+    if actor == decider {
+        return Ok(());
+    }
+    Err(format!(
+        "step {i}: the step is authored for actor {actor}, but our engine is waiting on \
+         player {decider} (turn {}, phase {}{}). A wrong-seat step would apply as the \
+         other player's decision; fix the step's `actor:` (or the line before it).",
+        game.turn_count,
+        game.current_phase.py_name(),
+        game.pending_selection
+            .as_ref()
+            .map(|p| format!(", parked {:?} prompt", p.kind))
+            .unwrap_or_default()
+    ))
 }
 
 /// Classify a lowered action for the wire (task_69f10a66 Family 1). An
@@ -2098,6 +2204,76 @@ steps:
             .expect("adapter should build");
         assert_eq!(a.lowered_action_ids().len(), 1);
         assert_eq!(a.steps().len(), 1);
+    }
+
+    /// G-TOOLING-EXAM-ACTOR-UNCHECKED: a `pass` authored for the seat our
+    /// engine is NOT waiting on must refuse to lower. Before the fix the mask
+    /// (built per actor, never gated on whose decision it is) offered PASS and
+    /// the step silently applied as the other player's pass.
+    #[test]
+    fn a_wrong_seat_pass_refuses_to_lower() {
+        let card_data = test_support::load_card_data();
+        let deck = simple_deck();
+        let wrong = LINE.replace("  - actor: 0\n    do: { pass: {} }", "  - actor: 1\n    do: { pass: {} }");
+        assert_ne!(wrong, LINE, "fixture edit must apply");
+        let s = Scenario::from_yaml(&wrong).unwrap();
+        let err = ScenarioAdapter::from_scenario(&s, deck.clone(), deck, &card_data)
+            .expect_err("a wrong-seat pass must not lower");
+        assert!(
+            err.contains("authored for actor 1") && err.contains("waiting on player 0"),
+            "unexpected error: {err}"
+        );
+    }
+
+    /// The same guard covers every main-phase verb, not just `pass`.
+    #[test]
+    fn a_wrong_seat_hatch_refuses_to_lower() {
+        let card_data = test_support::load_card_data();
+        let deck = simple_deck();
+        let wrong = LINE.replace("  - actor: 0\n    do: { pass: {} }", "  - actor: 1\n    do: { hatch: {} }");
+        let s = Scenario::from_yaml(&wrong).unwrap();
+        let err = ScenarioAdapter::from_scenario(&s, deck.clone(), deck, &card_data)
+            .expect_err("a wrong-seat hatch must not lower");
+        assert!(err.contains("waiting on player 0"), "unexpected error: {err}");
+    }
+
+    /// G-TOOLING-EXAM-PLAYCOSTBUDGET-ZONE: the budget prompt's DCGO class
+    /// follows the zone of its candidates, read off the action-id ranges.
+    #[test]
+    fn a_play_cost_budget_maps_by_its_candidate_zone() {
+        use digimon_engine::action::space::{
+            encode_attack, PASS, PLAY_HAND_START, TRASH_EFFECT_START,
+        };
+        // Mervamon (BT26-081) with an empty trash: hand cards only.
+        assert_eq!(
+            play_cost_budget_prompt_name(&[PLAY_HAND_START + 2, PLAY_HAND_START + 4, PASS]),
+            Some("SelectHandEffect")
+        );
+        // Trash cards only.
+        assert_eq!(
+            play_cost_budget_prompt_name(&[TRASH_EFFECT_START, PASS]),
+            Some("SelectCardEffect")
+        );
+        // Opponent permanents (EX4-073 "play cost <= 6") -- the old mapping.
+        assert_eq!(
+            play_cost_budget_prompt_name(&[encode_attack(0, 0), encode_attack(0, 1)]),
+            Some("SelectPermanentEffect")
+        );
+        // Hand AND trash: DCGO's zone menu + zone widget, no one class.
+        assert_eq!(
+            play_cost_budget_prompt_name(&[PLAY_HAND_START, TRASH_EFFECT_START, PASS]),
+            None
+        );
+        // Nothing but PASS: no candidate, no class.
+        assert_eq!(play_cost_budget_prompt_name(&[PASS]), None);
+        // And the kind alone no longer claims a class.
+        assert_eq!(
+            dcgo_prompt_name(&SelectionKind::PlayCostBudget {
+                remaining_play_cost: 8,
+                picked: 0
+            }),
+            None
+        );
     }
 
     #[test]

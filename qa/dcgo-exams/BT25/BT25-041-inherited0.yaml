@@ -1,0 +1,155 @@
+# Exam scenario: Murasamemon (BT25-041), clause BT25-041#inherited#0 --
+# "[End of Attack] [Once Per Turn] By trashing the bottom face-down card under
+#  any of your Tamers, this Digimon with the [Glowing Dawn] trait unsuspends."
+#
+# Witness: Murasamemon is a SOURCE of Zephagamon (ST23-09, [Glowing Dawn]),
+# which attacks (suspends) and ends the turn UNSUSPENDED, with BT26-089's
+# bottom face-down card (ST23-03) in p0's trash. Nothing else in the line
+# unsuspends it (ST23-09's <Reboot> acts only in the opponent's unsuspend
+# phase).
+#
+# PROVISIONAL: every assert below is OUR engine's result, not backfilled from
+# DCGO. It stays unconfirmed until the oracle pass.
+#
+# THE LINE (stacked gd-bt26-1st vs tm-quiet-red; Tamer = BT26-089, which has no
+# trash-reaction, so trashing its face-down cards opens nothing extra):
+#   T1 p0 (mem 0): hatch, Ukkomon (BT25-032) over Kekkomon for 0, BT26-089 for
+#      3 -> -3.
+#   T2 p1 (mem 3): Biyomon (ST1-02) for 2 -> 1, Birdramon (ST1-05) over it for
+#      2 -> -1.
+#   T3 p0 (mem 1): move Ukkomon; BT26-089 [SOMP] places ST23-06 face down,
+#      Draw 1, +1 -> 2. Armalizamon (BT25-049, GREEN Lv.4) over Ukkomon for 2
+#      -> 0 (its "may suspend" declined). Murasamemon (BT25-041) over Armalizamon for 3 -> -3
+#      (GREEN Lv.4 -> only the "Lv.4 w/[Glowing Dawn]: Cost 3" route).
+#      Murasamemon's [When Digivolving] is DECLINED ("Don't pay": DCGO generic_int
+#      value 3 = `dcgo_only`; our Replacement decline = `sim_only`).
+#   T4 p1 (mem 3): pass.
+#   T5 p0 (mem 3): SOMP places ST23-03 face down (+1 -> 4). Zephagamon (ST23-09)
+#      over Murasamemon for 3 -> 1 (yellow Lv.5 -> only its [Glowing Dawn]
+#      route); its [When Digivolving] deletes Birdramon (lowest DP).
+#      Zephagamon attacks security (<Security A. +1>: 5 -> 3). Kekkomon's
+#      inherited [When Attacking] declined. [End of Attack]: THE CLAUSE -- yes,
+#      BT26-089 picked, its bottom face-down ST23-03 trashed, Zephagamon
+#      unsuspends.
+#
+# PROMPT SHAPE (BT25_041.cs per the card YAML: inherited [End of Attack][OPT]
+# optional -> OptionalSkill, then the Tamer SelectPermanentEffect).
+#
+# UPDATED 2026-10-04 (post-#708): this line used to answer a 2-candidate
+# TriggerOrder (MultipleSkills) on the T5 attack, because our engine re-offered
+# ST23-09's [When Digivolving][When Attacking][Once Per Turn] although that
+# shared OPT was already spent on the [When Digivolving] this turn (flagged
+# here as an uncertain ENGINE FINDING). #708 stopped offering spent-OPT /
+# unactivatable triggers (G-ENGINE-OPT-NOOP-REQUEUE,
+# G-ENGINE-TRIGGER-ORDER-UNACTIVATABLE, RESOLVED 2026-10-04), so only
+# Kekkomon's inherited [When Attacking] is offered and the MultipleSkills row
+# is gone (assert moved from `at: 24` to 23). DCGO agrees: ST23_09.cs builds
+# the WD/WA pair through ActivateClassesForSharedEffects with
+# maxCountPerTurn: 1 and one shared hash "ST23_09_WD_WA", so the WA half is
+# not offered once the WD half resolved; ST23_01.cs's inherited WA is
+# isOptional: true (-> OptionalSkill), which the bare `decline` row answers.
+card: BT25-041
+clause: BT25-041#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-089, BT25-032, BT25-049, BT25-041, ST23-12,
+            BT16-082, ST23-06, BT16-082, ST23-06, BT25-043,
+            ST23-06, ST23-09, ST23-03, BT25-043, ST23-03,
+            ST23-03, BT26-089, BT26-089, ST23-15, ST23-15,
+            ST23-15]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, ST1-05, ST1-03, BT1-009, BT3-007,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-08, ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-032 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT26-089, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { digivolve: { from: field.0, using: ST1-05 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST23-06] } }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT25-049 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: BT25-041 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST23-03] } }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: ST23-09 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { attack: { attacker: field.1, target: security } }
+    expect: { prompt: main_phase }
+  # Kekkomon's (ST23-01) inherited [When Attacking] is now the only trigger:
+  # declined. (DCGO: OptionalSkill; ours: the optional Hand pick.)
+  - actor: 0
+    do: { select: { decline: true } }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 23
+    that:
+      turn: 5
+      p0.memory: 1
+      p0.trash: [ST23-03]
+      p1.security: 3
+      p1.field: []
+      p1.trash: [BT1-009, BT4-014, ST1-02, ST1-05]
+      p0.field:
+        - card_id: BT26-089
+          dp: -1
+          suspended: false
+          sources: [ST23-06]
+        - card_id: ST23-09
+          dp: 12000
+          suspended: false
+          sources: [BT25-032, BT25-041, BT25-049, ST23-01]

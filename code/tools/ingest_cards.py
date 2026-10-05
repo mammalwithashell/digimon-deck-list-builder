@@ -97,6 +97,15 @@ RARITY_MAP = {
     "C": 0, "U": 1, "R": 2, "SR": 3, "SEC": 4, "P": 5,
 }
 
+# Ids the digimoncard.io API serves that are not cards. A set re-ingest replaces
+# every card with the set's prefix by the API's response, so these must be
+# dropped at fetch time or they come back.
+#   RB1-10: a stale duplicate of RB1-010 Siriusmon -- two-digit number in a
+#   three-digit set, rarity "Unknown", no set name, and an older wording
+#   ("unsuspend this Digimon" for the card's "you may unsuspend"). The official
+#   Bandai DB has no RB1-10. Removed from cards.json on 2026-10-03.
+API_PHANTOM_IDS = frozenset({"RB1-10"})
+
 # Known set names for convenience (used by legacy positional args mode)
 SET_NAMES = {
     "BT14": "Booster Blast Ace",
@@ -231,6 +240,7 @@ def _digixros_element_to_json(el):
         **({"name_any": list(el.name_any)} if el.name_any else {}),
         **({"text_any": list(el.text_any)} if el.text_any else {}),
         **({"keyword": el.keyword} if el.keyword else {}),
+        **({"any_of": [dict(q) for q in el.any_of]} if el.any_of else {}),
     }
 
 
@@ -242,6 +252,7 @@ def _digixros_cost_to_json(dxc):
         "different_card_numbers": bool(dxc.different_card_numbers),
         "different_names": bool(dxc.different_names),
         **({"different_colors": True} if dxc.different_colors else {}),
+        **({"different_levels": True} if dxc.different_levels else {}),
         "has_text": dxc.has_text,
         "source_zones": list(dxc.source_zones),
     }
@@ -491,7 +502,7 @@ def fetch_set_by_card_prefix(set_id):
     seen = {}
     for card in api_data:
         cid = card["id"]
-        if not cid.startswith(api_prefix + "-"):
+        if not cid.startswith(api_prefix + "-") or cid in API_PHANTOM_IDS:
             continue
         if cid not in seen:
             seen[cid] = card
@@ -530,8 +541,8 @@ def merge_set_into_cards(existing, new_cards, set_id):
 
     Preserves ``index`` and ``norm_id`` from the old entry when a card is
     being re-fetched (so that stable tensor encoding is not corrupted).
-    Genuinely new cards will lack these fields until ``build_registry.py``
-    is run to assign indices.
+    Genuinely new cards will lack these fields until
+    ``build_registry.py --offline`` assigns the next free indices.
     """
     prefix = set_id + "-"
     # Save old entries so we can carry over index/norm_id
@@ -628,7 +639,8 @@ def bulk_ingest():
     missing_indices = sum(1 for v in existing.values() if "index" not in v)
     if missing_indices:
         print(f"\nWARNING: {missing_indices} cards are missing index/norm_id fields.")
-        print("Run `python tools/build_registry.py` to assign stable indices.")
+        print("Run `python code/tools/build_registry.py --offline` to assign them (append-only;")
+        print("without --offline it rebuilds every entry from the API).")
 
 
 def backfill_xros_costs(cards_path=None):
@@ -705,7 +717,8 @@ def main():
         missing_indices = sum(1 for v in existing.values() if "index" not in v)
         if missing_indices:
             print(f"\nWARNING: {missing_indices} cards are missing index/norm_id fields.")
-            print("Run `python tools/build_registry.py` to assign stable indices.")
+            print("Run `python code/tools/build_registry.py --offline` to assign them (append-only;")
+            print("without --offline it rebuilds every entry from the API).")
         return
 
     # Legacy positional args mode: SET_ID SET_NAME
@@ -739,7 +752,7 @@ def main():
     seen = {}
     for card in api_data:
         cid = card["id"]
-        if cid not in seen:
+        if cid not in seen and cid not in API_PHANTOM_IDS:
             seen[cid] = card
     print(f"Unique cards: {len(seen)}")
 
@@ -759,7 +772,8 @@ def main():
     missing_indices = sum(1 for v in merged.values() if "index" not in v)
     if missing_indices:
         print(f"\nWARNING: {missing_indices} cards are missing index/norm_id fields.")
-        print("Run `python tools/build_registry.py` to assign stable indices.")
+        print("Run `python code/tools/build_registry.py --offline` to assign them (append-only;")
+        print("without --offline it rebuilds every entry from the API).")
 
 
 if __name__ == "__main__":

@@ -4367,6 +4367,13 @@ Single triggered observers auto-enter their body. If the printed trigger is
 optional, the first actionable body selection must expose PASS through the action
 mask, and no prompt should be installed when the body has no legal result.
 Multi-trigger bundles use `TriggerOrder` for player-chosen ordering/decline.
+Bundles are staged per §15-4-5 trigger batch (`QueuedEffect::trigger_batch`):
+entries triggered while an earlier entry resolved form a newer batch that is
+staged — and fully drained — before the still-pending older batch resumes;
+within a batch the turn player's entries come first (15-4-3-5). A
+`TriggerOrder` pick resolves the n-th OFFERED entry
+(`TriggerOrderSelectionState::bundle`), and decline-all drops only the offered
+optional entries.
 
 ---
 

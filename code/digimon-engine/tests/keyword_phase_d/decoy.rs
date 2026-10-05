@@ -78,6 +78,15 @@ fn plain_digimon(id: &str) -> CardData {
     }
 }
 
+/// Delete `h` as if an effect controlled by player 1 (the Decoy carrier's
+/// opponent in these fixtures) were resolving — Decoy only replaces a
+/// deletion caused by an OPPONENT's effect (rules 16-17; DCGO
+/// `Decoy.cs:51-70` `IsByEffect(... EffectSourceCard.Owner == card.Owner.Enemy)`).
+fn opp_effect_delete(r: &mut DebugRunner, h: digimon_engine::permanent::PermanentHandle) {
+    r.game.set_effect_source_player_for_test(Some(1));
+    r.game.delete_permanent_with_effects(h);
+}
+
 // ─── Test 1: accept → Decoy substitutes self for the ally's deletion ────────
 
 /// Player 0 has Decoy (perm A) and a plain ally Digimon (perm B). Opponent
@@ -94,7 +103,7 @@ fn decoy_accept_substitutes_self_for_ally_deletion() {
     let _decoy = r.place_on_field(0, "DECOY", None);
     let ally = r.place_on_field(0, "ALLY", None);
 
-    r.game.delete_permanent_with_effects(ally);
+    opp_effect_delete(&mut r, ally);
 
     // Optional outer accept dialog should be parked.
     {
@@ -154,7 +163,7 @@ fn decoy_decline_lets_original_deletion_proceed() {
     let _decoy = r.place_on_field(0, "DECOY", None);
     let ally = r.place_on_field(0, "ALLY", None);
 
-    r.game.delete_permanent_with_effects(ally);
+    opp_effect_delete(&mut r, ally);
 
     // Outer optional accept dialog is parked.
     {
@@ -203,7 +212,7 @@ fn decoy_does_not_self_redirect_when_self_is_subject() {
 
     let decoy = r.place_on_field(0, "DECOY", None);
 
-    r.game.delete_permanent_with_effects(decoy);
+    opp_effect_delete(&mut r, decoy);
 
     // No selection parked: the body's subject==self guard returned early
     // before any outcome was set, so no candidate parked an optional dialog.
@@ -254,7 +263,7 @@ fn decoy_does_not_protect_opponents_permanent() {
     let _decoy = r.place_on_field(0, "DECOY", None);
     let opp_digi = r.place_on_field(1, "OPP-DIGI", None);
 
-    r.game.delete_permanent_with_effects(opp_digi);
+    opp_effect_delete(&mut r, opp_digi);
 
     // As in Test 3: optional-install may park a spurious outer dialog
     // because cross-controller filtering happens in the body, not at
@@ -314,7 +323,7 @@ fn decoy_color_filter_rejects_non_matching_ally() {
     let _decoy = r.place_on_field(0, "DECOY-BLACK", None);
     let red = r.place_on_field(0, "RED-ALLY", None);
 
-    r.game.delete_permanent_with_effects(red);
+    opp_effect_delete(&mut r, red);
 
     // Optional outer accept dialog may still install (filter is in body).
     if r.game.pending_selection.is_some() {
@@ -369,7 +378,7 @@ fn decoy_color_filter_accepts_matching_ally() {
     let _decoy = r.place_on_field(0, "DECOY-BLACK", None);
     let black = r.place_on_field(0, "BLACK-ALLY", None);
 
-    r.game.delete_permanent_with_effects(black);
+    opp_effect_delete(&mut r, black);
 
     {
         let pending = r
@@ -433,7 +442,7 @@ fn decoy_multi_color_filter_matches_any_in_set() {
     let yellow = r.place_on_field(0, "YELLOW-ALLY", None);
 
     // Yellow is NOT in the Red/Black filter — Decoy should reject.
-    r.game.delete_permanent_with_effects(yellow);
+    opp_effect_delete(&mut r, yellow);
     if r.game.pending_selection.is_some() {
         r.game
             .resolve_selection(0, REPLACEMENT_ACCEPT)
@@ -449,7 +458,7 @@ fn decoy_multi_color_filter_matches_any_in_set() {
 
     // Now place a Red ally — should be accepted.
     let red = r.place_on_field(0, "RED-ALLY", None);
-    r.game.delete_permanent_with_effects(red);
+    opp_effect_delete(&mut r, red);
     {
         let pending = r
             .game
@@ -474,4 +483,45 @@ fn decoy_multi_color_filter_matches_any_in_set() {
             .card_id(&r.game.card_data),
         "RED-ALLY",
     );
+}
+
+// ─── Test 8: cause gate — own-effect / non-effect deletions are NOT replaced ─
+
+/// Rules 16-17 (`<Decoy (X)>`: "another of your (X) Digimon would be deleted
+/// by an opponent's effect"); DCGO `Decoy.cs:55-61` gates `CanUseCondition`
+/// on `IsByEffect(hashtable, EffectSourceCard.Owner == card.Owner.Enemy)`.
+/// A deletion caused by the Decoy controller's OWN effect, or by no effect
+/// at all (rule processing / battle), must not offer the Decoy dialog.
+#[test]
+fn decoy_does_not_replace_own_effect_or_non_effect_deletion() {
+    let mut r = DebugRunner::builder()
+        .add_card(decoy_card("DECOY"))
+        .add_card(plain_digimon("ALLY"))
+        .add_card(plain_digimon("ALLY2"))
+        .start();
+
+    let _decoy = r.place_on_field(0, "DECOY", None);
+    let ally = r.place_on_field(0, "ALLY", None);
+
+    // Own effect (player 0) deletes the ally.
+    r.game.set_effect_source_player_for_test(Some(0));
+    r.game.delete_permanent_with_effects(ally);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "Decoy must not offer to replace a deletion by its controller's own effect"
+    );
+    assert!(r.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "ALLY"));
+
+    // No effect resolving at all (not "by an opponent's effect").
+    r.game.set_effect_source_player_for_test(None);
+    let ally2 = r.place_on_field(0, "ALLY2", None);
+    r.game.delete_permanent_with_effects(ally2);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "Decoy must not offer to replace a deletion not caused by an opponent's effect"
+    );
+    assert_eq!(r.game.players[0].battle_area.len(), 1, "only the Decoy remains");
 }

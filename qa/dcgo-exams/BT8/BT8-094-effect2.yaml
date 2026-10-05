@@ -1,4 +1,4 @@
-# Exam scenario: Digimon Emperor (BT8-094), clause BT8-094#effect#2 --
+# Exam scenario: Digimon Emperor (BT8-094), clause BT8-094#security#0 --
 # "[Security] Play this card without paying the cost."
 #
 # THE SECURITY-TRIGGER SKELETON: the card under exam sits at p0's stack[9] --
@@ -15,7 +15,7 @@
 # Book: qa/dcgo-exams/BT8/tm_bt8_094_pool.json (--decks). p0's deck is Digimon
 # Emperor x4 over the quiet ST-1 filler; p1 is the quiet ST-1 opponent.
 card: BT8-094
-clause: BT8-094#effect#2
+clause: BT8-094#security#0
 seed: 424242
 decks:
   p0:

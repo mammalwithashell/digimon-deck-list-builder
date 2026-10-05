@@ -25,11 +25,19 @@
 # is not separately observable on this line (P-213 sits on a T1 Aegiomon that
 # could attack anyway).
 #
-# PROMPT SHAPE / anticipated oracle quirks:
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
 #   - "may attack" target = the player: two rows for one decision (EX7-013
 #     precedent) -- ours a single-accept-id `yes:` SIM-ONLY, DCGO's
-#     SelectAttackEffect `value: -1` DCGO-ONLY.
-#   - No prompt for the gated buff (mandatory on both sides).
+#     SelectAttackEffect `value: -1` DCGO-ONLY (P_213.cs runs SelectAttackEffect
+#     directly, no OptionalSkill; the harness hook takes select_value -1 as
+#     "attack the player").
+#   - No prompt for the gated buff (WD isOptional false; GainRush +
+#     ChangeDigimonDP take no input).
+#   - T1 Aegiomon [On Play] accept: OptionalSkill(yes); its -5000 rider is
+#     skipped (HasMatchConditionOpponentsPermanent false, P1 empty).
+#   - The attack's <Raid> is stacked but filtered out of MultipleSkills by
+#     CanActivate (CanActivateRaid needs an unsuspended opponent Digimon) ->
+#     no prompt; P1 has no Counter/Blocker.
 card: P-213
 clause: P-213#effect#3
 seed: 424242

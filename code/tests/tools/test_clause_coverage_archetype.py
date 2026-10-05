@@ -19,7 +19,16 @@ from tools.clause_coverage.archetype import (
     resolve,
 )
 
-LIBRARY = Path("data/deck_library.json")
+# The 45 Toho Braves lists the published report was computed from, frozen. The
+# live data/deck_library.json is refreshed from DCG Nexus and moves under it.
+PUBLISHED_TOHO_LISTS = Path(__file__).parent / "fixtures" / "toho_braves_lists_2026-08.json"
+
+# The report's core: every card its per-card table shows in >=33 of 45 lists.
+PUBLISHED_TOHO_CORE = [
+    "EX1-066", "EX12-004", "EX12-009", "EX12-011", "EX12-020", "EX12-026",
+    "EX12-031", "EX12-036", "EX12-046", "EX12-047", "EX12-061", "EX12-062",
+    "EX12-063", "EX12-065", "EX12-070", "EX12-074", "EX12-075", "EX12-076",
+]
 
 
 def _fixture_entry(lists: list[list[str]]) -> dict:
@@ -68,19 +77,26 @@ def test_resolve_is_case_insensitive_and_suggests_near_misses():
     assert "Toho Braves" in str(e.value), "an unknown name must suggest, not just fail"
 
 
-def test_real_library_reproduces_the_published_toho_figures():
-    """Guards the 0.7 default against the published report: 42-card pool,
-    18-card core, 45 lists. If deck_library.json is re-scraped and these move,
-    this fails loudly rather than letting a report quote stale figures.
+def test_published_toho_lists_reproduce_the_report_figures():
+    """Guards the 0.7 default against the published report
+    (qa/qa-reports/toho-braves-exam-report.md, 2026-08-26): 45 lists, a 42-card
+    pool, and the 18-card core its per-card table lists.
+
+    It reads the frozen lists the report was computed from, not the live
+    library. This test used to read data/deck_library.json; the 2026-09-12 DCG
+    Nexus refresh (f5e8c29b2) grew Toho Braves to 114 lists, a 50-card pool and
+    a 17-card core (EX12-075 dropped out), and it failed from then on while
+    saying nothing about core(). Reports are dated snapshots; the campaign
+    tooling always recomputes from the live library.
 
     NOTE: the threshold is ceil(list_count * fraction), not a hardcoded
     literal -- ceil(45 * 0.7) = ceil(31.5) = 32, not 31. See
     code/tools/clause_coverage/archetype.py's core() docstring.
     """
-    lib = load_archetypes(LIBRARY)
+    lib = load_archetypes(PUBLISHED_TOHO_LISTS)
     entry = lib[resolve(lib, "Toho Braves")]
     assert len(entry["decklists"]) == 45
     assert len(pool(entry)) == 42
     c = core(entry, DEFAULT_CORE_FRACTION)
-    assert len(c["cards"]) == 18, f"expected the published 18-card core, got {len(c['cards'])}"
+    assert c["cards"] == PUBLISHED_TOHO_CORE, f"expected the published 18-card core, got {c['cards']}"
     assert c["threshold"] == 32

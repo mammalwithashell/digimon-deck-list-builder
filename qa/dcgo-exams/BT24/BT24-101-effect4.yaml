@@ -32,7 +32,13 @@
 #
 # PROMPT SHAPE: our Replacement window (optional, mandatory body) ->
 # DCGO OptionalSkill (WhenRemoveField, optional); answered yes. No pick:
-# only Elecmon is leaving. T1 reveal: RevealBucket x2 + OrderedPermutation
+# only Elecmon is leaving. VERIFIED (DCGO C#, 2026-10-04): BT24_101.cs
+# "Protect TS" is WhenRemoveField, SetUpActivateClass(..., 1, true, ...),
+# CanUse via CanTriggerWhenPermanentRemoveField with NO IsByBattle exclusion
+# (so a security-battle loss triggers it); the body trashes the top
+# security and clears willBeRemoveField -- no pick. Elecmon BT24-031's own
+# inherited [When Attacking] is dead while it is the top card. The trash
+# then stacks effect#3 alone (fresh on T5) -> no MultipleSkills. T1 reveal: RevealBucket x2 + OrderedPermutation
 # N=1 (sim_only) -- documented RevealBucket per-bucket add-timing quirk.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --

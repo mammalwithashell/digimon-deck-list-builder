@@ -229,3 +229,30 @@ fn bt26_033_option_main_deletes_all_lowest_dp_then_recovers() {
     assert_eq!(r.security_count(0), 4, "<Recovery +1>");
     assert_eq!(r.memory(), 10 - 5, "paid 2 + 3 security");
 }
+
+/// G-ENGINE-DUAL-END-OF-TURN-WINDOW: a board-resident DUAL card is
+/// `CardKind::Dual`; the end-of-turn keyword gate must still count it as a
+/// Digimon so `<Engage>` parks the EndOfTurnAction attack window.
+#[test]
+fn bt26_033_engage_parks_end_of_turn_attack_window_for_dual_card() {
+    use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
+    use digimon_engine::enums::GamePhase;
+
+    let mut r = setup();
+    let jupi = r.place_on_field(0, CARD_ID, Some(0));
+    assert_eq!(r.game.turn_player(), 0);
+    assert!(r.game.has_end_of_turn_keywords(0));
+
+    r.game.end_turn();
+    assert_eq!(
+        r.game.current_phase,
+        GamePhase::EndOfTurnAction,
+        "<Engage> on a DUAL top card must open the end-of-turn attack window"
+    );
+    let mask = digimon_engine::build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[encode_attack(jupi.index as u16, SECURITY_TARGET) as usize],
+        1.0
+    );
+    assert_eq!(mask[PASS as usize], 1.0, "Engage is optional");
+}

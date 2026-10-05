@@ -50,7 +50,7 @@ card: EX8-073
 name: "Gallantmon (X Antibody)"
 kind: digimon
 level: 6
-color: [red, blue]
+color: [red, blue, yellow]
 cost: 12
 dp: 12000
 traits: [Holy Warrior, X Antibody, Royal Knight]

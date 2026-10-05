@@ -42,19 +42,21 @@ effects:
   - when: end_of_your_turn
     optional: true
     summary: "[End of Your Turn] Suspend this Tamer to activate an On Play or When Digivolving effect of your Olympos XII Digimon"
+    # "By suspending this Tamer, you may activate ...": DCGO BT24_102.cs:121-
+    # 135 offers the OptionalSkill whenever Homeros is on the battle area and
+    # can pay the suspend cost -- no eligible-target check (§15-7-5: the "By
+    # X" cost may be paid even if the result can't happen). The cost is paid
+    # first (:137-138), then the declinable [Olympos XII] pick
+    # (SelectPermanentEffect canNoSelect: true; opens nothing with no
+    # candidate).
     condition:
-      all_of:
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            card_number_is: "BT24-102"
-            is_unsuspended: true
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            kind: digimon
-            trait_has: "Olympos XII"
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: "BT24-102"
+        is_unsuspended: true
     process:
+      - suspend: { target: source }
       - select_own_permanent:
           bind_as: refire_target
           optional: true
@@ -63,7 +65,6 @@ effects:
               - kind: digimon
               - trait_has: "Olympos XII"
           prompt: "Choose 1 of your Olympos XII Digimon"
-      - suspend: { target: source }
       - refire_effect:
           source: refire_target
           timing: on_play_or_when_digivolving

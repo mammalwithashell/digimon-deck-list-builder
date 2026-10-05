@@ -2,7 +2,7 @@ card: BT20-045
 name: Examon
 kind: digimon
 level: 7
-color: [green, red]
+color: [green, red, blue]
 cost: 9
 dp: 15000
 traits: [Holy Warrior, Royal Knight]

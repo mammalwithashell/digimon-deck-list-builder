@@ -257,12 +257,27 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             target,
             position,
             face_up,
+            to_owner,
+            bind_placed_as,
         } => {
-            let player = crate::dsl_cards::step::resolve_player(ctx, *of);
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
+                let top = ctx
+                    .game
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+                    .map(|p| (p.top_card().owner, p.top_card().handle()));
+                let player = match (*to_owner, top) {
+                    // DCGO AddSecurityCard -> `cardSource.Owner.SecurityCards`.
+                    (true, Some((owner, _))) => owner,
+                    _ => crate::dsl_cards::step::resolve_player(ctx, *of),
+                };
                 let position = super::map_stack_position(*position);
-                let _ = ctx.place_permanent_on_security(player, h, position, *face_up);
+                let placed = ctx.place_permanent_on_security(player, h, position, *face_up);
+                if let (true, Some(name), Some((_, card))) = (placed, bind_placed_as.as_ref(), top) {
+                    bindings.insert_card(name, card);
+                }
             }
             true
         }

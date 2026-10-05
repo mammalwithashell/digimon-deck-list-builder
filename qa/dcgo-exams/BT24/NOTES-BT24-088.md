@@ -10,7 +10,7 @@ All three clauses have a scenario; none is `unreachable`. Book:
 |---|---|---|---|
 | `BT24-088#effect#0` | `[Start of Your Turn] If you have 4 or less memory, by returning this Tamer to the bottom of the deck, you may play 1 [Asuna Shiroki] or 1 level 4 or lower Digimon card … from your trash without paying the cost.` | `BT24-088-effect0.yaml` (the [Asuna Shiroki] name branch) | lowers, asserts pass |
 | `BT24-088#effect#1` | `[On Play] By trashing 1 card with [Three Musketeers] in its text or the [TS] trait from your hand, <Draw 2>.` | `BT24-088-effect1.yaml` (cost PAID) | lowers, asserts pass |
-| `BT24-088#effect#2` | `[Security] Play this card without paying the cost.` | `BT24-088-effect2.yaml` (P1 defends; card pinned at P1 `stack[9]`) | lowers, asserts pass |
+| `BT24-088#security#0` | `[Security] Play this card without paying the cost.` | `BT24-088-effect2.yaml` (P1 defends; card pinned at P1 `stack[9]`) | lowers, asserts pass |
 
 Audited on resume (2026-09-18) against `BT24_088.cs`; re-lowered on the current
 harness binary; no repairs needed.

@@ -2,14 +2,13 @@
 # "[When Digivolving] [Counter] [Once Per Turn] Trash your top security card
 #  and <Recovery +2>."  -- the [When Digivolving] arm.
 #
-# WHY THE WD ARM: the [Counter] arm is NOT reachable on our engine in real
-# combat (see report): the DSL lowers `when: counter` to
-# EffectTiming::CounterEffect but never sets `Effect::counter`, and
-# `Game::try_enter_counter` only offers a battle-area FieldAbility when
-# `e.counter && timing == CounterEffect` (combat/mod.rs ~L1625); it also
-# returns early for any attack on the player. Probe (not committed): Wrath
-# Mode on field, P1's Biyomon attacks P0's suspended Elecmon -> our engine
-# goes straight to the block prompt, p0.security unchanged at 5.
+# WHY THE WD ARM: written when the [Counter] arm was unreachable on our
+# engine (no Counter window on a player attack, no `counter` flag from the
+# DSL). Both are fixed (2026-10-04, G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK
+# + G-DSL-COUNTER-TIMING-NO-COUNTER-FLAG; BT26-103-effect3.yaml now crosses the
+# Counter window and declines it). DCGO's Counter arm is CounterClass,
+# optional by construction -> OptionalSkill; a Counter-arm line would author
+# `select: {yes: true}` + `expect: {prompt: OptionalSkill}` at the window.
 #
 # Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
 # `tm-quiet-red`).
@@ -28,8 +27,26 @@
 # [Jupitermon] base) means <Succession> copies nothing and this is the ONLY
 # When-Digivolving trigger -> no MultipleSkills row.
 #
-# PROMPT SHAPE: the clause is mandatory (DCGO optional:false per the YAML
-# crosscheck) and target-less -> no OptionalSkill, no selection.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04): identical to
+# BT26-103-effect0.yaml --
+#   * T3 Minervamon [On Play] (BT24/Yellow/BT24_041.cs shared OP/WD/OD,
+#     optional false): its "may play" SelectHandEffect has maxCount 0 (no
+#     cost<=5 [Iliad] card in hand) -> SelectHandEffect.active() returns false
+#     (`_maxCount <= 0`), NO prompt and no OptionalSkill; then the mandatory
+#     De-Digivolve SelectPermanentEffect (HasMatchConditionPermanent true) ->
+#     1:1 with our pick.
+#   * T5 cost route: CardController.cs SelectCost asks SelectCountEffect
+#     over the DISTINCT cost list [6 (Yellow Lv.6 circle), 5 (Olympos XII
+#     route)] (~720) -> answered by VALUE 5; ours is an EffectChoice.
+#   * Wrath Mode's WD (BT26_103.cs ActivateClassesForSharedEffects, optional:
+#     false, OPT hash "BT26_103_WD_Counter") is the lone WD trigger
+#     (<Succession> copies nothing off a non-[Jupitermon] source) -> no
+#     MultipleSkills, no OptionalSkill. Its IDestroySecurity queues effect#6
+#     ([All Turns][OPT], fires on EITHER player's removal), which resolves
+#     after the WD: mandatory SelectPermanentEffect (maxCount 1, canNoSelect
+#     false; a sole candidate is still asked).
+#   * The clause is mandatory and target-less (IDestroySecurity + IRecovery)
+#     -> no prompt of its own.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

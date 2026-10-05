@@ -303,6 +303,32 @@ fn bt24_041_opponent_turn_aura_grants_reboot_and_blocker_to_own_iliad_digimon_on
     assert!(!runner.game.has_keyword(opponent_iliad, Keyword::Blocker));
 }
 
+/// G-ENGINE-AURA-REBOOT-NOT-APPLIED: the `[Opponent's Turn]` aura-granted
+/// `<Reboot>` must be live at the START of the opponent's unsuspend phase, so a
+/// suspended [Iliad] Digimon unsuspends there (rules 16-10) without any manual
+/// declarative re-tick.
+#[test]
+fn bt24_041_aura_granted_reboot_unsuspends_in_opponents_unsuspend_phase() {
+    let mut runner = minervamon_runner().start();
+    runner.place_on_field(0, "BT24-041", Some(0));
+    let own_iliad = runner.place_on_field(0, "ALLY-ILIAD", Some(0));
+    let own_plain = runner.place_on_field(0, "ALLY-DIGIMON", Some(0));
+    runner.game.tick_declarative_effects();
+    runner.game.players[0].battle_area[own_iliad.index as usize].is_suspended = true;
+    runner.game.players[0].battle_area[own_plain.index as usize].is_suspended = true;
+
+    runner.end_turn();
+    assert_eq!(runner.turn_player(), 1, "must be opponent's turn");
+    assert!(
+        !runner.game.players[0].battle_area[own_iliad.index as usize].is_suspended,
+        "aura-granted <Reboot> must unsuspend the [Iliad] Digimon in the opponent's unsuspend phase"
+    );
+    assert!(
+        runner.game.players[0].battle_area[own_plain.index as usize].is_suspended,
+        "non-[Iliad] Digimon has no <Reboot> and stays suspended"
+    );
+}
+
 fn minervamon_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
     DebugRunner::builder()
         .from_dsl_yaml(YAML)

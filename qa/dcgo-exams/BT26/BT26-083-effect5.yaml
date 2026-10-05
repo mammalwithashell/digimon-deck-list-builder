@@ -25,12 +25,21 @@
 # the delete pick) P0's trash holds exactly the 5 former security cards, both
 # P1 Digimon are in P1's trash, and P0 security is 3 (0 + Recovery 3).
 #
-# PROMPT SHAPE. Ours: ONE CountCapped multi pick (min = max = 2 of 2) answered
-# with both targets. DCGO (per our YAML crosscheck): IDestroySecurity, then a
-# mandatory SelectPermanentEffect (maxCount 2, canNoSelect false,
-# canEndNotMax false) -- possible DCGO auto-select when candidates == maxCount
-# (would show as a missing DCGO row). No OptionalSkill (not optional). The
-# <Execute> gate: documented end-of-turn fold.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04 (b9a0638cd)):
+#   - P0's trash is empty -> SelectAssemblyClass.CanFulfillConditions is false
+#     -> no Assembly prompt.
+#   - The delete pick is ONE SelectPermanentEffect maxCount = min(trashed,
+#     opp Digimon), canNoSelect false (BT26_083.cs:85-99); asked even when
+#     candidates == maxCount (the forced auto-pick is human-UI only,
+#     SelectPermanentEffect.cs ~376-407). 0 candidates -> no prompt
+#     (`if (deleteCount >= 1)`). The OP/WD is optional:false
+#     (BT26_083.cs:115): no OptionalSkill.
+#     The "possible DCGO auto-select when candidates == maxCount" is REFUTED
+#     for the harness: the row is asked.
+#   - <Execute> (KeyWordEffects/Execute.cs) is an optional OnEndTurn
+#     ActivateClass gated on CanActivateExecute == CanAttack -> OptionalSkill,
+#     then SelectAttackEffect on yes (CardEffectCommons Execute.cs:18-70):
+#     the documented end-of-turn fold. Declined here.
 card: BT26-083
 clause: BT26-083#effect#5
 seed: 424242

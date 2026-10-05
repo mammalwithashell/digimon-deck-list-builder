@@ -29,8 +29,8 @@
       "scenario_path": "qa/dcgo-exams/P/P-212-effect2.yaml",
       "recorded_at": "2026-09-19T15:13:53.557772400+00:00"
     },
-    "P-212#effect#3": {
-      "clause_id": "P-212#effect#3",
+    "P-212#security#0": {
+      "clause_id": "P-212#security#0",
       "card_id": "P-212",
       "verdict": "confirmed",
       "label": "Security Effect",

@@ -12,7 +12,7 @@ with `tm_p_108_pool.json` (decks `tm-wisdom`, `quiet-opponent`).
 |---|---|---|
 | `P-108#effect#0` | `[Main] Reveal the top 2 cards of your deck. Add 1 purple card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.` | `P-108-effect0.yaml` |
 | `P-108#effect#1` | `[Main] <Delay> … 1 of your Digimon may digivolve into a purple Digimon card in the hand with the digivolution cost reduced by 2.` | `P-108-effect1.yaml` |
-| `P-108#effect#2` | `[Security] Place this card in the battle area.` | `P-108-effect2.yaml` |
+| `P-108#security#0` | `[Security] Place this card in the battle area.` | `P-108-effect2.yaml` |
 
 ## Adversarial pre-Unity review (from `P_108.cs`)
 

@@ -1,4 +1,4 @@
-# Exam scenario: BT8-097 (Crimson Blaze), clause BT8-097#effect#2 --
+# Exam scenario: BT8-097 (Crimson Blaze), clause BT8-097#security#0 --
 # "[Security] Activate this card's [Main] effects."
 #
 # The printed sentence is ONE clause; the extractor splits it at the
@@ -53,7 +53,7 @@
 # never plays it -- the security effect activates the [Main] body
 # directly, off the security stack.
 card: BT8-097
-clause: BT8-097#effect#2
+clause: BT8-097#security#0
 seed: 424242
 decks:
   p0:

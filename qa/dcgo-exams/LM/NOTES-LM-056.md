@@ -16,7 +16,7 @@ and none resolves a `<De-Digivolve>`.
 | `LM-056#effect#0` | `While you don't have [Image Training] in the battle area, you can ignore this card's color requirements.` | `LM-056-effect0.yaml` — the play is legal ONLY through the clause: p0 owns nothing but a YELLOW Tsunomon BT24-003 in breeding |
 | `LM-056#effect#1` | `[Main] Reveal the top 2 … Add 1 purple or blue card … place this card in the battle area.` | `LM-056-effect1.yaml` |
 | `LM-056#effect#2` | `[Main] <Delay> - 1 of your Digimon may digivolve into a purple or blue Digimon card in the hand with the digivolution cost reduced by 2.` | `LM-056-effect2.yaml` |
-| `LM-056#effect#3` | `[Security] Reveal the top 2 … place this card in the battle area.` | `LM-056-effect3.yaml` |
+| `LM-056#security#0` | `[Security] Reveal the top 2 … place this card in the battle area.` | `LM-056-effect3.yaml` |
 
 ## Adversarial pre-Unity review (from `LM_056.cs`)
 
@@ -121,7 +121,7 @@ them.
 | Clause | Sidecar | Diff | Verdict |
 |---|---|---|---|
 | `LM-056#effect#2` | `20260921T043609Z_6794b105` | CLEAN, compared 19 of 20 ours / 19 dcgo (1 sim-only row) | **confirmed** |
-| `LM-056#effect#3` | `20260921T043702Z_ece1cec6` | CLEAN, compared 14 of 15 ours / 14 dcgo (1 sim-only row) | **confirmed** |
+| `LM-056#security#0` | `20260921T043702Z_ece1cec6` | CLEAN, compared 14 of 15 ours / 14 dcgo (1 sim-only row) | **confirmed** |
 
 The excluded row on each line is our own follow-on `select:` step, which answers a
 prompt DCGO does not open; it is named in the denominator rather than netted out.

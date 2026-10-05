@@ -2,8 +2,8 @@ card: BT20-060
 name: "Alphamon: Ouryuken"
 kind: digimon
 level: 7
-color: [black, purple, red]
-cost: 6
+color: [black, yellow, red]
+cost: 9
 dp: 16000
 traits: ["X Antibody", "Royal Knight", Chronicle]
 attribute: Vaccine

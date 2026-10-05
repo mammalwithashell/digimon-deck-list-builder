@@ -21,15 +21,18 @@
 # WITNESS: Biyomon (3000) and Monodramon (3000) are deleted to P1's trash;
 # Vermilimon (8000) survives at 3000 DP -- the -5000 read directly.
 #
-# PROMPT SHAPE / anticipated oracle quirks:
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04):
+#   - T1 [On Play] decline: optional -> OptionalSkill(no).
 #   - SIM-ONLY row: our 9-1-5 TriggerOrder between the used Option's disposal
-#     and BT26-029's trigger (G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER); DCGO
-#     hard-codes the disposal first and asks nothing -> we answer "Trash the
+#     and BT26-029's trigger (G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER). DCGO
+#     trashes the used Option inside UseOptionClass (CardController.cs,
+#     AddTrashCard right after the OptionSkill ActivateEffectProcess) before
+#     the main stack's triggers run, and asks nothing -> we answer "Trash the
 #     used Option" to take DCGO's order (BT3-096-effect0 precedent).
-#   - The 3-target pick: ours is a count-capped multi-select answered in one
-#     `targets:` row; DCGO is one SelectPermanentEffect(maxCount 3). If DCGO
-#     re-parks per pick (or ours does on the wire), expect a cardinality
-#     mismatch, not a rules finding.
+#   - The 3-target pick: DCGO asks ONE SelectPermanentEffect with maxCount
+#     min(3, 3) = 3, canNoSelect false (BT26_029.cs All Turns region); ours a
+#     count-capped multi-select answered in one `targets:` row -> 1:1. A lone
+#     mandatory trigger -> no MultipleSkills, no OptionalSkill.
 card: BT26-029
 clause: BT26-029#effect#4
 seed: 424242

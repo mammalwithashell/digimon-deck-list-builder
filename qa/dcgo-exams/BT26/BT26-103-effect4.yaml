@@ -18,20 +18,24 @@
 #            (3 -> -2). THE CLAUSE: Wrath Mode now carries BT24-101's
 #            effects, so TWO [When Digivolving] triggers stack:
 #              Wrath Mode's own WD (effect#5) and the gained BT24-101 WD.
-#   Resolution (our TriggerOrder prompts, steps 12-17):
+#   Resolution (PRE-FIX trace -- since the 2026-10-04 derived-first fix ours
+#   asks two prompts, sim_only steps 13/15; DCGO's are dcgo_only 12/14):
 #     12 [BT26-103 WD, BT24-101 gWD]           -> BT26-103: trash BT25-033,
 #                                                Recovery +2 (4 -> 3 -> 5);
 #                                                triggers effect#6 + gained AT
-#     13 [BT24-101 gWD, BT24-101 gAT, BT26-103 e6] -> e6 (no opp Digimon: no-op)
+#     13 [BT24-101 gWD, BT24-101 gAT, BT26-103 e6] -> e6 (no opp Digimon: a
+#                                                no-target activation, which
+#                                                still spends its OPT, 15-14-1)
 #     14 [BT24-101 gWD, BT24-101 gAT]  ordinal 0 -> gWD: trash BT24-034
 #                                                (5 -> 4); -13000 no target;
 #                                                4 > 1 -> no Recovery;
-#                                                re-triggers gAT + e6
-#     15 [BT24-101 gAT, BT24-101 gAT, BT26-103 e6] -> e6 (no-op)
-#     16 [BT24-101 gAT, BT24-101 gAT]  ordinal 0 -> gAT: trash P1's top
+#                                                re-triggers gAT (+ e6, now
+#                                                OPT-spent: not offered)
+#     15 [BT24-101 gAT, BT24-101 gAT]  ordinal 0 -> gAT: trash P1's top
 #                                                security BT1-009 (4 -> 3);
-#                                                that removal triggers e6 again
-#     17 [BT24-101 gAT (OPT spent), BT26-103 e6] -> gAT fizzles; e6 auto-last.
+#                                                the second gAT and the e6
+#                                                that removal raises are
+#                                                OPT-spent: nothing more.
 #
 # WITNESS (P1's T6 breeding decision): the two gained effects ran --
 #   * gained [When Digivolving]: P0's trash gains BT24-034 (p0.security 4,
@@ -40,19 +44,55 @@
 #     security": p1.security 3 (not 4), BT1-009 in P1's trash.
 #   The end state is order-independent across the 2..3-way stacks above.
 #
-# PROMPT SHAPE / EXPECTED ORACLE TRIAGE:
-#   * Cost route by VALUE 5 (SelectCountEffect).
-#   * MultipleSkills rows: the ORDER is ours. Steps 14 and 16 use `ordinal: 0`
-#     over two same-id (BT24-101) triggers that carry no keyword, so neither
-#     `trigger:` nor `trigger_not:` applies. Step 14's branch is LOAD-BEARING
-#     for the row trace (gained WD vs gained AT) though not for the end state;
-#     read DCGO's order off the abort message if it disagrees.
-#   * Our engine re-queues effect#6 on every security removal even after a
-#     no-target resolution (its OPT is not consumed by a no-op), giving rows
-#     13/15/17 that DCGO may batch or skip (DCGO's CanActivate usually checks
-#     for a target first) -- a likely prompt-count mismatch, see report.
-#   * DCGO may also not re-queue a SECOND instance of the gained [All Turns]
-#     OPT (rows 15-17), which would shorten its stack.
+# PROMPT SHAPE (VERIFIED against DCGO C# 2026-10-04) -- the trigger rows are
+# SPLIT into `sim_only` (ours) + `dcgo_only` (DCGO) because the two engines
+# neither name nor batch these triggers the same way:
+#   * Cost route by VALUE 5: CardController.cs SelectCost builds the DISTINCT
+#     cost list ([6, 5]) and asks SelectCountEffect (~720) -- shared row.
+#   * IDENTITY: <Succession> copies are built by CopiedEffects.cs
+#     CopyDigivolutionCardEffects as a NEW ActivateClass whose
+#     SetUpICardEffect(..., card) names the HOST (BT26-103) as EffectSourceCard
+#     (only OriginalEffectSourceCard is BT24-101). MultipleSkills candidate ids
+#     are EffectSourceCard.CardID (MultipleSkills.cs ScriptedCandidateCardIds),
+#     so on DCGO's wire EVERY gained BT24-101 trigger reads "BT26-103". Ours
+#     labels them BT24-101 -- no shared identity can answer both, hence the
+#     split. Order inside BT26_103.CardEffects: the Succession region precedes
+#     the Shared WD/Counter and All Turns regions, so a copy sits BEFORE the
+#     host's own effect at the same timing -> own effect = ordinal 1.
+#   * BATCHING: DCGO resolves triggers that arise DURING a resolution in a
+#     NESTED MultipleSkills before returning to the still-pending ones
+#     (MultipleSkills.cs ActivateMultipleSkills_OnePlayer, "If there are any
+#     newly triggered effects, resolve those first" ->
+#     _autoProcessing.TriggeredSkillProcess). DCGO's line:
+#       A  MultipleSkills [copied WD, own WD] (both "BT26-103") -> own WD
+#          (ordinal 1): trash BT25-033, Recovery +2; queues copied AT + e6.
+#       B  nested MultipleSkills [copied AT, own e6] (both "BT26-103") -> e6
+#          (ordinal 1; no opp Digimon -> HasMatchConditionPermanent false, no
+#          pick; OPT "BT26_103_AT" registered). The lone copied AT then runs
+#          with NO prompt (MultipleSkills `Count == 1` short-circuit): trash
+#          P1's top security; the removal re-triggers nothing (copied AT is
+#          owner-only; e6 OPT spent).
+#          Back in the outer batch the lone copied WD runs, no prompt: trash
+#          P0's top security, -13000 no target (maxCount 0), 4 > 1 no Recovery;
+#          copied AT/e6 OPT-spent (copies get a stable GenerateHashString, so
+#          the OPT survives CardEffects() re-allocation).
+#     So DCGO asks 2 MultipleSkills rows to our 4 TriggerOrder rows.
+#   * FIXED 2026-10-04 (G-ENGINE-TRIGGER-ORDER-DERIVED-FIRST): our drainer now
+#     stages derived triggers in their own newer batch, so ours also asks TWO
+#     ordering prompts ([own WD, gWD] then [gAT, e6]) and runs gAT before the
+#     still-pending gWD -- DCGO's shape. The rows stay split only because of
+#     the IDENTITY difference above. Historical note (pre-fix):
+#   * PREDICTED DIVERGENCE (prompt shape; DCGO is right): our step-13 prompt
+#     offers [BT24-101 gWD, BT24-101 gAT, BT26-103 e6] -- it MERGES the
+#     pending gWD with the two triggers derived from own WD. general_rule.pdf
+#     §15-4-5-2/3 (docs/digimon-rules/digest.md "Derived triggering") says
+#     derived triggers activate BEFORE still-pending ones, i.e. DCGO's nested
+#     [gAT, e6] batch; ours also lets step 14 run gWD before the derived gAT.
+#     The END STATE is order-independent here (asserts unaffected), and the
+#     differ compares only the rows both sides share (pre-A, pre-B, final).
+#   * (FIXED 2026-10-04, G-ENGINE-OPT-NOOP-REQUEUE / G-ENGINE-OPT-SPENT-
+#     TRIGGER-IN-TRIGGER-ORDER) OPT-spent re-queued entries are no longer
+#     offered on our side.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.
@@ -108,25 +148,23 @@ steps:
   - actor: 0
     do: { select: { value: 5 } }
     expect: { prompt: SelectCountEffect }
-  # Trigger stack (see header table).
+  # Trigger stack (see header). DCGO row A: [copied BT24-101 WD, own WD],
+  # both sourced "BT26-103" -> own WD.
   - actor: 0
-    do: { select: { cards: [BT26-103] } }
-    expect: { prompt: MultipleSkills, count: 1, candidates: [BT26-103, BT24-101] }
+    do: { select: { cards: [BT26-103], ordinal: 1, dcgo_only: true } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT26-103, BT26-103] }
+  # Ours 12: [BT26-103 WD, BT24-101 gWD] -> own WD.
   - actor: 0
-    do: { select: { cards: [BT26-103] } }
-    expect: { prompt: MultipleSkills, count: 1, candidates: [BT24-101, BT24-101, BT26-103] }
+    do: { select: { cards: [BT26-103], sim_only: true } }
+  # DCGO row B (nested, derived triggers only): [copied AT, own e6] -> e6.
   - actor: 0
-    do: { select: { cards: [BT24-101], ordinal: 0 } }
-    expect: { prompt: MultipleSkills, count: 1, candidates: [BT24-101, BT24-101] }
+    do: { select: { cards: [BT26-103], ordinal: 1, dcgo_only: true } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [BT26-103, BT26-103] }
+  # Ours, the same nested batch (derived triggers only, §15-4-5-2/3):
+  # [BT24-101 gAT, BT26-103 e6] -> e6. The lone gAT then runs, and the
+  # still-pending gWD after it -- no further prompt on either side.
   - actor: 0
-    do: { select: { cards: [BT26-103] } }
-    expect: { prompt: MultipleSkills, count: 1, candidates: [BT24-101, BT24-101, BT26-103] }
-  - actor: 0
-    do: { select: { cards: [BT24-101], ordinal: 0 } }
-    expect: { prompt: MultipleSkills, count: 1, candidates: [BT24-101, BT24-101] }
-  - actor: 0
-    do: { select: { cards: [BT24-101] } }
-    expect: { prompt: MultipleSkills, count: 1, candidates: [BT24-101, BT26-103] }
+    do: { select: { cards: [BT26-103], sim_only: true } }
   # T6 (P1): trailing breeding decision.
   - actor: 1
     do: { pass: {} }
@@ -143,14 +181,8 @@ assert:
       p1.trash: [BT1-014, ST1-10]
       p0.field:
         - { card_id: BT26-103, dp: 16000, suspended: false, sources: [BT24-101] }
-  # After own WD + gained WD (step 15's prompt): 4 -1 +2 -1 = 4.
-  - at: 15
-    that:
-      p0.security: 4
-      p1.security: 4
-      p0.trash: [BT24-031, BT24-034, BT25-033]
   # Final: gained [All Turns] trashed P1's top security.
-  - at: 18
+  - at: 16
     that:
       turn: 6
       p0.security: 4

@@ -4,12 +4,20 @@
 # Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json (`ts-jupitermon` vs
 # `tm-quiet-red`).
 #
-# ISOLATION: Jupitermon's printed circle is Yellow Lv.5 / cost 5, and its
-# second special condition is "Lv.5 w/[Aegiochusmon] in name: Cost 1 per
-# security card". The base here is P-213 -- RED Lv.5 [Shaman/Iliad/TS], NOT
-# named Aegiochusmon -- so neither the circle nor the Aegiochusmon route
-# applies and the digivolve is legal ONLY through this clause, at cost 5.
-# Single legal route => no route-choice prompt.
+# ISOLATION -- CORRECTED 2026-10-04: Jupitermon's printed circle is Yellow
+# Lv.5 / cost 5, and its second special condition is "Lv.5 w/[Aegiochusmon]
+# in name: Cost 1 per security card". The base here is P-213 -- RED Lv.5
+# [Shaman/Iliad/TS] -- and P-213's card NAME IS "Aegiochusmon"
+# (data/cards.json card_name_eng; BT24_101.cs's second route tests
+# `TopCard.ContainsCardName("Aegiochusmon")`). So BOTH special routes apply:
+# this clause (5) and effect#1's route (1 x 5 security = 5). The Yellow
+# circle does not. The memory delta (exactly 5) is therefore consistent with
+# either special route -- this line does NOT isolate effect#0 from effect#1
+# while P0 sits at 5 security. (To isolate: a non-Aegiochusmon red/black
+# [TS] Lv.5, or the same base at security != 5 with the cost choice
+# answered 5.) No route prompt on DCGO's side: CardController.cs
+# PlayCardClass SelectCost builds CostList, applies `.Distinct()`, and only
+# opens SelectCountEffect for >= 2 DISTINCT costs -- {5, 5} -> one.
 #
 # THE LINE:
 #   T1 (P0, memory 0): hard-play P-213 (cost 7: 0 -> -7; P-213 has no [On
@@ -26,8 +34,12 @@
 #
 # PROMPT SHAPE: the digivolve itself asks nothing. Jupitermon's WD is
 # mandatory and its -13000 target pick is empty here (no P1 Digimon):
-# measured -- our engine asks nothing; DCGO is expected to skip an empty
-# SelectPermanentEffect as well. effect#3 is mandatory, no prompt.
+# measured -- our engine asks nothing; VERIFIED DCGO skips it too:
+# BT24_101.cs passes maxCount = min(1, candidates) and
+# SelectPermanentEffect.active() returns false with zero candidates. The WD
+# is non-optional (SetUpActivateClass(..., -1, false, ...)) -> no
+# OptionalSkill. effect#3 (OnLoseSecurity, once per turn, isOptional false)
+# is the only trigger stacked by the trash -> no MultipleSkills, no prompt.
 #
 # PROVISIONAL: assert block is our engine's result, not backfilled from DCGO --
 # unconfirmed until the oracle pass.

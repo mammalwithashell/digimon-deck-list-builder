@@ -62,12 +62,14 @@ Read four things before doing anything else:
 - `skipped` — confirmed or `unavailable`, with reasons. Report these; never
   silently drop them.
 
-Two verified worked examples, so you know what the output actually looks like:
+Two verified worked examples, so you know what the output actually looks like
+(measured 2026-10-03 on main; the counts move whenever `data/deck_library.json`
+is refreshed or a verdict is recorded, so expect yours to differ):
 
-- `--archetype "Toho Braves"` → 42 cards, core 18 (≥32 of 45 lists), `implement`
-  0, `exam` 56, `skipped` 110.
-- `--archetype "Hunters"` → 65 cards, core 16 (≥19 of 27 lists), `implement` 42,
-  `exam` 88, `skipped` 3.
+- `--archetype "Toho Braves"` → 50 cards, core 17 (≥80 of 114 lists), `implement`
+  7, `exam` 52, `skipped` 113.
+- `--archetype "Hunters"` → 66 cards, core 14 (≥20 of 28 lists), `implement` 42,
+  `exam` 82, `skipped` 10.
 
 An unknown archetype raises with near-misses. Use one of them; do not invent a
 name.

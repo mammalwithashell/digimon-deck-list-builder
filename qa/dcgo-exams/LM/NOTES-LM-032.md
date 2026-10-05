@@ -15,7 +15,7 @@ pointing at the per-card book.
 |---|---|---|---|
 | `LM-032#effect#0` | `[Main] 1 of your purple Digimon may digivolve into a purple Digimon card in the hand with the digivolution cost reduced by 3. Then, place this card in the battle area.` | `LM-032-effect0.yaml` | lowers, asserts pass (repaired, below) |
 | `LM-032#effect#1` | `[Start of Your Turn] If your opponent has a Digimon, <Delay>. ・Return 1 purple Digimon card from your trash to the top of the deck. Then, if you don't have a Digimon, you may play 1 purple Digimon card with 2000 DP or less from your trash without paying the cost.` | `LM-032-effect1.yaml` | lowers, asserts pass (repaired, below) |
-| `LM-032#effect#2` | `[Security] You may play 1 purple Digimon card with 2000 DP or less from your trash without paying the cost. Then, add this card to the hand.` | `LM-032-effect2.yaml` | lowers, asserts pass (repaired, below) |
+| `LM-032#security#0` | `[Security] You may play 1 purple Digimon card with 2000 DP or less from your trash without paying the cost. Then, add this card to the hand.` | `LM-032-effect2.yaml` | lowers, asserts pass (repaired, below) |
 
 ## Audit of the crashed agent's files (resumed campaign, 2026-09-18)
 
