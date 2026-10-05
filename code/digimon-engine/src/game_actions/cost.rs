@@ -970,15 +970,24 @@ impl Game {
     ///   (`activation_cost_kind`, e.g. "by suspending this Tamer" — BT26-088
     ///   Hiroko, BT5-092): counted at its amount iff the cost is payable now
     ///   (accepting is then always possible).
-    /// - **Any other pay_cost** (trash/delete/place-a-card costs, interactive
-    ///   pay_costs): NOT counted — no read-only probe can prove it payable,
-    ///   so the mask stays conservative (never offers a play the payment
-    ///   path could then refuse). Such a play is still offered whenever it
-    ///   is affordable without that reducer.
+    /// - **pay_cost with a read-only probe** (`Effect::pay_cost_probe`, built
+    ///   by the DSL lowering from the compiled pay_cost: trash the bottom
+    ///   face-down card under a Tamer, delete / suspend a Digimon, return
+    ///   cards from the trash, place a [Shoutmon] / under-Tamer cards,
+    ///   return this Tamer to the deck): counted iff its demands can be met
+    ///   now, plus any per-token extra reduction (a deleted Digimon's play
+    ///   cost, a pre-attach's `cost_delta`). Reducers drawing on the same
+    ///   objects never share one: tokens are allocated greedily, largest
+    ///   reduction first, so the preview can under-count but never offers a
+    ///   play no sequence of choices could pay for.
+    /// - **Any other pay_cost**: NOT counted (conservative). Such a play is
+    ///   still offered whenever it is affordable without that reducer.
     ///
     /// Reductions are evaluated against the current state; a reducer whose
     /// condition only becomes true after an earlier reducer's pay_cost
-    /// resolves is not anticipated (none is known to exist).
+    /// resolves is not anticipated (none is known to exist). Permanents that
+    /// host a counted reducer are never spent as another reducer's
+    /// delete / suspend token.
     pub(crate) fn preview_play_cost_reduction_for_hand_card(
         &self,
         player_id: PlayerId,
@@ -993,26 +1002,192 @@ impl Game {
             is_digivolve: false,
             target_permanents: [None, None],
         };
-        self.collect_before_pay_cost_reducers(player_id, Some(target), &[], CostReductionKind::Play)
-            .into_iter()
-            .filter(|c| c.amount > 0)
-            .filter(|c| !c.has_pay_cost || self.cost_reducer_pay_cost_provably_payable(&c.key))
-            .map(|c| c.amount)
-            .sum()
+        self.preview_before_pay_cost_reduction(player_id, target, CostReductionKind::Play)
     }
 
-    /// Strict variant of [`Self::cost_reducer_pay_cost_payable`]: `true` only
-    /// when the reducer declares a read-only cost shape
-    /// (`activation_cost_kind`) AND that cost is payable right now. A pay_cost
-    /// without a data twin is unprovable and reports `false`.
-    fn cost_reducer_pay_cost_provably_payable(&self, key: &CostReductionKey) -> bool {
-        let Some(effects) = self.effects_for_card(&key.card_id, key.source_card) else {
+    /// Read-only preview of the `before_pay_cost` reduction the cost path for
+    /// `kind` can realize for `target` right now. Mirrors, per kind, which
+    /// reducers that path actually offers:
+    ///
+    /// - `Play` (`continue_play_from_hand_cost_reduction_chain`): every
+    ///   candidate, in turn — mandatory ones auto-apply, optional / paid ones
+    ///   are an accept prompt the player can always accept.
+    /// - `OptionUse` (`play_option_core`, `OptionCostPolicy::Pay`): only the
+    ///   FIRST interactive pay_cost reducer
+    ///   (`try_prompt_interactive_option_use_cost_reducer`), then the
+    ///   synchronous scan (`scan_before_pay_cost_reduction_with_target`),
+    ///   which skips optional and interactive reducers.
+    /// - `Digivolve`: not previewed (the digivolve mask has no memory gate —
+    ///   every evo cost fits the -10 floor from a main-phase gauge ≥ 0).
+    pub(crate) fn preview_before_pay_cost_reduction(
+        &self,
+        player_id: PlayerId,
+        target: CostTargetContext,
+        kind: CostReductionKind,
+    ) -> i32 {
+        let candidates = self.collect_before_pay_cost_reducers(player_id, Some(target), &[], kind);
+        let mut entries: Vec<(Option<PermanentHandle>, i32, PayCostPreview)> = Vec::new();
+        match kind {
+            CostReductionKind::Play => {
+                for c in &candidates {
+                    if let Some(e) = self.preview_cost_reducer_entry(c, target) {
+                        entries.push((c.key.source_permanent, e.0, e.1));
+                    }
+                }
+            }
+            CostReductionKind::OptionUse => {
+                if let Some(c) = candidates
+                    .iter()
+                    .find(|c| c.pay_cost_interactive && c.has_pay_cost)
+                {
+                    if let Some(e) = self.preview_cost_reducer_entry(c, target) {
+                        entries.push((c.key.source_permanent, e.0, e.1));
+                    }
+                }
+                for c in candidates
+                    .iter()
+                    .filter(|c| !c.pay_cost_interactive && !c.optional)
+                {
+                    if let Some(e) = self.preview_cost_reducer_entry(c, target) {
+                        entries.push((c.key.source_permanent, e.0, e.1));
+                    }
+                }
+            }
+            CostReductionKind::Digivolve => return 0,
+        }
+        allocate_cost_reducer_previews(entries)
+    }
+
+    /// `(amount, demands)` for one reducer candidate when its cost is
+    /// provably payable right now, else `None`.
+    fn preview_cost_reducer_entry(
+        &self,
+        candidate: &CostReductionCandidate,
+        target: CostTargetContext,
+    ) -> Option<(i32, PayCostPreview)> {
+        if !candidate.has_pay_cost {
+            return (candidate.amount > 0).then(|| (candidate.amount, PayCostPreview::default()));
+        }
+        let key = &candidate.key;
+        let effects = self.effects_for_card(&key.card_id, key.source_card)?;
+        let effect = effects.get(key.effect_slot as usize)?;
+        if let Some(kind) = effect.activation_cost_kind {
+            return kind
+                .is_payable(self, key.source_permanent)
+                .then(|| (candidate.amount, PayCostPreview::default()));
+        }
+        let probe = effect.pay_cost_probe.as_ref()?;
+        let rctx = EffectReadContext::new_with_cost_target(
+            self,
+            key.source_card,
+            key.source_permanent,
+            key.controller,
+            target.card,
+            target.from_hand,
+        )
+        .with_cost_is_digivolve(target.is_digivolve)
+        .with_cost_target_permanents(target.target_permanents_vec());
+        let preview = probe(&rctx)?;
+        Some((candidate.amount, preview))
+    }
+
+    /// Read-only preview of the memory the `BeforePayCostObserve` scan
+    /// (`scan_before_pay_cost_observers`) would gain for `acting_player`
+    /// before paying for `target` — the "gain N memory" observers carrying a
+    /// `before_pay_cost_memory_gain` data twin. Observers run without a
+    /// choice, so the gain is automatic. Mirrors the scan's gates exactly.
+    /// `G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION` follow-up (3).
+    pub(crate) fn preview_before_pay_cost_memory_gain(
+        &self,
+        acting_player: PlayerId,
+        cost_target: CostTargetContext,
+    ) -> i32 {
+        if self
+            .modifiers
+            .player_has(acting_player, ModifierType::CannotReduceCost)
+        {
+            return 0;
+        }
+        let observer_scan_target = Some(cost_target).filter(|t| !t.is_digivolve);
+        let mut gain = 0;
+        for info in
+            self.before_pay_cost_observer_infos(acting_player, observer_scan_target.map(|t| t.card))
+        {
+            let Some(effects) = self.effects_for_card(&info.card_id, info.source_card) else {
+                continue;
+            };
+            let Some(effect) = effects.get(info.effect_slot as usize) else {
+                continue;
+            };
+            let Some(amount) = effect.before_pay_cost_memory_gain else {
+                continue;
+            };
+            if effect.timing != EffectTiming::BeforePayCostObserve
+                || info.is_under != effect.inherited
+                || info.controller != acting_player
+            {
+                continue;
+            }
+            if effect.max_per_turn > 0
+                && self.observer_activation_count(&info) >= effect.max_per_turn
+            {
+                continue;
+            }
+            let cond_ok = effect.condition.as_ref().is_none_or(|cond| {
+                let ctx = EffectReadContext::new_with_cost_target(
+                    self,
+                    info.source_card,
+                    info.source_permanent,
+                    info.controller,
+                    cost_target.card,
+                    cost_target.from_hand,
+                )
+                .with_cost_target_permanents(cost_target.target_permanents_vec());
+                cond(&ctx)
+            });
+            if cond_ok {
+                gain += amount;
+            }
+        }
+        gain
+    }
+
+    /// Declare-then-pay affordability (rule 1-3-11-1) of paying `cost` for
+    /// `target` once the automatic / choosable before-pay effects resolve:
+    /// `reduction` (from a `preview_*` call) lowers the cost and the
+    /// observer memory gain raises the gauge (capped at the gauge maximum).
+    pub(crate) fn affordable_after_before_pay_effects(
+        &self,
+        player_id: PlayerId,
+        target: CostTargetContext,
+        cost: i32,
+        reduction: i32,
+    ) -> bool {
+        let gain = self.preview_before_pay_cost_memory_gain(player_id, target);
+        let memory = (i32::from(self.memory) + gain).min(i32::from(self.rules.memory_range.1));
+        memory - (cost - reduction).max(0) >= i32::from(self.rules.memory_range.0)
+    }
+
+    /// Hand-play mask check: is playing hand card `hand_index` at `cost`
+    /// (already net of `[Assembly]` / cast-time reductions) declarable once
+    /// the before-pay reducers and observers are taken into account?
+    pub(crate) fn hand_play_affordable_after_before_pay_effects(
+        &self,
+        player_id: PlayerId,
+        hand_index: usize,
+        cost: i32,
+    ) -> bool {
+        let Some(card) = self.player(player_id).hand.get(hand_index) else {
             return false;
         };
-        effects
-            .get(key.effect_slot as usize)
-            .and_then(|effect| effect.activation_cost_kind)
-            .is_some_and(|kind| kind.is_payable(self, key.source_permanent))
+        let target = CostTargetContext {
+            card: card.handle(),
+            from_hand: true,
+            is_digivolve: false,
+            target_permanents: [None, None],
+        };
+        let reduction = self.preview_play_cost_reduction_for_hand_card(player_id, hand_index);
+        self.affordable_after_before_pay_effects(player_id, target, cost, reduction)
     }
 
     pub(crate) fn inspect_cost_reduction_candidate(
@@ -1292,4 +1467,74 @@ impl Game {
             perm.record_activation(info.source_card, opt_slot);
         }
     }
+}
+
+/// Sum the reductions of the previewed reducers that can be paid TOGETHER:
+/// each reducer's demands take distinct tokens (no object pays two costs),
+/// largest potential reduction first, best per-token extra first. A
+/// permanent that hosts another counted reducer is never spent as a token
+/// (deleting / suspending it could switch that reducer off). Greedy, so it
+/// may under-count an exotic overlap; it never counts a reducer whose cost
+/// can't be paid alongside the ones already counted.
+/// `G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION`.
+fn allocate_cost_reducer_previews(
+    mut entries: Vec<(Option<PermanentHandle>, i32, PayCostPreview)>,
+) -> i32 {
+    let hosts: Vec<PermanentHandle> = entries.iter().filter_map(|(host, _, _)| *host).collect();
+    let potential = |amount: i32, preview: &PayCostPreview| -> i32 {
+        amount
+            + preview
+                .demands
+                .iter()
+                .map(|d| {
+                    let mut extras: Vec<i32> = d.options.iter().map(|(_, b)| *b).collect();
+                    extras.sort_unstable_by(|a, b| b.cmp(a));
+                    extras
+                        .into_iter()
+                        .take(d.required + d.optional_max)
+                        .filter(|b| *b > 0)
+                        .sum::<i32>()
+                })
+                .sum::<i32>()
+    };
+    entries.sort_by_key(|(_, amount, preview)| std::cmp::Reverse(potential(*amount, preview)));
+    let mut used: Vec<PayCostToken> = Vec::new();
+    let mut total = 0;
+    for (host, amount, preview) in entries {
+        let mut taken: Vec<PayCostToken> = Vec::new();
+        let mut extra = 0;
+        let mut payable = true;
+        for demand in &preview.demands {
+            let mut available: Vec<(PayCostToken, i32)> = demand
+                .options
+                .iter()
+                .copied()
+                .filter(|(token, _)| !used.contains(token) && !taken.contains(token))
+                .filter(|(token, _)| match token {
+                    PayCostToken::Permanent(p) => Some(*p) == host || !hosts.contains(p),
+                    PayCostToken::Card(_) => true,
+                })
+                .collect();
+            if available.len() < demand.required {
+                payable = false;
+                break;
+            }
+            available.sort_by_key(|(_, b)| std::cmp::Reverse(*b));
+            for (i, (token, b)) in available.into_iter().enumerate() {
+                if i < demand.required {
+                    taken.push(token);
+                    extra += b;
+                } else if i < demand.required + demand.optional_max && b > 0 {
+                    taken.push(token);
+                    extra += b;
+                }
+            }
+        }
+        if !payable {
+            continue;
+        }
+        used.extend(taken);
+        total += amount + extra;
+    }
+    total
 }

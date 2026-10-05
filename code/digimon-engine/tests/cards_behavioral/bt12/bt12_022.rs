@@ -563,3 +563,28 @@ fn bt12_022_inherited_jamming_not_active_on_opponents_turn() {
         "Jamming should not be active on opponent's turn (your_turn gate)"
     );
 }
+
+/// G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION follow-up (3): the
+/// lowered observer carries the "gain 1 memory" data twin that read-only
+/// affordability checks add to the gauge.
+#[test]
+fn bt12_022_observer_lowers_with_its_memory_gain_twin() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT12-022 in embedded DSL pack")
+        .start();
+    let handle = runner.place_on_field(0, CARD_ID, Some(0));
+    let card = runner.game.players[0].battle_area[handle.index as usize]
+        .top_card()
+        .handle();
+    let effects = runner
+        .game
+        .effects_for_card(CARD_ID, card)
+        .expect("BT12-022 effects");
+    let gains: Vec<Option<i32>> = effects
+        .iter()
+        .filter(|e| e.timing == digimon_engine::enums::EffectTiming::BeforePayCostObserve)
+        .map(|e| e.before_pay_cost_memory_gain)
+        .collect();
+    assert_eq!(gains, vec![Some(1)]);
+}

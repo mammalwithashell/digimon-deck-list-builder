@@ -345,3 +345,56 @@ fn bt25_096_security_clause_plays_union_zone_and_adds_self() {
         "[Security] adds this Option to the hand"
     );
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Option-use affordability counts the face-down-trash use-cost reduction
+// (G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION follow-up (2))
+// ════════════════════════════════════════════════════════════════════════════
+
+fn option_use_offered(runner: &DebugRunner, hand_index: usize) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize + hand_index] == 1.0
+}
+
+/// Thomas (blue Tamer → color requirement) with `face_down` face-down cards
+/// under him, Mirage Beast Knight in hand.
+fn option_mask_runner(face_down: usize) -> DebugRunner {
+    let mut runner = base();
+    let mut ids = vec!["FILLER"; face_down];
+    ids.push("Thomas H. Norstein");
+    let tamer = runner.place_stack(0, &ids);
+    for i in 0..face_down {
+        runner.game.players[0].battle_area[tamer.index as usize].card_sources[i].face_down = true;
+    }
+    push_to_hand(&mut runner, 0, CARD_ID);
+    runner
+}
+
+#[test]
+fn bt25_096_mask_offers_use_payable_only_after_trashing_a_face_down_card() {
+    let mut runner = option_mask_runner(1);
+    let h = hand_index_of(&runner, 0, CARD_ID);
+    // Printed 5 from -7 → -12 (illegal); reduced 3 → -10 (legal).
+    runner.game.set_memory(-7);
+    assert!(
+        option_use_offered(&runner, h),
+        "a face-down card under a Tamer pays the -2"
+    );
+    runner.play(0, h);
+    drive_engage(&mut runner);
+    assert!(
+        !runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
+        "the Option was used at the reduced cost 3"
+    );
+
+    let mut runner = option_mask_runner(0);
+    let h = hand_index_of(&runner, 0, CARD_ID);
+    runner.game.set_memory(-7);
+    assert!(
+        !option_use_offered(&runner, h),
+        "no face-down card → the -2 is unpayable → 5 from -7 overdraws"
+    );
+}

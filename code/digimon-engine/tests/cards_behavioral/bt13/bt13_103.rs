@@ -537,3 +537,43 @@ fn _unused_silencer() {
     let _ = make_opp_level5("X", "X");
     let _ = make_gizmon("Y", "Y", 0);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 5 — RL mask counts the variable delete-Gizmon reduction
+// (G-ENGINE-PLAY-MASK-IGNORES-WHEN-PLAYING-REDUCTION follow-up (1))
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fn hand_play_offered(runner: &DebugRunner) -> bool {
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    mask[digimon_engine::action::space::PLAY_HAND_START as usize] == 1.0
+}
+
+/// The reduction equals the deleted Gizmon's play cost, so the mask credits
+/// the BEST payable choice (the player picks which Gizmon to delete).
+#[test]
+fn bt13_103_mask_counts_the_most_expensive_deletable_gizmon() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT13-103 in embedded DSL pack")
+        .add_card(make_belphemon("BELPH", "Belphemon: Rage Mode", 5))
+        .add_card(make_gizmon("GIZ-1", "Gizmon: XT", 1))
+        .add_card(make_gizmon("GIZ-4", "Gizmon: AT", 4))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER"])
+        .hand(0, &["BELPH"])
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "GIZ-1", Some(1));
+    // Printed 5 from -9 → -14; deleting GIZ-1 → 4 → -13; GIZ-4 → 1 → -10.
+    runner.game.set_memory(-9);
+    assert!(
+        !hand_play_offered(&runner),
+        "only the cost-1 Gizmon: 5 - 1 = 4 overdraws"
+    );
+    runner.place_on_field(0, "GIZ-4", Some(2));
+    assert!(
+        hand_play_offered(&runner),
+        "deleting the cost-4 Gizmon makes 5 - 4 = 1 payable from -9"
+    );
+}
