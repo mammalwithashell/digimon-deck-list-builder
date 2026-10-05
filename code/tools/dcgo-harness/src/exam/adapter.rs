@@ -288,12 +288,28 @@ impl LoweredStep {
     }
 }
 
+/// Which card raised a select step's prompt, captured at lowering time while
+/// the prompt is live. Introspection for authors: the card named here is the
+/// one whose DCGO script decides the prompt's shape on the oracle side.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelectSource {
+    /// Scenario step index.
+    pub step: usize,
+    /// Top-level card id of the effect's source, when the handle resolves.
+    pub card_id: Option<String>,
+    /// Our engine's `SelectionKind`, debug-formatted.
+    pub kind: String,
+    /// Our engine's prompt text.
+    pub prompt: String,
+}
+
 #[derive(Debug)]
 pub struct ScenarioAdapter {
     steps: Vec<StepSpec>,
     spec_owner: Vec<usize>,
     lowered: Vec<LoweredStep>,
     lowered_owner: Vec<usize>,
+    select_sources: Vec<SelectSource>,
     deck_p0: Vec<String>,
     deck_p1: Vec<String>,
     seed: u64,
@@ -327,6 +343,7 @@ impl ScenarioAdapter {
         // line then stalled one spec short of its own last step).
         let mut spec_owner: Vec<usize> = Vec::with_capacity(s.steps.len());
         let mut lowered = Vec::with_capacity(s.steps.len());
+        let mut select_sources: Vec<SelectSource> = Vec::new();
         // Which SCENARIO step each lowered entry came from. Usually 1:1, but a
         // step whose declaration our engine splits into several decisions
         // contributes several entries (`materials:`, `dna:`), so the job
@@ -409,6 +426,7 @@ impl ScenarioAdapter {
                 // decision as DCGO-only, and skipping it here would leave that
                 // prompt unanswered and desync every later step.
                 StepAction::Select(payload) => {
+                    select_sources.extend(select_source(&game, i));
                     let (row, wire) =
                         build_selection_row(&game, i, actor, payload, step.expect.as_ref())?;
                     check_select_expectations(&game, i, payload, step.expect.as_ref())?;
@@ -454,6 +472,7 @@ impl ScenarioAdapter {
                             "step {i}: `sim_only: true` but OUR engine has NO live prompt                              here. A sim-only row answers a decision only WE ask; with                              nothing parked it answers nothing, so drop the step (or, if                              DCGO is the side asking, use `dcgo_only: true`)."
                         ));
                     }
+                    select_sources.extend(select_source(&game, i));
                     let (row, wire) =
                         build_selection_row(&game, i, actor, payload, step.expect.as_ref())?;
                     let _ = wire;
@@ -690,6 +709,7 @@ impl ScenarioAdapter {
             seed: s.seed,
             first_player,
             card_data: card_data.clone(),
+            select_sources,
         })
     }
 
@@ -744,6 +764,11 @@ impl ScenarioAdapter {
     /// scenario step.
     pub fn lowered_owners(&self) -> &[usize] {
         &self.lowered_owner
+    }
+
+    /// The card that raised each select step's prompt (see [`SelectSource`]).
+    pub fn select_sources(&self) -> &[SelectSource] {
+        &self.select_sources
     }
 
     pub fn lowered_steps(&self) -> &[LoweredStep] {
@@ -1855,6 +1880,17 @@ fn build_dcgo_only_wire(payload: &SelectPayload) -> Result<SelectWire, String> {
     Ok(wire)
 }
 
+/// The live prompt's source, if one is parked (see [`SelectSource`]).
+fn select_source(game: &Game, step: usize) -> Option<SelectSource> {
+    let p = game.pending_selection.as_ref()?;
+    Some(SelectSource {
+        step,
+        card_id: game.card_data_for_handle(p.source_card).map(|d| d.card_id.clone()),
+        kind: format!("{:?}", p.kind),
+        prompt: p.prompt.clone(),
+    })
+}
+
 fn build_selection_row(
     game: &Game,
     i: usize,
@@ -2459,6 +2495,22 @@ steps:
             "ST1-08", // p1's turn-2 draw — NOT a second ST1-03
         ]);
         (p0, p1)
+    }
+
+    /// Which card raised each select step's prompt, captured while it is live
+    /// -- the introspection an author (or the card loop's author stage) needs to
+    /// know which card's DCGO script to read for the prompt shape.
+    #[test]
+    fn each_select_step_records_the_card_that_raised_its_prompt() {
+        let card_data = test_support::load_card_data();
+        let (p0, p1) = select_line_decks();
+        let s = Scenario::from_yaml(SELECT_LINE).unwrap();
+        let a = ScenarioAdapter::from_scenario(&s, p0, p1, &card_data).expect("lowers");
+        let sources = a.select_sources();
+        assert_eq!(sources.len(), 1, "{sources:?}");
+        assert_eq!(sources[0].step, 5);
+        assert_eq!(sources[0].card_id.as_deref(), Some("ST1-15"));
+        assert!(!sources[0].kind.is_empty());
     }
 
     #[test]

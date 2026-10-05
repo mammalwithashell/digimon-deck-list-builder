@@ -139,6 +139,11 @@ enum Command {
         /// diverged from that count instead of reading them.
         #[arg(long, alias = "verbose")]
         all_diffs: bool,
+        /// Print, per scenario, which card raised each select step's prompt
+        /// (and our engine's prompt kind/text) -- the card whose DCGO script
+        /// decides the prompt's shape on the oracle side.
+        #[arg(long)]
+        explain_selects: bool,
     },
     /// Build a standalone DCGO player and stamp its manifest.
     Build {
@@ -449,6 +454,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             interaction_denominator,
             emit_job,
             all_diffs,
+            explain_selects,
         } => run_exam(
             scenario,
             *sim_only,
@@ -460,6 +466,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             interaction_denominator,
             emit_job.as_deref(),
             *all_diffs,
+            *explain_selects,
         ),
         Command::Build {
             unity,
@@ -633,6 +640,7 @@ fn run_exam(
     interaction_denominator: &Path,
     emit_job: Option<&Path>,
     all_diffs: bool,
+    explain_selects: bool,
 ) -> Result<ExitCode, String> {
     use dcgo_harness::exam::verdict::{ClauseTextBook, InteractionBook, VerdictStore};
 
@@ -718,6 +726,7 @@ fn run_exam(
             &book,
             emit_job,
             all_diffs,
+            explain_selects,
             &mut lowered,
             &mut ran,
             &mut diffed,
@@ -858,6 +867,7 @@ fn exam_one(
     book: &DeckBook,
     emit_job: Option<&Path>,
     all_diffs: bool,
+    explain_selects: bool,
     lowered: &mut u32,
     ran: &mut u32,
     diffed: &mut u32,
@@ -932,6 +942,17 @@ fn exam_one(
         s.steps.len(),
         run.lowered_steps
     );
+    if explain_selects {
+        for src in &run.select_sources {
+            println!(
+                "  select step {}: source {} ({}) -- {}",
+                src.step,
+                src.card_id.as_deref().unwrap_or("?"),
+                src.kind,
+                src.prompt
+            );
+        }
+    }
 
     // Sim-only path (checked in run_exam): the line lowered cleanly, so emit
     // the DCGO scripted job that runs the same line against the oracle.

@@ -27,7 +27,7 @@ use std::path::Path;
 use digimon_engine::runners::replay::ReplaySession;
 use digimon_engine::CardData;
 
-use crate::exam::adapter::{LoweredStep, ScenarioAdapter};
+use crate::exam::adapter::{LoweredStep, ScenarioAdapter, SelectSource};
 use crate::exam::assertions::check_assertions;
 use crate::exam::deckbook::{ordered_deck, DeckBook};
 use crate::exam::differ::{diff, DiffReport};
@@ -69,6 +69,8 @@ fn resolve_default(rel: &str) -> std::path::PathBuf {
 /// reaches its last step. Only [`ScenarioAdapter::from_scenario`] and
 /// [`ReplaySession`] construction are true failures to lower.
 pub struct LoweredRun {
+    /// The card that raised each select step's prompt (`exam --explain-selects`).
+    pub select_sources: Vec<SelectSource>,
     /// Every step's lowered form, in scenario order -- what `--emit-job`
     /// turns into a DCGO scripted job.
     pub lowered_steps: Vec<LoweredStep>,
@@ -112,6 +114,7 @@ pub fn lower_and_run(
     let adapter = ScenarioAdapter::from_scenario(s, deck_p0, deck_p1, card_data)?;
     let lowered_steps = adapter.lowered_steps().to_vec();
     let lowered_owners = adapter.lowered_owners().to_vec();
+    let select_sources = adapter.select_sources().to_vec();
     // Captured BEFORE the adapter moves into the replay session below.
     let wire_rows_per_step = adapter.dcgo_wire_rows_per_step(s.steps.len());
     let ours_present_per_step = adapter.ours_present_per_step(s.steps.len());
@@ -143,6 +146,7 @@ pub fn lower_and_run(
     }
 
     Ok(LoweredRun {
+        select_sources,
         lowered_steps,
         lowered_owners,
         wire_rows_per_step,
