@@ -147,6 +147,20 @@ enum Command {
         /// `assert:` block (rows marked `_backfilled`). Oracle mode only.
         #[arg(long)]
         backfill: bool,
+        /// One call per scenario: preflight the node, submit the scenario's
+        /// job, wait for THAT job's result, diff its sidecar, record the
+        /// verdict (with --verdicts) and backfill (with --backfill). Prints one
+        /// JSON line per scenario. Needs --root, or DCGO_HARNESS_ROOT / the
+        /// player's default LocalLow root.
+        #[arg(long, conflicts_with_all = ["sim_only", "sidecar", "emit_job"])]
+        oracle: bool,
+        /// The oracle player's build directory: checked by the preflight
+        /// (action-space gate) and stamped on recorded verdicts.
+        #[arg(long, requires = "oracle")]
+        build: Option<PathBuf>,
+        /// Seconds to wait for each oracle job's result.
+        #[arg(long, default_value_t = 300, requires = "oracle")]
+        oracle_timeout: u64,
     },
     /// Build a standalone DCGO player and stamp its manifest.
     Build {
@@ -474,6 +488,35 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             all_diffs,
             explain_selects,
             backfill,
+            oracle,
+            build,
+            oracle_timeout,
+        } if *oracle => run_oracle(
+            args.root.as_deref(),
+            scenario,
+            build.as_deref(),
+            cards_json,
+            decks.as_deref(),
+            verdicts.as_deref(),
+            clause_text_json.as_deref(),
+            interaction_denominator,
+            *backfill,
+            std::time::Duration::from_secs(*oracle_timeout),
+        ),
+        Command::Exam {
+            scenario,
+            sim_only,
+            sidecar,
+            cards_json,
+            decks,
+            verdicts,
+            clause_text_json,
+            interaction_denominator,
+            emit_job,
+            all_diffs,
+            explain_selects,
+            backfill,
+            ..
         } => run_exam(
             scenario,
             *sim_only,
@@ -646,6 +689,95 @@ enum ExamOutcome {
     LowerFailed,
     /// Lowered and ran, but the checks failed (assertion or oracle diff).
     CheckFailed,
+}
+
+/// `exam --oracle`: one call per scenario -- see `exam::oracle`. Prints one
+/// JSON line per scenario on stdout and the denominator on stderr; exits 0
+/// only when every scenario came back `confirmed`.
+#[allow(clippy::too_many_arguments)]
+fn run_oracle(
+    root: Option<&Path>,
+    scenario: &Path,
+    build: Option<&Path>,
+    cards_json: &Path,
+    decks: Option<&Path>,
+    verdicts: Option<&Path>,
+    clause_text_json: Option<&Path>,
+    interaction_denominator: &Path,
+    backfill: bool,
+    timeout: std::time::Duration,
+) -> Result<ExitCode, String> {
+    use dcgo_harness::exam::oracle::{preflight, run_oracle_exam_loaded, OracleExamOptions};
+
+    let root = root
+        .map(Path::to_path_buf)
+        .or_else(dcgo_harness::node::default_harness_root)
+        .ok_or("--oracle needs --root <harness root>, or DCGO_HARNESS_ROOT")?;
+    if verdicts.is_some() && clause_text_json.is_none() {
+        return Err("--verdicts needs --clause-text-json <extract output>: the scenario \
+                    file only names a clause id, and the verdict must carry the clause's \
+                    label and text sha256 from the clause_coverage denominator."
+            .to_string());
+    }
+    let paths = collect_scenario_paths(scenario)?;
+    if paths.is_empty() {
+        eprintln!(
+            "exam --oracle: NOTHING MEASURED -- no *.yaml scenarios under {}.",
+            scenario.display()
+        );
+        return Ok(ExitCode::SUCCESS);
+    }
+    // Refuse before any submission when the node cannot answer.
+    preflight(&root, build)?;
+    let card_data = dcgo_replay::load_card_data_at(cards_json)
+        .map_err(|e| format!("loading {}: {}", cards_json.display(), e))?;
+    let book = DeckBook::load(decks, cards_json)?;
+    let opts = OracleExamOptions {
+        root: &root,
+        build,
+        cards_json,
+        decks,
+        verdicts_dir: verdicts,
+        clause_text_json,
+        interaction_denominator,
+        backfill,
+        timeout,
+        poll: std::time::Duration::from_secs(1),
+    };
+
+    let (mut confirmed, mut diverged, mut unmeasured, mut errors) = (0usize, 0usize, 0usize, 0usize);
+    for (i, path) in paths.iter().enumerate() {
+        // A player that died mid-batch stops the batch here, instead of every
+        // remaining scenario timing out one by one.
+        if let Err(e) = preflight(&root, build) {
+            errors += paths.len() - i;
+            eprintln!("exam --oracle: stopping with {} scenario(s) unsubmitted: {e}", paths.len() - i);
+            break;
+        }
+        match run_oracle_exam_loaded(path, &opts, &card_data, &book) {
+            Ok(r) => {
+                match r.verdict.as_str() {
+                    "confirmed" => confirmed += 1,
+                    "diverged" => diverged += 1,
+                    _ => unmeasured += 1,
+                }
+                println!("{}", serde_json::to_string(&r).map_err(|e| e.to_string())?);
+            }
+            Err(e) => {
+                errors += 1;
+                println!(
+                    "{}",
+                    serde_json::json!({ "scenario": path.display().to_string(), "error": e })
+                );
+            }
+        }
+    }
+    eprintln!(
+        "exam --oracle: scenarios {} / confirmed {confirmed} / diverged {diverged} / \
+         unmeasured {unmeasured} / errors {errors}",
+        paths.len()
+    );
+    Ok(if confirmed == paths.len() { ExitCode::SUCCESS } else { ExitCode::from(1) })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1019,9 +1151,17 @@ fn exam_one(
         //
         // A refusal is reported, never propagated: the oracle verdict below is
         // independent of whether the scenario file could be updated.
+        // The sim-only replay CI will run: the same line over the deck book.
+        let sim = ordered_deck(&s.decks.p0, book)
+            .and_then(|p0| Ok((p0, ordered_deck(&s.decks.p1, book)?)))
+            .and_then(|(p0, p1)| lower_and_run(&s, p0, p1, card_data))
+            .map(|r| r.projections);
         println!(
             "  {}",
-            try_backfill(path, &text, &od.projections, &od.dcgo, &od.pairing, &report)
+            match sim {
+                Ok(sim) => try_backfill(path, &text, &od.projections, &od.dcgo, &od.pairing, &report, &sim),
+                Err(e) => format!("backfill skipped: the sim-only replay could not run ({e})"),
+            }
         );
     }
 
@@ -1080,10 +1220,14 @@ fn try_backfill(
     dcgo: &[dcgo_harness::exam::projection::StateProjection],
     pairing: &dcgo_harness::exam::projection::StepPairing,
     report: &dcgo_harness::exam::differ::DiffReport,
+    sim: &[dcgo_harness::exam::projection::StateProjection],
 ) -> String {
-    match dcgo_harness::exam::backfill::backfill_from_diff(text, rows, dcgo, pairing, report) {
-        Ok(updated) => match std::fs::write(path, updated) {
-            Ok(()) => format!("backfill: wrote confirmed state into {}", path.display()),
+    match dcgo_harness::exam::backfill::backfill_from_diff(text, rows, dcgo, pairing, report, sim) {
+        Ok(b) => match std::fs::write(path, &b.text) {
+            Ok(()) => format!(
+                "backfill: {}",
+                dcgo_harness::exam::oracle::backfill_message(path, &b.dropped)
+            ),
             Err(e) => format!(
                 "backfill skipped: writing backfilled scenario {}: {e}",
                 path.display()
@@ -1292,7 +1436,7 @@ mod try_backfill_tests {
         assert!(r.is_clean(), "the verdict inputs are a CLEAN diff");
 
         // A pairing naming a row the caller never supplied is refused.
-        let line = try_backfill(&path, SCENARIO, &[row(0)], &[row(0)], &pairs(&[(3, 0)]), &r);
+        let line = try_backfill(&path, SCENARIO, &[row(0)], &[row(0)], &pairs(&[(3, 0)]), &r, &[row(0)]);
         assert!(line.starts_with("backfill skipped: "), "got: {line}");
         assert_eq!(std::fs::read_to_string(&path).unwrap(), SCENARIO);
         // The clean report is untouched, so the caller still builds Confirmed.
@@ -1303,12 +1447,60 @@ mod try_backfill_tests {
     fn an_accepted_backfill_writes_the_file() {
         let path = std::env::temp_dir().join("try_backfill_accepted.yaml");
         std::fs::write(&path, SCENARIO).unwrap();
-        let line = try_backfill(&path, SCENARIO, &[row(0)], &[row(0)], &pairs(&[(0, 0)]), &report(0));
+        let line = try_backfill(&path, SCENARIO, &[row(0)], &[row(0)], &pairs(&[(0, 0)]), &report(0), &[row(0)]);
         assert!(
             line.starts_with("backfill: wrote confirmed state into"),
             "got: {line}"
         );
         let written = std::fs::read_to_string(&path).unwrap();
         assert!(written.starts_with(SCENARIO) && written.contains("_backfilled"));
+    }
+}
+
+#[cfg(test)]
+mod oracle_cli_tests {
+    use super::*;
+
+    fn parse(extra: &[&str]) -> Result<Args, clap::Error> {
+        let mut argv = vec!["dcgo-harness", "exam", "--scenario", "x.yaml", "--cards-json", "c.json"];
+        argv.extend_from_slice(extra);
+        Args::try_parse_from(argv)
+    }
+
+    #[test]
+    fn oracle_refuses_the_flags_of_the_other_two_routes() {
+        assert!(parse(&["--oracle"]).is_ok());
+        for other in [&["--sim-only"][..], &["--sidecar", "s"], &["--emit-job", "d"]] {
+            let mut a = vec!["--oracle"];
+            a.extend_from_slice(other);
+            assert!(parse(&a).is_err(), "--oracle with {other:?} must be refused");
+        }
+        assert!(parse(&["--build", "b"]).is_err(), "--build is an --oracle flag");
+    }
+
+    #[test]
+    fn oracle_on_a_node_with_no_player_refuses_before_submitting() {
+        let root = tempfile::tempdir().unwrap();
+        for d in ["jobs", "claimed", "done", "failed"] {
+            std::fs::create_dir_all(root.path().join(d)).unwrap();
+        }
+        std::fs::write(root.path().join("harness.enabled"), "x").unwrap();
+        let scenario = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/oracle/ST23-06-effect0.yaml");
+        let err = run_oracle(
+            Some(root.path()),
+            &scenario,
+            None,
+            Path::new("data/cards.json"),
+            None,
+            None,
+            None,
+            Path::new("none.json"),
+            false,
+            std::time::Duration::from_secs(1),
+        )
+        .unwrap_err();
+        assert!(err.contains("no live player"), "{err}");
+        assert_eq!(std::fs::read_dir(root.path().join("jobs")).unwrap().count(), 0);
     }
 }

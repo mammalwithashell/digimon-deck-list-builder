@@ -64,13 +64,21 @@ pub const GENERATED_MARKER: &str = "_backfilled";
 /// `phase` is left out of a row whose phase the differ did not compare
 /// ([`phase_is_compared`]). `ours` is indexed by scenario step and may carry
 /// the trailing post-final-step row; no pairing ever names it.
+///
+/// `sim` is the SIM-ONLY replay of the same line (decks from the deck book,
+/// exactly what the CI gate runs), indexed like `ours`. A value the oracle run
+/// showed but the sim replay does not reproduce -- a card drawn from beyond
+/// `stack:`, which comes from DCGO's own shuffle in the oracle run and from the
+/// deck book's order in CI -- is left out and listed in [`Backfill::dropped`]:
+/// asserting it would fail the sim-only gate on a line that agrees with DCGO.
 pub fn backfill_from_diff(
     scenario_yaml: &str,
     ours: &[StateProjection],
     dcgo: &[StateProjection],
     pairing: &StepPairing,
     report: &DiffReport,
-) -> Result<String, String> {
+    sim: &[StateProjection],
+) -> Result<Backfill, String> {
     if !report.is_clean() {
         let why = if report.divergences.is_empty() {
             "the run was TRUNCATED".to_string()
@@ -103,7 +111,11 @@ pub fn backfill_from_diff(
                 dcgo.len()
             ));
         };
-        observed.push(Observed { row: o, with_phase: phase_is_compared(&o.phase, &d.phase) });
+        observed.push(Observed {
+            row: o,
+            with_phase: phase_is_compared(&o.phase, &d.phase),
+            sim: Some(sim.get(*oi)),
+        });
     }
     if observed.len() != report.compared_steps as usize {
         return Err(format!(
@@ -116,10 +128,23 @@ pub fn backfill_from_diff(
     write_assertions(scenario_yaml, &observed)
 }
 
-/// One oracle-observed row to write, and whether its `phase` was compared.
+/// What [`backfill_from_diff`] wrote, and what it deliberately left out.
+#[derive(Debug, Clone)]
+pub struct Backfill {
+    /// The scenario text with the regenerated `assert:` block.
+    pub text: String,
+    /// `at N: key` for every observed value the sim-only replay does not
+    /// reproduce, so it is not asserted.
+    pub dropped: Vec<String>,
+}
+
+/// One oracle-observed row to write, whether its `phase` was compared, and
+/// -- when filtering for the sim-only gate -- the sim replay's row for the
+/// same step (`Some(None)`: the replay has no such row).
 struct Observed<'a> {
     row: &'a StateProjection,
     with_phase: bool,
+    sim: Option<Option<&'a StateProjection>>,
 }
 
 /// Write `confirmed` into the scenario's `assert:` block and return the new
@@ -156,14 +181,14 @@ pub fn backfill(scenario_yaml: &str, confirmed: &[StateProjection]) -> Result<St
     }
     let rows: Vec<Observed> = confirmed
         .iter()
-        .map(|row| Observed { row, with_phase: true })
+        .map(|row| Observed { row, with_phase: true, sim: None })
         .collect();
-    write_assertions(scenario_yaml, &rows)
+    write_assertions(scenario_yaml, &rows).map(|b| b.text)
 }
 
 /// The shared tail of both entry points: refuse rows no oracle row covers,
 /// then splice one generated assertion per row.
-fn write_assertions(scenario_yaml: &str, confirmed: &[Observed]) -> Result<String, String> {
+fn write_assertions(scenario_yaml: &str, confirmed: &[Observed]) -> Result<Backfill, String> {
     let scenario = Scenario::from_yaml(scenario_yaml)?;
     let steps = scenario.steps.len() as u32;
 
@@ -195,8 +220,31 @@ fn write_assertions(scenario_yaml: &str, confirmed: &[Observed]) -> Result<Strin
     let mut rows: Vec<&Observed> = confirmed.iter().collect();
     rows.sort_by_key(|p| p.row.step);
     let mut generated = Vec::with_capacity(rows.len());
+    let mut dropped = Vec::new();
     for o in rows {
-        generated.push(assertion_for(o.row, o.with_phase)?);
+        let mut a = assertion_for(o.row, o.with_phase)?;
+        if let Some(sim) = o.sim {
+            let want = match sim {
+                Some(sim_row) => Some(assertion_for(sim_row, o.with_phase)?.that),
+                None => None,
+            };
+            let keys: Vec<String> = a.that.keys().cloned().collect();
+            for key in keys {
+                if key == GENERATED_MARKER {
+                    continue;
+                }
+                let reproduced = want.as_ref().and_then(|w| w.get(&key)) == a.that.get(&key);
+                if !reproduced {
+                    a.that.remove(&key);
+                    dropped.push(format!("at {}: {key}", a.at));
+                }
+            }
+            if a.that.len() == 1 {
+                // Nothing but the marker survived: no row at all.
+                continue;
+            }
+        }
+        generated.push(a);
     }
 
     let text = splice_assertions(scenario_yaml, &generated)?;
@@ -206,7 +254,7 @@ fn write_assertions(scenario_yaml: &str, confirmed: &[Observed]) -> Result<Strin
     // scenario rather than as this error.
     Scenario::from_yaml(&text).map_err(|e| format!("backfilled scenario no longer parses: {e}"))?;
 
-    Ok(text)
+    Ok(Backfill { text, dropped })
 }
 
 fn is_blank_or_comment(line: &str) -> bool {
@@ -486,9 +534,9 @@ steps:
         assert!(report.is_clean());
         assert_eq!(report.compared_steps, 2);
 
-        let out = backfill_from_diff(LINE, &ours, &observed, &one_to_one(2), &report)
+        let out = backfill_from_diff(LINE, &ours, &observed, &one_to_one(2), &report, &ours)
             .expect("clean run backfills");
-        let s = Scenario::from_yaml(&out).unwrap();
+        let s = Scenario::from_yaml(&out.text).unwrap();
         let ats: Vec<u32> = generated(&s).iter().map(|a| a.at).collect();
         assert_eq!(
             ats,
@@ -511,7 +559,7 @@ steps:
         let report = diff(&ours, &dcgo);
         assert!(!report.is_clean(), "fixture must actually diverge");
 
-        let err = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &report).unwrap_err();
+        let err = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &report, &ours).unwrap_err();
         assert!(err.contains("DIVERGED"), "got: {err}");
         assert!(err.contains("step 1"), "got: {err}");
 
@@ -519,7 +567,7 @@ steps:
         // "we got through 1 of 2 steps" must not read as "all agreed".
         let truncated = diff(&ours, &ours[..1]);
         assert!(truncated.divergences.is_empty());
-        let err = backfill_from_diff(LINE, &ours, &ours[..1], &one_to_one(2), &truncated).unwrap_err();
+        let err = backfill_from_diff(LINE, &ours, &ours[..1], &one_to_one(2), &truncated, &ours).unwrap_err();
         assert!(err.contains("TRUNCATED"), "got: {err}");
 
         // And the report-free entry point still refuses the truncation shape
@@ -534,7 +582,7 @@ steps:
         // a blanket refusal.
         let clean = diff(&ours, &ours);
         assert!(clean.is_clean());
-        assert!(backfill_from_diff(LINE, &ours, &ours, &one_to_one(2), &clean).is_ok());
+        assert!(backfill_from_diff(LINE, &ours, &ours, &one_to_one(2), &clean, &ours).is_ok());
     }
 
     #[test]
@@ -549,11 +597,29 @@ steps:
         let report = crate::exam::differ::diff_paired(&ours, &dcgo, &pairing);
         assert!(report.is_clean(), "fixture must be a clean report: {report:?}");
 
-        let out = backfill_from_diff(LINE, &ours, &dcgo, &pairing, &report)
+        let out = backfill_from_diff(LINE, &ours, &dcgo, &pairing, &report, &ours)
             .expect("the paired row is confirmed and must be written");
-        let s = Scenario::from_yaml(&out).unwrap();
+        let s = Scenario::from_yaml(&out.text).unwrap();
         let ats: Vec<u32> = generated(&s).iter().map(|a| a.at).collect();
         assert_eq!(ats, vec![1], "only the step DCGO observed is asserted");
+    }
+
+    #[test]
+    fn a_value_the_sim_only_replay_cannot_reproduce_is_not_asserted() {
+        // A card drawn from beyond `stack:` comes from DCGO's own shuffle in the
+        // oracle run but from the deck book's order in the sim-only CI replay:
+        // asserting it would fail the gate on a line that agrees with DCGO.
+        let ours = compared_rows();
+        let mut sim = compared_rows();
+        sim[1].p1.hand = vec!["ST1-08".to_string()];
+        let report = diff(&ours, &ours);
+        let out = backfill_from_diff(LINE, &ours, &ours, &one_to_one(2), &report, &sim).unwrap();
+        assert_eq!(out.dropped, vec!["at 1: p1.hand".to_string()]);
+        let s = Scenario::from_yaml(&out.text).unwrap();
+        let at1 = generated(&s).into_iter().find(|a| a.at == 1).unwrap();
+        assert!(!at1.that.contains_key("p1.hand"), "the shuffle-dependent hand must not be asserted");
+        assert!(at1.that.contains_key("p0.hand"), "what the replay reproduces is still asserted");
+        assert!(generated(&s).iter().find(|a| a.at == 0).unwrap().that.contains_key("p1.hand"));
     }
 
     #[test]
@@ -567,8 +633,8 @@ steps:
         let report = crate::exam::differ::diff_paired(&ours, &dcgo, &one_to_one(2));
         assert!(report.is_clean(), "{report:?}");
 
-        let out = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &report).unwrap();
-        let s = Scenario::from_yaml(&out).unwrap();
+        let out = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &report, &ours).unwrap();
+        let s = Scenario::from_yaml(&out.text).unwrap();
         for a in generated(&s) {
             assert!(!a.that.contains_key("phase"), "step {} asserts an uncompared phase", a.at);
             assert!(a.that.contains_key("memory"), "the compared fields are still written");
@@ -577,8 +643,8 @@ steps:
         // A phase the differ DID compare is still asserted.
         let main = compared_rows();
         let report = diff(&main, &main);
-        let out = backfill_from_diff(LINE, &main, &main, &one_to_one(2), &report).unwrap();
-        let s = Scenario::from_yaml(&out).unwrap();
+        let out = backfill_from_diff(LINE, &main, &main, &one_to_one(2), &report, &main).unwrap();
+        let s = Scenario::from_yaml(&out.text).unwrap();
         assert!(generated(&s).iter().all(|a| a.that.contains_key("phase")));
     }
 
@@ -596,7 +662,7 @@ steps:
         let observed = compared_rows();
         let report = diff(&observed, &observed);
         assert_eq!(report.compared_steps, 2);
-        let err = backfill_from_diff(LINE, &observed[..1], &observed, &one_to_one(2), &report)
+        let err = backfill_from_diff(LINE, &observed[..1], &observed, &one_to_one(2), &report, &observed[..1])
             .unwrap_err();
         assert!(err.contains("do not match"), "got: {err}");
 

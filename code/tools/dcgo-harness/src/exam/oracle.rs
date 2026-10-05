@@ -249,6 +249,307 @@ impl VerdictRecorder {
     }
 }
 
+// ---------------------------------------------------------------------------
+// The one-call loop: preflight, lower, submit, wait, diff, record, backfill.
+// ---------------------------------------------------------------------------
+
+/// What one scenario's one-call oracle run established. Serialized as one
+/// JSON line per scenario by `exam --oracle`, and returned by the MCP.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct OracleExamResult {
+    pub scenario: String,
+    /// The scenario's primary clause.
+    pub clause: String,
+    /// Every id the verdict is filed under: the `covers:` clauses, or the
+    /// interaction id instead of any clause.
+    pub ids: Vec<String>,
+    /// `confirmed` | `diverged` | `unmeasured`. Unmeasured means the oracle
+    /// did not measure the line (timeout, quarantine, DCGO stopped it before
+    /// any divergence); nothing is written to the verdict store for it.
+    pub verdict: String,
+    /// The differ's lead line when the diff was not clean.
+    pub first_divergence: Option<String>,
+    /// Why the verdict is not `confirmed`.
+    pub reason: Option<String>,
+    /// The differ's compared-row counts, when a diff ran.
+    pub denominator: Option<String>,
+    pub job_id: String,
+    /// What DCGO filed: `completed` | `partial` | `failed`. Absent when no
+    /// result was filed (timeout, quarantine).
+    pub job_outcome: Option<String>,
+    pub sidecar: Option<String>,
+    /// Whether the scenario's `assert:` block was rewritten from this run.
+    pub backfilled: bool,
+    /// What backfill did, or why it did not run.
+    pub backfill_note: Option<String>,
+    /// Ids filed in the verdict store by this call.
+    pub recorded: Vec<String>,
+    /// The store's refusals (orphan ids), verbatim.
+    pub refused: Vec<String>,
+}
+
+pub struct OracleExamOptions<'a> {
+    /// The harness root holding jobs/ claimed/ done/ failed/.
+    pub root: &'a Path,
+    /// The player build, for the preflight's action-space gate and the
+    /// verdict's `dcgo_build` stamp.
+    pub build: Option<&'a Path>,
+    pub cards_json: &'a Path,
+    pub decks: Option<&'a Path>,
+    /// Record the verdict here (needs `clause_text_json`).
+    pub verdicts_dir: Option<&'a Path>,
+    pub clause_text_json: Option<&'a Path>,
+    pub interaction_denominator: &'a Path,
+    /// On `confirmed`, write the observed state into the scenario's `assert:`.
+    pub backfill: bool,
+    pub timeout: Duration,
+    pub poll: Duration,
+}
+
+/// Refuse before any submission when the node cannot answer: `node::health`
+/// NO-GO, or no live player (no running `harness.pid` and no heartbeat
+/// within `DEFAULT_STALE_SECONDS`) -- a job nobody can claim only times out.
+pub fn preflight(root: &Path, build: Option<&Path>) -> Result<(), String> {
+    let h = crate::node::health(root, build);
+    if !h.go {
+        return Err(format!("oracle NO-GO:\n{}", h.describe()));
+    }
+    let pid_live = crate::daemon::read_pid(root)
+        .map(crate::daemon::pid_alive)
+        .unwrap_or(false);
+    let beat_fresh = crate::daemon::heartbeat_age(root)
+        .map(|age| age <= crate::daemon::DEFAULT_STALE_SECONDS)
+        .unwrap_or(false);
+    if !pid_live && !beat_fresh {
+        return Err(format!(
+            "oracle refused: no live player on {} (no running {} and no {} in the last {}s), \
+             so a submitted job could only time out. Start one with \
+             `dcgo-harness --root <root> node up --build <dir>`.",
+            root.display(),
+            crate::daemon::PID_FILE,
+            crate::daemon::HEARTBEAT_FILE,
+            crate::daemon::DEFAULT_STALE_SECONDS
+        ));
+    }
+    Ok(())
+}
+
+/// The DCGO commit a player build was made from, for the verdict stamp.
+fn build_commit(build: Option<&Path>) -> Option<String> {
+    crate::manifest::load(build?).ok().map(|m| m.dcgo_commit)
+}
+
+fn outcome_name(o: JobOutcome) -> &'static str {
+    match o {
+        JobOutcome::Completed => "completed",
+        JobOutcome::Partial => "partial",
+        JobOutcome::Failed => "failed",
+    }
+}
+
+/// Does our engine agree with the scenario's Q&A ruling? `None` without one;
+/// a ruling with zero checks is vacuous and never counts as agreement.
+fn ruling_agrees(s: &Scenario, projections: &[crate::exam::projection::StateProjection]) -> Option<bool> {
+    let (checked, failures) = crate::exam::assertions::check_ruling(s, projections)?;
+    Some(failures.is_empty() && checked > 0)
+}
+
+/// The line a successful backfill reports, naming any value it left out
+/// because the sim-only replay does not reproduce it.
+pub fn backfill_message(scenario: &Path, dropped: &[String]) -> String {
+    let mut m = format!("wrote confirmed state into {}", scenario.display());
+    if !dropped.is_empty() {
+        m.push_str(&format!(
+            " (left out {} value(s) the sim-only replay does not reproduce -- stack the \
+             cards they depend on to assert them: {})",
+            dropped.len(),
+            dropped.join(", ")
+        ));
+    }
+    m
+}
+
+/// One call: preflight, then [`run_oracle_exam_loaded`] with the card data
+/// and deck book loaded from `opts`.
+pub fn run_oracle_exam(scenario: &Path, opts: &OracleExamOptions) -> Result<OracleExamResult, String> {
+    preflight(opts.root, opts.build)?;
+    let card_data = dcgo_replay::load_card_data_at(opts.cards_json)
+        .map_err(|e| format!("loading {}: {e}", opts.cards_json.display()))?;
+    let book = crate::exam::deckbook::DeckBook::load(opts.decks, opts.cards_json)?;
+    run_oracle_exam_loaded(scenario, opts, &card_data, &book)
+}
+
+/// Lower the scenario (refusing a line our engine cannot finish before any
+/// Unity time is spent), submit its job under `exam-<stem>`, wait for THAT
+/// job's result, diff its sidecar, record the verdict and backfill.
+///
+/// `Err` only for problems on this side (unreadable or unlowerable scenario,
+/// a line that does not complete, a store that cannot be written). Whatever
+/// the oracle does -- answers, diverges, stops, times out -- is a result.
+/// Does not preflight: callers running a batch call [`preflight`] themselves.
+pub fn run_oracle_exam_loaded(
+    scenario: &Path,
+    opts: &OracleExamOptions,
+    card_data: &std::collections::HashMap<String, digimon_engine::CardData>,
+    book: &crate::exam::deckbook::DeckBook,
+) -> Result<OracleExamResult, String> {
+    use crate::exam::deckbook::ordered_deck;
+
+    let text = std::fs::read_to_string(scenario)
+        .map_err(|e| format!("reading {}: {e}", scenario.display()))?;
+    let s = Scenario::from_yaml(&text)?;
+    let lowered = crate::exam::run::lower_and_run(
+        &s,
+        ordered_deck(&s.decks.p0, book)?,
+        ordered_deck(&s.decks.p1, book)?,
+        card_data,
+    )?;
+    if !lowered.complete {
+        return Err(format!(
+            "{}: the line does not run to completion in our engine ({} of {} steps{}); fix it \
+             sim-only before spending an oracle run",
+            scenario.display(),
+            lowered.steps_run,
+            lowered.steps_total,
+            if lowered.stall_reasons.is_empty() {
+                String::new()
+            } else {
+                format!(": {}", lowered.stall_reasons.join("; "))
+            }
+        ));
+    }
+    let stem = scenario
+        .file_stem()
+        .and_then(|x| x.to_str())
+        .ok_or_else(|| format!("unnamed scenario {}", scenario.display()))?;
+    let job = crate::exam::job_spec::build_exam_job(
+        stem,
+        &s,
+        book.resolve(&s.decks.p0.rest)?,
+        book.resolve(&s.decks.p1.rest)?,
+        &lowered.lowered_steps,
+        &lowered.lowered_owners,
+    )?;
+    let json = serde_json::to_string_pretty(&job)
+        .map_err(|e| format!("serializing job {}: {e}", job.job_id))?
+        + "\n";
+
+    let mut result = OracleExamResult {
+        scenario: scenario.display().to_string(),
+        clause: s.clause.clone(),
+        ids: match &s.interaction {
+            Some(i) => vec![i.id.clone()],
+            None => s.covered_clauses(),
+        },
+        verdict: "unmeasured".to_string(),
+        first_divergence: None,
+        reason: None,
+        denominator: None,
+        job_id: job.job_id.clone(),
+        job_outcome: None,
+        sidecar: None,
+        backfilled: false,
+        backfill_note: None,
+        recorded: Vec::new(),
+        refused: Vec::new(),
+    };
+
+    let run = match submit_and_wait(opts.root, &job.job_id, &json, opts.timeout, opts.poll) {
+        Ok(run) => run,
+        Err(e) => {
+            result.reason = Some(e);
+            return Ok(result);
+        }
+    };
+    let outcome = outcome_name(run.outcome);
+    let completed = run.outcome == JobOutcome::Completed;
+    result.job_outcome = Some(outcome.to_string());
+    result.sidecar = run.sidecar_path.as_ref().map(|p| p.display().to_string());
+    let dcgo_said = if run.message.is_empty() {
+        format!("DCGO job {outcome}")
+    } else {
+        format!("DCGO job {outcome}: {}", run.message)
+    };
+    let Some(sidecar) = run.sidecar_path.as_ref() else {
+        result.reason = Some(format!("{dcgo_said} (no recording filed)"));
+        return Ok(result);
+    };
+    let od = match crate::exam::oracle_diff::diff_against_sidecar(&text, sidecar, card_data) {
+        Ok(od) => od,
+        Err(e) => {
+            result.reason = Some(if completed {
+                e
+            } else {
+                format!("{dcgo_said} (its partial trace could not be diffed: {e})")
+            });
+            return Ok(result);
+        }
+    };
+    result.denominator = Some(od.report.denominator());
+    if !od.report.is_clean() {
+        result.first_divergence = format!("{}", od.report).lines().next().map(str::to_string);
+    }
+    // DCGO stopped the line early (a prompt mismatch, a turn cap) and nothing
+    // diverged before it did: the clause was not measured.
+    if !completed && od.report.divergences.is_empty() {
+        result.reason = Some(format!("{dcgo_said} -- stopped before the line finished, with no divergence before it"));
+        return Ok(result);
+    }
+
+    let mut event = VerdictEvent::from_diff(
+        &s,
+        &od.report,
+        ruling_agrees(&s, &od.projections),
+        scenario.display().to_string(),
+    );
+    if !completed {
+        event.reason = Some(format!("{}; {dcgo_said}", event.reason.unwrap_or_default()));
+    }
+    let confirmed = event.verdict == Verdict::Confirmed;
+    result.verdict = if confirmed { "confirmed" } else { "diverged" }.to_string();
+    result.reason = event.reason.clone();
+
+    if opts.backfill && confirmed {
+        result.backfill_note = Some(match crate::exam::backfill::backfill_from_diff(
+            &text,
+            &od.projections,
+            &od.dcgo,
+            &od.pairing,
+            &od.report,
+            // The pre-submission lowering IS the sim-only replay CI runs.
+            &lowered.projections,
+        ) {
+            Ok(b) => match std::fs::write(scenario, &b.text) {
+                Ok(()) => {
+                    result.backfilled = true;
+                    backfill_message(scenario, &b.dropped)
+                }
+                Err(e) => format!("backfill skipped: writing {}: {e}", scenario.display()),
+            },
+            Err(reason) => format!("backfill skipped: {reason}"),
+        });
+    }
+
+    if let (Some(dir), Some(ctj)) = (opts.verdicts_dir, opts.clause_text_json) {
+        let mut recorder = VerdictRecorder::load(dir, ctj, opts.interaction_denominator)?;
+        let recorded_at = chrono::Utc::now().to_rfc3339();
+        let dcgo_build = build_commit(opts.build);
+        for r in recorder.record(&event, &recorded_at) {
+            match r {
+                Ok(id) => {
+                    recorder
+                        .store
+                        .set_provenance(&id, Some(run.job_id.clone()), dcgo_build.clone())?;
+                    result.recorded.push(id);
+                }
+                Err(e) => result.refused.push(e),
+            }
+        }
+        recorder.save(dir)?;
+    }
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -422,6 +723,15 @@ mod verdict_event_tests {
         assert_eq!(ev.ids(), vec!["probe:BT7-056#effect#0:scope:neg".to_string()]);
     }
 
+    #[test]
+    fn the_backfill_line_names_what_it_left_out_readably() {
+        let m = backfill_message(Path::new("s.yaml"), &["at 3: p1.hand".to_string()]);
+        assert!(m.starts_with("wrote confirmed state into s.yaml"), "{m}");
+        assert!(m.contains("left out 1 value(s)") && m.ends_with("at 3: p1.hand)"), "{m}");
+        assert!(!m.contains("  "), "no runs of spaces: {m}");
+        assert_eq!(backfill_message(Path::new("s.yaml"), &[]), "wrote confirmed state into s.yaml");
+    }
+
     fn recorder(dir: &std::path::Path) -> VerdictRecorder {
         let book = dir.join("clauses.json");
         std::fs::write(&book, r#"{"clauses":[{"id":"BT7-056#effect#0","label":"[On Play]","text":"t"}]}"#).unwrap();
@@ -450,5 +760,264 @@ mod verdict_event_tests {
         let ev = VerdictEvent::from_diff(&s, &clean(), None, "x.yaml".into());
         let out = rec.record(&ev, "2026-10-05T00:00:00Z");
         assert!(out[0].as_ref().unwrap_err().starts_with("refusing interaction qa:Q1601:"), "{:?}", out[0]);
+    }
+}
+
+#[cfg(test)]
+mod oracle_exam_tests {
+    //! The one-call loop against a fake oracle node: a temp harness root and a
+    //! thread that plays DCGO's part by filing a real scripted-v19 recording
+    //! and sidecar (tests/fixtures/oracle) for the submitted job. No Unity.
+    use super::*;
+    use std::path::{Path, PathBuf};
+    use std::time::Duration;
+
+    fn repo() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..")
+    }
+
+    fn fixture(name: &str) -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/oracle").join(name)
+    }
+
+    /// A harness root: queue dirs, plus the enable marker and a fresh
+    /// heartbeat when asked for.
+    fn node(live: bool, enabled: bool) -> tempfile::TempDir {
+        let t = tempfile::tempdir().unwrap();
+        for d in ["jobs", "claimed", "done", "failed"] {
+            std::fs::create_dir_all(t.path().join(d)).unwrap();
+        }
+        if enabled {
+            std::fs::write(t.path().join("harness.enabled"), "test\n").unwrap();
+        }
+        if live {
+            std::fs::write(t.path().join("harness.heartbeat"), "").unwrap();
+        }
+        t
+    }
+
+    /// What the fake player files for the job.
+    struct Filing {
+        outcome: &'static str,
+        message: &'static str,
+        /// Cut the sidecar to this many lines (DCGO stopped early).
+        sidecar_lines: Option<usize>,
+    }
+
+    /// Plays DCGO: waits for `jobs/<job>.json`, files the fixture recording
+    /// and sidecar beside each other, then the job's result.
+    fn play(root: &Path, work: &Path, stem: &str, f: Filing) -> std::thread::JoinHandle<()> {
+        let (root, work, stem) = (root.to_path_buf(), work.to_path_buf(), stem.to_string());
+        std::thread::spawn(move || {
+            let job = format!("exam-{stem}");
+            let queued = root.join("jobs").join(format!("{job}.json"));
+            for _ in 0..1000 {
+                if queued.exists() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            std::fs::rename(&queued, root.join("done").join(format!("{job}.json"))).unwrap();
+            let rec_dir = work.join("rec");
+            std::fs::create_dir_all(&rec_dir).unwrap();
+            let rec = rec_dir.join(format!("{stem}.jsonl"));
+            std::fs::copy(fixture(&format!("{stem}.jsonl")), &rec).unwrap();
+            let side = std::fs::read_to_string(fixture(&format!("{stem}.state.jsonl"))).unwrap();
+            let side: String = match f.sidecar_lines {
+                Some(n) => side.lines().take(n).map(|l| format!("{l}\n")).collect(),
+                None => side,
+            };
+            std::fs::write(rec_dir.join(format!("{stem}.state.jsonl")), side).unwrap();
+            let body = serde_json::json!({
+                "job_id": job, "outcome": f.outcome, "recording_path": rec.display().to_string(),
+                "steps": 4, "duration_seconds": 1.0, "message": f.message,
+            });
+            std::fs::write(root.join("done").join(format!("{job}.result.json")), body.to_string())
+                .unwrap();
+        })
+    }
+
+    struct Bench {
+        root: tempfile::TempDir,
+        work: tempfile::TempDir,
+        cards: PathBuf,
+        decks: PathBuf,
+        clauses: PathBuf,
+        none: PathBuf,
+        store: PathBuf,
+    }
+
+    fn bench(live: bool, enabled: bool) -> Bench {
+        let work = tempfile::tempdir().unwrap();
+        let clauses = work.path().join("clauses.json");
+        std::fs::write(
+            &clauses,
+            r#"{"clauses":[
+            {"id":"ST23-06#effect#0","label":"[On Play]","text":"a"},
+            {"id":"ST23-04#effect#0","label":"[On Play]","text":"b"}]}"#,
+        )
+        .unwrap();
+        Bench {
+            root: node(live, enabled),
+            cards: repo().join("data/cards.json"),
+            decks: repo().join("qa/dcgo-exams/ST23/glowing_dawn_pool.json"),
+            clauses,
+            none: work.path().join("no-denominator.json"),
+            store: work.path().join("store"),
+            work,
+        }
+    }
+
+    impl Bench {
+        fn opts(&self, timeout: Duration) -> OracleExamOptions<'_> {
+            OracleExamOptions {
+                root: self.root.path(),
+                build: None,
+                cards_json: &self.cards,
+                decks: Some(&self.decks),
+                verdicts_dir: Some(&self.store),
+                clause_text_json: Some(&self.clauses),
+                interaction_denominator: &self.none,
+                backfill: true,
+                timeout,
+                poll: Duration::from_millis(20),
+            }
+        }
+        fn scenario(&self, stem: &str) -> PathBuf {
+            let p = self.work.path().join(format!("{stem}.yaml"));
+            std::fs::copy(fixture(&format!("{stem}.yaml")), &p).unwrap();
+            p
+        }
+        fn stored(&self, clause: &str) -> Option<crate::exam::verdict::ClauseVerdict> {
+            VerdictStore::load_dir(&self.store).ok()?.get(clause).cloned()
+        }
+        fn play(&self, stem: &str, f: Filing) -> std::thread::JoinHandle<()> {
+            play(self.root.path(), self.work.path(), stem, f)
+        }
+    }
+
+    const COMPLETED: Filing = Filing { outcome: "completed", message: "", sidecar_lines: None };
+
+    #[test]
+    fn a_clean_run_confirms_records_provenance_and_backfills() {
+        let b = bench(true, true);
+        let sc = b.scenario("ST23-06-effect0");
+        let h = b.play("ST23-06-effect0", COMPLETED);
+        let r = run_oracle_exam(&sc, &b.opts(Duration::from_secs(60))).unwrap();
+        h.join().unwrap();
+        assert_eq!(r.verdict, "confirmed", "{r:?}");
+        assert_eq!(r.job_id, "exam-ST23-06-effect0");
+        assert!(r.backfilled, "{r:?}");
+        assert!(std::fs::read_to_string(&sc).unwrap().contains("_backfilled"));
+        let row = b.stored("ST23-06#effect#0").expect("verdict recorded");
+        assert_eq!(row.verdict, Verdict::Confirmed);
+        assert_eq!(row.job_id.as_deref(), Some("exam-ST23-06-effect0"));
+        assert_eq!(r.recorded, vec!["ST23-06#effect#0".to_string()]);
+    }
+
+    #[test]
+    fn a_diverged_run_is_recorded_diverged_and_never_backfilled() {
+        let b = bench(true, true);
+        let sc = b.scenario("ST23-04-effect0");
+        let before = std::fs::read_to_string(&sc).unwrap();
+        let h = b.play("ST23-04-effect0", COMPLETED);
+        let r = run_oracle_exam(&sc, &b.opts(Duration::from_secs(60))).unwrap();
+        h.join().unwrap();
+        assert_eq!(r.verdict, "diverged", "{r:?}");
+        assert!(
+            r.first_divergence.as_deref().unwrap_or("").starts_with("DIVERGED at step 14"),
+            "{r:?}"
+        );
+        assert!(!r.backfilled);
+        assert_eq!(std::fs::read_to_string(&sc).unwrap(), before);
+        assert_eq!(b.stored("ST23-04#effect#0").unwrap().verdict, Verdict::Diverged);
+    }
+
+    #[test]
+    fn a_failed_job_that_diverged_before_it_stopped_is_diverged_with_dcgos_message() {
+        let b = bench(true, true);
+        let sc = b.scenario("ST23-04-effect0");
+        let h = b.play(
+            "ST23-04-effect0",
+            Filing {
+                outcome: "failed",
+                message: "prompt mismatch: step 20 expected prompt 'main_phase' but DCGO asked 'SelectHandEffect'",
+                sidecar_lines: None,
+            },
+        );
+        let r = run_oracle_exam(&sc, &b.opts(Duration::from_secs(60))).unwrap();
+        h.join().unwrap();
+        assert_eq!(r.verdict, "diverged", "{r:?}");
+        assert!(r.reason.as_deref().unwrap_or("").contains("prompt mismatch"), "{r:?}");
+        assert_eq!(r.job_outcome.as_deref(), Some("failed"));
+    }
+
+    #[test]
+    fn a_failed_job_with_no_divergence_leaves_the_clause_unmeasured_and_unrecorded() {
+        let b = bench(true, true);
+        let sc = b.scenario("ST23-06-effect0");
+        let h = b.play(
+            "ST23-06-effect0",
+            Filing {
+                outcome: "failed",
+                message: "prompt mismatch: step 2 expected prompt 'main_phase' but DCGO asked 'OptionalSkill'",
+                sidecar_lines: Some(2),
+            },
+        );
+        let r = run_oracle_exam(&sc, &b.opts(Duration::from_secs(60))).unwrap();
+        h.join().unwrap();
+        assert_eq!(r.verdict, "unmeasured", "{r:?}");
+        assert!(r.reason.as_deref().unwrap_or("").contains("prompt mismatch"), "{r:?}");
+        assert!(r.recorded.is_empty());
+        assert!(b.stored("ST23-06#effect#0").is_none(), "an unmeasured run must not write a verdict");
+    }
+
+    #[test]
+    fn a_timeout_is_unmeasured_with_the_reason() {
+        let b = bench(true, true);
+        let sc = b.scenario("ST23-06-effect0");
+        let r = run_oracle_exam(&sc, &b.opts(Duration::from_millis(200))).unwrap();
+        assert_eq!(r.verdict, "unmeasured");
+        assert!(r.reason.as_deref().unwrap_or("").contains("timed out"), "{r:?}");
+        assert!(b.stored("ST23-06#effect#0").is_none());
+    }
+
+    #[test]
+    fn a_quarantined_job_is_unmeasured_with_the_reason() {
+        let b = bench(true, true);
+        let sc = b.scenario("ST23-06-effect0");
+        let root = b.root.path().to_path_buf();
+        let h = std::thread::spawn(move || {
+            let q = root.join("jobs/exam-ST23-06-effect0.json");
+            for _ in 0..1000 {
+                if q.exists() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            std::fs::rename(&q, root.join("failed/exam-ST23-06-effect0.json")).unwrap();
+        });
+        let r = run_oracle_exam(&sc, &b.opts(Duration::from_secs(60))).unwrap();
+        h.join().unwrap();
+        assert_eq!(r.verdict, "unmeasured");
+        assert!(r.reason.as_deref().unwrap_or("").contains("quarantined"), "{r:?}");
+    }
+
+    #[test]
+    fn no_go_refuses_before_submitting() {
+        let b = bench(true, false);
+        let sc = b.scenario("ST23-06-effect0");
+        let err = run_oracle_exam(&sc, &b.opts(Duration::from_secs(1))).unwrap_err();
+        assert!(err.contains("NO-GO"), "{err}");
+        assert_eq!(std::fs::read_dir(b.root.path().join("jobs")).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn no_live_player_refuses_before_submitting() {
+        let b = bench(false, true);
+        let sc = b.scenario("ST23-06-effect0");
+        let err = run_oracle_exam(&sc, &b.opts(Duration::from_secs(1))).unwrap_err();
+        assert!(err.contains("no live player"), "{err}");
+        assert_eq!(std::fs::read_dir(b.root.path().join("jobs")).unwrap().count(), 0);
     }
 }
