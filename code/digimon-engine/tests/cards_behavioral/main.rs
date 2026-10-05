@@ -14,8 +14,8 @@
 /// multithreaded bottleneck. This suite is the adversarial case: huge
 /// allocation churn against a heap that only grows, because
 /// `card_store::shared_card_store` memoizes per distinct test card set into a
-/// process-global map that is never evicted (~2 MB retained per test, measured
-/// monotonic 523 MB -> 1471 MB over 484 tests at ONE thread).
+/// process-global map (bounded since 2026-10-05; before that it was never
+/// evicted and retained ~2 MB per test).
 ///
 /// `#[global_allocator]` must live in the binary crate, and an integration-test
 /// binary is its own crate, so it goes here rather than in the library.

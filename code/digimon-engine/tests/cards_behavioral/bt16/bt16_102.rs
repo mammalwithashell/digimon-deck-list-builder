@@ -38,17 +38,24 @@ fn bt16_102_is_tricolor_lv6_with_four_clauses() {
     assert_eq!(card.kind, CompiledCardKind::Digimon);
     assert_eq!(card.level, Some(6));
     assert_eq!(card.cost, Some(12));
+    // The name bar prints yellow|blue|black (official DB and DCGO agree); an
+    // earlier override, and this test, had white for black.
     for c in [
         CompiledColor::Yellow,
         CompiledColor::Blue,
-        CompiledColor::White,
+        CompiledColor::Black,
     ] {
         assert!(
             card.color.contains(&c),
-            "BT16-102 is Yellow/Blue/White; got {:?}",
+            "BT16-102 is Yellow/Blue/Black; got {:?}",
             card.color
         );
     }
+    assert!(
+        !card.color.contains(&CompiledColor::White),
+        "BT16-102 is not white; got {:?}",
+        card.color
+    );
     assert_eq!(
         card.effects.len(),
         4,

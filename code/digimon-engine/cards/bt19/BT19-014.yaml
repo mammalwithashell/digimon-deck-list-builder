@@ -2,7 +2,7 @@ card: BT19-014
 name: Shoutmon EX6
 kind: digimon
 level: 6
-color: [red, yellow]
+color: [red, yellow, black]
 cost: 11
 dp: 12000
 traits: [Composite, Xros Heart, Blue Flare]

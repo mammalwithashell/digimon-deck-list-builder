@@ -6,7 +6,10 @@
 # Replacement prompt for PLAYER 1 (step 15 `decline`), and the Piercing
 # security check is lost: P1's security stays 5. Per §16-6 / §16-24 P1 should
 # get no prompt and the Piercing check should take P1 to 4.
-# The assert pins the CURRENT (buggy) state; flip p1.security to 4 when fixed.
+# FIXED 2026-10-04 by #708 (G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED):
+# P1 is no longer asked and the Piercing check lands (security 5 -> 4,
+# ST1-02 trashed). The phantom P1 row is removed and the assert now holds the
+# printed-rules result; kept as a regression line.
 # Run: dcgo-harness exam --scenario <this> --sim-only --cards-json data/cards.json
 #      --decks qa/dcgo-exams/ST23/glowing_dawn_pool.json
 card: BT25-049
@@ -72,14 +75,12 @@ steps:
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
-  - actor: 1
-    do: { select: { yes: true } }
   - actor: 0
     do: { pass: {} }
 assert:
-  - at: 17
+  - at: 16
     that:
       turn: 5
       p1.field: []
-      p1.trash: [BT1-009]
-      p1.security: 5
+      p1.trash: [BT1-009, ST1-02]
+      p1.security: 4

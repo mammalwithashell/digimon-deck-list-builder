@@ -21,7 +21,9 @@
     "TS"
   ],
   "form_eng": [],
-  "attribute_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
   "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with the [Sea Beast] or [Shaman] trait or [Aqua] or [Sea Animal] in any of its traits and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
   "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon unsuspends, if you have 7 or fewer cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)",
   "security_effect_description_eng": "",

@@ -1,4 +1,4 @@
-# Exam scenario: ST19-14 (Arisa Kinosaki), clause ST19-14#effect#3 --
+# Exam scenario: ST19-14 (Arisa Kinosaki), clause ST19-14#security#0 --
 # "[Security] Play this card without paying the cost."
 #
 # Arisa is a cost-4 [LIBERATOR] Tamer with a [Start of Your Turn]
@@ -49,7 +49,7 @@
 # The witness is the Tamer standing on P0's FIELD (played, not trashed) with
 # P1's memory untouched at 3 -- "without paying the cost".
 card: ST19-14
-clause: ST19-14#effect#3
+clause: ST19-14#security#0
 seed: 424242
 decks:
   p0:

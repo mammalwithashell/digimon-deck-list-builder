@@ -19,10 +19,10 @@ Resolution order per card (README, and CLAUDE.md "Printed card data"):
        cards.json's `security_effect_description_eng` is not evidence the
        card has no security-face text (see README): that field is
        populated for 3 of ~4300 cards pool-wide, so its emptiness is
-       structurally uninformative. A bundle's absence of a "Security"
+       structurally uninformative. A bundle's absence of a "Security Effect"
        section, by contrast, IS informative (it's the official DB, not a
-       lossy scrape) -- so a bundled card with no Security section gets
-       ZERO security clauses, not an image-required slot.
+       lossy scrape) -- so a bundled card with no such section gets ZERO
+       security clauses, not an image-required slot.
 
 Clause texts that are ingestion artifacts rather than printed card text
 (`|applinkdp =` MediaWiki residue, the bare field label "Inherited Effect",
@@ -69,9 +69,16 @@ DEFAULT_IMG_DIR = os.environ.get(
 # Condition / and any future label) defaults to "effect" -- all of those
 # are printed ability/condition text on the card face, just not the plain
 # "Effect" box.
+#
+# The official DB labels the security box "Security Effect" (817 sections in
+# data/card_official.json on 2026-10-03; none says a bare "Security"). Until
+# that label was listed here every official security clause was zoned
+# "effect", taking an effect index. "security" stays for fixtures and any
+# older bundle that used it.
 _LABEL_TO_ZONE = {
     "effect": "effect",
     "inherited effect": "inherited",
+    "security effect": "security",
     "security": "security",
 }
 
@@ -382,8 +389,8 @@ def extract_card_clauses(
                 continue
             zone = _LABEL_TO_ZONE.get(label.lower(), "effect")
             add(zone, label or "bundle", text, source="bundle")
-        # Bundle exists and has no "Security" section: the official DB is
-        # authoritative, so a missing section is a CONFIRMED absence, not
+        # Bundle exists and has no "Security Effect" section: the official DB
+        # is authoritative, so a missing section is a CONFIRMED absence, not
         # lossy silence -- deliberately NOT an image-required slot.
         return clauses
 

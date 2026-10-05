@@ -10,7 +10,7 @@ Book: `qa/dcgo-exams/BT8/tm_bt8_094_pool.json` (decks `tm-emperor`, `quiet-oppon
 |---|---|---|---|
 | `BT8-094#effect#0` | `[All Turns] When any of your opponent's level 5 or lower Digimon are deleted, by suspending this Tamer, <Draw 1>.` | `BT8-094-effect0.yaml` | lowers, asserts pass |
 | `BT8-094#effect#1` | `[Opponent's Turn] When any of your opponent's level 3 Digimon move from the breeding area to the battle area, gain 2 memory.` | `BT8-094-effect1.yaml` | lowers, asserts pass |
-| `BT8-094#effect#2` | `[Security] Play this card without paying the cost.` | `BT8-094-effect2.yaml` | lowers, asserts pass |
+| `BT8-094#security#0` | `[Security] Play this card without paying the cost.` | `BT8-094-effect2.yaml` | lowers, asserts pass |
 
 ## Audit of the crashed agent's files (resumed campaign, 2026-09-18)
 

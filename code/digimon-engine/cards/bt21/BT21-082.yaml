@@ -1,0 +1,134 @@
+# BT21-082 Takuya Kanbara — Tamer, Red, Cost 3.
+# Traits: Hero
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT21-082.md):
+#   [Security] Play this card without paying the cost.
+#   [Start of Your Main Phase] 1 of your Digimon or Tamers may digivolve into
+#   a Digimon card with the [Hybrid] or [Hero] trait in the hand. For each of
+#   your red Tamers with different names, reduce this effect's digivolution
+#   cost by 1.
+# Inherited:
+#   [Your Turn] [Once Per Turn] When your opponent's security stack is removed
+#   from, you may play 1 red Tamer card from your hand without paying the cost.
+# Official Q&A: "Yes, the digivolution cost is reduced by 1." (Takuya himself
+#   counts as one of your red Tamers.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Red/BT21_082.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.SecuritySkill` → `PlaySelfTamerSecurityEffect` —
+#   the canonical `play_from_security: {}` idiom (BT21-083/084/086/087).
+#
+# Clause 2 — `EffectTiming.OnStartMainPhase`, `isOptional: false`, no OPT.
+#   CanUseCondition: IsOwnerTurn && on battle area. Body: if any own Digimon or
+#   Tamer has a [Hybrid]/[Hero] hand card that can digivolve onto it,
+#   SelectPermanentEffect (canNoSelect: true — the "may") →
+#   DigivolveIntoHandOrTrashCard(Hybrid|Hero, payCost: true, reduceCost:
+#   GetUniqueNameCardCount(own battle-area red Tamers' top cards), isHand).
+#   → `start_of_your_main_phase` (mandatory trigger; the choice lives in the
+#   optional permanent pick). `has_digivolve_candidate` restricts the pick to
+#   Digimon/Tamers with a legal result card (DCGO CanPlayCardTargetFrame);
+#   `can_digivolve_onto` restricts the hand pick. Cost:
+#   `reduce: { base: 0, per: { distinct_names_count: { of: you, zone:
+#   battle_area, filter: { kind: tamer, color_is: red } } }, delta: 1 }`
+#   (G-DSL-FORMULA-DISTINCT-NAMES-COUNT, EX7-066 precedent). The formula is
+#   evaluated at digivolve time, matching DCGO's `costReduction()` call.
+#
+# Clause 3 — `EffectTiming.OnLoseSecurity`, `SetIsInheritedEffect(true)`,
+#   maxCount 1 (OPT), isOptional: true. CanUseCondition: IsOwnerTurn &&
+#   CanTriggerWhenLoseSecurity(enemy) && IsExistOnBattleAreaDigimon(card) (the
+#   carrier is a Digimon). Body: SelectHandEffect (red Tamer, canNoSelect) →
+#   PlayPermanentCards(payCost: false).
+#   → `scope: inherited`, `when: on_opponent_security_removed`, optional,
+#   once_per_turn, `active_when: your_turn` (BT24-012 / BT24-008 inherited
+#   idiom); optional `select_hand` + `play_from_hand_free` (BT21-009 idiom).
+
+card: BT21-082
+name: "Takuya Kanbara"
+kind: tamer
+color: [red]
+cost: 3
+traits: [Hero]
+
+effects:
+  # ─── Clause 1: [Security] play this card without paying the cost ──────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # ─── Clause 2: [Start of Your Main Phase] may digivolve, cost -N ──────────
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] 1 of your Digimon or Tamers may digivolve into a [Hybrid]/[Hero] Digimon in hand, cost -1 per red Tamer with a different name"
+    process:
+      - select_own_permanent:
+          bind_as: evo_base
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - any_of:
+                          - trait_has: Hybrid
+                          - trait_has: Hero
+          prompt: "Select 1 of your Digimon or Tamers to digivolve into a [Hybrid] or [Hero] Digimon"
+      - if:
+          condition: { binding_present: evo_base }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo_card
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - can_digivolve_onto: evo_base
+                    - any_of:
+                        - trait_has: Hybrid
+                        - trait_has: Hero
+                prompt: "Digivolve into a [Hybrid] or [Hero] Digimon card in your hand"
+            - effect_initiated_digivolve:
+                target: evo_base
+                from_hand: evo_card
+                cost:
+                  reduce:
+                    base: 0
+                    per:
+                      distinct_names_count:
+                        of: you
+                        zone: battle_area
+                        filter:
+                          all_of:
+                            - kind: tamer
+                            - color_is: red
+                    delta: 1
+                ignore_requirements: false
+
+  # ─── Clause 3 (inherited): [Your Turn][OPT] opp security removed → play red Tamer
+  - scope: inherited
+    when: on_opponent_security_removed
+    optional: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][Once Per Turn] When your opponent's security stack is removed from, you may play 1 red Tamer card from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: red_tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - color_is: red
+          prompt: "You may play 1 red Tamer card from your hand without paying the cost"
+      - if:
+          condition: { binding_present: red_tamer }
+          then:
+            - play_from_hand_free: { of: you, hand_index: red_tamer }

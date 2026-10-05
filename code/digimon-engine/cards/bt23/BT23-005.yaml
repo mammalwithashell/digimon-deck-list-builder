@@ -43,7 +43,7 @@ name: Elizamon
 kind: digimon
 level: 3
 color: [red]
-cost: 0
+cost: 3
 dp: 1000
 traits: [Reptile, LIBERATOR]
 

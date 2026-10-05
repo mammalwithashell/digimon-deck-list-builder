@@ -13,7 +13,8 @@
   "rarity": 4,
   "card_colors": [
     0,
-    6
+    6,
+    5
   ],
   "type_eng": [
     "Wicked God"
@@ -30,6 +31,16 @@
   "evo_costs": [
     {
       "card_color": 0,
+      "level": 6,
+      "memory_cost": 6
+    },
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 6
+    },
+    {
+      "card_color": 5,
       "level": 6,
       "memory_cost": 6
     }

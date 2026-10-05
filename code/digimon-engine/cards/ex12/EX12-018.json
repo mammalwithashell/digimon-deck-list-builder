@@ -1,4 +1,6 @@
 {
+  "index": 4419,
+  "norm_id": 0.22095,
   "card_id": "EX12-018",
   "card_index": 18,
   "card_name_eng": "Siriusmon",
@@ -54,6 +56,11 @@
           "card_color": 0,
           "level": 5,
           "memory_cost": 4
+        },
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 4
         }
       ],
       "effect_text": "＜Progress＞ (While attacking, your opponent's effects don't affect this Digimon.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon in battle, it checks security before the attack ends.)\r\n＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may place up to 2 Digimon cards with [Gammamon] in its text or the [VB] trait from your hand or trash as this Digimon's top or bottom digivolution cards. If this effect placed, to 1 of your opponent's Digimon, give -2000 DP until their turn ends for each of this Digimon's digivolution cards.",
@@ -65,8 +72,7 @@
     "option": {
       "use_cost": 5,
       "colors": [
-        "Red",
-        "Yellow"
+        "Red"
       ],
       "effect_text": "Use Requirement: VB trait\r\n[Main] Delete 1 of your opponent's highest DP Digimon. Then, 1 of your Digimon may attack.",
       "security_text": "",

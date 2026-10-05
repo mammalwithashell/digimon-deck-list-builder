@@ -11,8 +11,8 @@
       "scenario_path": "qa/dcgo-exams/ST19/ST19-14-effect0.yaml",
       "recorded_at": "2026-08-23T22:14:56.917661600+00:00"
     },
-    "ST19-14#effect#3": {
-      "clause_id": "ST19-14#effect#3",
+    "ST19-14#security#0": {
+      "clause_id": "ST19-14#security#0",
       "card_id": "ST19-14",
       "verdict": "confirmed",
       "label": "Security Effect",

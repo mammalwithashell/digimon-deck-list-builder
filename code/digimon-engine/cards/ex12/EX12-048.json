@@ -1,17 +1,20 @@
 {
+  "index": 4449,
+  "norm_id": 0.22245,
   "card_id": "EX12-048",
   "card_index": 48,
   "card_name_eng": "SeitenGokuumon",
   "card_name_jpn": "",
   "card_effect_class_name": "EX12_048",
-  "play_cost": 5,
-  "dp": 12000,
+  "play_cost": 13,
+  "dp": 13000,
   "level": 6,
   "card_kind": 0,
   "rarity": 0,
   "card_colors": [
     2,
-    0
+    0,
+    1
   ],
   "type_eng": [
     "Tathāgata",

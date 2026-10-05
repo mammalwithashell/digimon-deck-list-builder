@@ -9,7 +9,7 @@ yet: all three are `unmeasured` until the oracle pass. None is `unreachable`.
 |---|---|---|---|
 | `EX7-066#effect#0` | `When effects trash this card from digivolution cards, 1 of your Digimon gets +3000 DP until the end of your opponent's turn. While you have a [Three Musketeers] trait Digimon, you may ignore this card's color requirements.` | `EX7-066-effect0.yaml` (new) | lowers, 16/16 asserts pass |
 | `EX7-066#effect#1` | `[Main] Delete 1 … 9000 DP or less. For each of your [Three Musketeers] trait Digimon with different names, add 3000 … Then, place this card as the bottom digivolution card …` | `EX7-066-effect1.yaml` (REPAIRED) | lowers, 12/12 |
-| `EX7-066#effect#2` | `[Security] Delete 1 of your opponent's Digimon with 12000 DP or less.` | `EX7-066-effect2.yaml` (REPAIRED) | lowers, 12/12 |
+| `EX7-066#security#0` | `[Security] Delete 1 of your opponent's Digimon with 12000 DP or less.` | `EX7-066-effect2.yaml` (REPAIRED) | lowers, 12/12 |
 
 Book: `qa/dcgo-exams/EX7/tm_ex7_066_pool.json` (deck `tm-chaos-triangular`, the
 crashed agent's, unchanged: EX7-066 ×4 and Deputymon EX7-010 ×4 in the shared list).

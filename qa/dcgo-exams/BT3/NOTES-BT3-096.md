@@ -9,7 +9,7 @@ Book: `qa/dcgo-exams/BT3/tm_bt3_096_pool.json` (decks `tm-mimi-purple`, `quiet-o
 | Clause | Text | Scenario | Sim-only |
 |---|---|---|---|
 | `BT3-096#effect#0` | `[All Turns] When a player uses an Option card, you may suspend this Tamer to gain 1 memory.` | `BT3-096-effect0.yaml` | lowers, asserts pass |
-| `BT3-096#effect#1` | `[Security] Play this card without paying its memory cost.` | `BT3-096-effect1.yaml` | lowers, asserts pass |
+| `BT3-096#security#0` | `[Security] Play this card without paying its memory cost.` | `BT3-096-effect1.yaml` | lowers, asserts pass |
 
 ## Audit of the crashed agent's files (resumed campaign, 2026-09-18)
 

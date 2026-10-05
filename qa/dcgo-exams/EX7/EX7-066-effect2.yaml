@@ -1,4 +1,4 @@
-# Exam scenario: Chaos Triangular (EX7-066), clause EX7-066#effect#2 --
+# Exam scenario: Chaos Triangular (EX7-066), clause EX7-066#security#0 --
 # "[Security] Delete 1 of your opponent's Digimon with 12000 DP or less."
 #
 # EX7-066 is pinned as P0's TOP security card (stack[9]; stack[5..9] is the
@@ -36,7 +36,7 @@
 # SelectPermanentEffect(Mode.Destroy, canNoSelect: false) over opponent
 # Digimon with DP <= MaxDP_DeleteEffect(12000), selectPlayer = card.Owner = P0.
 card: EX7-066
-clause: EX7-066#effect#2
+clause: EX7-066#security#0
 seed: 424242
 decks:
   p0:

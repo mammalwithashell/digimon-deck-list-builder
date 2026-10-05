@@ -17,6 +17,14 @@
 #      <Arts Digivolve>: Armalizamon (Lv.4, [Glowing Dawn] -- a legal
 #      digivolution base for Scourge) digivolves into it at no cost; the
 #      digivolve draw takes stack[13] BT25-057. The overspend ends the turn.
+#   UPDATED 2026-10-04 (post-#708): at the end of T3 ScourgeChiropmon's
+#      <Execute> window now opens (G-ENGINE-DUAL-END-OF-TURN-WINDOW, RESOLVED
+#      2026-10-04: end-of-turn attack keywords no longer skip a DUAL top
+#      card). DCGO asks it too (BT26_075.cs ExecuteSelfEffect, OnEndTurn,
+#      optional), so the line declines it with one shared row; before #708
+#      the turn rotated straight to p1 and the next row (p1's pass) is what
+#      the harness's actor check refused. The assert moved from `at: 10`
+#      to 11.
 # WITNESS: memory -3 (= the use cost only), BT26-075 on top of Armalizamon,
 # P0's trash empty.
 #
@@ -75,11 +83,18 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
+  # The overspend ends T3, and the freshly digivolved DUAL ScourgeChiropmon
+  # opens its <Execute> end-of-turn window (see header): decline it (our
+  # EndOfTurnAction PASS; DCGO OptionalSkill "no" on the wire -- the
+  # BT8-097-effect0.yaml convention).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: OptionalSkill }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 10
+  - at: 11
     that:
       turn: 4
       # 1 - 4 for the USE and nothing else: the digivolution was free.

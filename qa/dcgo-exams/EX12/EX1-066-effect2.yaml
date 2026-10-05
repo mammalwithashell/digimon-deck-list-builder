@@ -1,4 +1,4 @@
-# Exam scenario: EX1-066 (Analog Youth), clause EX1-066#effect#2 --
+# Exam scenario: EX1-066 (Analog Youth), clause EX1-066#security#0 --
 # "[Security] Play this card without paying its memory cost."
 #
 # THE SECURITY-TRIGGER SKELETON. The stack prefix is a draw-order prefix on
@@ -52,7 +52,7 @@
 # all four of which are spent on the security fillers, so the third revealed
 # card is EX12-026 (Shellmon) rather than a fifth Wankomon.
 card: EX1-066
-clause: EX1-066#effect#2
+clause: EX1-066#security#0
 seed: 424242
 decks:
   p0:

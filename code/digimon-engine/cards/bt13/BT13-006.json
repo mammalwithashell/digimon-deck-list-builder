@@ -19,8 +19,8 @@
   ],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "[On Deletion] You may trash 1 card in your hand to delete 1 of your opponent's level 3 Digimon.",
-  "inherited_effect_description_eng": "",
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[On Deletion] By trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon.",
   "security_effect_description_eng": "",
   "evo_costs": [],
   "xros_req": ""

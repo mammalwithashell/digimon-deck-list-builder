@@ -2,8 +2,8 @@
   "version": 1,
   "last_updated": "2026-08-23T22:14:37.219528800+00:00",
   "clauses": {
-    "ST1-12#effect#1": {
-      "clause_id": "ST1-12#effect#1",
+    "ST1-12#security#0": {
+      "clause_id": "ST1-12#security#0",
       "card_id": "ST1-12",
       "verdict": "confirmed",
       "label": "Security Effect",

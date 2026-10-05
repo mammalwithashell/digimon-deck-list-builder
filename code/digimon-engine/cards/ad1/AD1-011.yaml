@@ -1,0 +1,138 @@
+# AD1-011 Paildramon — Digimon, Lv.5, Blue/Green, DP 8000, Cost 8.
+# Traits: Dragonkin / Hero   Form: Ultimate   Attribute: Free
+# Evo (official Bandai DB): Blue Lv.4 / Cost 4, Green Lv.4 / Cost 4
+# [Digivolve] Lv.4 w/[Free]/[Hero] trait: Cost 3
+# [DNA Digivolve] Blue Lv.4 + green Lv.4: Cost 0
+#
+# Printed card text (official, data/card_bundles/AD1-011.md):
+#
+#   ＜Partition (blue Lv.4 & green Lv.4)＞ [When Digivolving] Until your
+#   opponent's turn ends, this Digimon can't be deleted in battle. Then, if DNA
+#   digivolving, this Digimon's attack target can't change for the turn.
+#   [When Attacking] This Digimon may digivolve into a Digimon card with
+#   [Imperialdramon] in its name in the hand with the digivolution cost
+#   reduced by 2.
+#
+# Inherited Effect:
+#   ＜Partition (blue Lv.4 & green Lv.4)＞
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/AD1/Blue/AD1_011.cs
+#   - AddSelfDigivolutionRequirementStaticEffect(level 4, Free||Hero, cost 3)
+#   - GetJogressConditionClass(blue Lv.4, green Lv.4)
+#   - PartitionSelfEffect face-up + inherited (blue Lv.4, green Lv.4)
+#   - OnEnterFieldAnyone (WD, non-optional): GainCanNotBeDeletedByBattle
+#     (UntilOpponentTurnEnd); if IsJogress → UntilEachTurnEnd
+#     CanNotSwitchAttackTargetEffect on this permanent.
+#   - OnAllyAttack (WA, non-OPT): DigivolveIntoHandOrTrashCard(name contains
+#     "Imperialdramon", payCost, reduceCost 2, isHand) — the selection is
+#     optional ("may").
+
+card: AD1-011
+name: Paildramon
+kind: digimon
+level: 5
+color: [blue, green]
+cost: 8
+dp: 8000
+traits: [Dragonkin, Hero]
+form: Ultimate
+attribute: Free
+
+alt_paths:
+  # ─── Standard digivolve circles (printed): Blue Lv.4 / 4, Green Lv.4 / 4 ───
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 4
+
+  # ─── [Digivolve] Lv.4 w/[Free]/[Hero] trait: Cost 3 (no color gate) ─────────
+  # DCGO PermanentCondition: TopCard.EqualsTraits("Free") || EqualsTraits("Hero")
+  # at level 4. Attributes are folded into traits by the card-data loader.
+  - kind: digivolve
+    from:
+      any_of:
+        - { level_eq: 4, trait_has: Free }
+        - { level_eq: 4, trait_has: Hero }
+    cost: 3
+
+  # ─── [DNA Digivolve] Blue Lv.4 + Green Lv.4: Cost 0 ──────────────────────────
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 4, color_is: blue }
+      - { level_eq: 4, color_is: green }
+    cost: 0
+
+effects:
+  # ─── <Partition (blue Lv.4 & green Lv.4)> — face-up ─────────────────────────
+  - kind: partition
+    summary: "<Partition (Blue Lv.4 & Green Lv.4)>"
+    sources:
+      - { level_eq: 4, color_is: blue }
+      - { level_eq: 4, color_is: green }
+    exclude_cause: [own_effect, battle]
+
+  # ─── [When Digivolving] battle-deletion immunity; DNA → target lock ─────────
+  #
+  # "Until your opponent's turn ends, this Digimon can't be deleted in battle.
+  #  Then, if DNA digivolving, this Digimon's attack target can't change for
+  #  the turn."
+  #
+  # `CannotBeDestroyedByBattle` is the cause-filtered (Battle) passive cancel
+  # replacement at WhenWouldBeDeleted. `CannotSwitchAttackTarget` is the
+  # attacker-side lock consulted by every retarget path (Block, Raid, effect
+  # redirects — combat/mod.rs; BT26-021 idiom). `dna_origin` reads the
+  # trigger's DNA flag (BT12-028 idiom).
+  - when: when_digivolving
+    summary: "[When Digivolving] Can't be deleted in battle until opp turn ends; if DNA, attack target can't change this turn"
+    process:
+      - add_modifier:
+          target: source
+          modifier: CannotBeDestroyedByBattle
+          value: 1
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - add_modifier:
+                target: source
+                modifier: CannotSwitchAttackTarget
+                value: 1
+                expiry: end_of_turn
+
+  # ─── [When Attacking] may digivolve into [Imperialdramon] in hand, cost −2 ──
+  #
+  # Not once-per-turn. Optional pick (decline = no digivolve). Only hand cards
+  # with a legal digivolve route onto this Digimon are offered (DCGO
+  # DigivolveIntoHandOrTrashCard filters by CanDigivolve). EX13-004 idiom.
+  - when: when_attacking
+    summary: "[When Attacking] This Digimon may digivolve into an [Imperialdramon]-named Digimon in hand with the cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: imperial
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Imperialdramon"
+              - can_digivolve_onto: source
+          prompt: "This Digimon may digivolve into a Digimon card with [Imperialdramon] in its name with the digivolution cost reduced by 2"
+      - if:
+          condition: { binding_present: imperial }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: imperial
+                cost: { reduce: 2 }
+                ignore_requirements: false
+
+  # ─── Inherited <Partition (blue Lv.4 & green Lv.4)> ─────────────────────────
+  - kind: partition
+    scope: inherited
+    summary: "Inherited <Partition (Blue Lv.4 & Green Lv.4)>"
+    sources:
+      - { level_eq: 4, color_is: blue }
+      - { level_eq: 4, color_is: green }
+    exclude_cause: [own_effect, battle]

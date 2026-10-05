@@ -39,7 +39,13 @@
 # not stage the unpayable De-Digivolve branch at all (BT25-057.yaml DCGO
 # note: "RemoveUse if no cost paid" -- i.e. DCGO lets it activate and
 # refunds), so this row may need a dcgo_only/sim_only rework after the
-# oracle pass. Retaliation itself (BT26-070.yaml: RetaliationSelfEffect
+# oracle pass. UPDATED 2026-10-04 (post-#708): the [When Attacking]
+# TriggerOrder row is now `dcgo_only` -- our engine spends BT25-057's shared
+# OPT on the unpayable WD activation and no longer offers the spent WA half;
+# DCGO refunds the use (RemoveUse) when no Tamer cost was paid and orders it
+# again. That accounting split is the open GD finding "unpayable optional 'by
+# trashing ... under a Tamer' costs still park prompts" (15-6-3 / 15-7 vs
+# 15-14-1), not a #708 regression. Retaliation itself (BT26-070.yaml: RetaliationSelfEffect
 # (isInherited)) is mandatory and alone at T4 -> no prompt either side.
 card: BT26-070
 clause: BT26-070#inherited#0
@@ -95,10 +101,19 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
-  # [When Attacking]: Monarchlizamon's [WD][WA][OPT] again (unpayable,
-  # nothing) and Liollmon's inherited "may add top security" (yes).
+  # [When Attacking]: Liollmon's (BT26-025) inherited "may add top security"
+  # (yes). UPDATED 2026-10-04 (post-#708): our engine no longer offers
+  # Monarchlizamon's [WD][WA][OPT] here -- the unpayable [When Digivolving]
+  # half above resolved and spent the shared OPT (15-14-1), and #708 stopped
+  # offering spent-OPT entries (G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER).
+  # DCGO still asks: BT25_057.cs calls activateClass.RemoveUse() when the
+  # Tamer cost was not paid, so the WA half is live again and
+  # MultipleSkills.cs orders it against BT26_025's inherited WA. The row is
+  # DCGO-only; picking BT25-057 first resolves it as a no-op (no Tamer)
+  # before the shared yes row.
   - actor: 0
-    do: { select: { cards: [BT25-057] } }
+    do: { select: { cards: [BT25-057], dcgo_only: true } }
+    expect: { prompt: MultipleSkills }
   - actor: 0
     do: { select: { yes: true } }
   - actor: 0

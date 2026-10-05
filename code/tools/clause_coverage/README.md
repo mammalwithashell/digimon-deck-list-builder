@@ -167,12 +167,21 @@ the same zone renumber down. Zones are numbered independently, so dropping
 the only clause in a zone (every `#security#0`, and every `|applinkdp =`
 `#inherited#0`) renumbers nothing at all.
 
-When a card **does** have a bundle, a missing `"Security"` section in that
-bundle is treated as a **confirmed** absence (the official DB is
+When a card **does** have a bundle, a missing `"Security Effect"` section in
+that bundle is treated as a **confirmed** absence (the official DB is
 authoritative, not lossy) — no image-required slot is added in that case.
 This is the one place bundle-absence and cards.json-absence are handled
 differently, deliberately: the former is a trustworthy negative, the latter
 is not.
+
+Bundle section labels map to zones as `Effect` → effect, `Inherited Effect`
+→ inherited, `Security Effect` → security; every other label (`Special
+Digivolution Condition`, `DUAL Effect`, `Link Effect`, …) is card-face text
+and goes to effect. Until 2026-10-03 the map listed `Security`, a label the
+official DB never prints, so every official security clause was zoned effect
+and its id moved with the effect box's clause count.
+`code/tools/archive/migrate_security_effect_zone.py` moved the exam's
+verdict and scenario ids to the corrected ones.
 
 ### The "inherited" zone is skipped for Tamer/Option/Dual-kind cards
 

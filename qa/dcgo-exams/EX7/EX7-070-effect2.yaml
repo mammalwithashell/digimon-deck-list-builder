@@ -1,4 +1,4 @@
-# Exam scenario: Der Blitz (EX7-070), clause EX7-070#effect#2 --
+# Exam scenario: Der Blitz (EX7-070), clause EX7-070#security#0 --
 # "[Security] Delete 1 of your opponent's Digimon with the lowest play cost."
 #
 # EX7-070 is pinned as P0's TOP security card (stack[9]; stack[5..9] is the
@@ -32,7 +32,7 @@
 # PROMPT SHAPE (EX7_070.cs, region "Security Effect"): mandatory; one
 # SelectPermanentEffect(Destroy, canNoSelect: false) for card.Owner = P0.
 card: EX7-070
-clause: EX7-070#effect#2
+clause: EX7-070#security#0
 seed: 424242
 decks:
   p0:

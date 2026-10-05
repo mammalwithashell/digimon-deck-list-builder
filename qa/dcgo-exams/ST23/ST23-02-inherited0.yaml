@@ -14,16 +14,17 @@
 # deletes both). Liollmon's inherited <Barrier> parks for p0; p0 accepts, the
 # top security card (ST23-07) is trashed and ST23-03 stays (security 5 -> 4).
 #
-# ENGINE FINDING (expected oracle divergence): after the Barrier is accepted,
-# OUR engine ALSO SPARES p1's Agumon -- it stays on p1's field (suspended,
-# 4000 DP) instead of being deleted. Declining the Barrier on the same line
-# deletes both (probed). <Barrier> (16-24) only prevents THIS Digimon's
-# deletion; the opponent's Digimon that lost/tied the battle must still be
-# deleted. The asserts pin OUR current behaviour (p1.field keeps BT3-007,
-# p1.trash only the T3 security card) so the oracle diff surfaces it; the
-# printed-text expectation is p1.field: [] and p1.trash: [BT3-007, ST1-02].
-# Suspected site: the parked-replacement path of the batched deletion
-# (code/digimon-engine/src/combat/deletion.rs, pending_deletion_batch_rest).
+# FIXED 2026-10-04 (post-#708): this line used to pin an ENGINE FINDING --
+# after the Barrier was accepted OUR engine ALSO spared p1's Agumon. #708
+# scoped <Barrier>'s replacement condition to its own carrier
+# (G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED, RESOLVED 2026-10-04 in
+# docs/RUST_ENGINE_GAPS.md; this pass had logged the same root cause as
+# G-ENGINE-BARRIER-CONDITION-NOT-CARRIER-SCOPED), so the asserts now hold
+# the printed-text result: <Barrier> (16-24, docs/digimon-rules/keyword-semantics.md) only
+# prevents THIS Digimon's deletion, and the tied Agumon is still deleted
+# (p1.field: [], p1.trash: [ST1-02, BT3-007]). DCGO agrees: Barrier.cs
+# BarrierEffect's CanUse is CanTriggerWhenPermanentRemoveField(permanent =>
+# permanent.cardSources.Contains(card)) && IsByBattle -- carrier-scoped.
 #
 # PROMPT SHAPE: DCGO BarrierSelfEffect(isInheritedEffect) (card YAML
 # crosscheck) -- an optional "by trashing" -> OptionalSkill; ours a Replacement
@@ -102,9 +103,5 @@ assert:
           dp: 4000
           suspended: true
           sources: [ST23-01, ST23-02]
-      p1.field:
-        - card_id: BT3-007
-          dp: 4000
-          suspended: true
-          sources: []
-      p1.trash: [ST1-02]
+      p1.field: []
+      p1.trash: [ST1-02, BT3-007]

@@ -8824,6 +8824,16 @@ pins that the turn scan does not trash such a marker.
   Digimon / Use as Option"; the Digimon branch really puts Jupitermon on the field. The printed text
   only permits USING the Option face. Needs a use-only variant (or a `mode: use` flag). Pinned by
   `qa/dcgo-exams/BT26/BT26-090-effect0.yaml` (answers "Use as Option" with a `sim_only` `choice:` row).
+
+### Event-target "has inherited effects" leaf  [G-DSL-EVENT-TARGET-HAS-INHERITED] — RESOLVED 2026-10-04
+- **Card:** BT21-091 Spirit Evolution! `[All Turns] When any of your Tamers with inherited effects are played, <Delay>. …`
+- **Gap:** the card/permanent leaf `has_inherited: {}` existed, but no event-target sibling for
+  on_ally_played gating.
+- **RESOLVED:** new predicate leaf `event_target_has_inherited: bool` (DCGO `TopCard.HasInheritedEffect`:
+  non-empty printed inherited text on the event target's top card). Spec/compiled/compile in
+  `code/digimon-dsl/src/{predicate,compiled,compile}.rs`; evaluated in `eval_event_fields`
+  (`code/digimon-engine/src/dsl_cards/predicate.rs`). Tests: `cards_behavioral::bt21::bt21_091`.
+
 ## Card-spec issues surfaced by the Chronomon / TS Mervamon exam-authoring pass (2026-10-04)
 
 Found while authoring `qa/dcgo-exams/` scenarios (see `qa/dcgo-exams/BT26/NOTES-BT26-CHRONOMON-MERVAMON.md`) and

@@ -1,4 +1,6 @@
 {
+  "index": 4403,
+  "norm_id": 0.22015,
   "card_id": "EX12-002",
   "card_index": 2,
   "card_name_eng": "Mococomon",
@@ -19,8 +21,8 @@
   ],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2.",
-  "inherited_effect_description_eng": "[Once Per Turn] When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2.",
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2.",
   "security_effect_description_eng": "",
   "evo_costs": [],
   "xros_req": ""

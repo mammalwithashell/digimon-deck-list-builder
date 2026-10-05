@@ -14,7 +14,7 @@ stage left were audited against `BT18_093.cs` and re-lowered unchanged on
 |---|---|---|
 | `BT18-093#effect#0` | `[Start of Your Turn] If you have 2 or less memory, set it to 3.` | `BT18-093-effect0.yaml` — p0 opens T5 on 1 by a double overshoot (Inboots 3 → -1, then p1's Biyomon 1 → -1) |
 | `BT18-093#effect#1` | `[Start of Your Main Phase] By trashing 1 Option card or 1 card with the [Ghost] or [Three Musketeers] trait in your hand, <Draw 1>.` | `BT18-093-effect1.yaml` — fodder Shadow Wing ST1-13 (an Option) |
-| `BT18-093#effect#2` | `[Security] Play this card without paying the cost.` | `BT18-093-effect2.yaml` |
+| `BT18-093#security#0` | `[Security] Play this card without paying the cost.` | `BT18-093-effect2.yaml` |
 
 ## Adversarial pre-Unity review (from `BT18_093.cs`)
 

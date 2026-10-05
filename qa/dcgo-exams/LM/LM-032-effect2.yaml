@@ -1,4 +1,4 @@
-# Exam scenario: Purple Scramble (LM-032), clause LM-032#effect#2 --
+# Exam scenario: Purple Scramble (LM-032), clause LM-032#security#0 --
 # "[Security] You may play 1 purple Digimon card with 2000 DP or less from
 #  your trash without paying the cost. Then, add this card to the hand."
 #
@@ -18,7 +18,7 @@
 # Deck accounting for P0 (no T1 draw): draws T3 = stack[10], T5 = stack[11],
 # T7 = stack[12]. P1: T2 = [10], T4 = [11], T6 = [12], T8 = [13].
 card: LM-032
-clause: LM-032#effect#2
+clause: LM-032#security#0
 seed: 424242
 decks:
   p0:
