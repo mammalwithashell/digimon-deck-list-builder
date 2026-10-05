@@ -1,11 +1,16 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "card-loop/classify_qa@1",
   "title": "classify_qa result",
   "description": "Classify one official Q&A ruling before any oracle time is spent (design D6). TERMINATING when textual or not_examinable: both model families answer independently from the same packet and must agree (design D5); disagreement or a missing citation escalates. Strict-mode compatible: every property is required and objects are closed.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["q_id", "classification", "reasoning", "citation", "examined_clauses"],
+  "required": [
+    "q_id",
+    "classification",
+    "reasoning",
+    "citation",
+    "examined_clauses"
+  ],
   "properties": {
     "q_id": {
       "type": "string",
@@ -14,7 +19,11 @@
     },
     "classification": {
       "type": "string",
-      "enum": ["behavioral", "textual", "not_examinable"],
+      "enum": [
+        "behavioral",
+        "textual",
+        "not_examinable"
+      ],
       "description": "behavioral: how play resolves -- exam it. textual: only clarifies printed data (name, traits, colour, cost wording) -- checked against card data, no oracle. not_examinable: tournament procedure, or a state no legal line of play can reach."
     },
     "reasoning": {
@@ -29,7 +38,9 @@
     },
     "examined_clauses": {
       "type": "array",
-      "items": {"type": "string", "pattern": "^[^#\\s]+#[^#\\s]+#[0-9]+$"},
+      "items": {
+        "type": "string"
+      },
       "description": "Clause ids (card_id#zone#index, from the packet) the ruling is about -- the scenario's covers: if behavioral. May be empty."
     }
   }

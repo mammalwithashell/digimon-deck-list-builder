@@ -18,13 +18,13 @@ Groups 1–5 do not depend on the oracle-readiness plans and can proceed in para
 
 ## 3. Agent CLI workers (independent)
 
-- [ ] 3.1 `workers/base.py`: packet and result dataclasses, stage JSON schemas under `schemas/`, schema validation with one retry carrying the validation error
-- [ ] 3.2 `workers/fake.py` replaying canned results, used by all driver tests
-- [ ] 3.3 `workers/claude.py`: `claude -p --output-format json --json-schema … --max-budget-usd …` with non-interactive permissions and read-only `--add-dir` for base DCGO / rules; parse result, `total_cost_usd`, usage
-- [ ] 3.4 `workers/codex.py`: resolve `codex.exe` from the installed package at runtime; `codex exec -C <wt> -s workspace-write -c approval_policy=never --add-dir <cargo target> --add-dir <sccache> --output-schema … -o … --json`; refuse an effective `danger-full-access`; token usage priced from a config table and marked derived
-- [ ] 3.5 Worktree pool: `git worktree add` at a pinned base, per-worktree `CARGO_TARGET_DIR` under `D:\cargo-target`, reset-to-base before each item, bounded size, cleanup
-- [ ] 3.6 Retry classes: transient backoff, schema retry, quota/credit exhaustion disables the vendor for the run and notifies the router
-- [ ] 3.7 Smoke test each real adapter on a trivial schema'd task (manual, recorded in the change notes with observed cost and latency)
+- [x] 3.1 `workers/base.py`: packet and result dataclasses, stage JSON schemas under `schemas/`, schema validation with one retry carrying the validation error
+- [x] 3.2 `workers/fake.py` replaying canned results, used by all driver tests
+- [x] 3.3 `workers/claude.py`: `claude -p --output-format json --json-schema … --max-budget-usd …` with non-interactive permissions and read-only `--add-dir` for base DCGO / rules; parse result, `total_cost_usd`, usage
+- [x] 3.4 `workers/codex.py`: resolve `codex.exe` from the installed package at runtime; `codex exec -C <wt> -s workspace-write -c approval_policy=never --add-dir <cargo target> --add-dir <sccache> --output-schema … -o … --json`; refuse an effective `danger-full-access`; token usage priced from a config table and marked derived
+- [x] 3.5 Worktree pool: `git worktree add` at a pinned base, per-worktree `CARGO_TARGET_DIR` under `D:\cargo-target`, reset-to-base before each item, bounded size, cleanup
+- [x] 3.6 Retry classes: transient backoff, schema retry, quota/credit exhaustion disables the vendor for the run and notifies the router
+- [ ] 3.7 Smoke test each real adapter on a trivial schema'd task (manual, recorded in the change notes with observed cost and latency) — Codex DONE (≈17 s, ≈27.6k input tokens per trivial call; `-s workspace-write` verified to block writes outside the worktree despite the global `danger-full-access`); Claude BLOCKED: the `claude` CLI is not logged in (`claude auth status` → `loggedIn: false`) — needs `claude auth login` or `claude setup-token` + `CLAUDE_CODE_OAUTH_TOKEN`, then re-run
 
 ## 4. Attempt ledger, provenance and scorecard (independent)
 
@@ -40,10 +40,10 @@ Groups 1–5 do not depend on the oracle-readiness plans and can proceed in para
 - [ ] 5.1 `scenario.rs`: optional `covers` (default `[clause]`) and `interaction {id, source, kind}`; `expect_ruling` block carrying a Q-number; legacy scenarios unchanged; Rust unit tests
 - [ ] 5.2 `exam_validate` / binding: orphan-interaction rejection; `covers` ids must all be known clauses
 - [ ] 5.3 Verdict store v2: `interactions` map beside `clauses` in per-card files; v1 loader compatibility; shared-ruling writes to every listed card in one commit
-- [ ] 5.4 Probe generator `families@1` (optional_decline, scope, once_per_turn_multi, would_replacement, granted_keyword, leave_play, immunity, timing_gate) over extracted clause text, with negative probes; deterministic ids; tests per family on real clause text
-- [ ] 5.5 Denominator builder joining `card_qa.json` + probes per card; committed artifact plus `--check` drift mode; family promotion flag and a promotion report listing cards that would drop out of readiness
-- [ ] 5.6 Q&A classification packet and schema (`behavioral|textual|not_examinable`) and the `expect_ruling` authoring packet, both marked as terminating calls requiring two families
-- [ ] 5.7 Three-way outcome function (ours / DCGO / ruling → verdict per the D7 table) with exhaustive unit tests; DCGO fork-candidate export
+- [x] 5.4 Probe generator `families@1` (optional_decline, scope, once_per_turn_multi, would_replacement, granted_keyword, leave_play, immunity, timing_gate) over extracted clause text, with negative probes; deterministic ids; tests per family on real clause text
+- [x] 5.5 Denominator builder joining `card_qa.json` + probes per card; committed artifact plus `--check` drift mode; family promotion flag and a promotion report listing cards that would drop out of readiness
+- [x] 5.6 Q&A classification packet and schema (`behavioral|textual|not_examinable`) and the `expect_ruling` authoring packet, both marked as terminating calls requiring two families
+- [x] 5.7 Three-way outcome function (ours / DCGO / ruling → verdict per the D7 table) with exhaustive unit tests; DCGO fork-candidate export
 
 ## 6. Driver orchestration (after readiness plans 1 and 3)
 
@@ -74,6 +74,13 @@ Groups 1–5 do not depend on the oracle-readiness plans and can proceed in para
 
 - [ ] 9.1 Keyword-gate false positives make every real pool NO-GO: `link` (still classed a subsystem in the DCGO keyword manifest — blocks Rocks via ST22-09), `delay`, `digi-burst up to`, `sistermon noir` (BT7). Fix the `tools.author_set` lexicon/manifest; preflight meanwhile fails the gate only for cards with no YAML spec (warn otherwise)
 - [ ] 9.2 177 cards with printed effects have no per-card DCGO `.cs` (e.g. keyword-only cards such as one carrying only `<Jamming>`). Establish how DCGO implements keyword-only cards before preflight's `.cs` presence check marks them `unavailable`
-- [ ] 9.3 Promote module-level defaults proposed by the groups into `LoopConfig`: `dcgo_root`, `node_status_timeout_s` (group 2); `corrections_path`, `audits_path` (group 4); plus any from groups 3 and 5
+- [ ] 9.3 Promote module-level defaults proposed by the groups into `LoopConfig` / `contracts`: `dcgo_root`, `node_status_timeout_s` (group 2); `corrections_path`, `audits_path` (group 4); `worktree_root` (short path — MAX_PATH), `worker_timeout_s`, `max_transient_retries`, `retry_base_delay_s`, `claude_permission_mode`, `claude_allowed_tools`, `claude_read_only_dirs`, `codex_extra_config`, `pool_keep_patterns`, real `prices.codex` incl. `cache_write_input`; `TaskPacket.base_sha` / `artifacts_dir`, `WorkerResult.calls` / `session_id`, `Usage.cost_complete` (group 3); `interaction_denominator_path`, `card_qa_path`, `promotion_path`, `exam_verdicts_dir`, `fork_candidates_path`; `INTERACTION_SOURCES`, `QA_CLASSES` (group 5)
 - [ ] 9.4 The router's scorecard override matches the configured model alias by exact string (`sonnet`; Codex `None` pools all models) — the driver must record the configured alias in attempts, or the scorecard must normalise resolved model names
-- [ ] 9.5 Stale-on-main test `test_real_library_reproduces_the_published_toho_figures` (deck library refreshed: Toho Braves now 114 lists, test expects 45) — fails at `ad68542ee` before any card-loop change; fix in its own commit (CLAUDE.md rule 33)
+- [ ] 9.5 Stale-on-main tests failing at `ad68542ee` before any card-loop change: `test_real_library_reproduces_the_published_toho_figures` (deck library refreshed: Toho Braves now 114 lists, test expects 45) and `test_faq_conformance_generator::test_generated_faq_conformance_module_is_current` — fix in their own commits (CLAUDE.md rule 33)
+- [ ] 9.6 Document `covers`, `interaction` and `expect_ruling` in `docs/DCGO_EXAM.md` and the `exam_authoring_guide` topics (the guide is generated from the doc under a drift test)
+- [ ] 9.7 Decide per-family promotion before interaction gating turns on: a trial denominator (partial scrape, 3,693 rulings) held ≈18.8k interactions vs ≈3.6k clauses; probes alone 15,138 (scope 5,058, optional_decline 4,265, timing_gate 1,859, once_per_turn_multi 1,645, leave_play 926, would_replacement 742, granted_keyword 576, immunity 67). `families@1` is committed `promoted: true` but has no effect until group 7
+- [ ] 9.8 Emit the three-way legs (ours/DCGO/ruling) as structured fields once readiness plan 1's `exam --oracle` lands (today only in the verdict `reason` text)
+- [ ] 9.9 Claude worker verification after login: the read-only `Edit(//c/...)` deny rule actually blocks writes; print-mode workers can use the `dcgo-exam` MCP from `.mcp.json`
+- [ ] 9.10 Codex: root-cause the one-off ≈518 s first sandboxed command (≈1.07M input tokens from "still waiting" turns) — consider a preflight warm-up per pool worktree; override the `dcgo-exam` MCP entry's hardcoded base-repo `CARGO_TARGET_DIR` per worktree; confirm sccache works inside the sandbox
+- [ ] 9.11 Treat worker timeouts as non-transient for long stages (today a timeout retries up to 4× and is paid each time)
+- [ ] 9.12 Add `jsonschema` to the tools requirements (installed locally, listed nowhere; a fallback validator runs without it)

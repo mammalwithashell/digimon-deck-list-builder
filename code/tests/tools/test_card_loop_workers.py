@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.card_loop.contracts import TaskPacket, Usage, WorkerResult
+from tools.card_loop.contracts import STAGES, TaskPacket, Usage, WorkerResult
 from tools.card_loop.workers import base
 from tools.card_loop.workers.base import (
     SCHEMAS_DIR,
@@ -84,7 +84,7 @@ def err(msg, cost=None) -> WorkerResult:
 # ----------------------------------------------------------------------------- schemas
 
 
-@pytest.mark.parametrize("stage", OWNED_STAGES)
+@pytest.mark.parametrize("stage", STAGES)
 def test_stage_schema_exists_and_is_a_valid_schema(stage):
     import jsonschema
 
@@ -104,7 +104,7 @@ def _objects(node):
             yield from _objects(v)
 
 
-@pytest.mark.parametrize("stage", OWNED_STAGES)
+@pytest.mark.parametrize("stage", STAGES)
 def test_stage_schema_is_strict_mode_compatible(stage):
     """Codex `--output-schema` uses OpenAI strict structured outputs: every object
     closed, every property required, root an object, no unsupported keywords."""
@@ -118,9 +118,8 @@ def test_stage_schema_is_strict_mode_compatible(stage):
         assert kw not in text
 
 
-def test_every_owned_stage_has_a_schema():
-    # classify_qa / encode_ruling schemas are owned by group 5 and not asserted here.
-    assert set(OWNED_STAGES) <= {p.stem for p in SCHEMAS_DIR.glob("*.json")}
+def test_every_stage_has_a_schema():
+    assert set(STAGES) <= {p.stem for p in SCHEMAS_DIR.glob("*.json")}
 
 
 @pytest.mark.parametrize("stage", OWNED_STAGES)
