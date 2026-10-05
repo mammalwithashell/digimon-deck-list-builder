@@ -630,51 +630,42 @@ fn bt17_097_delay_fires_for_battle_deletion_of_free_digimon() {
 // Section 4 — Clause C: [Security] (inherited) Davis/Ken Tamer + place self
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Smoke test: firing the Security clause on a placed BT17-097 (inherited)
-/// with no eligible Tamers in hand or trash installs a zone-choice prompt and
-/// completes without panic.
+/// [Security] with no eligible Tamer anywhere: a real attack checks BT17-097
+/// from the defender's security stack; the optional Tamer play has no
+/// candidate, and the mandatory tail still places BT17-097 in the battle area.
+/// (Driven through the real security-check path — the battle-area scan skips
+/// every [Security] clause.)
 #[test]
-fn bt17_097_security_smoke_no_eligible_tamer_no_panic() {
+fn bt17_097_security_no_eligible_tamer_still_places_self() {
+    let mut attacker = make_filler("BT17097-SMOKE-ATK");
+    attacker.dp = Some(6000);
+
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT17_097_YAML)
         .expect("BT17-097 YAML parses")
+        .add_card(attacker)
         .add_card(make_filler("FILL"))
         .memory(10)
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
+        .security(1, &["BT17-097"])
         .start();
 
-    let field_handle = runner.place_on_field(0, "BT17-097", Some(0));
+    let attacker = runner.place_on_field(0, "BT17097-SMOKE-ATK", Some(0));
+    let _ = runner.attack_player(attacker, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    assert_eq!(runner.security_count(1), 0, "BT17-097 left security");
+    let ids: Vec<String> = runner.game.players[1]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        ids,
+        vec!["BT17-097".to_string()],
+        "no Tamer played; BT17-097 itself is placed in the battle area"
     );
-    runner.game.drain_effect_queue();
-
-    // G-DSL-UNION-PLAY-FREE workaround installs a zone choice prompt.
-    // Drive through any selections; with no eligible Davis/Ken Tamer, the
-    // select_hand / select_trash steps are no-ops.
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 30 {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        let _ = runner.game.resolve_selection(player, action);
-        runner.game.drain_effect_queue();
-        steps += 1;
-    }
-    // Primary assertion: no panic. Secondary: card may appear on field as
-    // Delay-Option after the security activation (place_self_as_delay_option).
 }
 
 /// [Security] + Davis Motomiya in the defender's hand → a real attack on the

@@ -30,8 +30,7 @@ use digimon_dsl::compiled::{
     CompiledTriggeredClause,
 };
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming, ModifierType};
-use digimon_engine::selection::TriggerSource;
+use digimon_engine::enums::{CardKind, ModifierType};
 
 // ─── Helper fixtures ─────────────────────────────────────────────────────────
 
@@ -475,35 +474,55 @@ fn bt8_097_main_deletes_opp_digimon_with_exactly_6000_dp() {
 // Section 5 — [Security] clause mirrors [Main] effects
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// [Security] timing fires the floodgate modifier on the opponent.
+/// Attacker for a REAL security reveal: BT8-097 sits in P1's security stack and
+/// P0's 8000-DP attacker (above the 6000-DP delete threshold) checks it, so the
+/// [Security] clause runs through `SecurityRevealed` — the only path the engine
+/// dispatches `SecuritySkill` through. The card owner is P1; its opponent is P0.
+fn security_attacker() -> digimon_engine::card_data::CardData {
+    let mut atk = make_test_card("SEC-ATK", "SecAttacker");
+    atk.card_kind = CardKind::Digimon;
+    atk.dp = Some(8000);
+    atk.level = Some(5);
+    atk
+}
+
+/// [Security] fires the floodgate modifier on the card owner's opponent.
 #[test]
 fn bt8_097_security_installs_cannot_play_digimon_by_effect_modifier() {
-    let mut runner = runner();
-
-    // Manually place BT8-097 on field and fire on_security timing.
-    // (Simulates the card being revealed from security stack.)
-    let handle = runner.place_on_field(0, "BT8-097", None);
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT8-097")
+        .expect("BT8-097 in embedded DSL pack")
+        .add_card(security_attacker())
+        .security(1, &["BT8-097"])
+        .memory(8)
+        .start();
+    let attacker = runner.place_on_field(0, "SEC-ATK", Some(0));
 
     assert!(
         !runner
             .game
             .modifiers
-            .player_has(1, ModifierType::CannotPlayDigimonByEffect),
+            .player_has(0, ModifierType::CannotPlayDigimonByEffect),
         "modifier must not be present before security effect fires"
     );
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(handle),
-    );
-    runner.game.drain_effect_queue();
+    runner.attack_player(attacker, 1, false);
+    runner.auto_resolve().expect("security check resolves");
 
+    assert_eq!(runner.security_count(1), 0, "BT8-097 was checked");
     assert!(
         runner
             .game
             .modifiers
+            .player_has(0, ModifierType::CannotPlayDigimonByEffect),
+        "CannotPlayDigimonByEffect must be installed on the opponent after [Security] fires"
+    );
+    assert!(
+        !runner
+            .game
+            .modifiers
             .player_has(1, ModifierType::CannotPlayDigimonByEffect),
-        "CannotPlayDigimonByEffect must be installed on opponent after [Security] fires"
+        "the card owner is not restricted"
     );
 }
 
@@ -544,7 +563,9 @@ fn bt8_097_triggered_clauses_use_native_add_player_modifier_step() {
     );
 }
 
-/// [Security]: deletes opponent Digimon just like [Main] does.
+/// [Security]: deletes opponent Digimon just like [Main] does. Driven through a
+/// real security check: the 4000-DP opponent Digimon is deleted, the 8000-DP
+/// attacker (above the threshold) survives.
 #[test]
 fn bt8_097_security_deletes_eligible_opp_digimon() {
     let mut target = make_test_card("SEC-OPP-DIGI", "SecOppDigi");
@@ -556,28 +577,31 @@ fn bt8_097_security_deletes_eligible_opp_digimon() {
         .dsl_card("BT8-097")
         .expect("BT8-097 in embedded DSL pack")
         .add_card(target)
+        .add_card(security_attacker())
+        .security(1, &["BT8-097"])
         .memory(8)
         .start();
 
-    let handle = runner.place_on_field(0, "BT8-097", None);
-    runner.place_on_field(1, "SEC-OPP-DIGI", Some(0));
-    let opp_before = runner.battle_area_size(1);
-    assert_eq!(opp_before, 1);
+    runner.place_on_field(0, "SEC-OPP-DIGI", Some(0));
+    let attacker = runner.place_on_field(0, "SEC-ATK", Some(0));
+    assert_eq!(runner.battle_area_size(0), 2);
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(handle),
-    );
-    runner.game.drain_effect_queue();
+    runner.attack_player(attacker, 1, false);
 
     assert!(
         runner.game.pending_selection.is_none(),
         "for_each sweep from [Security] must not install a player selection"
     );
+    assert_eq!(runner.security_count(1), 0, "BT8-097 was checked");
+    let survivors: Vec<String> = runner.game.players[0]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
     assert_eq!(
-        runner.battle_area_size(1),
-        0,
-        "[Security] clause must delete eligible opponent Digimon (same as [Main])"
+        survivors,
+        vec!["SEC-ATK".to_string()],
+        "[Security] clause must delete the eligible (<=6000 DP) opponent Digimon only"
     );
 }
 

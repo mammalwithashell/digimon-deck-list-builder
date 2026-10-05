@@ -209,54 +209,50 @@ fn ad1_018_when_digivolving_fires_immunity_clause() {
 // Section 3 — Inherited [Security]: De-Digivolve 1 + delete cost-≤3 (behavioral)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// The inherited [Security] clause De-Digivolves 1 opponent Digimon (pops its
-/// top source), then deletes 1 opponent Digimon with play cost <= 3.
+/// The [Security] clause (lowered as `inherited`-scope `on_security`)
+/// De-Digivolves 1 opponent Digimon (pops its top source), then deletes 1
+/// opponent Digimon with play cost <= 3. Driven through a REAL security check:
+/// AD1-018 is P1's security card and P0's attacker reveals it (the battle-area
+/// scan never dispatches `SecuritySkill`). The card owner is P1; its opponent
+/// is P0.
 #[test]
 fn ad1_018_inherited_security_de_digivolves_then_deletes_cost_le_3() {
-    let mut host_top = make_test_card_with_level("LK-HOST", "Host carrier", 6);
-    host_top.card_kind = CardKind::Digimon;
-    host_top.dp = Some(11000);
+    let mut atk = opp_digimon("SEC-ATK", 8);
+    atk.dp = Some(20000);
 
     let mut runner = DebugRunner::builder()
         .dsl_card("AD1-018")
         .expect("AD1-018 loads")
-        .add_card(host_top)
         .add_card(opp_digimon("OPP-STACK", 5))
         .add_card(opp_digimon("OPP-BASE", 5))
         .add_card(opp_digimon("OPP-CHEAP", 3))
+        .add_card(atk)
+        .security(1, &["AD1-018"])
         .memory(15)
         .start();
 
-    // Security owner p0 carries AD1-018 as a buried source so the INHERITED
-    // [Security] clause fires.
-    let host = runner.place_on_field(0, "LK-HOST", Some(0));
-    runner.push_source(host, "AD1-018");
-
-    // Opponent (p1) Digimon: a stacked one to De-Digivolve, plus a cost-3 one
-    // (deletable) and a cost-5 one (not deletable by the cost-≤3 step).
-    let stack = runner.place_on_field(1, "OPP-STACK", None);
+    // Opponent (P0) Digimon: a stacked one to De-Digivolve, plus a cost-3 one
+    // (deletable) and the cost-8 attacker (not deletable by the cost-≤3 step).
+    let stack = runner.place_on_field(0, "OPP-STACK", None);
     runner.push_source(stack, "OPP-BASE"); // give it a digivolution source to pop
-    let cheap = runner.place_on_field(1, "OPP-CHEAP", None);
-    let stack_sources_before = runner.game.players[1].battle_area[stack.index as usize]
+    let cheap = runner.place_on_field(0, "OPP-CHEAP", None);
+    let attacker = runner.place_on_field(0, "SEC-ATK", Some(0));
+    let stack_sources_before = runner.game.players[0].battle_area[stack.index as usize]
         .card_sources
         .len();
-    let opp_before = runner.battle_area_size(1);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(host));
-    runner.game.drain_effect_queue();
+    runner.attack_player(attacker, 1, false);
 
     // First prompt: De-Digivolve target (OppField, mandatory).
     let v1 = runner
         .pending_selection_view()
         .expect("De-Digivolve target prompt must install");
     assert_eq!(v1.kind, SelectionKind::OppField);
+    assert_eq!(v1.selecting_player, 1, "the security card's owner picks");
     let pick_stack = encode_attack(0, stack.index as u16);
     runner
         .execute_action(v1.selecting_player, pick_stack)
         .expect("De-Digivolve the stacked opponent Digimon");
-    runner.game.drain_effect_queue();
 
     // Second prompt: delete target (cost <= 3) — only the cheap one qualifies.
     let v2 = runner
@@ -264,28 +260,32 @@ fn ad1_018_inherited_security_de_digivolves_then_deletes_cost_le_3() {
         .expect("cost-≤3 delete prompt must install");
     assert_eq!(v2.kind, SelectionKind::OppField);
     let pick_cheap = encode_attack(0, cheap.index as u16);
-    assert!(
-        v2.valid_action_ids.contains(&pick_cheap),
-        "the cost-3 opponent Digimon must be a valid delete target"
+    assert_eq!(
+        v2.valid_action_ids,
+        vec![pick_cheap],
+        "only the cost-3 opponent Digimon is a valid delete target"
     );
     runner
         .execute_action(v2.selecting_player, pick_cheap)
         .expect("delete the cost-3 opponent Digimon");
-    runner.game.drain_effect_queue();
+    let _ = runner.auto_resolve();
 
     // The stacked Digimon lost a source (De-Digivolve 1), and the cheap one
     // was deleted.
+    let ids: Vec<String> = runner.game.players[0]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
     assert_eq!(
-        runner.game.players[1].battle_area[stack.index as usize]
-            .card_sources
-            .len(),
-        stack_sources_before - 1,
-        "De-Digivolve 1 must pop the top source of the chosen opponent Digimon"
+        ids,
+        vec!["OPP-BASE".to_string(), "SEC-ATK".to_string()],
+        "De-Digivolve 1 trashed OPP-STACK (OPP-BASE is now on top) and the cost-≤3 Digimon was deleted"
     );
     assert_eq!(
-        runner.battle_area_size(1),
-        opp_before - 1,
-        "the cost-≤3 opponent Digimon must be deleted"
+        runner.game.players[0].battle_area[0].card_sources.len(),
+        stack_sources_before - 1,
+        "De-Digivolve 1 must pop the top source of the chosen opponent Digimon"
     );
 }
 

@@ -62,9 +62,9 @@ use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::enums::{CardColor, CardKind};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::{OptionPlayResult, SelectionKind, TriggerSource};
+use digimon_engine::selection::{OptionPlayResult, SelectionKind};
 
 /// Production YAML for ST22-08, inlined at compile time.
 const YAML: &str = include_str!("../../../cards/st22/ST22-08.yaml");
@@ -117,13 +117,38 @@ fn st22_08_runner() -> DebugRunner {
         .start()
 }
 
-/// Enqueue + drain ST22-08's [Security] effect for the given permanent handle.
-fn fire_security(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(handle),
-    );
-    runner.game.drain_effect_queue();
+/// Build a runner where ST22-08 is P1's only security card and P0 controls the
+/// given Digimon plus a 10000-DP attacker (`SEC-ATK`, never the lowest-DP one
+/// while another P0 Digimon is on the field). Returns the attacker handle.
+///
+/// [Security] effects only ever resolve through a REAL security check
+/// (`TriggerSource::SecurityRevealed`): the battle-area scan skips every
+/// `security` clause, so these tests attack P1 instead of dispatching
+/// `SecuritySkill` on a field copy. The card owner is P1; its opponent is P0.
+fn security_runner(p0_digimon: Vec<CardData>) -> (DebugRunner, PermanentHandle) {
+    let mut atk = filler("SEC-ATK");
+    atk.dp = Some(10000);
+    let mut builder = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("YAML parses")
+        .add_card(atk)
+        .security(1, &["ST22-08"])
+        .memory(20);
+    let ids: Vec<String> = p0_digimon.iter().map(|c| c.card_id.clone()).collect();
+    for card in p0_digimon {
+        builder = builder.add_card(card);
+    }
+    let mut runner = builder.start();
+    for id in &ids {
+        runner.place_on_field(0, id, None);
+    }
+    let attacker = runner.place_on_field(0, "SEC-ATK", Some(0));
+    (runner, attacker)
+}
+
+/// Attack P1 with `attacker`, checking ST22-08 so its [Security] effect runs.
+fn fire_security(runner: &mut DebugRunner, attacker: PermanentHandle) {
+    let _ = runner.attack_player(attacker, 1, false);
 }
 
 /// True when a dual-mode mode-select prompt is currently installed.
@@ -406,28 +431,22 @@ fn st22_08_color_requirement_enforced_without_tamer() {
 // § 3  Clause 2 — [Security] delete opponent's lowest-DP Digimon + add to hand
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Positive: when the opponent has two Digimon (3000 / 5000 DP), the
-/// [Security] delete prompt offers ONLY the lowest-DP (3000) Digimon.
+/// Positive: when the opponent has two Digimon (3000 / 5000 DP) besides the
+/// 10000-DP attacker, the [Security] delete prompt offers ONLY the lowest-DP
+/// (3000) Digimon.
 #[test]
 fn st22_08_security_offers_only_lowest_dp_opponent_digimon() {
-    let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(YAML)
-        .expect("YAML parses")
-        .add_card(red_digimon("OPP-LOW", 4, 3000, 4))
-        .add_card(red_digimon("OPP-HIGH", 5, 5000, 6))
-        .memory(20)
-        .start();
+    let (mut runner, attacker) = security_runner(vec![
+        red_digimon("OPP-LOW", 4, 3000, 4),
+        red_digimon("OPP-HIGH", 5, 5000, 6),
+    ]);
 
-    // Seat ST22-08 on P0's field so we can fire its [Security] effect.
-    let st22 = runner.place_on_field(0, "ST22-08", Some(0));
-    runner.place_on_field(1, "OPP-LOW", None);
-    runner.place_on_field(1, "OPP-HIGH", None);
-
-    fire_security(&mut runner, st22);
+    fire_security(&mut runner, attacker);
 
     let view = runner
         .pending_selection_view()
         .expect("[Security] delete selection must install");
+    assert_eq!(view.selecting_player, 1, "the security card's owner picks");
     assert_eq!(
         view.valid_action_ids.len(),
         1,
@@ -439,21 +458,13 @@ fn st22_08_security_offers_only_lowest_dp_opponent_digimon() {
 /// BOTH are offered (the player resolves the tie-break choice).
 #[test]
 fn st22_08_security_offers_all_tied_lowest_dp_digimon() {
-    let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(YAML)
-        .expect("YAML parses")
-        .add_card(red_digimon("OPP-A", 4, 3000, 4))
-        .add_card(red_digimon("OPP-B", 4, 3000, 4))
-        .add_card(red_digimon("OPP-BIG", 6, 9000, 8))
-        .memory(20)
-        .start();
+    let (mut runner, attacker) = security_runner(vec![
+        red_digimon("OPP-A", 4, 3000, 4),
+        red_digimon("OPP-B", 4, 3000, 4),
+        red_digimon("OPP-BIG", 6, 9000, 8),
+    ]);
 
-    let st22 = runner.place_on_field(0, "ST22-08", Some(0));
-    runner.place_on_field(1, "OPP-A", None);
-    runner.place_on_field(1, "OPP-B", None);
-    runner.place_on_field(1, "OPP-BIG", None);
-
-    fire_security(&mut runner, st22);
+    fire_security(&mut runner, attacker);
 
     let view = runner
         .pending_selection_view()
@@ -461,26 +472,29 @@ fn st22_08_security_offers_all_tied_lowest_dp_digimon() {
     assert_eq!(
         view.valid_action_ids.len(),
         2,
-        "[Security] must offer BOTH tied lowest-DP (3000) Digimon, excluding the 9000-DP one"
+        "[Security] must offer BOTH tied lowest-DP (3000) Digimon, excluding the 9000-DP one and the attacker"
     );
 }
 
-/// Negative: when the opponent has no Digimon, the [Security] delete step
-/// installs no selection (and the add-self-to-hand tail still runs).
+/// A real security check always has the attacking Digimon on the opponent's
+/// field: when it is the opponent's only Digimon it is the lowest-DP one, so
+/// the [Security] delete takes it, and the add-self-to-hand tail still runs.
 #[test]
-fn st22_08_security_no_selection_when_no_opp_digimon() {
-    let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(YAML)
-        .expect("YAML parses")
-        .memory(20)
-        .start();
+fn st22_08_security_deletes_lone_attacker_and_adds_self_to_hand() {
+    let (mut runner, attacker) = security_runner(Vec::new());
+    fire_security(&mut runner, attacker);
+    runner.auto_resolve().expect("security selections resolve");
 
-    let st22 = runner.place_on_field(0, "ST22-08", Some(0));
-    fire_security(&mut runner, st22);
-
-    assert!(
-        runner.game.pending_selection.is_none(),
-        "[Security] must install no delete selection when the opponent has no Digimon"
+    assert_eq!(
+        runner.battle_area_size(0),
+        0,
+        "the lone attacker is the opponent's lowest-DP Digimon and is deleted"
+    );
+    assert_eq!(runner.security_count(1), 0, "ST22-08 left security");
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "ST22-08 must be added to the defender's hand after [Security] resolves"
     );
 }
 
@@ -488,17 +502,9 @@ fn st22_08_security_no_selection_when_no_opp_digimon() {
 /// `canNoSelect: false`). [Security] effects have no opt-out per rules §16.
 #[test]
 fn st22_08_security_delete_is_mandatory_when_candidate_exists() {
-    let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(YAML)
-        .expect("YAML parses")
-        .add_card(red_digimon("OPP-D", 4, 3000, 4))
-        .memory(20)
-        .start();
+    let (mut runner, attacker) = security_runner(vec![red_digimon("OPP-D", 4, 3000, 4)]);
 
-    let st22 = runner.place_on_field(0, "ST22-08", Some(0));
-    runner.place_on_field(1, "OPP-D", None);
-
-    fire_security(&mut runner, st22);
+    fire_security(&mut runner, attacker);
 
     assert!(
         runner.game.pending_selection.is_some(),
