@@ -488,60 +488,68 @@ fn ad1_017_inherited_security_clause_shape() {
     );
 }
 
-/// Behavioral: firing the inherited [Security] effect (AD1-017 buried as a
-/// digivolution source under a host the security owner controls) installs the
-/// two debuffs on the chosen opponent Digimon(s).
+/// Behavioral: AD1-017's [Security] effect (printed security text, lowered as
+/// an `inherited`-scope `on_security` clause) installs the two debuffs on the
+/// chosen opponent Digimon. Driven through a REAL security check: AD1-017 is
+/// P1's security card and P0's 20000-DP attacker reveals it (the battle-area
+/// scan never dispatches `SecuritySkill`). The card owner is P1; its opponent
+/// is P0.
 #[test]
 fn ad1_017_inherited_security_installs_debuffs() {
-    let mut host_top = make_test_card_with_level("HOST", "Host carrier", 6);
-    host_top.card_kind = CardKind::Digimon;
-    host_top.dp = Some(11000);
-
     let mut runner = DebugRunner::builder()
         .dsl_card("AD1-017")
         .expect("AD1-017 loads")
-        .add_card(host_top)
         .add_card(opp_digimon("OPP-A", 8000))
         .add_card(opp_digimon("OPP-B", 8000))
+        .add_card(opp_digimon("SEC-ATK", 20000))
+        .security(1, &["AD1-017"])
         .memory(15)
         .start();
-    // Host stack for the security owner (p0): AD1-017 is a buried digivolution
-    // source so its INHERITED [Security] clause is the one that fires.
-    let host = runner.place_on_field(0, "HOST", Some(0));
-    runner.push_source(host, "AD1-017");
-    // The security owner (p0)'s opponent is p1 — two p1 Digimon are the targets.
-    let a = runner.place_on_field(1, "OPP-A", None);
-    let b = runner.place_on_field(1, "OPP-B", None);
+    let a = runner.place_on_field(0, "OPP-A", None);
+    let b = runner.place_on_field(0, "OPP-B", None);
+    let attacker = runner.place_on_field(0, "SEC-ATK", Some(0));
     let a_dp = runner.effective_dp(a).unwrap();
     let b_dp = runner.effective_dp(b).unwrap();
 
-    // Fire the SecuritySkill timing on the host — the inherited AD1-017 source
-    // contributes the [Security] clause.
+    runner.attack_player(attacker, 1, false);
+
+    // Security A. -1 target pick (mandatory, AD1-017's owner chooses).
+    let v1 = runner
+        .pending_selection_view()
+        .expect("Security A. -1 target prompt must install");
+    assert_eq!(v1.selecting_player, 1, "the security card's owner picks");
+    let pick_a = encode_attack(0, a.index as u16);
+    assert!(v1.valid_action_ids.contains(&pick_a));
     runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(host));
-    runner.game.drain_effect_queue();
-    // Drive the two mandatory target picks (Security A. -1 target, then DP target).
+        .execute_action(1, pick_a)
+        .expect("give OPP-A Security A. -1");
+    // -3000 DP target pick.
+    let v2 = runner
+        .pending_selection_view()
+        .expect("-3000 DP target prompt must install");
+    let pick_b = encode_attack(0, b.index as u16);
+    assert!(v2.valid_action_ids.contains(&pick_b));
+    runner
+        .execute_action(1, pick_b)
+        .expect("give OPP-B -3000 DP");
     let _ = runner.auto_resolve();
 
-    // One opponent Digimon must carry the SecurityAttackChange (-1) debuff and
-    // one must carry a -3000 DP reduction.
-    let sec_a = runner
-        .game
-        .modifiers
-        .has(a, ModifierType::SecurityAttackChange);
-    let sec_b = runner
-        .game
-        .modifiers
-        .has(b, ModifierType::SecurityAttackChange);
+    assert_eq!(runner.security_count(1), 0, "AD1-017 was checked");
     assert!(
-        sec_a || sec_b,
-        "an opponent Digimon must receive the Security A. -1 debuff"
+        runner
+            .game
+            .modifiers
+            .has(a, ModifierType::SecurityAttackChange),
+        "OPP-A must receive the Security A. -1 debuff"
     );
-    let dp_drop =
-        runner.effective_dp(a) == Some(a_dp - 3000) || runner.effective_dp(b) == Some(b_dp - 3000);
-    assert!(
-        dp_drop,
-        "an opponent Digimon must receive the -3000 DP debuff"
+    assert_eq!(
+        runner.effective_dp(b),
+        Some(b_dp - 3000),
+        "OPP-B must receive the -3000 DP debuff"
+    );
+    assert_eq!(
+        runner.effective_dp(a),
+        Some(a_dp),
+        "OPP-A's DP is untouched"
     );
 }
