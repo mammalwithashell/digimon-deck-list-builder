@@ -928,6 +928,7 @@ status).
 ---
 
 ## G-ENGINE-AURA-GRANT-REPLACEMENT-KEYWORD — aura-granted replacement-effect keywords (Scapegoat etc.) do not install their behavior on the target set
+- **✅ RESOLVED 2026-10-05** (BT25-097 Guardian Palace now IMPLEMENTED). The engine half had already closed: a filtered-target aura grant lands in `ModifierRegistry::permanent_keywords`, and the WhenWouldBeDeleted candidate scan (`replacement.rs`, the `game.modifiers.granted_keywords(h)` loop) synthesizes `keyword_to_auto_effect(kw, top)` on the RECIPIENT (`CandidateKind::GrantedKeywordEffect`), conditional or not (the aura's `active_when` gates whether the grant is installed). The only missing piece was DSL vocabulary — `Scapegoat` was absent from `modifier_map::lookup_keyword` and the validator's `KNOWN_KEYWORD_KEYS`. Both now map it. Behavioral proof: `cards_behavioral::bt25::bt25_097` (accept → pick another Digimon → substitute deleted; no Junomon → no dialog; own-effect deletion ignored per 16-31). Original text retained below.
 - **Discovered by:** BT25-097 Guardian Palace (aegiomon-3 slice), 2026-06-06.
 - **Clause:** "[Security] [All Turns] All of your yellow or purple [TS] trait Digimon gain ＜Alliance＞. While you have a Digimon with [Junomon] in its name, they also gain ＜Scapegoat＞."
 - **DCGO (BT25_097.cs):** an `AllianceStaticEffect` over yellow/purple TS own Digimon (gated in-security) plus a conditional `ScapegoatStaticEffect` over the same set, gated on a [Junomon]-named own permanent.

@@ -253,7 +253,7 @@ fn bt8_054_not_offered_when_no_digimon_can_be_suspended() {
 /// Negative: Digisorption only reduces a digivolution INTO THIS card. A
 /// Pistmon already on the field does not reduce another card's digivolve.
 #[test]
-fn bt8_054_field_blossomon_does_not_reduce_other_digivolutions() {
+fn bt8_054_field_pistmon_does_not_reduce_other_digivolutions() {
     let (mut runner, base, _other) = runner_with(&["PLAIN-LV5"]);
     runner.place_on_field(0, CARD_ID, Some(0));
     let mem_before = runner.memory();

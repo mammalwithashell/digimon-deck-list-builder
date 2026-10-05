@@ -4936,3 +4936,24 @@ The failing seed moved with the implemented-deck pool (decks are drawn from full
 - `CanNotSwitchAttackTarget` and `CannotSwitchAttackTarget` both exist; only the latter suppresses
   Block/Raid/redirects (BT26-021). AD1-011 Paildramon uses `CannotSwitchAttackTarget`. Candidate for
   consolidation; AD1-012's inherited aura uses the other spelling and should be checked.
+
+## Findings from the green Time Strangers support batch (2026-10-05)
+
+### ＜Digisorption -N＞ had no engine or DSL support  [G-ENGINE-DIGISORPTION] — **RESOLVED 2026-10-05**
+- **Cards:** BT3-054 Blossomon (-3), BT8-054 Pistmon (-2) (TS Ceresmon / Vegetation lists). No `Keyword`
+  variant, no parse, no YAML anywhere.
+- **Rule (16-9):** Opt-cost→Mand — "when one of your Digimon digivolves into this card from your hand, you may
+  suspend 1 of your Digimon to reduce the cost by N". DCGO (`BT3_054.cs`): BeforePayCost, optional, gated on
+  `Card == this && isEvolution`; the suspend pick admits any own unsuspended battle-area Digimon
+  (`CanTapWhenAbsorbEvolution` — the digivolving Digimon included).
+- **Fix (substrate, rule 28):** `cost_reduction` gained `when_digivolving_into_this: bool` (DSL `clause.rs` →
+  `compiled.rs` → `Effect::when_digivolving_into_this`). It is the digivolve twin of `when_playing_this`: the
+  HAND card being digivolved into hosts the reducer (`before_pay_cost_source_infos` now takes
+  `(target, is_digivolve)` and collects the matching block), the lowering gates it on
+  `cost_is_digivolve && cost_target_from_hand && cost_target_card == source_card`, and a field/source copy never
+  collects it (`push_cost_source_info`). Authored as `optional: true` + `pay_cost: [select_own_permanent
+  {unsuspended digimon}, suspend]`, it rides the existing interactive digivolve reducer prompt
+  (`try_prompt_interactive_digivolve_cost_reducer`): accept/decline, then the player picks WHICH Digimon to
+  suspend; not offered when nothing can be suspended. Tests: `cards_behavioral::bt3::bt3_054`, `bt8::bt8_054`.
+- **Not covered (no card in scope needs it):** DCGO's `EffectTiming.WhenDigisorption` observers and
+  `ICanSuspendByDigisorptionEffect` widenings; Digisorption on a breeding-area digivolve.
