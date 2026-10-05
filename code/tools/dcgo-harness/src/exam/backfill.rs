@@ -43,8 +43,8 @@ use std::collections::BTreeMap;
 
 use serde_yml::Value;
 
-use crate::exam::differ::DiffReport;
-use crate::exam::projection::{SeatProjection, StateProjection};
+use crate::exam::differ::{phase_is_compared, DiffReport};
+use crate::exam::projection::{SeatProjection, StateProjection, StepPairing};
 use crate::exam::scenario::{Assertion, Scenario};
 
 /// Key stamped into every assertion this module generates.
@@ -55,11 +55,20 @@ pub const GENERATED_MARKER: &str = "_backfilled";
 
 /// Backfill, gated on the differ's verdict. **Prefer this entry point.**
 ///
-/// Refuses a report that is not clean — see the module docs for why a diverged
+/// Refuses a report that is not clean -- see the module docs for why a diverged
 /// or truncated run must never become an expected value.
+///
+/// Writes ONLY the rows the differ paired (`pairing.pairs`): a step that put
+/// nothing on the DCGO wire, or that only DCGO decides, was never observed by
+/// the oracle and gets no assertion, while the steps around it still do.
+/// `phase` is left out of a row whose phase the differ did not compare
+/// ([`phase_is_compared`]). `ours` is indexed by scenario step and may carry
+/// the trailing post-final-step row; no pairing ever names it.
 pub fn backfill_from_diff(
     scenario_yaml: &str,
-    confirmed: &[StateProjection],
+    ours: &[StateProjection],
+    dcgo: &[StateProjection],
+    pairing: &StepPairing,
     report: &DiffReport,
 ) -> Result<String, String> {
     if !report.is_clean() {
@@ -82,29 +91,35 @@ pub fn backfill_from_diff(
         ));
     }
     // Honesty rule: an `_backfilled` assertion may encode only state DCGO
-    // actually observed. The caller's rows can be longer than what the differ
-    // compared -- our trace carries a trailing post-final-step row that DCGO's
-    // pre-decision trace never has a partner for -- so cut to the compared
-    // prefix and never write the rest.
-    if report.ours_unpairable > 0 {
+    // actually observed -- exactly the paired rows, nothing else.
+    let mut observed = Vec::with_capacity(pairing.pairs.len());
+    for (oi, di) in &pairing.pairs {
+        let (Some(o), Some(d)) = (ours.get(*oi), dcgo.get(*di)) else {
+            return Err(format!(
+                "refusing to backfill: the pairing names our row {oi} and DCGO row {di} \
+                 but only {} and {} row(s) were supplied, so the rows do not match \
+                 what the oracle compared.",
+                ours.len(),
+                dcgo.len()
+            ));
+        };
+        observed.push(Observed { row: o, with_phase: phase_is_compared(&o.phase, &d.phase) });
+    }
+    if observed.len() != report.compared_steps as usize {
         return Err(format!(
-            "refusing to backfill: {} of our rows had no DCGO partner (sim-only \
-             steps), so the oracle observed only some of the rows and which ones \
-             cannot be told from the report ({}).",
-            report.ours_unpairable,
-            report.denominator()
+            "refusing to backfill: the report compared {} step(s) but the pairing names \
+             {}, so the rows do not match what the oracle compared.",
+            report.compared_steps,
+            observed.len()
         ));
     }
-    let compared = report.compared_steps as usize;
-    if confirmed.len() < compared {
-        return Err(format!(
-            "refusing to backfill: the report compared {compared} step(s) but only \
-             {} confirmed row(s) were supplied, so the rows do not match what the \
-             oracle compared.",
-            confirmed.len()
-        ));
-    }
-    backfill(scenario_yaml, &confirmed[..compared])
+    write_assertions(scenario_yaml, &observed)
+}
+
+/// One oracle-observed row to write, and whether its `phase` was compared.
+struct Observed<'a> {
+    row: &'a StateProjection,
+    with_phase: bool,
 }
 
 /// Write `confirmed` into the scenario's `assert:` block and return the new
@@ -123,6 +138,35 @@ pub fn backfill(scenario_yaml: &str, confirmed: &[StateProjection]) -> Result<St
     let scenario = Scenario::from_yaml(scenario_yaml)?;
     let steps = scenario.steps.len() as u32;
 
+    // Coverage: every decision point of the line must have been projected.
+    // This is the truncation half of "the diff was not clean", and it is the
+    // only half this entry point can see without a `DiffReport`. Checked
+    // after the shape refusals below would have fired, so an empty set or a
+    // trailing row reports its own, more specific reason.
+    let in_range = confirmed.iter().all(|p| p.step < steps);
+    let missing: Vec<u32> = (0..steps)
+        .filter(|s| !confirmed.iter().any(|p| p.step == *s))
+        .collect();
+    if !confirmed.is_empty() && in_range && !missing.is_empty() {
+        return Err(format!(
+            "refusing to backfill: the confirmed state does not cover step(s) \
+             {missing:?} of a {steps}-step line -- a partial run must never be \
+             written in as if the whole line agreed"
+        ));
+    }
+    let rows: Vec<Observed> = confirmed
+        .iter()
+        .map(|row| Observed { row, with_phase: true })
+        .collect();
+    write_assertions(scenario_yaml, &rows)
+}
+
+/// The shared tail of both entry points: refuse rows no oracle row covers,
+/// then splice one generated assertion per row.
+fn write_assertions(scenario_yaml: &str, confirmed: &[Observed]) -> Result<String, String> {
+    let scenario = Scenario::from_yaml(scenario_yaml)?;
+    let steps = scenario.steps.len() as u32;
+
     if confirmed.is_empty() {
         return Err("refusing to backfill: no confirmed state was supplied, so there \
                     is nothing the oracle actually established"
@@ -130,17 +174,17 @@ pub fn backfill(scenario_yaml: &str, confirmed: &[StateProjection]) -> Result<St
     }
 
     // A row at or past `steps` is the trailing state no oracle row covers.
-    if let Some(bad) = confirmed.iter().find(|p| p.step >= steps) {
+    if let Some(bad) = confirmed.iter().find(|p| p.row.step >= steps) {
         return Err(format!(
             "refusing to backfill: confirmed state names step {} but the oracle only \
              observes the {steps} decision point(s) 0..{steps}; the post-final-step \
              state was never compared against DCGO",
-            bad.step
+            bad.row.step
         ));
     }
 
     // Two rows for one step would silently let one of them win.
-    let mut seen: Vec<u32> = confirmed.iter().map(|p| p.step).collect();
+    let mut seen: Vec<u32> = confirmed.iter().map(|p| p.row.step).collect();
     seen.sort_unstable();
     if seen.windows(2).any(|w| w[0] == w[1]) {
         return Err("refusing to backfill: the confirmed state has two rows for the \
@@ -148,23 +192,11 @@ pub fn backfill(scenario_yaml: &str, confirmed: &[StateProjection]) -> Result<St
             .to_string());
     }
 
-    // Coverage: every decision point of the line must have been projected.
-    // This is the truncation half of "the diff was not clean", and it is the
-    // only half this entry point can see without a `DiffReport`.
-    let missing: Vec<u32> = (0..steps).filter(|s| !seen.contains(s)).collect();
-    if !missing.is_empty() {
-        return Err(format!(
-            "refusing to backfill: the confirmed state does not cover step(s) \
-             {missing:?} of a {steps}-step line -- a partial run must never be \
-             written in as if the whole line agreed"
-        ));
-    }
-
-    let mut rows: Vec<&StateProjection> = confirmed.iter().collect();
-    rows.sort_by_key(|p| p.step);
+    let mut rows: Vec<&Observed> = confirmed.iter().collect();
+    rows.sort_by_key(|p| p.row.step);
     let mut generated = Vec::with_capacity(rows.len());
-    for row in rows {
-        generated.push(assertion_for(row)?);
+    for o in rows {
+        generated.push(assertion_for(o.row, o.with_phase)?);
     }
 
     let text = splice_assertions(scenario_yaml, &generated)?;
@@ -326,11 +358,14 @@ fn splice_assertions(
 }
 
 /// One generated assertion: the whole projected board at that step.
-fn assertion_for(p: &StateProjection) -> Result<Assertion, String> {
+/// `with_phase: false` leaves `phase` out -- the differ did not compare it.
+fn assertion_for(p: &StateProjection, with_phase: bool) -> Result<Assertion, String> {
     let mut that = BTreeMap::new();
     that.insert(GENERATED_MARKER.to_string(), Value::Bool(true));
     that.insert("turn".to_string(), to_value(p.turn)?);
-    that.insert("phase".to_string(), to_value(&p.phase)?);
+    if with_phase {
+        that.insert("phase".to_string(), to_value(&p.phase)?);
+    }
     that.insert("memory".to_string(), to_value(p.memory)?);
     seat_entries(&mut that, "p0", &p.p0)?;
     seat_entries(&mut that, "p1", &p.p1)?;
@@ -358,6 +393,17 @@ fn to_value<T: serde::Serialize>(v: T) -> Result<Value, String> {
 mod tests {
     use super::*;
     use crate::exam::differ::diff;
+    use crate::exam::projection::{pair_by_wire_rows, StepPairing};
+
+    /// One DCGO row per step: the 1:1 pairing a plain line produces.
+    fn one_to_one(n: usize) -> StepPairing {
+        pair_by_wire_rows(&vec![1; n], n)
+    }
+
+    fn with_phase(mut p: StateProjection, phase: &str) -> StateProjection {
+        p.phase = phase.to_string();
+        p
+    }
 
     const LINE: &str = r#"
 card: EX12-035
@@ -440,7 +486,8 @@ steps:
         assert!(report.is_clean());
         assert_eq!(report.compared_steps, 2);
 
-        let out = backfill_from_diff(LINE, &ours, &report).expect("clean run backfills");
+        let out = backfill_from_diff(LINE, &ours, &observed, &one_to_one(2), &report)
+            .expect("clean run backfills");
         let s = Scenario::from_yaml(&out).unwrap();
         let ats: Vec<u32> = generated(&s).iter().map(|a| a.at).collect();
         assert_eq!(
@@ -464,7 +511,7 @@ steps:
         let report = diff(&ours, &dcgo);
         assert!(!report.is_clean(), "fixture must actually diverge");
 
-        let err = backfill_from_diff(LINE, &ours, &report).unwrap_err();
+        let err = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &report).unwrap_err();
         assert!(err.contains("DIVERGED"), "got: {err}");
         assert!(err.contains("step 1"), "got: {err}");
 
@@ -472,7 +519,7 @@ steps:
         // "we got through 1 of 2 steps" must not read as "all agreed".
         let truncated = diff(&ours, &ours[..1]);
         assert!(truncated.divergences.is_empty());
-        let err = backfill_from_diff(LINE, &ours, &truncated).unwrap_err();
+        let err = backfill_from_diff(LINE, &ours, &ours[..1], &one_to_one(2), &truncated).unwrap_err();
         assert!(err.contains("TRUNCATED"), "got: {err}");
 
         // And the report-free entry point still refuses the truncation shape
@@ -487,25 +534,52 @@ steps:
         // a blanket refusal.
         let clean = diff(&ours, &ours);
         assert!(clean.is_clean());
-        assert!(backfill_from_diff(LINE, &ours, &clean).is_ok());
+        assert!(backfill_from_diff(LINE, &ours, &ours, &one_to_one(2), &clean).is_ok());
     }
 
     #[test]
-    fn backfill_refuses_when_some_of_our_rows_had_no_dcgo_partner() {
-        // A clean report with an unpaired row of ours: the oracle observed only
-        // some rows and the report cannot say which, so nothing is written.
-        let rows = compared_rows();
-        let report = DiffReport {
-            compared_steps: 1,
-            ours_steps: 2,
-            dcgo_steps: 1,
-            ours_unpairable: 1,
-            dcgo_unpairable: 0,
-            divergences: vec![],
-        };
-        assert!(report.is_clean(), "fixture must be a clean report");
-        let err = backfill_from_diff(LINE, &rows, &report).unwrap_err();
-        assert!(err.contains("no DCGO partner"), "got: {err}");
+    fn only_the_rows_dcgo_observed_are_written_when_some_of_ours_had_no_partner() {
+        // Step 0 is a sim-only row (zero wire rows): DCGO never observed it, so
+        // it gets no assertion -- but the paired step 1 still does. Refusing the
+        // whole file here left most multi-gate scenarios with no `assert:`
+        // block at all (Plan 1 final review).
+        let ours = compared_rows();
+        let dcgo = vec![row(0, -3)];
+        let pairing = StepPairing { pairs: vec![(1, 0)], ours_unpairable: 1, dcgo_unpairable: 0 };
+        let report = crate::exam::differ::diff_paired(&ours, &dcgo, &pairing);
+        assert!(report.is_clean(), "fixture must be a clean report: {report:?}");
+
+        let out = backfill_from_diff(LINE, &ours, &dcgo, &pairing, &report)
+            .expect("the paired row is confirmed and must be written");
+        let s = Scenario::from_yaml(&out).unwrap();
+        let ats: Vec<u32> = generated(&s).iter().map(|a| a.at).collect();
+        assert_eq!(ats, vec![1], "only the step DCGO observed is asserted");
+    }
+
+    #[test]
+    fn phase_is_left_out_wherever_the_differ_did_not_compare_it() {
+        // Our engine parks a selection in its own phase (SelectTarget, ...)
+        // and names the end-of-turn window EndOfTurnAction; DCGO stays on
+        // Main for both, and the differ skips `phase` there. Writing our
+        // phase would assert a value the oracle never confirmed.
+        let ours = vec![with_phase(row(0, 0), "SelectTarget"), with_phase(row(1, -3), "EndOfTurnAction")];
+        let dcgo = vec![row(0, 0), row(1, -3)];
+        let report = crate::exam::differ::diff_paired(&ours, &dcgo, &one_to_one(2));
+        assert!(report.is_clean(), "{report:?}");
+
+        let out = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &report).unwrap();
+        let s = Scenario::from_yaml(&out).unwrap();
+        for a in generated(&s) {
+            assert!(!a.that.contains_key("phase"), "step {} asserts an uncompared phase", a.at);
+            assert!(a.that.contains_key("memory"), "the compared fields are still written");
+        }
+
+        // A phase the differ DID compare is still asserted.
+        let main = compared_rows();
+        let report = diff(&main, &main);
+        let out = backfill_from_diff(LINE, &main, &main, &one_to_one(2), &report).unwrap();
+        let s = Scenario::from_yaml(&out).unwrap();
+        assert!(generated(&s).iter().all(|a| a.that.contains_key("phase")));
     }
 
     #[test]
@@ -522,7 +596,8 @@ steps:
         let observed = compared_rows();
         let report = diff(&observed, &observed);
         assert_eq!(report.compared_steps, 2);
-        let err = backfill_from_diff(LINE, &observed[..1], &report).unwrap_err();
+        let err = backfill_from_diff(LINE, &observed[..1], &observed, &one_to_one(2), &report)
+            .unwrap_err();
         assert!(err.contains("do not match"), "got: {err}");
 
         // Rows that skip a decision point are refused by the coverage check.

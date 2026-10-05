@@ -295,6 +295,14 @@ fn is_equivalent_phase_pair(ours: &str, dcgo: &str) -> bool {
     ours == "EndOfTurnAction" && dcgo == "Main"
 }
 
+/// Whether the differ compares `phase` for this pair of rows -- false for our
+/// selection-interlude phases ([`is_selection_phase`]) and the one equivalent
+/// spelling pair ([`is_equivalent_phase_pair`]). Backfill uses it to leave out a
+/// phase the oracle never confirmed.
+pub fn phase_is_compared(ours: &str, dcgo: &str) -> bool {
+    !is_selection_phase(ours) && !is_equivalent_phase_pair(ours, dcgo)
+}
+
 pub fn diff(ours: &[StateProjection], dcgo: &[StateProjection]) -> DiffReport {
     // Keyed by `step`, not by position — the two sides may skip different
     // rows and a positional zip would offset one of them by one.
@@ -402,7 +410,7 @@ fn diff_projection(ours: &StateProjection, dcgo: &StateProjection) -> Vec<FieldD
     // against DCGO's phase -- observed live on the ST1-15 gate: step 12 read
     // `phase: ours=SelectBudgeted dcgo=Main` with every state field equal,
     // turning a CLEAN selection round-trip into a false divergence.
-    if !is_selection_phase(&ours.phase) && !is_equivalent_phase_pair(&ours.phase, &dcgo.phase) {
+    if phase_is_compared(&ours.phase, &dcgo.phase) {
         push_ne(&mut diffs, "phase", ours.phase.as_str(), dcgo.phase.as_str());
     }
     push_ne(&mut diffs, "memory", &ours.memory, &dcgo.memory);

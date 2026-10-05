@@ -1118,13 +1118,15 @@ fn exam_one(
 
     if backfill && report.is_clean() {
         // Our rows equal DCGO's on every compared field when the diff is clean.
-        // Pass only the compared slice: the trailing post-final-step row in
-        // `projections` was never observed by the oracle, so an `_backfilled`
-        // assertion over it would claim more than DCGO confirmed.
+        // Backfill writes exactly the rows the pairing compared: never the
+        // trailing post-final-step row, never a sim-only or dcgo-only step.
         //
         // A refusal is reported, never propagated: the oracle verdict below is
         // independent of whether the scenario file could be updated.
-        println!("  {}", try_backfill(path, &text, &ours_for_diff, &report));
+        println!(
+            "  {}",
+            try_backfill(path, &text, &ours_for_diff, &dcgo, &pairing, &report)
+        );
     }
 
     // What this run established about the clause, for the verdict store: a
@@ -1198,9 +1200,11 @@ fn try_backfill(
     path: &Path,
     text: &str,
     rows: &[dcgo_harness::exam::projection::StateProjection],
+    dcgo: &[dcgo_harness::exam::projection::StateProjection],
+    pairing: &dcgo_harness::exam::projection::StepPairing,
     report: &dcgo_harness::exam::differ::DiffReport,
 ) -> String {
-    match dcgo_harness::exam::backfill::backfill_from_diff(text, rows, report) {
+    match dcgo_harness::exam::backfill::backfill_from_diff(text, rows, dcgo, pairing, report) {
         Ok(updated) => match std::fs::write(path, updated) {
             Ok(()) => format!("backfill: wrote confirmed state into {}", path.display()),
             Err(e) => format!(
@@ -2509,7 +2513,11 @@ mod migrate_verdicts_guard_tests {
 mod try_backfill_tests {
     use super::*;
     use dcgo_harness::exam::differ::DiffReport;
-    use dcgo_harness::exam::projection::StateProjection;
+    use dcgo_harness::exam::projection::{StateProjection, StepPairing};
+
+    fn pairs(p: &[(usize, usize)]) -> StepPairing {
+        StepPairing { pairs: p.to_vec(), ours_unpairable: 0, dcgo_unpairable: 0 }
+    }
 
     const SCENARIO: &str = "card: EX12-035\nclause: EX12-035#effect#0\nseed: 1\ndecks:\n  p0: { stack: [ST1-02], rest: st1 }\n  p1: { stack: [], rest: st1 }\nsteps:\n  - actor: 0\n    do: { pass: {} }\n";
 
@@ -2537,10 +2545,11 @@ mod try_backfill_tests {
     fn a_refused_backfill_is_reported_not_propagated_and_leaves_the_file_alone() {
         let path = std::env::temp_dir().join("try_backfill_refused.yaml");
         std::fs::write(&path, SCENARIO).unwrap();
-        let r = report(1);
+        let r = report(0);
         assert!(r.is_clean(), "the verdict inputs are a CLEAN diff");
 
-        let line = try_backfill(&path, SCENARIO, &[row(0)], &r);
+        // A pairing naming a row the caller never supplied is refused.
+        let line = try_backfill(&path, SCENARIO, &[row(0)], &[row(0)], &pairs(&[(3, 0)]), &r);
         assert!(line.starts_with("backfill skipped: "), "got: {line}");
         assert_eq!(std::fs::read_to_string(&path).unwrap(), SCENARIO);
         // The clean report is untouched, so the caller still builds Confirmed.
@@ -2551,7 +2560,7 @@ mod try_backfill_tests {
     fn an_accepted_backfill_writes_the_file() {
         let path = std::env::temp_dir().join("try_backfill_accepted.yaml");
         std::fs::write(&path, SCENARIO).unwrap();
-        let line = try_backfill(&path, SCENARIO, &[row(0)], &report(0));
+        let line = try_backfill(&path, SCENARIO, &[row(0)], &[row(0)], &pairs(&[(0, 0)]), &report(0));
         assert!(
             line.starts_with("backfill: wrote confirmed state into"),
             "got: {line}"
