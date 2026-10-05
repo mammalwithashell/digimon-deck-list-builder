@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T15:01:05.744667+00:00",
+  "last_updated": "2026-10-05T16:36:16.888671900+00:00",
   "clauses": {
     "BT25-057#effect#0": {
       "clause_id": "BT25-057#effect#0",
@@ -8,9 +8,9 @@
       "verdict": "diverged",
       "label": "Special Digivolution Condition",
       "text_sha256": "0a2b682b1080a44a868aef0c995e33409bc1a7dac16aea7861a516542ae07202",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-057-effect0.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 9 of 17 ours / 9 dcgo steps)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-057-effect0.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 13 of 17 ours / 13 dcgo steps)",
+      "recorded_at": "2026-10-05T16:36:13.218140+00:00"
     },
     "BT25-057#effect#1": {
       "clause_id": "BT25-057#effect#1",
@@ -18,9 +18,9 @@
       "verdict": "diverged",
       "label": "Effect",
       "text_sha256": "ef0f84f8a9d297859c4f9cc82bda6dde8fb40f9333f2a29d860cfc6f3f7cb230",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-057-effect1.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 9 of 17 ours / 9 dcgo steps)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-057-effect1.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 13 of 17 ours / 13 dcgo steps)",
+      "recorded_at": "2026-10-05T16:36:13.904375400+00:00"
     },
     "BT25-057#effect#2": {
       "clause_id": "BT25-057#effect#2",
@@ -28,9 +28,9 @@
       "verdict": "diverged",
       "label": "Effect",
       "text_sha256": "23088b6ac653bcfbc9b5d369c9a7532887164a7a378c73f20b32bea0b62cb57d",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-057-effect2.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 9 of 16 ours / 9 dcgo steps)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-057-effect2.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 13 of 16 ours / 13 dcgo steps)",
+      "recorded_at": "2026-10-05T16:36:14.610712300+00:00"
     },
     "BT25-057#effect#3": {
       "clause_id": "BT25-057#effect#3",
@@ -38,9 +38,9 @@
       "verdict": "diverged",
       "label": "DUAL Effect",
       "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-057-effect3.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 9 of 22 ours / 9 dcgo steps)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-057-effect3.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 18 of 22 ours / 18 dcgo steps)",
+      "recorded_at": "2026-10-05T16:36:15.377928100+00:00"
     },
     "BT25-057#effect#4": {
       "clause_id": "BT25-057#effect#4",
@@ -48,9 +48,9 @@
       "verdict": "diverged",
       "label": "DUAL Effect",
       "text_sha256": "af63531ea4b1624c83d5ff2f5f785c74913ae755c405caaf020395bcee74b6b1",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-057-effect4.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 9 of 22 ours / 9 dcgo steps)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-057-effect4.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 18 of 22 ours / 18 dcgo steps)",
+      "recorded_at": "2026-10-05T16:36:16.153338300+00:00"
     },
     "BT25-057#effect#5": {
       "clause_id": "BT25-057#effect#5",
@@ -58,9 +58,9 @@
       "verdict": "diverged",
       "label": "DUAL Rule",
       "text_sha256": "f47d9bc85635eee2013e33028330c63f170fed1f2762dc0a1bddfe1be343ebe8",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-057-effect5.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 9 of 23 ours / 9 dcgo steps)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-057-effect5.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 17 of 23 ours / 17 dcgo steps)",
+      "recorded_at": "2026-10-05T16:36:16.888671900+00:00"
     }
   }
 }

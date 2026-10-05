@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T14:29:46.957613100+00:00",
+  "last_updated": "2026-10-05T16:35:30.779055400+00:00",
   "clauses": {
     "BT26-033#effect#0": {
       "clause_id": "BT26-033#effect#0",
@@ -8,8 +8,8 @@
       "verdict": "confirmed",
       "label": "Special Digivolution Condition",
       "text_sha256": "1ee53a215d53bc5d3a5a862de8b15e399444669c0ed4f49877414c3941270bed",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-033-effect0.yaml",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-033-effect0.yaml",
+      "recorded_at": "2026-10-05T16:35:24.189273100+00:00"
     },
     "BT26-033#effect#1": {
       "clause_id": "BT26-033#effect#1",
@@ -17,18 +17,17 @@
       "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-033-effect1.yaml",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-033-effect1.yaml",
+      "recorded_at": "2026-10-05T16:35:25.003850200+00:00"
     },
     "BT26-033#effect#2": {
       "clause_id": "BT26-033#effect#2",
       "card_id": "BT26-033",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-033-effect2.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 14 of 17 ours / 14 dcgo steps)",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-033-effect2.yaml",
+      "recorded_at": "2026-10-05T16:35:25.897679700+00:00"
     },
     "BT26-033#effect#3": {
       "clause_id": "BT26-033#effect#3",
@@ -36,8 +35,8 @@
       "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "d4d920244a089f84b9c94e7aa1fc2fb92ea6f1a327096926427ae785370a5fee",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-033-effect3.yaml",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-033-effect3.yaml",
+      "recorded_at": "2026-10-05T16:35:26.693315100+00:00"
     },
     "BT26-033#effect#4": {
       "clause_id": "BT26-033#effect#4",
@@ -45,8 +44,8 @@
       "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "fa8b5a1ee646993b9af283c1e47aa7a49d63eca21ab85c9fdc6325aa852d73ef",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-033-effect4.yaml",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-033-effect4.yaml",
+      "recorded_at": "2026-10-05T16:35:27.375108900+00:00"
     },
     "BT26-033#effect#5": {
       "clause_id": "BT26-033#effect#5",
@@ -54,8 +53,8 @@
       "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "3d52d1cc711e323838d0a7ce6d15de4240e79c9a4c50d791837670d0d8729f3f",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-033-effect5.yaml",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-033-effect5.yaml",
+      "recorded_at": "2026-10-05T16:35:28.212623600+00:00"
     },
     "BT26-033#effect#6": {
       "clause_id": "BT26-033#effect#6",
@@ -63,8 +62,8 @@
       "verdict": "confirmed",
       "label": "DUAL Effect",
       "text_sha256": "44e437a0e69b0d4252dc5662994e8b67e032769272cb411cce4cd415565fc473",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-033-effect6.yaml",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-033-effect6.yaml",
+      "recorded_at": "2026-10-05T16:35:28.831213100+00:00"
     },
     "BT26-033#effect#7": {
       "clause_id": "BT26-033#effect#7",
@@ -72,8 +71,8 @@
       "verdict": "confirmed",
       "label": "DUAL Effect",
       "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-033-effect7.yaml",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-033-effect7.yaml",
+      "recorded_at": "2026-10-05T16:35:29.452572500+00:00"
     },
     "BT26-033#effect#8": {
       "clause_id": "BT26-033#effect#8",
@@ -81,8 +80,8 @@
       "verdict": "confirmed",
       "label": "DUAL Effect",
       "text_sha256": "b984c3e5aab3147c1661cd06b642781b9e16cf17e8387f035c5e3e2caa49446d",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-033-effect8.yaml",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-033-effect8.yaml",
+      "recorded_at": "2026-10-05T16:35:30.089167200+00:00"
     },
     "BT26-033#effect#9": {
       "clause_id": "BT26-033#effect#9",
@@ -90,8 +89,8 @@
       "verdict": "confirmed",
       "label": "DUAL Rule",
       "text_sha256": "f47d9bc85635eee2013e33028330c63f170fed1f2762dc0a1bddfe1be343ebe8",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-033-effect9.yaml",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-033-effect9.yaml",
+      "recorded_at": "2026-10-05T16:35:30.779055400+00:00"
     }
   }
 }

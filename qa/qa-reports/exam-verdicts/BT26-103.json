@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T14:29:46.957613100+00:00",
+  "last_updated": "2026-10-05T16:35:50.653482900+00:00",
   "clauses": {
     "BT26-103#effect#0": {
       "clause_id": "BT26-103#effect#0",
@@ -8,38 +8,35 @@
       "verdict": "confirmed",
       "label": "Special Digivolution Condition",
       "text_sha256": "3a66a41f4163fb520e72f071a41eda75555a0c0d52621eb087e61d0cb9280f1d",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-103-effect0.yaml",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-103-effect0.yaml",
+      "recorded_at": "2026-10-05T16:35:46.642423400+00:00"
     },
     "BT26-103#effect#1": {
       "clause_id": "BT26-103#effect#1",
       "card_id": "BT26-103",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-103-effect1.yaml",
-      "reason": "DIVERGED at step 10 (compared 19 of 19 ours / 19 dcgo steps)",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-103-effect1.yaml",
+      "recorded_at": "2026-10-05T16:35:47.365963800+00:00"
     },
     "BT26-103#effect#2": {
       "clause_id": "BT26-103#effect#2",
       "card_id": "BT26-103",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-103-effect2.yaml",
-      "reason": "DIVERGED at step 10 (compared 20 of 20 ours / 20 dcgo steps)",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-103-effect2.yaml",
+      "recorded_at": "2026-10-05T16:35:48.092642300+00:00"
     },
     "BT26-103#effect#3": {
       "clause_id": "BT26-103#effect#3",
       "card_id": "BT26-103",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-103-effect3.yaml",
-      "reason": "DIVERGED at step 9 (compared 13 of 13 ours / 13 dcgo steps)",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-103-effect3.yaml",
+      "recorded_at": "2026-10-05T16:35:48.705858100+00:00"
     },
     "BT26-103#effect#4": {
       "clause_id": "BT26-103#effect#4",
@@ -47,8 +44,8 @@
       "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "384cd2fbb325c2b55905843f396f762f10a27d11c6b2367b6e132c048aea0ba4",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-103-effect4.yaml",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-103-effect4.yaml",
+      "recorded_at": "2026-10-05T16:35:49.334935100+00:00"
     },
     "BT26-103#effect#5": {
       "clause_id": "BT26-103#effect#5",
@@ -56,18 +53,17 @@
       "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "b2eee31662c860c86d906a2007f650e25e5ae5dd4fe0ad63db5f9a36d97b1143",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-103-effect5.yaml",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-103-effect5.yaml",
+      "recorded_at": "2026-10-05T16:35:49.957267600+00:00"
     },
     "BT26-103#effect#6": {
       "clause_id": "BT26-103#effect#6",
       "card_id": "BT26-103",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "27a09a00045e19b4271ac08708482b03e72be1e9df5eff0d361eefdaf991fda7",
-      "scenario_path": "D:/card-loop-iter0/tsj\\BT26-103-effect6.yaml",
-      "reason": "DIVERGED at step 10 (compared 18 of 18 ours / 18 dcgo steps)",
-      "recorded_at": "2026-10-05T14:29:46.957613100+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-103-effect6.yaml",
+      "recorded_at": "2026-10-05T16:35:50.653482900+00:00"
     }
   }
 }

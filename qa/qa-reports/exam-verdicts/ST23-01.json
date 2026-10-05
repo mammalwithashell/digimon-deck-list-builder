@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T15:01:05.744667+00:00",
+  "last_updated": "2026-10-05T16:36:38.373836500+00:00",
   "clauses": {
     "ST23-01#inherited#0": {
       "clause_id": "ST23-01#inherited#0",
@@ -8,9 +8,9 @@
       "verdict": "diverged",
       "label": "Inherited Effect",
       "text_sha256": "04087126c76dff75c72a5327a79ee8ff6d6ee337bf3ccf190a110feeb9d34a7c",
-      "scenario_path": "D:/card-loop-iter0/gd\\ST23-01-inherited0.yaml",
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-01-inherited0.yaml",
       "reason": "TRUNCATED, no divergence found (compared 3 of 13 ours / 3 dcgo steps)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "recorded_at": "2026-10-05T16:36:38.373836500+00:00"
     }
   }
 }

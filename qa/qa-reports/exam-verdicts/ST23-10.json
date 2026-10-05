@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T15:01:05.744667+00:00",
+  "last_updated": "2026-10-05T16:37:00.928476600+00:00",
   "clauses": {
     "ST23-10#effect#0": {
       "clause_id": "ST23-10#effect#0",
@@ -8,8 +8,8 @@
       "verdict": "confirmed",
       "label": "Special Digivolution Condition",
       "text_sha256": "4118206f5da32cf670da3e20b402bf481416f0e22e690221fb44cf7cdeed4bca",
-      "scenario_path": "D:/card-loop-iter0/gd\\ST23-10-effect0.yaml",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-10-effect0.yaml",
+      "recorded_at": "2026-10-05T16:36:59.622606700+00:00"
     },
     "ST23-10#effect#1": {
       "clause_id": "ST23-10#effect#1",
@@ -17,9 +17,9 @@
       "verdict": "diverged",
       "label": "Effect",
       "text_sha256": "301d85df362ef9deeb5d1d7620ff13478d8f15b52f0dee2467c1c603fd6b41d9",
-      "scenario_path": "D:/card-loop-iter0/gd\\ST23-10-effect1.yaml",
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-10-effect1.yaml",
       "reason": "TRUNCATED, no divergence found (compared 2 of 11 ours / 2 dcgo steps)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "recorded_at": "2026-10-05T16:37:00.259554100+00:00"
     },
     "ST23-10#inherited#0": {
       "clause_id": "ST23-10#inherited#0",
@@ -27,8 +27,8 @@
       "verdict": "confirmed",
       "label": "Inherited Effect",
       "text_sha256": "da37b3513c253581acd58fb279b5a7fd68f5a7e2b7187af928bad07c0006b995",
-      "scenario_path": "D:/card-loop-iter0/gd\\ST23-10-inherited0.yaml",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-10-inherited0.yaml",
+      "recorded_at": "2026-10-05T16:37:00.928476600+00:00"
     }
   }
 }

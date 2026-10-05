@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T15:01:05.744667+00:00",
+  "last_updated": "2026-10-05T16:36:46.081107500+00:00",
   "clauses": {
     "ST23-04#effect#0": {
       "clause_id": "ST23-04#effect#0",
@@ -8,9 +8,9 @@
       "verdict": "diverged",
       "label": "Special Digivolution Condition",
       "text_sha256": "0a2b682b1080a44a868aef0c995e33409bc1a7dac16aea7861a516542ae07202",
-      "scenario_path": "D:/card-loop-iter0/gd\\ST23-04-effect0.yaml",
-      "reason": "DIVERGED at step 9 (compared 12 of 18 ours / 12 dcgo steps (2 sim-only row(s) with no DCGO prompt); trace truncated)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-04-effect0.yaml",
+      "reason": "DIVERGED at step 14 (compared 14 of 18 ours / 14 dcgo steps (2 sim-only row(s) with no DCGO prompt); trace truncated)",
+      "recorded_at": "2026-10-05T16:36:43.632975900+00:00"
     },
     "ST23-04#effect#1": {
       "clause_id": "ST23-04#effect#1",
@@ -18,9 +18,9 @@
       "verdict": "diverged",
       "label": "Effect",
       "text_sha256": "0cd820ef4adfa8bcc70f0a32465ac5487d7e1544f031510314254d0d908ff0b1",
-      "scenario_path": "D:/card-loop-iter0/gd\\ST23-04-effect1.yaml",
-      "reason": "DIVERGED at step 9 (compared 12 of 25 ours / 12 dcgo steps (2 sim-only row(s) with no DCGO prompt); trace truncated)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-04-effect1.yaml",
+      "reason": "DIVERGED at step 14 (compared 14 of 25 ours / 14 dcgo steps (2 sim-only row(s) with no DCGO prompt); trace truncated)",
+      "recorded_at": "2026-10-05T16:36:44.428383400+00:00"
     },
     "ST23-04#effect#2": {
       "clause_id": "ST23-04#effect#2",
@@ -28,9 +28,9 @@
       "verdict": "diverged",
       "label": "Effect",
       "text_sha256": "cf2336c13ecb6a57bb78bcd9259bf1551cb3e3f434c7648c470cae25c62b7b17",
-      "scenario_path": "D:/card-loop-iter0/gd\\ST23-04-effect2.yaml",
-      "reason": "DIVERGED at step 9 (compared 12 of 18 ours / 12 dcgo steps (2 sim-only row(s) with no DCGO prompt); trace truncated)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-04-effect2.yaml",
+      "reason": "DIVERGED at step 14 (compared 14 of 18 ours / 14 dcgo steps (2 sim-only row(s) with no DCGO prompt); trace truncated)",
+      "recorded_at": "2026-10-05T16:36:45.119205800+00:00"
     },
     "ST23-04#inherited#0": {
       "clause_id": "ST23-04#inherited#0",
@@ -38,9 +38,9 @@
       "verdict": "diverged",
       "label": "Inherited Effect",
       "text_sha256": "3dc24fce998a78519232b48757cc3c2e1f0e36b2f8159894f413e8656ca680e7",
-      "scenario_path": "D:/card-loop-iter0/gd\\ST23-04-inherited0.yaml",
-      "reason": "DIVERGED at step 9 (compared 12 of 27 ours / 12 dcgo steps (2 sim-only row(s) with no DCGO prompt); trace truncated)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-04-inherited0.yaml",
+      "reason": "DIVERGED at step 14 (compared 14 of 27 ours / 14 dcgo steps (2 sim-only row(s) with no DCGO prompt); trace truncated)",
+      "recorded_at": "2026-10-05T16:36:46.081107500+00:00"
     }
   }
 }

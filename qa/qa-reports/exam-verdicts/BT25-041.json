@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T15:01:05.744667+00:00",
+  "last_updated": "2026-10-05T16:36:02.707101+00:00",
   "clauses": {
     "BT25-041#effect#0": {
       "clause_id": "BT25-041#effect#0",
@@ -8,9 +8,9 @@
       "verdict": "diverged",
       "label": "Special Digivolution Condition",
       "text_sha256": "0a2b682b1080a44a868aef0c995e33409bc1a7dac16aea7861a516542ae07202",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-041-effect0.yaml",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-041-effect0.yaml",
       "reason": "TRUNCATED, no divergence found (compared 3 of 19 ours / 3 dcgo steps (3 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "recorded_at": "2026-10-05T16:35:59.957307600+00:00"
     },
     "BT25-041#effect#1": {
       "clause_id": "BT25-041#effect#1",
@@ -18,9 +18,9 @@
       "verdict": "diverged",
       "label": "Effect",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-041-effect1.yaml",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-041-effect1.yaml",
       "reason": "TRUNCATED, no divergence found (compared 3 of 29 ours / 3 dcgo steps (5 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "recorded_at": "2026-10-05T16:36:01.068776200+00:00"
     },
     "BT25-041#effect#2": {
       "clause_id": "BT25-041#effect#2",
@@ -28,9 +28,9 @@
       "verdict": "diverged",
       "label": "Effect",
       "text_sha256": "cc2dc6f82df0aae563978beca7189c36c5d66a097550be821ce9056c16e8c0b4",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-041-effect2.yaml",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-041-effect2.yaml",
       "reason": "TRUNCATED, no divergence found (compared 3 of 19 ours / 3 dcgo steps (3 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "recorded_at": "2026-10-05T16:36:01.816072500+00:00"
     },
     "BT25-041#inherited#0": {
       "clause_id": "BT25-041#inherited#0",
@@ -38,9 +38,9 @@
       "verdict": "diverged",
       "label": "Inherited Effect",
       "text_sha256": "64630079c1514a467b85dae81d66037e363ae561c5b121901d8cd7910502d7b6",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-041-inherited0.yaml",
-      "reason": "DIVERGED at step 9 (compared 11 of 24 ours / 12 dcgo steps (2 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable); trace truncated)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-041-inherited0.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 19 of 24 ours / 20 dcgo steps (2 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T16:36:02.707101+00:00"
     }
   }
 }

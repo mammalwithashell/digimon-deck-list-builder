@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T15:01:05.744667+00:00",
+  "last_updated": "2026-10-05T16:36:12.522422700+00:00",
   "clauses": {
     "BT25-049#effect#0": {
       "clause_id": "BT25-049#effect#0",
@@ -8,8 +8,8 @@
       "verdict": "confirmed",
       "label": "Special Digivolution Condition",
       "text_sha256": "877731aa0d6e85e4d6cfc00284dda7d4e8e7f7a79b71b564d5da0d8d7c6f2419",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-049-effect0.yaml",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-049-effect0.yaml",
+      "recorded_at": "2026-10-05T16:36:10.444273200+00:00"
     },
     "BT25-049#effect#1": {
       "clause_id": "BT25-049#effect#1",
@@ -17,8 +17,8 @@
       "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "5a98f3b1487cdc67032daa89e6db0fe98b6b52335641779402ccc04de6068fc1",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-049-effect1.yaml",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-049-effect1.yaml",
+      "recorded_at": "2026-10-05T16:36:11.085038200+00:00"
     },
     "BT25-049#effect#2": {
       "clause_id": "BT25-049#effect#2",
@@ -26,9 +26,9 @@
       "verdict": "diverged",
       "label": "Effect",
       "text_sha256": "8ff49543bbc239b486eae586a361867a732a98a6a39fee1690cdc1ea1d14e0e9",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-049-effect2.yaml",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-049-effect2.yaml",
       "reason": "TRUNCATED, no divergence found (compared 3 of 23 ours / 3 dcgo steps (5 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "recorded_at": "2026-10-05T16:36:11.811019600+00:00"
     },
     "BT25-049#inherited#0": {
       "clause_id": "BT25-049#inherited#0",
@@ -36,9 +36,9 @@
       "verdict": "diverged",
       "label": "Inherited Effect",
       "text_sha256": "a091aedcc9003f8ace6b1900bf59c1633b08fa8951d41d2bfe13de2c31c98794",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT25-049-inherited0.yaml",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-049-inherited0.yaml",
       "reason": "TRUNCATED, no divergence found (compared 13 of 17 ours / 13 dcgo steps)",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "recorded_at": "2026-10-05T16:36:12.522422700+00:00"
     }
   }
 }

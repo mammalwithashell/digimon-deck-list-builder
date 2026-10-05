@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T13:37:57.916187400+00:00",
+  "last_updated": "2026-10-05T16:37:12.809345800+00:00",
   "clauses": {
     "BT26-036#effect#2": {
       "clause_id": "BT26-036#effect#2",
@@ -8,8 +8,8 @@
       "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "20df8b0e20c97976bb030b5eefc4224f86aa1ca14d4959621856a293d0f7f5fb",
-      "scenario_path": "D:/card-loop-iter0/ds\\BT26-036-effect2.yaml",
-      "recorded_at": "2026-10-05T13:37:57.916187400+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-036-effect2.yaml",
+      "recorded_at": "2026-10-05T16:37:12.809345800+00:00"
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T15:01:05.744667+00:00",
+  "last_updated": "2026-10-05T16:36:27.951122100+00:00",
   "clauses": {
     "BT26-070#effect#0": {
       "clause_id": "BT26-070#effect#0",
@@ -8,8 +8,8 @@
       "verdict": "confirmed",
       "label": "Special Digivolution Condition",
       "text_sha256": "877731aa0d6e85e4d6cfc00284dda7d4e8e7f7a79b71b564d5da0d8d7c6f2419",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT26-070-effect0.yaml",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-070-effect0.yaml",
+      "recorded_at": "2026-10-05T16:36:25.227975200+00:00"
     },
     "BT26-070#effect#1": {
       "clause_id": "BT26-070#effect#1",
@@ -17,8 +17,8 @@
       "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT26-070-effect1.yaml",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-070-effect1.yaml",
+      "recorded_at": "2026-10-05T16:36:25.839900200+00:00"
     },
     "BT26-070#effect#2": {
       "clause_id": "BT26-070#effect#2",
@@ -26,8 +26,8 @@
       "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "197abf1ab3df097ce3c0d53a9e6349e4292d8f678e8592868ad1f3bd26f0a789",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT26-070-effect2.yaml",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-070-effect2.yaml",
+      "recorded_at": "2026-10-05T16:36:26.496283600+00:00"
     },
     "BT26-070#effect#3": {
       "clause_id": "BT26-070#effect#3",
@@ -35,8 +35,8 @@
       "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "9d2d1bb2c6c9405fa550c48b0e94b9dc7dd58e6bfc69cd014e3f4d38230c7669",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT26-070-effect3.yaml",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-070-effect3.yaml",
+      "recorded_at": "2026-10-05T16:36:27.191300500+00:00"
     },
     "BT26-070#inherited#0": {
       "clause_id": "BT26-070#inherited#0",
@@ -44,8 +44,8 @@
       "verdict": "confirmed",
       "label": "Inherited Effect",
       "text_sha256": "9b7e9dbf46f6b4128beff354f00384ab0ef5ac56b10196ad133bfd7ac1670efa",
-      "scenario_path": "D:/card-loop-iter0/gd\\BT26-070-inherited0.yaml",
-      "recorded_at": "2026-10-05T15:01:05.744667+00:00"
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-070-inherited0.yaml",
+      "recorded_at": "2026-10-05T16:36:27.951122100+00:00"
     }
   }
 }
