@@ -1052,11 +1052,10 @@ fn exam_one(
         // Pass only the compared slice: the trailing post-final-step row in
         // `projections` was never observed by the oracle, so an `_backfilled`
         // assertion over it would claim more than DCGO confirmed.
-        let updated =
-            dcgo_harness::exam::backfill::backfill_from_diff(&text, &ours_for_diff, &report)?;
-        std::fs::write(path, updated)
-            .map_err(|e| format!("writing backfilled scenario {}: {e}", path.display()))?;
-        println!("  backfill: wrote confirmed state into {}", path.display());
+        //
+        // A refusal is reported, never propagated: the oracle verdict below is
+        // independent of whether the scenario file could be updated.
+        println!("  {}", try_backfill(path, &text, &ours_for_diff, &report));
     }
 
     // What this run established about the clause, for the verdict store: a
@@ -1092,6 +1091,27 @@ fn exam_one(
         },
         Some(event),
     ))
+}
+
+/// Write a clean oracle run's confirmed state into the scenario at `path`.
+/// Returns the line to print. Never fails the caller: a refused or failed
+/// backfill is `backfill skipped: <reason>` and the file is left untouched.
+fn try_backfill(
+    path: &Path,
+    text: &str,
+    rows: &[dcgo_harness::exam::projection::StateProjection],
+    report: &dcgo_harness::exam::differ::DiffReport,
+) -> String {
+    match dcgo_harness::exam::backfill::backfill_from_diff(text, rows, report) {
+        Ok(updated) => match std::fs::write(path, updated) {
+            Ok(()) => format!("backfill: wrote confirmed state into {}", path.display()),
+            Err(e) => format!(
+                "backfill skipped: writing backfilled scenario {}: {e}",
+                path.display()
+            ),
+        },
+        Err(reason) => format!("backfill skipped: {reason}"),
+    }
 }
 
 fn fail(message: String) -> ExamOutcome {
@@ -2298,5 +2318,61 @@ mod migrate_verdicts_guard_tests {
         // survives untouched.
         assert!(to.join("BT8-084.json").exists());
         assert!(!to.join("EX12-035.json").exists());
+    }
+}
+
+#[cfg(test)]
+mod try_backfill_tests {
+    use super::*;
+    use dcgo_harness::exam::differ::DiffReport;
+    use dcgo_harness::exam::projection::StateProjection;
+
+    const SCENARIO: &str = "card: EX12-035\nclause: EX12-035#effect#0\nseed: 1\ndecks:\n  p0: { stack: [ST1-02], rest: st1 }\n  p1: { stack: [], rest: st1 }\nsteps:\n  - actor: 0\n    do: { pass: {} }\n";
+
+    fn row(step: u32) -> StateProjection {
+        StateProjection::from_sidecar_line(&format!(
+            r#"{{"step":{step},"turn":1,"phase":"Main","memory":0,
+               "p0":{{"security":5,"hand":[],"trash":[],"field":[]}},
+               "p1":{{"security":5,"hand":[],"trash":[],"field":[]}}}}"#
+        ))
+        .unwrap()
+    }
+
+    fn report(ours_unpairable: u32) -> DiffReport {
+        DiffReport {
+            compared_steps: 1,
+            ours_steps: 1 + ours_unpairable,
+            dcgo_steps: 1,
+            ours_unpairable,
+            dcgo_unpairable: 0,
+            divergences: vec![],
+        }
+    }
+
+    #[test]
+    fn a_refused_backfill_is_reported_not_propagated_and_leaves_the_file_alone() {
+        let path = std::env::temp_dir().join("try_backfill_refused.yaml");
+        std::fs::write(&path, SCENARIO).unwrap();
+        let r = report(1);
+        assert!(r.is_clean(), "the verdict inputs are a CLEAN diff");
+
+        let line = try_backfill(&path, SCENARIO, &[row(0)], &r);
+        assert!(line.starts_with("backfill skipped: "), "got: {line}");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), SCENARIO);
+        // The clean report is untouched, so the caller still builds Confirmed.
+        assert!(r.is_clean());
+    }
+
+    #[test]
+    fn an_accepted_backfill_writes_the_file() {
+        let path = std::env::temp_dir().join("try_backfill_accepted.yaml");
+        std::fs::write(&path, SCENARIO).unwrap();
+        let line = try_backfill(&path, SCENARIO, &[row(0)], &report(0));
+        assert!(
+            line.starts_with("backfill: wrote confirmed state into"),
+            "got: {line}"
+        );
+        let written = std::fs::read_to_string(&path).unwrap();
+        assert!(written.starts_with(SCENARIO) && written.contains("_backfilled"));
     }
 }

@@ -228,7 +228,9 @@ fn splice_assertions(
         if any_assert_key {
             // Flow style (`assert: [...]`) or a value on the key line: there is
             // no item text to splice into. Refuse rather than rewrite the file.
-            return Err("refusing to backfill: `assert:` carries an inline value;                         rewrite it as a block list so the entries can be spliced                         without re-serializing the scenario"
+            return Err("refusing to backfill: `assert:` carries an inline value; \
+                        rewrite it as a block list so the entries can be spliced \
+                        without re-serializing the scenario"
                 .to_string());
         }
         let mut out = original.to_string();
@@ -486,6 +488,32 @@ steps:
         let clean = diff(&ours, &ours);
         assert!(clean.is_clean());
         assert!(backfill_from_diff(LINE, &ours, &clean).is_ok());
+    }
+
+    #[test]
+    fn backfill_refuses_when_some_of_our_rows_had_no_dcgo_partner() {
+        // A clean report with an unpaired row of ours: the oracle observed only
+        // some rows and the report cannot say which, so nothing is written.
+        let rows = compared_rows();
+        let report = DiffReport {
+            compared_steps: 1,
+            ours_steps: 2,
+            dcgo_steps: 1,
+            ours_unpairable: 1,
+            dcgo_unpairable: 0,
+            divergences: vec![],
+        };
+        assert!(report.is_clean(), "fixture must be a clean report");
+        let err = backfill_from_diff(LINE, &rows, &report).unwrap_err();
+        assert!(err.contains("no DCGO partner"), "got: {err}");
+    }
+
+    #[test]
+    fn backfill_refuses_an_inline_assert_value_with_a_readable_message() {
+        let inline = format!("{LINE}assert: []\n");
+        let err = backfill(&inline, &compared_rows()).unwrap_err();
+        assert!(err.contains("inline value"), "got: {err}");
+        assert!(!err.contains("  "), "no runs of spaces in the message: {err}");
     }
 
     #[test]
