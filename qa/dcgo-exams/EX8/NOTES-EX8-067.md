@@ -52,8 +52,9 @@ already passed it"; the code reading says the latter (selections.rs:3797-3839 in
 No row shape avoids it: `cards:` cannot resolve against our `OwnField` gate prompt
 ("card pick 'EX8-067' not found in OwnField prompt"), and `targets` / `yes` / `decline` payloads
 all hit the same trailing PASS. Budget (3 round-trips) spent; recorded `unmeasured`.
-Fix to unblock: in `resolve_next`, treat a fresh `CountCappedMultiSelect { picked: 0 }` like
-`SourceMulti { picked: 0 }` (PASS only if `picked > 0` or the row asked to stop).
+(DONE in a6a7587d3 -- see the RESOLVED entry below.) Fix to unblock: in `resolve_next`, treat a fresh
+`CountCappedMultiSelect { picked: 0 }` like `SourceMulti { picked: 0 }` (PASS only if `picked > 0` or the
+row asked to stop).
 
 ## Data note (not a clause)
 `data/card_official.json` / the bundle print Close's play cost as 3; the card image and
@@ -71,8 +72,9 @@ trash pick installs a `MultiPickStep` frame (dsl_cards/step/selections.rs:3301),
 still PASSed. The guard's unit tests park the prompt with no resume frame, so they did not catch it.
 No oracle job was emitted: the diff would only re-report the tool declining our prompt. The trash-pick
 row is already `cards: [EX8-047, BT21-055]`, so the brief's scenario fix does not apply.
-Fix to unblock (code, out of scope for the acceptance task): in `resolve_next`, require the resume-frame
-branch to also see `picked > 0` (or no fresh-prompt signal) before spending the trailing PASS.
+(DONE in a6a7587d3 -- see the RESOLVED entry below.) Fix to unblock (code, out of scope for the acceptance
+task): in `resolve_next`, require the resume-frame branch to also see `picked > 0` (or no fresh-prompt
+signal) before spending the trailing PASS.
 
 ## 2026-10-04 (later) -- RESOLVED: effect#1 confirmed (supersedes the "blocked" entry above)
 After a6a7587d3 (trailing-PASS guard holds under a MultiPickStep frame) the sim-only line completes with no
@@ -81,3 +83,10 @@ After a6a7587d3 (trailing-PASS guard holds under a MultiPickStep frame) the sim-
 -> verdict `confirmed` recorded for `EX8-067#effect#1`. Backfill skipped by design (6 sim-only rows, so the
 oracle observed only some rows). The scenario's trash-pick row was already `cards: [EX8-047, BT21-055]`; only
 its stale "KNOWN TOOLING BLOCKER" comment was replaced. EX8-067 is now 3 clauses: 3 confirmed.
+The CLEAN diff's compared rows include DCGO's post-placement rows (trash emptied into EX8-048's sources:
+EX11-038, EX8-047, BT21-055), so the placement the earlier round-trips could not reach is now observed and
+agrees.
+
+Known zoning bug: `EX8-067#effect#2` is a Security Effect that `clause_coverage` currently zones as `effect`.
+The id will change to `EX8-067#security#0` when the zoning fix lands, and this verdict (and its scenario's
+`clause:` key) must be re-keyed then.
