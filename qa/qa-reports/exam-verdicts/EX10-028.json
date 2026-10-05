@@ -19,6 +19,8 @@
       "text_sha256": "e13e6f8d4f0eba53ac204e66f741c4c64fcf53fb7fc5ebba6ef52fbb0bf169b3",
       "scenario_path": "qa/dcgo-exams/EX10/EX10-028-inherited0.yaml",
       "reason": "DIVERGED at step 26 (compared 17 of 29 ours / 24 dcgo steps (12 sim-only row(s) with no DCGO prompt + 7 DCGO intermediate row(s) not comparable))",
+      "triage": "ours_wrong",
+      "citation": "general_rule.pdf 15-8-3-2 (p.25); G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS",
       "recorded_at": "2026-10-04T13:30:26.500876600+00:00"
     }
   }

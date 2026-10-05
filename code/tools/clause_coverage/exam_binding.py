@@ -411,6 +411,8 @@ def bind(
                 "recorded_at": entry.get("recorded_at"),
                 "dcgo_build": entry.get("dcgo_build"),
                 "job_id": entry.get("job_id"),
+                "triage": entry.get("triage"),
+                "citation": entry.get("citation"),
             }
         )
 

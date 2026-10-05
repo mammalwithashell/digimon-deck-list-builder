@@ -191,6 +191,18 @@ enum Command {
         #[arg(long, default_value = "qa/qa-reports/exam-verdicts")]
         to: PathBuf,
     },
+    /// Classify a diverged exam verdict: whose bug is it?
+    VerdictTriage {
+        #[arg(long)]
+        clause: String,
+        /// ours_wrong | dcgo_quirk | undetermined
+        #[arg(long)]
+        triage: String,
+        #[arg(long)]
+        citation: Option<String>,
+        #[arg(long, default_value = "qa/qa-reports/exam-verdicts")]
+        verdicts: PathBuf,
+    },
     /// Serve the exam's agent surface over stdio (MCP, JSON-RPC 2.0).
     Mcp,
     /// Bring this machine up as an oracle node: preflight, then launch.
@@ -269,7 +281,10 @@ impl Args {
 fn needs_root(command: &Command) -> bool {
     !matches!(
         command,
-        Command::Exam { .. } | Command::MigrateVerdicts { .. } | Command::Mcp
+        Command::Exam { .. }
+            | Command::MigrateVerdicts { .. }
+            | Command::VerdictTriage { .. }
+            | Command::Mcp
     )
 }
 
@@ -552,6 +567,22 @@ fn run(args: &Args) -> Result<ExitCode, String> {
                 from.display(),
                 to.display()
             );
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::VerdictTriage { clause, triage, citation, verdicts } => {
+            use dcgo_harness::exam::verdict::{Triage, VerdictStore};
+            let class = match triage.as_str() {
+                "ours_wrong" => Triage::OursWrong,
+                "dcgo_quirk" => Triage::DcgoQuirk,
+                "undetermined" => Triage::Undetermined,
+                other => return Err(format!(
+                    "--triage must be ours_wrong | dcgo_quirk | undetermined, got `{other}`"
+                )),
+            };
+            let mut store = VerdictStore::load_dir(verdicts)?;
+            store.set_triage(clause, class, citation.clone())?;
+            store.save_dir(verdicts)?;
+            println!("verdict-triage: {clause} -> {triage}");
             Ok(ExitCode::SUCCESS)
         }
         Command::Mcp => {
@@ -2216,6 +2247,8 @@ mod migrate_verdicts_guard_tests {
             reason: None,
             dcgo_build: None,
             job_id: None,
+            triage: None,
+            citation: None,
             recorded_at: "2026-01-01T00:00:00Z".to_string(),
         });
         let from = tmp.join("dcgo_exam_verdicts.json");

@@ -75,6 +75,19 @@ impl std::fmt::Display for Verdict {
     }
 }
 
+/// Whose bug a `diverged` clause is. `general_rule.pdf` outranks DCGO, so a
+/// divergence is not automatically ours.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Triage {
+    /// Our engine is wrong; the rules or DCGO's correct behavior is cited.
+    OursWrong,
+    /// DCGO is wrong or differs only in a rules-neutral way; cited.
+    DcgoQuirk,
+    /// Not yet decided. Blocks readiness.
+    Undetermined,
+}
+
 /// One clause's exam record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClauseVerdict {
@@ -102,6 +115,13 @@ pub struct ClauseVerdict {
     /// Which harness job ran it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub job_id: Option<String>,
+    /// Whose bug a `diverged` clause is, once triaged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub triage: Option<Triage>,
+    /// Evidence for the triage class (rules section, DCGO file:line, or
+    /// gap-tracker id).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub citation: Option<String>,
     /// RFC 3339 timestamp of the recording.
     pub recorded_at: String,
 }
@@ -362,6 +382,38 @@ impl VerdictStore {
         self.clauses.insert(v.clause_id.clone(), v);
     }
 
+    /// Classify a `diverged` row. `ours_wrong` and `dcgo_quirk` need a citation
+    /// (a `general_rule.pdf` section, a DCGO `file:line`, or a gap-tracker entry
+    /// that carries one); `undetermined` does not. Marks the card dirty.
+    pub fn set_triage(
+        &mut self,
+        clause_id: &str,
+        triage: Triage,
+        citation: Option<String>,
+    ) -> Result<(), String> {
+        let citation = citation.map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
+        if matches!(triage, Triage::OursWrong | Triage::DcgoQuirk) && citation.is_none() {
+            return Err(format!(
+                "triage {triage:?} for `{clause_id}` needs --citation (rules section, \
+                 DCGO file:line, or gap-tracker id)"
+            ));
+        }
+        let row = self
+            .clauses
+            .get_mut(clause_id)
+            .ok_or_else(|| format!("no stored verdict for `{clause_id}`"))?;
+        if row.verdict != Verdict::Diverged {
+            return Err(format!(
+                "`{clause_id}` is {} -- not diverged; only a diverged row is triaged",
+                row.verdict
+            ));
+        }
+        row.triage = Some(triage);
+        row.citation = citation;
+        self.dirty.insert(row.card_id.clone());
+        Ok(())
+    }
+
     /// The stored verdict, drift or no drift. Use [`Self::get_validated`]
     /// when the answer will be trusted.
     pub fn get(&self, clause_id: &str) -> Option<&ClauseVerdict> {
@@ -599,6 +651,8 @@ pub fn record_scenario_verdict(
         reason,
         dcgo_build: None,
         job_id: None,
+        triage: None,
+        citation: None,
         recorded_at,
     });
     Ok(())
@@ -619,6 +673,8 @@ mod tests {
             reason: None,
             dcgo_build: None,
             job_id: None,
+            triage: None,
+            citation: None,
             recorded_at: "2026-08-21T00:00:00Z".to_string(),
         }
     }
@@ -991,6 +1047,8 @@ mod tests {
             reason: Some("DIVERGED at step 1".into()),
             dcgo_build: None,
             job_id: None,
+            triage: None,
+            citation: None,
             recorded_at: "2026-02-01T00:00:00Z".into(),
         });
         store.save_dir(&dir).unwrap();
@@ -1000,5 +1058,66 @@ mod tests {
         assert!(touched.contains("\"diverged\""));
         assert!(touched.contains("\r\n"), "an existing CRLF file must stay CRLF");
         assert!(!touched.replace("\r\n", "").contains('\n'), "no bare LF lines");
+    }
+
+    fn diverged_row(card: &str) -> ClauseVerdict {
+        ClauseVerdict {
+            clause_id: format!("{card}#effect#0"),
+            card_id: card.into(),
+            verdict: Verdict::Diverged,
+            label: "Effect".into(),
+            text_sha256: "abc".into(),
+            scenario_path: None,
+            reason: Some("DIVERGED at step 3".into()),
+            dcgo_build: None,
+            job_id: None,
+            triage: None,
+            citation: None,
+            recorded_at: "2026-02-01T00:00:00Z".into(),
+        }
+    }
+
+    #[test]
+    fn set_triage_records_class_and_citation_on_a_diverged_row() {
+        let mut store = VerdictStore::default();
+        store.record(diverged_row("BT6-060"));
+        store
+            .set_triage("BT6-060#effect#0", Triage::DcgoQuirk, Some("G-EXAM-REVEAL-BUCKET-ADD-TIMING".into()))
+            .unwrap();
+        let row = store.get("BT6-060#effect#0").unwrap();
+        assert_eq!(row.triage, Some(Triage::DcgoQuirk));
+        assert_eq!(row.citation.as_deref(), Some("G-EXAM-REVEAL-BUCKET-ADD-TIMING"));
+        let json = store.to_json().unwrap();
+        assert!(json.contains("\"triage\": \"dcgo_quirk\""));
+    }
+
+    #[test]
+    fn set_triage_refuses_quirk_or_ours_wrong_without_citation() {
+        let mut store = VerdictStore::default();
+        store.record(diverged_row("BT6-060"));
+        assert!(store.set_triage("BT6-060#effect#0", Triage::DcgoQuirk, None).is_err());
+        assert!(store.set_triage("BT6-060#effect#0", Triage::OursWrong, Some("  ".into())).is_err());
+        assert!(store.set_triage("BT6-060#effect#0", Triage::Undetermined, None).is_ok());
+    }
+
+    #[test]
+    fn set_triage_refuses_a_non_diverged_row() {
+        let mut store = VerdictStore::default();
+        let mut row = diverged_row("BT1-001");
+        row.verdict = Verdict::Confirmed;
+        store.record(row);
+        let err = store
+            .set_triage("BT1-001#effect#0", Triage::DcgoQuirk, Some("x".into()))
+            .unwrap_err();
+        assert!(err.contains("not diverged"), "got: {err}");
+    }
+
+    #[test]
+    fn old_rows_without_triage_still_parse() {
+        let text = r#"{"version":1,"last_updated":"x","clauses":{"BT1-001#effect#0":{
+            "clause_id":"BT1-001#effect#0","card_id":"BT1-001","verdict":"diverged",
+            "label":"Effect","text_sha256":"abc","recorded_at":"x"}}}"#;
+        let store = VerdictStore::from_json(text).unwrap();
+        assert_eq!(store.get("BT1-001#effect#0").unwrap().triage, None);
     }
 }

@@ -334,3 +334,38 @@ def test_load_verdict_store_still_reads_a_single_file(tmp_path):
         encoding="utf-8",
     )
     assert set(load_verdict_store(p)) == {"EX12-073#effect#0"}
+
+def test_bind_passes_triage_and_citation_through(tmp_path):
+    import json
+    from tools.clause_coverage.exam_binding import bind
+
+    verdicts = tmp_path / "exam-verdicts"
+    verdicts.mkdir()
+    (verdicts / "EX10-025.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "last_updated": "x",
+                "clauses": {
+                    "EX10-025#inherited#0": {
+                        "clause_id": "EX10-025#inherited#0",
+                        "card_id": "EX10-025",
+                        "verdict": "diverged",
+                        "label": "Inherited Effect",
+                        "recorded_at": "x",
+                        "triage": "ours_wrong",
+                        "citation": "general_rule.pdf 15-8-3-2",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = bind(["EX10-025"], None, verdicts)
+    row = next(
+        c for c in result["cards"]["EX10-025"]["clauses"]
+        if c["clause_id"] == "EX10-025#inherited#0"
+    )
+    assert row["verdict"] == "diverged"
+    assert row["triage"] == "ours_wrong"
+    assert row["citation"] == "general_rule.pdf 15-8-3-2"

@@ -609,6 +609,8 @@ mod tests {
                 reason: None,
                 dcgo_build: None,
                 job_id: None,
+                triage: None,
+                citation: None,
                 recorded_at: "2026-08-27T00:00:00+00:00".to_string(),
             });
         }
@@ -895,6 +897,8 @@ mod tests {
             reason: None,
             dcgo_build: None,
             job_id: None,
+            triage: None,
+            citation: None,
             recorded_at: "2026-08-20T00:00:00+00:00".to_string(),
         });
         store.save_dir(&dir.join("exam-verdicts")).unwrap();
