@@ -46,6 +46,7 @@ pub mod dcgo_pool;
 pub mod deckbook;
 pub mod differ;
 pub mod drafter;
+pub mod job_spec;
 pub mod ledger;
 pub mod lower;
 pub mod projection;
