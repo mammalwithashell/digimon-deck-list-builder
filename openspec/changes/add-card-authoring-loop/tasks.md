@@ -10,11 +10,11 @@ Groups 1–5 do not depend on the oracle-readiness plans and can proceed in para
 ## 2. Work-set resolution and preflight (independent)
 
 - [x] 2.1 Scaffold `code/tools/card_loop/` (package, `__main__.py` lazy CLI dispatcher, `config.py` defaults + TOML overrides, `contracts.py` shared stage/family/item/packet/result types); tests in `test_card_loop_skeleton.py`
-- [ ] 2.2 `workset.py`: `--cards` (ids, `@file`), `--set` via `author_set.set_resolver`, `--decklists` via the PyO3 `parse_deck`, `--archetype` via `deck_library.json` + `archetype_aliases.json` with near-miss errors; combinable; tests per spec scenario
-- [ ] 2.3 Core by `core_fraction` and ranking by greedy decklist completion (shared with, or ported from, readiness §4.8 so there is one implementation); tests including the staple-outranks-one-of scenario
-- [ ] 2.4 Generalise `tools.clause_coverage.campaign` to plan from a resolved work set (keep `--archetype` as a thin wrapper); existing campaign tests stay green
-- [ ] 2.5 Preflight checks (mirror and `cards.json` coverage, keyword gate, per-card DCGO `.cs` presence → `unavailable`, action-space hash, CLI resolution, `node status`) each with a named remedy; NO-GO blocks worker spend; tests with fixtures
-- [ ] 2.6 `plan` writes `runs/card-loop/<run-id>/plan.json` (frozen inputs, resolved pool/core/ranking, config hash); add `runs/card-loop/` to `.gitignore`
+- [x] 2.2 `workset.py`: `--cards` (ids, `@file`), `--set` via `author_set.set_resolver`, `--decklists` via the PyO3 `parse_deck`, `--archetype` via `deck_library.json` + `archetype_aliases.json` with near-miss errors; combinable; tests per spec scenario
+- [x] 2.3 Core by `core_fraction` and ranking by greedy decklist completion (shared with, or ported from, readiness §4.8 so there is one implementation); tests including the staple-outranks-one-of scenario
+- [x] 2.4 Generalise `tools.clause_coverage.campaign` to plan from a resolved work set (keep `--archetype` as a thin wrapper); existing campaign tests stay green
+- [x] 2.5 Preflight checks (mirror and `cards.json` coverage, keyword gate, per-card DCGO `.cs` presence → `unavailable`, action-space hash, CLI resolution, `node status`) each with a named remedy; NO-GO blocks worker spend; tests with fixtures
+- [x] 2.6 `plan` writes `runs/card-loop/<run-id>/plan.json` (frozen inputs, resolved pool/core/ranking, config hash); add `runs/card-loop/` to `.gitignore`
 
 ## 3. Agent CLI workers (independent)
 
@@ -28,12 +28,12 @@ Groups 1–5 do not depend on the oracle-readiness plans and can proceed in para
 
 ## 4. Attempt ledger, provenance and scorecard (independent)
 
-- [ ] 4.1 `qa/card-loop/attempts.jsonl` schema and writer; `merge=union` in `.gitattributes`; reader tolerant of unknown keys
-- [ ] 4.2 Provenance: `produced_by` on worker-produced records, `Loop-Attempt:` / `Loop-Model:` trailers on driver commits; blame-to-attempt resolver with tests
-- [ ] 4.3 Correction detectors (review reject, gate fail, blame-attributed later edit, overturned terminating verdict, escalation resolved against a call) emitting immediate/late correction events
-- [ ] 4.4 Router: per-stage defaults from config, seeded-hash exploration share (default 20%), implementer-excluded routing for interaction exams, minimum-sample + interval-separation rule before switching
-- [ ] 4.5 `card-loop report models`: per stage × model × prompt version — attempts, first-pass acceptance, immediate/late correction rates, corrected cost per unit, Wilson intervals
-- [ ] 4.6 `card-loop audit next|record`: random accepted-output sampling at a configurable rate, human verdicts stored as ground truth, reviewer-precision estimate in the report
+- [x] 4.1 `qa/card-loop/attempts.jsonl` schema and writer; `merge=union` in `.gitattributes`; reader tolerant of unknown keys
+- [x] 4.2 Provenance: `produced_by` on worker-produced records, `Loop-Attempt:` / `Loop-Model:` trailers on driver commits; blame-to-attempt resolver with tests
+- [x] 4.3 Correction detectors (review reject, gate fail, blame-attributed later edit, overturned terminating verdict, escalation resolved against a call) emitting immediate/late correction events
+- [x] 4.4 Router: per-stage defaults from config, seeded-hash exploration share (default 20%), implementer-excluded routing for interaction exams, minimum-sample + interval-separation rule before switching
+- [x] 4.5 `card-loop report models`: per stage × model × prompt version — attempts, first-pass acceptance, immediate/late correction rates, corrected cost per unit, Wilson intervals
+- [x] 4.6 `card-loop audit next|record`: random accepted-output sampling at a configurable rate, human verdicts stored as ground truth, reviewer-precision estimate in the report
 
 ## 5. Interaction schema, generators and denominator (independent)
 
@@ -69,3 +69,11 @@ Groups 1–5 do not depend on the oracle-readiness plans and can proceed in para
 - [ ] 8.2 Pilot run on one archetype (`--archetype`) end to end, including Q&A interactions; compare per-clause cost with Track A's $1.72 and record the first scorecard
 - [ ] 8.3 `docs/CARD_LOOP.md` operating manual (inputs, preflight, run/resume, escalation handling, audit, scorecard, adding a risk family); link from `docs/INDEX.md` and CLAUDE.md
 - [ ] 8.4 Resolve the design's open questions (audit rate, ruling-only adjudication without DCGO, default concurrency/budget, gating switch-on timing) and record the decisions in `design.md`
+
+## 9. Follow-ups found while building groups 2–5
+
+- [ ] 9.1 Keyword-gate false positives make every real pool NO-GO: `link` (still classed a subsystem in the DCGO keyword manifest — blocks Rocks via ST22-09), `delay`, `digi-burst up to`, `sistermon noir` (BT7). Fix the `tools.author_set` lexicon/manifest; preflight meanwhile fails the gate only for cards with no YAML spec (warn otherwise)
+- [ ] 9.2 177 cards with printed effects have no per-card DCGO `.cs` (e.g. keyword-only cards such as one carrying only `<Jamming>`). Establish how DCGO implements keyword-only cards before preflight's `.cs` presence check marks them `unavailable`
+- [ ] 9.3 Promote module-level defaults proposed by the groups into `LoopConfig`: `dcgo_root`, `node_status_timeout_s` (group 2); `corrections_path`, `audits_path` (group 4); plus any from groups 3 and 5
+- [ ] 9.4 The router's scorecard override matches the configured model alias by exact string (`sonnet`; Codex `None` pools all models) — the driver must record the configured alias in attempts, or the scorecard must normalise resolved model names
+- [ ] 9.5 Stale-on-main test `test_real_library_reproduces_the_published_toho_figures` (deck library refreshed: Toho Braves now 114 lists, test expects 45) — fails at `ad68542ee` before any card-loop change; fix in its own commit (CLAUDE.md rule 33)

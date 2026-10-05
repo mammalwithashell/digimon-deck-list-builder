@@ -145,7 +145,9 @@ A worker takes a packet and returns `{status, result, artifacts, usage}`:
 
 ### D11 — Attempt ledger, provenance and corrections
 
-`qa/card-loop/attempts.jsonl` is committed and append-only with a `merge=union` driver. One row per worker call: `{attempt_id, run_id, ts, stage, item, model, effort, prompt_version, assignment: routed|explore, outcome, usage}`.
+`qa/card-loop/attempts.jsonl` is committed and append-only with a `merge=union` driver. One row per worker call: `{attempt_id, run_id, ts, stage, item, family, model, effort, prompt_version, assignment: routed|explore|forced, outcome, usage}`.
+- `forced` marks an interaction exam routed away from the card implementer's family, outside the exploration share. If that family is unavailable the router raises rather than falling back to the implementer.
+- Corrections and human audits live beside it in `corrections.jsonl` / `audits.jsonl`, also union-merged. A correction is attributed `by_attempt`, `by_human`, or `by_gate` (a failed test gate or schema check).
 
 Provenance:
 - Every record a worker produces (YAML header comment, scenario `meta.produced_by`, verdict/triage `produced_by`) carries its `attempt_id`.

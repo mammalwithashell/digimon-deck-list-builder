@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Every worker attempt is ledgered
-The system SHALL append one row per worker call to a committed, append-only, union-merged attempt ledger recording attempt id, run id, timestamp, stage, item, model, effort, prompt version, assignment (`routed` or `explore`), outcome and usage.
+The system SHALL append one row per worker call to a committed, append-only, union-merged attempt ledger recording attempt id, run id, timestamp, stage, item, model, effort, prompt version, assignment (`routed`, `explore`, or `forced` for an interaction exam routed away from the implementer's family), outcome and usage.
 
 #### Scenario: Concurrent runs
 - **WHEN** two runs on different branches each append attempts and are merged
