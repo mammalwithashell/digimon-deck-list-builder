@@ -450,6 +450,48 @@ fn zone_card_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, Strin
     (!pairs.is_empty()).then_some(pairs)
 }
 
+/// A UnionZone prompt that includes `UnionZoneSet::MATERIAL` offers each of the
+/// owner's Digimon's NON-top digivolution cards as
+/// `encode_source_select(field_index, source_index)` — mirror of the installer
+/// in `effect_context/selections.rs`. Match by card identity; `carrier` (a
+/// battle-area index from the row's `targets:`) disambiguates two carriers
+/// holding the same card.
+fn union_zone_source_pick(
+    game: &Game,
+    owner: crate::PlayerId,
+    want: &str,
+    valid: &[u16],
+    carrier: Option<usize>,
+) -> Result<Option<u16>, String> {
+    use crate::action::space::encode_source_select;
+    let mut hits: Vec<u16> = Vec::new();
+    for (pi, perm) in game.player(owner).battle_area.iter().enumerate() {
+        if carrier.is_some_and(|c| c != pi) {
+            continue;
+        }
+        let candidates = perm.card_sources.len().saturating_sub(1);
+        for (si, src) in perm.card_sources.iter().take(candidates).enumerate() {
+            if src.card_id(&game.card_data) != want {
+                continue;
+            }
+            if let Some(id) = encode_source_select(pi as u16, si as u16) {
+                if valid.contains(&id) {
+                    hits.push(id);
+                }
+            }
+        }
+    }
+    match hits.as_slice() {
+        [] => Ok(None),
+        [one] => Ok(Some(*one)),
+        many => Err(format!(
+            "source pick '{want}' is ambiguous -- {} carriers hold it ({many:?}); \
+             name the carrier with `targets: [own.field.<i>]`",
+            many.len()
+        )),
+    }
+}
+
 /// Number of picks this payload carries (before any trailing PASS).
 pub fn payload_pick_count(payload: &SelectionRow) -> usize {
     if let Some(t) = &payload.targets {
@@ -681,7 +723,7 @@ pub fn resolve_next(
             }
         }
         let hit = match pending.kind {
-            SelectionKind::Hand | SelectionKind::UnionZone { .. } => find_id(
+            SelectionKind::Hand => find_id(
                 &zone_card_ids(&game.player(zone_owner).hand),
                 PLAY_HAND_START,
             )
@@ -691,6 +733,30 @@ pub fn resolve_next(
                     TRASH_EFFECT_START,
                 )
             }),
+            SelectionKind::UnionZone { zones } => {
+                let in_hand_or_trash = find_id(
+                    &zone_card_ids(&game.player(zone_owner).hand),
+                    PLAY_HAND_START,
+                )
+                .or_else(|| {
+                    find_id(
+                        &zone_card_ids(&game.player(zone_owner).trash),
+                        TRASH_EFFECT_START,
+                    )
+                });
+                match in_hand_or_trash {
+                    Some(id) => Some(id),
+                    None if zones.contains(crate::selection::UnionZoneSet::MATERIAL) => {
+                        let carrier = payload
+                            .targets
+                            .as_ref()
+                            .and_then(|t| t.first())
+                            .and_then(|t| usize::try_from(t.frame).ok());
+                        union_zone_source_pick(game, zone_owner, want, valid, carrier)?
+                    }
+                    None => None,
+                }
+            }
             SelectionKind::Trash => find_id(
                 &zone_card_ids(&game.player(zone_owner).trash),
                 TRASH_EFFECT_START,
@@ -1063,6 +1129,61 @@ mod tests {
             mechanic: None,
             zone: None,
         }
+    }
+
+    fn park_union_zone_material(game: &mut Game, valid_action_ids: Vec<u16>) {
+        game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::UnionZone {
+                zones: crate::selection::UnionZoneSet::MATERIAL,
+            },
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids,
+            is_optional: false,
+            prompt: "Trash 1 card from your Digimon's digivolution cards".to_string(),
+            effect_choices: None,
+            source_card: CardHandle(0),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            zone_owner: None,
+        });
+    }
+
+    #[test]
+    fn union_zone_resolves_a_digivolution_source_by_identity() {
+        use crate::action::space::encode_source_select;
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("SRC-A", "SRC-A"))
+            .add_card(make_test_card("SRC-B", "SRC-B"))
+            .add_card(make_test_card("TOP", "TOP"))
+            .memory(0)
+            .start();
+        // place_stack is bottom -> top; the top card is never a candidate.
+        runner.place_stack(0, &["SRC-A", "SRC-B", "TOP"]);
+        let a = encode_source_select(0, 0).unwrap();
+        let b = encode_source_select(0, 1).unwrap();
+        park_union_zone_material(&mut runner.game, vec![a, b]);
+        assert_eq!(resolve_next(&runner.game, &one_card_row("SRC-B"), 0), Ok(Some(b)));
+    }
+
+    #[test]
+    fn union_zone_source_pick_is_ambiguous_across_two_carriers() {
+        use crate::action::space::encode_source_select;
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("SRC", "SRC"))
+            .add_card(make_test_card("TOP1", "TOP1"))
+            .add_card(make_test_card("TOP2", "TOP2"))
+            .memory(0)
+            .start();
+        runner.place_stack(0, &["SRC", "TOP1"]);
+        runner.place_stack(0, &["SRC", "TOP2"]);
+        let x = encode_source_select(0, 0).unwrap();
+        let y = encode_source_select(1, 0).unwrap();
+        park_union_zone_material(&mut runner.game, vec![x, y]);
+        let err = resolve_next(&runner.game, &one_card_row("SRC"), 0).unwrap_err();
+        assert!(err.contains("ambiguous"), "got: {err}");
     }
 
     #[test]
