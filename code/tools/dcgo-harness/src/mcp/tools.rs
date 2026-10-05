@@ -137,6 +137,7 @@ pub fn list() -> Vec<serde_json::Value> {
                 "properties": {
                     "yaml": {"type": "string", "description": "Scenario YAML text"},
                     "sim_only": {"type": "boolean", "description": "Default true"},
+                    "inspect_step": {"type": "integer", "description": "Sim-only: also return our live prompt (kind, optional, candidates by card) and the board BEFORE this step -- works on a line that stalls or fails its asserts"},
                     "decks": {"type": "string", "description": "Deck-book JSON overriding the auto-found one"},
                     "harness_root": {"type": "string", "description": "Oracle harness root; default DCGO_HARNESS_ROOT / the player's root"},
                     "build": {"type": "string", "description": "Player build dir (preflight action-space gate)"},
@@ -235,6 +236,11 @@ pub fn bool_arg(params: &serde_json::Value, key: &str, default: bool) -> bool {
 }
 
 /// An optional integer with an explicit default.
+/// An optional non-negative integer argument.
+pub fn opt_usize_arg(params: &serde_json::Value, key: &str) -> Option<usize> {
+    arguments(params).get(key).and_then(|v| v.as_u64()).map(|n| n as usize)
+}
+
 pub fn usize_arg(params: &serde_json::Value, key: &str, default: usize) -> usize {
     arguments(params)
         .get(key)

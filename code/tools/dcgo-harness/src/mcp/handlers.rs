@@ -660,9 +660,24 @@ pub fn exam_probe(
         return Ok(value);
     }
     let decks = tools::opt_str_arg(params, "decks").map(PathBuf::from);
+    let inspect = tools::opt_usize_arg(params, "inspect_step")
+        .map(|n| crate::exam::run::inspect_one(&scratch, decks.as_deref(), n));
     let report = crate::exam::run_one(&scratch, decks.as_deref());
     let _ = std::fs::remove_file(&scratch);
-    let report = report?;
+    let report = match (report, &inspect) {
+        (Ok(r), _) => r,
+        // Introspection exists for exactly the line that does not pass: return
+        // the failure beside the inspected prompt instead of dropping both.
+        (Err(e), Some(i)) => {
+            let mut value = serde_json::json!({ "stage": "sim", "error": e, "note": SIM_ONLY_NOTE });
+            match i {
+                Ok(v) => value["inspect"] = v.clone(),
+                Err(ie) => value["inspect_error"] = serde_json::json!(ie),
+            }
+            return Ok(value);
+        }
+        (Err(e), None) => return Err(e),
+    };
 
     // No `clean` stamp here: `DiffReport::is_clean()` is false whenever
     // `dcgo_steps != compared_steps`, which is ALWAYS in sim-only (nothing
@@ -676,6 +691,11 @@ pub fn exam_probe(
         .map_err(|e| format!("serializing the diff report: {e}"))?;
     value["stage"] = serde_json::json!("sim");
     value["note"] = serde_json::json!(SIM_ONLY_NOTE);
+    match inspect {
+        Some(Ok(v)) => value["inspect"] = v,
+        Some(Err(e)) => value["inspect_error"] = serde_json::json!(e),
+        None => {}
+    }
     Ok(value)
 }
 
@@ -1271,6 +1291,18 @@ steps:
         .unwrap_err();
         assert!(err.contains("NO-GO"), "{err}");
         assert!(!store.join("exam-verdicts").exists(), "a probe never writes the verdict store");
+    }
+
+    #[test]
+    fn exam_probe_inspect_step_returns_the_live_prompt_and_board() {
+        repo_root();
+        let v = exam_probe(&json!({"arguments": {"yaml": GOOD_YAML, "inspect_step": 0}}), None)
+            .expect("probe with inspect");
+        assert_eq!(v["inspect"]["snapshot"]["step"], json!(0), "{v}");
+        assert!(v["inspect"]["projection"].is_object(), "{v}");
+        let v = exam_probe(&json!({"arguments": {"yaml": GOOD_YAML, "inspect_step": 9}}), None)
+            .expect("an out-of-range step is reported, not fatal");
+        assert!(v["inspect_error"].as_str().unwrap_or("").contains("out of range"), "{v}");
     }
 
     #[test]

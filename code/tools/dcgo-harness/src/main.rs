@@ -143,6 +143,10 @@ enum Command {
         /// decides the prompt's shape on the oracle side.
         #[arg(long)]
         explain_selects: bool,
+        /// Print our live prompt (kind, optional, candidates by card) and the
+        /// board BEFORE step N of each scenario, as JSON. Sim-only.
+        #[arg(long, requires = "sim_only")]
+        inspect: Option<usize>,
         /// On a CLEAN oracle diff, write the confirmed state into the scenario's
         /// `assert:` block (rows marked `_backfilled`). Oracle mode only.
         #[arg(long)]
@@ -491,6 +495,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             oracle,
             build,
             oracle_timeout,
+            ..
         } if *oracle => run_oracle(
             args.root.as_deref(),
             scenario,
@@ -515,6 +520,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             emit_job,
             all_diffs,
             explain_selects,
+            inspect,
             backfill,
             ..
         } => run_exam(
@@ -529,6 +535,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             emit_job.as_deref(),
             *all_diffs,
             *explain_selects,
+            *inspect,
             *backfill,
         ),
         Command::Build {
@@ -793,6 +800,7 @@ fn run_exam(
     emit_job: Option<&Path>,
     all_diffs: bool,
     explain_selects: bool,
+    inspect: Option<usize>,
     backfill: bool,
 ) -> Result<ExitCode, String> {
     use dcgo_harness::exam::oracle::VerdictRecorder;
@@ -882,6 +890,7 @@ fn run_exam(
             emit_job,
             all_diffs,
             explain_selects,
+            inspect,
             backfill,
             &mut lowered,
             &mut ran,
@@ -978,6 +987,7 @@ fn exam_one(
     emit_job: Option<&Path>,
     all_diffs: bool,
     explain_selects: bool,
+    inspect: Option<usize>,
     backfill: bool,
     lowered: &mut u32,
     ran: &mut u32,
@@ -1045,6 +1055,16 @@ fn exam_one(
                 src.kind,
                 src.prompt
             );
+        }
+    }
+
+    if let Some(n) = inspect {
+        match dcgo_harness::exam::run::inspect_payload(&run, n) {
+            Ok(v) => println!(
+                "{}",
+                serde_json::to_string_pretty(&v).map_err(|e| e.to_string())?
+            ),
+            Err(e) => println!("  inspect: {e}"),
         }
     }
 
@@ -1476,6 +1496,12 @@ mod oracle_cli_tests {
             assert!(parse(&a).is_err(), "--oracle with {other:?} must be refused");
         }
         assert!(parse(&["--build", "b"]).is_err(), "--build is an --oracle flag");
+    }
+
+    #[test]
+    fn inspect_is_a_sim_only_flag() {
+        assert!(parse(&["--sim-only", "--inspect", "3"]).is_ok());
+        assert!(parse(&["--inspect", "3"]).is_err(), "--inspect needs --sim-only");
     }
 
     #[test]
