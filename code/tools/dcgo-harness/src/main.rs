@@ -144,6 +144,10 @@ enum Command {
         /// decides the prompt's shape on the oracle side.
         #[arg(long)]
         explain_selects: bool,
+        /// On a CLEAN oracle diff, write the confirmed state into the scenario's
+        /// `assert:` block (rows marked `_backfilled`). Oracle mode only.
+        #[arg(long)]
+        backfill: bool,
     },
     /// Build a standalone DCGO player and stamp its manifest.
     Build {
@@ -201,6 +205,18 @@ enum Command {
         /// Destination directory for per-card files.
         #[arg(long, default_value = "qa/qa-reports/exam-verdicts")]
         to: PathBuf,
+    },
+    /// Classify a diverged exam verdict: whose bug is it?
+    VerdictTriage {
+        #[arg(long)]
+        clause: String,
+        /// ours_wrong | dcgo_quirk | undetermined
+        #[arg(long)]
+        triage: String,
+        #[arg(long)]
+        citation: Option<String>,
+        #[arg(long, default_value = "qa/qa-reports/exam-verdicts")]
+        verdicts: PathBuf,
     },
     /// Serve the exam's agent surface over stdio (MCP, JSON-RPC 2.0).
     Mcp,
@@ -280,7 +296,10 @@ impl Args {
 fn needs_root(command: &Command) -> bool {
     !matches!(
         command,
-        Command::Exam { .. } | Command::MigrateVerdicts { .. } | Command::Mcp
+        Command::Exam { .. }
+            | Command::MigrateVerdicts { .. }
+            | Command::VerdictTriage { .. }
+            | Command::Mcp
     )
 }
 
@@ -455,6 +474,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             emit_job,
             all_diffs,
             explain_selects,
+            backfill,
         } => run_exam(
             scenario,
             *sim_only,
@@ -467,6 +487,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             emit_job.as_deref(),
             *all_diffs,
             *explain_selects,
+            *backfill,
         ),
         Command::Build {
             unity,
@@ -569,6 +590,22 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             );
             Ok(ExitCode::SUCCESS)
         }
+        Command::VerdictTriage { clause, triage, citation, verdicts } => {
+            use dcgo_harness::exam::verdict::{Triage, VerdictStore};
+            let class = match triage.as_str() {
+                "ours_wrong" => Triage::OursWrong,
+                "dcgo_quirk" => Triage::DcgoQuirk,
+                "undetermined" => Triage::Undetermined,
+                other => return Err(format!(
+                    "--triage must be ours_wrong | dcgo_quirk | undetermined, got `{other}`"
+                )),
+            };
+            let mut store = VerdictStore::load_dir(verdicts)?;
+            store.set_triage(clause, class, citation.clone())?;
+            store.save_dir(verdicts)?;
+            println!("verdict-triage: {clause} -> {triage}");
+            Ok(ExitCode::SUCCESS)
+        }
         Command::Mcp => {
             dcgo_harness::mcp::serve(args.root.clone())?;
             Ok(ExitCode::SUCCESS)
@@ -641,6 +678,7 @@ fn run_exam(
     emit_job: Option<&Path>,
     all_diffs: bool,
     explain_selects: bool,
+    backfill: bool,
 ) -> Result<ExitCode, String> {
     use dcgo_harness::exam::verdict::{ClauseTextBook, InteractionBook, VerdictStore};
 
@@ -651,6 +689,9 @@ fn run_exam(
              to an assertion-only run would report oracle agreement nobody measured."
                 .to_string(),
         );
+    }
+    if backfill && sim_only {
+        return Err("--backfill needs an oracle run (--sidecar); sim-only confirms nothing".into());
     }
     if emit_job.is_some() && !sim_only {
         return Err(
@@ -727,6 +768,7 @@ fn run_exam(
             emit_job,
             all_diffs,
             explain_selects,
+            backfill,
             &mut lowered,
             &mut ran,
             &mut diffed,
@@ -868,6 +910,7 @@ fn exam_one(
     emit_job: Option<&Path>,
     all_diffs: bool,
     explain_selects: bool,
+    backfill: bool,
     lowered: &mut u32,
     ran: &mut u32,
     diffed: &mut u32,
@@ -1073,6 +1116,17 @@ fn exam_one(
         println!("  {report}");
     }
 
+    if backfill && report.is_clean() {
+        // Our rows equal DCGO's on every compared field when the diff is clean.
+        // Pass only the compared slice: the trailing post-final-step row in
+        // `projections` was never observed by the oracle, so an `_backfilled`
+        // assertion over it would claim more than DCGO confirmed.
+        //
+        // A refusal is reported, never propagated: the oracle verdict below is
+        // independent of whether the scenario file could be updated.
+        println!("  {}", try_backfill(path, &text, &ours_for_diff, &report));
+    }
+
     // What this run established about the clause, for the verdict store: a
     // CLEAN oracle diff confirms, anything else (divergence or truncation)
     // is a finding to triage. A Q&A exam additionally needs our engine to
@@ -1135,6 +1189,27 @@ fn ruling_leg(
         failures.len()
     );
     Some(agrees)
+}
+
+/// Write a clean oracle run's confirmed state into the scenario at `path`.
+/// Returns the line to print. Never fails the caller: a refused or failed
+/// backfill is `backfill skipped: <reason>` and the file is left untouched.
+fn try_backfill(
+    path: &Path,
+    text: &str,
+    rows: &[dcgo_harness::exam::projection::StateProjection],
+    report: &dcgo_harness::exam::differ::DiffReport,
+) -> String {
+    match dcgo_harness::exam::backfill::backfill_from_diff(text, rows, report) {
+        Ok(updated) => match std::fs::write(path, updated) {
+            Ok(()) => format!("backfill: wrote confirmed state into {}", path.display()),
+            Err(e) => format!(
+                "backfill skipped: writing backfilled scenario {}: {e}",
+                path.display()
+            ),
+        },
+        Err(reason) => format!("backfill skipped: {reason}"),
+    }
 }
 
 fn fail(message: String) -> ExamOutcome {
@@ -2400,6 +2475,8 @@ mod migrate_verdicts_guard_tests {
             reason: None,
             dcgo_build: None,
             job_id: None,
+            triage: None,
+            citation: None,
             recorded_at: "2026-01-01T00:00:00Z".to_string(),
         });
         let from = tmp.join("dcgo_exam_verdicts.json");
@@ -2425,5 +2502,61 @@ mod migrate_verdicts_guard_tests {
         // survives untouched.
         assert!(to.join("BT8-084.json").exists());
         assert!(!to.join("EX12-035.json").exists());
+    }
+}
+
+#[cfg(test)]
+mod try_backfill_tests {
+    use super::*;
+    use dcgo_harness::exam::differ::DiffReport;
+    use dcgo_harness::exam::projection::StateProjection;
+
+    const SCENARIO: &str = "card: EX12-035\nclause: EX12-035#effect#0\nseed: 1\ndecks:\n  p0: { stack: [ST1-02], rest: st1 }\n  p1: { stack: [], rest: st1 }\nsteps:\n  - actor: 0\n    do: { pass: {} }\n";
+
+    fn row(step: u32) -> StateProjection {
+        StateProjection::from_sidecar_line(&format!(
+            r#"{{"step":{step},"turn":1,"phase":"Main","memory":0,
+               "p0":{{"security":5,"hand":[],"trash":[],"field":[]}},
+               "p1":{{"security":5,"hand":[],"trash":[],"field":[]}}}}"#
+        ))
+        .unwrap()
+    }
+
+    fn report(ours_unpairable: u32) -> DiffReport {
+        DiffReport {
+            compared_steps: 1,
+            ours_steps: 1 + ours_unpairable,
+            dcgo_steps: 1,
+            ours_unpairable,
+            dcgo_unpairable: 0,
+            divergences: vec![],
+        }
+    }
+
+    #[test]
+    fn a_refused_backfill_is_reported_not_propagated_and_leaves_the_file_alone() {
+        let path = std::env::temp_dir().join("try_backfill_refused.yaml");
+        std::fs::write(&path, SCENARIO).unwrap();
+        let r = report(1);
+        assert!(r.is_clean(), "the verdict inputs are a CLEAN diff");
+
+        let line = try_backfill(&path, SCENARIO, &[row(0)], &r);
+        assert!(line.starts_with("backfill skipped: "), "got: {line}");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), SCENARIO);
+        // The clean report is untouched, so the caller still builds Confirmed.
+        assert!(r.is_clean());
+    }
+
+    #[test]
+    fn an_accepted_backfill_writes_the_file() {
+        let path = std::env::temp_dir().join("try_backfill_accepted.yaml");
+        std::fs::write(&path, SCENARIO).unwrap();
+        let line = try_backfill(&path, SCENARIO, &[row(0)], &report(0));
+        assert!(
+            line.starts_with("backfill: wrote confirmed state into"),
+            "got: {line}"
+        );
+        let written = std::fs::read_to_string(&path).unwrap();
+        assert!(written.starts_with(SCENARIO) && written.contains("_backfilled"));
     }
 }

@@ -38,7 +38,7 @@
 //! unit of a file, which is what keeps disjoint fleet writers merge-clean, and
 //! the loader refuses two copies of one interaction that disagree.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -85,6 +85,19 @@ impl std::fmt::Display for Verdict {
     }
 }
 
+/// Whose bug a `diverged` clause is. `general_rule.pdf` outranks DCGO, so a
+/// divergence is not automatically ours.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Triage {
+    /// Our engine is wrong; the rules or DCGO's correct behavior is cited.
+    OursWrong,
+    /// DCGO is wrong or differs only in a rules-neutral way; cited.
+    DcgoQuirk,
+    /// Not yet decided. Blocks readiness.
+    Undetermined,
+}
+
 /// One clause's exam record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClauseVerdict {
@@ -112,6 +125,13 @@ pub struct ClauseVerdict {
     /// Which harness job ran it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub job_id: Option<String>,
+    /// Whose bug a `diverged` clause is, once triaged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub triage: Option<Triage>,
+    /// Evidence for the triage class (rules section, DCGO file:line, or
+    /// gap-tracker id).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub citation: Option<String>,
     /// RFC 3339 timestamp of the recording.
     pub recorded_at: String,
 }
@@ -210,6 +230,9 @@ pub struct VerdictStore {
     interactions: BTreeMap<String, InteractionVerdict>,
     #[serde(skip)]
     current_text_shas: BTreeMap<String, String>,
+    /// Card ids whose rows changed since load; `save_dir` writes only these.
+    #[serde(skip)]
+    dirty: BTreeSet<String>,
 }
 
 impl Default for VerdictStore {
@@ -220,6 +243,7 @@ impl Default for VerdictStore {
             clauses: BTreeMap::new(),
             interactions: BTreeMap::new(),
             current_text_shas: BTreeMap::new(),
+            dirty: BTreeSet::new(),
         }
     }
 }
@@ -249,6 +273,14 @@ impl VerdictStore {
         }
         let mut text = self.to_json()?;
         text.push('\n');
+        // Keep the file's existing line endings: core.autocrlf checkouts hold
+        // CRLF, and an LF rewrite shows up as a modified file for no reason.
+        let existing_crlf = std::fs::read(path)
+            .map(|b| b.windows(2).any(|w| w == b"\r\n"))
+            .unwrap_or(false);
+        if existing_crlf {
+            text = text.replace('\n', "\r\n");
+        }
         std::fs::write(path, text)
             .map_err(|e| format!("failed to write verdict store {}: {e}", path.display()))
     }
@@ -371,7 +403,12 @@ impl VerdictStore {
         }
 
         for (card_id, per) in by_card.iter() {
-            per.save(&dir.join(card_file_name(card_id)))?;
+            let file = dir.join(card_file_name(card_id));
+            // Only cards whose rows changed this run are rewritten; a file that
+            // does not exist yet is always written.
+            if self.dirty.contains(card_id) || !file.exists() {
+                per.save(&file)?;
+            }
         }
 
         // Prune files for cards we no longer carry.
@@ -462,10 +499,43 @@ impl VerdictStore {
         Ok(store)
     }
 
-    /// Insert or replace one clause's verdict.
+    /// Insert or replace one clause's verdict, marking its card file dirty.
     pub fn record(&mut self, v: ClauseVerdict) {
         self.last_updated = v.recorded_at.clone();
+        self.dirty.insert(v.card_id.clone());
         self.clauses.insert(v.clause_id.clone(), v);
+    }
+
+    /// Classify a `diverged` row. `ours_wrong` and `dcgo_quirk` need a citation
+    /// (a `general_rule.pdf` section, a DCGO `file:line`, or a gap-tracker entry
+    /// that carries one); `undetermined` does not. Marks the card dirty.
+    pub fn set_triage(
+        &mut self,
+        clause_id: &str,
+        triage: Triage,
+        citation: Option<String>,
+    ) -> Result<(), String> {
+        let citation = citation.map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
+        if matches!(triage, Triage::OursWrong | Triage::DcgoQuirk) && citation.is_none() {
+            return Err(format!(
+                "triage {triage:?} for `{clause_id}` needs --citation (rules section, \
+                 DCGO file:line, or gap-tracker id)"
+            ));
+        }
+        let row = self
+            .clauses
+            .get_mut(clause_id)
+            .ok_or_else(|| format!("no stored verdict for `{clause_id}`"))?;
+        if row.verdict != Verdict::Diverged {
+            return Err(format!(
+                "`{clause_id}` is {} -- not diverged; only a diverged row is triaged",
+                row.verdict
+            ));
+        }
+        row.triage = Some(triage);
+        row.citation = citation;
+        self.dirty.insert(row.card_id.clone());
+        Ok(())
     }
 
     /// The stored verdict, drift or no drift. Use [`Self::get_validated`]
@@ -625,6 +695,10 @@ pub struct ClauseText {
 
 #[derive(Debug, Deserialize)]
 struct ClauseTextFile {
+    /// Cards the extract covered -- including those with zero clauses, which
+    /// the `clauses` list alone cannot show.
+    #[serde(default)]
+    cards: Vec<String>,
     clauses: Vec<ClauseText>,
 }
 
@@ -639,6 +713,9 @@ struct ClauseTextFile {
 #[derive(Debug, Clone)]
 pub struct ClauseTextBook {
     by_id: BTreeMap<String, ClauseText>,
+    /// Every card the book covers: the file's `cards` list plus the card
+    /// prefix of every clause id.
+    cards: std::collections::BTreeSet<String>,
     source: String,
 }
 
@@ -653,13 +730,23 @@ impl ClauseTextBook {
         let file: ClauseTextFile = serde_json::from_str(text)
             .map_err(|e| format!("invalid clause-text JSON ({source}): {e}"))?;
         let mut by_id = BTreeMap::new();
+        let mut cards: std::collections::BTreeSet<String> = file.cards.into_iter().collect();
         for c in file.clauses {
+            if let Some(card) = c.id.split('#').next() {
+                cards.insert(card.to_string());
+            }
             by_id.insert(c.id.clone(), c);
         }
         Ok(ClauseTextBook {
             by_id,
+            cards,
             source: source.to_string(),
         })
+    }
+
+    /// True when the book's extract covered this card (even with zero clauses).
+    pub fn has_card(&self, card_id: &str) -> bool {
+        self.cards.contains(card_id)
     }
 
     pub fn get(&self, clause_id: &str) -> Option<&ClauseText> {
@@ -761,6 +848,8 @@ pub fn record_scenario_verdict(
         reason,
         dcgo_build: None,
         job_id: None,
+        triage: None,
+        citation: None,
         recorded_at,
     });
     Ok(())
@@ -988,6 +1077,8 @@ mod tests {
             reason: None,
             dcgo_build: None,
             job_id: None,
+            triage: None,
+            citation: None,
             recorded_at: "2026-08-21T00:00:00Z".to_string(),
         }
     }
@@ -1116,6 +1207,25 @@ mod tests {
             book.clause_ids(),
             vec!["ST1-12#effect#0".to_string(), "ST1-12#security#0".to_string()]
         );
+    }
+
+    #[test]
+    fn book_knows_zero_clause_cards() {
+        let book = ClauseTextBook::from_json(
+            r#"{"cards":["BT1-009","ST1-07"],"clauses":[{"id":"ST1-07#inherited#0","label":"Inherited Effect","text":"x"}]}"#,
+            "t",
+        )
+        .unwrap();
+        assert!(book.has_card("BT1-009"));
+        assert!(book.has_card("ST1-07"));
+        assert!(!book.has_card("EX10-025"));
+    }
+
+    #[test]
+    fn book_without_a_cards_array_still_knows_the_cards_of_its_clauses() {
+        let book = ClauseTextBook::from_json(EXTRACT_JSON, "t").unwrap();
+        assert!(book.has_card("ST1-12"));
+        assert!(!book.has_card("ST1-13"));
     }
 
     #[test]
@@ -1331,6 +1441,108 @@ mod tests {
             assert_eq!(after.recorded_at, before.recorded_at);
         }
     }
+
+    #[test]
+    fn save_dir_rewrites_only_touched_cards_and_keeps_crlf() {
+        let dir = std::env::temp_dir().join("verdict-dirty-only-test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let row = |card: &str| {
+            format!(
+                "{{\r\n  \"version\": 1,\r\n  \"last_updated\": \"2026-01-01T00:00:00Z\",\r\n  \
+                 \"clauses\": {{\r\n    \"{card}#effect#0\": {{\r\n      \"clause_id\": \"{card}#effect#0\",\r\n      \
+                 \"card_id\": \"{card}\",\r\n      \"verdict\": \"confirmed\",\r\n      \"label\": \"Effect\",\r\n      \
+                 \"text_sha256\": \"abc\",\r\n      \"recorded_at\": \"2026-01-01T00:00:00Z\"\r\n    }}\r\n  }}\r\n}}\r\n"
+            )
+        };
+        std::fs::write(dir.join("BT1-001.json"), row("BT1-001")).unwrap();
+        std::fs::write(dir.join("BT1-002.json"), row("BT1-002")).unwrap();
+        let untouched_before = std::fs::read(dir.join("BT1-002.json")).unwrap();
+
+        let mut store = VerdictStore::load_dir(&dir).unwrap();
+        store.record(ClauseVerdict {
+            clause_id: "BT1-001#effect#0".into(),
+            card_id: "BT1-001".into(),
+            verdict: Verdict::Diverged,
+            label: "Effect".into(),
+            text_sha256: "abc".into(),
+            scenario_path: None,
+            reason: Some("DIVERGED at step 1".into()),
+            dcgo_build: None,
+            job_id: None,
+            triage: None,
+            citation: None,
+            recorded_at: "2026-02-01T00:00:00Z".into(),
+        });
+        store.save_dir(&dir).unwrap();
+
+        assert_eq!(std::fs::read(dir.join("BT1-002.json")).unwrap(), untouched_before);
+        let touched = std::fs::read_to_string(dir.join("BT1-001.json")).unwrap();
+        assert!(touched.contains("\"diverged\""));
+        assert!(touched.contains("\r\n"), "an existing CRLF file must stay CRLF");
+        assert!(!touched.replace("\r\n", "").contains('\n'), "no bare LF lines");
+    }
+
+    fn diverged_row(card: &str) -> ClauseVerdict {
+        ClauseVerdict {
+            clause_id: format!("{card}#effect#0"),
+            card_id: card.into(),
+            verdict: Verdict::Diverged,
+            label: "Effect".into(),
+            text_sha256: "abc".into(),
+            scenario_path: None,
+            reason: Some("DIVERGED at step 3".into()),
+            dcgo_build: None,
+            job_id: None,
+            triage: None,
+            citation: None,
+            recorded_at: "2026-02-01T00:00:00Z".into(),
+        }
+    }
+
+    #[test]
+    fn set_triage_records_class_and_citation_on_a_diverged_row() {
+        let mut store = VerdictStore::default();
+        store.record(diverged_row("BT6-060"));
+        store
+            .set_triage("BT6-060#effect#0", Triage::DcgoQuirk, Some("G-EXAM-REVEAL-BUCKET-ADD-TIMING".into()))
+            .unwrap();
+        let row = store.get("BT6-060#effect#0").unwrap();
+        assert_eq!(row.triage, Some(Triage::DcgoQuirk));
+        assert_eq!(row.citation.as_deref(), Some("G-EXAM-REVEAL-BUCKET-ADD-TIMING"));
+        let json = store.to_json().unwrap();
+        assert!(json.contains("\"triage\": \"dcgo_quirk\""));
+    }
+
+    #[test]
+    fn set_triage_refuses_quirk_or_ours_wrong_without_citation() {
+        let mut store = VerdictStore::default();
+        store.record(diverged_row("BT6-060"));
+        assert!(store.set_triage("BT6-060#effect#0", Triage::DcgoQuirk, None).is_err());
+        assert!(store.set_triage("BT6-060#effect#0", Triage::OursWrong, Some("  ".into())).is_err());
+        assert!(store.set_triage("BT6-060#effect#0", Triage::Undetermined, None).is_ok());
+    }
+
+    #[test]
+    fn set_triage_refuses_a_non_diverged_row() {
+        let mut store = VerdictStore::default();
+        let mut row = diverged_row("BT1-001");
+        row.verdict = Verdict::Confirmed;
+        store.record(row);
+        let err = store
+            .set_triage("BT1-001#effect#0", Triage::DcgoQuirk, Some("x".into()))
+            .unwrap_err();
+        assert!(err.contains("not diverged"), "got: {err}");
+    }
+
+    #[test]
+    fn old_rows_without_triage_still_parse() {
+        let text = r#"{"version":1,"last_updated":"x","clauses":{"BT1-001#effect#0":{
+            "clause_id":"BT1-001#effect#0","card_id":"BT1-001","verdict":"diverged",
+            "label":"Effect","text_sha256":"abc","recorded_at":"x"}}}"#;
+        let store = VerdictStore::from_json(text).unwrap();
+        assert_eq!(store.get("BT1-001#effect#0").unwrap().triage, None);
+    }
 }
 
 #[cfg(test)]
@@ -1350,6 +1562,8 @@ mod interaction_store_tests {
             dcgo_build: None,
             job_id: None,
             recorded_at: "2026-10-01T00:00:00Z".to_string(),
+            triage: None,
+            citation: None,
         }
     }
 

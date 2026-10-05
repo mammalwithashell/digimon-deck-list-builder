@@ -81,16 +81,46 @@ pub fn backfill_from_diff(
             report.denominator()
         ));
     }
-    backfill(scenario_yaml, confirmed)
+    // Honesty rule: an `_backfilled` assertion may encode only state DCGO
+    // actually observed. The caller's rows can be longer than what the differ
+    // compared -- our trace carries a trailing post-final-step row that DCGO's
+    // pre-decision trace never has a partner for -- so cut to the compared
+    // prefix and never write the rest.
+    if report.ours_unpairable > 0 {
+        return Err(format!(
+            "refusing to backfill: {} of our rows had no DCGO partner (sim-only \
+             steps), so the oracle observed only some of the rows and which ones \
+             cannot be told from the report ({}).",
+            report.ours_unpairable,
+            report.denominator()
+        ));
+    }
+    let compared = report.compared_steps as usize;
+    if confirmed.len() < compared {
+        return Err(format!(
+            "refusing to backfill: the report compared {compared} step(s) but only \
+             {} confirmed row(s) were supplied, so the rows do not match what the \
+             oracle compared.",
+            confirmed.len()
+        ));
+    }
+    backfill(scenario_yaml, &confirmed[..compared])
 }
 
 /// Write `confirmed` into the scenario's `assert:` block and return the new
 /// YAML.
 ///
+/// `confirmed` must be exactly the oracle-observed decision points: one row
+/// for each step `0..steps` (the position before each scripted step). A row at
+/// step `steps` or later is the trailing post-final-step state, which DCGO's
+/// pre-decision trace never observes, so it is refused rather than written.
+///
 /// Idempotent: previously generated assertions are replaced, not appended to.
-/// Hand-authored assertions are left exactly as they were.
+/// Everything else in the scenario text -- comments, `decks:`, `steps:`, and
+/// hand-authored assertions -- is preserved byte-for-byte: only the generated
+/// assertion entries are spliced.
 pub fn backfill(scenario_yaml: &str, confirmed: &[StateProjection]) -> Result<String, String> {
-    let mut scenario = Scenario::from_yaml(scenario_yaml)?;
+    let scenario = Scenario::from_yaml(scenario_yaml)?;
     let steps = scenario.steps.len() as u32;
 
     if confirmed.is_empty() {
@@ -99,12 +129,12 @@ pub fn backfill(scenario_yaml: &str, confirmed: &[StateProjection]) -> Result<St
             .to_string());
     }
 
-    // A row for a step the line does not have cannot be asserted -- and
-    // `Scenario::validate` would reject the `at:` we would write for it.
-    if let Some(bad) = confirmed.iter().find(|p| p.step > steps) {
+    // A row at or past `steps` is the trailing state no oracle row covers.
+    if let Some(bad) = confirmed.iter().find(|p| p.step >= steps) {
         return Err(format!(
-            "refusing to backfill: confirmed state names step {} but the line is \
-             {steps} steps long",
+            "refusing to backfill: confirmed state names step {} but the oracle only \
+             observes the {steps} decision point(s) 0..{steps}; the post-final-step \
+             state was never compared against DCGO",
             bad.step
         ));
     }
@@ -118,10 +148,10 @@ pub fn backfill(scenario_yaml: &str, confirmed: &[StateProjection]) -> Result<St
             .to_string());
     }
 
-    // Coverage: every step of the line must have been projected. This is the
-    // truncation half of "the diff was not clean", and it is the only half
-    // this entry point can see without a `DiffReport`.
-    let missing: Vec<u32> = (1..=steps).filter(|s| !seen.contains(s)).collect();
+    // Coverage: every decision point of the line must have been projected.
+    // This is the truncation half of "the diff was not clean", and it is the
+    // only half this entry point can see without a `DiffReport`.
+    let missing: Vec<u32> = (0..steps).filter(|s| !seen.contains(s)).collect();
     if !missing.is_empty() {
         return Err(format!(
             "refusing to backfill: the confirmed state does not cover step(s) \
@@ -130,19 +160,14 @@ pub fn backfill(scenario_yaml: &str, confirmed: &[StateProjection]) -> Result<St
         ));
     }
 
-    // Drop what we generated last time; keep what a human wrote.
-    scenario
-        .assertions
-        .retain(|a| !a.that.contains_key(GENERATED_MARKER));
-
     let mut rows: Vec<&StateProjection> = confirmed.iter().collect();
     rows.sort_by_key(|p| p.step);
+    let mut generated = Vec::with_capacity(rows.len());
     for row in rows {
-        scenario.assertions.push(assertion_for(row)?);
+        generated.push(assertion_for(row)?);
     }
 
-    let text = serde_yml::to_string(&scenario)
-        .map_err(|e| format!("failed to re-serialize the backfilled scenario: {e}"))?;
+    let text = splice_assertions(scenario_yaml, &generated)?;
 
     // Round-trip guard: a backfilled scenario that no longer parses is worse
     // than no backfill, because the failure would surface later as a missing
@@ -150,6 +175,154 @@ pub fn backfill(scenario_yaml: &str, confirmed: &[StateProjection]) -> Result<St
     Scenario::from_yaml(&text).map_err(|e| format!("backfilled scenario no longer parses: {e}"))?;
 
     Ok(text)
+}
+
+fn is_blank_or_comment(line: &str) -> bool {
+    let t = line.trim();
+    t.is_empty() || t.starts_with('#')
+}
+
+fn indent_of(line: &str) -> usize {
+    line.len() - line.trim_start_matches(' ').len()
+}
+
+/// Replace only the generated assertion entries inside the original text.
+///
+/// The top-level `assert:` section runs from its key line to the next
+/// top-level key (a column-0 line that is not a `-` item, comment or blank) or
+/// EOF. Hand-authored entries stay as their original text; entries carrying
+/// [`GENERATED_MARKER`] are dropped and the freshly serialized ones appended
+/// after them. Absent a section, one is appended at EOF.
+fn splice_assertions(
+    original: &str,
+    generated: &[Assertion],
+) -> Result<String, String> {
+    let crlf = original.contains("\r\n");
+    let lines: Vec<&str> = original.split_inclusive('\n').collect();
+    let strip = |l: &str| l.trim_end_matches(['\r', '\n']).to_string();
+
+    let new_block = |indent: usize| -> Result<String, String> {
+        let body = serde_yml::to_string(&generated.to_vec())
+            .map_err(|e| format!("failed to serialize the generated assertions: {e}"))?;
+        let pad = " ".repeat(indent);
+        let mut out = String::new();
+        for l in body.lines() {
+            if l.is_empty() {
+                out.push('\n');
+            } else {
+                out.push_str(&pad);
+                out.push_str(l);
+                out.push_str(if crlf { "\r\n" } else { "\n" });
+            }
+        }
+        Ok(out)
+    };
+
+    let key_idx = lines.iter().position(|l| {
+        let s = strip(l);
+        s == "assert:" || (s.starts_with("assert:") && s["assert:".len()..].trim_start().starts_with('#'))
+    });
+    let any_assert_key = lines.iter().any(|l| l.starts_with("assert:"));
+
+    let Some(key_idx) = key_idx else {
+        if any_assert_key {
+            // Flow style (`assert: [...]`) or a value on the key line: there is
+            // no item text to splice into. Refuse rather than rewrite the file.
+            return Err("refusing to backfill: `assert:` carries an inline value; \
+                        rewrite it as a block list so the entries can be spliced \
+                        without re-serializing the scenario"
+                .to_string());
+        }
+        let mut out = original.to_string();
+        if !out.is_empty() && !out.ends_with('\n') {
+            out.push_str(if crlf { "\r\n" } else { "\n" });
+        }
+        out.push_str(if crlf { "assert:\r\n" } else { "assert:\n" });
+        out.push_str(&new_block(0)?);
+        return Ok(out);
+    };
+
+    // End of the section: next column-0 key line, then walk back over trailing
+    // blank/comment lines, which belong to whatever follows.
+    let mut end = lines.len();
+    for (i, l) in lines.iter().enumerate().skip(key_idx + 1) {
+        let s = strip(l);
+        if !s.is_empty() && !s.starts_with(' ') && !s.starts_with('#') && !s.starts_with('-') {
+            end = i;
+            break;
+        }
+    }
+    while end > key_idx + 1 && is_blank_or_comment(&strip(lines[end - 1])) {
+        end -= 1;
+    }
+
+    let body = &lines[key_idx + 1..end];
+    let item_indent = body
+        .iter()
+        .map(|l| strip(l))
+        .find(|s| !is_blank_or_comment(s) && s.trim_start().starts_with('-'))
+        .map(|s| indent_of(&s))
+        .unwrap_or(2);
+    let is_item_start = |l: &str| {
+        let s = strip(l);
+        indent_of(&s) == item_indent && (s.trim_start() == "-" || s.trim_start().starts_with("- "))
+    };
+
+    // Group into items; blank/comment lines directly before an item start join
+    // that item, so a human's comment above their assertion stays with it.
+    let mut groups: Vec<Vec<&str>> = Vec::new();
+    let mut pending: Vec<&str> = Vec::new();
+    for l in body {
+        if is_item_start(l) {
+            let mut g = std::mem::take(&mut pending);
+            g.push(l);
+            groups.push(g);
+        } else if is_blank_or_comment(&strip(l)) {
+            pending.push(l);
+        } else {
+            // Continuation of the current item (preceded by any pending lines).
+            match groups.last_mut() {
+                Some(g) => {
+                    g.append(&mut pending);
+                    g.push(l);
+                }
+                None => pending.push(l),
+            }
+        }
+    }
+    // Lines before the first item that are not comments stay verbatim.
+    let preamble = pending;
+
+    let mut out = String::new();
+    for l in &lines[..=key_idx] {
+        out.push_str(l);
+    }
+    // The key line must end in a newline before anything is appended.
+    if !out.ends_with('\n') {
+        out.push_str(if crlf { "\r\n" } else { "\n" });
+    }
+    for l in preamble {
+        out.push_str(l);
+    }
+    for g in &groups {
+        let text: String = g.concat();
+        let is_generated = {
+            let parsed: Vec<Assertion> = serde_yml::from_str(&text)
+                .map_err(|e| format!("could not read an existing assertion entry: {e}"))?;
+            parsed.iter().any(|a| a.that.contains_key(GENERATED_MARKER))
+        };
+        if !is_generated {
+            out.push_str(&text);
+            if !text.ends_with('\n') {
+                out.push_str(if crlf { "\r\n" } else { "\n" });
+            }
+        }
+    }
+    out.push_str(&new_block(item_indent)?);
+    for l in &lines[end..] {
+        out.push_str(l);
+    }
+    Ok(out)
 }
 
 /// One generated assertion: the whole projected board at that step.
@@ -211,7 +384,14 @@ steps:
         .unwrap()
     }
 
-    /// Every step of the line, plus the initial state at step 0.
+    /// The oracle-observed decision points of the 2-step line: the position
+    /// before each step (steps 0 and 1).
+    fn compared_rows() -> Vec<StateProjection> {
+        vec![row(0, 0), row(1, -3)]
+    }
+
+    /// What `exam_one` actually holds: the compared rows plus the trailing
+    /// post-final-step state (step 2) that DCGO never observes.
     fn full_run() -> Vec<StateProjection> {
         vec![row(0, 0), row(1, -3), row(2, 3)]
     }
@@ -224,13 +404,13 @@ steps:
     }
 
     #[test]
-    fn backfill_writes_assertions_for_every_step() {
-        let out = backfill(LINE, &full_run()).expect("a complete clean run should backfill");
+    fn backfill_writes_assertions_for_every_compared_step() {
+        let out = backfill(LINE, &compared_rows()).expect("a complete clean run should backfill");
         let s = Scenario::from_yaml(&out).expect("the result must still parse");
 
         let gen = generated(&s);
         let ats: Vec<u32> = gen.iter().map(|a| a.at).collect();
-        assert_eq!(ats, vec![0, 1, 2], "one assertion per projected step");
+        assert_eq!(ats, vec![0, 1], "one assertion per compared step");
 
         // The values are the observed ones, not placeholders.
         let step1 = gen.iter().find(|a| a.at == 1).unwrap();
@@ -251,11 +431,35 @@ steps:
     }
 
     #[test]
+    fn a_trailing_row_beyond_the_compared_steps_is_not_written() {
+        // `exam_one`'s projections carry a post-final-step row (step 2) that
+        // DCGO's pre-decision trace never observes.
+        let ours = full_run();
+        let observed = compared_rows();
+        let report = diff(&observed, &observed);
+        assert!(report.is_clean());
+        assert_eq!(report.compared_steps, 2);
+
+        let out = backfill_from_diff(LINE, &ours, &report).expect("clean run backfills");
+        let s = Scenario::from_yaml(&out).unwrap();
+        let ats: Vec<u32> = generated(&s).iter().map(|a| a.at).collect();
+        assert_eq!(
+            ats,
+            vec![0, 1],
+            "the unobserved trailing step must not be asserted"
+        );
+
+        // And the low-level entry point refuses the trailing row outright.
+        let err = backfill(LINE, &ours).unwrap_err();
+        assert!(err.contains("step 2"), "got: {err}");
+    }
+
+    #[test]
     fn backfill_refuses_when_the_diff_was_not_clean() {
         // Backfilling a diverged run would bake DCGO's disagreement in as our
         // expected value and make the scenario pass forever.
-        let ours = full_run();
-        let mut dcgo = full_run();
+        let ours = compared_rows();
+        let mut dcgo = compared_rows();
         dcgo[1] = row(1, 99);
         let report = diff(&ours, &dcgo);
         assert!(!report.is_clean(), "fixture must actually diverge");
@@ -265,7 +469,7 @@ steps:
         assert!(err.contains("step 1"), "got: {err}");
 
         // A truncated run is refused too: it has no divergences either, and
-        // "we got through 1 of 3 steps" must not read as "all 3 agreed".
+        // "we got through 1 of 2 steps" must not read as "all agreed".
         let truncated = diff(&ours, &ours[..1]);
         assert!(truncated.divergences.is_empty());
         let err = backfill_from_diff(LINE, &ours, &truncated).unwrap_err();
@@ -273,8 +477,8 @@ steps:
 
         // And the report-free entry point still refuses the truncation shape
         // it CAN see on its own: a confirmed set that misses a step.
-        let err = backfill(LINE, &ours[..2]).unwrap_err();
-        assert!(err.contains('2'), "the missing step must be named: {err}");
+        let err = backfill(LINE, &ours[..1]).unwrap_err();
+        assert!(err.contains('1'), "the missing step must be named: {err}");
 
         // Nothing at all is not a pass either.
         assert!(backfill(LINE, &[]).is_err());
@@ -287,9 +491,49 @@ steps:
     }
 
     #[test]
+    fn backfill_refuses_when_some_of_our_rows_had_no_dcgo_partner() {
+        // A clean report with an unpaired row of ours: the oracle observed only
+        // some rows and the report cannot say which, so nothing is written.
+        let rows = compared_rows();
+        let report = DiffReport {
+            compared_steps: 1,
+            ours_steps: 2,
+            dcgo_steps: 1,
+            ours_unpairable: 1,
+            dcgo_unpairable: 0,
+            divergences: vec![],
+        };
+        assert!(report.is_clean(), "fixture must be a clean report");
+        let err = backfill_from_diff(LINE, &rows, &report).unwrap_err();
+        assert!(err.contains("no DCGO partner"), "got: {err}");
+    }
+
+    #[test]
+    fn backfill_refuses_an_inline_assert_value_with_a_readable_message() {
+        let inline = format!("{LINE}assert: []\n");
+        let err = backfill(&inline, &compared_rows()).unwrap_err();
+        assert!(err.contains("inline value"), "got: {err}");
+        assert!(!err.contains("  "), "no runs of spaces in the message: {err}");
+    }
+
+    #[test]
+    fn backfill_refuses_when_the_rows_do_not_match_the_compared_count() {
+        // The report compared 2 steps but the caller handed over only 1 row.
+        let observed = compared_rows();
+        let report = diff(&observed, &observed);
+        assert_eq!(report.compared_steps, 2);
+        let err = backfill_from_diff(LINE, &observed[..1], &report).unwrap_err();
+        assert!(err.contains("do not match"), "got: {err}");
+
+        // Rows that skip a decision point are refused by the coverage check.
+        let gap = vec![row(0, 0), row(5, 1)];
+        assert!(backfill(LINE, &gap).is_err());
+    }
+
+    #[test]
     fn backfill_preserves_hand_authored_assertions_it_did_not_generate() {
-        let authored = format!("{LINE}assert:\n  - at: 2\n    that: {{ p0.memory: 3 }}\n");
-        let out = backfill(&authored, &full_run()).unwrap();
+        let authored = format!("{LINE}assert:\n  - at: 1\n    that: {{ p0.memory: 3 }}\n");
+        let out = backfill(&authored, &compared_rows()).unwrap();
         let s = Scenario::from_yaml(&out).unwrap();
 
         let hand: Vec<&Assertion> = s
@@ -298,39 +542,70 @@ steps:
             .filter(|a| !a.that.contains_key(GENERATED_MARKER))
             .collect();
         assert_eq!(hand.len(), 1, "the hand-authored assertion must survive");
-        assert_eq!(hand[0].at, 2);
+        assert_eq!(hand[0].at, 1);
         assert_eq!(
             hand[0].that.get("p0.memory").unwrap(),
             &Value::Number(3.into()),
             "and must survive UNTOUCHED -- backfill owns only what it marked"
         );
-        assert_eq!(generated(&s).len(), 3);
+        assert_eq!(generated(&s).len(), 2);
+        // The hand-authored entry is still the original text, verbatim.
+        assert!(
+            out.contains("  - at: 1\n    that: { p0.memory: 3 }\n"),
+            "got:\n{out}"
+        );
+    }
+
+    #[test]
+    fn backfill_keeps_the_scenario_text_and_only_adds_the_assert_block() {
+        let commented = format!("# header comment\n# second line\n{LINE}");
+        let out = backfill(&commented, &compared_rows()).unwrap();
+        assert!(
+            out.starts_with(&commented),
+            "everything before the new block must be byte-for-byte the original"
+        );
+        assert!(out[commented.len()..].starts_with("assert:\n"));
+
+        // With an existing assert section followed by another key, only the
+        // generated entries change; header, steps, decks, the hand entry and
+        // the trailing key are untouched.
+        let with_tail = format!(
+            "# top\n{LINE}assert:\n  # why\n  - at: 1\n    that: {{ p0.memory: 3 }}\nnotes: keep me\n"
+        );
+        let out = backfill(&with_tail, &compared_rows()).unwrap();
+        let head = with_tail.split("assert:").next().unwrap();
+        assert!(out.starts_with(head));
+        assert!(out.contains("  # why\n  - at: 1\n    that: { p0.memory: 3 }\n"));
+        assert!(out.ends_with("notes: keep me\n"));
+        let s = Scenario::from_yaml(&out.replace("notes: keep me\n", "")).unwrap();
+        assert_eq!(generated(&s).len(), 2);
     }
 
     #[test]
     fn backfill_is_idempotent() {
         // Running it twice must not accumulate duplicate `at:` entries.
-        let once = backfill(LINE, &full_run()).unwrap();
-        let twice = backfill(&once, &full_run()).unwrap();
+        let once = backfill(LINE, &compared_rows()).unwrap();
+        let twice = backfill(&once, &compared_rows()).unwrap();
         assert_eq!(once, twice, "a second backfill must be a no-op");
 
         let s = Scenario::from_yaml(&twice).unwrap();
-        assert_eq!(generated(&s).len(), 3, "no duplicated generated entries");
+        assert_eq!(generated(&s).len(), 2, "no duplicated generated entries");
 
         // Idempotent even with a hand-authored assertion in the file, and even
         // when the observed state CHANGED: the second run replaces the
         // generated block rather than appending a second copy of it.
-        let authored = format!("{LINE}assert:\n  - at: 2\n    that: {{ p0.memory: 3 }}\n");
-        let a1 = backfill(&authored, &full_run()).unwrap();
-        let mut changed = full_run();
-        changed[2] = row(2, 7);
+        let authored = format!("{LINE}assert:\n  - at: 1\n    that: {{ p0.memory: 3 }}\n");
+        let a1 = backfill(&authored, &compared_rows()).unwrap();
+        assert_eq!(a1, backfill(&a1, &compared_rows()).unwrap());
+        let mut changed = compared_rows();
+        changed[1] = row(1, 7);
         let a2 = backfill(&a1, &changed).unwrap();
         let s = Scenario::from_yaml(&a2).unwrap();
-        assert_eq!(generated(&s).len(), 3);
+        assert_eq!(generated(&s).len(), 2);
         assert_eq!(
             generated(&s)
                 .iter()
-                .find(|a| a.at == 2)
+                .find(|a| a.at == 1)
                 .unwrap()
                 .that
                 .get("memory")
@@ -351,7 +626,7 @@ steps:
         // Security is a COUNT in the projection precisely because contents are
         // hidden information; an assertion over them would encode knowledge no
         // player has.
-        let out = backfill(LINE, &full_run()).unwrap();
+        let out = backfill(LINE, &compared_rows()).unwrap();
         let s = Scenario::from_yaml(&out).unwrap();
         for a in generated(&s) {
             for (key, value) in &a.that {

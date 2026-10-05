@@ -708,6 +708,11 @@ def bind(
                 "recorded_at": entry.get("recorded_at"),
                 "dcgo_build": entry.get("dcgo_build"),
                 "job_id": entry.get("job_id"),
+                # Triage adjudicates a divergence; only the FINAL verdict counts, so
+                # a row downgraded to `unmeasured` (text drift, unrecognized stored
+                # verdict) must not carry a stale adjudication.
+                "triage": entry.get("triage") if verdict == "diverged" else None,
+                "citation": entry.get("citation") if verdict == "diverged" else None,
             }
         )
 

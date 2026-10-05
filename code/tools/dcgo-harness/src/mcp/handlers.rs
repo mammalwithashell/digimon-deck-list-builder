@@ -62,6 +62,52 @@ fn load_clause_book(path: &Path, store: &mut VerdictStore) -> Result<ClauseTextB
     Ok(book)
 }
 
+/// Extract and merge any requested card the clause-text book has never seen,
+/// so plan/status never report "0 outstanding" for an unknown card (a card
+/// absent from the book has no clause ids, hence an empty denominator).
+///
+/// Returns the ids extracted this call. An unreadable book is NOT handled here
+/// -- the caller's `load_clause_book` reports it, and extracting into a book
+/// that cannot be read would create one the caller never asked for.
+fn ensure_cards_in_book(book_path: &Path, cards: &[String]) -> Result<Vec<String>, String> {
+    let Ok(book) = ClauseTextBook::load(book_path) else {
+        return Ok(vec![]);
+    };
+    let mut missing: Vec<String> = Vec::new();
+    for c in cards {
+        if !book.has_card(c) && !missing.contains(c) {
+            missing.push(c.clone());
+        }
+    }
+    if missing.is_empty() {
+        return Ok(vec![]);
+    }
+    if let Some(bad) = missing.iter().find(|c| c.starts_with('-')) {
+        return Err(format!("{bad:?} is not a card id"));
+    }
+    let mut args = vec![
+        "-m".to_string(),
+        "tools.clause_coverage.book".to_string(),
+        "add".to_string(),
+        "--book".to_string(),
+        book_path.display().to_string(),
+        "--card-ids".to_string(),
+    ];
+    args.extend(missing.iter().cloned());
+    let out = std::process::Command::new("python")
+        .args(&args)
+        .env("PYTHONPATH", "code")
+        .output()
+        .map_err(|e| format!("running clause extraction for {missing:?}: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "clause extraction failed for {missing:?}: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    Ok(missing)
+}
+
 /// The card id a clause id belongs to: the part before the first `#`.
 fn clause_card_id(clause_id: &str) -> &str {
     clause_id.split('#').next().unwrap_or(clause_id)
@@ -121,6 +167,7 @@ pub fn exam_status(
     let cards = requested_cards(params)?;
     let mut store = VerdictStore::load_dir(&verdicts_dir(root))?;
     let book_path = clause_text_json_path(params);
+    let extracted = ensure_cards_in_book(&book_path, &cards)?;
 
     match load_clause_book(&book_path, &mut store) {
         Ok(book) => {
@@ -147,6 +194,7 @@ pub fn exam_status(
                 // CURRENT text (see `exam::verdict`'s module docs on drift).
                 "invalidated_by_text_drift": sum.invalidated,
                 "denominator_source": format!("clause-text book: {}", book_path.display()),
+                "extracted_now": extracted,
             }))
         }
         Err(reason) => {
@@ -193,6 +241,7 @@ pub fn exam_plan(
     let limit = tools::usize_arg(params, "limit", DEFAULT_LIMIT);
     let mut store = VerdictStore::load_dir(&verdicts_dir(root))?;
     let book_path = clause_text_json_path(params);
+    let extracted = ensure_cards_in_book(&book_path, &cards)?;
 
     let (outstanding, total_outstanding, denominator_source) =
         match load_clause_book(&book_path, &mut store) {
@@ -282,6 +331,7 @@ pub fn exam_plan(
         "outstanding_total": total_outstanding,
         "elided": total_outstanding.saturating_sub(returned),
         "denominator_source": denominator_source,
+        "extracted_now": extracted,
     }))
 }
 
@@ -582,14 +632,16 @@ pub fn node_health(
     params: &serde_json::Value,
     root: Option<&Path>,
 ) -> Result<serde_json::Value, String> {
-    let root = root
+    let root_buf = root
         .map(|r| r.to_path_buf())
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
+        .or_else(crate::node::default_harness_root)
+        .ok_or("no harness root: set DCGO_HARNESS_ROOT (the MCP's --root also relocates the verdict and claim stores, so it is not a substitute)")?;
+    let root = root_buf.as_path();
     let build = tools::opt_str_arg(params, "build").map(std::path::PathBuf::from);
 
     // node::health never fails -- a node that cannot answer must produce a
     // readable report, not an error string.
-    let h = crate::node::health(&root, build.as_deref());
+    let h = crate::node::health(root, build.as_deref());
     Ok(serde_json::json!({
         "go": h.go,
         "checks": h.checks.iter().map(|c| serde_json::json!({
@@ -646,6 +698,8 @@ mod tests {
                 reason: None,
                 dcgo_build: None,
                 job_id: None,
+                triage: None,
+                citation: None,
                 recorded_at: "2026-08-27T00:00:00+00:00".to_string(),
             });
         }
@@ -932,6 +986,8 @@ mod tests {
             reason: None,
             dcgo_build: None,
             job_id: None,
+            triage: None,
+            citation: None,
             recorded_at: "2026-08-20T00:00:00+00:00".to_string(),
         });
         store.save_dir(&dir.join("exam-verdicts")).unwrap();

@@ -4446,6 +4446,30 @@ to security before the trash play). Fix direction: scope the inline drain to tri
 enqueued by the in-flight effect. Tests tolerate the interleave
 (bt26_075 `decline_ascension_if_pending`).
 
+**Update (2026-10-04, oracle evidence) — the inline drain itself is the defect, not only its
+reach to sibling triggers.** Scoping the drain to newly-enqueued triggers is NOT enough: even the
+trashed card's OWN "when effects trash this card from digivolution cards" trigger must wait until
+the trashing effect finishes. `general_rule.pdf` §15-8-3-2 (p.25): "Trigger-type effects can't
+activate during the processing for a rule or effect." DCGO agrees
+(`ITrashDigivolutionCards.TrashDigivolutionCards()` stacks the trigger via
+`AutoProcessing.StackSkillInfos(hashtable, OnDigivolutionCardDiscarded)`; it resolves after the
+trashing effect). Oracle measurement: exam `EX10-025#inherited#0`
+(`qa/dcgo-exams/EX10/EX10-025-inherited0.yaml`, DCGO build scripted-v17) — Landramon EX10-028's
+[When Digivolving] trashes Sunarizamon EX10-025 from its sources; DCGO finishes Landramon's
+"gains <Reboot>/<Blocker>/+3000 DP" before Sunarizamon's inherited delete, we resolve the delete
+first (`p0.field[0].dp: ours=4000 dcgo=8000` at step 16). Same order-not-outcome defect earlier
+in `qa/dcgo-exams/P/NOTES-P-180.md` (LadyDevimon BT25-083 as the trasher, proposed id
+G-ENGINE-SOURCE-TRASH-TRIGGER-RESOLVES-MID-EFFECT, never filed — folded in here).
+Root cause is deliberate: `game_actions/mod.rs` (`fire_digivolution_card_trashed`, ~L2017, and the
+batch path ~L3031) inline-drains "intentionally" so that
+`ex10_036_clause_a_after_source_trash_prompts_opp_field_delete` passes — a sim-only behavioral
+test that encodes the rules-wrong order. Reach: every Rocks/Mineral Digimon's inherited clause
+(the archetype's shared "trashed from sources → delete/De-Digivolve" line) diverges on order until
+this is fixed. Fix direction: route source-trash observers through the normal pending queue
+(§15-8-3-2), re-derive Magneticdramon EX10-036's clause interaction from its DCGO C# and the
+oracle instead of the sim test, and drop the `G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION`
+park in `dsl_cards/step/mod.rs` once nothing drains inline.
+
 ## G-ENGINE-SELF-TRASHED-FROM-HAND — RESOLVED (2026-10-03, BT26-069 Dobermon)
 
 "When this card is trashed from the hand, …" (DCGO `CanTriggerOnTrashSelfHand`) had no

@@ -1,6 +1,6 @@
 {
   "generated_at": "2026-09-13T07:58:14.783202+00:00",
-  "source": "--card-ids (38 explicit ids) + three-musketeers-1 (60 explicit ids, additive merge 2026-09-13); 24 'Security Effect' ids moved to the security zone (2026-10-03)",
+  "source": "--card-ids (38 explicit ids) + three-musketeers-1 (60 explicit ids, additive merge 2026-09-13); 24 'Security Effect' ids moved to the security zone (2026-10-03) + book add EX10-025, EX10-028, EX8-067",
   "cards": [
     "BT11-089",
     "BT8-097",
@@ -99,7 +99,10 @@
     "P-180",
     "P-198",
     "P-212",
-    "ST13-08"
+    "ST13-08",
+    "EX10-025",
+    "EX10-028",
+    "EX8-067"
   ],
   "clauses": [
     {
@@ -5043,18 +5046,113 @@
       "text": "Players can't reduce play costs.",
       "source": "bundle",
       "image_path": null
+    },
+    {
+      "id": "EX10-025#effect#0",
+      "card_id": "EX10-025",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "You may place 2 cards with the [Mineral] or [Rock] trait from your trash as 1 of your [Mineral] or [Rock] trait Digimon's bottom digivolution cards. (Rule) Trait: Has [Mineral] Type.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX10-025#inherited#0",
+      "card_id": "EX10-025",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX10-028#effect#0",
+      "card_id": "EX10-028",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By trashing any 1 card with the [Mineral] or [Rock] trait from your Digimon's digivolution cards, 1 of your Digimon with the [Mineral] or [Rock] trait gains ＜Reboot＞, ＜Blocker＞ and +3000 DP until your opponent's turn ends.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX10-028#inherited#0",
+      "card_id": "EX10-028",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX8-067#effect#0",
+      "card_id": "EX8-067",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Turn"
+      ],
+      "keyword": null,
+      "text": "If you have 2 or less memory, set it to 3.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX8-067#effect#1",
+      "card_id": "EX8-067",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your Digimon digivolve into a [Mineral] or [Rock] trait Digimon, by suspending this Tamer, place up to 2 cards with the [Mineral] or [Rock] trait from your trash as that Digimon's bottom digivolution cards.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX8-067#security#0",
+      "card_id": "EX8-067",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
     }
   ],
   "denominator": {
-    "total_clauses": 361,
-    "total_cards": 98,
+    "total_clauses": 368,
+    "total_cards": 101,
     "by_zone": {
-      "effect": 290,
-      "inherited": 43,
-      "security": 28
+      "effect": 294,
+      "inherited": 45,
+      "security": 29
     },
     "by_source": {
-      "bundle": 259,
+      "bundle": 266,
       "cards_json": 98,
       "image-required": 4
     },
