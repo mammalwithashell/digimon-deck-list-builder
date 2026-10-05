@@ -1,0 +1,59 @@
+# ST9-04 ExVeemon — blue Lv.4, Mythical Dragon, Free. Mirror of ST9-09 Stingmon
+# (same self cost-reduction shape with blue/green swapped).
+#
+# Printed text (official Bandai DB, data/card_bundles/ST9-04.md; card face checked):
+#   When you would play this card from your hand, if you have a green Digimon in
+#   play, reduce its play cost by 1.
+#   Inherited: [When Attacking] If you have a green Digimon in play, this Digimon
+#   gets +1000 DP for the turn.
+#
+# DCGO ST9_04.cs: ChangeCostClass (in hand, owner has a Digimon whose top card is
+# green, root = Hand, this card only) -1; OnAllyAttack inherited, gated on the same
+# green check, ChangeDigimonDP(+1000, UntilEachTurnEnd) on this permanent.
+# Official Q&A: the carrier itself being green satisfies the check.
+card: ST9-04
+name: ExVeemon
+kind: digimon
+level: 4
+color: [blue]
+cost: 4
+dp: 4000
+traits: [Mythical Dragon]
+form: Champion
+attribute: Free
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        color_is: green
+    amount: 1
+    summary: "Play cost -1 when you have a green Digimon in play"
+
+  - scope: inherited
+    when: when_attacking
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        color_is: green
+    optional: false
+    summary: "[Inherited][When Attacking] If you have a green Digimon in play, +1000 DP for the turn"
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 1000
+          expiry: end_of_turn
