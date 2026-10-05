@@ -38,7 +38,13 @@ steps:
     do: { play: { card: ST23-13, from: hand } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { yes: true } }
+    do: { select: { yes: true, sim_only: true } }
+  # DCGO asks this ST23-13 "you may" as SetIntSelection (Yes=1 / No=2) on the
+  # generic_int channel, not as an OptionalSkill (ST23_13.cs SharedActivateCoroutine,
+  # optional: false), so its answer rides a separate dcgo_only row.
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -49,7 +55,13 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
-    do: { select: { yes: true } }
+    do: { select: { yes: true, sim_only: true } }
+  # DCGO asks this ST23-13 "you may" as SetIntSelection (Yes=1 / No=2) on the
+  # generic_int channel, not as an OptionalSkill (ST23_13.cs SharedActivateCoroutine,
+  # optional: false), so its answer rides a separate dcgo_only row.
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
   - actor: 0
     do: { play: { card: ST23-10, from: hand } }
     expect: { prompt: main_phase }
@@ -63,7 +75,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 7
+  - at: 8
     that:
       p0.memory: 3
       p0.hand: [BT25-032, BT25-046, BT25-049, BT9-103, ST23-10]
@@ -72,7 +84,7 @@ assert:
           dp: -1
           suspended: false
           sources: [ST23-03, ST23-04]
-  - at: 10
+  - at: 12
     that:
       turn: 3
       p0.memory: 0

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T16:36:21.993344300+00:00",
+  "last_updated": "2026-10-05T18:07:23.397990700+00:00",
   "clauses": {
     "BT25-090#effect#0": {
       "clause_id": "BT25-090#effect#0",
@@ -28,8 +28,8 @@
       "label": "Effect",
       "text_sha256": "0eb0a485c2af893f03bf76d2aa431a45930404ef0dbc2756bb3debfa8c260148",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-090-effect2.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 2 of 21 ours / 2 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T16:36:21.374301+00:00"
+      "reason": "TRUNCATED, no divergence found (compared 6 of 24 ours / 8 dcgo steps (7 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T18:07:23.397990700+00:00"
     },
     "BT25-090#security#0": {
       "clause_id": "BT25-090#security#0",

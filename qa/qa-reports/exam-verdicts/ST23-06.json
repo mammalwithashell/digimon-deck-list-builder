@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T16:36:48.703227400+00:00",
+  "last_updated": "2026-10-05T18:07:28.743795300+00:00",
   "clauses": {
     "ST23-06#effect#0": {
       "clause_id": "ST23-06#effect#0",
@@ -18,8 +18,8 @@
       "label": "Effect",
       "text_sha256": "9ad29ae1e711f080768506f827ed5a6caa5d3dd8f2f3ac69fb9187c587b7fc86",
       "scenario_path": "qa/dcgo-exams/ST23/ST23-06-effect1.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 3 of 14 ours / 3 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T16:36:47.344951900+00:00"
+      "reason": "DIVERGED at step 9 (compared 11 of 16 ours / 13 dcgo steps (5 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T18:07:28.128462900+00:00"
     },
     "ST23-06#effect#2": {
       "clause_id": "ST23-06#effect#2",
@@ -28,8 +28,8 @@
       "label": "Effect",
       "text_sha256": "e904265c0f51e71be639a3e7f3a6418a4112b1356343938aa9d757660b50e13b",
       "scenario_path": "qa/dcgo-exams/ST23/ST23-06-effect2.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 2 of 13 ours / 2 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T16:36:47.986964400+00:00"
+      "reason": "DIVERGED at step 11 (compared 10 of 15 ours / 12 dcgo steps (5 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T18:07:28.743795300+00:00"
     },
     "ST23-06#inherited#0": {
       "clause_id": "ST23-06#inherited#0",

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T16:36:42.941182700+00:00",
+  "last_updated": "2026-10-05T18:07:27.465317400+00:00",
   "clauses": {
     "ST23-03#effect#0": {
       "clause_id": "ST23-03#effect#0",
@@ -27,8 +27,8 @@
       "label": "Effect",
       "text_sha256": "9022368f95a8dc4934abf1dba223dc7c57f0547880c348dc7ffbe15f4de851de",
       "scenario_path": "qa/dcgo-exams/ST23/ST23-03-effect2.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 3 of 20 ours / 3 dcgo steps (2 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T16:36:42.231001100+00:00"
+      "reason": "DIVERGED at step 9 (compared 12 of 22 ours / 14 dcgo steps (6 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable); trace truncated)",
+      "recorded_at": "2026-10-05T18:07:27.465317400+00:00"
     },
     "ST23-03#inherited#0": {
       "clause_id": "ST23-03#inherited#0",

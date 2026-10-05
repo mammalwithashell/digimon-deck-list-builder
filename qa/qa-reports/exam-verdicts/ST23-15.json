@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T16:37:12.205542500+00:00",
+  "last_updated": "2026-10-05T18:07:37.327641800+00:00",
   "clauses": {
     "ST23-15#effect#0": {
       "clause_id": "ST23-15#effect#0",
@@ -9,8 +9,8 @@
       "label": "Effect",
       "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
       "scenario_path": "qa/dcgo-exams/ST23/ST23-15-effect0.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 6 of 11 ours / 6 dcgo steps (2 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T16:37:10.088407+00:00"
+      "reason": "TRUNCATED, no divergence found (compared 6 of 12 ours / 6 dcgo steps (4 sim-only row(s) with no DCGO prompt))",
+      "recorded_at": "2026-10-05T18:07:35.890522800+00:00"
     },
     "ST23-15#effect#1": {
       "clause_id": "ST23-15#effect#1",
@@ -19,8 +19,8 @@
       "label": "Effect",
       "text_sha256": "cf93c12eebdcbf4e8c49493a41037894f118595926af3429fe4e29fcf803bf1e",
       "scenario_path": "qa/dcgo-exams/ST23/ST23-15-effect1.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 2 of 11 ours / 2 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T16:37:10.772520400+00:00"
+      "reason": "TRUNCATED, no divergence found (compared 6 of 13 ours / 8 dcgo steps (5 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T18:07:36.576098500+00:00"
     },
     "ST23-15#effect#2": {
       "clause_id": "ST23-15#effect#2",
@@ -29,8 +29,8 @@
       "label": "Effect",
       "text_sha256": "004dbba1623100ff8e565b29cbd45141cc49c63f3ef724276bd736904008bcfd",
       "scenario_path": "qa/dcgo-exams/ST23/ST23-15-effect2.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 2 of 18 ours / 2 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T16:37:11.564562900+00:00"
+      "reason": "TRUNCATED, no divergence found (compared 6 of 21 ours / 8 dcgo steps (7 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T18:07:37.327641800+00:00"
     },
     "ST23-15#security#0": {
       "clause_id": "ST23-15#security#0",

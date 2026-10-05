@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T16:35:59.188702900+00:00",
+  "last_updated": "2026-10-05T18:07:19.295499900+00:00",
   "clauses": {
     "BT25-035#effect#0": {
       "clause_id": "BT25-035#effect#0",
@@ -18,8 +18,8 @@
       "label": "Effect",
       "text_sha256": "d23a1a3a56737928d8331388e923995e55ee3868b9ee138cf10e8884618ea69d",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-035-effect1.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 3 of 22 ours / 3 dcgo steps (3 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T16:35:58.439454700+00:00"
+      "reason": "DIVERGED at step 10 (compared 12 of 24 ours / 14 dcgo steps (7 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable); trace truncated)",
+      "recorded_at": "2026-10-05T18:07:19.295499900+00:00"
     },
     "BT25-035#inherited#0": {
       "clause_id": "BT25-035#inherited#0",

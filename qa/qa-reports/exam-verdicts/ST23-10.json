@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T16:37:00.928476600+00:00",
+  "last_updated": "2026-10-05T18:07:30.011593600+00:00",
   "clauses": {
     "ST23-10#effect#0": {
       "clause_id": "ST23-10#effect#0",
@@ -14,12 +14,11 @@
     "ST23-10#effect#1": {
       "clause_id": "ST23-10#effect#1",
       "card_id": "ST23-10",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "301d85df362ef9deeb5d1d7620ff13478d8f15b52f0dee2467c1c603fd6b41d9",
       "scenario_path": "qa/dcgo-exams/ST23/ST23-10-effect1.yaml",
-      "reason": "TRUNCATED, no divergence found (compared 2 of 11 ours / 2 dcgo steps)",
-      "recorded_at": "2026-10-05T16:37:00.259554100+00:00"
+      "recorded_at": "2026-10-05T18:07:30.011593600+00:00"
     },
     "ST23-10#inherited#0": {
       "clause_id": "ST23-10#inherited#0",
