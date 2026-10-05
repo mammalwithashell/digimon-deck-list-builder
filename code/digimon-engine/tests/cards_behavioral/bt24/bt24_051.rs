@@ -209,6 +209,108 @@ fn bt24_051_opt_unsuspends_one_own_digimon_and_auras_grant_rush_piercing() {
     assert!(!runner.game.players[0].battle_area[ally.index as usize].is_suspended);
 }
 
+/// G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING. The [WD][WA][OPT] unsuspend
+/// folds its "you may" into the first pick (no outer confirm). Declining that
+/// pick declines the ACTIVATION (§15-9-2), and §15-14-1 counts activations —
+/// so the once-per-turn use is NOT spent and a later [When Attacking] in the
+/// same turn offers the unsuspend again.
+#[test]
+fn bt24_051_declined_opt_unsuspend_does_not_spend_once_per_turn() {
+    let mut runner = merukimon_runner()
+        .add_card(own_iliad("ALLY", CardColor::Blue))
+        .start();
+    let meruki = runner.place_on_field(0, CARD_ID, Some(0));
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+    runner.game.players[0].battle_area[ally.index as usize].is_suspended = true;
+    runner.game.turn_count = 1;
+    runner.game.tick_declarative_effects();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(meruki),
+    );
+    runner.game.drain_effect_queue();
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField),
+        "the folded optional pick is the first prompt"
+    );
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the unsuspend");
+    assert!(runner.pending_selection_view().is_none());
+    assert!(runner.game.players[0].battle_area[ally.index as usize].is_suspended);
+
+    // A second [When Attacking] the same turn: the OPT is still available.
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(meruki),
+    );
+    runner.game.drain_effect_queue();
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField),
+        "a declined activation does not spend [Once Per Turn]"
+    );
+    runner
+        .execute_action(0, encode_attack(0, ally.index as u16))
+        .expect("accept this time");
+    assert!(!runner.game.players[0].battle_area[ally.index as usize].is_suspended);
+
+    // Accepted: NOW the use is spent — a third trigger offers nothing.
+    runner.game.players[0].battle_area[ally.index as usize].is_suspended = true;
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(meruki),
+    );
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "an accepted activation spends [Once Per Turn]"
+    );
+}
+
+/// Same gap, multi-timing shape: the [When Digivolving] and [When Attacking]
+/// arms share one OPT counter. Both queued at once (a digivolve-into-attack is
+/// not reachable here, so both are enqueued in one batch): declining the first
+/// arm's pick must leave the sibling arm offered.
+#[test]
+fn bt24_051_declined_opt_arm_keeps_sibling_timing_offered() {
+    let mut runner = merukimon_runner()
+        .add_card(own_iliad("ALLY", CardColor::Blue))
+        .start();
+    let meruki = runner.place_on_field(0, CARD_ID, Some(0));
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+    runner.game.players[0].battle_area[ally.index as usize].is_suspended = true;
+    runner.game.turn_count = 1;
+    runner.game.tick_declarative_effects();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(meruki),
+    );
+    runner.game.drain_effect_queue();
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
+    runner.execute_action(0, PASS).expect("decline the WA arm");
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(meruki),
+    );
+    runner.game.drain_effect_queue();
+    // [When Digivolving] also raises the suspend-2 clause (no opposing
+    // targets here → its condition fails), so the only prompt is the OPT pick.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField),
+        "the [When Digivolving] arm of the same OPT clause is still offered"
+    );
+    runner
+        .execute_action(0, encode_attack(0, ally.index as u16))
+        .expect("accept the WD arm");
+    assert!(!runner.game.players[0].battle_area[ally.index as usize].is_suspended);
+}
+
 fn merukimon_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)

@@ -275,6 +275,7 @@ impl Game {
             dsl_outer_tail: None,
             dsl_resolved_tail_bindings: None,
             dsl_clause_aborted: false,
+            folded_decline_refund: None,
             scheduled_effects: Vec::new(),
             scheduled_drain_tail: None,
             scheduled_provenance_deletions: Vec::new(),

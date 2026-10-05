@@ -486,11 +486,11 @@ fn bt24_003_no_shaman_hand_card_leaves_no_legal_pick() {
 // Section 4 — OPT enforcement
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// [Once Per Turn]: after resolving once, a second own-security removal on
-/// the same turn does not re-offer the prompt; after end_turn (and back to
-/// the controller's turn) the lockout clears.
+/// [Once Per Turn]: a DECLINED offer does not spend the OPT, so a second
+/// own-security removal on the same turn re-offers the prompt; after end_turn
+/// (and back to the controller's turn) it is offered again.
 #[test]
-fn bt24_003_opt_blocks_second_activation_same_turn() {
+fn bt24_003_declined_offer_does_not_spend_opt() {
     let mut runner = base();
     let host = runner.place_stack(0, &["BT24-003", "ST3-02"]);
     {
@@ -505,8 +505,8 @@ fn bt24_003_opt_blocks_second_activation_same_turn() {
         runner.game.players[0].hand.push(card);
     }
 
-    // First activation: decline (OPT should still be consumed — DCGO marks
-    // the ActivateClass as "used" once the prompt is offered/resolved).
+    // First offer: decline. A declined optional offer is not an activation,
+    // so it does NOT spend the [Once Per Turn] (see below).
     runner.game.enqueue_triggered(
         EffectTiming::OnOwnSecurityRemoved,
         TriggerSource::SecurityRemoved {
@@ -537,10 +537,18 @@ fn bt24_003_opt_blocks_second_activation_same_turn() {
         },
     );
     runner.game.drain_effect_queue();
-    assert!(
-        runner.pending_selection().is_none(),
-        "OPT must lock out a second activation in the same turn"
-    );
+    // G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING: the declined pick is the
+    // folded optional gate (DCGO `SetUpActivateClass(..., 1, true)` = an
+    // isOptional OptionalSkill), so the first offer was NOT an activation
+    // (rules 15-9-2) and [Once Per Turn] (15-14-1) is still available.
+    if let Some(view) = runner.pending_selection_view() {
+        runner
+            .execute_action(view.selecting_player, PASS)
+            .expect("decline the re-offer");
+        runner.game.drain_effect_queue();
+    } else {
+        panic!("a declined activation must leave the OPT unspent — re-offer expected");
+    }
 
     // Cycle back to player 0's turn; the lockout must clear.
     runner.end_turn(); // -> P1

@@ -214,6 +214,37 @@ fn bt25_027_wa_bounce_lv4_trash_facedown_unsuspends_self() {
     );
 }
 
+/// Guard for G-ENGINE-OPT-DECLINE-CONSUMES-SIBLING-TIMING's refund: the
+/// "you may return ..." pick is only PART of this clause -- its "Then, by
+/// trashing ..., this Digimon unsuspends" leg does not depend on the bounce, so
+/// declining the bounce is NOT a decline of the activation and the clause must
+/// not be marked as refunding its [Once Per Turn] use (only a folded clause
+/// whose every later step depends on the first pick is).
+#[test]
+fn bt25_027_bounce_decline_is_not_an_activation_decline() {
+    let runner = runner_field_mach_suspended_with_stash_and_opp();
+    let mach = find_field(&runner, 0, CARD_ID).expect("mach on field");
+    let top = runner.game.players[0].battle_area[mach.index as usize]
+        .top_card()
+        .handle();
+    let effects = runner
+        .game
+        .effects_for_card(CARD_ID, top)
+        .expect("BT25-027 effects");
+    // (Separately, and not this gap: declining the bounce currently also
+    // skips the Then-leg at run time, although DCGO runs it — a card-spec
+    // issue for BT25-027, which probably wants `outer_prompt: true`.)
+    let opt_arms: Vec<_> = effects
+        .iter()
+        .filter(|e| e.max_per_turn > 0 && e.optional && e.process.is_some())
+        .collect();
+    assert!(!opt_arms.is_empty());
+    assert!(
+        opt_arms.iter().all(|e| !e.folded_decline_refunds_opt),
+        "the bounce decline leaves the independent Then-leg -- no refund"
+    );
+}
+
 #[test]
 fn bt25_027_wa_no_stash_does_not_unsuspend() {
     let mut runner = DebugRunner::builder()
