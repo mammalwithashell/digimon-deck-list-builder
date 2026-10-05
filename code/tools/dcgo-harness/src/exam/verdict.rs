@@ -538,6 +538,31 @@ impl VerdictStore {
         Ok(())
     }
 
+    /// Stamp the oracle provenance (which harness job ran it, which DCGO build
+    /// answered) on a recorded clause or interaction row, and mark its card(s)
+    /// dirty so the stamp is written.
+    pub fn set_provenance(
+        &mut self,
+        id: &str,
+        job_id: Option<String>,
+        dcgo_build: Option<String>,
+    ) -> Result<(), String> {
+        if let Some(row) = self.clauses.get_mut(id) {
+            row.job_id = job_id;
+            row.dcgo_build = dcgo_build;
+            self.dirty.insert(row.card_id.clone());
+            return Ok(());
+        }
+        let row = self
+            .interactions
+            .get_mut(id)
+            .ok_or_else(|| format!("no stored verdict for `{id}`"))?;
+        row.job_id = job_id;
+        row.dcgo_build = dcgo_build;
+        self.dirty.extend(row.card_ids.iter().cloned());
+        Ok(())
+    }
+
     /// The stored verdict, drift or no drift. Use [`Self::get_validated`]
     /// when the answer will be trusted.
     pub fn get(&self, clause_id: &str) -> Option<&ClauseVerdict> {
@@ -582,9 +607,11 @@ impl VerdictStore {
         }
     }
 
-    /// Insert or replace one interaction's verdict.
+    /// Insert or replace one interaction's verdict, marking every card file it
+    /// is filed under dirty (`save_dir` writes only dirty cards).
     pub fn record_interaction(&mut self, v: InteractionVerdict) {
         self.last_updated = v.recorded_at.clone();
+        self.dirty.extend(v.card_ids.iter().cloned());
         self.interactions.insert(v.interaction_id.clone(), v);
     }
 
@@ -1483,6 +1510,30 @@ mod tests {
         assert!(!touched.replace("\r\n", "").contains('\n'), "no bare LF lines");
     }
 
+    #[test]
+    fn set_provenance_stamps_job_and_build_and_the_row_is_written() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut store = VerdictStore::default();
+        store.record(diverged_row("BT1-001"));
+        store.save_dir(dir.path()).unwrap();
+
+        let mut store = VerdictStore::load_dir(dir.path()).unwrap();
+        store
+            .set_provenance("BT1-001#effect#0", Some("exam-BT1-001-effect0".into()), Some("8b6c39ea1".into()))
+            .unwrap();
+        store.save_dir(dir.path()).unwrap();
+
+        let back = VerdictStore::load_dir(dir.path()).unwrap();
+        let row = back.get("BT1-001#effect#0").unwrap();
+        assert_eq!(row.job_id.as_deref(), Some("exam-BT1-001-effect0"));
+        assert_eq!(row.dcgo_build.as_deref(), Some("8b6c39ea1"));
+        assert!(store.set_provenance("BT9-999#effect#0", None, None).is_err());
+    }
+
+    pub(super) fn diverged_row_for(card: &str) -> ClauseVerdict {
+        diverged_row(card)
+    }
+
     fn diverged_row(card: &str) -> ClauseVerdict {
         ClauseVerdict {
             clause_id: format!("{card}#effect#0"),
@@ -1565,6 +1616,32 @@ mod interaction_store_tests {
             triage: None,
             citation: None,
         }
+    }
+
+    #[test]
+    fn set_provenance_also_stamps_an_interaction_row() {
+        let mut store = VerdictStore::default();
+        store.record_interaction(iv("qa:Q1", &["BT1-001"], Verdict::Confirmed));
+        store.set_provenance("qa:Q1", Some("exam-BT1-001-qa1".into()), None).unwrap();
+        assert_eq!(store.get_interaction("qa:Q1").unwrap().job_id.as_deref(), Some("exam-BT1-001-qa1"));
+    }
+
+    #[test]
+    fn an_interaction_verdict_for_a_card_that_already_has_a_file_is_saved() {
+        // record_interaction must mark its cards dirty: save_dir rewrites only
+        // dirty cards, so an interaction filed under a card that already has a
+        // verdict file was reported "recorded" and silently never written.
+        let dir = tempfile::tempdir().unwrap();
+        let mut store = VerdictStore::default();
+        store.record(super::tests::diverged_row_for("BT1-001"));
+        store.save_dir(dir.path()).unwrap();
+
+        let mut store = VerdictStore::load_dir(dir.path()).unwrap();
+        store.record_interaction(iv("qa:Q7", &["BT1-001"], Verdict::Confirmed));
+        store.save_dir(dir.path()).unwrap();
+
+        let back = VerdictStore::load_dir(dir.path()).unwrap();
+        assert!(back.get_interaction("qa:Q7").is_some(), "the interaction verdict was not written");
     }
 
     fn iv(id: &str, cards: &[&str], verdict: Verdict) -> InteractionVerdict {
