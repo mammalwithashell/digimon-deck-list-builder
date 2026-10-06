@@ -109,3 +109,10 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert: []
+expect_ruling:
+  q_id: Q6395
+  assert:
+  - at: 18
+    that:
+      p0.memory: 0
+      p0.trash: [BT25-085]
