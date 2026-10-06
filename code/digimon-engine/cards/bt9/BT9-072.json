@@ -19,7 +19,7 @@
   ],
   "form_eng": [],
   "attribute_eng": [
-    "Data"
+    "Vaccine"
   ],
   "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 2-color purple card among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
   "inherited_effect_description_eng": "",
@@ -27,6 +27,11 @@
   "evo_costs": [
     {
       "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    },
+    {
+      "card_color": 2,
       "level": 2,
       "memory_cost": 0
     }

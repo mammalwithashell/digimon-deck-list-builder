@@ -3,6 +3,7 @@ name: King Drasil_7D6
 kind: digi_egg
 color: [white]
 cost: 0
+traits: ["9000"]
 
 effects:
   - kind: flood_gate

@@ -23,7 +23,7 @@
   ],
   "form_eng": [],
   "attribute_eng": [
-    "Data"
+    "Vaccine"
   ],
   "effect_description_eng": "[When Digivolving] 1 of your opponent's Digimon gets -8000 DP until their turn ends. Then, if they have 5 or more memory, gain 2 memory.\r\n[Your Turn] [Once Per Turn] When any of your [Chronicle] trait Digimon or Tamers are played, 1 of your Digimon may attack. Then, you may activate 1 of this Digimon's [When Digivolving] effects.\r\n[End of Your Turn] [Once Per Turn] You may play 1 [Chronicle] trait card without [Alphamon] in its name from your hand with the cost reduced by 6. It gains ＜Rush＞ for the turn. (This Digimon can attack the turn it was played.)",
   "inherited_effect_description_eng": "",
@@ -40,5 +40,49 @@
       "memory_cost": 5
     }
   ],
-  "xros_req": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+  "xros_req": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "",
+          "trait_match": "Chronicle",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": true,
+          "color": null,
+          "level_exact": 5
+        },
+        {
+          "name_contains": "",
+          "trait_match": "Chronicle",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": true,
+          "color": null,
+          "level_exact": 4
+        },
+        {
+          "name_contains": "",
+          "trait_match": "Chronicle",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": true,
+          "color": null,
+          "level_exact": 3
+        }
+      ],
+      "reduce_cost_per_card": 5,
+      "max_materials": 3,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "trash"
+      ]
+    }
+  ]
 }

@@ -16,8 +16,7 @@
     2
   ],
   "type_eng": [
-    "Mythical Beast",
-    "3"
+    "Mythical Beast"
   ],
   "form_eng": [],
   "attribute_eng": [
@@ -29,6 +28,11 @@
   "evo_costs": [
     {
       "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 2,
       "level": 4,
       "memory_cost": 4
     }

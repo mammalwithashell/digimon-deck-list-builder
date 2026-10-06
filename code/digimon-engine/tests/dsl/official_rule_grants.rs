@@ -28,46 +28,58 @@ use std::collections::HashMap;
 const OFFICIAL_JSON_PATH: &str =
     concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/card_official.json");
 
-/// Parse every `(Rule) Trait: Has [X] ...` / `[Rule] Trait: Has [X] and [Y].`
-/// grant out of a card's joined printed text. Handles all forms observed in
-/// the official mirror:
+/// Parse every trait grant out of a card's joined printed text. Handles all
+/// forms observed in the official mirror:
 ///   - `(Rule) Trait: Has [Ice-Snow] Type.` / `... type.`
 ///   - `(Rule) Trait: Has [Free] attribute.` / `... Attribute.`
 ///   - `(Rule) Trait: Has [Hybrid] Form.`
 ///   - `(Rule) Trait: Has [Olympos XII].` (no field word)
 ///   - `(Rule) Trait: Has [Boss] and [D-Brigade].` (compound)
 ///   - `[Rule] Trait: Has [Dragonkin] Type.` (square-bracket Rule marker)
+///   - `(Rule) Also has Name:[Sistermon Noir] and Trait: [Virus].` (BT23-077),
+///     `... and has Trait: [DigiPolice].` (BT24-086), `... and Trait: [Data]
+///     Attribute.` (EX13-066): name-and-trait boxes
+///   - `This card/Digimon is also treated as having the [Cyborg] trait.` (P-101)
+///     and `*Also treat as if name is [Sistermon Noir] and traits include
+///     [Virus].` (ST12-13), printed outside a rule box
+///
+/// A capital `Trait:` opens a grant only in a rule box; a digivolve condition's
+/// `w/[X] trait: Cost 3` is lower case.
 fn rule_trait_grants(text: &str) -> Vec<String> {
     let mut grants = Vec::new();
     let mut rest = text;
-    while let Some(pos) = rest.find("Rule") {
-        let preceded = rest[..pos].ends_with('(') || rest[..pos].ends_with('[');
-        let after = &rest[pos + "Rule".len()..];
-        if preceded {
-            if let Some(s) = after.strip_prefix(')').or_else(|| after.strip_prefix(']')) {
-                let s = s.trim_start();
-                if let Some(s) = s.strip_prefix("Trait:") {
-                    let s = s.trim_start();
-                    if let Some(mut s) = s.strip_prefix("Has") {
-                        // One or more `[Name]`, optionally joined by "and".
-                        loop {
-                            let t = s.trim_start();
-                            let Some(open) = t.strip_prefix('[') else {
-                                break;
-                            };
-                            let Some(end) = open.find(']') else { break };
-                            grants.push(open[..end].trim().to_string());
-                            s = &open[end + 1..];
-                            match s.trim_start().strip_prefix("and") {
-                                Some(t) => s = t,
-                                None => break,
-                            }
-                        }
-                    }
+    while let Some(pos) = rest.find("Trait:") {
+        rest = &rest[pos + "Trait:".len()..];
+        let s = rest.trim_start();
+        let mut s = s.strip_prefix("Has").unwrap_or(s);
+        // One or more `[Name]`, optionally joined by "and".
+        loop {
+            let t = s.trim_start();
+            let Some(open) = t.strip_prefix('[') else {
+                break;
+            };
+            let Some(end) = open.find(']') else { break };
+            grants.push(open[..end].trim().to_string());
+            s = &open[end + 1..];
+            match s.trim_start().strip_prefix("and") {
+                Some(t) => s = t,
+                None => break,
+            }
+        }
+    }
+    for (opener, closer) in [
+        ("treated as having the [", "] trait"),
+        ("traits include [", "]"),
+    ] {
+        let mut rest = text;
+        while let Some(pos) = rest.find(opener) {
+            rest = &rest[pos + opener.len()..];
+            if let Some(end) = rest.find(']') {
+                if rest[end..].starts_with(closer) {
+                    grants.push(rest[..end].trim().to_string());
                 }
             }
         }
-        rest = after;
     }
     grants
 }
@@ -134,9 +146,27 @@ fn parser_handles_all_observed_rule_grant_forms() {
         rule_trait_grants("attack. [Rule] Trait: Has [Dragonkin] Type."),
         vec!["Dragonkin"]
     );
+    assert_eq!(
+        rule_trait_grants("(Rule) Also has Name:[Sistermon Noir] and Trait: [Virus]."),
+        vec!["Virus"]
+    );
+    assert_eq!(
+        rule_trait_grants("(Rule) Also treated as Name: [Shuu Yulin] and has Trait: [DigiPolice]."),
+        vec!["DigiPolice"]
+    );
+    assert_eq!(
+        rule_trait_grants("This card/Digimon is also treated as having the [Cyborg] trait."),
+        vec!["Cyborg"]
+    );
+    assert_eq!(
+        rule_trait_grants("*Also treat as if name is [Sistermon Noir] and traits include [Virus]."),
+        vec!["Virus"]
+    );
     // Name rules and unrelated text must NOT parse as trait grants.
     assert!(rule_trait_grants("(Rule) Name: Also treated as [Agumon].").is_empty());
+    assert!(rule_trait_grants("(Rule) Name: Also treated as having [Greymon].").is_empty());
     assert!(rule_trait_grants("no rule box here [Ice-Snow] trait").is_empty());
+    assert!(rule_trait_grants("[Digivolve] Lv.4 w/[Demon]/[TS] trait: Cost 3").is_empty());
 }
 
 /// PRODUCTION: every official Rule trait grant must be present in the

@@ -16,16 +16,18 @@
   ],
   "type_eng": [
     "Copy & Paste (App Name)",
-    "Leviathan"
+    "Leviathan",
+    "Copy & Paste"
   ],
   "form_eng": [
-    "Stnd."
+    "Stnd.",
+    "Appmon"
   ],
   "attribute_eng": [
     "System"
   ],
   "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [Leviathan] trait among them to the hand. Return the rest to the bottom of the deck.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, you may return 1 [Appmon] trait Digimon card from your trash to the hand.",
   "security_effect_description_eng": "",
   "evo_costs": [
     {

@@ -3,6 +3,7 @@ name: "Unique Emblem: Gravel Hearts"
 kind: option
 color: [black]
 cost: 3
+traits: [LIBERATOR]
 
 # Printed text (cards.json effect_description_eng):
 # [Main] You may play 1 [Sunarizamon] or [Close] from your hand or trash

@@ -1,5 +1,5 @@
 # BT13-083 Gizmon: AT — Digimon, Lv.4, Purple, DP 6000, Cost 6.
-# Traits: none printed (type_eng ["Unknown"] in cards.json / official bundle).
+# Traits: Unknown (the card prints "Champion | Unknown | Unknown").
 # Form: Champion. Attribute: Unknown.
 #
 # Printed card text (official Bandai DB bundle `data/card_bundles/BT13-083.md`,
@@ -144,6 +144,7 @@ level: 4
 color: [purple]
 cost: 6
 dp: 6000
+traits: [Unknown]
 
 effects:
   # ─── Clause 1: when-played FIXED interactive cost reducer ──────────────────

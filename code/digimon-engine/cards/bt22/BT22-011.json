@@ -21,7 +21,7 @@
   ],
   "form_eng": [],
   "attribute_eng": [
-    "Data"
+    "Virus"
   ],
   "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n[Main] [Once Per Turn] By paying 3 cost, you may play 1 play cost 5 or lower Digimon card with the [Flame] or [CS] trait from your trash without paying the cost. Then, this Digimon may attack.",
   "inherited_effect_description_eng": "[Your Turn] This Digimon with the [Flame] or [CS] trait gains ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)",
@@ -29,6 +29,11 @@
   "evo_costs": [
     {
       "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 6,
       "level": 4,
       "memory_cost": 4
     }

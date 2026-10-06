@@ -5,7 +5,7 @@ level: 7
 color: [black, yellow, red]
 cost: 9
 dp: 16000
-traits: ["X Antibody", "Royal Knight", Chronicle]
+traits: ["NO DATA", "X Antibody", "Royal Knight", Chronicle]
 attribute: Vaccine
 ace_overflow: -5
 

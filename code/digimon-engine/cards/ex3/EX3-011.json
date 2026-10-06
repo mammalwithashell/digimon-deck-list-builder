@@ -17,9 +17,7 @@
   "type_eng": [
     "Rock Dragon"
   ],
-  "form_eng": [
-    "Virus"
-  ],
+  "form_eng": [],
   "attribute_eng": [
     "Virus"
   ],
@@ -29,6 +27,11 @@
   "evo_costs": [
     {
       "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    },
+    {
+      "card_color": 6,
       "level": 4,
       "memory_cost": 3
     }

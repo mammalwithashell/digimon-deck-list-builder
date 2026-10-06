@@ -28,7 +28,8 @@
 # Rule line: `also_treated_as: [Sistermon Ciel (Awakened)]`. The [Data]
 #   attribute rides on `attribute_eng` (["Virus","Data"], card_overrides.json),
 #   which production folds into traits; the DSL `attribute` field is a single
-#   string, so the printed primary attribute is authored here.
+#   string, so the printed primary attribute is authored there and [Data] joins
+#   `traits:` (DebugRunner matches traits only), as BT16-102's [Free] does.
 # <Decode>: non-cancelling would-leave replacement gated other-than-battle,
 #   playing a [Sistermon Noir]/[Sistermon Ciel]-named source free.
 # [When Digivolving]: mandatory single delete over opp Digimon with play cost
@@ -45,7 +46,7 @@ level: 4
 color: [white, black]
 cost: 5
 dp: 6000
-traits: [Puppet]
+traits: [Puppet, Data]
 form: Champion
 attribute: Virus
 
@@ -67,7 +68,7 @@ dual:
     level: 4
     dp: 6000
     colors: [white, black]
-    traits: [Puppet]
+    traits: [Puppet, Data]
     effect_text: |
       <Decode ([Sistermon Noir]/[Sistermon Ciel])>
       [When Digivolving] Delete 1 of your opponent's Digimon with a play cost of 4 or less.

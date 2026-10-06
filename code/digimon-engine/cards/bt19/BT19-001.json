@@ -15,14 +15,13 @@
     0
   ],
   "type_eng": [
+    "Minor",
     "Xros Heart"
   ],
   "form_eng": [],
-  "attribute_eng": [
-    "Minor"
-  ],
-  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] By placing 1 Digimon card with the [Xros Heart] or [Blue Flare] trait rom your hand under any of your Tamers, ＜Draw 1＞ (Draw 1 card from your deck.)",
-  "inherited_effect_description_eng": "",
+  "attribute_eng": [],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] By placing 1 Digimon card with the [Xros Heart] or [Blue Flare] trait rom your hand under any of your Tamers, ＜Draw 1＞ (Draw 1 card from your deck.)",
   "security_effect_description_eng": "",
   "evo_costs": [],
   "xros_req": ""

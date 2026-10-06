@@ -16,8 +16,7 @@
     2
   ],
   "type_eng": [
-    "Angel",
-    "3"
+    "Angel"
   ],
   "form_eng": [],
   "attribute_eng": [
@@ -29,6 +28,11 @@
   "evo_costs": [
     {
       "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    },
+    {
+      "card_color": 2,
       "level": 3,
       "memory_cost": 3
     }

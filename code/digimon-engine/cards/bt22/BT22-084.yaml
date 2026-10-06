@@ -58,6 +58,7 @@ name: Nokia Shiramine
 kind: tamer
 color: [red, blue]
 cost: 5
+traits: [CS]
 
 effects:
   # ─── Clause 1: [Start of Your Turn] memory <= 2 → set to 3 ────────────────

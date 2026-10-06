@@ -16,7 +16,8 @@
     6
   ],
   "type_eng": [
-    "Undead"
+    "Undead",
+    "Cyborg"
   ],
   "form_eng": [
     "Champion"
@@ -30,6 +31,11 @@
   "evo_costs": [
     {
       "card_color": 5,
+      "level": 3,
+      "memory_cost": 3
+    },
+    {
+      "card_color": 6,
       "level": 3,
       "memory_cost": 3
     }
