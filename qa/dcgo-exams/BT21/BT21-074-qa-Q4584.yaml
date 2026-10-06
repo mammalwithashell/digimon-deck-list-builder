@@ -52,7 +52,7 @@ card: BT21-074
 clause: BT21-074#effect#0
 interaction: {id: "qa:Q4584", source: qa, kind: positive}
 covers: [BT21-074#effect#0]
-meta: {produced_by: 20261006T142319216892Z-pilot-three-musketeers-421630}
+meta: {produced_by: 20261006T142458555421Z-pilot-three-musketeers-18a3eb}
 expect_ruling:
   q_id: Q4584
   assert:
