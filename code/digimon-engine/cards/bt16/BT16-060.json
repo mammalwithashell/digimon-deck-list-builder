@@ -23,7 +23,7 @@
   "attribute_eng": [
     "Virus"
   ],
-  "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. For each [D-Brigade] or [DigiPolice] trait card among them, reduce the play costs of all of your opponent's Digimon by 1 until the end of the turn. Return the revealed cards to the top or the bottom of the deck. Then, delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+  "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. For each [D-Brigade] or [DigiPolice] trait card among them, reduce the play costs of all of your opponent's Digimon by 1 for the turn. Return the revealed cards to the top or the bottom of the deck. Then, delete 1 of your opponent's Digimon with a play cost of 4 or less.",
   "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When one of your other Digimon with the [D-Brigade] or [DigiPolice] trait is played, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
   "security_effect_description_eng": "",
   "evo_costs": [

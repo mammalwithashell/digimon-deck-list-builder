@@ -17,7 +17,7 @@
   "type_eng": [],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "[Main] Trash 2 digivolution cards from your opponent's Digimon. Then, if you have a Tamer with [Joe Kido] in its name, choose 1 of your Digimon. If your opponent has no Digimon with as many or more digivolution cards as that Digimon, unsuspend it.",
+  "effect_description_eng": "[Main] Trash any 2 digivolution cards from your opponent's Digimon. Then, if you have a Tamer with [Joe Kido] in its name, choose 1 of your Digimon. If your opponent has no Digimon with as many or more digivolution cards as the chosen Digimon, unsuspend it.",
   "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects. Then, add this card to your hand.",
   "security_effect_description_eng": "",
   "evo_costs": [],

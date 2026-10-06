@@ -21,7 +21,7 @@
   "attribute_eng": [
     "Vaccine"
   ],
-  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 yellow card with [Angel], [Cherub], [Throne], [Authority], [Seraph] or [Virtue] in any of its traits (other than [Three Great Angels] trait) and 1 card with the [Four Great Dragons] trait among them to your hand. Place the rest at the bottom of your deck in any order.",
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 yellow card with [Angel], [Cherub], [Throne], [Authority], [Seraph] or [Virtue], other than [Three Great Angels], in one of its traits and 1 card with the [Four Great Dragons] trait among them to your hand. Place the rest at the bottom of your deck in any order.",
   "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you play a Digimon with the [Four Great Dragons] trait, 1 of those Digimon gains ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)",
   "security_effect_description_eng": "",
   "evo_costs": [

@@ -13,7 +13,11 @@ re-applies. Fix wrong API data with an override, plus a top-level `_note_<topic>
 key saying why. Editing `cards.json` alone is undone by the next ingest. Printed
 data is checked against the official Bandai DB mirror (`data/card_official.json`,
 `data/card_bundles/`; see CLAUDE.md "Source priority"), and
-`code/tests/test_cards_json_integrity.py` keeps reviewed cards in line with it.
+`code/tests/test_cards_json_integrity.py` keeps reviewed cards in line with it. Bandai's
+errata page (`world.digimoncard.com/rule/errata_card/`) outranks both the mirror, which can
+still hold a card's pre-errata wording, and the card image; `code/tests/test_cards_json_errata.py`
+records every errata and fails while `cards.json` lacks one. A new errata is one more entry
+there plus an override.
 
 ### 1.1 Card Ingester
 

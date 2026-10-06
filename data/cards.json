@@ -12138,7 +12138,7 @@
     "type_eng": [],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "[Main] 1 of your Digimon gains \"[Security] effects on Option cards checked by this Digimon don't activate.\" for the turn.",
+    "effect_description_eng": "[Main] 1 of your Digimon gains \"This Digimon doesn't activate the [Security] effects of any Option cards it checks\" for the turn.",
     "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -31641,7 +31641,7 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "While you have an [Armor Form] trait Digimon, you can ignore this card's color requirements.\r\n[Main] Trash the top card of 1 of your Digimon with the [Armor Form] trait. Then, you may digivolve 1 of your Digimon into a Digimon card in your hand with the [Armor Form] trait for its digivolution cost. If you do, unsuspend that Digimon.",
-    "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 3 Digimon card with the [Free] trait from your hand or trash without paying its memory cost.",
+    "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 3 Digimon card with [Free] in its traits from your hand or trash without paying its memory cost.",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -34156,7 +34156,7 @@
     "attribute_eng": [
       "Virus"
     ],
-    "effect_description_eng": "[On Play] [When Digivolving] Place 1 [Raijinmon], [Fujinmon], and [Suijinmon] from your trash under this Digimon in any order as its bottom digivolution cards. Gain 1 memory for each card placed.\r\n[When Attacking] If the level 6 cards in this Digimon's digivolution cards have 3 or more colors among them, this Digimon gain +3000 DP until the end of your opponent's next turn. If they have 4 or more colors, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+    "effect_description_eng": "[On Play] [When Digivolving] Place 1 [Raijinmon], 1 [Fujinmon], and 1 [Suijinmon] from your trash under this Digimon in any order as its bottom digivolution cards. Gain 1 memory for each card placed.\r\n[When Attacking] If the level 6 cards in this Digimon's digivolution cards have 3 or more colors among them, this Digimon gain +3000 DP until the end of your opponent's next turn. If they have 4 or more colors, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -34310,7 +34310,7 @@
     "attribute_eng": [
       "Virus"
     ],
-    "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Among them, add 1 card with [Undead] or [Dark Animal] in any of its traits to the hand and trash 1 such card among them. Place the rest at the bottom of your.",
+    "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Among them, add 1 card with [Undead] or [Dark Animal] in one of its traits to the hand and trash 1 such card. Return the rest to the bottom of the deck.",
     "inherited_effect_description_eng": "[When Attacking] This Digimon may digivolve into a Digimon card with the [Undead] or [Dark Animal] trait from your trash for its digivolution cost.",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -35698,7 +35698,7 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "",
-    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When a Digimon is suspended by an effect, this Digimon gets +1000 DP for the turn.",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When an effect suspends a Digimon, this Digimon gets +1000 DP for the turn.",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -39283,7 +39283,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "[All Turns] [Once Per Turn] When a purple card is placed under this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) and memory +1.\r\n[Your Turn] [Once Per Turn] When you would play 1 level 4 or higher Digimon card with [Bagra Army] trait, by placing up to 3 purple Digimon cards from under your Tamers in the digivolution cards of the Digimon card played, reduce the memory cost of that Digimon by 2 for each card placed.",
+    "effect_description_eng": "[All Turns] [Once Per Turn] When a purple card is placed under this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) and memory +1.\r\n[Your Turn] [Once Per Turn] When you would play 1 level 4 or higher Digimon card with [Bagra Army] in its traits, by placing up to 3 purple Digimon cards from under your Tamers in the digivolution cards of the Digimon card played, reduce the memory cost of that Digimon by 2 for each card placed.",
     "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -39361,7 +39361,7 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "[Main] Choose 1 of your level 4 or higher Digimon with [Shoutmon] in its name. Delete 1 of your opponent's Digimon with DP less than or equal to the chosen Digimon.",
-    "inherited_effect_description_eng": "Security Effect [Security] Reveal the top 3 cards of your deck. You may add 1 Digimon card with the [Xros Heart] trait among them to your hand, and play 1 [Taiki Kudo] among them without paying its memory cost. Place the rest at the bottom of your deck in any order.",
+    "inherited_effect_description_eng": "Security Effect [Security] Reveal the top 3 cards of your deck. You may add 1 Digimon card with [Xros Heart] in its traits among them to your hand and play 1 [Taiki Kudo] among them without paying its memory cost. Place the rest at the bottom of your deck in any order.",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -39387,7 +39387,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "[Main] Reveal the top 6 cards of your deck. You may add 2 cards with the [Blue Flare] trait among them to your hand, and play 1 [Kiriha Aonuma] among them without paying its memory cost. Place the rest at the bottom of your deck in any order. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+    "effect_description_eng": "[Main] Reveal the top 6 cards of your deck. You may add 2 cards with [Blue Flare] in their traits among them to your hand, and play 1 [Kiriha Aonuma] among them without paying its memory cost. Place the rest at the bottom of your deck in any order. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
     "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -39641,7 +39641,7 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Add up to 1 card with the [Bagra Army] trait among them to your hand. Trash the rest. Then, you may place 1 Digimon card with the [Bagra Army] trait from your trash under one of your Tamers.",
-    "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Yuu Amano] from your hand or trash without paying its memory cost. Then, add this card to its owner's hand.",
+    "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Yuu Amano] from your hand or trash without paying its play cost. Then, add this card to its owner's hand.",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -45384,7 +45384,7 @@
     "attribute_eng": [
       "Free"
     ],
-    "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. You may play 1 [Airu Suzaki], [Ren Tobari] or [Ryoma Mogami] among them without paying the cost. Place the rest at the bottom of your deck in any order.\r\n[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers.",
+    "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. You may play 1 [Airu Suzaki], [Ren Tobari], or [Ryoma Mogami] card among them without paying its cost. Place the remaining cards at the bottom of your deck in any order.\r\n[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers.",
     "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has ＜Save＞ in its text, 1 of your opponent's Digimon gets -2000 DP for the turn.",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -45910,7 +45910,7 @@
     "attribute_eng": [
       "Free"
     ],
-    "effect_description_eng": "[On Play] [When Digivolving] You may play 1 [Airu Suzaki], [Ren Tobari] or [Ryoma Mogami] from your hand without paying its cost.\r\n[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers.",
+    "effect_description_eng": "[On Play] [When Digivolving] You may play 1 [Airu Suzaki], [Ren Tobari], or [Ryoma Mogami] card from your hand without paying its cost.\r\n[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers.",
     "inherited_effect_description_eng": "[Your Turn] While this Digimon has ＜Save＞ in its text, it gets +2000 DP.",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -51229,7 +51229,7 @@
     "attribute_eng": [
       "Vaccine"
     ],
-    "effect_description_eng": "[End of Your Turn] By deleting this Digimon that has a digivolution card with [Bird] or [Avian] in any of its traits, at the end of your opponent's next turn, play 1 [Ravemon] from your trash without paying its cost.\r\n[On Deletion] You may play 1 [Falcomon] or [Keenan Crier] from your hand or trash without paying its cost.",
+    "effect_description_eng": "[End of Your Turn] By deleting this Digimon that has a digivolution card with [Bird] or [Avian] in one of its traits, at the next end of your opponent's turn, you may play 1 [Ravemon] from your trash without paying the cost.\r\n[On Deletion] You may play 1 [Falcomon] or [Keenan Crier] from your hand or trash without paying the cost.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -51940,7 +51940,7 @@
     ],
     "attribute_eng": [],
     "effect_description_eng": "",
-    "inherited_effect_description_eng": "[Your Turn] While your opponent has no Digimon with with as many or more digivolution cards than this Digimon, this Digimon gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.).",
+    "inherited_effect_description_eng": "[Your Turn] While your opponent has no Digimon with as many or more digivolution cards as this Digimon, this Digimon gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.).",
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
@@ -55168,7 +55168,7 @@
     "type_eng": [],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "[Main] Trash 2 digivolution cards from your opponent's Digimon. Then, if you have a Tamer with [Joe Kido] in its name, choose 1 of your Digimon. If your opponent has no Digimon with as many or more digivolution cards as that Digimon, unsuspend it.",
+    "effect_description_eng": "[Main] Trash any 2 digivolution cards from your opponent's Digimon. Then, if you have a Tamer with [Joe Kido] in its name, choose 1 of your Digimon. If your opponent has no Digimon with as many or more digivolution cards as the chosen Digimon, unsuspend it.",
     "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects. Then, add this card to your hand.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -61390,7 +61390,7 @@
     "attribute_eng": [
       "Virus"
     ],
-    "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. For each [D-Brigade] or [DigiPolice] trait card among them, reduce the play costs of all of your opponent's Digimon by 1 until the end of the turn. Return the revealed cards to the top or the bottom of the deck. Then, delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+    "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. For each [D-Brigade] or [DigiPolice] trait card among them, reduce the play costs of all of your opponent's Digimon by 1 for the turn. Return the revealed cards to the top or the bottom of the deck. Then, delete 1 of your opponent's Digimon with a play cost of 4 or less.",
     "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When one of your other Digimon with the [D-Brigade] or [DigiPolice] trait is played, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -70496,7 +70496,7 @@
     "type_eng": [],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "While you have a Digimon with [Knightmon] in its text, you can ignore this card's color requirements.\r\n[Main] Until the end of opponent's turn, 1 of your their Digimon gains \"[Start of Your Main Phase] This Digimon attacks.\" Then, place this card in the battle area.\r\n[All Turns] When attack target changes, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and ＜Security A. +1＞ (This Digimon checks 1 additional security card.) until the end of your turn.",
+    "effect_description_eng": "While you have a Digimon with [Knightmon] in its text, you can ignore this card's color requirements.\r\n[Main] Until the end of your opponent's turn, give 1 of their Digimon \"[Start of Your Main Phase] This Digimon attacks.\" Then, place this card in the battle area.\r\n[All Turns] When attack targets change, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and ＜Security A. +1＞ (This Digimon checks 1 additional security card.) until the end of your turn.",
     "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 5 or lower Digimon card with [Knightmon] in its text from your trash without paying the cost. Then, place this card in the battle area.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -74170,7 +74170,7 @@
     "type_eng": [],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "While you have a level 5 [WarGrowlmon], [Taomon] or [Rapidmon], you can ignore this card's color requirements.\r\n[Main] Play 1 [WarGrowlmon] Token (Digimon/Red/6000 DP), 1 [Taomon] Token (Digimon/Yellow/6000 DP), and 1 [Rapidmon] Token (Digimon/Green/6000 DP). This effect can't play tokens with the same names as your Digimon. Then, 1 of your level 5 Digimon gains ＜Alliance＞ twice for the turn and attacks.",
+    "effect_description_eng": "While you have a level 5 [WarGrowlmon], [Taomon] or [Rapidmon], you may ignore this card's color requirements.\r\n[Main] Play 1 [WarGrowlmon] Token (Digimon/Red/6000 DP), 1 [Taomon] Token (Digimon/Yellow/6000 DP), and 1 [Rapidmon] Token (Digimon/Green/6000 DP). This effect can't play tokens with the same names as your Digimon. Then, 1 of your level 5 Digimon gains ＜Alliance＞ twice for the turn and attacks.",
     "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 5 [WarGrowlmon], [Taomon] or [Rapidmon] from your hand without paying the cost.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -88988,7 +88988,7 @@
     "norm_id": 0.1237,
     "card_id": "BT23-078",
     "card_index": 78,
-    "card_name_eng": "Goro Matayoshi",
+    "card_name_eng": "Gorou Matayoshi",
     "card_name_jpn": "",
     "card_effect_class_name": "BT23_078",
     "play_cost": 3,
@@ -95816,7 +95816,7 @@
       "Data"
     ],
     "effect_description_eng": "[When Digivolving] [When Attacking] [Once Per Turn] By trashing the bottom face-down card under any of your Tamers, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)\r\n[When Digivolving] This Digimon may battle 1 of your opponent's Digimon.",
-    "inherited_effect_description_eng": "Use Requirement: Glowing Dawn trait\r\n[Main] 1 of your Digimon gains , and +5000 DP until your opponent's turn ends. Then, it may attack.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -95867,7 +95867,7 @@
         "colors": [
           "Green"
         ],
-        "effect_text": "＜Use Req. ([Glowing Dawn] trait)＞ (Specified cards let you ignore color requirements.) [Main] 1 of your Digimon gains ＜Rush＞, ＜Security A. +1＞ and +5000 DP until your opponent's turn ends. Then, it may attack.",
+        "effect_text": "＜Use Req. ([Glowing Dawn] trait)＞ (Specified cards let you ignore color requirements.) [Main] 1 of your Digimon gains ＜Rush＞, ＜Security A. +1＞ and +5000 DP for the turn. Then, it may attack.",
         "security_text": "",
         "keywords": [
           "ArtsDigivolve"
@@ -100212,7 +100212,7 @@
     "attribute_eng": [
       "Virus"
     ],
-    "effect_description_eng": "[On Play] You may place up to 5 level 5 red and/or black cards with the [Cyborg] trait and different card numbers from your hand and/or trash in this card's digivolution cards to gain 1 memory for each card placed.\r\n[All Turns] This Digimon's DP can't be reduced.\r\n[All Turns] When this Digimon would be deleted, you may trash 2 level 5 Digimon cards in this Digimon's digivolution cards to prevent this Digimon from being deleted.",
+    "effect_description_eng": "[On Play] You may place up to 5 level 5 red and/or black cards with [Cyborg] in their traits and different card numbers from your hand and/or trash in this Digimon's digivolution cards to gain 1 memory for each card placed.\r\n[All Turns] This Digimon's DP can't be reduced.\r\n[All Turns] When this Digimon would be deleted, you may trash 2 level 5 Digimon cards in this Digimon's digivolution cards to prevent this Digimon from being deleted.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -101158,7 +101158,7 @@
     "attribute_eng": [
       "Virus"
     ],
-    "effect_description_eng": "[End of Attack] You may place this Digimon under 1 of your other Digimon as its bottom digivolution card.",
+    "effect_description_eng": "[End of Attack] You may place this Digimon as 1 of your other Digimon's bottom digivolution card.",
     "inherited_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n[Your Turn] This Digimon gets +2000 DP.",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -101993,7 +101993,7 @@
       "D-Reaper"
     ],
     "attribute_eng": [],
-    "effect_description_eng": "[On Play] [When Attacking] [Once Per Turn] If one of your [Mother D-Reaper]s has 5 or more digivolution cards, reveal the top 3 cards of your deck. You may play 1 card with the [D-Reaper] trait and a play cost of 10 or less among them without paying its memory cost. Place the remaining cards at the top of your deck in any order.",
+    "effect_description_eng": "[On Play] [When Attacking] [Once Per Turn] If one of your [Mother D-Reaper]s has 5 or more digivolution cards, reveal the top 3 cards of your deck. You may play 1 card with [D-Reaper] in its traits and a play cost of 10 or less among them without paying its memory cost. Place the remaining cards at the top of your deck in any order.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -102629,7 +102629,7 @@
     "attribute_eng": [
       "Virus"
     ],
-    "effect_description_eng": "[When Attacking] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Dragon], [saur] or [Ceratopsian] in any of its traits among them to your hand. Place the rest at the bottom of your deck in any order.",
+    "effect_description_eng": "[When Attacking] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Dragon], [saur] or [Ceratopsian] in one of its traits among them to your hand. Place the rest at the bottom of your deck in any order.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -102821,7 +102821,7 @@
     "attribute_eng": [
       "Free"
     ],
-    "effect_description_eng": "[When Digivolving] Activate 1 of the effects below.\r\n・1 of your other Digimon may digivolve into a level 4 purple Digimon card with the [Free] trait from your trash for the cost.\r\n・This Digimon and another of your Digimon may DNA digivolve into a Digimon card in the hand.",
+    "effect_description_eng": "[When Digivolving] Activate 1 of the effects below.\r\n・1 of your other Digimon may digivolve into a level 4 purple Digimon card with [Free] in its traits from your trash for the cost.\r\n・This Digimon and one of your other Digimon may DNA digivolve into a Digimon card in your hand for the cost.",
     "inherited_effect_description_eng": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -103087,7 +103087,7 @@
     "attribute_eng": [
       "Virus"
     ],
-    "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it comes into play.)\r\n[On Play] Delete 1 of your opponent's Digimon with 3000 DP or less. For each card with [Dragon], [saur] or [Ceratopsian] in any of its traits in this Digimon's digivolution cards, add 2000 to the maximum DP you can choose with this effect.",
+    "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it comes into play.)\r\n[On Play] Delete 1 of your opponent's Digimon with 3000 DP or less. For each card with [Dragon], [saur] or [Ceratopsian] in one of its traits in this Digimon's digivolution cards, add 2000 to the maximum DP you can choose with this effect.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -103439,7 +103439,7 @@
     "attribute_eng": [
       "Data"
     ],
-    "effect_description_eng": "[When Digivolving] You may play 1 blue level 3 Digimon card or 1 level 4 or lower Digimon card with [Aqua] or [Sea Animal] in any of its traits from one of your blue Digimon's digivolution cards without paying the cost. Then, you may place 1 blue Digimon card from your hand under this Digimon as its bottom digivolution card.",
+    "effect_description_eng": "[When Digivolving] You may play 1 blue level 3 Digimon card or 1 level 4 or lower Digimon card with [Aqua] or [Sea Animal] in one of its traits from one of your blue Digimon's digivolution cards without paying its memory cost. Then, you may place 1 blue Digimon card from your hand under this Digimon as its bottom digivolution card.",
     "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When you play a Digimon from digivolution cards, you may return 1 of your opponent's Digimon of the same level to the bottom of its owner's deck.",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -103556,7 +103556,7 @@
     "attribute_eng": [
       "Vaccine"
     ],
-    "effect_description_eng": "[When Digivolving] You may play 1 blue level 3 Digimon card or 1 Digimon card with [Seadramon] in its name or [Aqua] or [Sea Animal] in any of its traits from 1 of your blue Digimon's digivolution cards without paying the cost.\r\n[Opponent's Turn] [Once Per Turn] When your opponent plays a Digimon card, you may activate 1 of this Digimon's [When Digivolving] effects.",
+    "effect_description_eng": "[When Digivolving] You may play 1 blue level 3 Digimon card or 1 Digimon card with [Seadramon] in its name or [Aqua] or [Sea Animal] in one of its traits from one of your blue Digimon's digivolution cards without paying its memory cost.\r\n[Opponent's Turn] [Once Per Turn] When your opponent plays a Digimon card, you may activate 1 of this Digimon's [When Digivolving] effects.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -103626,7 +103626,7 @@
     "attribute_eng": [
       "Data"
     ],
-    "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 yellow card with [Angel], [Cherub], [Throne], [Authority], [Seraph] or [Virtue] in any of its traits (other than [Three Great Angels] trait) and 1 card with the [Four Great Dragons] trait among them to your hand. Place the rest at the bottom of your deck in any order.",
+    "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 yellow card with [Angel], [Cherub], [Throne], [Authority], [Seraph] or [Virtue], other than [Three Great Angels], in one of its traits and 1 card with the [Four Great Dragons] trait among them to your hand. Place the rest at the bottom of your deck in any order.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -103696,7 +103696,7 @@
     "attribute_eng": [
       "Vaccine"
     ],
-    "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 yellow card with [Angel], [Cherub], [Throne], [Authority], [Seraph] or [Virtue] in any of its traits (other than [Three Great Angels] trait) and 1 card with the [Four Great Dragons] trait among them to your hand. Place the rest at the bottom of your deck in any order.",
+    "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 yellow card with [Angel], [Cherub], [Throne], [Authority], [Seraph] or [Virtue], other than [Three Great Angels], in one of its traits and 1 card with the [Four Great Dragons] trait among them to your hand. Place the rest at the bottom of your deck in any order.",
     "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you play a Digimon with the [Four Great Dragons] trait, 1 of those Digimon gains ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -103873,7 +103873,7 @@
     "attribute_eng": [
       "Vaccine"
     ],
-    "effect_description_eng": "[When Digivolving] You may return 1 card with the [Four Great Dragons] trait from your trash to your hand.\r\n[When Attacking] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, by returning 1 [Magnadramon], 1 [Azulongmon], and 1 [Megidramon] from your trash to the bottom of your deck in any order, trash the top 2 cards of your opponent's security stack.",
+    "effect_description_eng": "[When Digivolving] You may return 1 card with the [Four Great Dragons] trait from your trash to your hand.\r\n[When Attacking] 1 of your opponent's Digimon gets -6000 for the turn. Then, by returning 1 [Magnadramon], 1 [Azulongmon], and 1 [Megidramon] from your trash to the bottom of your deck in any order, trash the top 2 cards of your opponent's security stack.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -104247,7 +104247,7 @@
     "attribute_eng": [
       "Virus"
     ],
-    "effect_description_eng": "[When Digivolving] You may suspend 1 Digimon.\r\n[All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, for each other suspended Digimon with [Vegetation], [Plant] or [Fairy] in any of its traits you have in play, gain 1 memory.\r\n[End of Your Turn] [Once Per Turn] If you have 2 or more suspended Digimon with [Vegetation], [Plant] or [Fairy] in one of their traits, return 1 of your opponent's suspended Digimon at the bottom of its owner's deck.",
+    "effect_description_eng": "[When Digivolving] You may suspend 1 Digimon.\r\n[All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, for each other suspended Digimon with [Vegetation], [Plant], or [Fairy] in one of their traits you have in play, gain 1 memory.\r\n[End of Your Turn] [Once Per Turn] If you have 2 or more suspended Digimon with [Vegetation], [Plant], or [Fairy] in one of their traits, return 1 of your opponent's suspended Digimon to the bottom of its owner's deck.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -104735,7 +104735,7 @@
     "attribute_eng": [
       "Free"
     ],
-    "effect_description_eng": "[When Digivolving] Activate 1 of the effects below.\r\n・1 of your other Digimon may digivolve into a red level 4 Digimon card with the [Free] trait from your trash for the cost.\r\n・This Digimon and another of your Digimon may DNA digivolve into a Digimon card in the hand.",
+    "effect_description_eng": "[When Digivolving] Activate 1 of the effects below.\r\n・1 of your other Digimon may digivolve into a red level 4 Digimon card with [Free] in its traits from your trash for the cost.\r\n・This Digimon and one of your other Digimon may DNA digivolve into a Digimon card in your hand for the cost.",
     "inherited_effect_description_eng": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -105152,7 +105152,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "[Main] ＜Draw 1＞ (Draw 1 card from your deck.) Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Play 1 Digimon card with the [Four Great Dragons] trait from your hand without paying the cost. The Digimon played by this effect can't digivolve to level 7, and at the end of your opponent's turn, delete that Digimon.",
+    "effect_description_eng": "[Main] ＜Draw 1＞ (Draw 1 card from your deck.) Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Play 1 Digimon card with the [Four Great Dragons] trait from your hand without paying the cost. The Digimon played by this effect can't digivolve to level 7, and at the next end of your opponent's turn, delete that Digimon.",
     "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -107825,7 +107825,7 @@
     "type_eng": [],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "[Start of Your Main Phase] If you have 1 or fewer Digimon in play, you may play 1 [Terriermon] or [Lopmon] from your hand without paying the cost. Digimon played by this effect can't digivolve and are deleted at the end of your opponent's turn.\r\n[Your Turn] When one of your Digimon with [Terriermon] or [Lopmon] in its digivolution cards would digivolve, by suspending this Tamer, reduce the digivolution cost by 1.",
+    "effect_description_eng": "[Start of Your Main Phase] If you have 1 or fewer Digimon in play, you may play 1 [Terriermon] or [Lopmon] from your hand without paying the cost. Digimon played by this effect can't digivolve and are deleted at the next end of your opponent's turn.\r\n[Your Turn] When one of your Digimon with [Terriermon] or [Lopmon] in its digivolution cards would digivolve, by suspending this Tamer, reduce the digivolution cost by 1.",
     "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -108026,7 +108026,7 @@
     "type_eng": [],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "[Main] By deleting 1 of your Digimon, delete 1 of your opponent's Digimon whose level is less than or equal to that Digimon. If one of your Digimon with [Ravemon] in its name was deleted by this effect, at the end of your opponent's turn, play 1 [Ravemon] from your trash without paying the cost.",
+    "effect_description_eng": "[Main] By deleting 1 of your Digimon, delete 1 of your opponent's Digimon whose level is less than or equal to that Digimon. If one of your Digimon with [Ravemon] in its name was deleted by this effect, at the next end of your opponent's turn, play 1 [Ravemon] from your trash without paying the cost.",
     "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's Digimon with the lowest level.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -128012,7 +128012,7 @@
     "attribute_eng": [
       "Vaccine"
     ],
-    "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. Then, if they have no unsuspended Digimon, gain 2 memory.\r\n[When Attacking] You may play 1 Digimon card with [Angoramon] in its text from your hand without paying the cost. At the end of your opponent's turn, return that Digimon to the hand.",
+    "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. Then, if they have no unsuspended Digimon, gain 2 memory.\r\n[When Attacking] You may play 1 Digimon card with [Angoramon] in its text from your hand without paying the cost. At the next end of your opponent's turn, return that Digimon to the hand.",
     "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -130114,7 +130114,7 @@
     "type_eng": [],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "[Main] If you have a Digimon with [Veedramon] in its name, by suspending this Tamer, activate 1 of the effects below.\r\n・＜Draw 1＞ (Draw 1 card from your deck.)\r\n・1 of your Digimon gets +1000 DP for the turn.",
+    "effect_description_eng": "[Main] If you have a Digimon with [Veedramon] in its name, you may suspend this Tamer to activate one of the following effects:\r\n・Trigger ＜Draw 1＞ (Draw 1 card from your deck.)\r\n・1 of your Digimon gets +1000 DP for the turn.",
     "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -130690,7 +130690,7 @@
       "Variable"
     ],
     "effect_description_eng": "[When Attacking] This Digimon can digivolve into an [AncientGreymon] in your hand for a memory cost of 2, ignoring its digivolution requirements. If it does, delete this Digimon at the end of the turn.",
-    "inherited_effect_description_eng": "[Your Turn] When you would digivolve this Digimon into an [AncientGreymon] in your hand, reduce its digivolution cost by 2.",
+    "inherited_effect_description_eng": "[Your Turn] When digivolving this Digimon into an [AncientGreymon] in your hand, reduce its digivolution cost by 2.",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -130727,7 +130727,7 @@
       "Variable"
     ],
     "effect_description_eng": "[When Digivolving] This Digimon can digivolve into an [AncientGarurumon] in your hand for a memory cost of 1, ignoring its digivolution requirements. If it does, delete this Digimon at the end of the turn.",
-    "inherited_effect_description_eng": "[Your Turn] When you would digivolve this Digimon into an [AncientGarurumon] in your hand, reduce its digivolution cost by 2.",
+    "inherited_effect_description_eng": "[Your Turn] When digivolving this Digimon into an [AncientGarurumon] in your hand, reduce its digivolution cost by 2.",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -144298,7 +144298,7 @@
     "attribute_eng": [
       "Vaccine"
     ],
-    "effect_description_eng": "[When Digivolving] Place 1 yellow or purple Digimon card from your trash on top of your security stack face down. When DNA digivolving, you may search your security stack for 1 level 5 or lower Digimon card and play it without paying its memory cost. Then, shuffle your security stack.\r\n[All Turns] When you play another Digimon using an effect, delete 1 of your opponent's Digimon whose level is less than or equal to the played Digimon's level.",
+    "effect_description_eng": "[When Digivolving] Place 1 yellow or purple Digimon card from your trash on top of your security stack face down. When DNA digivolving, search your security stack, and you may play 1 level 5 or lower Digimon card among it without paying its cost. Then, shuffle your security stack.\r\n[All Turns] When you play another Digimon using an effect, delete 1 of your opponent's Digimon whose level is less than or equal to the played Digimon's level.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -147150,7 +147150,7 @@
       "Vaccine"
     ],
     "effect_description_eng": "[When Attacking] [Once Per Turn] By trashing 1 card from your hand, unsuspend this Digimon.",
-    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] By trashing 1 card from your hand, delete 1 of your opponent's level 4 or lower Digimon.",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] By trashing 1 card in your hand, delete 1 of your opponent's level 4 or lower Digimon.",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
