@@ -1,27 +1,24 @@
 # Adversarial extension of oracle-confirmed BT25-083-effect2.yaml.
-# Pay the source-trash cost, then DECLINE the eligible reduced-cost P-180 use.
-# Unlike the base, P1 has Agumon ST1-03 (2000 DP): P-180's mandatory
-# source-trash deletion must wait for LadyDevimon's reuse decision to finish.
-# DCGO BT25_083.cs: trash -> canNoSelect trash-use pick -> complete effect.
-# P_180.cs: pending mandatory deletion after the parent finishes; see
-# docs/digimon-rules/digest.md, rule 15-8-3-2.
-# This exposes early child-trigger resolution; do not reorder deletion
-# before decline or hide that ordering behind sim_only/dcgo_only.
-# Decline leaves P-180 in trash, no source refund, no extra security trash,
-# and no memory payment. The attack then checks one security.
-# Three own Digimon retain the base's slot-safe field.2 LadyDevimon attack.
+# Pay the P-180 source-trash cost, then decline its legal discounted reuse.
+# Keep the opponent empty so P-180's source-trash trigger has no target:
+# the previous target-bearing line stopped before the actual decline because
+# our engine resolved the child deletion before the parent's reuse decision.
+# Do not disguise that timing mismatch with per-engine reordered choices.
+#
+# After declining, immediately use a SECOND P-180 from hand at its FULL cost 6.
+# This tests that decline neither refunds the paid source nor installs/leaks
+# the unused cost reduction into the next Option use. DCGO BT25_083.cs creates
+# ChangeCostClass only inside `if (selectedOption != null)`.
+# Expected oracle witnesses: decline leaves the first P-180 in trash, memory 3,
+# and 3 opposing security after the attack; the hand use costs 6 (3 -> -3),
+# trashes one security, and places only the second P-180 under EX7-073.
+# The next decision belongs to P1. A leaked discount would leave P0 at 0.
+# The second P-180 is drawn on T11, AFTER LadyDevimon's T9 On Play, keeping
+# the base's inert On Play and slot-safe third-Digimon attacker intact.
 # Existing sim_only/dcgo_only rows adapt only the base's gate/source UI.
-# Measured 2026-10-06: exam_validate clean against both denominators.
-# exam_probe(sim_only, inspect_step=28) stops at step 28: expected
-# SelectCardEffect (reuse decline), but OppField/SelectPermanentEffect is
-# parked. A transient diagnostic swapping only steps 28/29 lowers fully:
-# before 28, memory 3, P-180 in trash, mandatory ST1-03 deletion candidate;
-# before 29, optional Trash pick offers P-180, then decline succeeds.
-# Thus the cost and decline are reachable; their ordering with the child
-# trigger is the finding. The diagnostic reorder is NOT this delivered line.
-# No oracle run; retain the DCGO/rules ordering for independent measurement.
+# assert is deliberately empty for independent oracle backfill.
 interaction: {id: 'probe:BT25-083#effect#2:optional_decline', source: probe, kind: positive}
-meta: {produced_by: 20261006T153641571057Z-pilot-three-musketeers-32907a}
+meta: {produced_by: 20261006T154129754070Z-pilot-three-musketeers-59e069}
 covers:
   - BT25-083#effect#2
   - P-180#effect#0
@@ -33,7 +30,7 @@ decks:
   p0:
     stack: [EX7-073, BT25-083, BT24-088, BT24-088, BT24-088,
             BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
-            BT25-092, P-180, EX7-073, EX7-051, BT25-092]
+            BT25-092, P-180, EX7-073, EX7-051, P-180]
     rest: three-musketeers
   p1:
     stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT3-007,
@@ -50,9 +47,6 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
-  - actor: 1
-    do: { play: { card: ST1-03, from: hand } }
-    expect: { prompt: main_phase }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -127,11 +121,15 @@ steps:
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectCardEffect }
+  # Full-cost follow-up: the declined reuse must not discount this hand use.
   - actor: 0
-    do: { select: { targets: [opp.field.0] } }
-    expect: { prompt: SelectPermanentEffect }
-  - actor: 0
-    do: { pass: {} }
+    do: { play: { card: P-180, from: hand } }
     expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
 assert: []
 
