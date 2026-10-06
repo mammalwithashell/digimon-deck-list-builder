@@ -1,0 +1,62 @@
+# Negative target-scope extension of BT26-036-inherited0.yaml.
+# Keep the Lalamon -> GeoGreymon breeding prefix, but put P1's Agumon
+# in BREEDING and Tai Kamiya in the battle area. Neither is a legal target.
+# DCGO BT26_036.cs CanSelectPermanentCondition requires an opponent's
+# battle-area Digimon, unsuspended and suspendable. CanActivateCondition
+# requires at least one such target, so this attack must open NO suspension
+# selection. The following main_phase row detects a spurious prompt.
+# Rules: docs/digimon-rules/digest.md section 2 (breeding exclusion).
+# Witness before step 9: P1 Tai and breeding Agumon remain unsuspended;
+# security falls to 4 and GeoGreymon survives ST1-02. Oracle backfills asserts.
+card: BT26-036
+clause: BT26-036#inherited#0
+interaction: {id: "probe:BT26-036#inherited#0:scope:neg", source: probe, kind: negative}
+covers:
+  - BT26-036#effect#0
+  - BT26-036#inherited#0
+  - ST24-05#effect#1
+meta: {produced_by: 20261006T150326303564Z-pilot-data-squad-84ead8}
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-036, ST24-05, BT26-072, BT26-076, ST24-15,
+            ST24-04, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-12, ST24-04, BT26-082]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-12, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-036 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST24-05 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: breeding, using: ST1-03 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert: []
