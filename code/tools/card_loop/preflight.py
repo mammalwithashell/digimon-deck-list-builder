@@ -12,10 +12,12 @@ Every check returns `{name, status: ok|warn|fail, detail, remedy}` and every
   is a `warn` (the gate lags the engine: a keyword newly lowered through the DSL
   counts as covered only once the manifest's `dsl_lowered_keywords` is
   regenerated).
-- `dcgo_scripts`     per-card DCGO `.cs` presence. A missing script is a `warn`:
-  that card's clauses and interactions are `unavailable`, the rest proceeds. A
-  missing DCGO checkout is a `fail` (it would silently make every card
-  unavailable).
+- `dcgo_scripts`     per-card DCGO effect class, resolved the way DCGO does:
+  through the card's CardBaseEntity asset's `CardEffectClassName` (a keyword-
+  only reprint runs a shared class; see `dcgo_script_resolution`). A card with
+  no effect class is a `warn`: its clauses and interactions are `unavailable`,
+  the rest proceeds. A missing DCGO checkout is a `fail` (it would silently
+  make every card unavailable).
 - `worker_cli.<family>`  the group-3 adapters' `resolve_*_exe()`; an adapter
   that is not built yet is a `warn`, an unresolved binary a `fail`.
 - `oracle_node[.<check>]`  `dcgo-harness node status --build <player_dir>`,
@@ -274,19 +276,161 @@ def _card_effect_dir(root: Path) -> Path:
     return root / "Assets" / "Scripts" / "CardEffect"
 
 
-def dcgo_script_presence(pool: Iterable[str], dcgo_root: str | Path | None) -> dict[str, str | None]:
-    """`{card: "Assets/Scripts/CardEffect/<SET>/<Colour>/<ID_>.cs" | None}`.
+def _card_base_entity_dir(root: Path) -> Path:
+    return root / "Assets" / "CardBaseEntity"
 
-    Never cached: `resume` calls this again so a card whose script DCGO has
-    since gained re-enters the plan as outstanding.
+
+# How DCGO gives a card its effects (task 9.2) — NOT from a file named after the
+# card, and NOT by reading keywords from card data:
+#
+# - `CardObjectController.CreateCardSource` (Assets/Scripts/Script/
+#   CardObjectController.cs) calls `cEntity_EffectController.AddCardEffect(
+#   cEntity_Base.CardID, cEntity_Base.CardEffectClassName)`; the CEntity_Base
+#   is the card's CardBaseEntity asset (Assets/CardBaseEntity/<SET>/<Colour>/
+#   <Kind>/<ID_>.asset), whose `CardEffectClassName` names the effect class.
+# - `CEntity_EffectController.AddCardEffect` (Assets/Scripts/Script/
+#   CEntity_EffectController.cs) resolves that name by reflection: the global
+#   type `ClassName`, else `DCGO.CardEffects.<the CARD's set prefix>.<ClassName>`
+#   (`DCGO.CardEffects.Tokens.<ClassName>` when the name contains "token");
+#   anything else, or an empty name, attaches `EmptyEffectClass` — the card
+#   plays with no effects at all.
+#
+# So a keyword-only reprint is implemented by a SHARED class: BT1-032's asset
+# names `BT1_016`, whose `CardEffects` adds `CardEffectFactory.
+# JammingSelfStaticEffect` (Assets/Scripts/CardEffect/BT1/Red/BT1_016.cs);
+# ST13-08 runs BT8_071, BT14-009 runs BT9_033. Such cards ARE examinable. A
+# card with no asset (all of EX13 at this DCGO) is absent from DCGO's card list
+# whatever scripts exist, and a class namespaced under another set (BT12-036 ->
+# `DCGO.CardEffects.BT10.BT10_045`) never resolves: both are `unavailable`.
+_ASSET_CLASS_RE = re.compile(r"^\s*CardEffectClassName:\s*['\"]?([^'\"\r\n]*?)['\"]?\s*$", re.M)
+_NAMESPACE_RE = re.compile(r"^\s*namespace\s+([\w.]+)", re.M)
+
+
+@dataclass(frozen=True)
+class DcgoScript:
+    """Where DCGO's effect class for a card lives, or why there is none."""
+
+    #: File declaring the class DCGO attaches, relative to the DCGO root.
+    path: str | None
+    #: How it was resolved, or why the card is unavailable.
+    mechanism: str
+
+
+def _find_asset(root: Path, card_id: str, cache: dict[str, dict[str, Path]]) -> Path | None:
+    set_name = card_id.partition("-")[0]
+    if set_name not in cache:
+        index: dict[str, Path] = {}
+        set_dir = _card_base_entity_dir(root) / set_name
+        if set_dir.is_dir():
+            for p in set_dir.rglob("*.asset"):
+                index.setdefault(p.stem, p)
+        cache[set_name] = index
+    return cache[set_name].get(card_id.replace("-", "_"))
+
+
+def _declares_class(path: Path, class_name: str, namespaces: tuple[str, ...]) -> bool:
+    """Does `path` declare `class <class_name> : CEntity_Effect` in one of
+    `namespaces` ("" = the global namespace)?"""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    m = re.search(rf"\bclass\s+{re.escape(class_name)}\s*:\s*CEntity_Effect\b", text)
+    if not m:
+        return False
+    ns = [n.group(1) for n in _NAMESPACE_RE.finditer(text, 0, m.start())]
+    return (ns[-1] if ns else "") in namespaces
+
+
+def _resolve_effect_class(root: Path, card_id: str, class_name: str) -> Path | None:
+    """The file declaring the class `AddCardEffect` would attach, or None."""
+    card_set = card_id.partition("-")[0]
+    scoped = "DCGO.CardEffects.Tokens" if "token" in class_name else f"DCGO.CardEffects.{card_set}"
+    namespaces = ("", scoped)
+    effect_dir = _card_effect_dir(root)
+
+    def candidates() -> Iterable[Path]:
+        # Usually the file named after the class (`BT1_016` -> BT1/Red/BT1_016.cs).
+        natural = _dcgo_script_path(root, class_name.replace("_", "-", 1).removesuffix("_token"))
+        if natural is not None:
+            yield natural.with_name(f"{class_name}.cs")
+        # Else another file of the card's or the class's set (BT25_003 is
+        # declared in BT25_002.cs), and only then anywhere.
+        for set_dir in dict.fromkeys([card_set, class_name.partition("_")[0]]):
+            if (effect_dir / set_dir).is_dir():
+                yield from sorted((effect_dir / set_dir).rglob("*.cs"))
+        yield from sorted(effect_dir.rglob("*.cs"))
+
+    seen: set[Path] = set()
+    for path in candidates():
+        if path in seen or not path.is_file():
+            continue
+        seen.add(path)
+        if _declares_class(path, class_name, namespaces):
+            return path
+    return None
+
+
+def dcgo_script_resolution(
+    pool: Iterable[str], dcgo_root: str | Path | None
+) -> dict[str, DcgoScript]:
+    """Resolve each card the way DCGO does (see the comment above).
+
+    A checkout without `Assets/CardBaseEntity` (older DCGO, test fixtures) falls
+    back to the file named after the card.
     """
     root = Path(dcgo_root) if dcgo_root else None
-    usable = root is not None and _card_effect_dir(root).is_dir()
-    out: dict[str, str | None] = {}
+    pool = list(pool)
+    if root is None or not _card_effect_dir(root).is_dir():
+        return {c: DcgoScript(None, "no DCGO checkout") for c in pool}
+
+    def rel(p: Path) -> str:
+        return p.relative_to(root).as_posix()
+
+    if not _card_base_entity_dir(root).is_dir():
+        out = {}
+        for card in pool:
+            path = _dcgo_script_path(root, card)
+            out[card] = (DcgoScript(rel(path), "script file named after the card")
+                         if path is not None else
+                         DcgoScript(None, "no script file named after the card"))
+        return out
+    assets: dict[str, dict[str, Path]] = {}
+    out = {}
     for card in pool:
-        path = _dcgo_script_path(root, card) if usable else None
-        out[card] = path.relative_to(root).as_posix() if path is not None else None
+        asset = _find_asset(root, card, assets)
+        if asset is None:
+            out[card] = DcgoScript(None, "no CardBaseEntity asset: not in DCGO's card list")
+            continue
+        m = _ASSET_CLASS_RE.search(asset.read_text(encoding="utf-8", errors="replace"))
+        class_name = (m.group(1).strip() if m else "")
+        if not class_name:
+            out[card] = DcgoScript(None, "asset names no CardEffectClassName: DCGO "
+                                         "attaches EmptyEffectClass (no effects)")
+            continue
+        path = _resolve_effect_class(root, card, class_name)
+        if path is None:
+            out[card] = DcgoScript(None, f"asset class {class_name} does not resolve in "
+                                         f"DCGO.CardEffects.{card.partition('-')[0]}: DCGO "
+                                         "attaches EmptyEffectClass (no effects)")
+        elif class_name != card.replace("-", "_"):
+            out[card] = DcgoScript(rel(path), f"asset CardEffectClassName {class_name} "
+                                              "(shared class)")
+        elif path.stem != class_name:
+            out[card] = DcgoScript(rel(path), f"class {class_name} declared in {path.name}")
+        else:
+            out[card] = DcgoScript(rel(path), "own class")
     return out
+
+
+def dcgo_script_presence(pool: Iterable[str], dcgo_root: str | Path | None) -> dict[str, str | None]:
+    """`{card: "<path of the file declaring the card's DCGO effect class>" | None}`.
+
+    Resolved through the card's CardBaseEntity asset (`dcgo_script_resolution`).
+    Never cached: `resume` calls this again so a card DCGO has since gained
+    re-enters the plan as outstanding.
+    """
+    return {c: r.path for c, r in dcgo_script_resolution(pool, dcgo_root).items()}
 
 
 def newly_available(before: dict[str, str | None], after: dict[str, str | None]) -> list[str]:
@@ -297,7 +441,8 @@ def newly_available(before: dict[str, str | None], after: dict[str, str | None])
 def check_dcgo_scripts(
     pool: Sequence[str], dcgo_root: str | Path | None
 ) -> tuple[Check, dict[str, str | None]]:
-    presence = dcgo_script_presence(pool, dcgo_root)
+    resolution = dcgo_script_resolution(pool, dcgo_root)
+    presence = {c: r.path for c, r in resolution.items()}
     root = Path(dcgo_root) if dcgo_root else None
     if root is None or not _card_effect_dir(root).is_dir():
         where = str(root) if root else "(unresolved)"
@@ -308,16 +453,26 @@ def check_dcgo_scripts(
                   "or pass --dcgo-root / set DIGIMON_DCGO_ROOT"),
             presence,
         )
+    shared = [c for c, r in resolution.items() if r.path and r.mechanism.startswith("asset ")]
+    note = (f"; {len(shared)} run a shared class named by their CardBaseEntity asset's "
+            f"CardEffectClassName (keyword-only / reprint cards): {_fmt_ids(shared)}"
+            if shared else "")
     missing = [c for c, p in presence.items() if p is None]
     if missing:
+        reasons: dict[str, list[str]] = {}
+        for c in missing:
+            reasons.setdefault(resolution[c].mechanism, []).append(c)
+        why = "; ".join(f"{_fmt_ids(ids)} ({m})" for m, ids in reasons.items())
         return (
             Check("dcgo_scripts", "warn",
-                  f"{len(missing)} of {len(presence)} pool cards have no DCGO script "
-                  f"(their clauses and interactions are planned unavailable): {_fmt_ids(missing)}",
+                  f"{len(missing)} of {len(presence)} pool cards have no DCGO effect class "
+                  f"(their clauses and interactions are planned unavailable): {why}{note}",
                   "none needed to proceed; resume re-checks after a DCGO bump"),
             presence,
         )
-    return Check("dcgo_scripts", "ok", f"{len(presence)}/{len(presence)} pool cards have a DCGO script"), presence
+    return (Check("dcgo_scripts", "ok",
+                  f"{len(presence)}/{len(presence)} pool cards have a DCGO effect class{note}"),
+            presence)
 
 
 # ---------------------------------------------------------------------------
