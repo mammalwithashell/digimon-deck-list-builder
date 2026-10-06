@@ -34,14 +34,15 @@
 #     `condition:` (source_count trait_has) is false, no trigger.
 #
 # MEMORY IS ENGINEERED AWAY FROM ZERO (BT21-071-effect1 convention): P1
-# overspends on T4 (Biyomon ST1-02 for 2, then Garudamon ST1-08 from hand for
-# 6: 3 -> 1 -> -5), handing P0 FIVE memory on T5, so the cost-3 digivolve
-# lands on 2 and P0 still holds the turn for the trailing pass. Garudamon has
-# only a [When Digivolving] effect, so playing it prompts nothing.
+# overspends on T4 (MetalGreymon BT1-114 from hand for 8: 3 -> -5; it has no
+# [When Digivolving]/on-play effect, so nothing prompts), handing P0 FIVE
+# memory on T5, so the cost-3 digivolve lands on 2 and P0 still holds the
+# turn for the trailing pass. One play keeps the ruling's `at: 10` pointing
+# at the state right after the digivolve.
 #
 #   T1 (P0): pass.   T2 (P1): pass.
 #   T3 (P0, 3): play Deputymon EX7-010 (cost 6: 3 -> -3, turn over).
-#   T4 (P1, 3): Biyomon (3 -> 1), Garudamon (1 -> -5).
+#   T4 (P1, 3): MetalGreymon BT1-114 (3 -> -5).
 #   T5 (P0, 5): THE CLAUSE -- digivolve Deputymon into Satellamon for 3
 #            (5 -> 2, draw 1). Pass (turn over).
 #   T6 (P1): the trailing step.
@@ -52,7 +53,7 @@ card: BT21-074
 clause: BT21-074#effect#0
 interaction: {id: "qa:Q4584", source: qa, kind: positive}
 covers: [BT21-074#effect#0]
-meta: {produced_by: 20261006T142458555421Z-pilot-three-musketeers-18a3eb}
+meta: {produced_by: 20261006T142628951430Z-pilot-three-musketeers-50b84f}
 expect_ruling:
   q_id: Q4584
   assert:
