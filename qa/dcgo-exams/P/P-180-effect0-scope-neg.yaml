@@ -1,0 +1,157 @@
+# Exam scenario (NEGATIVE probe): probe:P-180#effect#0:scope:neg.
+# Same line as P-180-effect0.yaml (oracle-confirmed prefix), but the opponent's
+# ONLY Digimon is WarGreymon ST1-10 (vanilla, 12000 DP, > 7000). P-180 is
+# still trashed from LadyDevimon's digivolution cards by BeelStarmon BT25-085's [When Digivolving], but the clause's scope
+# ("opponent's 7000 DP or lower Digimon") has no legal target, so it must NOT
+# fire: no pick prompt, WarGreymon survives. DCGO: CanActivateCondition false
+# (HasMatchConditionPermanent over DP <= 7000). P1 plays it on T4 (9 -> -1),
+# not Agumon, so nothing <= 7000 exists on P1's side at T9.
+card: P-180
+clause: P-180#effect#0
+interaction: {id: "probe:P-180#effect#0:scope:neg", source: probe, kind: negative}
+covers: [P-180#effect#0]
+meta: {produced_by: 20261006T141545402931Z-pilot-three-musketeers-ecfdb6}
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws: T3 turn = BlackGatomon, T5 turn =
+    # Asuna, T5 Sparrowmon digivolve, LadyDevimon's <Draw 1>, T7 turn, T7
+    # BlackGatomon digivolve, T9 turn, T9 BeelStarmon digivolve. ONE copy each
+    # of LadyDevimon and BeelStarmon ever reaches the hand (`play:` / `using:`
+    # stay unambiguous), and no Option other than P-180 does, so BeelStarmon's
+    # use-an-Option [When Digivolving] stays inactive on both sides.
+    stack: [EX7-073, BT25-083, P-180, EX7-051, BT25-085,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-082, BT25-092, BT21-071, BT21-074, BT25-078,
+            EX7-008, BT21-071, BT21-074]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-10, ST1-04, ST1-04, BT1-009, BT3-007,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT3-007, BT3-007, BT3-007, ST1-05, ST1-05]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch Pagumon.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): hatch, pass.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): no breeding prompt (Pagumon is a Lv.2 in an occupied breeding
+  # area). BeelStarmon (X Antibody), the slot ballast: the FIRST Digimon in
+  # (12: 3 -> -9, the turn is over).
+  - actor: 0
+    do: { play: { card: EX7-073, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 9): WarGreymon (cost 10: 9 -> -1), the turn passes to P0 with 1.
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): breeding-digivolve Sparrowmon (Purple Lv.2 / 0); it stays in
+  # the breeding area this turn.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  # LadyDevimon (cost 7: 3 -> -4), the SECOND Digimon in. Her [On Play] seats
+  # P-180.
+  - actor: 0
+    do: { play: { card: BT25-083, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: the zone menu. 1 = "Hand" (the VALUE, not an index).
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # SHARED: the [Three Musketeers] trait card to place.
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  # SHARED: the Digimon that receives it -- LadyDevimon (OUR field.1; BeelStarmon
+  # (X) is field.0). On the wire by identity. <Draw 1>, then the turn is over.
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T6 (P1, 4): pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): promote Sparrowmon -- the THIRD Digimon in: field.2 / frame 5.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # SHARED: Sparrowmon's [Start of Your Main Phase] OptionalSkill (EX7_051.cs:
+  # isOptional TRUE), declined. BeelStarmon BT25-085 in hand is a DUAL card --
+  # a [Three Musketeers] trait Option -- so the cost is payable on both sides.
+  # `expect: OptionalSkill` over our declinable cost pick is the fold marker.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # BlackGatomon onto Sparrowmon: alt-circle 2 vs printed Purple Lv.3 / 3.
+  - actor: 0
+    do: { digivolve: { from: field.2, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  # [When Digivolving]: SIM-ONLY outer gate (DCGO builds it non-optional and
+  # carries the "may" on the pick's canNoSelect), then the shared hand pick.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-092] } }
+    expect: { prompt: SelectHandEffect }
+  # Memory 1: still P0's turn. Pass (P1 gets 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1, 3): pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0, 3): empty breeding area -> breeding prompt; pass it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Asuna's [Start of Your Main Phase], declined -- two rows for one decision
+  # (BT25_092.cs: optional: false + ONE cancellable SelectHandEffect; ours: an
+  # outer `Replacement` gate before the hand pick).
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  # BlackGatomon (Lv.4, field.2 on BOTH sides) -> BeelStarmon (Lv.6) for 4
+  # through the [All Turns] grant: the only open route (BeelStarmon's own
+  # circles want a Lv.5), so no cost prompt. Memory 3 -> -1.
+  - actor: 0
+    do: { digivolve: { from: field.2, using: BT25-085 } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: our `optional: true` gate on BeelStarmon's trash-to-unsuspend
+  # effect (DCGO: optional: false, the "may" rides the picks' canNoSelect).
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  # SHARED: which Digimon to trash an Option from -- LadyDevimon.
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The Option to trash. Ours: a single-candidate EffectChoice, answered
+  # through the `yes:` single-accept-id path, sim-only. DCGO: SelectCardEffect
+  # over LadyDevimon's digivolution cards, by identity, wire-only.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [P-180], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # One step past the clause: memory -1, so the seat is P1 (T10; Koromon still
+  # sits in the breeding area -> no breeding prompt).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
