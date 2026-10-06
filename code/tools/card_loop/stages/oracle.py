@@ -148,8 +148,30 @@ class OracleExecutor:
                                         f"(pick {cm.pick} of {cm.wanted_list}); our engine accepted that pick sim-only, "
                                         f"so the two engines offer different candidates at that selection")}
             return "engines_disagree", evidence
+        sm = harness.step_shape_mismatch(row) if pm is None else None
+        if sm is not None:
+            # The scripted answer does not fit the prompt DCGO asked (and our
+            # engine accepted it sim-only): the line is wrong, and resubmitting
+            # the same job fails the same way -- Q6391 burnt its three oracle
+            # retries on one such step.
+            evidence = {"scenario": path, "dcgo_row": None, "scenario_step": None, "step_mapping": None,
+                        "expected": sm.prompt, "dcgo_asked": sm.prompt, "ours": sm.prompt, "route": "scenario_wrong",
+                        "explanation": (f"DCGO's {sm.prompt} needs {sm.needs} but the scripted step gives {sm.got}; "
+                                        f"our engine accepted that answer sim-only. Rewrite the step for the prompt "
+                                        f"DCGO asks (exam MCP `exam_authoring_guide`, topic `prompts`)")}
+            return "scenario_wrong", evidence
         if pm is None:
-            return ("diverged" if verdict == "diverged" else "unmeasured"), None
+            if verdict == "diverged":
+                return "diverged", None
+            if row.get("job_outcome") == "failed":
+                # DCGO stopped the line for a reason the loop cannot parse. The
+                # job is deterministic: another round trip gives the same stop.
+                # Triage reads DCGO's message instead.
+                evidence = {"scenario": path, "dcgo_row": None, "scenario_step": None, "step_mapping": None,
+                            "expected": None, "dcgo_asked": None, "ours": None, "route": "undetermined",
+                            "explanation": f"DCGO stopped the line: {row.get('reason')}"}
+                return "undetermined", evidence
+            return "unmeasured", None
         steps = base.scenario_steps(ctx, path)
         if hm is not None and isinstance(hm.get("step"), int):
             # The harness maps DCGO's wire row to the scenario step exactly

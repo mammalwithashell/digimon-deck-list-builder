@@ -133,8 +133,11 @@ CAP_RESETS = {
     "implement": ("review",),
     "fix_card": ("triage", ORACLE_RETRY_KEY),
     "fix_engine": ("triage", ORACLE_RETRY_KEY),
-    "author_clause": (ORACLE_RETRY_KEY,),
-    "author_interaction": (ORACLE_RETRY_KEY,),
+    # A re-authored line is a new exam: its encoding, oracle trips and triage
+    # start over (the second pilot's `scenario_wrong` round trips died on
+    # `triage 1/1` and `encode_ruling 2/2` caps spent by the earlier line).
+    "author_clause": ("triage", ORACLE_RETRY_KEY),
+    "author_interaction": ("triage", "encode_ruling", ORACLE_RETRY_KEY),
 }
 #: An item that takes this many consecutive executor steps with no worker
 #: attempt and no adjudication is set aside for the session (an executor loop

@@ -382,6 +382,29 @@ def actor_mismatch(result: Mapping) -> tuple[int, int] | None:
 
 
 @dataclass(frozen=True)
+class StepShapeMismatch:
+    """DCGO asked the prompt the scenario expected, but the scripted answer has
+    the wrong SHAPE for it (`SelectHandEffect prompt needs select_card_ids or
+    select_cancel, got: select_value=1`): the line, not an engine, is wrong, and
+    the same job fails identically every time it is resubmitted."""
+    prompt: str
+    needs: str
+    got: str
+
+
+_NEEDS = re.compile(r"(\w+) prompt needs (.+?), got: (.+?)(?: -- |$)")
+
+
+def step_shape_mismatch(result: Mapping) -> StepShapeMismatch | None:
+    if result.get("job_outcome") != "failed":
+        return None
+    m = _NEEDS.search(str(result.get("reason") or ""))
+    if not m:
+        return None
+    return StepShapeMismatch(prompt=m.group(1), needs=m.group(2).strip(), got=m.group(3).strip())
+
+
+@dataclass(frozen=True)
 class CandidateMismatch:
     """DCGO's prompt matched but offered other candidates than the pick the
     scenario (sim-only clean in our engine) makes: the engines disagree on

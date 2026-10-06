@@ -159,6 +159,15 @@ def test_a_contradicted_ruling_is_a_failure_line_the_author_sees():
     assert H.parse_sim_output(0, SIM_PASS).line_ok
 
 
+def test_a_step_shape_mismatch_is_parsed_from_dcgos_message():
+    row = {"job_outcome": "failed",
+           "reason": "DCGO job failed: SelectHandEffect prompt needs select_card_ids or select_cancel, got: "
+                     "select_value=1 -- stopped before the line finished"}
+    m = H.step_shape_mismatch(row)
+    assert (m.prompt, m.needs, m.got) == ("SelectHandEffect", "select_card_ids or select_cancel", "select_value=1")
+    assert H.step_shape_mismatch({"job_outcome": "completed", "reason": row["reason"]}) is None
+
+
 def test_a_candidate_mismatch_is_parsed_from_dcgos_message():
     row = {"job_outcome": "failed",
            "reason": "DCGO job failed: SelectCardEffect: wanted card 'BT26-005' (pick 0 of [BT26-005]) is not "

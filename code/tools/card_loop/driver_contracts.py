@@ -82,7 +82,7 @@ _EXAM_TRANSITIONS = {
     "TRIAGE": ("FIX", "TERMINATION_CHECK", "AUTHORING", "ESCALATED"),   # AUTHORING: scenario_wrong
     "FIX": ("GATE", "ESCALATED"),
     "GATE": ("ORACLE", "FIX", "ESCALATED"),
-    "TERMINATION_CHECK": ("TERMINAL", "ESCALATED"),
+    "TERMINATION_CHECK": ("TERMINAL", "AUTHORING", "ESCALATED"),   # AUTHORING: the second opinion is scenario_wrong
     "CONFIRMED": (),
     "TERMINAL": (),
     "UNAVAILABLE": ("PENDING",),                                 # DCGO gained the script (resume)

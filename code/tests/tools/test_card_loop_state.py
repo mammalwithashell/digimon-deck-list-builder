@@ -287,6 +287,19 @@ def test_deleting_an_escalation_file_withdraws_it_on_resume(ws):
     assert d.get("history") == ["att-1"], "the attempt history is kept"
 
 
+def test_a_withdrawn_escalation_over_a_diverged_ledger_row_is_re_measured_from_pending(ws):
+    # The ledger's `diverged` is a finding, not an adjudication, and the second
+    # pilot's first findings were checker artifacts: re-entering at DIVERGED
+    # re-triaged a stale row (Q4577); re-measure instead.
+    s = _open(ws)
+    item = "clause:BT7-056#effect#0"
+    assert s.records[item].state == "DIVERGED", "the BT7-056 ledger row is diverged (undetermined)"
+    s.transition(item, "ESCALATED", reason="triage undetermined")     # no escalation file is written here
+    r = _open(ws)
+    assert r.records[item].state == "PENDING"
+    assert "escalation withdrawn" in [e for e in _events(ws) if e["item"] == item][-1]["reason"]
+
+
 def test_a_pending_card_whose_spec_appeared_is_implemented_on_resume(ws):
     _open(ws)
     (ws["paths"].cards_dir / "ex12" / "EX12-073.yaml").write_text("card: EX12-073\n", encoding="utf-8")

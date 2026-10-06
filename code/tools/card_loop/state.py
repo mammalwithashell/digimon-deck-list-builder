@@ -503,7 +503,10 @@ class RunState:
             if origin is None:
                 continue
             if rec.state == "ESCALATED" and item not in escalated:
-                target = origin.state if origin.state != "ESCALATED" else "PENDING"
+                # A ledger `diverged` is a finding, not an adjudication, and it
+                # may be stale (the second pilot's first findings were checker
+                # artifacts): re-measure from PENDING instead of re-triaging it.
+                target = origin.state if origin.state not in ("ESCALATED", "DIVERGED") else "PENDING"
                 # The item starts its exam over: the stage-scoped data of the
                 # escalated attempt (an agreed block, feedback, oracle rows) must
                 # not steer the new attempt. A re-entered Q&A item kept its old

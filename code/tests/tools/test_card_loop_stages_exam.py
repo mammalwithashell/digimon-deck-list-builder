@@ -636,6 +636,37 @@ def test_dcgo_offering_other_candidates_is_an_engine_disagreement_for_triage(rep
     assert not cmds.argvs("--inspect")
 
 
+SHAPE = ("DCGO job failed: SelectHandEffect prompt needs select_card_ids or select_cancel, got: select_value=1 -- "
+         "stopped before the line finished, with no divergence before it")
+
+
+def test_a_scripted_answer_of_the_wrong_shape_goes_back_to_the_author_not_to_a_retry(repo):
+    # Q6391 resubmitted the same job three times ("unmeasured") and escalated
+    # on the oracle_retry cap: the step's shape was wrong for DCGO's prompt.
+    _write_scenario(repo)
+    cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=SHAPE) + "\n")
+    item = _oracle_item()
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "AUTHORING"
+    assert out.data["prompt_route"] == "scenario_wrong"
+    assert "select_card_ids" in out.data["prompt_evidence"]["explanation"]
+    (c,) = out.corrections
+    assert (c.kind, c.corrected_attempt, c.by_gate) == ("gate_fail", "att-a", "oracle_scenario")
+    assert not cmds.argvs("--inspect")
+
+
+def test_a_dcgo_stop_the_loop_cannot_parse_goes_to_triage_not_to_a_retry(repo):
+    _write_scenario(repo)
+    reason = "DCGO job failed: deck codes rejected by the lobby -- stopped before the line finished"
+    cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=reason) + "\n")
+    item = _oracle_item()
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED" and out.data["prompt_route"] == "undetermined"
+    assert "deck codes rejected" in out.data["prompt_evidence"]["explanation"]
+
+
 def test_a_divergence_before_the_mismatch_is_a_plain_divergence(repo):
     _write_scenario(repo)
     row = _row(verdict="diverged", job_outcome="failed", reason="memory differs; " + MISMATCH,
@@ -767,6 +798,20 @@ def test_disagreement_escalates_with_both_arguments(repo):
     assert all(c.kind == "family_disagreement" for c in out.corrections)
     assert out.attempts[0].outcome == "escalated"
     assert "att-t1" in out.escalation.history
+
+
+def test_a_second_opinion_of_scenario_wrong_sends_the_exam_back_instead_of_escalating(repo):
+    # Q5677: claude said dcgo_quirk, codex said the exam itself was wrong; the
+    # two were escalated as "families disagree". A wrong exam ends nothing.
+    workers = _workers(codex=[ok(TRI_SCENARIO)])
+    item = _term_item()
+    out = TerminationCheckExecutor().run(_ctx(repo, workers), item)
+    _check(item, out)
+    assert out.next_state == "AUTHORING" and out.escalation is None
+    assert "does not decide" in out.data["triage_feedback"] and "dcgo_quirk" in out.data["triage_feedback"]
+    assert out.data["expect_ruling"] is None
+    assert all(c.kind == "family_disagreement" for c in out.corrections) and out.corrections
+    assert out.attempts[0].outcome == "accepted"
 
 
 def test_agreement_without_a_citation_escalates(repo):
