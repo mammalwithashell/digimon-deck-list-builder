@@ -79,3 +79,18 @@ steps:
 meta: {produced_by: 20261006T225056812806Z-pilot-data-squad-e8e383}
 assert: []
 
+expect_ruling:
+  q_id: Q6958
+  assert:
+  - at: 17
+    that:
+      p0.field:
+      - card_id: BT26-091
+        dp: -1
+        suspended: false
+        sources: []
+      - card_id: BT26-094
+        dp: -1
+        suspended: false
+        sources: [ST24-04]
+      p0.trash: [BT26-005, ST24-12]
