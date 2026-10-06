@@ -93,7 +93,10 @@ export function GameBoard({
     revealedCards,
     pendingSelection,
     playerLabels,
+    viewSeat,
   } = useGameStore();
+  // Lab games: one human drives both seats, so nothing is hidden.
+  const isLab = viewSeat != null;
 
   // Board atmosphere animates only when effective live-background is on
   // (motion full + toggle). Drives the `is-live` gate on the board's
@@ -154,7 +157,13 @@ export function GameBoard({
       <div className="ib-board__top-chrome">
         <div className="ib-chrome-tag"><span className="ib-dot" />MATCH LIVE</div>
         <div className="ib-chrome-tag">TURN {String(turnCount).padStart(2, '0')}</div>
-        <div className="ib-chrome-tag">{currentPlayer === 1 ? 'YOUR PRIORITY' : 'OPP PRIORITY'}</div>
+        {isLab ? (
+          <div className="ib-chrome-tag" data-testid="lab-seat-tag">
+            LAB · SEAT {viewSeat + 1} TO ACT
+          </div>
+        ) : (
+          <div className="ib-chrome-tag">{currentPlayer === 1 ? 'YOUR PRIORITY' : 'OPP PRIORITY'}</div>
+        )}
         <ActionTraceTicker traces={actionTraces} />
       </div>
 
@@ -172,7 +181,13 @@ export function GameBoard({
       />
 
       <div className="ib-board__opponent-hand">
-        <HandZone cardIds={player2.handIds} isOpponent />
+        <HandZone
+          cardIds={player2.handIds}
+          isOpponent
+          faceUp={isLab}
+          handCards={isLab ? player2.handCards : undefined}
+          onCardInspect={isLab ? onHandCardInspect : undefined}
+        />
       </div>
 
       {/* Flow stage: opponent field / memory gauge / player field share the

@@ -270,4 +270,8 @@ export interface GameState {
   revealedCards: { cardId: string; owner: number }[];
   pendingSelection: PendingSelection | null;
   pendingAttack: PendingAttack | null;
+  /** Lab games only: the engine seat (0/1) rendered as `player1` (bottom).
+   *  The board follows whichever seat must act; absent in normal games,
+   *  where engine seat 0 (the local human) is always player1. */
+  viewSeat?: number;
 }

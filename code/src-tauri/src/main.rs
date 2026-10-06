@@ -95,6 +95,7 @@ fn main() {
             engine_commands::rust_move_from_breeding,
             engine_commands::rust_mulligan_decide,
             engine_commands::rust_create_game,
+            engine_commands::rust_create_lab_game,
             engine_commands::rust_submit_action,
             engine_commands::rust_step_game,
             engine_commands::rust_get_mask,

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isInTauriRuntime } from '@/api/engineRuntime';
 import { Window } from '@/design/components/Window';
 import { InBetweenShell } from '@/features/play/InBetweenShell';
 import {
@@ -16,7 +17,15 @@ const OPPONENTS: Array<{ id: OpponentMode; name: string; sub: string; meta: stri
   { id: 'room', name: 'ROOM MATCH', sub: 'Private code and friends', meta: 'PRIVATE CODE' },
   { id: 'bot', name: 'BOT MATCH', sub: 'CPU practice', meta: 'LOCAL ENGINE' },
   { id: 'ai_starter', name: 'AI STARTER DECK', sub: 'Pick a starter, face the AI', meta: 'AI OPPONENT' },
+  { id: 'lab', name: 'COMBO LAB', sub: 'Control both seats, stack both decks', meta: 'LOCAL ENGINE' },
 ];
+
+// Lab games need the in-process engine, so the option only exists on desktop.
+const visibleOpponents = () =>
+  OPPONENTS.filter((o) => o.id !== 'lab' || isInTauriRuntime());
+
+// Modes that skip the format/deck steps and go straight to their own setup.
+const NO_FORMAT_MODES: OpponentMode[] = ['ai_starter', 'lab'];
 
 export function ModeSelectPage() {
   const navigate = useNavigate();
@@ -57,7 +66,7 @@ export function ModeSelectPage() {
 
         <Window title="OPPONENT" className="mode-window">
           <section className="mode-opponent-strip" aria-label="Opponent">
-            {OPPONENTS.map((opponent) => (
+            {visibleOpponents().map((opponent) => (
               <button
                 key={opponent.id}
                 type="button"
@@ -72,7 +81,7 @@ export function ModeSelectPage() {
           </section>
         </Window>
 
-        {opponentMode !== 'ai_starter' && (
+        {!NO_FORMAT_MODES.includes(opponentMode) && (
           <Window title="FORMAT" className="mode-window">
             <section className="mode-grid" aria-label="Formats">
               {visibleFormats.map((format, index) => (
@@ -103,7 +112,12 @@ export function ModeSelectPage() {
 
         <div className="mode-action-bar">
           <span>
-            {opponentMode === 'ai_starter' ? 'STARTER DECKS' : selected.name} /{' '}
+            {opponentMode === 'ai_starter'
+              ? 'STARTER DECKS'
+              : opponentMode === 'lab'
+                ? 'ANY DECKS'
+                : selected.name}{' '}
+            /{' '}
             {opponentMode.toUpperCase()}
           </span>
           <button
@@ -114,10 +128,12 @@ export function ModeSelectPage() {
                   ? '/play/room'
                   : opponentMode === 'ai_starter'
                     ? '/play/ai-starter'
-                    : '/play/deck',
+                    : opponentMode === 'lab'
+                      ? '/play/lab'
+                      : '/play/deck',
               )
             }
-            disabled={opponentMode !== 'ai_starter' && !selected.enabled}
+            disabled={!NO_FORMAT_MODES.includes(opponentMode) && !selected.enabled}
           >
             ENTER FORMAT
           </button>

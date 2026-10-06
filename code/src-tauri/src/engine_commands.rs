@@ -1416,6 +1416,79 @@ fn new_session_game(
     Ok(game)
 }
 
+/// Build a lab game: both decks taken verbatim in the caller's staged order
+/// (no setup shuffle), an explicit first player, and the mulligan skipped
+/// (both hands auto-kept) so the staged order fully determines the opening
+/// hand, security and draws. A redraw would reshuffle and destroy the stack.
+///
+/// Each deck list is TOP-FIRST: index 0 is the first card drawn. Eggs and
+/// main-deck cards may be interleaved — `Game::new_inner` routes them by
+/// kind while keeping relative order. The engine pops from the END of its
+/// deck Vecs, so each list is reversed here. With no mulligan the main deck
+/// deals as: `[0..5)` opening hand, `[5..10)` security (index 5 lands at
+/// the bottom, index 9 on top and is checked first), `[10..)` the draws.
+fn new_lab_game(
+    decks_top_first: &[Vec<String>],
+    db: &std::collections::HashMap<String, CardData>,
+    rules: Rules,
+    seed: u64,
+    first_player: PlayerId,
+) -> Result<Game, String> {
+    if first_player as usize >= decks_top_first.len() {
+        return Err(format!("first_player {first_player} out of range"));
+    }
+    let engine_order: Vec<Vec<String>> = decks_top_first
+        .iter()
+        .map(|d| d.iter().rev().cloned().collect())
+        .collect();
+    let mut game = Game::new_with_ordered_decks(&engine_order, db, rules, Some(seed), first_player)
+        .map_err(|e| format!("Game::new_with_ordered_decks failed: {}", e))?;
+    game.start_game();
+    Ok(game)
+}
+
+/// Create a lab game: one human drives BOTH seats over two staged decks.
+/// See `new_lab_game` for the deck-order contract (lists are top-first).
+#[tauri::command]
+pub async fn rust_create_lab_game(
+    engine: tauri::State<'_, EngineHandle>,
+    deck1: Vec<String>,
+    deck2: Vec<String>,
+    first_player: Option<PlayerId>,
+    seed: Option<String>,
+) -> Result<CreateGameResponseDto, String> {
+    let parsed_seed = parse_optional_seed(seed)?;
+    engine
+        .run(move |world| -> Result<CreateGameResponseDto, String> {
+            let db = digimon_engine::deck_tools::full_card_data();
+            let effective_seed = parsed_seed.unwrap_or_else(rand::random::<u64>);
+            let game = new_lab_game(
+                &[deck1, deck2],
+                &db,
+                Rules::standard(),
+                effective_seed,
+                first_player.unwrap_or(0),
+            )?;
+            let session = GameSession {
+                registry: Some(CardRegistry::from_cards(&db)),
+                player_kinds: vec![PlayerKind::Human; 2],
+                player_model_ids: vec![None, None],
+            };
+            let mask = action_mask_bytes(&game);
+            let dto = game_state_dto(&game);
+            world.game = Some(game);
+            world.session = session;
+            Ok(CreateGameResponseDto {
+                game_id: "rust-local".to_string(),
+                seed: effective_seed.to_string(),
+                state: dto,
+                action_mask: mask,
+                agent_pending: false,
+            })
+        })
+        .await?
+}
+
 /// Create a new local game. When `deck1`/`deck2` are provided by the
 /// caller, the real `data/cards.json`-derived card pool is used so any
 /// production card ID resolves. When both are absent, falls back to the
@@ -2145,6 +2218,81 @@ mod tests {
         assert!(game.mulligan_current_player().is_none());
         assert_eq!(game.turn_count, 1, "the last accept_mulligan begins turn 1");
         assert_ne!(game.current_phase, GamePhase::Mulligan);
+    }
+
+    // ─── lab game (staged decks, both seats human) ───────────────────────
+
+    /// A 50-card main deck whose top-first order is a distinguishable pattern,
+    /// with eggs interleaved to prove kind-routing keeps relative order.
+    fn staged_deck(offset: usize) -> Vec<String> {
+        let mains = [
+            "TEST-001",
+            "TEST-002",
+            "TEST-003",
+            "TEST-004",
+            "TEST-005",
+            "VANILLA-3K",
+            "VANILLA-5K",
+        ];
+        let mut deck: Vec<String> = (0..50)
+            .map(|i| mains[(i * 3 + offset) % mains.len()].to_string())
+            .collect();
+        deck.insert(2, "EGG-01".to_string());
+        deck.push("EGG-01".to_string());
+        deck
+    }
+
+    fn ids(game: &Game, cards: &[digimon_engine::card_source::CardSource]) -> Vec<String> {
+        cards
+            .iter()
+            .map(|c| card_dto(c, &game.card_data).card_id)
+            .collect()
+    }
+
+    #[test]
+    fn lab_game_deals_hand_security_and_draws_in_staged_order() {
+        let db = test_card_db();
+        let decks = vec![staged_deck(0), staged_deck(4)];
+        // Seat 1 goes first so seat 0 has not drawn yet when we inspect it;
+        // then check seat 1 too (the first player skips its turn-1 draw).
+        let game = new_lab_game(&decks, &db, Rules::standard(), 7, 1).unwrap();
+        assert_eq!(game.turn_order[0], 1, "first player is the staged choice");
+        assert_eq!(game.turn_count, 1, "mulligan skipped, turn 1 begun");
+        assert_ne!(game.current_phase, GamePhase::Mulligan);
+
+        for seat in 0..2u8 {
+            let mains: Vec<String> = decks[seat as usize]
+                .iter()
+                .filter(|id| *id != "EGG-01")
+                .cloned()
+                .collect();
+            let p = game.player(seat);
+            let mut hand = ids(&game, &p.hand);
+            let mut want_hand = mains[0..5].to_vec();
+            hand.sort();
+            want_hand.sort();
+            assert_eq!(hand, want_hand, "seat {seat}: opening hand = top 5");
+            // security Vec is bottom→top (combat pops the end), so reversed
+            // it must equal staged slots 5..10 read top-first.
+            let mut sec = ids(&game, &p.security);
+            sec.reverse();
+            let mut want_sec = mains[5..10].to_vec();
+            want_sec.reverse();
+            assert_eq!(
+                sec, want_sec,
+                "seat {seat}: slot 9 is the top security card"
+            );
+            let next = card_dto(p.deck.last().unwrap(), &game.card_data).card_id;
+            assert_eq!(next, mains[10], "seat {seat}: next draw = slot 10");
+            assert_eq!(p.digitama_deck.len(), 2);
+        }
+    }
+
+    #[test]
+    fn lab_game_rejects_out_of_range_first_player() {
+        let db = test_card_db();
+        let decks = vec![staged_deck(0), staged_deck(1)];
+        assert!(new_lab_game(&decks, &db, Rules::standard(), 7, 2).is_err());
     }
 
     #[test]
@@ -3092,11 +3240,7 @@ mod tests {
         let mut game = started_game(42);
         let resp = perform_surrender(&mut game, 1).unwrap();
 
-        let types: Vec<&str> = resp
-            .events
-            .iter()
-            .map(|e| e.event_type.as_str())
-            .collect();
+        let types: Vec<&str> = resp.events.iter().map(|e| e.event_type.as_str()).collect();
         let concede_pos = types
             .iter()
             .position(|t| *t == "Concede")
@@ -3110,7 +3254,10 @@ mod tests {
             "rule 16: Concede must precede GameOver, got {types:?}"
         );
         // Event DTOs are in the Python/frontend 1-based convention.
-        assert_eq!(resp.events[concede_pos].player, 1, "conceder is frontend player 1");
+        assert_eq!(
+            resp.events[concede_pos].player, 1,
+            "conceder is frontend player 1"
+        );
         assert_eq!(
             resp.events[game_over_pos].meta["winner"], 2,
             "winner in the GameOver event is frontend player 2 (the opponent)"

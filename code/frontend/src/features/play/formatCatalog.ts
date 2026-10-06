@@ -12,7 +12,8 @@ export type PlayFormatId =
   | 'eden'
   | 'eden_singleton'
   | 'starter';
-export type OpponentMode = 'quick' | 'room' | 'bot' | 'ai_starter';
+// 'lab': one human drives both seats over staged decks (desktop only).
+export type OpponentMode = 'quick' | 'room' | 'bot' | 'ai_starter' | 'lab';
 
 export interface PlayFormat {
   id: PlayFormatId;

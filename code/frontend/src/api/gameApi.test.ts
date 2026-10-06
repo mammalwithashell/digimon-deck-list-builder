@@ -4,8 +4,10 @@ import {
   createGame,
   dtoToGameState,
   normalizeSeedInput,
+  setLabMode,
   toTensorSummary,
 } from './gameApi';
+import type { GameStateDto } from './engineDtos';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -382,5 +384,91 @@ describe('normalizeSeedInput', () => {
     expect(() => normalizeSeedInput('-1')).toThrow(/base-10/);
     expect(() => normalizeSeedInput('1.5')).toThrow(/base-10/);
     expect(() => normalizeSeedInput('18446744073709551616')).toThrow(/u64/);
+  });
+});
+
+describe('dtoToGameState lab perspective', () => {
+  const card = (id: string) => ({
+    card_id: id,
+    card_name: id,
+    card_kind: 'Digimon' as const,
+    level: 3,
+    dp: 2000,
+    play_cost: 3,
+    colors: ['Red'],
+  });
+  const player = (id: number, handId: string) => ({
+    id,
+    hand: [card(handId)],
+    battle_area: [],
+    breeding: null,
+    deck_count: 40,
+    trash_count: 0,
+    security_count: 5,
+    is_eliminated: false,
+  });
+  const dto = (over: Partial<GameStateDto> = {}): GameStateDto => ({
+    turn_count: 2,
+    turn_player: 1,
+    first_player: 0,
+    current_phase: 'Main',
+    memory: 3,
+    game_over: false,
+    winner: null,
+    mulligan_current_player: null,
+    mulligan_used: [false, false],
+    players: [player(0, 'SEAT0-CARD'), player(1, 'SEAT1-CARD')],
+    ...over,
+  });
+
+  afterEach(() => setLabMode(false));
+
+  it('keeps engine seat 0 at the bottom outside lab mode', () => {
+    setLabMode(false);
+    const state = dtoToGameState(dto());
+    expect(state.player1.handIds).toEqual(['SEAT0-CARD']);
+    expect(state.viewSeat).toBeUndefined();
+    expect(state.memoryGauge).toBe(-3);
+  });
+
+  it('puts the turn player at the bottom when it is the decider', () => {
+    setLabMode(true);
+    const state = dtoToGameState(dto());
+    expect(state.viewSeat).toBe(1);
+    expect(state.player1.handIds).toEqual(['SEAT1-CARD']);
+    expect(state.player2.handIds).toEqual(['SEAT0-CARD']);
+    // view-relative: bottom seat's turn, bottom seat's memory, top went first
+    expect(state.currentPlayer).toBe(0);
+    expect(state.memoryGauge).toBe(3);
+    expect(state.firstPlayer).toBe(1);
+  });
+
+  it('flips to the non-turn seat when it owns the pending selection', () => {
+    setLabMode(true);
+    const state = dtoToGameState(
+      dto({
+        pending_selection: {
+          phase: 'BlockTiming',
+          valid_action_ids: [1],
+          is_optional: true,
+          prompt: 'Block?',
+          selecting_player: 0,
+          kind: 'OwnField',
+          zone_owner: 1,
+        } as unknown as GameStateDto['pending_selection'],
+      }),
+    );
+    expect(state.viewSeat).toBe(0);
+    expect(state.player1.handIds).toEqual(['SEAT0-CARD']);
+    expect(state.pendingSelection?.selectingPlayer).toBe(1);
+    expect(state.pendingSelection?.zoneOwner).toBe(2);
+    expect(state.currentPlayer).toBe(1);
+  });
+
+  it('shows the winner at the bottom once the game is over', () => {
+    setLabMode(true);
+    const state = dtoToGameState(dto({ game_over: true, winner: 0 }));
+    expect(state.viewSeat).toBe(0);
+    expect(state.winner).toBe(1);
   });
 });

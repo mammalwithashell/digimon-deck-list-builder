@@ -304,10 +304,14 @@ export function GamePage() {
             store.setActionMask(maskData);
             store.setGameSeed(stateSeed ?? flowSeed ?? null);
             store.clearActionTraces();
-            store.setPlayerLabels({
-              1: 'YOU',
-              2: pickAlias(`${urlGameId}:2`),
-            });
+            // Lab games label by engine seat (set in setGameState, swapping
+            // with the perspective) — don't overwrite with YOU/alias.
+            if (!gameApi.isLabMode()) {
+              store.setPlayerLabels({
+                1: 'YOU',
+                2: pickAlias(`${urlGameId}:2`),
+              });
+            }
             // Lock human input and drive any opening agent decision (e.g. the
             // AI's mulligan when the human goes second) before handing control
             // back. Games created via createBotGame/createAiStarterGame land
@@ -552,13 +556,18 @@ export function GamePage() {
       return;
     }
     try {
-      const res = await gameApi.surrenderGame(store.gameId, 1);
+      // Lab games: concede for the seat currently at the bottom (the one
+      // acting). `surrenderGame` takes the 1-based engine seat.
+      const seat = store.viewSeat != null ? store.viewSeat + 1 : 1;
+      const res = await gameApi.surrenderGame(store.gameId, seat);
       store.setGameState(res.state);
       store.setActionMask(res.action_mask);
       if (res.events) store.appendEvents(res.events);
       appendResponseActionTraces(res as typeof res & ActionTraceResponse);
       store.setAgentPending(false);
-      setSurrenderedBy(1);
+      // A finished lab game shows the winner at the bottom, so the seat that
+      // conceded is now the top (UI player 2).
+      setSurrenderedBy(store.viewSeat != null ? 2 : 1);
     } catch {
       // Ignore errors (e.g. game already over)
     }

@@ -30,6 +30,8 @@ interface GameStore {
   revealedCards: { cardId: string; owner: number }[];
   pendingSelection: PendingSelection | null;
   pendingAttack: PendingAttack | null;
+  /** Lab games only: engine seat (0/1) currently shown at the bottom. */
+  viewSeat: number | null;
 
   // UI state
   actionMask: number[];
@@ -85,6 +87,7 @@ const initialState = {
   revealedCards: [],
   pendingSelection: null,
   pendingAttack: null,
+  viewSeat: null as number | null,
   actionMask: [],
   decodedActions: [],
   agentPending: false,
@@ -118,6 +121,17 @@ export const useGameStore = create<GameStore>((set) => ({
       revealedCards: state.revealedCards,
       pendingSelection: state.pendingSelection,
       pendingAttack: state.pendingAttack,
+      viewSeat: state.viewSeat ?? null,
+      // Lab games: labels name the ENGINE seat now at each board side, so
+      // they swap along with the perspective.
+      ...(state.viewSeat != null
+        ? {
+            playerLabels: {
+              1: `Seat ${state.viewSeat + 1}`,
+              2: `Seat ${state.viewSeat === 0 ? 2 : 1}`,
+            },
+          }
+        : {}),
     }),
 
   setActionMask: (mask) => set({ actionMask: mask }),

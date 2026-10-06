@@ -381,22 +381,80 @@ function toPlayerState(player: PlayerDto, memory: number): PlayerState {
   };
 }
 
+// ─── Lab mode (one human drives both seats over staged decks) ────────
+//
+// The desktop engine already resolves every action for whichever seat is
+// deciding, and builds the action mask relative to that seat. So instead of
+// teaching every board/selection component about a second "local" seat, a
+// lab game re-orients the state so the DECIDING seat is always the UI's
+// `player1` (bottom of the board, owner of the clickable hand) — the same
+// perspective swap `server/state_filter.py` performs for PvP seat 2. All the
+// `localPlayer={1}` wiring then works unchanged for both seats.
+
+const LAB_FLAG_KEY = 'digimon.labGame';
+
+function readLabFlag(): boolean {
+  try {
+    return sessionStorage.getItem(LAB_FLAG_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+let labMode = readLabFlag();
+
+export function isLabMode(): boolean {
+  return labMode;
+}
+
+export function setLabMode(on: boolean): void {
+  labMode = on;
+  try {
+    if (on) sessionStorage.setItem(LAB_FLAG_KEY, '1');
+    else sessionStorage.removeItem(LAB_FLAG_KEY);
+  } catch {
+    // Storage unavailable — the in-memory flag still covers this session.
+  }
+}
+
+/** Engine seat (0/1) that must act next — the seat a lab game shows at the
+ *  bottom. Mirrors `current_decision_player` in `engine_commands.rs`
+ *  while the game is live. */
+export function decisionSeat(dto: GameStateDto): number {
+  // Once the game is over, show the winner at the bottom so the result
+  // overlay reads "Victory" from the winning seat's side.
+  if (dto.game_over && dto.winner != null) return dto.winner;
+  return (
+    dto.mulligan_current_player ??
+    dto.pending_selection?.selecting_player ??
+    dto.turn_player
+  );
+}
+
 export function dtoToGameState(dto: GameStateDto): GameState {
+  // Normal games: engine seat 0 is the local human and sits at the bottom.
+  // Lab games: whoever decides sits at the bottom (see "Lab mode" above).
+  const viewSeat = labMode ? decisionSeat(dto) : 0;
+  const otherSeat = viewSeat === 0 ? 1 : 0;
+  // Engine seat -> view-relative raw seat (0 = bottom, 1 = top) and
+  // 1-based UI player (1 = bottom, 2 = top). Identity when viewSeat is 0.
+  const rel = (seat: number) => (seat === viewSeat ? 0 : 1);
+  const ui = (seat: number) => rel(seat) + 1;
   const player1: PlayerDto | undefined =
-    dto.players.find((p) => p.id === 0) ?? dto.players[0];
+    dto.players.find((p) => p.id === viewSeat) ?? dto.players[0];
   if (!player1) {
     throw new Error('Engine returned a game state with no players');
   }
   const player2: PlayerDto =
-    dto.players.find((p) => p.id === 1) ?? dto.players[1] ?? player1;
-  const memory0 = dto.turn_player === 0 ? dto.memory : -dto.memory;
+    dto.players.find((p) => p.id === otherSeat) ?? dto.players[1] ?? player1;
+  const memory0 = dto.turn_player === viewSeat ? dto.memory : -dto.memory;
   return {
     turnCount: dto.turn_count,
     currentPhase: mapPhase(dto.current_phase),
-    currentPlayer: dto.turn_player,
+    currentPlayer: rel(dto.turn_player),
     // Raw engine seat (0/1), same convention as currentPlayer. 0 = the local
     // human (player1), so the mulligan UI shows "you go first" when this is 0.
-    firstPlayer: dto.first_player,
+    firstPlayer: rel(dto.first_player),
     // Engine `memory` is from the TURN PLAYER's perspective; the UI contract
     // (MemoryGauge, and the browser wire's `to_ui_json` memoryGauge) is
     // player-1's perspective. Without this flip, the opponent's memory
@@ -409,12 +467,12 @@ export function dtoToGameState(dto: GameStateDto): GameState {
     // convention (1/2), matching `localPlayer={1}` + `playerLabels{1,2}` in
     // ResultOverlay/PhaseIndicator and the `selectingPlayer + 1` mapping below.
     // Without this, the local human (engine 0) winning shows "Defeat".
-    winner: dto.winner == null ? null : dto.winner + 1,
+    winner: dto.winner == null ? null : ui(dto.winner),
     player1: toPlayerState(player1, memory0),
     player2: toPlayerState(player2, -memory0),
     revealedCards: (dto.revealed_cards ?? []).map((rc) => ({
       cardId: rc.card_id,
-      owner: rc.owner,
+      owner: rel(rc.owner),
     })),
     pendingSelection: dto.pending_selection
       ? {
@@ -427,7 +485,7 @@ export function dtoToGameState(dto: GameStateDto): GameState {
           // `localPlayer` is hardcoded to 1. Without this +1, every
           // engine-0 pending selection would render as "Waiting for
           // opponent…" when it's actually the user's turn.
-          selectingPlayer: dto.pending_selection.selecting_player + 1,
+          selectingPlayer: ui(dto.pending_selection.selecting_player),
           // Field selections encode own- and opponent-field targets in the
           // SAME id range (`OWN_FIELD_START + slot`); `kind` is the only
           // signal of which side. Drop it and "delete an opponent's Digimon"
@@ -439,7 +497,7 @@ export function dtoToGameState(dto: GameStateDto): GameState {
           zoneOwner:
             dto.pending_selection.zone_owner == null
               ? undefined
-              : dto.pending_selection.zone_owner + 1,
+              : ui(dto.pending_selection.zone_owner),
           // EffectChoice branches need to thread through with their actual
           // engine `action_id`s; the frontend's broken `EFFECT_CHOICE_START`
           // range scan can't find them otherwise.
@@ -458,6 +516,7 @@ export function dtoToGameState(dto: GameStateDto): GameState {
         }
       : null,
     pendingAttack: null,
+    ...(labMode ? { viewSeat } : {}),
   };
 }
 
@@ -565,6 +624,7 @@ export async function createGame(
   // If the caller passed those directly, forward verbatim. Otherwise fall
   // back to deriving them from the legacy string-typed fields so existing
   // call sites work without modification.
+  setLabMode(false);
   const kinds = params.player_kinds ?? deriveKinds(params);
   const modelIds = params.player_model_ids ?? [null, null];
   const resp = await invoke<CreateGameCommandResponse>('rust_create_game', {
@@ -586,6 +646,42 @@ export async function createGame(
     // human's controls weren't locked and the paced driver didn't advance the
     // AI — the human had to click their mulligan twice.
     agent_pending: resp.agent_pending,
+  };
+}
+
+/**
+ * Create a desktop lab game: one human drives BOTH seats, each deck dealt in
+ * exactly the staged order (no shuffle, no mulligan). Each list is
+ * TOP-FIRST — index 0 is drawn first; with no mulligan main-deck slots
+ * 0-4 are the opening hand, 5-9 the security stack (slot 9 on top, checked
+ * first), and 10+ the draws. Egg-deck cards may be included anywhere; they
+ * are routed to the egg deck keeping their relative order (index 0 hatches
+ * first). `firstPlayer` is the engine seat (0/1) that takes turn 1.
+ */
+export async function createLabGame(params: {
+  deck1: string[];
+  deck2: string[];
+  firstPlayer: 0 | 1;
+  seed?: string | null;
+}): Promise<CreateGameResponse> {
+  if (!isInTauriRuntime()) {
+    throw new Error('Lab games are only available in the desktop app.');
+  }
+  const resp = await invoke<CreateGameCommandResponse>('rust_create_lab_game', {
+    deck1: params.deck1,
+    deck2: params.deck2,
+    firstPlayer: params.firstPlayer,
+    seed: normalizeSeedInput(params.seed),
+  });
+  setLabMode(true);
+  return {
+    game_id: resp.game_id,
+    seed: resp.seed,
+    state: dtoToGameState(resp.state),
+    action_mask: resp.action_mask,
+    logs: [],
+    events: [],
+    agent_pending: false,
   };
 }
 

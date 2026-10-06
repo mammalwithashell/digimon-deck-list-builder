@@ -14,6 +14,7 @@ import { DeckBuilderPage } from '@/pages/DeckBuilderPage';
 import { DeckLibraryPage } from '@/pages/DeckLibraryPage';
 import { DeckSelectPage } from '@/pages/DeckSelectPage';
 import { StarterDeckSelectPage } from '@/pages/StarterDeckSelectPage';
+import { LabSetupPage } from '@/pages/LabSetupPage';
 import { LobbyPage } from '@/pages/LobbyPage';
 import { MatchingPage } from '@/pages/MatchingPage';
 import { ModeSelectPage } from '@/pages/ModeSelectPage';
@@ -86,6 +87,7 @@ function DesktopRoutes() {
           <Route path="/play" element={<ModeSelectPage />} />
           <Route path="/play/deck" element={<DeckSelectPage />} />
           <Route path="/play/ai-starter" element={<StarterDeckSelectPage />} />
+          <Route path="/play/lab" element={<LabSetupPage />} />
           <Route path="/play/matching" element={<MatchingPage />} />
           <Route path="/play/room" element={<RoomChooserPage />} />
           <Route path="/play/room/:gameId" element={<RoomLobbyPage />} />
