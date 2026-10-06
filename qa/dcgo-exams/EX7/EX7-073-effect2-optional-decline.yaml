@@ -1,0 +1,101 @@
+# Probe optional_decline: EX7-073#effect#2. Same line as EX7-073-effect2.yaml
+# (clause 1 uses P-180 free, which tucks under EX7-073, so two [Three
+# Musketeers] sources ARE payable), but the "By trashing 2 ..." cost is
+# DECLINED. DCGO gates it with an OptionalSkill (declined); our engine's decline
+# path is the SourceMulti min:0 pick. Expect: nothing trashed, Vermilimon
+# survives, P1 security stays 4 (only P-180's own [Main] trashed one), and
+# BT25-085 + P-180 remain under EX7-073. P-180's trash trigger must stay silent.
+card: EX7-073
+clause: EX7-073#effect#2
+interaction: {id: "probe:EX7-073#effect#2:optional_decline", source: probe, kind: positive}
+covers: [EX7-073#effect#2, EX7-073#effect#1]
+meta: {produced_by: 20261006T143144540614Z-pilot-three-musketeers-db0449}
+seed: 424242
+decks:
+  p0:
+    stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-073,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, BT25-083, BT25-083,
+            P-180, BT25-078, BT21-074, EX7-008, BT25-083]
+    rest: three-musketeers
+  p1:
+    stack: [BT4-014, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-092] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-085 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-073 } }
+    expect: { prompt: main_phase }
+  # Clause 1 first so P-180 is a digivolution card when clause 2 comes up.
+  - actor: 0
+    do: { select: { cards: [EX7-073], ordinal: 0 } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [EX7-073, EX7-073] }
+  - actor: 0
+    do: { select: { cards: [P-180] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE's optional cost, declined.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  # Nothing resolved; P0 still holds memory 2.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
