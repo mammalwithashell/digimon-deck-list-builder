@@ -98,10 +98,10 @@ steps:
     expect: { prompt: SelectPermanentEffect }
   # ACE [When Digivolving]: use-a-TM-Option half live (BT25-085 in hand); decline.
   - actor: 0
-    do: { select: { value: 1, dcgo_only: true } }
+    do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: SelectHandEffect }
   - actor: 0
-    do: { select: { decline: true } }
+    do: { select: { decline: true, sim_only: true } }
 assert: []
 expect_ruling:
   q_id: Q6391
