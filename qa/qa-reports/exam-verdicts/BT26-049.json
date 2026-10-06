@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-06T15:46:27.985584900+00:00",
+  "last_updated": "2026-10-06T15:48:45.553983600+00:00",
   "clauses": {
     "BT26-049#effect#0": {
       "clause_id": "BT26-049#effect#0",
@@ -23,6 +23,17 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-049-effect1",
       "recorded_at": "2026-10-06T15:46:27.985584900+00:00"
+    },
+    "BT26-049#effect#2": {
+      "clause_id": "BT26-049#effect#2",
+      "card_id": "BT26-049",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "876284cf95d2a8016eb1c169de808a419eed6bdd6212ff0b804daa4637b97833",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-049-effect2.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-049-effect2",
+      "recorded_at": "2026-10-06T15:48:45.553983600+00:00"
     }
   }
 }
