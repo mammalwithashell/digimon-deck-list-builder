@@ -3,10 +3,12 @@
 //! desktop and hosted API can't diverge on deck validation.
 
 use digimon_engine::deck_tools::{
-    card_database, card_legality, classify_parsed, is_card_tested, out_of_set_cards, parse_deck,
-    parse_text, parse_tts, summarize_deck, tested_cards_sorted, validate_deck,
-    validate_deck_for_game_mode, validate_deck_for_mode,
+    card_database, card_legality, card_legality_for_descriptor, classify_parsed, is_card_tested,
+    out_of_set_cards, parse_deck, parse_text, parse_tts, summarize_deck, tested_cards_sorted,
+    validate_deck, validate_deck_for_descriptor, validate_deck_for_game_mode,
+    validate_deck_for_mode,
 };
+use digimon_engine::format::{self, FormatDescriptor};
 use digimon_engine::{build_registry, CardData, GameMode, HeadlessRunner, Rarity};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -914,4 +916,205 @@ fn card_legality_does_not_raise_a_normal_card() {
     let leg = card_legality("BT12-050", "standard").unwrap(); // Stingmon, normal 4-of.
     assert!(leg.legal);
     assert_eq!(leg.max_copies, 4);
+}
+
+// ─── Card-number aliases ──────────────────────────────────────────────
+//
+// Three Resurgence Booster reprints print "※Card Number: Also treated as
+// [P-009]. A deck may not have more than 4 total copies of this and [P-009]."
+// (RB1-004 Agumon; RB1-006 Gammamon -> P-058; RB1-007 Greymon -> P-010).
+// general_rule.pdf 2-11-1: cards with matching names and card numbers are the
+// same card, and 1-4-1-2-2 allows 4 copies of a card number, so a reprint and
+// its promo share one 4-copy limit. The official Q&A for each card says the
+// same.
+
+/// (reprint, the promo card number it is also treated as).
+const CARD_NUMBER_ALIASES: [(&str, &str); 3] =
+    [("RB1-004", "P-009"), ("RB1-006", "P-058"), ("RB1-007", "P-010")];
+
+/// The first `size` cards of the legal fixture deck, which holds none of the
+/// alias pairs, leaving room for a test to add them.
+fn legal_deck_without_alias_pairs(size: usize) -> Vec<String> {
+    let mut deck = make_legal_deck();
+    assert!(
+        deck.iter()
+            .all(|c| CARD_NUMBER_ALIASES.iter().all(|(r, p)| c != r && c != p)),
+        "fixture deck already holds an alias pair: {deck:?}"
+    );
+    deck.truncate(size);
+    deck
+}
+
+fn copies(card_id: &str, n: usize) -> Vec<String> {
+    vec![card_id.to_string(); n]
+}
+
+#[test]
+fn reprint_and_promo_share_one_four_copy_limit() {
+    for (reprint, promo) in CARD_NUMBER_ALIASES {
+        for (n_promo, n_reprint) in [(4, 1), (1, 4)] {
+            let mut deck = legal_deck_without_alias_pairs(45);
+            deck.extend(copies(promo, n_promo));
+            deck.extend(copies(reprint, n_reprint));
+            let result = validate_deck(&deck);
+            assert!(
+                !result.is_valid,
+                "{n_promo}x {promo} + {n_reprint}x {reprint} is 5 copies of card number {promo}"
+            );
+            assert!(
+                result.errors.iter().any(|e| e.contains(promo)
+                    && e.contains(reprint)
+                    && e.contains("5 copies")
+                    && e.contains("max 4")),
+                "expected a 5-of-4 copy-limit error naming {promo} and {reprint}, got: {:?}",
+                result.errors
+            );
+        }
+    }
+}
+
+#[test]
+fn reprint_and_promo_within_four_total_are_legal() {
+    for (reprint, promo) in CARD_NUMBER_ALIASES {
+        for (n_promo, n_reprint) in [(2, 2), (3, 1), (1, 3)] {
+            let mut deck = legal_deck_without_alias_pairs(46);
+            deck.extend(copies(promo, n_promo));
+            deck.extend(copies(reprint, n_reprint));
+            let result = validate_deck(&deck);
+            assert!(
+                result.is_valid,
+                "{n_promo}x {promo} + {n_reprint}x {reprint} is 4 copies of card number {promo}: {:?}",
+                result.errors
+            );
+        }
+    }
+}
+
+#[test]
+fn five_copies_of_a_reprint_alone_report_one_violation() {
+    // RB1-004 alone has card numbers RB1-004 and P-009; both counts are the
+    // same five cards, and the deck breaks one rule, not two.
+    let mut deck = legal_deck_without_alias_pairs(45);
+    deck.extend(copies("RB1-004", 5));
+    let result = validate_deck(&deck);
+    assert_eq!(
+        result.errors.len(),
+        1,
+        "expected exactly one copy-limit error, got: {:?}",
+        result.errors
+    );
+    assert!(result.errors[0].contains("RB1-004") && result.errors[0].contains("5 copies"));
+}
+
+/// The Standard format with `edit` applied. Formats are data, so a test can
+/// put a restriction on these cards that no real format carries today.
+fn standard_with(edit: impl FnOnce(&mut FormatDescriptor)) -> FormatDescriptor {
+    let mut fmt = format::descriptor("standard")
+        .expect("standard format exists")
+        .clone();
+    edit(&mut fmt);
+    fmt
+}
+
+#[test]
+fn restriction_on_a_promo_binds_its_reprint() {
+    // (P-009's limit, RB1-004 copies, expected error)
+    for (limit, n_reprint, want) in [(1u8, 2usize, "restricted limit of 1"), (0, 1, "is banned")] {
+        let fmt = standard_with(|f| {
+            f.restriction.card_limits.insert("P-009".to_string(), limit);
+        });
+        let mut deck = legal_deck_without_alias_pairs(50 - n_reprint);
+        deck.extend(copies("RB1-004", n_reprint));
+        let result = validate_deck_for_descriptor(&deck, &fmt);
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|e| e.contains("P-009") && e.contains("RB1-004") && e.contains(want)),
+            "P-009 limited to {limit}: expected a '{want}' error naming RB1-004, got: {:?}",
+            result.errors
+        );
+    }
+}
+
+#[test]
+fn restriction_on_a_reprint_does_not_bind_its_promo() {
+    // RB1-004 has P-009's card number; P-009 does not have RB1-004's.
+    let fmt = standard_with(|f| {
+        f.restriction.card_limits.insert("RB1-004".to_string(), 1);
+    });
+    let mut deck = legal_deck_without_alias_pairs(46);
+    deck.extend(copies("P-009", 4));
+    let result = validate_deck_for_descriptor(&deck, &fmt);
+    assert!(
+        result.is_valid,
+        "a limit on RB1-004 must leave 4x P-009 legal: {:?}",
+        result.errors
+    );
+}
+
+#[test]
+fn singleton_counts_a_reprint_and_its_promo_as_one_card() {
+    let fmt = standard_with(|f| {
+        f.singleton = true;
+        f.default_max_copies = 1;
+    });
+    let db = card_database();
+    let mut deck: Vec<String> = {
+        let mut ids: Vec<&str> = db
+            .values()
+            .filter(|c| c.card_kind == 0 && !is_banned_or_restricted(&c.card_id))
+            .map(|c| c.card_id.as_str())
+            .filter(|id| CARD_NUMBER_ALIASES.iter().all(|(r, p)| id != r && id != p))
+            .collect();
+        ids.sort_unstable();
+        ids.into_iter().take(48).map(String::from).collect()
+    };
+    assert_eq!(deck.len(), 48, "need 48 distinct legal Digimon");
+    deck.extend(["P-009", "RB1-004"].map(String::from));
+    let result = validate_deck_for_descriptor(&deck, &fmt);
+    assert!(
+        result
+            .errors
+            .iter()
+            .any(|e| e.contains("P-009") && e.contains("RB1-004") && e.contains("singleton")),
+        "P-009 + RB1-004 is 2 copies of one card number under singleton, got: {:?}",
+        result.errors
+    );
+}
+
+#[test]
+fn choice_group_naming_a_promo_matches_its_reprint() {
+    let fmt = standard_with(|f| {
+        f.restriction
+            .choice_groups
+            .push((vec!["P-009".to_string()], vec!["P-058".to_string()]));
+    });
+    let mut deck = legal_deck_without_alias_pairs(48);
+    deck.extend(["RB1-004", "RB1-006"].map(String::from));
+    let result = validate_deck_for_descriptor(&deck, &fmt);
+    assert!(
+        result
+            .errors
+            .iter()
+            .any(|e| e.contains("Choice restriction violated")),
+        "RB1-004 is a P-009 and RB1-006 a P-058, got: {:?}",
+        result.errors
+    );
+}
+
+#[test]
+fn card_legality_of_a_reprint_follows_its_promos_restriction() {
+    // (P-009's limit, expected legal, expected max copies)
+    for (limit, legal, max_copies) in [(0u8, false, 0u32), (1, true, 1)] {
+        let fmt = standard_with(|f| {
+            f.restriction.card_limits.insert("P-009".to_string(), limit);
+        });
+        let leg = card_legality_for_descriptor("RB1-004", &fmt);
+        assert_eq!(
+            (leg.legal, leg.max_copies),
+            (legal, max_copies),
+            "RB1-004 with P-009 limited to {limit}: {leg:?}"
+        );
+    }
 }

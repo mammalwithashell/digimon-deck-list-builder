@@ -23,7 +23,7 @@
   "attribute_eng": [
     "Vaccine"
   ],
-  "effect_description_eng": "[Your Turn] While this Digimon has an [Agumon] digivolution card, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "effect_description_eng": "[Your Turn] While this Digimon has an [Agumon] digivolution card, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n※Card Number: Also treated as [P-010]. A deck may not have more than 4 total copies of this and [P-010].",
   "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [

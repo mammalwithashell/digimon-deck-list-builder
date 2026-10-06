@@ -23,8 +23,8 @@
   "attribute_eng": [
     "Vaccine"
   ],
-  "effect_description_eng": "Inherited Effect [Your Turn] While this Digimon has [Greymon] in its name, it gets +2000 DP.",
-  "inherited_effect_description_eng": "",
+  "effect_description_eng": "※Card Number: Also treated as [P-009]. A deck may not have more than 4 total copies of this and [P-009].",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Greymon] in its name, it gets +2000 DP.",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
