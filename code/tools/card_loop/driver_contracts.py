@@ -218,6 +218,20 @@ class StageOutcome:
     adjudicated: bool = False
 
 
+class StageDeferred(Exception):
+    """Raised by an executor that cannot advance the item now: a worker call
+    failed (error, or schema-invalid after its one retry), or no family can
+    take a non-terminating call. `outcome.next_state` equals the item's
+    current state; its attempts and corrections are still ledgered, the
+    attempt counts toward the stage's cap, and the item stays where it is.
+    Terminating calls never defer: they escalate (design D5)."""
+
+    def __init__(self, reason: str, outcome: "StageOutcome | None" = None):
+        super().__init__(reason)
+        self.reason = reason
+        self.outcome = outcome
+
+
 @dataclass(frozen=True)
 class Escalation:
     """A human-queue entry (`qa/card-loop/escalations/<item>.md`, D5)."""
