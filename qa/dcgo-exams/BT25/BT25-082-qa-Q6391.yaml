@@ -104,3 +104,18 @@ steps:
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
 assert: []
+expect_ruling:
+  q_id: Q6391
+  assert:
+  - at: 20
+    that:
+      p0.field:
+      - card_id: EX7-059
+        dp: 11000
+        suspended: true
+        sources: [BT25-082, EX7-051, ST6-01]
+      - card_id: BT25-092
+        dp: -1
+        suspended: false
+        sources: []
+      p0.memory: -3
