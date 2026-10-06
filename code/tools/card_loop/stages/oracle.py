@@ -33,11 +33,25 @@ from typing import Mapping
 
 from .. import corrections as corr
 from ..driver_contracts import ItemRecord, StageOutcome
+from ..interactions.outcome import three_way
 from . import base, harness
 
 
 def _unmeasured(path: str, reason: str, **extra) -> dict:
     return {"scenario": path, "verdict": "unmeasured", "reason": reason, **extra}
+
+
+def three_way_of(result: Mapping) -> dict | None:
+    """The D7 outcome of a Q&A exam from the structured legs `exam --oracle`
+    prints (`ours_vs_dcgo`, `ours_vs_ruling`, `ruling_q_id`; harness follow-up
+    9.8). `None` unless BOTH legs were measured -- an absent leg is not a
+    disagreement. Goes into `data["three_way"]` for triage and for the run's
+    DCGO fork-candidate export."""
+    a, b = result.get("ours_vs_dcgo"), result.get("ours_vs_ruling")
+    if not isinstance(a, bool) or not isinstance(b, bool):
+        return None
+    out = three_way(a, b)
+    return {**out.to_dict(), "ours_vs_dcgo": a, "ours_vs_ruling": b, "q_id": result.get("ruling_q_id")}
 
 
 class OracleExecutor:
@@ -211,7 +225,8 @@ class OracleExecutor:
         if hit:
             p, (kind, evidence) = hit
             data = {**base_data, "oracle": results[p],
-                    "prompt_route": None if kind == "diverged" else kind, "prompt_evidence": evidence}
+                    "prompt_route": None if kind == "diverged" else kind, "prompt_evidence": evidence,
+                    "three_way": three_way_of(results[p])}
             if kind == "diverged":
                 reason = results[p].get("first_divergence") or results[p].get("reason") or "diverged"
             elif evidence.get("stall"):
@@ -241,5 +256,6 @@ class OracleExecutor:
                                       "oracle": results.get(pending[0])})
         return base.outcome("CONFIRMED", item=item, adjudicated=True, data={**base_data,
                             "oracle": results[paths[0]] if paths else None, "prompt_route": None,
-                            "prompt_evidence": None},
+                            "prompt_evidence": None,
+                            "three_way": three_way_of(results[paths[0]]) if paths else None},
                             reason=f"confirmed by the oracle ({len(paths)} scenario(s))")

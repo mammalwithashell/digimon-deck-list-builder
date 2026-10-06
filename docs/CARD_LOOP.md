@@ -163,6 +163,7 @@ but the attempts lost in between stay lost. Run the CLI with
 | `qa/card-loop/escalations/<item>.md` + `index.jsonl` | the human queue: both families' arguments, citations, attempt history |
 | `qa/qa-reports/exam-verdicts/<card>.json` | per-clause and per-interaction verdicts (v2), written by the harness |
 | `qa/dcgo-exams/<SET>/` | the scenarios the loop authored, backfilled with oracle-confirmed asserts |
+| `qa/card-loop/dcgo_fork_candidates.json` (run tree, at the end of a run) | design D7's DCGO fork backlog: every Q&A exam where DCGO disagreed with the publisher's ruling (from the oracle's structured three-way legs) and every agreed interaction `dcgo_quirk`, each with its citation and scenario |
 | `qa/dsl-vocab-gaps.md`, `docs/RUST_ENGINE_GAPS.md` | gap records a parked card raised (orchestrator-only writes) |
 
 ## 6. Handling escalations

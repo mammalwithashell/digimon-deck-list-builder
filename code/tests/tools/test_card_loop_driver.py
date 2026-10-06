@@ -1221,3 +1221,38 @@ def test_cli_run_refuses_an_uncapped_real_run(cli_ws, capsys):
     # --fake runs are tests, never billed: exempt
     rc = drv.cli_run(["--plan", str(cli_ws["plan"]), "--fake", str(cli_ws["canned"]), "--serial"])
     assert rc == 0, capsys.readouterr()
+
+
+def test_the_run_exports_dcgo_fork_candidates_from_the_three_way_legs(tmp_path):
+    # Design D7: every row where DCGO is shown to disagree with the publisher's
+    # ruling is a candidate patch to our DCGO fork. The driver writes the list
+    # into the run tree at the end of the run and commits it.
+    cmds = _tree_cmds().on(("status", "dcgo_fork_candidates"), 0, "?? qa/card-loop/dcgo_fork_candidates.json\n")
+    I1 = "interaction:qa:Q1601"
+    I2 = "interaction:qa:Q1602"
+
+    def oracle(ctx, it):
+        legs = {I1: (True, False), I2: (True, True)}[it.item]
+        tw = {"verdict_hint": "ours_wrong" if not legs[1] else "confirmed", "citation_kind": "qa",
+              "dcgo_fork_candidate": not legs[1], "terminating": False,
+              "dcgo_matches_ruling": legs[1], "ours_vs_dcgo": legs[0], "ours_vs_ruling": legs[1],
+              "q_id": it.ident.split(":")[1]}
+        oracle_row = {"scenario": f"qa/dcgo-exams/BT1/{it.ident[3:]}.yaml", "verdict": "confirmed" if legs[1] else "diverged",
+                      "first_divergence": None if legs[1] else "ours contradicts ruling qa:Q1601 (ours vs DCGO: agree)"}
+        if legs[1]:
+            return StageOutcome("CONFIRMED", adjudicated=True, data={"three_way": tw, "oracle": oracle_row})
+        return StageOutcome("DIVERGED", data={"three_way": tw, "oracle": oracle_row})
+
+    tree = tmp_path / "tree"
+    h = Harness(tmp_path, [seed(I1, "ORACLE"), seed(I2, "ORACLE")], [Exec("ORACLE", oracle)],
+                run_command=cmds, repo=tree, manage_tree=True)
+    result = h.run()
+    assert h.states() == {I1: "TRIAGE", I2: "CONFIRMED"}      # DIVERGED -> TRIAGE; no triage executor: blocked
+    out = tree / "qa" / "card-loop" / "dcgo_fork_candidates.json"
+    assert out.exists(), result.problems
+    rows = json.loads(out.read_text(encoding="utf-8"))["candidates"]
+    assert [r["interaction_id"] for r in rows] == ["qa:Q1601"]
+    assert rows[0]["outcome"] == "ours_wrong" and rows[0]["citation"] == "qa:Q1601"
+    assert rows[0]["card_ids"] == ["BT1-001"] and rows[0]["scenario_path"].endswith("Q1601.yaml")
+    commits = cmds.argvs("git", "commit")
+    assert any("DCGO fork candidates" in c[c.index("-m") + 1] for c in commits), commits

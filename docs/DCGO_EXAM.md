@@ -203,9 +203,15 @@ expect_ruling:                                               # qa: only -- the p
   neither → `ours_wrong`. A line that is legal but whose `expect_ruling` is
   contradicted by our engine still goes to the oracle (the contradiction is a
   finding to triage, not an authoring error).
-- `exam --oracle` reports both legs per scenario; the harness exit code is 1 when
-  only the ruling leg failed (`RULING … CONTRADICTED`), so a driver can tell "the
-  line is wrong" from "the engine disagrees with the publisher".
+- `exam --oracle` reports both legs per scenario as structured fields on its
+  JSON line — `ours_vs_dcgo` (the differ was clean), `ours_vs_ruling` (our
+  engine meets `expect_ruling:`) and `ruling_q_id` — present only when measured,
+  so a reader never parses them out of `reason`; the card loop turns them into
+  the outcome above (`data["three_way"]`) and exports every "DCGO disagrees with
+  the ruling" row as a DCGO fork candidate (`qa/card-loop/dcgo_fork_candidates.json`
+  in the run tree). The sim-only exit code is 1 when only the ruling leg failed
+  (`RULING … CONTRADICTED`), so a driver can tell "the line is wrong" from "the
+  engine disagrees with the publisher".
 
 ### `stack` is a PREFIX, and applies to the INITIAL SHUFFLE ONLY
 

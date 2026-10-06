@@ -1007,3 +1007,44 @@ def test_authoring_keeps_only_scenario_yaml_in_scenario_paths(repo):
     assert out.next_state == "SIM"
     assert out.data["scenario_paths"] == [SC]
     assert out.data["pool_files"] == ["qa/dcgo-exams/ST23/my_pool.json"]
+
+
+# ================================================================ ORACLE: three-way legs (D7, follow-up 9.8)
+
+
+def test_structured_legs_attach_the_three_way_outcome(repo):
+    # `exam --oracle` prints the two legs as fields; the stage turns them into
+    # the D7 outcome so triage and the fork-candidate export never parse `reason`.
+    _write_scenario(repo)
+    item = _oracle_item(item="interaction:qa:Q1601")
+    row = _row(verdict="diverged", ids=["qa:Q1601"], recorded=[],
+               reason="ours contradicts ruling qa:Q1601 (ours vs DCGO: agree); clean diff",
+               ours_vs_dcgo=True, ours_vs_ruling=False, ruling_q_id="Q1601")
+    cmds = FakeCommands().on("--oracle", 1, row + "\n")
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED"
+    tw = out.data["three_way"]
+    assert tw["verdict_hint"] == "ours_wrong" and tw["dcgo_fork_candidate"] is True
+    assert tw["dcgo_matches_ruling"] is False and tw["q_id"] == "Q1601"
+    assert (tw["ours_vs_dcgo"], tw["ours_vs_ruling"]) == (True, False)
+
+
+def test_confirmed_with_both_legs_records_a_confirmed_three_way(repo):
+    _write_scenario(repo)
+    item = _oracle_item(item="interaction:qa:Q1601")
+    row = _row(ids=["qa:Q1601"], recorded=["qa:Q1601"], ours_vs_dcgo=True, ours_vs_ruling=True,
+               ruling_q_id="Q1601")
+    cmds = FakeCommands().on("--oracle", 0, row + "\n")
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    assert out.next_state == "CONFIRMED"
+    assert out.data["three_way"]["verdict_hint"] == "confirmed"
+    assert out.data["three_way"]["dcgo_fork_candidate"] is False
+
+
+def test_a_result_without_legs_carries_no_three_way(repo):
+    # A clause exam, or an unmeasured ruling leg: the outcome is not decided.
+    _write_scenario(repo)
+    cmds = FakeCommands().on("--oracle", 0, _row() + "\n")
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), _oracle_item())
+    assert out.next_state == "CONFIRMED" and out.data.get("three_way") is None

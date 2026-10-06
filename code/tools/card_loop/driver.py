@@ -872,6 +872,53 @@ class Driver:
         reason = self._stop.reason if self._stop else "stop"
         self._commit_paths(paths, f"card-loop: ledgers for run {self.run_id} ({reason})")
 
+    FORK_CANDIDATES_PATH = "qa/card-loop/dcgo_fork_candidates.json"
+
+    def _export_fork_candidates(self) -> None:
+        """Design D7: every Q&A exam where DCGO is shown to disagree with the
+        publisher's ruling (the structured three-way legs, `data["three_way"]`),
+        and every two-family-agreed `dcgo_quirk` interaction, is a candidate
+        patch to our DCGO fork. Written deterministically into the run tree and
+        committed with the ledgers; the mod work itself is separate (rule 29).
+        Clause-level quirks are not listed here -- they live in the verdict
+        store with their citation."""
+        from .interactions.outcome import fork_candidates, write_fork_candidates
+
+        rows = []
+        for rec in self.state.ordered():
+            if rec.kind != "interaction":
+                continue
+            meta = self.state.meta.get(rec.item)
+            cards = sorted(meta.cards) if meta is not None else []
+            oracle = rec.data.get("oracle") or {}
+            tw = rec.data.get("three_way")
+            if isinstance(tw, Mapping) and tw.get("dcgo_fork_candidate"):
+                rows.append({
+                    "interaction_id": rec.ident, "card_ids": cards,
+                    "ours_vs_dcgo_agree": tw.get("ours_vs_dcgo"),
+                    "ours_vs_ruling_agree": tw.get("ours_vs_ruling"),
+                    "dcgo_observed": oracle.get("first_divergence") or oracle.get("reason"),
+                    "expected": f"the publisher's answer to qa:{tw.get('q_id')}" if tw.get("q_id") else None,
+                    "scenario_path": oracle.get("scenario"),
+                })
+            elif rec.state == "TERMINAL" and rec.data.get("terminal") == "dcgo_quirk" and rec.data.get("citation"):
+                rows.append({
+                    "interaction_id": rec.ident, "card_ids": cards, "verdict_hint": "dcgo_quirk",
+                    "citation": rec.data.get("citation"),
+                    "dcgo_observed": oracle.get("first_divergence") or oracle.get("reason"),
+                    "expected": None, "scenario_path": oracle.get("scenario"),
+                })
+        if not rows:
+            return
+        try:
+            candidates = fork_candidates(rows)
+        except ValueError as e:
+            self.state.problems.append(f"DCGO fork-candidate export skipped: {e}")
+            return
+        write_fork_candidates(candidates, self.repo / self.FORK_CANDIDATES_PATH)
+        self._commit_paths([self.FORK_CANDIDATES_PATH],
+                           f"card-loop: DCGO fork candidates for run {self.run_id} ({len(candidates)})")
+
     def _release_engine_waits(self) -> None:
         """GATE items whose engine fix passed the gate wait for a human to merge
         the engine branch into the run branch (D13); once its sha is an
@@ -1267,6 +1314,7 @@ class Driver:
                 self.state.problems.append(f"merger close() failed: {e!r}")
         if self.manage_tree:
             self._commit_ledgers()
+            self._export_fork_candidates()
         blocked = self._scan_blocked()
         counts = self.state.counts()
         extra = {"stop": stop.to_dict(), "blocked": blocked, "failed": dict(self._failed),
