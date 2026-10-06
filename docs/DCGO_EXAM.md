@@ -122,6 +122,9 @@ cost is a known risk — see "Known gaps".
 | `steps[].do` | A **symbolic** action — `hatch`, `pass`, `move`, `play`, `digivolve`, `attack`, `main`, `link`, `select`. |
 | `steps[].expect` | The prompt this step expects to be answering. Optional per step, asserted **before** answering. |
 | `assert` | `at: <step index>` + `that: {path: value}`. Backfilled from the oracle — see "Assertion backfill". |
+| `covers` | Optional. Every clause id the line exercises (a ruling or combo spanning two cards); must include `clause` itself. Each must be a clause the extractor produces for its card, or the scenario is rejected like a bad `clause:`. |
+| `interaction` | Optional. `{ id, source: qa\|probe\|combo, kind: positive\|negative }`. Its presence makes the file an **interaction exam** — see below. |
+| `expect_ruling` | Q&A interaction exams only. `{ q_id: Q1601, assert: [ { at, that } ] }` — the publisher's answer as observables, never backfilled — see below. |
 
 ### `clause:` is an identity, not a label
 
@@ -149,6 +152,60 @@ previously-recorded verdicts silently re-point at *different* clauses. So the
 verdict store records the clause `label` and `text_sha256` alongside the id, and
 a mismatch on re-read invalidates that verdict back to `unmeasured` rather than
 reporting a stale `confirmed`.
+
+### `covers:`, `interaction:` and `expect_ruling:` — an interaction exam is a scenario about a ruling or a probe (added 2026-10-05)
+
+A clause exam asks "does this clause do what it prints". An **interaction exam**
+asks a narrower, riskier question about the same card — an official Q&A ruling,
+or a generated risk probe (the decline path of a "you may", the scope of "this
+Digimon", a `[Once Per Turn]` with two copies, a negative probe that must NOT
+fire). The gating set per card is the committed denominator
+`data/interaction_denominator.json` (`python -m tools.card_loop interactions
+--check`); the card-loop authors and adjudicates them (`docs/CARD_LOOP.md`), and
+readiness requires every gating one adjudicated (CLAUDE.md rule 34).
+
+```yaml
+card: BT7-056
+clause: BT7-056#effect#0
+covers: [BT7-056#effect#0, EX12-073#inherited#0]          # every clause the line exercises
+interaction: { id: "qa:Q1601", source: qa, kind: positive } # qa:<Q> | probe:<clause>:<family>[:neg] | combo:<slug>
+seed: 424242
+decks: { ... }
+steps: [ ... ]                                               # the same line vocabulary as a clause exam
+assert: [ ... ]                                              # backfilled from the oracle, as usual
+expect_ruling:                                               # qa: only -- the publisher's answer, NEVER backfilled
+  q_id: Q1601
+  assert:
+    - at: 7
+      that: { p0.field.0.dp: 7000 }
+```
+
+- `interaction.id` must exist in the denominator (`combo:` ids excepted — they
+  are examined and reported but never gate); an unknown id is an orphan, rejected
+  like an unknown `clause:`. The verdict is filed under the **interaction id** in
+  the per-card verdict file's `interactions` map (`version: 2`), never under
+  `clause:` — a negative probe that passes proves the clause did *not* fire,
+  which must not read as that clause being confirmed. A ruling that prints on
+  several cards is one interaction: its verdict is written identically into every
+  listed card's file in one commit.
+- `covers` is the `clause:` list the exam exercises; `clause:` itself stays the
+  primary and must appear in it. Scenarios that bind to a clause the extractor
+  does not produce are orphans (`exam_validate`, `bind()["orphan_scenarios"]`).
+- `expect_ruling` is the **third oracle** of a Q&A exam (card-loop design D7):
+  the differ compares our engine with DCGO; this block compares our engine with
+  the ruling, with the same row shape and checker as `assert:`
+  (`exam::assertions::check_ruling`, lenient on representation: a bare card id
+  equals a card entry, mappings compare as subsets, sequences as multisets). It is
+  authored AFTER the line is confirmed legal, by one model family and verified
+  blind by the other (D5), and is never backfilled. The outcome table: all three
+  agree → `confirmed`; ours = DCGO ≠ ruling → `ours_wrong` (and a DCGO fork
+  candidate); ours = ruling ≠ DCGO → `dcgo_quirk` citing `qa:<Q>`; ours matches
+  neither → `ours_wrong`. A line that is legal but whose `expect_ruling` is
+  contradicted by our engine still goes to the oracle (the contradiction is a
+  finding to triage, not an authoring error).
+- `exam --oracle` reports both legs per scenario; the harness exit code is 1 when
+  only the ruling leg failed (`RULING … CONTRADICTED`), so a driver can tell "the
+  line is wrong" from "the engine disagrees with the publisher".
 
 ### `stack` is a PREFIX, and applies to the INITIAL SHUFFLE ONLY
 

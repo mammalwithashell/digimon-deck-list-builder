@@ -109,6 +109,30 @@ python code/tools/scrape_official_evo_costs.py --ids BT13-020 EX1-014
 - `code/tools/audit_digivolve/reconcile_traits.py` folds official traits the API
   drops, including `(Rule) Trait` grants, into `card_overrides.json`.
 
+#### 1.3.1 Official Q&A rulings mirror
+
+**Script:** `code/tools/scrape_official_qa.py` → **`data/card_qa.json`** (the ruling
+source; **not** `card_official.json`'s `qa` field, whose parser kept one answer per
+card and swallowed the question into the title).
+
+```bash
+PYTHONPATH=code python -m tools.scrape_official_qa --ids BT7-056 ST1-01
+PYTHONPATH=code python -m tools.scrape_official_qa --all              # resumes: skips cards already scraped
+PYTHONPATH=code python -m tools.scrape_official_qa --all --refresh    # re-fetch everything (new rulings)
+```
+
+- Rulings are keyed by their stable Q-number (`qa.Q1601 = {q_id, date, question,
+  answer, card_ids}`); a ruling printed on several cards (reprints, shared rulings)
+  is stored once, and `cards.<id>` lists each card's Q-numbers (`[]` = none found).
+  `failed` names cards the search did not find; `conflicts` one Q-number with
+  different text on two cards (none so far). Keys are sorted, so diffs are stable.
+- It is the `qa:` half of the card loop's gating interaction denominator
+  (`python -m tools.card_loop interactions build`, `docs/CARD_LOOP.md`): every
+  ruling that prints a card becomes an interaction exam with the publisher's
+  answer as `expect_ruling:` (`docs/DCGO_EXAM.md`). Re-scrape, then rebuild the
+  denominator and regenerate readiness, when Bandai publishes new rulings; an
+  edited answer changes the ruling's `text_sha256` and invalidates its verdict.
+
 ---
 
 ### 1.4 Card Autoencoder Trainer
