@@ -50,3 +50,176 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
+assert:
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT21-074
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT21-074
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - BT21-074
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 2
+- at: 3
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - BT21-074
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 4
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - BT21-074
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 3
+- at: 5
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - BT21-074
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 6
+  that:
+    _backfilled: true
+    memory: -4
+    p0.field:
+    - card_id: BT21-074
+      dp: 7000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    - BT25-082
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 4
