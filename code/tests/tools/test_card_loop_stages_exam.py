@@ -437,13 +437,16 @@ STALL_REASON = ("player stalled on exam-ST23-04-effect0: claimed 412s ago (its o
                 "heartbeat still names it")
 
 
-def _stall_ctx(repo, cmds, heartbeat):
+def _stall_ctx(repo, cmds, heartbeat, launches=None):
     from tools.card_loop.config import LoopConfig
     hroot = repo / "hroot"
     hroot.mkdir(exist_ok=True)
     (hroot / "harness.heartbeat").write_text(heartbeat + "\n", encoding="utf-8")
     cfg = LoopConfig(exploration_share=0.0, harness_root=str(hroot), player_dir="P:/player")
-    return _ctx(repo, cmds=cmds, config=cfg)
+    extra = {}
+    if launches is not None:
+        extra["launch_detached"] = lambda argv, cwd, timeout: (launches.append(list(argv)), 0)[1]
+    return _ctx(repo, cmds=cmds, config=cfg, **extra)
 
 
 def test_a_stalled_player_goes_to_triage_and_the_player_is_restarted(repo):
@@ -451,14 +454,16 @@ def test_a_stalled_player_goes_to_triage_and_the_player_is_restarted(repo):
     # SelectCardEffect never completed it, and DCGO enforces no job timeout.
     # The harness now reports the stall; the stage routes it to triage as
     # `undetermined` (a model reads both sides) and restarts the player, since
-    # the heartbeat still names the stalled job.
+    # the heartbeat still names the stalled job. `node up` runs detached (the
+    # player would inherit a captured pipe and the call would block).
     _write_scenario(repo)
     cmds = (FakeCommands()
             .on("--oracle", 1, _row(verdict="unmeasured", job_outcome=None, reason=STALL_REASON, stall=STALL) + "\n")
             .on(("node", "down"), 0, "stopped pid 1")
-            .on(("node", "up"), 0, "GO\nstarted pid 2"))
+            .on(("node", "status"), 0, "GO\n  [ok] player: running (pid 2, heartbeat Healthy)\n"))
+    launches = []
     item = _oracle_item()
-    out = OracleExecutor().run(_stall_ctx(repo, cmds, "exam-ST23-04-effect0"), item)
+    out = OracleExecutor().run(_stall_ctx(repo, cmds, "exam-ST23-04-effect0", launches), item)
     _check(item, out)
     assert out.next_state == "DIVERGED"
     assert out.data["prompt_route"] == "undetermined"
@@ -466,10 +471,22 @@ def test_a_stalled_player_goes_to_triage_and_the_player_is_restarted(repo):
     assert ev["stall"] == STALL and "stalled" in ev["explanation"] and "OptionalSkill" in ev["explanation"]
     assert "stalled" in out.reason
     node_calls = [c["argv"] for c in cmds.calls if "node" in c["argv"]]
-    assert [c[c.index("node") + 1] for c in node_calls] == ["down", "up"]
-    assert "--build" in node_calls[1] and "P:/player" in node_calls[1]
-    assert ev["player_restart"].startswith("restarted")
+    assert [c[c.index("node") + 1] for c in node_calls] == ["down", "status"]
+    (up,) = launches
+    assert up[up.index("node") + 1] == "up" and "--build" in up and "P:/player" in up
+    assert ev["player_restart"].startswith("restarted") and "pid 2" in ev["player_restart"]
     assert not cmds.argvs("--inspect"), "nothing to inspect: DCGO asked no prompt the line could not answer"
+
+
+def test_a_player_that_did_not_come_back_is_reported_not_claimed(repo):
+    _write_scenario(repo)
+    cmds = (FakeCommands()
+            .on("--oracle", 1, _row(verdict="unmeasured", job_outcome=None, reason=STALL_REASON, stall=STALL) + "\n")
+            .on(("node", "down"), 0, "stopped pid 1")
+            .on(("node", "status"), 0, "NO-GO\n  [fail] player: not running\n"))
+    out = OracleExecutor().run(_stall_ctx(repo, cmds, "exam-ST23-04-effect0", []), _oracle_item())
+    note = out.data["prompt_evidence"]["player_restart"]
+    assert not note.startswith("restarted") and "not running" in note
 
 
 def test_a_stall_the_player_already_left_behind_does_not_restart_it(repo):

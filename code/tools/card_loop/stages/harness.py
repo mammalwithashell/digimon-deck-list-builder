@@ -24,6 +24,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping, Sequence
@@ -181,21 +182,43 @@ def heartbeat_job(ctx) -> str | None:
     return text or None
 
 
+def launch_detached(argv: Sequence[str], cwd: str, timeout: float) -> int | None:
+    """Run a launcher whose child must outlive it (`node up` spawns the Unity
+    player). No pipes: a captured stdout is inherited by the player (Rust's
+    spawn on Windows inherits every inheritable handle), the launcher's EOF
+    never comes, and the caller blocks until its timeout. Exit code, 124 on a
+    timeout, None when the launcher could not start."""
+    try:
+        return subprocess.run(list(argv), cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL, close_fds=True, timeout=timeout).returncode
+    except OSError:
+        return None
+    except subprocess.TimeoutExpired:
+        return 124
+
+
 def restart_player(ctx) -> str:
-    """`node down`, then `node up --build <player_dir>`: the only cure for a
-    player wedged on a job (DCGO enforces no job timeout). Returns a note for
-    the evidence; a failure is reported, never raised."""
+    """`node down`, then `node up --build <player_dir>`, then `node status` to
+    confirm: the only cure for a player wedged on a job (DCGO enforces no job
+    timeout). Returns a note for the evidence; a failure is reported, never
+    raised. `node up` goes through `ctx.launch_detached` when the context has
+    one (tests), else `launch_detached`."""
     build = getattr(getattr(ctx, "config", None), "player_dir", None)
     if not build:
         return "not restarted: no player_dir configured"
-    rc, out, err = run(ctx, [harness_bin(ctx), *_root_args(ctx), "node", "down"], NODE_TIMEOUT_S)
+    root = _root_args(ctx)
+    rc, out, err = run(ctx, [harness_bin(ctx), *root, "node", "down"], NODE_TIMEOUT_S)
     if rc != 0:
         return f"restart failed at `node down` (exit {rc}): {(err or out).strip()[-300:]}"
-    rc, out, err = run(ctx, [harness_bin(ctx), *_root_args(ctx), "node", "up", "--build", str(build)],
-                       NODE_TIMEOUT_S)
+    launcher = getattr(ctx, "launch_detached", None) or launch_detached
+    rc = launcher([harness_bin(ctx), *root, "node", "up", "--build", str(build)], str(ctx.repo), NODE_TIMEOUT_S)
     if rc != 0:
-        return f"restart failed at `node up` (exit {rc}): {(err or out).strip()[-300:]}"
-    return "restarted the player (`node down`, then `node up`)"
+        return f"restart failed at `node up` (exit {rc})"
+    rc, out, err = run(ctx, [harness_bin(ctx), *root, "node", "status"], NODE_TIMEOUT_S)
+    status = next((l.strip() for l in (out or "").splitlines() if "player:" in l), "")
+    if "player: running" not in status:          # `[fail] player: not running` also says "running"
+        return f"restart: `node up` returned 0 but `node status` says {status or (err or out).strip()[-200:]!r}"
+    return f"restarted the player (`node down`, then `node up`; {status})"
 
 
 def verdict_triage_argv(ctx, clause_id: str, triage: str, citation: str) -> list[str]:
