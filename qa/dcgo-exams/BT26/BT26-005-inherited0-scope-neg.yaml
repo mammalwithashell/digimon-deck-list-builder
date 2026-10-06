@@ -10,7 +10,8 @@ clause: BT26-005#inherited#0
 interaction: {id: "probe:BT26-005#inherited#0:scope:neg", source: probe, kind: negative}
 covers:
   - BT26-005#inherited#0
-meta: {produced_by: 20261006T145834227207Z-pilot-data-squad-7983ac}
+  - BT26-094#effect#0
+meta: {produced_by: 20261006T225543857091Z-pilot-data-squad-c3056a}
 seed: 424242
 decks:
   p0:
@@ -61,7 +62,8 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.1, target: security } }
     expect: { prompt: main_phase }
+  # The attack has resolved in Main; no inherited On Deletion choice is pending.
   - actor: 0
     do: { pass: {} }
-    expect: { prompt: breeding_action }
+    expect: { prompt: main_phase }
 assert: []
