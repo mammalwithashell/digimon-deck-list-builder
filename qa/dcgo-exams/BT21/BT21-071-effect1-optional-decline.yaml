@@ -1,0 +1,65 @@
+# Interaction exam: probe:BT21-071#effect#1:optional_decline
+# Scopemon (BT21-071) [On Play] "By placing 1 [Appmon]/[Three Musketeers] card
+# from hand or trash as a Digimon's bottom digivolution card, gain 1 memory."
+#
+# Same setup as BT21-071-effect1.yaml (P1 overspends so P0 has 5 memory on T3;
+# Scopemon takes it to 1). Here the player ACCEPTS the OptionalSkill gate
+# (DCGO-only row) and then DECLINES the card pick (SelectHandEffect is
+# canNoSelect: true in BT21_071.cs). The "By placing" cost is therefore never
+# paid: no card is tucked, no host prompt, and NO memory is gained -- memory
+# must stay at 1, Scopemon has no sources, P-180 stays in hand. A divergence
+# would be an engine that still gains the memory (or tucks) after an empty pick.
+card: BT21-071
+clause: BT21-071#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT21-071, P-180, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-08, ST1-03, ST1-03, ST1-03,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            ST1-03, BT1-009]
+    rest: quiet-opponent
+meta: {produced_by: 20261006T134840115191Z-pilot-three-musketeers-dc9b10}
+interaction: {id: "probe:BT21-071#effect#1:optional_decline", source: probe, kind: positive}
+covers: [BT21-071#effect#1]
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  # Accept the gate (wire-only row in DCGO)...
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # ...then decline the card pick: nothing placed, no memory.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # Memory is 1 (not 2): still P0's turn; pass ends it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
