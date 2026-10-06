@@ -30,7 +30,26 @@ attempts and corrections are ledgered, an escalation file is written for
 ESCALATED, the transition event is appended, PARKED items are handed to the
 gap lane. GATE is driver-owned: `Gate.check(ctx, item, last merge)`; pass ->
 ORACLE, fail -> FIX with the reasons (a `gate_fail` correction against the
-fix attempt), or ESCALATED when the fix stage's cap is spent.
+fix attempt), or ESCALATED when the fix stage's cap is spent. An ENGINE fix
+that passes stays in GATE (`data["engine_wait"]`) until a human has merged
+its `card-loop/<run>/engine-*` branch into the run branch (its sha is an
+ancestor of the run tree's HEAD, checked every round and on resume), because
+the oracle runs on the run tree. An executor that raises
+`driver_contracts.StageDeferred` (a failed worker call, no family for a
+non-terminating call) leaves the item where it is: its attempts and
+corrections are ledgered, one attempt counts toward the stage's cap, and the
+cap escalates.
+
+**The run tree** (`manage_tree=True`; the CLI's real runs, and `--fake
+--run-tree`): `ctx.repo` is a worktree on `card-loop/<run>/run` (never bare
+`card-loop/<run>`: engine branches live under it). Before the first ORACLE
+call of a session the clause-text book is extended to the whole pool
+(`tools.clause_coverage.book add`) and committed; after every ORACLE and
+TERMINATION_CHECK step the tree writes their executors make (verdicts,
+`--backfill`, `verdict-triage`) are committed; at a stop the ledgers are.
+Every commit carries `Loop-Attempt` / `Loop-Model: driver/default` /
+`Loop-Run` trailers. Parked cards' reported gaps go to the trackers through
+`GapLane.record_gap`. Nothing is committed off a run branch.
 
 **Attempt caps** are per item per stage (`config.attempt_caps`), counted per
 executor step that made worker calls (a two-family termination check is ONE
@@ -63,6 +82,7 @@ import dataclasses
 import importlib
 import inspect
 import json
+import os
 import subprocess
 import sys
 import time
@@ -84,6 +104,7 @@ from .driver_contracts import (
     ItemRecord,
     MergeRequest,
     MergeResult,
+    StageDeferred,
     StageOutcome,
     check_transition,
     is_adjudicated,
@@ -124,6 +145,26 @@ FAKE_DIR = "fake"
 REPORT_NAME = "report.md"
 ALL_STATES = frozenset(s for states in STATES_BY_KIND.values() for s in states)
 
+# Run-tree management (`manage_tree=True`; the CLI turns it on for a run tree).
+#: Executors that write into the run tree itself: the oracle's verdicts and
+#: `--backfill`, the termination check's `verdict-triage`. After their step
+#: the driver commits those writes so the tree never carries them across steps.
+TREE_WRITING_STATES = frozenset({"ORACLE", "TERMINATION_CHECK"})
+VERDICTS_DIR = "qa/qa-reports/exam-verdicts"
+DEFAULT_CLAUSE_TEXT_BOOK = "qa/exam-clause-text.json"
+#: `PYTHONPATH=code python -m tools.clause_coverage.book ...` without an env
+#: override (`ctx.run_command` takes argv, cwd, timeout only).
+BOOK_BOOTSTRAP = ("import runpy, sys; sys.path.insert(0, 'code'); "
+                  "runpy.run_module('tools.clause_coverage.book', run_name='__main__', alter_sys=True)")
+DRIVER_FAMILY = "driver"
+PROTECTED_BRANCHES = ("main", "master")
+
+
+def run_branch(run_id: str) -> str:
+    """The run branch. Never bare `card-loop/<run_id>`: engine fixes land on
+    `card-loop/<run_id>/engine-<gap>`, and a ref cannot be a branch and a directory."""
+    return f"card-loop/{run_id}/run"
+
 
 # ---------------------------------------------------------------------------
 # components
@@ -142,13 +183,16 @@ class Components:
     missing: dict = field(default_factory=dict)
 
 
-#: name -> (module, factory names tried in order). A factory is called with the
-#: LoopConfig when it takes a positional parameter (or `config=`), else bare.
-COMPONENT_SPECS = {
-    "stages": ("tools.card_loop.stages", ("default_executors", "build_executors", "EXECUTORS")),
-    "gate": ("tools.card_loop.gates", ("default_gate", "build_gate")),
-    "merger": ("tools.card_loop.merge", ("default_merger", "build_merger")),
-    "gaps": ("tools.card_loop.gaps", ("default_gap_lane", "build_gap_lane")),
+#: name -> module. What each must provide (the group-6 modules as built):
+#:   stages  `build_executors()` -> {state: executor}   (or `EXECUTORS`)
+#:   gate    `FixGate()`
+#:   gaps    `RunGapLane(run_dir, plan, repo=<run tree>)`
+#:   merger  `LoopMerger(gap_lane=<the RunGapLane>, worktree_root=...)`, `.close(ctx)` at run end
+COMPONENT_MODULES = {
+    "stages": "tools.card_loop.stages",
+    "gate": "tools.card_loop.gates",
+    "gaps": "tools.card_loop.gaps",
+    "merger": "tools.card_loop.merge",
 }
 
 
@@ -178,43 +222,55 @@ def _executor_registry(value) -> dict:
     return out
 
 
-def default_components(config: LoopConfig | None = None) -> Components:
-    """Load the executors, gate, merger and gap lane, tolerating any that are
-    not built yet (reported in `Components.missing`, never raised)."""
+def default_components(config: LoopConfig | None = None, *, run_dir=None, plan: Mapping | None = None,
+                       repo=None, worktree_root=None) -> Components:
+    """Construct the executors, fix gate, gap lane and merger, tolerating any
+    module that is not built (reported in `Components.missing`, never raised).
+    `repo` is the run tree the gap lane reads and commits in; the merger gets
+    the same gap lane so an engine merge notes its branch on it."""
     config = config or LoopConfig()
     comps = Components()
-    for name, (module, factories) in COMPONENT_SPECS.items():
+    mods = {}
+    for name, module in COMPONENT_MODULES.items():
         try:
-            mod = importlib.import_module(module)
+            mods[name] = importlib.import_module(module)
         except ModuleNotFoundError as e:
             if e.name and (e.name == module or module.startswith(e.name + ".")):
                 comps.missing[name] = f"not built yet ({module})"
             else:
                 comps.missing[name] = f"import failed: {e}"
-            continue
         except Exception as e:  # a broken module must not take the driver down
             comps.missing[name] = f"import failed: {type(e).__name__}: {e}"
-            continue
-        value, error = None, f"{module} has no factory (expected one of {', '.join(factories)})"
-        for fname in factories:
-            obj = getattr(mod, fname, None)
-            if obj is None:
-                continue
-            try:
-                value, error = (_call_factory(obj, config) if callable(obj) else obj), None
-            except Exception as e:
-                error = f"{module}.{fname} failed: {type(e).__name__}: {e}"
-            break
-        if error:
-            comps.missing[name] = error
-            continue
-        if name == "stages":
-            try:
-                comps.executors = _executor_registry(value)
-            except (TypeError, ValueError) as e:
-                comps.missing[name] = str(e)
-        else:
-            setattr(comps, name, value)
+
+    def build(name: str, attr: str, make: Callable):
+        mod = mods.get(name)
+        if mod is None:
+            return None
+        obj = getattr(mod, attr, None)
+        if obj is None:
+            comps.missing[name] = f"{COMPONENT_MODULES[name]} has no {attr}"
+            return None
+        try:
+            return make(obj)
+        except Exception as e:
+            comps.missing[name] = f"{COMPONENT_MODULES[name]}.{attr} failed: {type(e).__name__}: {e}"
+            return None
+
+    if "stages" in mods:
+        stages = mods["stages"]
+        factory = getattr(stages, "build_executors", None)
+        try:
+            value = _call_factory(factory, config) if callable(factory) else getattr(stages, "EXECUTORS")
+            comps.executors = _executor_registry(value)
+        except Exception as e:
+            comps.missing["stages"] = f"executor registry unusable: {type(e).__name__}: {e}"
+    comps.gate = build("gate", "FixGate", lambda cls: cls())
+    if "gaps" in mods and run_dir is None:
+        comps.missing["gaps"] = "the gap lane needs the run directory"
+    elif "gaps" in mods:
+        comps.gaps = build("gaps", "RunGapLane", lambda cls: cls(run_dir, plan, repo=repo))
+    comps.merger = build("merger", "LoopMerger",
+                         lambda cls: cls(gap_lane=comps.gaps, worktree_root=worktree_root))
     return comps
 
 
@@ -309,6 +365,12 @@ class DriverContext:
     run_command: Callable
     now: Callable[[], str]
     new_attempt_id: Callable[[], str]
+    # Optional attributes the executors read with getattr (None = not configured):
+    items: Mapping | None = None              # the live item map (item id -> ItemRecord)
+    harness_bin: str | None = None
+    clause_text_json: str | None = None
+    sleep: Callable | None = None
+    dcgo_root: str | None = None
 
 
 @dataclass
@@ -369,7 +431,9 @@ class Driver:
                  run_command: Callable | None = None, now: Callable[[], str] | None = None,
                  clock: Callable[[], float] | None = None, new_attempt_id: Callable[[], str] | None = None,
                  serial: bool = False, max_attempts: int | None = None,
-                 dcgo_presence: Callable | None = None):
+                 dcgo_presence: Callable | None = None, manage_tree: bool = False,
+                 harness_bin: str | None = None, clause_text_json: str | None = None,
+                 sleep: Callable | None = None, dcgo_root: str | None = None):
         self.plan = plan
         self.config = config
         self.components = components
@@ -392,7 +456,16 @@ class Driver:
             base_sha=plan.get("base_sha"), plan=plan, config=config, workers=dict(workers or {}),
             health=self.health, ledger=self.ledger, corrections=self.corrections, scorecard=scorecard,
             pool=pool, run_command=run_command or default_run_command, now=self.now,
-            new_attempt_id=attempt_id)
+            new_attempt_id=attempt_id, items=self.state.records, harness_bin=harness_bin,
+            clause_text_json=clause_text_json, sleep=sleep,
+            dcgo_root=dcgo_root or (plan.get("dcgo") or {}).get("root"))
+        # Run-tree management: commit tree writes (oracle verdicts/backfill,
+        # termination triage, the clause-text book, the ledgers at a stop),
+        # run the clause-text prelude, record parked gaps in the trackers.
+        self.manage_tree = manage_tree
+        self._prelude: str | None = None          # None = not run; "ok"; or the failure
+        self._branch_ok: bool | None = None
+        self._engine_wait_problems: set[str] = set()
 
         self._history: dict[str, list[str]] = {}
         self._attempt_index: dict[str, Attempt] = {}
@@ -499,6 +572,12 @@ class Driver:
             return "waits for " + ", ".join(f"{r} ({self.state.records[r].state})" for r in unmet)
         if st in BUILTIN_STATES and st not in self.components.executors:
             return None
+        if st == "GATE" and rec.data.get("engine_wait"):
+            ew = rec.data["engine_wait"]
+            return (f"the fix gate passed; waits for a human to merge {ew.get('branch') or 'the engine branch'}"
+                    f" ({(ew.get('sha') or '?')[:12]}) into the run branch")
+        if st in ORACLE_STATES and self.manage_tree and self._prelude not in (None, "ok"):
+            return f"the clause-text book prelude failed: {self._prelude}"
         if st == "GATE":
             if self.components.gate is None:
                 why = self.components.missing.get("gate")
@@ -545,6 +624,8 @@ class Driver:
                 continue
             if self._check_stop():
                 return
+            if st in ORACLE_STATES and self.manage_tree and self._prelude is None and not self._run_prelude():
+                continue
             free[lane] -= 1
             self._seq += 1
             snapshot = ItemRecord.from_dict(copy.deepcopy(rec.to_dict()))
@@ -573,7 +654,7 @@ class Driver:
 
     # ------------------------------------------------------------------ gap lane
 
-    def _park(self, rec: ItemRecord) -> None:
+    def _park(self, rec: ItemRecord, *, record: bool = True) -> None:
         gaps = self.components.gaps
         gap_id = rec.data.get("gap_id")
         if not gap_id:
@@ -585,6 +666,8 @@ class Driver:
             gaps.park(rec.item, gap_id, is_core=self.state.meta[rec.item].is_core)
         except Exception as e:
             self.state.problems.append(f"gap lane park({rec.item}, {gap_id}) failed: {e!r}")
+        if record:
+            self._record_gaps(rec)
 
     def _unpark_closed(self) -> None:
         gaps = self.components.gaps
@@ -610,6 +693,157 @@ class Driver:
                     self.state.transition(item, "IMPLEMENTING", reason=f"gap {gid} closed",
                                           item_data={"unparked_from": rec.data.get("gap_id")})
 
+    def _record_gaps(self, rec: ItemRecord) -> None:
+        """Tracker writes are orchestrator-only: the gaps a parked card's worker
+        reported go to `qa/dsl-vocab-gaps.md` / `docs/RUST_ENGINE_GAPS.md`
+        through the gap lane, which commits them on the run branch."""
+        record = getattr(self.components.gaps, "record_gap", None)
+        if not self.manage_tree or not callable(record):
+            return
+        for gap in rec.data.get("gaps") or ():
+            if not isinstance(gap, Mapping) or gap.get("kind") not in ("dsl", "engine"):
+                continue
+            try:
+                record(dict(gap), gap["kind"], attempt_id=rec.data.get("implement_attempt"),
+                       family=rec.data.get("implementer_family"), model=None)
+            except Exception as e:
+                self.state.problems.append(f"recording gap {gap.get('id')} for {rec.item} failed: {e!r}")
+
+    # ------------------------------------------------------------------ the run tree
+
+    def _git(self, *args: str, timeout: float = 300) -> tuple:
+        try:
+            return self.ctx.run_command(["git", *args], str(self.repo), timeout)
+        except Exception as e:
+            return None, "", f"{type(e).__name__}: {e}"
+
+    def _on_run_branch(self) -> bool:
+        if self._branch_ok is None:
+            rc, out, err = self._git("symbolic-ref", "-q", "--short", "HEAD", timeout=60)
+            branch = out.strip() if rc == 0 else None
+            self._branch_ok = bool(branch) and branch not in PROTECTED_BRANCHES
+            if not self._branch_ok:
+                self.state.problems.append(
+                    f"the run tree {self.repo} is on {branch or 'a detached HEAD'}, not a run branch "
+                    f"({run_branch(self.run_id)}): its writes are left uncommitted")
+        return self._branch_ok
+
+    @staticmethod
+    def _porcelain_paths(out: str) -> list[str]:
+        paths = []
+        for line in out.splitlines():
+            if len(line) < 4:
+                continue
+            path = line[3:].split(" -> ")[-1].strip()
+            if path.startswith('"') and path.endswith('"'):
+                path = path[1:-1]
+            paths.append(path)
+        return paths
+
+    def _commit_paths(self, pathspecs, subject: str, *, attempt_id: str | None = None,
+                      body: str | None = None) -> str | None:
+        """Commit whatever is dirty under `pathspecs` in the run tree (and only
+        that), with `Loop-Attempt` / `Loop-Model` trailers. Returns the commit
+        subject, or None when nothing was dirty or the commit could not be made."""
+        from .provenance import loop_commit_message
+
+        pathspecs = [str(p) for p in pathspecs if p]
+        if not pathspecs or not self._on_run_branch():
+            return None
+        rc, out, err = self._git("status", "--porcelain", "--untracked-files=all", "--", *pathspecs)
+        if rc != 0:
+            self.state.problems.append(f"git status in the run tree failed ({rc}): {(err or out).strip()[-300:]}")
+            return None
+        dirty = self._porcelain_paths(out)
+        if not dirty:
+            return None
+        msg = loop_commit_message(subject, body, attempt_id=attempt_id or self.ctx.new_attempt_id(),
+                                  family=DRIVER_FAMILY, model=None,
+                                  extra_trailers=[f"Loop-Run: {self.run_id}"])
+        for args in (("add", "--", *dirty), ("commit", "-q", "-m", msg, "--", *dirty)):
+            rc, out, err = self._git(*args)
+            if rc != 0:
+                self.state.problems.append(f"git {args[0]} in the run tree failed ({rc}): "
+                                           f"{(err or out).strip()[-300:]}")
+                return None
+        return subject
+
+    def _clause_text_book(self) -> str:
+        for v in (self.ctx.clause_text_json, self.plan.get("clause_text_json"),
+                  getattr(self.config, "clause_text_json", None)):
+            if v:
+                return str(v)
+        return DEFAULT_CLAUSE_TEXT_BOOK
+
+    def _run_prelude(self) -> bool:
+        """Before the first ORACLE call of a session: extend the clause-text book
+        to the whole pool and commit it. A card missing from the book makes
+        every oracle verdict for it an orphan refusal. Idempotent; once per session."""
+        pool = list((self.plan.get("work_set") or {}).get("pool") or [])
+        if not pool:
+            self._prelude = "ok"
+            return True
+        book = self._clause_text_book()
+        argv = [sys.executable, "-c", BOOK_BOOTSTRAP, "add", "--book", book, "--card-ids", *pool]
+        try:
+            rc, out, err = self.ctx.run_command(argv, str(self.repo), 1800)
+        except Exception as e:
+            rc, out, err = None, "", f"{type(e).__name__}: {e}"
+        if rc != 0:
+            self._prelude = f"`tools.clause_coverage.book add` exited {rc}: {(err or out).strip()[-300:]}"
+            self.state.problems.append(f"clause-text book prelude: {self._prelude}")
+            return False
+        self._commit_paths([book], f"card-loop: clause-text book covers run {self.run_id}'s pool",
+                           body=f"{len(pool)} pool card(s); added by the driver's run prelude.")
+        self._prelude = "ok"
+        return True
+
+    def _commit_tree_writes(self, rec: ItemRecord, src: str, attempts) -> None:
+        """After a step whose executor writes into the run tree (ORACLE's
+        verdicts + `--backfill`, TERMINATION_CHECK's `verdict-triage`)."""
+        paths = list(rec.data.get("scenario_paths") or [])
+        for row in (rec.data.get("oracle_results") or {}).values():
+            if isinstance(row, Mapping) and row.get("backfilled") and row.get("scenario"):
+                paths.append(row["scenario"])
+        paths.append(VERDICTS_DIR)
+        what = "oracle verdict and backfill" if src in ORACLE_STATES else f"{src.lower()} verdict"
+        self._commit_paths(list(dict.fromkeys(paths)), f"card-loop: {what} for {rec.item}",
+                           attempt_id=attempts[0].attempt_id if attempts else None)
+
+    def _commit_ledgers(self) -> None:
+        paths = []
+        for p in (Path(self.ledger.path), Path(self.corrections.path),
+                  Path(self.ledger.path).with_name("audits.jsonl"), Path(self.paths.escalations_dir)):
+            try:
+                paths.append(Path(p).resolve().relative_to(self.repo.resolve()).as_posix())
+            except ValueError:
+                continue                      # outside the run tree (e.g. --fake ledgers)
+        reason = self._stop.reason if self._stop else "stop"
+        self._commit_paths(paths, f"card-loop: ledgers for run {self.run_id} ({reason})")
+
+    def _release_engine_waits(self) -> None:
+        """GATE items whose engine fix passed the gate wait for a human to merge
+        the engine branch into the run branch (D13); once its sha is an
+        ancestor of the run tree's HEAD, the item goes on to the oracle."""
+        for rec in self.state.ordered():
+            ew = rec.data.get("engine_wait") if rec.state == "GATE" else None
+            if not ew or not ew.get("sha"):
+                continue
+            rc, out, err = self._git("merge-base", "--is-ancestor", ew["sha"], "HEAD", timeout=60)
+            if rc == 0:
+                self.state.transition(rec.item, "ORACLE", reason=f"engine fix {ew.get('branch')} "
+                                                                  "landed on the run branch",
+                                      item_data={"engine_wait": None, "engine_landed": dict(ew)})
+            elif rc != 1 and rec.item not in self._engine_wait_problems:
+                self._engine_wait_problems.add(rec.item)
+                self.state.problems.append(f"{rec.item}: cannot tell whether {ew.get('branch')} landed "
+                                           f"(git merge-base exited {rc}): {(err or out).strip()[-200:]}")
+
+    def _round_start(self) -> None:
+        self._unpark_closed()
+        self._release_engine_waits()
+        self._advance_builtins()
+
     # ------------------------------------------------------------------ start of a session
 
     def _default_dcgo_presence(self, cards):
@@ -634,7 +868,7 @@ class Driver:
         if self.components.gaps is not None:
             for rec in self.state.ordered():
                 if rec.state == "PARKED":
-                    self._park(rec)
+                    self._park(rec, record=False)      # resume: the lane learns it again
 
     # ------------------------------------------------------------------ the loop
 
@@ -661,8 +895,7 @@ class Driver:
 
     def _loop_serial(self) -> None:
         while not self._check_stop():
-            self._unpark_closed()
-            self._advance_builtins()
+            self._round_start()
             task = next(self._ready_tasks({"worker": 1, "oracle": 1}), None)
             if task is None:
                 if self._stop is None:
@@ -678,9 +911,8 @@ class Driver:
             while True:
                 try:
                     if not self._check_stop():
-                        self._unpark_closed()
-                        self._advance_builtins()
-                        busy = {t.item for t in in_flight.values()}
+                        self._round_start()
+                        busy ={t.item for t in in_flight.values()}
                         used = {lane: sum(1 for t in in_flight.values() if t.lane == lane) for lane in lanes}
                         free = {lane: lanes[lane] - used[lane] for lane in lanes}
                         for task in self._ready_tasks(free, busy):
@@ -706,6 +938,8 @@ class Driver:
             if task.kind == "gate":
                 return ("gate", self.components.gate.check(self.ctx, task.record, self._merge_for(task.record)))
             return ("outcome", self.components.executors[task.state].run(self.ctx, task.record))
+        except StageDeferred as e:
+            return ("deferred", e)
         except Exception as e:
             return ("error", e, traceback.format_exc())
 
@@ -718,6 +952,8 @@ class Driver:
         tag = result[0]
         if tag == "error":
             self._executor_failed(rec, task, result[1], result[2])
+        elif tag == "deferred":
+            self._apply_deferred(rec, task, result[1])
         elif tag == "gate":
             if isinstance(result[1], GateResult):
                 self._apply_gate(rec, result[1])
@@ -831,9 +1067,49 @@ class Driver:
                               event_data=outcome.events_data, count=count, reset_keys=reset)
         if dst == "PARKED":
             self._park(rec)
+        if self.manage_tree and src in TREE_WRITING_STATES:
+            self._commit_tree_writes(rec, src, attempts)
         newly = bool(outcome.adjudicated) or (is_adjudicated(kind, dst) and not is_adjudicated(kind, src))
         self._tick(attempts, adjudicated=newly)
         self._idle_check(rec, progressed=bool(attempts) or newly)
+
+    def _escalate_if_capped(self, rec: ItemRecord, why: str) -> None:
+        key = self._cap_key(rec)
+        cap = self._cap(key)
+        if cap is not None and rec.attempts.get(key, 0) >= cap:
+            self._escalate(rec, Escalation(
+                item=rec.item, reason=f"attempt cap: {key} {rec.attempts.get(key, 0)}/{cap} spent; {why}"))
+
+    def _apply_deferred(self, rec: ItemRecord, task: _Task, exc: StageDeferred) -> None:
+        """The stage could not run now (a failed worker call, no family for a
+        non-terminating call): ledger what it carries, count ONE attempt toward
+        the stage's cap, leave the item where it is, escalate at the cap."""
+        outcome = getattr(exc, "outcome", None) or StageOutcome(next_state=rec.state)
+        reason = getattr(exc, "reason", None) or str(exc) or outcome.reason or "deferred"
+        attempts = list(outcome.attempts or [])
+        try:
+            for a in attempts:
+                a.validate()
+            for c in outcome.corrections or ():
+                c.validate()
+        except Exception as e:
+            self._executor_failed(rec, task, e)
+            return
+        if outcome.next_state != rec.state:
+            self.state.problems.append(f"{rec.item}: a deferral proposed {outcome.next_state}; "
+                                       f"a deferred item stays in {rec.state}")
+        count, reset = self._count_keys(rec.state, rec.state, attempts)
+        key = self._cap_key(rec)
+        if key and key not in count:
+            count.append(key)
+        ids = [a.attempt_id for a in attempts]
+        self._ledger(attempts, outcome.corrections)
+        self.state.note(rec.item, reason=f"deferred: {reason}", stage=attempts[0].stage if attempts else task.stage,
+                        attempt_id=ids[0] if ids else None, attempt_ids=ids, count=count, reset_keys=reset,
+                        item_data=outcome.data, event_data=outcome.events_data)
+        self._tick(attempts, adjudicated=False)
+        self._idle_check(rec, progressed=bool(attempts))
+        self._escalate_if_capped(rec, f"the last step was deferred: {reason}")
 
     def _merge_failed(self, rec, outcome, attempts, req, res, count, reset, stage) -> None:
         item = rec.item
@@ -849,19 +1125,25 @@ class Driver:
                         item_data={"merge_error": errors}, count=count, reset_keys=reset,
                         event_data={"merge": {"ok": False, "errors": errors, "branch": res.branch}})
         self._tick(attempts, adjudicated=False)
-        key = self._cap_key(rec)
-        cap = self._cap(key)
-        if cap is not None and rec.attempts.get(key, 0) >= cap:
-            self._escalate(rec, Escalation(
-                item=item, reason=f"attempt cap: {key} {rec.attempts.get(key, 0)}/{cap} spent; "
-                                  f"the last merge failed: {'; '.join(errors)}"))
+        self._escalate_if_capped(rec, f"the last merge failed: {'; '.join(errors)}")
 
     def _apply_gate(self, rec: ItemRecord, result: GateResult) -> None:
         item = rec.item
         fix_stage = "fix_engine" if rec.data.get("engine_fix") else "fix_card"
         if result.passed:
-            self.state.transition(item, "ORACLE", reason="fix gate passed",
-                                  item_data={"gate": {"passed": True, "evidence": dict(result.evidence)}})
+            gate = {"gate": {"passed": True, "evidence": dict(result.evidence)}}
+            merge = rec.data.get("merge") or {}
+            if merge.get("engine"):
+                # D13: an engine fix lands on its own branch for a human to merge;
+                # the oracle runs on the run tree, so the item waits here until
+                # that branch is part of the run branch (`_release_engine_waits`).
+                wait = {"branch": merge.get("branch"), "sha": merge.get("sha"),
+                        "attempt_id": merge.get("attempt_id"), "gap_id": rec.data.get("gap_id")}
+                self.state.note(item, reason=f"fix gate passed; waiting for a human to merge "
+                                             f"{wait['branch']} into {run_branch(self.run_id)}",
+                                item_data={**gate, "engine_wait": wait})
+                return
+            self.state.transition(item, "ORACLE", reason="fix gate passed", item_data=gate)
             return
         reasons = [str(r) for r in result.reasons] or ["the fix gate failed (no reason given)"]
         fix_attempt = (rec.data.get("merge") or {}).get("attempt_id")
@@ -899,6 +1181,14 @@ class Driver:
                        wall_clock_hours=cfg.wall_clock_hours, plateau=self._plateau,
                        plateau_limit=cfg.plateau_attempts, session_attempts=self._session_attempts)
         self._stop = stop
+        close = getattr(self.components.merger, "close", None)
+        if callable(close):
+            try:
+                close(self.ctx)
+            except Exception as e:
+                self.state.problems.append(f"merger close() failed: {e!r}")
+        if self.manage_tree:
+            self._commit_ledgers()
         blocked = self._scan_blocked()
         counts = self.state.counts()
         extra = {"stop": stop.to_dict(), "blocked": blocked, "failed": dict(self._failed),
@@ -966,8 +1256,67 @@ def _add_run_options(p: argparse.ArgumentParser) -> None:
     p.add_argument("--budget-usd", type=float, default=None, help="USD cap for the run (overrides config)")
     p.add_argument("--serial", action="store_true", help="one task at a time (deterministic)")
     p.add_argument("--worktree-root", default=None,
-                   help="root for the driver's worker worktree pool (keep it SHORT on Windows); "
-                        "omitted = no pool")
+                   help="root for the worker worktree pool, the engine-fix and gate scratch trees and "
+                        "(by default) the run tree; keep it SHORT on Windows (MAX_PATH). Omitted = no "
+                        "worker pool, scratch trees under <run_dir>/wt")
+    p.add_argument("--run-tree", default=None,
+                   help="the run's working tree, checked out on card-loop/<run-id>/run (created from the "
+                        "plan's base sha, or reused). Default for real runs: <worktree-root or "
+                        "<run_dir>/wt>/cl-<run>-run; --fake without it runs in the current checkout "
+                        "and commits nothing")
+
+
+class RunTreeError(RuntimeError):
+    pass
+
+
+RUN_TREE_RECORD = "run_tree.json"
+
+
+def default_run_tree(run_dir, run_id: str, worktree_root=None) -> Path:
+    root = Path(worktree_root) if worktree_root else Path(run_dir) / "wt"
+    slug = "".join(c if c.isalnum() or c in "_-" else "-" for c in run_id)[:32].strip("-") or "run"
+    return root / f"cl-{slug}-run"
+
+
+def _git_cp(cwd, *args) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True,
+                          encoding="utf-8", errors="replace")
+
+
+def ensure_run_tree(repo, run_id: str, base_sha: str | None, tree) -> Path:
+    """`tree` checked out on `run_branch(run_id)`: a new worktree (and branch,
+    from `base_sha`) the first time, the same one after. Refuses a tree that is
+    on another branch -- the loop never switches someone's checkout."""
+    branch, tree = run_branch(run_id), Path(tree)
+    listed = _git_cp(repo, "worktree", "list", "--porcelain")
+    if listed.returncode != 0:
+        raise RunTreeError(f"{repo} is not a git repository: {listed.stderr.strip()}")
+    registered = {os.path.normcase(os.path.abspath(line[len("worktree "):]))
+                  for line in listed.stdout.splitlines() if line.startswith("worktree ")}
+    if os.path.normcase(os.path.abspath(tree)) in registered:
+        current = _git_cp(tree, "symbolic-ref", "-q", "--short", "HEAD").stdout.strip()
+        if current != branch:
+            raise RunTreeError(f"{tree} is on {current or 'a detached HEAD'}, not the run branch {branch}")
+        return tree
+    if tree.exists() and any(tree.iterdir()):
+        raise RunTreeError(f"{tree} exists and is not a worktree of {repo}")
+    exists = _git_cp(repo, "rev-parse", "--verify", "-q", f"refs/heads/{branch}").returncode == 0
+    tree.parent.mkdir(parents=True, exist_ok=True)
+    args = (["worktree", "add", "-q", str(tree), branch] if exists
+            else ["worktree", "add", "-q", "-b", branch, str(tree), base_sha or "HEAD"])
+    cp = _git_cp(repo, *args)
+    if cp.returncode != 0:
+        raise RunTreeError(f"git {' '.join(args)} failed: {cp.stderr.strip()}")
+    return tree
+
+
+def _recorded_run_tree(run_dir) -> Path | None:
+    try:
+        doc = json.loads((Path(run_dir) / RUN_TREE_RECORD).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return Path(doc["path"]) if doc.get("path") else None
 
 
 def _execute(plan: dict, run_dir: Path, args, *, command: str) -> int:
@@ -985,7 +1334,16 @@ def _execute(plan: dict, run_dir: Path, args, *, command: str) -> int:
               "checks and re-plan, or exercise the loop with --fake)", file=sys.stderr)
         return 1
 
-    components = default_components(config)
+    # The run tree: real runs always work in one (on card-loop/<run>/run); a
+    # --fake run only when --run-tree is given (else the current checkout, no commits).
+    use_tree = (not fake) or bool(args.run_tree)
+    tree = None
+    if use_tree:
+        tree = Path(args.run_tree) if args.run_tree else (
+            _recorded_run_tree(run_dir) or default_run_tree(run_dir, plan["run_id"], args.worktree_root))
+    repo = tree or REPO_ROOT
+    components = default_components(config, run_dir=run_dir, plan=plan, repo=repo,
+                                    worktree_root=args.worktree_root)
     health = VendorHealth()
     if fake:
         try:
@@ -1011,15 +1369,29 @@ def _execute(plan: dict, run_dir: Path, args, *, command: str) -> int:
         for name, why in sorted(components.missing.items()):
             print(f"  {name}: {why}")
 
+    if tree is not None:
+        try:
+            ensure_run_tree(REPO_ROOT, plan["run_id"], plan.get("base_sha"), tree)
+        except RunTreeError as e:
+            print(f"{command}: run tree: {e}", file=sys.stderr)
+            return 2
+        Path(run_dir).mkdir(parents=True, exist_ok=True)
+        (Path(run_dir) / RUN_TREE_RECORD).write_text(
+            json.dumps({"path": str(tree), "branch": run_branch(plan["run_id"])}) + "\n", encoding="utf-8")
+        print(f"{command}: run tree {tree} on {run_branch(plan['run_id'])}")
+    else:
+        print(f"{command}: --fake without --run-tree: executors run in the current checkout and the "
+              "driver commits nothing")
+
     pool = None
     if args.worktree_root and not fake:
         from .workers.pool import WorktreePool
         pool = WorktreePool(REPO_ROOT, plan.get("base_sha") or "HEAD", args.worktree_root,
                             config.worktree_pool_size, config.cargo_target_base, sccache_dir=config.sccache_dir)
     try:
-        driver = Driver(plan, config, components, workers, run_dir=run_dir, repo=REPO_ROOT,
-                        paths=ledger_paths(REPO_ROOT, config), health=health, pool=pool,
-                        max_attempts=args.max_attempts, serial=args.serial)
+        driver = Driver(plan, config, components, workers, run_dir=run_dir, repo=repo,
+                        paths=ledger_paths(repo, config), health=health, pool=pool,
+                        max_attempts=args.max_attempts, serial=args.serial, manage_tree=tree is not None)
         result = driver.run()
     finally:
         if pool is not None:
@@ -1096,7 +1468,9 @@ def cli_status(argv: list[str] | None = None) -> int:
         return 2
     if (run_dir / FAKE_DIR).is_dir():
         config = _fake_config(config, run_dir)
-    state = RunState.open(plan, ledger_paths(REPO_ROOT, config), run_dir=run_dir, write=False)
+    tree = _recorded_run_tree(run_dir)
+    repo = tree if tree is not None and tree.is_dir() else REPO_ROOT
+    state = RunState.open(plan, ledger_paths(repo, config), run_dir=run_dir, write=False)
     last_stop = None
     snap = run_dir / "state.json"
     if snap.exists():

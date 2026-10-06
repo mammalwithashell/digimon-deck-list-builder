@@ -24,6 +24,7 @@ from tools.card_loop.driver_contracts import (
     GateResult,
     MergeRequest,
     MergeResult,
+    StageDeferred,
     StageOutcome,
 )
 from tools.card_loop.ledger import Attempt, load_attempts
@@ -725,6 +726,232 @@ def test_unavailable_items_reenter_when_dcgo_gains_the_script(tmp_path):
     assert [e["dst"] for e in h.events(C1)][:2] == ["UNAVAILABLE", "PENDING"]
 
 
+# --------------------------------------------------------------------------- StageDeferred
+
+
+def test_a_deferred_step_is_ledgered_counted_and_escalates_at_the_cap(tmp_path):
+    def defer(ctx, it):
+        a = attempt(ctx, it, "author_clause", outcome="error")
+        raise StageDeferred("author_clause worker claude returned error: boom",
+                            StageOutcome(it.state, attempts=[a], data={"history": [a.attempt_id]}))
+    ex = Exec("AUTHORING", defer)
+    h = Harness(tmp_path, [seed(C1, "AUTHORING")], [ex], config=cfg(tmp_path, attempt_caps={"author_clause": 2}))
+    h.run()
+    assert ex.calls == [C1, C1]
+    assert h.states() == {C1: "ESCALATED"}
+    assert [a.outcome for a in h.attempts()] == ["error", "error"]
+    stays = [e for e in h.events(C1) if e["src"] == e["dst"] == "AUTHORING"]
+    assert len(stays) == 2 and all(e["reason"].startswith("deferred:") for e in stays)
+    assert h.state.records[C1].data["history"] == ["A002"]
+    text = esc_mod.escalation_path(h.config.escalations_dir, C1).read_text(encoding="utf-8")
+    assert "author_clause 2/2" in text and "deferred" in text
+
+
+def test_a_deferral_without_attempts_still_counts_toward_the_cap(tmp_path):
+    from tools.card_loop.stages.base import StageDeferred as StagesDeferred   # subclasses the contract's
+    ex = Exec("AUTHORING", lambda ctx, it: (_ for _ in ()).throw(
+        StagesDeferred("no family can take author_interaction")))
+    h = Harness(tmp_path, [seed(C1, "AUTHORING")], [ex], config=cfg(tmp_path, attempt_caps={"author_clause": 3}))
+    result = h.run()
+    assert ex.calls == [C1] * 3 and h.states() == {C1: "ESCALATED"}
+    assert h.attempts() == [] and not result.failed
+
+
+def test_a_failed_authoring_merge_keeps_the_item_in_authoring(tmp_path):
+    def author(ctx, it):
+        a = attempt(ctx, it, "author_clause")
+        return StageOutcome("SIM", attempts=[a], data={"scenario_paths": ["qa/dcgo-exams/BT1/x.yaml"]},
+                            merge_request=MergeRequest(attempt_id=a.attempt_id, family="claude", model=None,
+                                                       artifacts={"diff": "d", "manifest": "m"}))
+    merger = FakeMerger(lambda: None, results=[MergeResult(ok=False, errors=["scenario conflicts"])])
+    h = Harness(tmp_path, [seed(C1, "AUTHORING")], [Exec("AUTHORING", author), sim_ok(), oracle_confirms()],
+                merger=merger)
+    h.run()
+    chain = [(e["src"], e["dst"]) for e in h.events(C1)]
+    assert chain[1:] == [("AUTHORING", "AUTHORING"), ("AUTHORING", "SIM"), ("SIM", "ORACLE"),
+                         ("ORACLE", "CONFIRMED")]
+    assert "merge failed" in h.events(C1)[1]["reason"]
+
+
+# --------------------------------------------------------------------------- the run tree
+
+
+def _tree_cmds(book_rc=0):
+    from tools.card_loop.stages.testing import FakeCommands
+    return (FakeCommands()
+            .on(("tools.clause_coverage.book", "add"), book_rc, "", "" if book_rc == 0 else "book broke")
+            .on(("symbolic-ref",), 0, "card-loop/r1/run\n")
+            .on(("status", "exam-clause-text"), 0, " M qa/exam-clause-text.json\n")
+            .on(("status", "exam-verdicts"), 0,
+                " M qa/dcgo-exams/BT1/x.yaml\n?? qa/qa-reports/exam-verdicts/BT1-001.json\n")
+            .on(("git", "add", "--"), 0)
+            .on(("git", "commit"), 0))
+
+
+def test_oracle_writes_are_committed_after_the_clause_text_prelude(tmp_path):
+    cmds = _tree_cmds()
+    seen = []
+
+    def oracle(ctx, it):
+        seen.append(len(cmds.argvs("clause_coverage.book")))
+        return StageOutcome("CONFIRMED", adjudicated=True, data={"oracle_results": {
+            "qa/dcgo-exams/BT1/x.yaml": {"scenario": "qa/dcgo-exams/BT1/x.yaml", "verdict": "confirmed",
+                                         "backfilled": True}}})
+    plan = {**PLAN, "work_set": {"pool": ["BT1-001", "BT1-002"], "core": [], "ranking": []}}
+    tree = tmp_path / "tree"
+    h = Harness(tmp_path, [seed(C1, "ORACLE", data={"scenario_paths": ["qa/dcgo-exams/BT1/x.yaml"]}),
+                           seed(C2, "ORACLE")], [Exec("ORACLE", oracle)], plan=plan,
+                run_command=cmds, repo=tree, manage_tree=True)
+    h.run()
+    assert h.states() == {C1: "CONFIRMED", C2: "CONFIRMED"}
+    book = cmds.argvs("clause_coverage.book")
+    assert len(book) == 1, "the prelude runs once per session"
+    assert book[0][-3:] == ["--card-ids", "BT1-001", "BT1-002"] and "qa/exam-clause-text.json" in book[0]
+    assert [c["cwd"] for c in cmds.calls if "clause_coverage.book" in " ".join(c["argv"])] == [str(tree)]
+    assert seen == [1, 1], "the book was extended before the first oracle call"
+    commits = cmds.argvs("git", "commit")
+    assert "qa/exam-clause-text.json" in commits[0]
+    oracle_commit = commits[1]
+    msg = oracle_commit[oracle_commit.index("-m") + 1]
+    assert msg.startswith("card-loop: oracle verdict and backfill for clause:BT1-001#effect#0")
+    assert "Loop-Attempt: A" in msg and "Loop-Model: driver/default" in msg and "Loop-Run: r1" in msg
+    assert oracle_commit[-2:] == ["qa/dcgo-exams/BT1/x.yaml", "qa/qa-reports/exam-verdicts/BT1-001.json"]
+    status = cmds.argvs("status", "exam-verdicts")[0]
+    assert "qa/dcgo-exams/BT1/x.yaml" in status and "qa/qa-reports/exam-verdicts" in status
+
+
+def test_a_failed_prelude_holds_every_oracle_item(tmp_path):
+    cmds = _tree_cmds(book_rc=1)
+    oracle = oracle_confirms()
+    h = Harness(tmp_path, [seed(C1, "ORACLE")], [oracle], run_command=cmds, repo=tmp_path / "t",
+                manage_tree=True)
+    result = h.run()
+    assert oracle.calls == [] and h.states() == {C1: "ORACLE"}
+    assert result.stop.reason == "blocked"
+    assert "clause-text book prelude failed" in result.blocked[C1] and "book broke" in result.blocked[C1]
+
+
+def test_nothing_is_committed_off_a_run_branch(tmp_path):
+    from tools.card_loop.stages.testing import FakeCommands
+    cmds = (FakeCommands().on(("tools.clause_coverage.book",), 0).on(("symbolic-ref",), 0, "main\n"))
+    h = Harness(tmp_path, [seed(C1, "ORACLE")], [oracle_confirms()], run_command=cmds,
+                repo=tmp_path / "t", manage_tree=True)
+    result = h.run()
+    assert cmds.argvs("commit") == [] and cmds.argvs("status") == []
+    assert any("not a run branch" in p for p in result.problems)
+
+
+def test_without_manage_tree_the_driver_runs_no_git(tmp_path):
+    from tools.card_loop.stages.testing import FakeCommands
+    cmds = FakeCommands()            # any call would raise
+    h = Harness(tmp_path, [seed(C1, "ORACLE")], [oracle_confirms()], run_command=cmds)
+    assert h.run().stop.reason == "complete" and cmds.calls == []
+
+
+def test_an_engine_fix_waits_in_gate_until_a_human_merges_its_branch(tmp_path):
+    from tools.card_loop.stages.testing import FakeCommands
+
+    def fix(ctx, it):
+        a = attempt(ctx, it, "fix_engine")
+        return StageOutcome("GATE", attempts=[a], data={"engine_fix": True, "gap_id": "G-1"},
+                            merge_request=MergeRequest(attempt_id=a.attempt_id, family="codex", model=None,
+                                                       artifacts={"diff": "d"}, engine=True, gap_id="G-1"))
+    merger = FakeMerger(lambda: None, results=[MergeResult(ok=True, sha="e" * 40, branch="card-loop/r1/engine-G-1")])
+    cmds = FakeCommands().on(("merge-base", "--is-ancestor"), 1)
+    h1 = Harness(tmp_path, [seed(C1, "FIX")], [Exec("FIX", fix), oracle_confirms()],
+                 gate=FakeGate([GateResult(True)]), merger=merger, run_command=cmds)
+    result = h1.run()
+    assert h1.states() == {C1: "GATE"} and result.stop.reason == "blocked"
+    assert "card-loop/r1/engine-G-1" in result.blocked[C1] and "human" in result.blocked[C1]
+    assert h1.state.records[C1].data["engine_wait"]["sha"] == "e" * 40
+
+    landed = FakeCommands().on(("merge-base", "--is-ancestor", "e" * 40, "HEAD"), 0)
+    oracle = oracle_confirms()
+    h2 = Harness(tmp_path, [seed(C1, "FIX")], [Exec("FIX", fix), oracle], gate=FakeGate([]),
+                 run_command=landed, ticker=h1.ticker)
+    h2.run()
+    assert oracle.calls == [C1] and h2.states() == {C1: "CONFIRMED"}
+    assert h2.state.records[C1].data["engine_wait"] is None
+
+
+def test_parked_cards_record_their_gaps_through_the_gap_lane(tmp_path):
+    card = "card:BT1-001"
+
+    class RecordingGaps(FakeGaps):
+        def __init__(self):
+            super().__init__()
+            self.recorded = []
+
+        def record_gap(self, gap, kind, *, attempt_id=None, family=None, model=None, commit=True):
+            self.recorded.append((gap["id"], kind, attempt_id, family))
+            return True
+
+    def park(ctx, it):
+        a = attempt(ctx, it, "implement")
+        return StageOutcome("PARKED", attempts=[a], data={
+            "gap_id": "G-DSL-1", "implement_attempt": a.attempt_id, "implementer_family": "claude",
+            "gaps": [{"kind": "dsl", "id": "G-DSL-1", "summary": "s"},
+                     {"kind": "engine", "id": "G-ENG-2", "summary": "t"}]})
+    gaps = RecordingGaps()
+    h = Harness(tmp_path, [seed(card, "IMPLEMENTING")], [Exec("IMPLEMENTING", park)], gaps=gaps,
+                manage_tree=True, repo=tmp_path / "t")
+    h.run()
+    assert gaps.recorded == [("G-DSL-1", "dsl", "A001", "claude"), ("G-ENG-2", "engine", "A001", "claude")]
+    assert gaps.park_calls == [(card, "G-DSL-1", True)]
+
+
+def test_executors_see_the_live_item_map_and_the_merger_is_closed(tmp_path):
+    seen = {}
+
+    def author(ctx, it):
+        seen["live"] = ctx.items is h.state.records and ctx.items[it.item].state == "AUTHORING"
+        seen["unset"] = (ctx.harness_bin, ctx.clause_text_json, ctx.sleep)
+        return StageOutcome("SIM", attempts=[attempt(ctx, it, "author_clause")])
+
+    class ClosingMerger(FakeMerger):
+        closed = 0
+
+        def close(self, ctx):
+            ClosingMerger.closed += 1
+
+    h = Harness(tmp_path, [seed(C1, "AUTHORING")], [Exec("AUTHORING", author), sim_ok(), oracle_confirms()],
+                merger=ClosingMerger(lambda: None))
+    h.run()
+    assert seen == {"live": True, "unset": (None, None, None)}
+    assert ClosingMerger.closed == 1
+
+
+def test_ensure_run_tree_creates_and_reuses_the_run_branch(tmp_path):
+    import subprocess
+
+    def git(cwd, *args):
+        return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=True).stdout
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    git(repo, "init", "-q")
+    git(repo, "config", "user.email", "t@example.com")
+    git(repo, "config", "user.name", "t")
+    (repo / "a.txt").write_text("a\n", encoding="utf-8")
+    git(repo, "add", "a.txt")
+    git(repo, "commit", "-q", "-m", "init")
+    base = git(repo, "rev-parse", "HEAD").strip()
+
+    assert drv.run_branch("r1") == "card-loop/r1/run"
+    tree = drv.default_run_tree(tmp_path / "runs" / "r1", "r1", tmp_path / "wt")
+    assert tree == tmp_path / "wt" / "cl-r1-run"
+    assert drv.ensure_run_tree(repo, "r1", base, tree) == tree
+    assert git(tree, "symbolic-ref", "--short", "HEAD").strip() == "card-loop/r1/run"
+    assert drv.ensure_run_tree(repo, "r1", base, tree) == tree, "reused on resume"
+
+    other = tmp_path / "other"
+    git(repo, "worktree", "add", "-q", "-b", "elsewhere", str(other))
+    with pytest.raises(drv.RunTreeError, match="not the run branch"):
+        drv.ensure_run_tree(repo, "r1", base, other)
+    # an engine branch can still be created beside the run branch
+    git(repo, "branch", "card-loop/r1/engine-G-1", base)
+
+
 # --------------------------------------------------------------------------- components + CLI
 
 
@@ -738,25 +965,48 @@ def test_default_components_reports_what_is_not_built(monkeypatch):
     assert all("not built yet" in why for why in comps.missing.values())
 
 
-def test_default_components_discovers_factories(monkeypatch):
+def test_default_components_wires_the_group6_constructors(monkeypatch, tmp_path):
     ex = Exec("AUTHORING", lambda ctx, it: None)
+
+    class FixGate:
+        def check(self, ctx, item, merge):
+            return GateResult(True)
+
+    class RunGapLane:
+        def __init__(self, run_dir, plan, *, repo=None):
+            self.run_dir, self.plan, self.repo = run_dir, plan, repo
+
+    class LoopMerger:
+        def __init__(self, *, gap_lane=None, worktree_root=None):
+            self.gap_lane, self.worktree_root = gap_lane, worktree_root
+
     mods = {
-        "tools.card_loop.stages": types.SimpleNamespace(default_executors=lambda config: [ex]),
-        "tools.card_loop.gates": types.SimpleNamespace(default_gate=lambda: FakeGate([])),
-        "tools.card_loop.merge": types.SimpleNamespace(),
+        "tools.card_loop.stages": types.SimpleNamespace(build_executors=lambda: {"AUTHORING": ex}),
+        "tools.card_loop.gates": types.SimpleNamespace(FixGate=FixGate),
+        "tools.card_loop.gaps": types.SimpleNamespace(RunGapLane=RunGapLane),
+        "tools.card_loop.merge": types.SimpleNamespace(LoopMerger=LoopMerger),
     }
-
-    def fake_import(name, *a, **k):
-        if name in mods:
-            return mods[name]
-        raise ModuleNotFoundError(f"No module named {name!r}", name=name)
-
-    monkeypatch.setattr(drv.importlib, "import_module", fake_import)
-    comps = drv.default_components(LoopConfig())
+    monkeypatch.setattr(drv.importlib, "import_module", lambda name, *a, **k: mods[name])
+    comps = drv.default_components(LoopConfig(), run_dir=tmp_path, plan=PLAN, repo=tmp_path / "tree",
+                                   worktree_root="W:/wt")
+    assert comps.missing == {}
     assert comps.executors == {"AUTHORING": ex}
-    assert isinstance(comps.gate, FakeGate)
-    assert comps.merger is None and "default_merger" in comps.missing["merger"]
-    assert "not built yet" in comps.missing["gaps"]
+    assert isinstance(comps.gate, FixGate)
+    assert (comps.gaps.run_dir, comps.gaps.plan, comps.gaps.repo) == (tmp_path, PLAN, tmp_path / "tree")
+    assert comps.merger.gap_lane is comps.gaps and comps.merger.worktree_root == "W:/wt"
+
+    mods["tools.card_loop.merge"] = types.SimpleNamespace()
+    comps = drv.default_components(LoopConfig())
+    assert "the run directory" in comps.missing["gaps"]
+    assert "LoopMerger" in comps.missing["merger"]
+
+
+def test_default_components_loads_the_real_modules(tmp_path):
+    comps = drv.default_components(LoopConfig(), run_dir=tmp_path, plan=PLAN, repo=tmp_path)
+    assert comps.missing == {}, comps.missing
+    assert {"IMPLEMENTING", "REVIEW", "AUTHORING", "SIM", "ORACLE", "TRIAGE", "FIX"} <= set(comps.executors)
+    assert "GATE" not in comps.executors and "PENDING" not in comps.executors, "the driver's own"
+    assert comps.merger.gap_lane is comps.gaps
 
 
 def test_load_fake_workers(tmp_path):
@@ -813,7 +1063,7 @@ def cli_ws(tmp_path, monkeypatch):
                                                                assignment="routed", outcome="accepted")],
                             data={"scenario": res.result["scenario"]})
 
-    monkeypatch.setattr(drv, "default_components", lambda config=None: drv.Components(
+    monkeypatch.setattr(drv, "default_components", lambda config=None, **kw: drv.Components(
         executors={"AUTHORING": Exec("AUTHORING", author), "SIM": sim_ok(), "ORACLE": oracle_confirms()},
         missing={"merger": "not built yet (test)"}))
 
