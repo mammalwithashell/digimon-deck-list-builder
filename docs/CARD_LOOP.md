@@ -56,10 +56,11 @@ records the plan without the gate.
 ## 4. Run, resume, status
 
 ```bash
+export PYTHONPATH=code                        # the CLI imports `tools.*` from code/
 python -m tools.card_loop run --plan runs/card-loop/<run-id>/plan.json --config my-loop.toml \
     --worktree-root D:/cl                     # short path: worker pool + run tree live here
 python -m tools.card_loop status --run <run-id>
-python -m tools.card_loop resume --run <run-id>
+python -m tools.card_loop resume --run <run-id> --config my-loop.toml --worktree-root D:/cl
 ```
 
 A real run checks out the run branch `card-loop/<run-id>/run` from the plan's
@@ -95,6 +96,19 @@ clause/int:  PENDING → [CLASSIFY → ENCODE] → AUTHORING → SIM → ORACLE 
 - **A prompt mismatch** on the oracle is routed by who disagreed: both engines
   contradict the scenario → back to AUTHORING; ours matches the scenario and
   DCGO does not → TRIAGE (a missing decline looks exactly like this).
+- **A stalled player** (DCGO enforces no job timeout: a scripted selection
+  that cannot complete its prompt holds the player forever, heartbeat fresh)
+  is reported by the harness once the claim outlives the job's own
+  `timeout_seconds` + 60 s while the heartbeat still names it, with the newest
+  recording's last row as evidence. The item goes to TRIAGE as `undetermined`
+  and the stage restarts the player (`node down` / `node up`) — only while
+  the heartbeat still names that job, so two runs sharing a player do not
+  restart it twice. A retry whose identical job is still on the player waits
+  for it; a claim the heartbeat no longer names is set aside under `aside/`.
+- **An interaction waits** (`waits for <clause> (FIX)` in the blocked report)
+  while any clause of its card is DIVERGED / TRIAGE / FIX / GATE: the engine
+  under the exam is about to change, and an exam authored now fails the very
+  assertion the fix targets.
 - **Interactions** start from the gating denominator
   (`data/interaction_denominator.json`): official rulings `qa:<Q>` and
   generated probes `probe:<clause>:<family>[:neg]`. A ruling is first
@@ -111,6 +125,12 @@ exhausted. Every stop writes `state.json` and `report.md`; the report's first
 line names the **unmeasured, escalated and unavailable** counts before the
 confirmed count. `resume` rebuilds from the committed ledgers first and the
 run's `events.jsonl` second, so a crashed run re-does only outstanding work.
+
+There is no graceful stop yet: to stop a running driver early, kill its
+process tree (`taskkill /PID <driver pid> /T /F` — the tree holds the worker
+CLIs and any `exam --oracle` waiting on the player), then `resume`. Work in
+flight at the kill is lost (its cost is real but unledgered). Run the CLI
+with `PYTHONPATH=code` (`pyproject.toml` sets that path for pytest only).
 
 ## 5. What lands where
 
@@ -137,6 +157,16 @@ DCGO's C#, then the card data), then either
   verdict-set --clause|--interaction <id> --verdict unreachable|unavailable
   --reason "…"`) and delete the escalation file, or
 - fix the card / scenario and delete the file; `resume` re-enters the item.
+
+Deleting the file alone withdraws the escalation: `resume` puts the item back
+at its ledger state with its attempt counters reset. Do that for escalations
+the tooling caused (an `oracle_retry 3/3` behind a stalled player, a merge the
+transport refused) rather than re-planning the run. The files live in the run
+tree (`<run tree>/qa/card-loop/escalations/`) and are committed there.
+
+A worker's edit to a gap tracker (`qa/dsl-vocab-gaps.md`,
+`docs/RUST_ENGINE_GAPS.md`) is dropped at merge, not refused — the rest of
+its diff lands, and the drop is listed in the merge result's `skipped`.
 
 Resolving against a worker's call is a late correction the scorecard counts.
 
@@ -176,6 +206,11 @@ family gates only once promoted, because promotion drops cards from readiness.
 
 - One oracle node, at most two players; the oracle is the throughput ceiling
   (~15–60 s per scenario).
+- DCGO itself enforces no per-job timeout (`HarnessJobLimits.timeout_seconds`
+  is read by nobody in Unity): a wedged job is detected and cured from this
+  side (stall report + player restart, above), at the cost of the job's
+  limit + 60 s per stall. Teaching the DCGO mod to abort a selection its
+  script cannot complete is the proper fix (base-repo DCGO work, rule 29).
 - A card whose official-mirror entry is a failed lookup (no `colors`) is not
   `ready` until the mirror covers it; EX12 is the known hole.
 - `exam_probe` (MCP) never records a verdict; only a committed scenario's run
