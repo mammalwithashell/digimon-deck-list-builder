@@ -139,3 +139,105 @@ def test_real_bind_admits_adjudicated_clauses_and_drops_a_text_drifted_card(tmp_
     data = build_readiness([card], scenarios_dir=tmp_path / "none", verdicts_dir=drifted)
     assert data["cards"][card]["status"] == "not_ready"
     assert data["cards"][card]["blocking"] == sorted(c["id"] for c in clauses)
+
+
+from tools.clause_coverage.readiness import main, rank_plan
+
+
+def _cards(ready, not_ready):
+    cards = {c: {"status": "ready", "total_clauses": 1, "by_verdict": {}, "blocking": []} for c in ready}
+    cards.update({c: {"status": "not_ready", "total_clauses": 1, "by_verdict": {},
+                      "blocking": [f"{c}#effect#0"]} for c in not_ready})
+    return cards
+
+
+def test_plan_prefers_the_card_that_completes_decklists():
+    decks = [["R", "X"], ["R", "X"], ["R", "Y", "Z"]]
+    plan = rank_plan(decks, _cards(["R"], ["X", "Y", "Z"]), lambda c: True, limit=3)
+    assert plan["decklists_ready_now"] == 0
+    assert [p["card_id"] for p in plan["picks"]][0] == "X"
+    assert plan["picks"][0]["decklists_completed"] == 2
+
+
+def test_plan_skips_decklists_the_other_gates_reject():
+    decks = [["R", "X"], ["R", "UNREG"]]
+    plan = rank_plan(decks, _cards(["R"], ["X", "UNREG"]), lambda c: c != "UNREG", limit=5)
+    assert plan["decklists_considered"] == 1
+    assert [p["card_id"] for p in plan["picks"]] == ["X"]
+
+
+def test_plan_ties_break_by_card_id_for_determinism():
+    decks = [["A1"], ["B1"]]
+    plan = rank_plan(decks, _cards([], ["B1", "A1"]), lambda c: True, limit=2)
+    assert [p["card_id"] for p in plan["picks"]] == ["A1", "B1"]
+
+
+def test_plan_breaks_completion_ties_by_decklists_containing():
+    # Spec §4.8: equal completions fall to how many decklists contain the card.
+    decks = [["A", "B"], ["B", "C"], ["B", "D"]]
+    plan = rank_plan(decks, _cards([], ["A", "B", "C", "D"]), lambda c: True, limit=1)
+    assert plan["picks"][0]["card_id"] == "B"
+    assert plan["picks"][0]["decklists_containing"] == 3
+
+
+def test_plan_counts_ready_decklists_and_reports_blockers():
+    decks = [["R"], ["R", "X"], ["R", "X", "X"]]
+    plan = rank_plan(decks, _cards(["R"], ["X"]), lambda c: True, limit=5)
+    assert plan["decklists_ready_now"] == 1
+    assert plan["picks"] == [{"card_id": "X", "decklists_completed": 2,
+                              "decklists_containing": 2, "blocking": ["X#effect#0"],
+                              "archetypes": []}]
+
+
+def test_plan_names_the_archetypes_a_pick_unblocks():
+    # Spec §4.8: the plan reports each pick's archetype(s), so /readiness-batch
+    # can group picks that share a scenario library entry.
+    decks = [["R", "X"], ["X"], ["Y"], ["X", "UNREG"]]
+    plan = rank_plan(decks, _cards(["R"], ["X", "Y", "UNREG"]), lambda c: c != "UNREG", limit=2,
+                     archetypes=["Beta", "Alpha", "Gamma", "Delta"])
+    assert {p["card_id"]: p["archetypes"] for p in plan["picks"]} == {
+        "X": ["Alpha", "Beta"], "Y": ["Gamma"],
+    }
+
+
+def _cli_inputs(tmp_path, cards):
+    lib = tmp_path / "lib.json"
+    lib.write_text(json.dumps({"archetypes": {"X": {"decklists": [
+        {"decklist": json.dumps(cards)},
+    ]}}}), encoding="utf-8")
+    tested = tmp_path / "tested.json"
+    tested.write_text(json.dumps({"card_ids": cards}), encoding="utf-8")
+    ledger = tmp_path / "ledger.json"
+    ledger.write_text(json.dumps({"cards": {}}), encoding="utf-8")
+    return [
+        "--library", str(lib), "--verdicts", str(tmp_path / "verdicts"),
+        "--scenarios", str(tmp_path / "scenarios"), "--out", str(tmp_path / "out.json"),
+        "--tested", str(tested), "--ledger", str(ledger),
+    ]
+
+
+def test_cli_writes_then_check_passes_and_detects_drift(tmp_path, capsys):
+    args = _cli_inputs(tmp_path, ["EX10-025", "EX10-025"])
+    out = tmp_path / "out.json"
+    assert main(["--check", *args]) == 1  # missing
+    assert main(args) == 0
+    first = out.read_bytes()
+    assert b"\r\n" not in first
+    data = json.loads(first)
+    assert data["cards"]["EX10-025"]["status"] == "not_ready"  # empty verdict store
+    assert data["decklists"] == {"oracle_ready": 0, "total": 1}
+    assert main(["--check", *args]) == 0
+    assert main(args) == 0 and out.read_bytes() == first  # byte-deterministic
+    out.write_text(first.decode("utf-8").replace("not_ready", "ready", 1), encoding="utf-8")
+    assert main(["--check", *args]) == 1
+    assert "stale" in capsys.readouterr().err
+
+
+def test_cli_plan_json_ranks_from_the_artifact(tmp_path, capsys):
+    args = _cli_inputs(tmp_path, ["EX10-025"])
+    assert main(args) == 0
+    capsys.readouterr()
+    assert main(["--plan", "--json", "--limit", "3", *args]) == 0
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["decklists_considered"] == 1
+    assert [p["card_id"] for p in plan["picks"]] == ["EX10-025"]
