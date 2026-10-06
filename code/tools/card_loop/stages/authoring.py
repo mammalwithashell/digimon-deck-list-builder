@@ -38,6 +38,10 @@ def _previous(item: ItemRecord) -> str:
         parts.append(f"- the publisher's ruling could not be encoded against your line: {fb}\n"
                      "  Rework the line so the situation the question describes happens on it, and stop "
                      "right after it resolves.")
+    tf = item.data.get("triage_feedback")
+    if tf:
+        parts.append(f"- triage of the oracle run judged the exam itself wrong: {tf}\n"
+                     "  Change what it names; do not touch the engines.")
     if not parts:
         return ""
     return ("\n## Your previous scenario did not hold\n" + "\n".join(parts)
@@ -127,7 +131,8 @@ class AuthoringExecutor:
         # SIM); a block agreed earlier rides along to the sim check directly.
         next_state = "ENCODE" if iid.startswith("qa:") and not item.data.get("expect_ruling") else "SIM"
         return self._finish(ctx, item, "author_interaction", render, refs, implementer=implementer,
-                            subject=iid, extra={"base_scenario": base_line, "encode_feedback": None},
+                            subject=iid, extra={"base_scenario": base_line, "encode_feedback": None,
+                                                "triage_feedback": None},
                             next_state=next_state)
 
     def _target(self, ctx, item, iid, entry, cards):
@@ -166,13 +171,18 @@ class AuthoringExecutor:
     # ------------------------------------------------------------------ shared
 
     def _reuse(self, ctx, item: ItemRecord, found: list[str]) -> StageOutcome | None:
-        """A committed scenario and no failed attempt yet: examine it as is."""
-        tried = item.data.get("author_attempt") or item.data.get("sim_failure") or item.data.get("prompt_evidence")
+        """A committed scenario and no failed attempt yet: examine it as is. A
+        Q&A item without an agreed block has its ruling encoded against that
+        line first (ENCODE), as a freshly authored line would."""
+        tried = (item.data.get("author_attempt") or item.data.get("sim_failure") or item.data.get("prompt_evidence")
+                 or item.data.get("encode_feedback") or item.data.get("triage_feedback"))
         if not found or tried or item.data.get("scenario_paths"):
             return None
-        return base.outcome("SIM", item=item, data={"scenario_paths": found, "author_attempt": None,
-                                                    "author_family": None, "sim_failure": None,
-                                                    "prompt_evidence": None},
+        qa = item.kind == "interaction" and base.interaction_of(item).startswith("qa:")
+        next_state = "ENCODE" if qa and not item.data.get("expect_ruling") else "SIM"
+        return base.outcome(next_state, item=item, data={"scenario_paths": found, "author_attempt": None,
+                                                         "author_family": None, "sim_failure": None,
+                                                         "prompt_evidence": None},
                             reason=f"reusing library scenario(s) {', '.join(found)}")
 
     def _finish(self, ctx, item, stage, render, refs, *, implementer, subject, extra=None,

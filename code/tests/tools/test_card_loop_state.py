@@ -272,11 +272,19 @@ def test_deleting_an_escalation_file_withdraws_it_on_resume(ws):
     s = _open(ws)
     item = "clause:BT7-056#inherited#0"
     assert s.records[item].state == "ESCALATED"
+    # the escalated attempt's stage data must not steer the new attempt (a
+    # re-entered Q&A item kept its old expect_ruling in the second pilot)
+    s.note(item, reason="stage data from the escalated pass",
+           item_data={"expect_ruling": {"q_id": "Q1", "assert": []}, "scenario_paths": ["x.yaml"],
+                      "triage_feedback": "old", "history": ["att-1"]})
     esc_mod.escalation_path(ws["paths"].escalations_dir, item).unlink()   # human: retry it
     r = _open(ws)
     assert r.records[item].state == "PENDING"
     assert r.records[item].attempts == {}
     assert "escalation withdrawn" in [e for e in _events(ws) if e["item"] == item][-1]["reason"]
+    d = r.records[item].data
+    assert d.get("expect_ruling") is None and d.get("scenario_paths") is None and d.get("triage_feedback") is None
+    assert d.get("history") == ["att-1"], "the attempt history is kept"
 
 
 def test_a_pending_card_whose_spec_appeared_is_implemented_on_resume(ws):

@@ -8,6 +8,8 @@ TRIAGE, first opinion, routed normally:
     ours_wrong                -> FIX (the fix gate is the arbiter; no second opinion)
     dcgo_quirk | unreachable  -> TERMINATION_CHECK, storing this call and the exact
                                  packet so the other family answers the SAME question
+    scenario_wrong            -> AUTHORING with the objection (data["triage_feedback"]); a
+                                 Q&A item's block is re-encoded against the reworked line
     undetermined              -> ESCALATED
 
 The packet carries no attempt id and no earlier answer, so it can be replayed
@@ -15,6 +17,7 @@ verbatim to the second family (D5).
 """
 from __future__ import annotations
 
+from .. import corrections as corr
 from ..driver_contracts import ItemRecord, StageOutcome
 from . import base, prompts
 
@@ -90,6 +93,24 @@ class TriageExecutor:
             return base.outcome("TERMINATION_CHECK", item=item, data=data,
                                 attempts=prior + [call.attempt(ctx, outcome="accepted")],
                                 reason=f"{call.family}: {cls}; needs the other family's agreement (D5)")
+        if cls == "scenario_wrong":
+            # The exam misreads the card or the ruling: back to its author with
+            # the objection, and the agreed block is re-encoded against the
+            # reworked line (a block that claimed what the answer does not
+            # decide is the usual cause). The author's attempt is corrected.
+            why = f"{call.family} (triage): {result.get('reasoning', '')}"
+            corrections = []
+            author = item.data.get("author_attempt")
+            if author:
+                stage = item.data.get("author_stage") or (
+                    "author_interaction" if item.kind == "interaction" else "author_clause")
+                corrections.append(corr.gate_fail(author, gate="triage_scenario", stage=stage, item=item.item,
+                                                  detail=why[:2000], ts=ctx.now()))
+            return base.outcome("AUTHORING", item=item, corrections=corrections,
+                                attempts=prior + [call.attempt(ctx, outcome="accepted")],
+                                data={**data, "triage_feedback": why, "expect_ruling": None, "encode_feedback": None,
+                                      "sim_failure": None, "prompt_evidence": None, "prompt_route": None},
+                                reason=f"{call.family}: scenario_wrong -- {result.get('reasoning', '')[:200]}")
         reason = f"{call.family} triage is {cls}: {result.get('reasoning', '')[:300]}"
         return base.outcome("ESCALATED", item=item, data=data, reason=reason,
                             attempts=prior + [call.attempt(ctx, outcome="escalated")],

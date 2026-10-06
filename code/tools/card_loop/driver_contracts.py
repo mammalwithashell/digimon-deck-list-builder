@@ -79,7 +79,7 @@ _EXAM_TRANSITIONS = {
     # the scenario's expected prompts (spec "Prompt-sequence failures").
     "ORACLE": ("CONFIRMED", "DIVERGED", "ORACLE", "AUTHORING", "ESCALATED"),
     "DIVERGED": ("TRIAGE", "ESCALATED"),
-    "TRIAGE": ("FIX", "TERMINATION_CHECK", "ESCALATED"),
+    "TRIAGE": ("FIX", "TERMINATION_CHECK", "AUTHORING", "ESCALATED"),   # AUTHORING: scenario_wrong
     "FIX": ("GATE", "ESCALATED"),
     "GATE": ("ORACLE", "FIX", "ESCALATED"),
     "TERMINATION_CHECK": ("TERMINAL", "ESCALATED"),

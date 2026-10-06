@@ -61,6 +61,13 @@ STATE_VERSION = 1
 DRIVER_KEY = "_driver"
 EVENTS_NAME = "events.jsonl"
 SNAPSHOT_NAME = "state.json"
+#: Item data that belongs to one pass through the exam stages and is cleared
+#: when a withdrawn escalation re-enters the item (resume reconciliation).
+EXAM_SCOPED_DATA = ("scenario_paths", "pool_files", "author_attempt", "author_family", "author_stage",
+                    "expect_ruling", "encode_feedback", "triage_feedback", "encode_attempts", "base_scenario",
+                    "sim_failure", "sim_notes", "deck_books", "ruling_contradicted", "ruling_block_written",
+                    "prompt_evidence", "prompt_route", "oracle", "oracle_results", "oracle_retry_paths",
+                    "triage_packet", "triage_first", "termination", "escalation", "escalation_reason")
 KIND_ORDER = {"card": 0, "clause": 1, "interaction": 2}
 COUNT_KEYS = ("confirmed", "terminal", "unavailable", "escalated", "unmeasured",
               "implemented", "parked")
@@ -497,7 +504,13 @@ class RunState:
                 continue
             if rec.state == "ESCALATED" and item not in escalated:
                 target = origin.state if origin.state != "ESCALATED" else "PENDING"
-                self._force(item, target, item_data=origin.data, reset_attempts=True,
+                # The item starts its exam over: the stage-scoped data of the
+                # escalated attempt (an agreed block, feedback, oracle rows) must
+                # not steer the new attempt. A re-entered Q&A item kept its old
+                # `expect_ruling` in the second pilot and its author was told to
+                # satisfy a block that no longer matched the line.
+                cleared = {k: None for k in EXAM_SCOPED_DATA}
+                self._force(item, target, item_data={**cleared, **dict(origin.data)}, reset_attempts=True,
                             reason="resume: escalation withdrawn (its file was deleted); "
                                    f"back to the ledger state {target}")
             elif origin.strong and rec.state != origin.state and not is_adjudicated(rec.kind, rec.state):

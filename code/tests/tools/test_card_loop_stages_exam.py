@@ -213,6 +213,29 @@ def test_qa_interaction_without_an_encoding_is_authored_then_encoded(repo):
     assert out.merge_request is not None
 
 
+def test_a_reused_library_line_for_a_qa_item_is_encoded_before_the_sim(repo):
+    # A withdrawn escalation re-enters with its data cleared; the line it
+    # authored is in the tree and is reused -- but the ruling must still be
+    # encoded against it (ENCODE), not run with whatever block the file holds.
+    rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
+    _write_scenario(repo, rel, QA_SCENARIO)
+    workers = _workers()
+    item = _item("AUTHORING", item="interaction:qa:Q77")
+    out = AuthoringExecutor().run(_ctx(repo, workers, sources=_isrc()), item)
+    _check(item, out)
+    assert out.next_state == "ENCODE" and out.data["scenario_paths"] == [rel]
+    assert not out.attempts and workers["claude"].calls == 0
+    # with an agreed block already in hand the reused line goes straight to the sim
+    item2 = _item("AUTHORING", item="interaction:qa:Q77", expect_ruling={"q_id": "Q77", "assert": []})
+    assert AuthoringExecutor().run(_ctx(repo, _workers(), sources=_isrc()), item2).next_state == "SIM"
+    # feedback from a rejected exam means the line is NOT reused as is
+    item3 = _item("AUTHORING", item="interaction:qa:Q77", triage_feedback="wrong pick")
+    workers3 = _workers(claude=[ok(dict(INT_OK, scenario_paths=[rel]))])
+    out3 = AuthoringExecutor().run(_ctx(repo, workers3, sources=_isrc()), item3)
+    assert workers3["claude"].calls == 1 and "wrong pick" in workers3["claude"].received[0].prompt
+    assert out3.next_state == "ENCODE"
+
+
 def test_qa_interaction_author_gets_the_ruling_and_the_agreed_block(repo):
     workers = _workers(claude=[ok(dict(INT_OK, scenario_paths=["qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"]))])
     block = {"q_id": "Q77", "assert": [{"at": 3, "that": {"p1.field": []}}]}
@@ -669,6 +692,27 @@ def test_triage_quirk_goes_to_the_termination_check(repo):
     _check(item, out)
     assert out.next_state == "TERMINATION_CHECK"
     assert out.data["triage_first"]["citation"] == {"kind": "rule", "ref": "7-3-1"}
+
+
+TRI_SCENARIO = {"classification": "scenario_wrong", "citation": {"kind": "ruling", "ref": "qa:Q77"},
+                "reasoning": "the expect_ruling asserts a DP the answer does not decide; drop it"}
+
+
+def test_triage_scenario_wrong_goes_back_to_authoring_with_the_objection(repo):
+    # Second pilot: triage found the exam wrong (a non-discriminating block, a
+    # pick of the wrong card) and could only answer `undetermined`, escalating.
+    workers = _workers(claude=[ok(TRI_SCENARIO)])
+    item = _triage_item(item="interaction:qa:Q77", author_attempt="att-a", author_stage="author_interaction",
+                        expect_ruling={"q_id": "Q77", "assert": []}, encode_feedback="old")
+    out = TriageExecutor().run(_ctx(repo, workers, sources=_isrc()), item)
+    _check(item, out)
+    assert out.next_state == "AUTHORING"
+    assert "does not decide" in out.data["triage_feedback"]
+    assert out.data["expect_ruling"] is None and out.data["encode_feedback"] is None
+    (c,) = out.corrections
+    assert (c.kind, c.corrected_attempt, c.by_gate, c.stage) == ("gate_fail", "att-a", "triage_scenario",
+                                                                 "author_interaction")
+    assert [a.outcome for a in out.attempts] == ["accepted"] and out.escalation is None
 
 
 def test_triage_undetermined_escalates(repo):

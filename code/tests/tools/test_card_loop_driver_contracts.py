@@ -85,3 +85,9 @@ def test_qa_interactions_are_encoded_after_authoring():
     check_transition("interaction", "ENCODE", "SIM")
     check_transition("interaction", "ENCODE", "AUTHORING")   # the line did not exercise the ruling
     check_transition("interaction", "CLASSIFY", "ENCODE")    # in-flight items from the earlier order replay
+
+
+def test_triage_can_send_a_wrong_exam_back_to_its_author():
+    from tools.card_loop.driver_contracts import check_transition
+    check_transition("interaction", "TRIAGE", "AUTHORING")
+    check_transition("clause", "TRIAGE", "AUTHORING")
