@@ -1,0 +1,106 @@
+# Q6391: Blast Digivolve (EX7-059 BeelStarmon ACE, [Hand][Counter]) in the
+# opponent's counter timing onto BlackGatomon (Lv.4), the ONLY legal route being
+# BlackGatomon's [Three Musketeers] grant (ignoring requirements; Blast pays 0).
+# Prefix is Q6390's through Asuna landing via BlackGatomon's WD. BlackGatomon
+# then attacks security (suspending it), P0 passes, and P1's Agumon attacks the
+# suspended BlackGatomon; P0 Blast Digivolves the ACE from hand. Its [When
+# Digivolving] use-a-TM-Option half is live (BT25-085 DUAL Option in hand) and
+# is declined. Stop there.
+interaction: {id: "qa:Q6391", source: qa, kind: positive}
+meta: {produced_by: 20261006T172217397006Z-pilot-three-musketeers-a3b8f7}
+covers:
+  - BT25-082#effect#0
+  - BT25-082#effect#1
+  - BT25-082#effect#2
+  - BT25-092#effect#1
+  - EX7-059#effect#1
+  - EX7-059#effect#2
+card: BT25-082
+clause: BT25-082#effect#2
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand (EX7-059 held from the start); stack[5..9] =
+    # security; stack[10..] = draws in order.
+    stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-059,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, BT25-083, BT25-085,
+            BT21-071, BT25-078, BT21-074, EX7-008, BT25-083]
+    rest: three-musketeers-ace
+  p1:
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote Sparrowmon; decline its start-of-main Option cost.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # BlackGatomon onto Sparrowmon at the alt-circle cost of 2.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-092] } }
+    expect: { prompt: SelectHandEffect }
+  # BlackGatomon attacks security (suspends it); no memory spent.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): Agumon attacks the suspended BlackGatomon.
+  - actor: 1
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  # THE LINE: Blast Digivolve the ACE from hand onto BlackGatomon.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT25-082], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # ACE [When Digivolving]: use-a-TM-Option half live (BT25-085 in hand); decline.
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+assert: []
