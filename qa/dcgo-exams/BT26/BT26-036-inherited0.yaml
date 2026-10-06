@@ -1,0 +1,54 @@
+# Lalamon's inherited [When Attacking][Once Per Turn] suspension.
+# Book: bt26_dats_pool.json (also included in ts_jupitermon_pool.json).
+# T1: hatch Pinamon, evolve Lalamon for 0 and GeoGreymon for 2 in breeding.
+# Neither Lalamon's reveal nor GeoGreymon's Tamer play triggers in breeding.
+# T2: P1 plays Agumon ST1-03 for 3 (2 -> -1), passing the turn.
+# T3: promote GeoGreymon and attack security. Lalamon's inherited effect
+# suspends the opponent's still-unsuspended Agumon before the security check.
+# DCGO BT26_036.cs uses optional:false and a skippable SelectPermanentEffect
+# with canNoSelect:true: there is NO preceding OptionalSkill yes/no gate.
+# The 6000 DP carrier survives the stacked 3000 DP ST1-02 security check.
+card: BT26-036
+clause: BT26-036#inherited#0
+meta: {produced_by: 20261006T150036067701Z-pilot-data-squad-6e7d75}
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-036, ST24-05, BT26-072, BT26-076, ST24-15,
+            ST24-04, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-12, ST24-04, BT26-082]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-036 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST24-05 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert: []
