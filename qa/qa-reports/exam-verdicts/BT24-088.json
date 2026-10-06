@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T15:36:53.180141800+00:00",
+  "last_updated": "2026-10-06T16:27:14.652728300+00:00",
   "clauses": {
     "BT24-088#effect#0": {
       "clause_id": "BT24-088#effect#0",
@@ -59,6 +59,20 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT24-088-effect1-optional-decline",
       "recorded_at": "2026-10-06T15:34:04.361183100+00:00"
+    },
+    "qa:Q5676": {
+      "interaction_id": "qa:Q5676",
+      "card_ids": [
+        "BT24-088"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "ba5d6c1de4937e71b84496fb234ab13e9a1438a3ca781f979d884d7754bc731e",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-088-qa-Q5676.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT24-088-qa-Q5676",
+      "recorded_at": "2026-10-06T16:27:14.652728300+00:00"
     },
     "qa:Q5678": {
       "interaction_id": "qa:Q5678",
