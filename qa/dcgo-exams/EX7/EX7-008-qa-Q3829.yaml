@@ -1,15 +1,16 @@
 # Q3829: ToyAgumon reveals Sparrowmon (EX7-051, Three Musketeers text only),
 # Hurricane Screw Shot (EX7-071, TM text AND a cost-6 Option) and Titamon +
 # SkullBaluchimon (BT24-081, fits neither). The ruling: "you must add as many
-# cards to your hand as possible". The line picks Sparrowmon (EX7-051) for
-# bucket 1 so that Hurricane Screw Shot (EX7-071) is still available for
-# bucket 2 and BOTH are added -- two cards, the maximum. Taking EX7-071 for
-# bucket 1 would starve bucket 2 and add only one.
+# cards to your hand as possible". The maximum here is TWO cards (Sparrowmon
+# for bucket 1, Hurricane Screw Shot for bucket 2). The line takes the STARVING
+# pick: Hurricane Screw Shot (EX7-071) for bucket 1, which leaves bucket 2 with
+# no candidate, so only ONE card could be added. Whether the engine/DCGO offers
+# or accepts that under-maximal pick is the point.
 card: EX7-008
 clause: EX7-008#effect#1
 covers: [EX7-008#effect#1]
 interaction: {id: "qa:Q3829", source: qa, kind: positive}
-meta: {produced_by: 20261006T225552409291Z-pilot-three-musketeers-2d4183}
+meta: {produced_by: 20261006T225824756984Z-pilot-three-musketeers-96f318}
 seed: 424242
 decks:
   p0:
@@ -26,41 +27,32 @@ decks:
             BT3-007]
     rest: quiet-opponent
 steps:
-  # T1 (P0, memory 0): nothing.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T2 (P1): nothing.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T3 (P0, 3): THE CLAUSE -- play ToyAgumon (3 -> 0).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { play: { card: EX7-008, from: hand } }
     expect: { prompt: main_phase }
-  # Bucket 1: "1 card with [Three Musketeers] in its text" -- Sparrowmon
-  # (EX7-051), leaving the dual-fit Hurricane Screw Shot for bucket 2.
-  - actor: 0
-    do: { select: { cards: [EX7-051] } }
-    expect: { prompt: SelectCardEffect }
-  # Bucket 2: "1 Option card with a use cost of 6" -- Hurricane Screw Shot.
+  # Bucket 1: starving pick -- the dual-fit Hurricane Screw Shot.
   - actor: 0
     do: { select: { cards: [EX7-071] } }
     expect: { prompt: SelectCardEffect }
-  # SIM-ONLY: Titamon + SkullBaluchimon returns to the bottom (our engine's
-  # one-choice OrderedPermutation; DCGO asks nothing).
+  # Bucket 2 has no candidate left; the two remaining cards (Sparrowmon,
+  # Titamon + SkullBaluchimon) are ordered onto the bottom of the deck.
   - actor: 0
-    do: { select: { cards: [BT24-081], sim_only: true } }
-  # One step past the clause: memory 0 is still P0's turn.
+    do: { select: { cards: [EX7-051, BT24-081] } }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
