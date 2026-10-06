@@ -397,6 +397,24 @@ def test_missing_decline_goes_to_triage_through_diverged(repo):
     assert not out.corrections
 
 
+def test_the_harness_mismatch_step_outranks_the_row_heuristic(repo):
+    # Plan 3's OracleExamResult.mismatch maps DCGO's row to the scenario step
+    # exactly (it knows the wire rows per step); the heuristic is the fallback.
+    _write_scenario(repo)
+    row = _row(verdict="unmeasured", job_outcome="failed", reason=MISMATCH,
+               mismatch={"row": 4, "step": 1, "expected": "main_phase", "asked": "OptionalSkill"})
+    cmds = (FakeCommands()
+            .on("--oracle", 1, row + "\n")
+            .on("--inspect", 0, _inspect(step=1)))
+    item = _oracle_item()
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    ev = out.data["prompt_evidence"]
+    assert (ev["scenario_step"], ev["step_mapping"]) == (1, "harness")
+    (inspect_call,) = cmds.argvs("--inspect")
+    assert inspect_call[inspect_call.index("--inspect") + 1] == "1"
+
+
 def test_both_engines_contradicting_the_scenario_goes_back_to_authoring(repo):
     _write_scenario(repo)
     cmds = (FakeCommands()
@@ -538,14 +556,57 @@ def test_one_family_available_escalates_without_a_call(repo):
     assert ctx.workers["claude"].calls == 0
 
 
-def test_unreachable_terminates_but_the_store_has_no_writer_for_it(repo):
+def test_unreachable_terminates_and_is_recorded_through_verdict_set(repo):
     unreachable = {"classification": "unreachable", "citation": {"kind": "rule", "ref": "4-1"},
                    "reasoning": "no legal line puts two copies in the breeding area"}
     workers = _workers(codex=[ok(unreachable)])
-    cmds = FakeCommands()
+    cmds = FakeCommands().on("verdict-set", 0, f"verdict-set: {CLAUSE} -> unreachable")
     out = TerminationCheckExecutor().run(_ctx(repo, workers, cmds), _term_item(first=unreachable))
     assert out.next_state == "TERMINAL" and out.data["terminal"] == "unreachable"
-    assert not cmds.calls and "not written" in out.data["verdict_store"]
+    (argv,) = cmds.argvs("verdict-set")
+    assert argv[argv.index("--clause") + 1] == CLAUSE
+    assert argv[argv.index("--verdict") + 1] == "unreachable"
+    assert "two copies" in argv[argv.index("--reason") + 1]
+    assert "--triage" not in argv
+    assert out.data["verdict_store"].startswith("recorded")
+
+
+def test_an_interaction_quirk_is_recorded_with_its_triage(repo):
+    workers = _workers(codex=[ok(TRI_QUIRK)])
+    cmds = FakeCommands().on("verdict-set", 0, "verdict-set: qa:Q77 -> diverged (dcgo_quirk)")
+    out = TerminationCheckExecutor().run(_ctx(repo, workers, cmds),
+                                         _term_item(item="interaction:qa:Q77"))
+    assert out.next_state == "TERMINAL" and out.data["terminal"] == "dcgo_quirk"
+    (argv,) = cmds.argvs("verdict-set")
+    assert argv[argv.index("--interaction") + 1] == "qa:Q77"
+    assert argv[argv.index("--verdict") + 1] == "diverged"
+    assert argv[argv.index("--triage") + 1] == "dcgo_quirk"
+    assert argv[argv.index("--citation") + 1].endswith("7-3-1")
+    assert "--clause" not in argv and "verdict-triage" not in argv
+
+
+def test_a_verdict_set_refusal_escalates(repo):
+    unreachable = {"classification": "unreachable", "citation": {"kind": "rule", "ref": "4-1"},
+                   "reasoning": "no legal line"}
+    workers = _workers(codex=[ok(unreachable)])
+    cmds = FakeCommands().on("verdict-set", 1, "", "refusing to record a verdict for clause `x`")
+    out = TerminationCheckExecutor().run(_ctx(repo, workers, cmds), _term_item(first=unreachable))
+    assert out.next_state == "ESCALATED" and "refusing" in out.escalation.reason
+
+
+@pytest.mark.parametrize("terminal,verdict", [("textual", "unavailable"), ("not_examinable", "unreachable")])
+def test_a_classification_agreement_is_recorded_as_an_interaction_verdict(repo, terminal, verdict):
+    item = ItemRecord(item="interaction:qa:Q77", state="TERMINATION_CHECK", data={
+        "terminal": terminal, "termination": {"agreed": True, "terminal": terminal, "stage": "classify_qa",
+                                              "citation": "qa:Q77 traits", "citations": ["qa:Q77 traits"]}})
+    cmds = FakeCommands().on("verdict-set", 0, f"verdict-set: qa:Q77 -> {verdict}")
+    out = TerminationCheckExecutor().run(_ctx(repo, cmds=cmds), item)
+    assert out.next_state == "TERMINAL" and out.adjudicated
+    (argv,) = cmds.argvs("verdict-set")
+    assert argv[argv.index("--interaction") + 1] == "qa:Q77"
+    assert argv[argv.index("--verdict") + 1] == verdict
+    assert terminal in argv[argv.index("--reason") + 1]
+    assert out.data["verdict_store"].startswith("recorded")
 
 
 def test_a_store_refusal_escalates_rather_than_diverging_silently(repo):
@@ -560,7 +621,7 @@ def test_an_agreement_reached_by_classification_terminates_without_a_call(repo):
         "terminal": "textual", "citation": "qa:Q77 traits",
         "termination": {"agreed": True, "stage": "classify_qa", "terminal": "textual",
                         "citation": "qa:Q77 traits", "citations": ["qa:Q77 traits", "qa:Q77 card data"]}})
-    ctx = _ctx(repo)
+    ctx = _ctx(repo, cmds=FakeCommands().on("verdict-set", 0, "verdict-set: qa:Q77 -> unavailable"))
     out = TerminationCheckExecutor().run(ctx, item)
     _check(item, out)
     assert out.next_state == "TERMINAL" and out.adjudicated and out.data["terminal"] == "textual"

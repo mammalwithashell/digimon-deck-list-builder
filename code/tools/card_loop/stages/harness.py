@@ -168,6 +168,23 @@ def verdict_triage_argv(ctx, clause_id: str, triage: str, citation: str) -> list
             "--citation", citation]
 
 
+def verdict_set_argv(ctx, *, verdict: str, reason: str, clause: str | None = None,
+                     interaction: str | None = None, triage: str | None = None,
+                     citation: str | None = None) -> list[str]:
+    """`dcgo-harness verdict-set`: an ending the exam cannot produce (an
+    unreachable clause, an interaction ending), with its triage."""
+    if (clause is None) == (interaction is None):
+        raise ValueError("verdict-set takes exactly one of clause / interaction")
+    argv = [harness_bin(ctx), "verdict-set"]
+    argv += ["--clause", clause] if clause is not None else ["--interaction", interaction]
+    argv += ["--verdict", verdict, "--reason", reason]
+    if triage:
+        argv += ["--triage", triage]
+        if citation:
+            argv += ["--citation", citation]
+    return argv
+
+
 def run(ctx, argv: Sequence[str], timeout: float) -> tuple[int | None, str, str]:
     """`ctx.run_command` in the run's tree; a binary that cannot start is rc None."""
     try:

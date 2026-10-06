@@ -11,7 +11,7 @@ from tools.card_loop.stages.base import StageDeferred
 from tools.card_loop.stages.classify import ClassifyExecutor
 from tools.card_loop.stages.encode import EncodeExecutor
 from tools.card_loop.stages.termination import TerminationCheckExecutor
-from tools.card_loop.stages.testing import failed, make_ctx, ok, sources
+from tools.card_loop.stages.testing import FakeCommands, failed, make_ctx, ok, sources
 from tools.card_loop.workers.fake import FakeWorker
 
 CLAUSE = "ST23-04#effect#0"
@@ -53,8 +53,9 @@ def _workers(claude=(), codex=()):
             "codex": FakeWorker(list(codex), family="codex")}
 
 
-def _ctx(repo, workers):
-    return make_ctx(repo, workers=workers, sources=sources(clauses=CLAUSE_ROWS, card_qa=CARD_QA))
+def _ctx(repo, workers, cmds=None):
+    return make_ctx(repo, workers=workers, run_command=cmds or FakeCommands(),
+                    sources=sources(clauses=CLAUSE_ROWS, card_qa=CARD_QA))
 
 
 def _cls(classification, citation="qa:Q77", clauses=(CLAUSE,)):
@@ -97,7 +98,7 @@ def test_both_behavioral_goes_to_encode_and_both_saw_the_same_packet(repo):
 
 def test_agreed_textual_ends_through_the_termination_check_without_another_call(repo):
     workers = _workers(claude=[_cls("textual", "qa:Q77 traits field")], codex=[_cls("textual", "qa:Q77 card data")])
-    ctx = _ctx(repo, workers)
+    ctx = _ctx(repo, workers, cmds=FakeCommands().on("verdict-set", 0, "verdict-set: qa:Q77 -> unavailable"))
     item = ItemRecord(item=ITEM, state="CLASSIFY")
     out = ClassifyExecutor().run(ctx, item)
     _check(item, out)

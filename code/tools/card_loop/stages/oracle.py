@@ -29,6 +29,8 @@ unmeasured to ORACLE; all confirmed -> CONFIRMED.
 """
 from __future__ import annotations
 
+from typing import Mapping
+
 from .. import corrections as corr
 from ..driver_contracts import ItemRecord, StageOutcome
 from . import base, harness
@@ -82,10 +84,25 @@ class OracleExecutor:
         if verdict == "confirmed":
             return "confirmed", None
         pm = harness.prompt_mismatch(row)
+        hm = row.get("mismatch") if isinstance(row.get("mismatch"), Mapping) else None
+        if pm is None and hm is not None and isinstance(hm.get("row"), int):
+            # DCGO stopped on a mismatch its message does not spell out as
+            # prompts (an actor mismatch): the engines disagreed on WHO acts at
+            # that step, which triage must see; another oracle run cannot help.
+            evidence = {"scenario": path, "dcgo_row": hm["row"], "scenario_step": hm.get("step"),
+                        "step_mapping": "harness", "expected": hm.get("expected"),
+                        "dcgo_asked": hm.get("asked"), "route": "engines_disagree",
+                        "explanation": str(row.get("reason") or "")}
+            return "diverged", evidence
         if pm is None:
             return ("diverged" if verdict == "diverged" else "unmeasured"), None
         steps = base.scenario_steps(ctx, path)
-        step, how = harness.scenario_step_for_row(steps, pm)
+        if hm is not None and isinstance(hm.get("step"), int):
+            # The harness maps DCGO's wire row to the scenario step exactly
+            # (it knows the wire rows per step); the heuristic is the fallback.
+            step, how = int(hm["step"]), "harness"
+        else:
+            step, how = harness.scenario_step_for_row(steps, pm)
         div = row.get("divergence") or {}
         if verdict == "diverged" and isinstance(div.get("step"), int) and div["step"] < step:
             return "diverged", None          # a real divergence happened first

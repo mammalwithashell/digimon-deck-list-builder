@@ -32,18 +32,64 @@ from . import base, harness
 STAGE = "triage"
 
 
+# How each terminal reason lands in the verdict store (the five classes of
+# docs/DCGO_EXAM.md): a diverged clause gets its triage through
+# `verdict-triage`; everything else goes through `verdict-set`. A ruling the
+# families classified `textual` is adjudicated from card data, so its
+# interaction is `unavailable` to the oracle with that reason; `not_examinable`
+# (tournament procedure, or a state no legal line reaches) is `unreachable`.
+_ENDINGS = {
+    "dcgo_quirk": ("diverged", "dcgo_quirk"),
+    "unreachable": ("unreachable", None),
+    "textual": ("unavailable", None),
+    "not_examinable": ("unreachable", None),
+}
+
+
+def record_ending(ctx, item: ItemRecord, terminal: str, citation: str | None,
+                  reason: str) -> tuple[str, str | None]:
+    """Write the ending to the verdict store. Returns `(note, error)`: the note
+    goes into `data["verdict_store"]`; a non-None error means the store refused
+    and the item must escalate rather than read as adjudicated."""
+    if terminal not in _ENDINGS:
+        return f"not written: no store ending for {terminal}", None
+    verdict, triage = _ENDINGS[terminal]
+    reason = " ".join(reason.split())[:400] or terminal
+    if item.kind == "clause":
+        clause = base.clause_of(item)
+        if terminal == "dcgo_quirk":
+            argv = harness.verdict_triage_argv(ctx, clause, terminal, citation or "")
+        else:
+            argv = harness.verdict_set_argv(ctx, clause=clause, verdict=verdict, reason=reason)
+        target = clause
+    else:
+        argv = harness.verdict_set_argv(ctx, interaction=item.ident, verdict=verdict, reason=reason,
+                                        triage=triage, citation=citation)
+        target = item.ident
+    rc, stdout, stderr = harness.run(ctx, argv, harness.VERDICT_TIMEOUT_S)
+    if rc != 0:
+        return "", (stderr or stdout).strip()[-500:] or f"exit {rc}"
+    return f"recorded {target} {verdict}" + (f" ({triage})" if triage else ""), None
+
+
 class TerminationCheckExecutor:
     state = "TERMINATION_CHECK"
 
     def run(self, ctx, item: ItemRecord) -> StageOutcome:
         pre = item.data.get("termination") or {}
         if pre.get("agreed"):
-            return base.outcome("TERMINAL", item=item, adjudicated=True,
-                                data={"terminal": pre.get("terminal"), "citation": pre.get("citation"),
-                                      "citations": pre.get("citations"),
-                                      "verdict_store": "not written: Q&A classifications are recorded "
-                                                       "by the interaction verdict writer"},
-                                reason=f"{pre.get('stage')}: both families agreed on {pre.get('terminal')}")
+            terminal = pre.get("terminal")
+            data = {"terminal": terminal, "citation": pre.get("citation"), "citations": pre.get("citations")}
+            note, err = record_ending(ctx, item, terminal, pre.get("citation"),
+                                      f"{terminal}: {pre.get('stage')} -- both families agreed "
+                                      f"({pre.get('citation')})")
+            if err:
+                reason = f"both families agreed on {terminal}, but the verdict store refused it: {err}"
+                return base.outcome("ESCALATED", item=item, reason=reason, data=data,
+                                    escalation=base.escalation(item, reason))
+            data["verdict_store"] = note
+            return base.outcome("TERMINAL", item=item, adjudicated=True, data=data,
+                                reason=f"{pre.get('stage')}: both families agreed on {terminal}")
         first = item.data.get("triage_first")
         packet = item.data.get("triage_packet")
         if not first or not packet:
@@ -92,23 +138,16 @@ class TerminationCheckExecutor:
 
         terminal = first["call"]
         data = {"triage_second": second, "terminal": terminal, "citation": cites[0], "citations": cites}
-        if item.kind == "clause" and terminal == "dcgo_quirk":
-            clause = base.clause_of(item)
-            rc, stdout, stderr = harness.run(ctx, harness.verdict_triage_argv(ctx, clause, terminal, cites[0]),
-                                             harness.VERDICT_TIMEOUT_S)
-            if rc != 0:
-                reason = (f"both families agreed on {terminal}, but the verdict store refused the triage: "
-                          f"{(stderr or stdout).strip()[-500:]}")
-                return base.outcome("ESCALATED", item=item, reason=reason, data=data,
-                                    attempts=[call.attempt(ctx, outcome="escalated",
-                                                           parent=first.get("attempt_id"))],
-                                    escalation=base.escalation(item, reason, [first, second],
-                                                               extra_history=[call.attempt_id]))
-            data["verdict_store"] = f"triaged {clause} {terminal}"
-        else:
-            data["verdict_store"] = (f"not written: `dcgo-harness verdict-triage` records only "
-                                     f"ours_wrong|dcgo_quirk|undetermined on a diverged clause row "
-                                     f"({item.kind} {terminal})")
+        note, err = record_ending(ctx, item, terminal, cites[0],
+                                  f"{terminal}: {first.get('reasoning') or second.get('reasoning') or ''}")
+        if err:
+            reason = f"both families agreed on {terminal}, but the verdict store refused it: {err}"
+            return base.outcome("ESCALATED", item=item, reason=reason, data=data,
+                                attempts=[call.attempt(ctx, outcome="escalated",
+                                                       parent=first.get("attempt_id"))],
+                                escalation=base.escalation(item, reason, [first, second],
+                                                           extra_history=[call.attempt_id]))
+        data["verdict_store"] = note
         return base.outcome("TERMINAL", item=item, adjudicated=True, data=data,
                             attempts=[call.attempt(ctx, outcome="accepted", parent=first.get("attempt_id"))],
                             reason=f"{first.get('family')} and {family} agree: {terminal} ({cites[0]})")
