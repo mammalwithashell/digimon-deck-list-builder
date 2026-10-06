@@ -4579,7 +4579,13 @@ impl Game {
     /// Install an outer accept/decline `PendingSelection` for a single
     /// OPTIONAL triggered effect. ACCEPT runs the queued effect's body;
     /// PASS/decline skips it cleanly. `G-OUTER-OPTIONAL-NOT-INSTALLED`.
-    fn install_outer_optional_trigger_selection(&mut self, qe: QueuedEffect) {
+    fn install_outer_optional_trigger_selection(&mut self, mut qe: QueuedEffect) {
+        // The prompt outlives a DNA digivolve's drain scope; carry its DNA
+        // bit onto the parked effect, as `install_trigger_order_selection`
+        // does, so "if DNA digivolving" still holds after ACCEPT (BT16-077).
+        if self.current_dna_origin.is_some() {
+            qe.dna_origin_context = self.current_dna_origin;
+        }
         let chooser = qe.controller;
         let source_card = qe.source_card;
         let source_permanent = qe.source_permanent;
