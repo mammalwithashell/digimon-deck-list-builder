@@ -1,0 +1,68 @@
+# Book: qa/dcgo-exams/BT26/bt26_dats_pool.json (also ts_jupitermon_pool.json).
+# Ravemon BT26-082 is purple, Lv.6, DATA SQUAD: the green cost-5 circle
+# cannot admit it, and it is not Rosemon for Burst Digivolve. The trait
+# condition under exam is the ONLY legal evolution route.
+# T1/T2 pass; T3 hard-play Ravemon for 12 (3 -> -9), with no On Play.
+# T4 opponent passes; T5 evolve for 5 (3 -> -2), draw, decline suspension.
+# DCGO BT26_050.cs: AddSelfDigivolutionRequirementStaticEffect cost 5,
+# level 6, HasDataSquadTraits. One legal cost means no SelectCountEffect.
+# Its mandatory WD activation directly asks SelectPermanentEffect with
+# canNoSelect:true, not an OptionalSkill gate. Decline the self-only pick.
+# Opponent's empty board gives the subsequent mandatory lock maxCount 0.
+# No OTHER suspended Digimon exists, so the shared WD/WA effect is gated
+# out: no MultipleSkills, no bottom-deck pick, and no optional yes/no gate.
+# The final breeding row witnesses completed evolution and turn handoff.
+# Assertions intentionally left empty for oracle backfill.
+card: BT26-050
+clause: BT26-050#effect#0
+meta: {produced_by: 20261006T154727007334Z-pilot-data-squad-41b6fe}
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-082, BT26-050, BT26-076, ST24-10, ST24-12,
+            ST24-04, BT26-072, BT26-091, BT26-094, ST24-05,
+            BT26-065, BT26-036, BT13-060]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-10, BT1-009, BT3-007, ST1-02,
+            BT1-014, BT4-010, BT3-007, ST1-04, BT1-009,
+            ST1-04, BT4-014, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-082, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-050 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert: []
