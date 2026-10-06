@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T16:51:14.771798300+00:00",
+  "last_updated": "2026-10-06T16:54:20.890895800+00:00",
   "clauses": {
     "BT21-071#effect#0": {
       "clause_id": "BT21-071#effect#0",
@@ -91,6 +91,21 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT21-071-qa-Q4577",
       "recorded_at": "2026-10-06T16:51:14.771798300+00:00"
+    },
+    "qa:Q4578": {
+      "interaction_id": "qa:Q4578",
+      "card_ids": [
+        "BT21-071"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "1eda83f264afedef96f6fb8a5e1dc7d0e5fe78f5397f22e3d720f1850c440870",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-071-qa-Q4578.yaml",
+      "reason": "ours contradicts ruling qa:Q4578 (ours vs DCGO: diverge); DIVERGED at step 14 (compared 9 of 15 ours / 13 dcgo steps (6 sim-only row(s) with no DCGO prompt + 4 DCGO intermediate row(s) not comparable))",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT21-071-qa-Q4578",
+      "recorded_at": "2026-10-06T16:54:20.890895800+00:00"
     }
   }
 }
