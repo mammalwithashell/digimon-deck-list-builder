@@ -73,6 +73,8 @@
     "attacking":      { "names": ["attack step", "attacking"], "section": "11",    "pdf": "general_rule.pdf", "pages": "19-20" },
     "battle":         { "names": ["battle resolution"],       "section": "14",     "pdf": "general_rule.pdf", "pages": "21" },
     "memory":         { "names": ["memory gauge", "memory cost"], "section": "1-4-2", "pdf": "general_rule.pdf", "pages": "2" },
-    "effect timing":  { "names": ["effect timing", "trigger timing", "activation timing"], "section": "15-16", "pdf": "general_rule.pdf", "pages": "22-32" }
+    "effect timing":  { "names": ["effect timing", "trigger timing", "activation timing"], "section": "15-16", "pdf": "general_rule.pdf", "pages": "22-32" },
+    "name containment": { "names": ["in its name", "language standardization"], "section": "2-3-1-3", "pdf": "general_rule.pdf", "pages": "3-4",
+                          "see": "docs/digimon-rules/language-standardization.md — Bandai's Language Standardization Rules (2026-05-29) override the literal 2-3-1-3 reading for listed names (BurningGreymon/DoruGreymon/DexDoruGreymon are not [Greymon], KendoGarurumon is not [Garurumon], ...)" }
   }
 }
