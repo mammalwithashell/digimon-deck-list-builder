@@ -142,3 +142,13 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert: []
+expect_ruling:
+  q_id: Q6396
+  assert:
+  - at: 30
+    that:
+      p1.field:
+      - card_id: ST1-03
+        dp: 2000
+        suspended: false
+        sources: []
