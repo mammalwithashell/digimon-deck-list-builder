@@ -14,6 +14,13 @@ on:
       - 'scripts/nextest_rust_min_stack.py'
       - '.config/nextest.toml'
       - '.github/workflows/verification-ladder.yml'
+      - 'qa/qa-reports/exam-verdicts/**'
+      - 'qa/exam-clause-text.json'
+      - 'data/deck_library.json'
+      - 'data/oracle_readiness.json'
+      - 'data/cards.json'
+      - 'data/card_official.json'
+      - 'data/card_overrides.json'
   push:
     branches: ["main"]
     paths:
@@ -28,6 +35,13 @@ on:
       - 'scripts/nextest_rust_min_stack.py'
       - '.config/nextest.toml'
       - '.github/workflows/verification-ladder.yml'
+      - 'qa/qa-reports/exam-verdicts/**'
+      - 'qa/exam-clause-text.json'
+      - 'data/deck_library.json'
+      - 'data/oracle_readiness.json'
+      - 'data/cards.json'
+      - 'data/card_official.json'
+      - 'data/card_overrides.json'
   schedule:
     - cron: '23 8 * * *'
   workflow_dispatch:

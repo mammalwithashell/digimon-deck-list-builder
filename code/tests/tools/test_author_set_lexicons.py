@@ -4,6 +4,7 @@ from tools.author_set.lexicons import (
     build_lexicons,
     build_name_lexicon,
     build_trait_lexicon,
+    name_stems,
 )
 
 SYNTH = [
@@ -30,6 +31,12 @@ def test_trait_lexicon_legacy_string_form():
 def test_name_lexicon():
     names = build_name_lexicon(SYNTH)
     assert names == {"agumon", "greymon", "omnimon", "birdramon"}
+
+
+def test_name_stems_strip_a_mode_suffix_only():
+    stems = name_stems({"sistermon noir (awakened)", "belphemon: rage mode",
+                        "chronomon: holy mode", "agumon", "atho, rené & por"})
+    assert stems == {"sistermon noir", "belphemon", "chronomon"}
 
 
 def test_dict_and_list_inputs_equivalent():

@@ -29,7 +29,36 @@ def test_dry_run_bt17_resolves_triages_and_clusters():
     assert "code/tools/impact_scope.py" in text
 
 
-def test_dry_run_blocks_flag_property_consistent():
+def _engine_without_dsl_link(monkeypatch, tmp_path):
+    """Run the report as if the engine did NOT lower Link through the DSL.
+
+    Link is a DCGO subsystem keyword, and before the DigiLink substrate it was
+    THE live subsystem port. The engine now covers it (the manifest's
+    `dsl_lowered_keywords`, task 9.1), so these tests replay the pre-substrate
+    manifest to keep exercising the subsystem-scoping logic on real set data.
+    """
+    import functools
+
+    import tools.author_set.report_set as report_set
+    from tools.author_set.keyword_gate import triage_set_from_artifacts
+
+    with open("data/dcgo_keyword_manifest.json", encoding="utf-8") as f:
+        manifest = json.load(f)
+    manifest["dsl_lowered_keywords"].pop("link")
+    path = tmp_path / "manifest_without_dsl_link.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(report_set, "triage_set_from_artifacts",
+                        functools.partial(triage_set_from_artifacts, manifest_path=str(path)))
+
+
+def test_dsl_lowered_link_no_longer_blocks_a_full_run():
+    rep = build_report("BT22", _cards(), do_pull=False)
+    assert "link" in rep.keywords.covered
+    assert "link" not in rep.keywords.auto_ingest_subsystem
+
+
+def test_dry_run_blocks_flag_property_consistent(monkeypatch, tmp_path):
+    _engine_without_dsl_link(monkeypatch, tmp_path)
     rep = build_report("BT22", _cards(), do_pull=False)
     # A full run is blocked by either a flagged keyword OR a subsystem auto-ingest.
     assert rep.blocks_full_run == (
@@ -40,12 +69,13 @@ def test_dry_run_blocks_flag_property_consistent():
     assert rep.blocks_full_run
 
 
-def test_subsystem_keyword_excludes_only_actual_users_not_whole_slice():
+def test_subsystem_keyword_excludes_only_actual_users_not_whole_slice(monkeypatch, tmp_path):
     """BT25's [Link] is a subsystem keyword, but only 2 of the ~18 Aegiomon-slice
     cards actually use it (BT25-075 Vulcanusmon links; BT25-102 Factorial Area
     grants Link +1). The report must scope the exclusion to those cards so the
     other ~16 TS cards in the slice stay authorable. dcgo_root="" forces the
     text-fallback path so the test is deterministic without a DCGO checkout."""
+    _engine_without_dsl_link(monkeypatch, tmp_path)
     rep = build_report("BT25", _cards(), do_pull=False, dcgo_root="")
     assert "link" in rep.keywords.auto_ingest_subsystem
     affected = set(rep.subsystem_affected.get("link", []))

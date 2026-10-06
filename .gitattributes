@@ -12,6 +12,10 @@ Caddyfile text eol=lf
 # tree on Windows checkouts.
 data/card_meta/** text eol=lf
 
+# The oracle readiness artifact is byte-deterministic (tools/clause_coverage/readiness.py
+# --check); keep it LF on every platform for the same reason.
+data/oracle_readiness.json text eol=lf
+
 # The exam attempt log is append-only history from parallel oracle nodes.
 # Union merge concatenates both sides instead of conflicting; the log is
 # one JSON object per line precisely so this is correct.
