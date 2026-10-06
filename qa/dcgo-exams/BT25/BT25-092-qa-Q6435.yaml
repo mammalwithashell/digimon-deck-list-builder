@@ -1,32 +1,24 @@
 # Exam scenario: Asuna Shiroki (BT25-092), interaction qa:Q6435 --
-# Q: "2 copies of this card are in the battle area. Can I activate the [Main]
-#  effect on both copies and digivolve my Digimon ... with the cost reduced by
-#  2?"  A (official): No -- you can't activate multiple digivolving effects at
-#  the same time.
+# Q: two copies in the battle area; can both [Main] effects be activated to
+# digivolve into 1 [Three Musketeers]/[TS] card with the cost reduced by 2?
+# A (official): No -- multiple digivolving effects can't be activated together.
 #
-# THE LINE: two Asuna Shiroki in the battle area, two Options (P-180) in hand,
-# a vanilla Purple Lv.3 host (DemiDevimon ST6-02), BlackGatomon (BT25-082) and
-# LadyDevimon (BT25-083) in hand; BOTH [Main] effects are activated in the same
-# main phase, back to back, aimed at the SAME Digimon: A digivolves it into
-# BlackGatomon (cost 2-1), B digivolves it again into LadyDevimon (cost 3-1).
-# The two -1 reductions are never combined into one -2 digivolve. Extends
-# BT25-092-qa-Q6434.yaml / BT25-092-effect1.yaml (book tm_bt25_092_pool.json).
-#
-#   T1 (P0, 0): play Asuna A (cost 4) -> -4.
-#   T3 (P0, 3): decline A's [Start of Your Main Phase]; play DemiDevimon x2.
-#   T5 (P0, 3): decline A's trigger; play Asuna B.
-#   T7 (P0, 3): both start triggers, then [Main] of A and [Main] of B.
+# THE LINE: two Asuna Shiroki, two Options (P-180) in hand, a Purple Lv.3 host
+# (ST6-02), and exactly ONE eligible card (BlackGatomon BT25-082, cost 2) in hand.
+# Asuna A's [Main] digivolves the host into it (-1 only); Asuna B's [Main] is then
+# activated for the same purpose and has nothing left to digivolve into -- the
+# two reductions never combine. Extends BT25-092-qa-Q6434.yaml.
 card: BT25-092
 clause: BT25-092#effect#1
 interaction: {id: "qa:Q6435", source: qa, kind: positive}
 covers: [BT25-092#effect#1]
-meta: {produced_by: 20261006T225552400158Z-pilot-three-musketeers-0f670a}
+meta: {produced_by: 20261006T230012121234Z-pilot-three-musketeers-20b9e1}
 seed: 424242
 decks:
   p0:
     stack: [BT25-092, ST6-02, ST6-02, BT25-092, P-180,
             BT21-074, BT21-074, BT21-071, BT21-071, BT21-071,
-            P-180, BT25-082, BT25-083, BT25-083, BT25-083]
+            P-180, BT25-082, BT21-071, P-180, P-180]
     rest: tm-asuna-demidevimon
   p1:
     stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
@@ -113,7 +105,8 @@ steps:
   - actor: 0
     do: { select: { cards: [BT25-082] } }
     expect: { prompt: SelectHandEffect }
-  # [Main] of Asuna B
+  # [Main] of Asuna B: no further [TS]/[Three Musketeers] card is left in hand or
+  # trash, so B's digivolve has nothing to take; A's -1 is not stacked into -2.
   - actor: 0
     do: { main: { on: field.3 } }
     expect: { prompt: main_phase }
@@ -122,20 +115,7 @@ steps:
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: SelectHandEffect }
-  - actor: 0
-    do: { select: { targets: [own.field.1] } }
-    expect: { prompt: SelectPermanentEffect }
-  - actor: 0
-    do: { select: { cards: [BT25-083] } }
-    expect: { prompt: SelectHandEffect }
-  # Same host digivolved twice (BlackGatomon cost 1, LadyDevimon cost 2): each
-  # effect reduces only its own digivolve by 1. Memory 3 -> 2 -> 0.
-  # LadyDevimon's two [When Digivolving] are dormant (no 3M card to place, no
-  # Option under a Digimon); our engine still asks the order, DCGO gates them off.
-  - actor: 0
-    do: { select: { cards: [BT25-083], ordinal: 0, sim_only: true } }
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+  # Our engine still asks which Digimon to digivolve; DCGO skips it (no legal card).
   - actor: 0
     do: { select: { decline: true, sim_only: true } }
 assert: []
