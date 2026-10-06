@@ -215,6 +215,10 @@ class UnimplementedDeckError(ValueError):
     """Raised when a training deck contains cards outside the Rust registry."""
 
 
+class NotOracleReadyDeckError(ValueError):
+    """A pool snapshot contains a card that is not oracle-ready."""
+
+
 def canonical_deck_counts(card_ids: List[str]) -> Dict[str, int]:
     """Return a stable card-count mapping for deck identity and snapshots."""
     return dict(sorted(Counter(card_ids).items()))
@@ -382,7 +386,10 @@ class GeneralistDeckPool:
         path: str | Path,
         *,
         implemented_card_ids: Optional[Set[str]] = None,
+        oracle_ready_card_ids: Optional[Set[str]] = None,
     ) -> "GeneralistDeckPool":
+        """Reload a written pool. Every deck must still pass the oracle gate: a
+        snapshot taken before the gate cannot smuggle non-ready decks back in."""
         path = Path(path)
         raw = json.loads(path.read_text(encoding="utf-8"))
         if raw.get("schema_version") != SNAPSHOT_SCHEMA_VERSION:
@@ -399,6 +406,11 @@ class GeneralistDeckPool:
         if raw.get("snapshot_hash") != expected_hash:
             raise ValueError("Deck-pool snapshot hash mismatch.")
 
+        oracle_ready = (
+            oracle_ready_card_ids
+            if oracle_ready_card_ids is not None
+            else _load_oracle_ready_card_ids()
+        )
         archetypes: Dict[str, List[DeckEntry]] = {}
         for record in raw.get("decks", []):
             card_ids = list(record.get("card_ids", []))
@@ -410,6 +422,12 @@ class GeneralistDeckPool:
                     card_ids,
                     implemented_card_ids,
                     label=f"snapshot deck {record.get('deck_id', '?')}",
+                )
+            not_ready = sorted({cid for cid in card_ids if cid not in oracle_ready})
+            if not_ready:
+                raise NotOracleReadyDeckError(
+                    f"snapshot deck {record.get('deck_id', '?')} contains cards that are not "
+                    f"oracle-ready: {', '.join(not_ready)}"
                 )
             deck_id = stable_deck_id(card_ids)
             if record.get("deck_id") != deck_id:

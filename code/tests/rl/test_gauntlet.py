@@ -1264,3 +1264,39 @@ class TestOracleReadinessGate:
                 allowed_archetypes={"ST-1 Gaia Red"},
                 oracle_ready_card_ids=set(),
             )
+
+    def _snapshot(self, tmp_path):
+        g = MetaGauntlet(
+            implemented_card_ids=self.REGISTERED,
+            not_ready_card_ids=set(),
+            oracle_ready_card_ids=set(self.REGISTERED),
+        )
+        g.load(str(self._lib(tmp_path)))
+        snapshot = tmp_path / "pool.json"
+        written = g.as_generalist_pool().write_snapshot(snapshot)
+        return snapshot, written
+
+    def test_snapshot_with_a_not_ready_card_is_refused(self, tmp_path):
+        snapshot, _ = self._snapshot(tmp_path)
+        with pytest.raises(gauntlet_module.NotOracleReadyDeckError, match="BT12-031"):
+            GeneralistDeckPool.from_snapshot(
+                snapshot,
+                implemented_card_ids=self.REGISTERED,
+                oracle_ready_card_ids={"BT12-002", "BT12-022"},
+            )
+
+    def test_snapshot_of_ready_decks_still_loads(self, tmp_path):
+        snapshot, written = self._snapshot(tmp_path)
+        loaded = GeneralistDeckPool.from_snapshot(
+            snapshot, implemented_card_ids=self.REGISTERED,
+            oracle_ready_card_ids=set(self.REGISTERED),
+        )
+        assert loaded.snapshot_hash == written
+
+    def test_snapshot_load_reads_the_artifact_when_nothing_is_injected(self, tmp_path, monkeypatch):
+        # A snapshot taken before the gate must not smuggle decks back in, even
+        # through callers (eval CLIs, --curriculum-pool) that inject nothing.
+        snapshot, _ = self._snapshot(tmp_path)
+        monkeypatch.setattr(gauntlet_module, "_ORACLE_READINESS_PATH", tmp_path / "absent.json")
+        with pytest.raises(gauntlet_module.OracleReadinessMissingError):
+            GeneralistDeckPool.from_snapshot(snapshot, implemented_card_ids=self.REGISTERED)
