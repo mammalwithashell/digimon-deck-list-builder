@@ -1,0 +1,44 @@
+# Probe optional_decline: BT25-078#effect#2. Same opening as BT25-078-effect2.yaml, but the
+# "may" is DECLINED. DCGO registers the effect optional: false and carries the "may" on the
+# reveal pick's canNoSelect, so its decline is "pick nothing" -> all 3 revealed cards
+# (Sparrowmon, Callismon, Titamon + SkullBaluchimon) are ordered to the deck bottom and
+# the hand / digivolution stack stay untouched. Our engine declines at its outer
+# accept/decline gate (the reveal pick after the branch is non-optional), a different
+# prompt position but the same observable outcome: no card added, nothing placed.
+card: BT25-078
+clause: BT25-078#effect#2
+interaction: {id: "probe:BT25-078#effect#2:optional_decline", source: probe, kind: positive}
+meta: {produced_by: 20261006T144737490583Z-pilot-three-musketeers-a416e4}
+covers: [BT25-078#effect#2]
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-078, BT21-074, BT21-074, BT25-085, BT25-085,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-083,
+            EX7-051, BT25-058, BT24-081]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-014]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-078, from: hand } }
+    expect: { prompt: main_phase }
+  # SIM-ONLY: decline at our outer gate.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  # DCGO-ONLY: the reveal pick, declined via canNoSelect.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # DCGO-ONLY: deck-bottom ordering of all 3 revealed cards.
+  - actor: 0
+    do: { select: { cards: [EX7-051, BT25-058, BT24-081], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
