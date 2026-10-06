@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T15:32:59.569574+00:00",
+  "last_updated": "2026-10-06T15:34:04.361183100+00:00",
   "clauses": {
     "BT24-088#effect#0": {
       "clause_id": "BT24-088#effect#0",
@@ -44,6 +44,21 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT24-088-effect0-optional-decline",
       "recorded_at": "2026-10-06T15:32:59.569574+00:00"
+    },
+    "probe:BT24-088#effect#1:optional_decline": {
+      "interaction_id": "probe:BT24-088#effect#1:optional_decline",
+      "card_ids": [
+        "BT24-088"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "c24e0b9001a5a7ec666ec5ba14749bc4fb45afecb684dad9ab989475f84b4182",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-088-effect1-optional-decline.yaml",
+      "reason": "DIVERGED at step 3 (compared 4 of 4 ours / 4 dcgo steps)",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT24-088-effect1-optional-decline",
+      "recorded_at": "2026-10-06T15:34:04.361183100+00:00"
     }
   }
 }
