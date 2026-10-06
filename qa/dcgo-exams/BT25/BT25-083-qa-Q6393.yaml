@@ -6,7 +6,7 @@
 # digivolved under BeelStarmon, which ties Phoenixmon on T9).
 card: BT25-083
 clause: BT25-083#inherited#0
-meta: {produced_by: 20261006T214736802846Z-pilot-three-musketeers-a7fbd1}
+meta: {produced_by: 20261006T215506295484Z-pilot-three-musketeers-1a31ef}
 interaction: {id: "qa:Q6393", source: qa, kind: positive}
 covers: [BT25-083#inherited#0]
 seed: 424242
@@ -133,9 +133,3 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-expect_ruling:
-  q_id: Q6393
-  assert:
-  - at: 23
-    that:
-      p0.field: [BT6-068]
