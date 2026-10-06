@@ -1,81 +1,49 @@
 # Interaction exam (NEGATIVE probe, family `scope`): Rosemon: Burst Mode
-# (BT13-060), clause BT13-060#effect#1 --
-# "[When Digivolving] Suspend 1 of your opponent's Digimon and 1 of their
-#  Tamers. Until the end of your opponent's turn, all of their Digimon and
-#  Tamers don't unsuspend."
-#
-# WHAT THE NEGATIVE SHOWS. The "don't unsuspend" rider is scoped by two things:
-# WHOSE permanents (the opponent's, never the digivolving player's) and HOW
-# LONG ("until the end of your opponent's turn" -- exactly ONE opponent turn).
-# The line reaches the clause, lets it fire, and then watches the two edges:
-#
-#   * T4 (P1's turn right after the digivolve): the suspended Biyomon
-#     ST1-02 and Tai Kamiya ST1-12 stay suspended through P1's unsuspend phase.
-#     That is the clause's positive half and the baseline for the negative.
-#   * T6 (P1's NEXT turn): the rider has expired, so P1's unsuspend phase DOES
-#     unsuspend Biyomon and Tai again. A rider that wrongly outlived "the end of
-#     your opponent's turn" (or latched onto the permanents for good) leaves
-#     them suspended here and the oracle differ reports it.
-#   * Agumon ST1-03, never selected, is unsuspended throughout: the suspend half
-#     takes exactly 1 Digimon + 1 Tamer, not "all of them".
-#   * P0's own Rosemon (BT1-082 -> BT13-060) is untouched by the rider; it is
-#     unsuspended all line (nothing here ever suspends it).
-#
-# THE LINE DOES NOT ATTACK: Rosemon: Burst Mode's [When Attacking] ("trash the
-# top card of your opponent's security stack for every 2 suspended Digimon /
-# Tamers") is a different clause (#effect#2) and attacking would put noise in
-# this one's observation.
-#
-# PROMPTS. Both picks are real prompts on both wires: DCGO's harness always
-# takes the AI branch of SelectPermanentEffect (the "forced selection" shortcut
-# lives only in the human-UI branch), and the clause's SetUpActivateClass is
-# `isOptional: false` so there is no OptionalSkill gate. Order is Digimon pick
-# then Tamer pick (BT13_060.cs). The picks travel by top-card identity; P1's
-# Biyomon/Agumon/Tai are three distinct ids so slot order cannot mislead DCGO.
-# P0 has exactly ONE Digimon so `field.0` is the same slot on both wires
-# (DCGO seats centre-out; see BT19-075-effect2.yaml "SLOT SAFETY").
-#
-# Memory: T1 P0 Rosemon BT1-082 hard-played for 12: 0 -> -12 -> P1 on 12.
-#   T2 P1 Biyomon (2) + Agumon (3) + Tai (2) = 7: 12 -> 5, pass -> P0 on 3.
-#   T3 P0 digivolve to BT13-060 for 5: 3 -> -2 (turn ends after the trigger).
-#   T4 P1 on 2: all-pass -> P0 on 3.   T5 P0 all-pass -> P1 on 3.
-#   T6 P1: unsuspend phase (the observation), then pass.
-# BT1-082's own text ("[Opponent's Turn] ... if this Digimon is suspended")
-# never applies: P1 never attacks and Rosemon is never suspended.
-#
-# Book: qa/dcgo-exams/BT13/bt13_060_pool.json (--decks).
+# (BT13-060), clause BT13-060#effect#1. The "don't unsuspend" rider holds the
+# suspended Biyomon ST1-02 and Tai Kamiya ST1-12 through P1's very next
+# unsuspend phase, but must NOT apply on P1's following turn (it expires at the
+# end of the opponent's turn); the unselected Birdramon ST1-05 is never touched.
+# Board/prompts follow the oracle-confirmed BT13-060-effect1 line (ST4-12 is
+# hard-playable on T3; a 12-cost Lv.6 on T1 breaks the -10 memory floor).
 card: BT13-060
 clause: BT13-060#effect#1
 covers: [BT13-060#effect#1]
 interaction: { id: "probe:BT13-060#effect#1:scope:neg", source: probe, kind: negative }
-meta: { produced_by: 20261006T134647542879Z-pilot-data-squad-fef91a }
 seed: 424242
+meta: {produced_by: 20261006T153144955691Z-pilot-data-squad-6bbc1b}
 decks:
   p0:
-    # hand [0..4]: the Lv.6, the Lv.7, inert filler; security [5..9] never
-    # flipped; [10] T3 turn draw; [11] the digivolve draw; [12] T5 turn draw.
-    stack: [BT1-082, BT13-060, ST1-02, ST1-03, ST1-04,
-            ST1-05, ST1-08, ST1-10, ST1-13, ST1-14,
-            ST1-02, ST1-03, ST1-04]
-    rest: bt13-060-rosemon
+    # [0..4] hand; [5..9] security (never touched); [10], [11] = the T3 / T5 draws.
+    stack: [ST4-12, BT13-060, ST4-02, ST4-02, ST4-02,
+            ST4-04, ST4-04, ST4-04, ST4-04, ST4-05,
+            ST4-02, ST4-05]
+    rest: tm-rosemon-bm
   p1:
-    # hand [0..4]: the three plays + filler; security [5..9] never flipped;
-    # [10] T2 draw, [11] T4 draw, [12] T6 draw -- all inert and distinct from
-    # the played ids so `play` is unambiguous.
-    stack: [ST1-02, ST1-03, ST1-12, ST1-04, ST1-05,
-            ST1-08, ST1-10, BT1-009, BT3-007, ST1-04,
-            ST1-05, ST1-08, BT3-007]
-    rest: bt13-060-quiet-gaia
+    stack: [ST1-02, ST1-12, ST1-05, ST1-05, ST1-03,
+            BT1-009, BT1-009, BT1-009, ST1-04, BT1-009,
+            ST1-03, ST1-03]
+    rest: tm-rosemon-opponent
 steps:
-  # T1 (P0, memory 0): decline breeding; hard-play Rosemon (12): 0 -> -12.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
-    do: { play: { card: BT1-082, from: hand } }
+    do: { pass: {} }
     expect: { prompt: main_phase }
-  # T2 (P1, memory 12): build the board the clause will suspend: two Digimon
-  # and one Tamer, 12 -> 5, then pass (-> P0 on 3).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): Rosemon ST4-12 (3 -> -7).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST4-12, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1): Biyomon, Tai Kamiya, Birdramon.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -83,45 +51,39 @@ steps:
     do: { play: { card: ST1-02, from: hand } }
     expect: { prompt: main_phase }
   - actor: 1
-    do: { play: { card: ST1-03, from: hand } }
-    expect: { prompt: main_phase }
-  - actor: 1
     do: { play: { card: ST1-12, from: hand } }
     expect: { prompt: main_phase }
   - actor: 1
-    do: { pass: {} }
+    do: { play: { card: ST1-05, from: hand.0 } }
     expect: { prompt: main_phase }
-  # T3 (P0, memory 3): THE CLAUSE. Digivolve for 5 (3 -> -2).
+  # T5 (P0): digivolve (5 -> 0); suspend Biyomon, then Tai.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { digivolve: { from: field.0, using: BT13-060 } }
     expect: { prompt: main_phase }
-  # Suspend 1 of the opponent's Digimon: Biyomon (opp.field.0), NOT Agumon.
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # ... and 1 of their Tamers: Tai Kamiya (opp.field.2, the only Tamer).
   - actor: 0
-    do: { select: { targets: [opp.field.2] } }
+    do: { select: { targets: [opp.field.1] } }
     expect: { prompt: SelectPermanentEffect }
-  # T4 (P1, memory 2): the unsuspend phase is blocked for the suspended pair.
+  # P1 turn: pair stays suspended (rider active).
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T5 (P0, memory 3): all-pass (no attack -- see header).
+  # P0 turn: all-pass.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T6 (P1): the rider has expired; the unsuspend phase unsuspends Biyomon
-  # and Tai. Observed on the two rows below.
+  # P1's next turn: rider expired -> Biyomon and Tai unsuspend.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
