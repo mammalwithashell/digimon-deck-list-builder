@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T21:34:58.181353800+00:00",
+  "last_updated": "2026-10-06T21:37:51.044367100+00:00",
   "clauses": {
     "BT25-082#effect#0": {
       "clause_id": "BT25-082#effect#0",
@@ -138,6 +138,20 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT25-082-qa-Q6390",
       "recorded_at": "2026-10-06T21:03:54.751290900+00:00"
+    },
+    "qa:Q6391": {
+      "interaction_id": "qa:Q6391",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "677ce91514b46d960092958c1aa324e487c2ad8ca3bcfacfe9ced812aab6c56d",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-qa-Q6391.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-qa-Q6391",
+      "recorded_at": "2026-10-06T21:37:51.044367100+00:00"
     },
     "qa:Q6392": {
       "interaction_id": "qa:Q6392",
