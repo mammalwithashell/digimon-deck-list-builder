@@ -61,6 +61,12 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT25-083 } }
     expect: { prompt: main_phase }
+  # DCGO-ONLY: [When Digivolving] shared effect (BT25_083.cs) is gated on a
+  # [Three Musketeers] trait card in hand/trash, which P0 holds here, so DCGO
+  # asks the Hand/Trash/Don't-place menu (generic_int). Decline = 3.
+  - actor: 0
+    do: { select: { value: 3, dcgo_only: true } }
+    expect: { prompt: generic_int }
   # SIM-ONLY: vacuous [When Digivolving] prompts (NOTES-BT25-083.md finding).
   - actor: 0
     do: { select: { cards: [BT25-083], ordinal: 0, sim_only: true } }
