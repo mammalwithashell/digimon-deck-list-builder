@@ -1,0 +1,55 @@
+# Probe optional_decline: BT21-074#effect#1 [On Play]. The tuck is mandatory
+# in DCGO (no OptionalSkill) but its hand pick has canNoSelect: true, so the
+# player may pick nothing. Here P0 declines the hand pick with Scopemon
+# (BT21-071) in hand: nothing is tucked and no host prompt follows. Our engine
+# must offer a decline and skip the host selection rather than force a pick.
+card: BT21-074
+clause: BT21-074#effect#1
+interaction: {id: "probe:BT21-074#effect#1:optional_decline", source: probe, kind: positive}
+covers: [BT21-074#effect#1]
+meta: {produced_by: 20261006T141841924127Z-pilot-three-musketeers-22efb3}
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped);
+    # stack[10] = T3 draw.
+    stack: [BT21-074, BT21-071, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-02, ST1-04,
+            BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-074, from: hand } }
+    expect: { prompt: main_phase }
+  # The [Appmon] trait card from hand (single qualifying zone: no zone menu,
+  # no OptionalSkill -- the effect is mandatory in DCGO).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # Memory is -4, so the seat is P1 (T4): the trailing step.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
