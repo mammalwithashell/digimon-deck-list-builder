@@ -737,10 +737,18 @@ class Driver:
     # ------------------------------------------------------------------ the run tree
 
     def _git(self, *args: str, timeout: float = 300) -> tuple:
-        try:
-            return self.ctx.run_command(["git", *args], str(self.repo), timeout)
-        except Exception as e:
-            return None, "", f"{type(e).__name__}: {e}"
+        from tools.git_retry import retry_on_index_lock
+
+        def once():
+            try:
+                return self.ctx.run_command(["git", *args], str(self.repo), timeout)
+            except Exception as e:
+                return None, "", f"{type(e).__name__}: {e}"
+
+        # The merger, the worker CLIs (`claude -p` refreshes the index in the
+        # tree it starts in) and this driver all take the run tree's index
+        # lock; git never waits for it.
+        return retry_on_index_lock(once, lambda r: r[2])
 
     def _on_run_branch(self) -> bool:
         if self._branch_ok is None:
@@ -908,6 +916,19 @@ class Driver:
         self._ran = True
         self._started = self.clock()
         try:
+            if self.manage_tree and Path(self.repo).is_dir():
+                # A driver killed mid-operation leaves the run tree's index.lock
+                # behind; every git call then fails until someone removes it
+                # (the second pilot lost nine items to one such lock). A fresh
+                # run has no tree yet; a sweep that cannot run never stops the run.
+                from tools.git_retry import sweep_stale_index_lock
+                try:
+                    swept = sweep_stale_index_lock(self.repo)
+                except Exception as e:  # noqa: BLE001 -- best effort
+                    swept = None
+                    self.state.problems.append(f"stale index.lock sweep skipped: {e!r}")
+                if swept is not None:
+                    self.state.problems.append(f"removed a stale {swept} left by an earlier process")
             self._on_start()
             if self.serial:
                 self._loop_serial()

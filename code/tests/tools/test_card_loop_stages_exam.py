@@ -295,6 +295,29 @@ def test_sim_writes_the_agreed_ruling_block_into_the_scenario(repo):
     assert out.data["ruling_block_written"] == [rel]
 
 
+def test_a_block_written_before_a_failing_sim_is_still_reported_for_the_commit(repo):
+    # Left uncommitted, the written block made the re-author's merge refuse
+    # ("manifest paths have uncommitted changes") three times (Q4577/Q4578/Q4585).
+    rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
+    _write_scenario(repo, rel, QA_SCENARIO)
+    cmds = FakeCommands().on("--sim-only", 1, SIM_FAIL)
+    item = _item("SIM", item="interaction:qa:Q77", scenario_paths=[rel], expect_ruling=AGREED,
+                 author_attempt="att-a", author_stage="author_interaction")
+    out = SimExecutor().run(_ctx(repo, cmds=cmds), item)
+    assert out.next_state == "AUTHORING"
+    assert out.data["ruling_block_written"] == [rel]
+
+
+def test_a_ruling_contradiction_exiting_one_still_goes_to_the_oracle(repo):
+    rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
+    _write_scenario(repo, rel, QA_SCENARIO + "expect_ruling:\n  q_id: Q77\n  assert:\n"
+                                              "    - at: 1\n      that: {p1.field: []}\n")
+    cmds = FakeCommands().on("--sim-only", 1, SIM_RULING_CONTRADICTED)
+    out = SimExecutor().run(_ctx(repo, cmds=cmds), _item("SIM", item="interaction:qa:Q77", scenario_paths=[rel],
+                                                         expect_ruling=AGREED))
+    assert out.next_state == "ORACLE"
+
+
 def test_sim_accepts_the_agreed_ruling_block_verbatim(repo):
     rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
     _write_scenario(repo, rel, QA_SCENARIO + "expect_ruling:\n  q_id: Q77\n  assert:\n"

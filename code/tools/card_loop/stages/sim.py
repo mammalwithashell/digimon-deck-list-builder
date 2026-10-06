@@ -92,8 +92,12 @@ class SimExecutor:
                 corrections.append(corr.gate_fail(author, gate="sim",
                                                   stage=item.data.get("author_stage") or _author_stage(item),
                                                   item=item.item, detail=detail, ts=ctx.now()))
+            # `ruling_block_written` rides along so the driver commits the block
+            # even now: left uncommitted, it refused the re-author's merge
+            # ("manifest paths have uncommitted changes") three times running.
             return base.outcome("AUTHORING", item=item, corrections=corrections,
-                                data={"sim_failure": failures, "deck_books": books or None},
+                                data={"sim_failure": failures, "deck_books": books or None,
+                                      "ruling_block_written": written or None},
                                 reason=f"sim-only failed for {', '.join(failures)}")
         reason = "sim-only clean; submitting to the oracle"
         if contradicted:

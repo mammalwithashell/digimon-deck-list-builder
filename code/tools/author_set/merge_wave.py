@@ -216,8 +216,15 @@ def special_mode_problems(diff_bytes: bytes) -> list[str]:
 
 def _git(repo: str | os.PathLike, *args: str, check: bool = True, stdin: bytes | None = None,
          text: bool = True) -> subprocess.CompletedProcess:
-    cp = subprocess.run(["git", *args], cwd=str(repo), capture_output=True, input=stdin,
-                        text=False)
+    from tools.git_retry import retry_on_index_lock
+
+    # Several writers share the run tree's index lock (the loop's merger and
+    # driver, worker CLIs refreshing the index); git fails at once on a
+    # collision instead of waiting, so the retry lives here.
+    cp = retry_on_index_lock(
+        lambda: subprocess.run(["git", *args], cwd=str(repo), capture_output=True, input=stdin,
+                               text=False),
+        lambda r: r.stderr)
     if text:
         cp = subprocess.CompletedProcess(cp.args, cp.returncode,
                                          cp.stdout.decode("utf-8", "replace"),

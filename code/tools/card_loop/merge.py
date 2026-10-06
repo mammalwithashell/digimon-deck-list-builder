@@ -80,8 +80,12 @@ def engine_branch_name(run_id: str, gap_or_attempt: str) -> str:
 
 
 def git(repo: str | os.PathLike, *args: str, check: bool = False) -> subprocess.CompletedProcess:
-    cp = subprocess.run(["git", *args], cwd=str(repo), capture_output=True, text=True,
-                        encoding="utf-8", errors="replace")
+    from tools.git_retry import retry_on_index_lock
+
+    cp = retry_on_index_lock(
+        lambda: subprocess.run(["git", *args], cwd=str(repo), capture_output=True, text=True,
+                               encoding="utf-8", errors="replace"),
+        lambda r: r.stderr)
     if check and cp.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)} failed in {repo}: {cp.stderr.strip()}")
     return cp

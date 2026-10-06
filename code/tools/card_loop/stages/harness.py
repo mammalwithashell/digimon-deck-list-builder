@@ -299,7 +299,9 @@ def parse_sim_output(rc: int | None, stdout: str, stderr: str = "") -> SimReport
     if rc is None:
         failures.append((stderr or "").strip() or "harness did not start")
     ruling = [l for l in failures if "CONTRADICT" in l]
-    line_ok = rc == 0 and summary is not None and len(ruling) == len(failures)
+    # A ruling contradiction exits 1 (a line failure 2, a crash None): the
+    # line is fine when every failure line is a ruling line.
+    line_ok = rc in (0, 1) and summary is not None and len(ruling) == len(failures)
     return SimReport(passed=passed, rc=rc, failures=failures, notes=notes, summary=summary,
                      assert_line=assert_line, line_ok=line_ok, ruling_contradicted=bool(ruling))
 

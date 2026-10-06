@@ -151,6 +151,10 @@ def test_a_contradicted_ruling_is_a_failure_line_the_author_sees():
     assert "p1.security expected 3" in r.failure_text()
     # the LINE ran clean; only the ruling failed -- the oracle can still measure it
     assert r.ruling_contradicted and r.line_ok
+    # the harness exits 1 on a contradiction (2 on a line failure): still the line is ok
+    r1 = H.parse_sim_output(1, SIM_RULING_FAIL)
+    assert r1.ruling_contradicted and r1.line_ok and not r1.passed
+    assert not H.parse_sim_output(2, SIM_RULING_FAIL).line_ok
     assert not H.parse_sim_output(1, SIM_FAIL).line_ok and not H.parse_sim_output(1, SIM_FAIL).ruling_contradicted
     assert H.parse_sim_output(0, SIM_PASS).line_ok
 
