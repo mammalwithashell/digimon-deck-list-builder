@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T14:21:50.926463900+00:00",
+  "last_updated": "2026-10-06T14:33:03.001005400+00:00",
   "clauses": {
     "BT21-074#effect#0": {
       "clause_id": "BT21-074#effect#0",
@@ -76,6 +76,20 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT21-074-effect1-scope-neg",
       "recorded_at": "2026-10-06T14:21:50.926463900+00:00"
+    },
+    "probe:BT21-074#effect#2:optional_decline": {
+      "interaction_id": "probe:BT21-074#effect#2:optional_decline",
+      "card_ids": [
+        "BT21-074"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "e76d35ee7244cf5a17563971aab695b13c8a1b1ebdda9ea28e06f905a7d552bf",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-074-effect2-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT21-074-effect2-optional-decline",
+      "recorded_at": "2026-10-06T14:33:03.001005400+00:00"
     }
   }
 }
