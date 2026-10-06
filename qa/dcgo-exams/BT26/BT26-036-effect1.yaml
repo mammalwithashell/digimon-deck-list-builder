@@ -45,14 +45,15 @@ steps:
   # T3 (P0): THE CLAUSE -- move Lalamon to the battle area.
   - actor: 0
     do: { move: { from: breeding } }
-    expect: { prompt: SelectCardEffect }
+    expect: { prompt: breeding_action }
   - actor: 0
     do: { select: { cards: [BT26-091] } }
+    expect: { prompt: SelectCardEffect }
   # Bottom order for the two leftovers.
   - actor: 0
     do: { select: { cards: [ST24-04, ST24-15] } }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-meta: {produced_by: 20261006T150024677751Z-pilot-data-squad-548ac9}
+meta: {produced_by: 20261006T153922124718Z-pilot-data-squad-e0ea80}
 assert: []
