@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-10-06T23:11:45.639987600+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T23:18:13.581009500+00:00",
   "clauses": {
     "BT26-065#effect#0": {
       "clause_id": "BT26-065#effect#0",
@@ -44,6 +44,22 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-065-inherited1",
       "recorded_at": "2026-10-06T23:11:45.639987600+00:00"
+    }
+  },
+  "interactions": {
+    "qa:Q7088": {
+      "interaction_id": "qa:Q7088",
+      "card_ids": [
+        "BT26-065"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "ff1e7155a46ea795ac5a6325c1295c7cdefe12f40b83239e417165669dbf6317",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-065-qa-Q7088.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-065-qa-Q7088",
+      "recorded_at": "2026-10-06T23:18:13.581009500+00:00"
     }
   }
 }
