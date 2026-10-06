@@ -111,6 +111,15 @@ fn inherited_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
     crate::card_data::parse_printed_keywords("", &card_data.inherited_text, "")
 }
 
+/// Keywords printed in a link card's link effect: a Digimon gains them while the
+/// card is one of its link cards (general_rule.pdf 4-2-6), and only then.
+fn link_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
+    if card_data.link_text.is_empty() {
+        return Vec::new();
+    }
+    crate::card_data::parse_printed_keywords("", &card_data.link_text, "")
+}
+
 /// One stashed member of a parked multi-permanent deletion batch
 /// (G-ENGINE-BATCH-DELETION-PARK-DROPS-REST).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -3637,6 +3646,37 @@ impl Game {
                     }
                 }
 
+                // Printed LINK keywords reach the host only while this card is
+                // one of its link cards (4-2-6), so they synthesize as
+                // `.linked()` auto-effects: the linked-card trigger and
+                // replacement passes collect them, the top-card and inherited
+                // scans skip them. De-duped against an unconditional
+                // `scope: linked` grant clause for the same keyword, as the
+                // loop above is against a `scope: inherited` one, so a DSL
+                // card's link keyword fires once in a live game, as it does in
+                // the embedded pack (whose text fields are empty).
+                for kw in link_keywords(cd) {
+                    let covered_by_linked_grant = registry_effects.as_ref().is_some_and(|es| {
+                        es.iter().any(|e| {
+                            e.declarative
+                                && e.linked
+                                && e.condition.is_none()
+                                && e.granted_keyword == Some(kw)
+                        })
+                    });
+                    if covered_by_linked_grant {
+                        continue;
+                    }
+                    effects.extend(
+                        crate::cards::keyword_effects::keyword_to_auto_effect(kw, handle)
+                            .into_iter()
+                            .map(|mut effect| {
+                                effect.linked = true;
+                                effect
+                            }),
+                    );
+                }
+
                 effects
             })
             .unwrap_or_default();
@@ -3670,7 +3710,9 @@ impl Game {
                 if !grant.declarative {
                     continue;
                 }
-                if !grant.inherited && native_keywords.contains(&kw) {
+                // A face grant of a keyword the card prints on its face is
+                // redundant; an inherited or link grant reaches another Digimon.
+                if !grant.inherited && !grant.linked && native_keywords.contains(&kw) {
                     continue;
                 }
                 let grant_condition = grant.condition.clone();
@@ -3679,6 +3721,11 @@ impl Game {
                         .into_iter()
                         .map(|mut effect| {
                             effect.inherited = grant.inherited;
+                            // A `scope: linked` grant (Link-ESS) fires for the
+                            // host through the linked-card scans, never as the
+                            // card's own face effect (4-2-6): BT24-067
+                            // Hackmon's link-box <Retaliation>.
+                            effect.linked = grant.linked;
                             if let Some(gc) = grant_condition.clone() {
                                 effect.condition = Some(match effect.condition.take() {
                                     Some(own) => std::sync::Arc::new(
@@ -3867,6 +3914,7 @@ mod reset_for_replay_tests {
             effect_text: String::new(),
             inherited_text: String::new(),
             security_text: String::new(),
+            link_text: String::new(),
             keywords: Vec::new(),
             effect_class_name: id.replace('-', "_"),
             index: 0,
@@ -3998,6 +4046,7 @@ mod current_attacker_tests {
             effect_text: String::new(),
             inherited_text: String::new(),
             security_text: String::new(),
+            link_text: String::new(),
             keywords: Vec::new(),
             effect_class_name: id.replace('-', "_"),
             index: 0,
@@ -4150,6 +4199,7 @@ mod resolve_token_as_battle_area_top_tests {
             effect_text: String::new(),
             inherited_text: String::new(),
             security_text: String::new(),
+            link_text: String::new(),
             keywords: Vec::new(),
             effect_class_name: id.replace('-', "_"),
             index: 0,

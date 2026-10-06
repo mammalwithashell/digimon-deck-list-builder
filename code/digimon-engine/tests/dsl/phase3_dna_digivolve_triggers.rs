@@ -21,6 +21,7 @@ fn digimon(id: &str, level: u8, dna_costs: Vec<DnaCost>, evo_costs: Vec<EvoCost>
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        link_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: id.replace('-', "_"),

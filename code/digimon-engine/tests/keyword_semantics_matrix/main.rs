@@ -116,6 +116,7 @@ fn synthetic_card(card_id: &str, keyword: Keyword) -> CardData {
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        link_text: String::new(),
         keywords: vec![keyword],
         dual: None,
         effect_class_name: card_id.replace('-', "_"),

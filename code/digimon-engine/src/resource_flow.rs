@@ -4,6 +4,9 @@ use crate::enums::Keyword;
 pub(crate) fn card_data_indicates_resource_flow(data: &CardData) -> bool {
     data.keywords.iter().any(keyword_indicates_resource_flow)
         || text_indicates_resource_flow(&data.text_for_search_all_faces())
+        // A link effect is not searchable card text (see `CardData::link_text`),
+        // but a link card that draws when linked (BT21-071) still moves resources.
+        || text_indicates_resource_flow(&data.link_text)
 }
 
 pub(crate) fn keyword_indicates_resource_flow(keyword: &Keyword) -> bool {

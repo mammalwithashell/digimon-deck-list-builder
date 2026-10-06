@@ -139,6 +139,15 @@ pub struct CardData {
     pub effect_text: String,
     pub inherited_text: String,
     pub security_text: String,
+    /// A link card's printed link effect (general_rule.pdf 2-3-12-6), from
+    /// cards.json's `link_effect_description_eng`. A Digimon gains it while this
+    /// card is one of its link cards (4-2-6), never while the card is one of its
+    /// digivolution cards: that is `inherited_text` (4-2-4), and a link card isn't
+    /// a stacked card (4-7-2). "[X] in its text" searches don't read it: the
+    /// official ruling enumerating that text lists no link effects, and DCGO's
+    /// `CardSource.HasText` skips `LinkEffect`.
+    #[serde(default)]
+    pub link_text: String,
     pub effect_class_name: String,
     /// Stable integer index from cards.json (1-based; 0 = unset/legacy).
     /// This is the source of truth for tensor encoding — must match Python.
@@ -202,6 +211,8 @@ struct RawCard {
     inherited_effect_description_eng: String,
     #[serde(default)]
     security_effect_description_eng: String,
+    #[serde(default)]
+    link_effect_description_eng: String,
     #[serde(default)]
     evo_costs: Vec<RawEvoCost>,
     /// DNA digivolve costs — absent in cards.json today; deserializes to
@@ -396,6 +407,7 @@ impl CardData {
                 effect_text: raw_card.effect_description_eng,
                 inherited_text: raw_card.inherited_effect_description_eng,
                 security_text: raw_card.security_effect_description_eng,
+                link_text: raw_card.link_effect_description_eng,
                 keywords,
                 effect_class_name: raw_card.card_effect_class_name,
                 index: raw_card.index,

@@ -256,6 +256,9 @@ pub struct PyCard {
     pub inherited_text: String,
     #[pyo3(get)]
     pub security_text: String,
+    /// A link card's link effect (`CardData::link_text`); empty otherwise.
+    #[pyo3(get)]
+    pub link_text: String,
 }
 
 impl PyCard {
@@ -290,6 +293,7 @@ impl PyCard {
             effect_text: card.effect_text.clone(),
             inherited_text: card.inherited_text.clone(),
             security_text: card.security_text.clone(),
+            link_text: card.link_text.clone(),
         }
     }
 }

@@ -33,6 +33,7 @@ pub fn card_data_from_compiled(card_id: &str) -> CardData {
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        link_text: String::new(),
         keywords: Vec::new(),
         dual: card.dual.as_ref().map(|dual| DualCardData {
             digimon: DualDigimonFace {

@@ -38,6 +38,7 @@ fn evo_lv4_red(card_id: &str) -> CardData {
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        link_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: card_id.replace('-', "_"),
