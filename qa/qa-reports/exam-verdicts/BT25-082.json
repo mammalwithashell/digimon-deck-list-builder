@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T17:14:37.514111500+00:00",
+  "last_updated": "2026-10-06T17:20:32.272309400+00:00",
   "clauses": {
     "BT25-082#effect#0": {
       "clause_id": "BT25-082#effect#0",
@@ -124,6 +124,21 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT25-082-qa-Q6389",
       "recorded_at": "2026-10-06T17:14:37.514111500+00:00"
+    },
+    "qa:Q6390": {
+      "interaction_id": "qa:Q6390",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "e8421d5d86944804b81d2139fb754d81604a526f8ea3f78e8235ef84ca8d6d20",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-qa-Q6390.yaml",
+      "reason": "ours contradicts ruling qa:Q6390 (ours vs DCGO: agree); CLEAN (compared 17 of 21 ours / 19 dcgo steps (4 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-qa-Q6390",
+      "recorded_at": "2026-10-06T17:20:32.272309400+00:00"
     }
   }
 }
