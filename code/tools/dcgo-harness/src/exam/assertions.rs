@@ -70,6 +70,22 @@ fn check_rows(rows: &[Assertion], projections: &[StateProjection]) -> (u32, Vec<
                 )),
                 Some(actual) => {
                     if !values_equal(expected, &actual) {
+                        let actual_s = actual.as_str().unwrap_or_default();
+                        if key == "phase" && is_selection_pseudo_phase(actual_s) {
+                            // The engine replaces the turn phase with the open
+                            // selection's kind and keeps no record of the phase it
+                            // interrupted, so `phase` is not observable here.
+                            // Name that, so the author moves the check to a zone
+                            // or a count (or a step with no selection open).
+                            failures.push(format!(
+                                "at {}: phase is not observable while a selection is open (our engine \
+                                 reports `{actual_s}` there, not the turn phase) -- expected {}; assert a \
+                                 zone or a count at this step, or the phase at a step with no selection open",
+                                a.at,
+                                render_value(expected)
+                            ));
+                            continue;
+                        }
                         failures.push(format!(
                             "at {}: {key} expected {} but our engine has {}",
                             a.at,
@@ -159,6 +175,17 @@ fn values_equal(expected: &serde_yml::Value, actual: &serde_yml::Value) -> bool 
         },
         _ => expected == actual,
     }
+}
+
+/// The engine's `GamePhase::py_name()` for a pending selection (`phases.rs`
+/// `is_selection_phase`): a prompt kind standing in for the turn phase.
+fn is_selection_pseudo_phase(name: &str) -> bool {
+    matches!(
+        name,
+        "SelectTarget" | "SelectMaterial" | "SelectTrash" | "SelectSource" | "SelectHand" | "SelectReveal"
+            | "SelectSecurity" | "SelectEffectChoice" | "SelectUnion" | "SelectPermutation" | "SelectBudgeted"
+            | "SelectBreedingPermanent" | "SelectPlayOrder"
+    )
 }
 
 fn render_value(v: &serde_yml::Value) -> String {
@@ -255,6 +282,24 @@ mod ruling_tests {
     fn strings_compare_case_insensitively_for_phase_names() {
         assert!(values_equal(&y("breeding"), &y("Breeding")));
         assert!(!values_equal(&y("breeding"), &y("Main")));
+    }
+
+    #[test]
+    fn a_phase_asserted_while_a_selection_is_open_is_named_unobservable() {
+        // Q2669: `phase: breeding` at a step where our engine reports the open
+        // trigger-order selection (`SelectPermutation`) instead of Breeding.
+        let mut t = trace();
+        t[2].phase = "SelectPermutation".to_string();
+        let s = scenario("interaction: { id: \"qa:Q2669\", source: qa, kind: positive }\nexpect_ruling:\n  q_id: Q2669\n  assert:\n    - at: 2\n      that: { phase: breeding }\n");
+        let (checked, failures) = check_ruling(&s, &t).unwrap();
+        assert_eq!(checked, 1);
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("not observable while a selection is open")
+                && failures[0].contains("SelectPermutation"), "{failures:?}");
+        // a plain phase mismatch keeps the plain message
+        let s2 = scenario("interaction: { id: \"qa:Q2669\", source: qa, kind: positive }\nexpect_ruling:\n  q_id: Q2669\n  assert:\n    - at: 1\n      that: { phase: breeding }\n");
+        let (_, f2) = check_ruling(&s2, &t).unwrap();
+        assert!(f2[0].contains("expected breeding but our engine has main"), "{f2:?}");
     }
 
     #[test]
