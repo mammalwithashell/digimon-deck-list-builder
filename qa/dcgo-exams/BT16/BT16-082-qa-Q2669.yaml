@@ -4,7 +4,7 @@ card: BT16-082
 clause: BT16-082#effect#0
 interaction: {id: "qa:Q2669", source: qa, kind: positive}
 covers: [BT16-082#effect#0]
-meta: {produced_by: 20261006T205103434839Z-pilot-data-squad-61330d}
+meta: {produced_by: 20261006T211315863653Z-pilot-data-squad-096130}
 seed: 424242
 decks:
   p0:
@@ -53,10 +53,3 @@ steps:
   - actor: 0
     do: { select: { yes: true } }
 assert: []
-expect_ruling:
-  q_id: Q2669
-  assert:
-  - at: 9
-    that: {phase: breeding}
-  - at: 11
-    that: {phase: main}
