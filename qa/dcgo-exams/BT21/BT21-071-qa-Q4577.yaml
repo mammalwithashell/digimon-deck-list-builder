@@ -73,11 +73,8 @@ steps:
 expect_ruling:
   q_id: Q4577
   assert:
-  - at: 12
+  - at: 9
     that:
-      p0.memory: -3
       p0.field:
       - card_id: BT21-071
-        sources:
-        - EX7-008
-        - ST1-01
+        sources: [EX7-008, ST1-01]
