@@ -60,7 +60,7 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T4 (P1): play ST1-04
+  # T4 (P1): play BT3-007.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -121,9 +121,12 @@ steps:
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
+  # Empty Counter window: our engine parks a Hand prompt with only PASS.
+  # The previous oracle run reached this point and DCGO asked P1 instead;
+  # there is no P0 OptionalSkill to answer on the wire.
   - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: SelectHandEffect }
   # First attacker dies against ST24-10 security; Dracomon is now slot 0.
   - actor: 1
     do: { attack: { attacker: field.0, target: security } }
@@ -131,11 +134,16 @@ steps:
   - actor: 0
     do: { select: { cards: [BT26-094] } }
     expect: { prompt: SelectHandEffect }
+  # Same empty Counter window after accepting Rosemon's second trigger.
   - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
-meta: {produced_by: 20261006T154059589286Z-pilot-data-squad-99d915}
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: SelectHandEffect }
+  # Shared checkpoint after combat: Keenan must now be on P0's field, and
+  # P1 can still spend memory normally. No start-of-turn Keenan trigger yet.
+  - actor: 1
+    do: { play: { card: BT1-009, from: hand } }
+    expect: { prompt: main_phase }
+meta: {produced_by: 20261006T163301156271Z-pilot-data-squad-759f6f}
 assert: []
-
 
 
