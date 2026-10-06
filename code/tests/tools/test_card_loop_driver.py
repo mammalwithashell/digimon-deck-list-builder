@@ -667,7 +667,9 @@ def test_worker_stages_run_concurrently_and_the_oracle_strictly_alone(tmp_path):
 
     items = [f"clause:BT1-001#effect#{i}" for i in range(6)]
     h = Harness(tmp_path, [seed(i, "AUTHORING") for i in items],
-                [tracked("AUTHORING", "SIM", "w", "author_clause"), tracked("SIM", "ORACLE", "w", pause=0.01),
+                # A 0.4 s window: three worker tasks must overlap even on a loaded
+                # machine (the 50 ms default saw w_max == 2 beside two live pilots).
+                [tracked("AUTHORING", "SIM", "w", "author_clause", pause=0.4), tracked("SIM", "ORACLE", "w", pause=0.01),
                  tracked("ORACLE", "CONFIRMED", "o", pause=0.02)],
                 serial=False, config=cfg(tmp_path, concurrency=3))
     result = h.run()
