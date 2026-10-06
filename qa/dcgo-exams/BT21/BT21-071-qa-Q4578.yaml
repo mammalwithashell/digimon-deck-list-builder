@@ -105,3 +105,9 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert: []
+expect_ruling:
+  q_id: Q4578
+  assert:
+  - at: 13
+    that:
+      p0.trash: [BT21-054]

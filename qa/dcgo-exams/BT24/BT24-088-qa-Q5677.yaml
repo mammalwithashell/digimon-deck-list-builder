@@ -72,3 +72,13 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert: []
+expect_ruling:
+  q_id: Q5677
+  assert:
+  - at: 2
+    that:
+      p0.trash: [EX7-008]
+  - at: 6
+    that:
+      p0.trash: []
+      p0.field: [EX7-008]
