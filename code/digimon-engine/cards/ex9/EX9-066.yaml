@@ -146,6 +146,7 @@ name: Tai Kamiya & Matt Ishida
 kind: tamer
 color: [red, blue]
 cost: 4
+traits: [ADVENTURE]
 
 effects:
   # ─── Clause 1: [On Play] return-from-trash ELSE draw 1 ─────────────────────

@@ -375,7 +375,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[All Turns] When your Digimon or Tamers are played or digivolve, if any of them have [Greymon] or [Matt Ishida] in their names, this Digimon may digivolve into a Digimon card with [Garurumon] in its name in the hand without paying the cost.",
     "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
@@ -22261,7 +22261,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Virus"
+      "Data"
     ],
     "effect_description_eng": "[Opponent's Turn] When an opponent's Digimon attacks, suspend up to 2 of their Digimon without ＜Blocker＞.\r\n[On Deletion] You may play 1 green level 4 or lower Digimon card with the [Hybrid] trait from your hand without paying its memory cost.",
     "inherited_effect_description_eng": "",
@@ -22368,7 +22368,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Vaccine"
+      "Virus"
     ],
     "effect_description_eng": "",
     "inherited_effect_description_eng": "[All Turns] While this Digimon has ＜Blocker＞, it gets +1000 DP.",
@@ -23326,7 +23326,8 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Data",
+      "Virus"
     ],
     "effect_description_eng": "[All Turns] All of your Digimon with [Huckmon] in their name or [Royal Knight] trait get +2000 DP.\r\n[On Play] Gain 1 memory.",
     "inherited_effect_description_eng": "Card Effect(s) [All Turns] All of your Digimon with [Huckmon] in their name or [Royal Knight] trait get +2000 DP.\r\n[On Play] Gain 1 memory.",
@@ -27026,7 +27027,8 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Data",
+      "Virus"
     ],
     "effect_description_eng": "[On Play] You may place 1 [Sistermon Ciel] from your hand or trash at the bottom of this Digimon's digivolution cards to delete 1 of your opponent's Digimon with a play cost of 5 or less.\r\n[On Deletion] Return 1 card with [Jesmon], [Huckmon] or [Sistermon] in its name other than [Sistermon Ciel (Awakened)] from your trash to your hand.",
     "inherited_effect_description_eng": "Card Effect(s) [On Play] You may place 1 [Sistermon Noir] from your hand or trash at the bottom of this Digimon's digivolution cards to delete 1 of your opponent's Digimon with a play cost of 5 or less.\r\n[On Deletion] Return 1 card with [Jesmon], [Huckmon] or [Sistermon] in its name other than [Sistermon Noir (Awakened)] from your trash to your hand.",
@@ -32385,7 +32387,7 @@
       "Rookie"
     ],
     "attribute_eng": [
-      "Vaccine"
+      "Data"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with [Garurumon] or [Omnimon] in its name and 1 [X Antibody] among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
     "inherited_effect_description_eng": "",
@@ -33119,7 +33121,7 @@
     ],
     "type_eng": [
       "Archangel",
-      "X Antibody}}"
+      "X Antibody"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -34343,7 +34345,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 2-color purple card among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
     "inherited_effect_description_eng": "",
@@ -37989,7 +37991,7 @@
       5
     ],
     "type_eng": [
-      "Avian",
+      "Bird",
       "Twilight",
       "Xros Heart"
     ],
@@ -45684,7 +45686,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Vaccine"
+      "Data"
     ],
     "effect_description_eng": "[On Play] Reveal 1 card from the top of your deck. Add it to your hand if it's a green Digimon card. Place the rest at the bottom of your deck.",
     "inherited_effect_description_eng": "",
@@ -45948,7 +45950,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "",
     "inherited_effect_description_eng": "",
@@ -53856,7 +53858,7 @@
       "Mega"
     ],
     "attribute_eng": [
-      "Vaccine"
+      "Data"
     ],
     "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n[When Digivolving] By unsuspending this Digimon, suspend 1 of your opponent's Digimon.\r\n[End of Your Turn] This Digimon may attack an opponent's Digimon.",
     "inherited_effect_description_eng": "",
@@ -65270,8 +65272,7 @@
       2
     ],
     "type_eng": [
-      "Angel",
-      "3"
+      "Angel"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -65398,8 +65399,7 @@
       2
     ],
     "type_eng": [
-      "Mythical Beast",
-      "3"
+      "Mythical Beast"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -65595,8 +65595,7 @@
       6
     ],
     "type_eng": [
-      "Demon Lord",
-      "3"
+      "Demon Lord"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -65636,8 +65635,7 @@
       6
     ],
     "type_eng": [
-      "Ancient Bird",
-      "3"
+      "Ancient Bird"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -67102,7 +67100,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Virus"
+      "Data"
     ],
     "effect_description_eng": "[When Digivolving] ＜Blitz＞ (If your opponent has 1 or more memory, this Digimon may attack.)\r\n[When Attacking] This Digimon gets +2000 DP until the end of your opponent's turn.",
     "inherited_effect_description_eng": "",
@@ -70618,12 +70616,11 @@
       0
     ],
     "type_eng": [
+      "Minor",
       "Xros Heart"
     ],
     "form_eng": [],
-    "attribute_eng": [
-      "Minor"
-    ],
+    "attribute_eng": [],
     "effect_description_eng": "",
     "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] By placing 1 Digimon card with the [Xros Heart] or [Blue Flare] trait rom your hand under any of your Tamers, ＜Draw 1＞ (Draw 1 card from your deck.)",
     "security_effect_description_eng": "",
@@ -73091,7 +73088,6 @@
     ],
     "type_eng": [
       "Cyborg",
-      "Twilight",
       "Xros Heart"
     ],
     "form_eng": [],
@@ -74806,7 +74802,7 @@
       5
     ],
     "type_eng": [
-      "Beast Dragon",
+      "Beast",
       "X Antibody",
       "Chronicle"
     ],
@@ -82621,7 +82617,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Virus"
     ],
     "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n[Main] [Once Per Turn] By paying 3 cost, you may play 1 play cost 5 or lower Digimon card with the [Flame] or [CS] trait from your trash without paying the cost. Then, this Digimon may attack.",
     "inherited_effect_description_eng": "[Your Turn] This Digimon with the [Flame] or [CS] trait gains ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)",
@@ -83105,7 +83101,7 @@
       1
     ],
     "type_eng": [
-      "Mythical Dragon",
+      "Holy Dragon",
       "CS"
     ],
     "form_eng": [],
@@ -86449,7 +86445,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Virus"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] Until your opponent's turn ends, their effects can't play Digimon or Tamers from the trash.\r\n[On Play] [When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.",
     "inherited_effect_description_eng": "",
@@ -88306,7 +88302,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[All Turns] When any of your Digimon or Tamers would leave the battle area by your opponent's effects, by suspending this Digimon, 1 of those Digimon or Tamers doesn't leave.\r\n[All Turns] [Once Per Turn] When this Digimon suspends, delete all of your opponent's Digimon with the lowest play cost.",
     "inherited_effect_description_eng": "",
@@ -88422,7 +88418,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Virus"
+      "Data"
     ],
     "effect_description_eng": "[On Play] [On Deletion] 1 of your Digimon with the [Ghost] trait gains ＜Blocker＞ (This Digimon can block in the blocker timing.) until your opponent's turn ends.",
     "inherited_effect_description_eng": "[On Deletion] Gain 1 memory.",
@@ -88975,7 +88971,8 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Data",
+      "Virus"
     ],
     "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] Delete 1 of your opponent's Digimon with a play cost of 4 or less.\r\n[All Turns] When this Digimon suspends, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
     "inherited_effect_description_eng": "Card Effect(s) ＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] Delete 1 of your opponent's Digimon with a play cost of 4 or less.\r\n[All Turns] When this Digimon suspends, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
@@ -89333,7 +89330,8 @@
       4
     ],
     "type_eng": [
-      "Hudie/CS"
+      "Hudie",
+      "CS"
     ],
     "form_eng": [],
     "attribute_eng": [],
@@ -91888,8 +91886,7 @@
     ],
     "type_eng": [
       "Zip/Unzip (App Name)",
-      "Zip",
-      "Unzip"
+      "Zip/Unzip"
     ],
     "form_eng": [
       "Sup.",
@@ -92524,7 +92521,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Ultimate"
+      "Virus"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] By trashing 1 card in your hand, until your opponent's turn ends, 1 of your Digimon with the [Demon], [Shaman] or [Titan] trait gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.).\r\n[On Deletion] You may play 1 level 4 or lower [Demon] or [Titan] trait Digimon card from your trash without paying the cost.",
     "inherited_effect_description_eng": "[Your Turn] While this Digimon is [Titamon] or has the [Titan] trait, it gains ＜Security A. +1}＞ (This Digimon checks 1} additional security cards.).",
@@ -92642,7 +92639,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Ultimate"
+      "Data"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] By trashing 1 card in your hand, delete 1 each of your opponent's level 3 and level 4 Digimon.",
     "inherited_effect_description_eng": "[Your Turn] While this Digimon is [Titamon] or has the [Titan] trait, it gains ＜Security A. +1}＞ (This Digimon checks 1} additional security cards.).",
@@ -92869,7 +92866,6 @@
     ],
     "type_eng": [
       "Shaman",
-      "Olympos XII",
       "Titan",
       "TS",
       "Demon"
@@ -93054,7 +93050,8 @@
       5
     ],
     "type_eng": [
-      "SEEKERS"
+      "SEEKERS",
+      "DigiPolice"
     ],
     "form_eng": [],
     "attribute_eng": [],
@@ -102959,9 +102956,7 @@
     "type_eng": [
       "Rock Dragon"
     ],
-    "form_eng": [
-      "Virus"
-    ],
+    "form_eng": [],
     "attribute_eng": [
       "Virus"
     ],
@@ -111038,7 +111033,7 @@
       0
     ],
     "type_eng": [
-      "Weapon",
+      "Holy Sword",
       "Legend-Arms"
     ],
     "form_eng": [],
@@ -112193,11 +112188,12 @@
       5
     ],
     "type_eng": [
-      "Unknown",
       "Unidentified"
     ],
     "form_eng": [],
-    "attribute_eng": [],
+    "attribute_eng": [
+      "Unknown"
+    ],
     "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Tamer card or Option card with [Diaboromon] in its text and 1 card with the [Unidentified] trait among them to the hand. Trash the rest.",
     "inherited_effect_description_eng": "[On Deletion] If this Digimon had the [Unidentified] trait, you may play 1 [Diaboromon] Token without paying the cost. (Digimon/Cost 14/Lv.6/White/Mega/Unknown/Unidentified/3000 DP)",
     "security_effect_description_eng": "",
@@ -123313,7 +123309,7 @@
     "type_eng": [
       "Copy & Paste (App Name)",
       "Leviathan",
-      "Copy &amp; Paste"
+      "Copy & Paste"
     ],
     "form_eng": [
       "Stnd.",
@@ -125014,7 +125010,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)\r\n[On Play] [When Digivolving] You may suspend 1 Digimon. Then, if this Digimon is suspended, it gets +4000 DP until your opponent's turn ends.",
     "inherited_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
@@ -125051,12 +125047,13 @@
       3
     ],
     "type_eng": [
-      "Vaccine",
       "Dinosaur",
       "LIBERATOR"
     ],
     "form_eng": [],
-    "attribute_eng": [],
+    "attribute_eng": [
+      "Vaccine"
+    ],
     "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)\r\n[On Play] [When Digivolving] You may suspend 1 Digimon. Then, choose 1 of each player's Digimon with the highest play cost and delete all other Digimon.\r\n[Opponent's Turn] While this Digimon is suspended, all of your opponent's Digimon can only attack suspended Digimon.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
@@ -126892,6 +126889,7 @@
       6
     ],
     "type_eng": [
+      "NSo",
       "LIBERATOR"
     ],
     "form_eng": [],
@@ -133217,7 +133215,8 @@
       6
     ],
     "type_eng": [
-      "Undead"
+      "Undead",
+      "Cyborg"
     ],
     "form_eng": [
       "Champion"
@@ -137849,7 +137848,8 @@
     ],
     "type_eng": [
       "App Driver",
-      "Appmon"
+      "Appmon",
+      "Leviathan"
     ],
     "form_eng": [],
     "attribute_eng": [],
@@ -143720,7 +143720,7 @@
       "Mega"
     ],
     "attribute_eng": [
-      "Free}}"
+      "Free"
     ],
     "effect_description_eng": "[When Digivolving] You may play 1 level 4 or lower blue Digimon card and 1 level 4 or lower green Digimon card from this Digimon's digivolution cards without paying their memory costs.",
     "inherited_effect_description_eng": "",
@@ -145104,7 +145104,8 @@
       "Champion"
     ],
     "attribute_eng": [
-      "Data"
+      "Data",
+      "Virus"
     ],
     "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] in its name or [Royal Knight] trait among them to your hand. Trash the rest.\r\n[All Turns] All of your Digimon with [Huckmon] in their names or [Royal Knight] trait gain ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.).",
     "inherited_effect_description_eng": "Card Effect(s) [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] in its name or [Royal Knight] trait among them to your hand. Trash the rest.\r\n[All Turns] All of your Digimon with [Huckmon] in their names or [Royal Knight] trait gain ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.).",
@@ -161585,7 +161586,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "[When Digivolving] 1 of your opponent's Digimon gets -8000 DP until their turn ends. Then, if they have 5 or more memory, gain 2 memory.\r\n[Your Turn] [Once Per Turn] When any of your [Chronicle] trait Digimon or Tamers are played, 1 of your Digimon may attack. Then, you may activate 1 of this Digimon's [When Digivolving] effects.\r\n[End of Your Turn] [Once Per Turn] You may play 1 [Chronicle] trait card without [Alphamon] in its name from your hand with the cost reduced by 6. It gains ＜Rush＞ for the turn. (This Digimon can attack the turn it was played.)",
     "inherited_effect_description_eng": "",

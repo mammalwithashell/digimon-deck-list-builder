@@ -16,7 +16,7 @@
     5
   ],
   "type_eng": [
-    "Beast Dragon",
+    "Beast",
     "X Antibody",
     "Chronicle"
   ],
@@ -30,6 +30,11 @@
   "evo_costs": [
     {
       "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    },
+    {
+      "card_color": 5,
       "level": 2,
       "memory_cost": 1
     }

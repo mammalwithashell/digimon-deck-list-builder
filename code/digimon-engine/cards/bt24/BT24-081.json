@@ -17,7 +17,6 @@
   ],
   "type_eng": [
     "Shaman",
-    "Olympos XII",
     "Titan",
     "TS",
     "Demon"
@@ -32,6 +31,11 @@
   "evo_costs": [
     {
       "card_color": 6,
+      "level": 6,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 3,
       "level": 6,
       "memory_cost": 4
     }

@@ -15,8 +15,7 @@
     6
   ],
   "type_eng": [
-    "Ancient Bird",
-    "3"
+    "Ancient Bird"
   ],
   "form_eng": [],
   "attribute_eng": [
@@ -28,6 +27,11 @@
   "evo_costs": [
     {
       "card_color": 6,
+      "level": 5,
+      "memory_cost": 5
+    },
+    {
+      "card_color": 2,
       "level": 5,
       "memory_cost": 5
     }

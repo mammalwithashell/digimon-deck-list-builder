@@ -19,7 +19,8 @@
   ],
   "form_eng": [],
   "attribute_eng": [
-    "Data"
+    "Data",
+    "Virus"
   ],
   "effect_description_eng": "[All Turns] All of your Digimon with [Huckmon] in their name or [Royal Knight] trait get +2000 DP.\r\n[On Play] Gain 1 memory.",
   "inherited_effect_description_eng": "Card Effect(s) [All Turns] All of your Digimon with [Huckmon] in their name or [Royal Knight] trait get +2000 DP.\r\n[On Play] Gain 1 memory.",

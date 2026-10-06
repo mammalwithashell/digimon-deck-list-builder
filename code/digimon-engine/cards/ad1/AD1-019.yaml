@@ -69,6 +69,7 @@ name: Matt Ishida & T.K. Takaishi
 kind: tamer
 color: [blue, yellow]
 cost: 3
+traits: [ADVENTURE, Hero]
 
 effects:
   # ─── Clause 1: [Start of Your Main Phase] gain 1 memory if opp has Digimon

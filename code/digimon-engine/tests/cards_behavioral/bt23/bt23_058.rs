@@ -77,7 +77,9 @@ fn bt23_058_has_printed_metadata_routes_reboot_and_blocker() {
     assert_eq!(card.color, vec![CompiledColor::Black]);
     assert!(card.traits.iter().any(|name| name == "Royal Knight"));
     assert!(card.traits.iter().any(|name| name == "CS"));
-    assert_eq!(card.attribute.as_deref(), Some("Data"));
+    // Prints "Mega | Vaccine | Holy Warrior/Royal Knight/CS" (card image, official Bandai DB,
+    // DCGO asset); cards.json held Data until 2026-10-05.
+    assert_eq!(card.attribute.as_deref(), Some("Vaccine"));
 
     // Printed circle: Black Lv.5 / cost 3 (official Bandai DB — the card was
     // previously mis-authored White).

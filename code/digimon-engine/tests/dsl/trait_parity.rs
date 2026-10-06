@@ -11,6 +11,12 @@
 //! This guard asserts the production trait set (cards.json-built) is a superset of every
 //! DSL card's compiled `traits:`. Reconcile any failure from the official Bandai DB via
 //! `code/tools/audit_digivolve/reconcile_traits.py` (see CLAUDE.md "Printed card data").
+//!
+//! The other direction matters too: a YAML that leaves out a printed type trait makes its
+//! behavioral tests blind to it (EX10-069's [LIBERATOR], BT22-084's [CS], until
+//! 2026-10-05), and a YAML `attribute:` copied from a wrong cards.json row stays wrong
+//! after the row is fixed (AD1-010, BT23-058). cards.json's traits are themselves held to
+//! the official DB pool-wide by code/tests/test_cards_json_integrity.py.
 
 use std::collections::HashSet;
 
@@ -60,6 +66,84 @@ fn check_trait_parity() {
          The digimoncard.io API drops Rule grants / the form field; reconcile from the official\n\
          Bandai DB with code/tools/audit_digivolve/reconcile_traits.py, or fix the DSL spec if\n\
          the official DB does not list the trait:\n{}",
+        violations.len(),
+        violations.join("\n"),
+    );
+}
+
+const CARDS_JSON_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/cards.json");
+
+/// data/cards.json rows by card id. Production folds a row's form_eng, attribute_eng and
+/// type_eng into one trait list; the YAML files the type line as `traits:` (plus whatever a
+/// card's tests need) and the attribute as `attribute:`, so they are compared field by field.
+fn cards_json_trait_fields() -> std::collections::HashMap<String, serde_json::Value> {
+    let raw = std::fs::read_to_string(CARDS_JSON_PATH).expect("read data/cards.json");
+    serde_json::from_str(&raw).expect("cards.json parses")
+}
+
+fn field(card: &serde_json::Value, name: &str) -> Vec<String> {
+    card[name]
+        .as_array()
+        .map(|a| {
+            a.iter()
+                .filter_map(|v| v.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Every printed type trait of a DSL card (its cards.json `type_eng`, minus the API's
+/// "X (App Name)" copies of an app name) must be in the YAML `traits:`, and a YAML
+/// `attribute:` must be one of the card's printed attributes.
+#[test]
+fn dsl_yaml_carries_the_printed_types_and_attribute() {
+    std::thread::Builder::new()
+        .stack_size(256 * 1024 * 1024)
+        .spawn(check_printed_types_and_attribute)
+        .expect("spawn large-stack thread")
+        .join()
+        .expect("printed-trait guard thread panicked");
+}
+
+fn check_printed_types_and_attribute() {
+    let registry =
+        digimon_engine::dsl_registry::from_embedded().expect("embedded cards.pack must load");
+    let cards = cards_json_trait_fields();
+
+    let mut violations: Vec<String> = Vec::new();
+    for (card_id, compiled) in registry.iter() {
+        let Some(card) = cards.get(card_id) else {
+            continue;
+        };
+        let yaml: HashSet<String> = compiled
+            .traits
+            .iter()
+            .map(|t| t.to_ascii_lowercase())
+            .collect();
+        for printed in field(card, "type_eng") {
+            if !printed.ends_with("(App Name)") && !yaml.contains(&printed.to_ascii_lowercase()) {
+                violations.push(format!(
+                    "  {card_id}: printed type {printed:?} absent from YAML traits {:?}",
+                    compiled.traits
+                ));
+            }
+        }
+        let attributes = field(card, "attribute_eng");
+        if let Some(attribute) = &compiled.attribute {
+            if !attributes.iter().any(|a| a.eq_ignore_ascii_case(attribute)) {
+                violations.push(format!(
+                    "  {card_id}: YAML attribute {attribute:?}, but the card prints {attributes:?}"
+                ));
+            }
+        }
+    }
+    violations.sort();
+
+    assert!(
+        violations.is_empty(),
+        "{} DSL card(s) disagree with the type line or attribute the card prints \
+         (data/cards.json, itself held to the official Bandai DB by \
+         code/tests/test_cards_json_integrity.py). Fix the YAML `traits:` / `attribute:`:\n{}",
         violations.len(),
         violations.join("\n"),
     );

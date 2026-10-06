@@ -6,7 +6,7 @@ color: [black]
 cost: 11
 dp: 11000
 traits: ["Holy Warrior", "Royal Knight", CS]
-attribute: Data
+attribute: Vaccine
 
 # Printed digivolve circle (official Bandai DB / data/card_bundles/BT23-058.md):
 # Black Lv.5 / cost 3. (Previously mis-authored as WHITE; see

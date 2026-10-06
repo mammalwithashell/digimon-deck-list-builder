@@ -5,7 +5,9 @@ level: 4
 color: [purple, white]
 cost: 4
 dp: 4000
-traits: [Undead]
+# "This card/Digimon is also treated as having the [Cyborg] trait." (card image, official
+# Bandai DB; DCGO's asset lists Undead and Cyborg.)
+traits: [Undead, Cyborg]
 attribute: Virus
 alt_paths:
   - kind: digivolve

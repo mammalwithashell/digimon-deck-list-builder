@@ -11,11 +11,8 @@ const CARD_ID: &str = "BT19-057";
 fn raptor_sparrowmon() -> CardData {
     let mut card = make_test_card_with_level("BT19-061", "RaptorSparrowmon", 4);
     card.colors = vec![CardColor::Black, CardColor::Purple];
-    card.traits = vec![
-        "Cyborg".to_string(),
-        "Twilight".to_string(),
-        "Xros Heart".to_string(),
-    ];
+    // As printed: Champion | Data | Cyborg/Xros Heart (no [Twilight], which the API adds).
+    card.traits = vec!["Cyborg".to_string(), "Xros Heart".to_string()];
     card.evo_costs = vec![EvoCost {
         card_color: 5,
         level: 3,

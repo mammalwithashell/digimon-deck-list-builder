@@ -5,7 +5,10 @@ level: 4
 color: [white]
 cost: 4
 dp: 5000
-traits: [Puppet]
+# Bandai's "Japanese / English Character Changes" (2022-03-18) treat this card as having the
+# attributes Virus and Data. The DSL `attribute:` holds one value, so [Virus] rides in
+# `traits:`, as on the later printings that print it (ST12-13, BT23-077).
+traits: [Puppet, Virus]
 attribute: Data
 
 effects:

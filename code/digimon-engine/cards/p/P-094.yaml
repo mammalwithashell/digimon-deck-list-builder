@@ -79,7 +79,8 @@ level: 5
 color: [black]
 cost: 10
 dp: 10000
-# Type/Traits + Attribute are "Unknown" on this card (no printed trait line).
+# The card prints "Ultimate | Unknown | Unknown": its type and attribute are [Unknown].
+traits: [Unknown]
 
 alt_paths:
   # Standard digivolve: Lv.4 Black / Cost 5 (official Bandai DB evo circle).

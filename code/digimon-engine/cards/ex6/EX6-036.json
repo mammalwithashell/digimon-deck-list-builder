@@ -15,11 +15,12 @@
     5
   ],
   "type_eng": [
-    "Unknown",
     "Unidentified"
   ],
   "form_eng": [],
-  "attribute_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
   "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Tamer card or Option card with [Diaboromon] in its text and 1 card with the [Unidentified] trait among them to the hand. Trash the rest.",
   "inherited_effect_description_eng": "[On Deletion] If this Digimon had the [Unidentified] trait, you may play 1 [Diaboromon] Token without paying the cost. (Digimon/Cost 14/Lv.6/White/Mega/Unknown/Unidentified/3000 DP)",
   "security_effect_description_eng": "",

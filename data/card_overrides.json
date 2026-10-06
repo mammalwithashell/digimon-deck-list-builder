@@ -171,6 +171,9 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "attribute_eng": [
+      "Free"
     ]
   },
   "BT12-028": {
@@ -1819,6 +1822,10 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "Xros Heart"
     ]
   },
   "BT19-072": {
@@ -2602,6 +2609,10 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Undead",
+      "Cyborg"
     ]
   },
   "P-186": {
@@ -2740,6 +2751,9 @@
         "level": 3,
         "memory_cost": 2
       }
+    ],
+    "attribute_eng": [
+      "Vaccine"
     ]
   },
   "BT12-021": {
@@ -3719,8 +3733,7 @@
   "BT24-056": {
     "type_eng": [
       "Zip/Unzip (App Name)",
-      "Zip",
-      "Unzip"
+      "Zip/Unzip"
     ],
     "form_eng": [
       "Sup.",
@@ -3914,7 +3927,7 @@
     "type_eng": [
       "Copy & Paste (App Name)",
       "Leviathan",
-      "Copy &amp; Paste"
+      "Copy & Paste"
     ],
     "form_eng": [
       "Stnd.",
@@ -6472,6 +6485,9 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Angel"
     ]
   },
   "BT17-064": {
@@ -6514,6 +6530,9 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Mythical Beast"
     ]
   },
   "BT17-067": {
@@ -6556,6 +6575,9 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Demon Lord"
     ]
   },
   "BT17-072": {
@@ -6570,6 +6592,9 @@
         "level": 5,
         "memory_cost": 5
       }
+    ],
+    "type_eng": [
+      "Ancient Bird"
     ]
   },
   "BT17-073": {
@@ -7685,6 +7710,11 @@
         "level": 2,
         "memory_cost": 1
       }
+    ],
+    "type_eng": [
+      "Beast",
+      "X Antibody",
+      "Chronicle"
     ]
   },
   "BT20-011": {
@@ -8679,6 +8709,9 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "attribute_eng": [
+      "Virus"
     ]
   },
   "BT22-012": {
@@ -9672,7 +9705,6 @@
     ],
     "type_eng": [
       "Shaman",
-      "Olympos XII",
       "Titan",
       "TS",
       "Demon"
@@ -11283,6 +11315,9 @@
         "level": 2,
         "memory_cost": 0
       }
+    ],
+    "attribute_eng": [
+      "Vaccine"
     ]
   },
   "BT9-074": {
@@ -11891,6 +11926,9 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "attribute_eng": [
+      "Vaccine"
     ]
   },
   "EX11-011": {
@@ -11905,6 +11943,13 @@
         "level": 5,
         "memory_cost": 5
       }
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "type_eng": [
+      "Dinosaur",
+      "LIBERATOR"
     ]
   },
   "EX11-025": {
@@ -12381,7 +12426,8 @@
         "level": 4,
         "memory_cost": 3
       }
-    ]
+    ],
+    "form_eng": []
   },
   "EX3-012": {
     "evo_costs": [
@@ -18202,7 +18248,10 @@
       }
     ],
     "inherited_effect_description_eng": "",
-    "xros_req": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "attribute_eng": [
+      "Vaccine"
+    ]
   },
   "EX13-061": {
     "inherited_effect_description_eng": "",
@@ -18493,5 +18542,155 @@
   },
   "ST23-05": {
     "inherited_effect_description_eng": ""
+  },
+  "_note_card_traits_drift_2026_10": "2026-10-05: traits of 44 cards corrected against the card image, the card's own block on the official card list, the DCGO card asset and Bandai's rule announcements (code/tools/archive/fix_card_traits_drift_2026_10.py lists them): wrong attributes, a stage filed as the attribute, traits the API renamed ([Avian] for BT10-060's printed [Bird]), invented ('3') or dropped, trait grants (including the Virus attribute Bandai gave BT6-084 and BT7-083 on 2022-03-18), ingest residue, and traits filed in the wrong field. Where the official mirror itself is wrong, or Bandai changed a card's traits beyond its print (BT2-024 and four others are [Aquatic], 2022-04-22), cards.json keeps the governing traits: see PRINTED_OVER_MIRROR and ANNOUNCED_TRAITS in code/tests/test_cards_json_integrity.py.",
+  "BT6-054": {
+    "attribute_eng": [
+      "Data"
+    ]
+  },
+  "BT6-057": {
+    "attribute_eng": [
+      "Virus"
+    ]
+  },
+  "BT9-020": {
+    "attribute_eng": [
+      "Data"
+    ]
+  },
+  "BT12-045": {
+    "attribute_eng": [
+      "Data"
+    ]
+  },
+  "BT12-052": {
+    "attribute_eng": [
+      "Vaccine"
+    ]
+  },
+  "BT14-054": {
+    "attribute_eng": [
+      "Data"
+    ]
+  },
+  "BT18-016": {
+    "attribute_eng": [
+      "Data"
+    ]
+  },
+  "BT23-014": {
+    "attribute_eng": [
+      "Virus"
+    ]
+  },
+  "BT23-058": {
+    "attribute_eng": [
+      "Vaccine"
+    ]
+  },
+  "BT23-061": {
+    "attribute_eng": [
+      "Data"
+    ]
+  },
+  "BT24-072": {
+    "attribute_eng": [
+      "Virus"
+    ]
+  },
+  "BT24-075": {
+    "attribute_eng": [
+      "Data"
+    ]
+  },
+  "BT10-060": {
+    "type_eng": [
+      "Bird",
+      "Twilight",
+      "Xros Heart"
+    ]
+  },
+  "BT22-023": {
+    "type_eng": [
+      "Holy Dragon",
+      "CS"
+    ]
+  },
+  "BT23-090": {
+    "type_eng": [
+      "Hudie",
+      "CS"
+    ]
+  },
+  "EX6-010": {
+    "type_eng": [
+      "Holy Sword",
+      "Legend-Arms"
+    ]
+  },
+  "EX11-059": {
+    "type_eng": [
+      "NSo",
+      "LIBERATOR"
+    ]
+  },
+  "P-234": {
+    "type_eng": [
+      "App Driver",
+      "Appmon",
+      "Leviathan"
+    ]
+  },
+  "BT6-084": {
+    "attribute_eng": [
+      "Data",
+      "Virus"
+    ]
+  },
+  "BT7-083": {
+    "attribute_eng": [
+      "Data",
+      "Virus"
+    ]
+  },
+  "BT23-077": {
+    "attribute_eng": [
+      "Data",
+      "Virus"
+    ]
+  },
+  "BT24-086": {
+    "type_eng": [
+      "SEEKERS",
+      "DigiPolice"
+    ]
+  },
+  "ST12-13": {
+    "attribute_eng": [
+      "Data",
+      "Virus"
+    ]
+  },
+  "BT9-040": {
+    "type_eng": [
+      "Archangel",
+      "X Antibody"
+    ]
+  },
+  "BT19-001": {
+    "attribute_eng": [],
+    "type_eng": [
+      "Minor",
+      "Xros Heart"
+    ]
+  },
+  "EX6-036": {
+    "attribute_eng": [
+      "Unknown"
+    ],
+    "type_eng": [
+      "Unidentified"
+    ]
   }
 }

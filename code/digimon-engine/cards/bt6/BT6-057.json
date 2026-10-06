@@ -19,10 +19,10 @@
   ],
   "form_eng": [],
   "attribute_eng": [
-    "Vaccine"
+    "Virus"
   ],
-  "effect_description_eng": "Inherited Effect [All Turns] While this Digimon has ＜Blocker＞, it gets +1000 DP.",
-  "inherited_effect_description_eng": "",
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon has ＜Blocker＞, it gets +1000 DP.",
   "security_effect_description_eng": "",
   "evo_costs": [
     {

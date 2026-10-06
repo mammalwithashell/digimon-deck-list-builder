@@ -21,7 +21,7 @@
   ],
   "form_eng": [],
   "attribute_eng": [
-    "Data"
+    "Vaccine"
   ],
   "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)\r\n[On Play] [When Digivolving] You may suspend 1 Digimon. Then, if this Digimon is suspended, it gets +4000 DP until your opponent's turn ends.",
   "inherited_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
@@ -29,6 +29,11 @@
   "evo_costs": [
     {
       "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 3,
       "level": 4,
       "memory_cost": 4
     }
