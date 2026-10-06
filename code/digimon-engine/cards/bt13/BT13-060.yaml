@@ -1,0 +1,72 @@
+# produced_by: 20261006T164919922300Z-pilot-data-squad-ecf874
+card: BT13-060
+name: "Rosemon: Burst Mode"
+kind: digimon
+level: 7
+color: [green]
+cost: 15
+dp: 15000
+traits: [Fairy]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, name_is: "Rosemon" }
+    cost: 5
+  - kind: burst_digivolve
+    from: { level_eq: 6, name_is: "Rosemon" }
+    cost: 0
+    extra_cost:
+      - select_own_permanent:
+          bind_as: yoshi
+          filter: { kind: tamer, name_is: "Yoshino Fujieda" }
+          prompt: "Return Yoshino Fujieda"
+      - return_to_hand: { target: yoshi }
+    on_burst_turn_end:
+      - trash_top_source: { target: self }
+
+effects:
+  - when: when_digivolving
+    process:
+      - select_opponent_permanent:
+          bind_as: d
+          filter: { kind: digimon }
+          prompt: "Suspend opponent Digimon"
+      - suspend: { target: d }
+      - select_opponent_permanent:
+          bind_as: t
+          filter: { kind: tamer }
+          prompt: "Suspend opponent Tamer"
+      - suspend: { target: t }
+      - add_modifier:
+          target:
+            of: opponent
+            zone: [battle_area]
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # [When Attacking] Trash the top card of your opponent's security stack for
+  # every 2 of your opponent's suspended Digimon and Tamers.
+  # DCGO BT13_060.cs:218-266 — mandatory; count = suspended (Digimon|Tamer) / 2,
+  # trashed from the top via IDestroySecurity.
+  - when: when_attacking
+    summary: "[When Attacking] Trash 1 opp security per 2 suspended opp Digimon/Tamers"
+    process:
+      - trash_top_security:
+          of: opponent
+          count:
+            floor_div:
+              - base: 0
+                per:
+                  card_count_in_zone:
+                    of: opponent
+                    zone: battle_area
+                    filter:
+                      is_suspended: true
+                      any_of:
+                        - kind: digimon
+                        - kind: tamer
+                delta: 1
+              - 2
