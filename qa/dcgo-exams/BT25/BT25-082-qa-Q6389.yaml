@@ -128,3 +128,9 @@ steps:
     expect: { prompt: SelectHandEffect }
 assert: []
 
+expect_ruling:
+  q_id: Q6389
+  assert:
+  - at: 20
+    that:
+      p0.field: [BT25-085, BT25-092]
