@@ -539,6 +539,73 @@ def _ledger_attempts(ctx) -> list:
     return list(attempts)
 
 
+def _load_yaml(path: Path) -> dict | None:
+    import yaml
+
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, yaml.YAMLError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def scenario_steps(ctx, rel: str) -> list:
+    data = _load_yaml(repo_path(ctx, rel)) or {}
+    steps = data.get("steps")
+    return steps if isinstance(steps, list) else []
+
+
+def find_scenarios(ctx, card_ids: Sequence[str], *, clause: str | None = None,
+                   interaction: str | None = None) -> list[str]:
+    """Committed library scenarios (repo-relative) for one clause (a plain
+    clause line, not an interaction exam) or one interaction id."""
+    out: list[str] = []
+    for d in dict.fromkeys(scenario_dir(c) for c in card_ids):
+        root = repo_path(ctx, d)
+        if not root.is_dir():
+            continue
+        for p in sorted(root.glob("*.yaml")):
+            data = _load_yaml(p)
+            if not data:
+                continue
+            inter = data.get("interaction") if isinstance(data.get("interaction"), dict) else None
+            if interaction is not None and inter and inter.get("id") == interaction:
+                out.append(f"{d}/{p.name}")
+            elif clause is not None and inter is None and data.get("clause") == clause:
+                out.append(f"{d}/{p.name}")
+    return out
+
+
+def keywords_of(clauses: Iterable[Mapping]) -> list[str]:
+    """Keywords a line will meet: each clause's `keyword` and every `<...>` in its text."""
+    out: list[str] = []
+    for c in clauses:
+        if c.get("keyword"):
+            out.append(str(c["keyword"]).strip("<>＜＞ "))
+        out += [k.strip() for k in re.findall(r"[<＜]([^<>＜＞]+)[>＞]", c.get("text") or "")]
+    return list(dict.fromkeys(k for k in out if k))
+
+
+def format_citation(citation) -> str | None:
+    """A triage/fix citation object as the verdict store's free text."""
+    if not citation:
+        return None
+    if isinstance(citation, str):
+        return citation.strip() or None
+    kind, ref = citation.get("kind"), str(citation.get("ref") or "").strip()
+    if not ref:
+        return None
+    return f"general_rule.pdf {ref}" if kind == "rule" else ref
+
+
+def posix(path: str) -> str:
+    """A worker-reported path as repo-relative POSIX (`qa\\x.yaml` -> `qa/x.yaml`)."""
+    p = str(path).strip().replace("\\", "/")
+    while p.startswith("./"):
+        p = p[2:]
+    return p
+
+
 def json_block(value) -> str:
     return json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False, default=str)
 
