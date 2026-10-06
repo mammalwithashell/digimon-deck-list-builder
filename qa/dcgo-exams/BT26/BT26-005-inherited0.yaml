@@ -100,5 +100,5 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-meta: {produced_by: 20261006T144338734991Z-pilot-data-squad-129154}
+meta: {produced_by: 20261006T164919942702Z-pilot-data-squad-dcc0c8}
 assert: []
