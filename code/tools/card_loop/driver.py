@@ -1279,10 +1279,13 @@ class Driver:
                 why = rec.data.get("escalation_reason")
                 escalations.append((rec.item, f"{where}" + (f" -- {why}" if why else "")))
         attempts = sorted(self._attempt_index.values(), key=lambda a: a.attempt_id)
+        landing = ({"tree": str(self.repo), "branch": run_branch(self.run_id)}
+                   if self.manage_tree else None)
         text = render_report(run_id=self.run_id, counts=counts, by_state=self.state.by_state(),
                              stop=stop.to_dict(), attempts=attempts, escalations=escalations,
                              blocked=blocked, failed=self._failed, problems=self.state.problems,
-                             missing_components=self.components.missing, generated_at=self.now())
+                             missing_components=self.components.missing, generated_at=self.now(),
+                             landing=landing)
         report_path = write_report(self.run_dir / REPORT_NAME, text)
         return RunResult(stop=stop, counts=counts, blocked=blocked, failed=dict(self._failed),
                          problems=list(self.state.problems), report_path=report_path, state_path=state_path)

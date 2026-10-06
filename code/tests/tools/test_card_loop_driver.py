@@ -1180,3 +1180,27 @@ def test_a_stop_file_written_mid_run_drains_in_flight_work_and_starts_nothing_ne
     assert author.calls == [C1], "the first task completed; no new task started"
     assert h.states()[C1] == "SIM" and h.states()[C2] == "AUTHORING"
     assert sim.calls == [], "SIM was not started after the stop"
+
+
+def test_report_tells_how_to_land_the_verdicts_into_readiness():
+    # Rule 34: the readiness artifact is regenerated after any verdict change,
+    # and a run's verdicts only count once its tree is merged. The report says so,
+    # with the exact commands, whenever the run adjudicated anything.
+    total = {"items": 3, "confirmed": 2, "terminal": 0, "unavailable": 0, "implemented": 0,
+             "adjudicated": 2, "escalated": 0, "unmeasured": 1, "parked": 0}
+    counts = {"total": total, "clause": dict(total)}
+    stop = {"reason": "complete", "spent_usd": 1.0}
+    text = report_mod.render_report(run_id="r", counts=counts, by_state={}, stop=stop,
+                                    landing={"tree": "D:/cl-x/run", "branch": "card-loop/r/run"})
+    assert "## Landing the verdicts" in text
+    assert "card-loop/r/run" in text and "D:/cl-x/run" in text
+    assert "python -m tools.clause_coverage.readiness" in text
+    assert "--plan" in text
+    # nothing adjudicated: nothing to land, no section
+    none = {"total": dict(total, adjudicated=0, confirmed=0)}
+    assert "## Landing the verdicts" not in report_mod.render_report(
+        run_id="r", counts=none, by_state={}, stop=stop,
+        landing={"tree": "D:/cl-x/run", "branch": "card-loop/r/run"})
+    # a driver that does not manage a run tree (tests, fakes) has nothing to merge
+    assert "## Landing the verdicts" not in report_mod.render_report(
+        run_id="r", counts=counts, by_state={}, stop=stop)
