@@ -14,6 +14,7 @@ databases, or ad-hoc re-homing without touching code:
 - ``DIGIMON_ARCHETYPE_ALIASES``
 - ``DIGIMON_CARD_OVERRIDES``
 - ``DIGIMON_TESTED_CARDS``
+- ``DIGIMON_ORACLE_READINESS`` (the training gate's readiness artifact)
 - ``DIGIMON_DATA_DIR`` — overrides the whole directory; individual file
   env vars still win if set.
 
@@ -53,3 +54,4 @@ DECK_LIBRARY: Path = _resolve("DIGIMON_DECK_LIBRARY", "deck_library.json")
 ARCHETYPE_ALIASES: Path = _resolve("DIGIMON_ARCHETYPE_ALIASES", "archetype_aliases.json")
 CARD_OVERRIDES: Path = _resolve("DIGIMON_CARD_OVERRIDES", "card_overrides.json")
 TESTED_CARDS: Path = _resolve("DIGIMON_TESTED_CARDS", "tested_cards.json")
+ORACLE_READINESS: Path = _resolve("DIGIMON_ORACLE_READINESS", "oracle_readiness.json")
