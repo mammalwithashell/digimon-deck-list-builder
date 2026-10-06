@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T21:03:54.751290900+00:00",
+  "last_updated": "2026-10-06T21:34:58.181353800+00:00",
   "clauses": {
     "BT25-082#effect#0": {
       "clause_id": "BT25-082#effect#0",
@@ -152,7 +152,7 @@
       "reason": "ours contradicts ruling qa:Q6392 (ours vs DCGO: agree); CLEAN (compared 20 of 24 ours / 21 dcgo steps (4 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT25-082-qa-Q6392",
-      "recorded_at": "2026-10-06T18:44:55.308126100+00:00"
+      "recorded_at": "2026-10-06T21:34:58.181353800+00:00"
     }
   }
 }
