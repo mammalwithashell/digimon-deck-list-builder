@@ -186,6 +186,30 @@ def _load_oracle_ready_card_ids(path: Optional[str | Path] = None) -> Set[str]:
     }
 
 
+def validate_oracle_ready_deck(
+    card_ids: List[str],
+    oracle_ready_card_ids: Optional[Set[str]] = None,
+    *,
+    label: str = "deck",
+) -> None:
+    """Raise `NotOracleReadyDeckError` if a deck holds a card that is not oracle-ready.
+
+    For decks that reach training without passing through `MetaGauntlet.load`
+    (pool snapshots, a job's `agent_deck: {source: deck_id}` library deck).
+    `oracle_ready_card_ids` defaults to the committed artifact.
+    """
+    ready = (
+        oracle_ready_card_ids
+        if oracle_ready_card_ids is not None
+        else _load_oracle_ready_card_ids()
+    )
+    not_ready = sorted({cid for cid in card_ids if cid not in ready})
+    if not_ready:
+        raise NotOracleReadyDeckError(
+            f"{label} contains cards that are not oracle-ready: {', '.join(not_ready)}"
+        )
+
+
 def _card_name(card_db: Optional[Any], card_id: str) -> str:
     card = card_db.get_card(card_id) if card_db is not None else None
     return f" {card.card_name}" if card is not None and getattr(card, "card_name", "") else ""
@@ -425,12 +449,9 @@ class GeneralistDeckPool:
                     implemented_card_ids,
                     label=f"snapshot deck {record.get('deck_id', '?')}",
                 )
-            not_ready = sorted({cid for cid in card_ids if cid not in oracle_ready})
-            if not_ready:
-                raise NotOracleReadyDeckError(
-                    f"snapshot deck {record.get('deck_id', '?')} contains cards that are not "
-                    f"oracle-ready: {', '.join(not_ready)}"
-                )
+            validate_oracle_ready_deck(
+                card_ids, oracle_ready, label=f"snapshot deck {record.get('deck_id', '?')}"
+            )
             deck_id = stable_deck_id(card_ids)
             if record.get("deck_id") != deck_id:
                 raise ValueError(

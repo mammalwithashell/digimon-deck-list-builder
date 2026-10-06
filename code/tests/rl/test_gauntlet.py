@@ -1297,6 +1297,25 @@ class TestOracleReadinessGate:
         )
         assert loaded.snapshot_hash == written
 
+    def test_run_training_job_library_deck_is_gated(self, tmp_path, monkeypatch):
+        # `agent_deck: {source: deck_id}` reads a deck straight from the library;
+        # it must pass the same gate as the pool (explicit file decks are the
+        # operator's own choice and stay ungated).
+        import data_paths
+        from tools import run_training_job
+
+        readiness = tmp_path / "oracle_readiness.json"
+        readiness.write_text(json.dumps({"version": 1, "cards": {
+            "BT12-002": {"status": "ready"}, "BT12-022": {"status": "ready"},
+            "BT12-031": {"status": "not_ready"},
+        }}))
+        monkeypatch.setattr(data_paths, "DECK_LIBRARY", self._lib(tmp_path))
+        monkeypatch.setattr(gauntlet_module, "_ORACLE_READINESS_PATH", readiness)
+        deck = run_training_job.load_deck({"source": "deck_id", "deck_id": "mixed_000"})
+        assert len(deck) == 55
+        with pytest.raises(gauntlet_module.NotOracleReadyDeckError, match="mixed_001.*BT12-031"):
+            run_training_job.load_deck({"source": "deck_id", "deck_id": "mixed_001"})
+
     def test_snapshot_load_reads_the_artifact_when_nothing_is_injected(self, tmp_path, monkeypatch):
         # A snapshot taken before the gate must not smuggle decks back in, even
         # through callers (eval CLIs, --curriculum-pool) that inject nothing.
