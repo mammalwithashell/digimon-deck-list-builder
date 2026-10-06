@@ -12,7 +12,7 @@
 # It plays the second Biyomon drawn on digivolution, proving main has resumed.
 # No attacks occur, so the egg's inherited effect is not exercised.
 interaction: {id: "probe:BT16-082#effect#0:scope:neg", source: probe, kind: negative}
-meta: {produced_by: 20261006T142946632264Z-pilot-data-squad-6acd27}
+meta: {produced_by: 20261006T153144950592Z-pilot-data-squad-b44859}
 covers: [BT16-082#effect#0]
 card: BT16-082
 clause: BT16-082#effect#0
