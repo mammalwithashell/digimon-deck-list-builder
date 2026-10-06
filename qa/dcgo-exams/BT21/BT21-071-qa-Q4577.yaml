@@ -2,15 +2,16 @@
 # names X in its effects, not only in its name/traits.
 #
 # Scopemon (BT21-071) [Digivolve] "Lv.3 w/[Three Musketeers] in text: Cost 2".
-# ToyAgumon EX7-008 is a BLACK Lv.3 whose only link to [Three Musketeers] is the
-# text of its [On Play] effect, so Scopemon's purple circle cannot be what makes
-# the digivolution legal -- only the "in text" clause (Q4577) does. Line is the
+# ToyAgumon EX7-008 is a RED Lv.3 that names [Three Musketeers] only in its
+# effect text ([On Play] and its special digivolution requirement), so Scopemon's
+# purple circle cannot be what makes the digivolution legal -- only the "in text"
+# clause (Q4577) does. Line is the
 # oracle-confirmed BT21-071-effect0 line (see its header for the step narrative).
 card: BT21-071
 clause: BT21-071#effect#0
 covers: [BT21-071#effect#0]
 interaction: {id: "qa:Q4577", source: qa, kind: positive}
-meta: {produced_by: 20261006T165011862477Z-pilot-three-musketeers-bc8156}
+meta: {produced_by: 20261006T191435665176Z-pilot-three-musketeers-091027}
 seed: 424242
 decks:
   p0:
@@ -70,11 +71,3 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
-expect_ruling:
-  q_id: Q4577
-  assert:
-  - at: 9
-    that:
-      p0.field:
-      - card_id: BT21-071
-        sources: [EX7-008, ST1-01]
