@@ -9,7 +9,9 @@ Every check returns `{name, status: ok|warn|fail, detail, remedy}` and every
 - `keyword_gate`     the author-set keyword gate (`tools.author_set.keyword_gate`)
   over the pool's printed text. A blocking keyword fails only when a card that
   uses it still needs implementing (no DSL spec); on already-authored cards it
-  is a `warn` (the gate's lexicon lags the engine, e.g. `<Delay>`).
+  is a `warn` (the gate lags the engine: a keyword newly lowered through the DSL
+  counts as covered only once the manifest's `dsl_lowered_keywords` is
+  regenerated).
 - `dcgo_scripts`     per-card DCGO `.cs` presence. A missing script is a `warn`:
   that card's clauses and interactions are `unavailable`, the rest proceeds. A
   missing DCGO checkout is a `fail` (it would silently make every card
@@ -248,8 +250,10 @@ def check_keyword_gate(
         )
     if parts:
         return Check("keyword_gate", "warn", "; ".join(parts),
-                     "port auto_ingest keywords from DCGO (author-set Phase 2); "
-                     "teach the gate lexicon the authored tokens")
+                     "port auto_ingest keywords from DCGO (author-set Phase 2); for tokens "
+                     "the engine already runs, regenerate data/dcgo_keyword_manifest.json "
+                     "(python code/tools/author_set/dcgo_manifest.py; a DSL-lowered keyword "
+                     "needs a DSL_KEYWORD_VOCAB entry) or teach the gate lexicon the token")
     return Check("keyword_gate", "ok", f"no blocking keyword in {len(present)} cards' text")
 
 
