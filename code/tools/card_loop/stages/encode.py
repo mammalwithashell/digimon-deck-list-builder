@@ -9,7 +9,8 @@ reasoning), decided by `packets.agree_encoding`.
                                        and data["base_scenario"] (the line its `at:` counts on)
     verifier disagrees              -> ESCALATED with both arguments
     a family unavailable            -> ESCALATED (single family, D5)
-    the author's block is malformed -> StageDeferred, `gate_fail` (encode_validate)
+    the author's block is malformed -> ENCODE again, `gate_fail` (encode_validate);
+                                       the `encode_ruling` attempt cap bounds the retries
     a call failed                   -> StageDeferred
 
 The block's `at:` steps index a scenario line, and the contract puts ENCODE
@@ -74,14 +75,16 @@ class EncodeExecutor:
             raise base.defer_failed(ctx, item, [ca])
         problems = packets.validate_encode_result(ca.output, "author")
         if problems:
+            # The author's correction, not infrastructure: the item stays in
+            # ENCODE for another call (the stage cap bounds it). Deferring here
+            # escalated Q2671 after one malformed reply in the second pilot.
             detail = "; ".join(problems)
-            outcome = StageOutcome(
+            return StageOutcome(
                 next_state=item.state, reason=f"malformed expect_ruling block: {detail}",
                 attempts=[ca.attempt(ctx, outcome="gate_failed")],
                 corrections=[corr.gate_fail(ca.attempt_id, gate="encode_validate", stage=STAGE,
                                             item=item.item, detail=detail[:2000], ts=ctx.now())],
                 data={"history": base.history(item, ca.attempt_id)})
-            raise base.StageDeferred(outcome.reason, outcome)
 
         verifier = other_family(author_family)
         pv = packets.encode_ruling_inputs(q, qa, clauses, scenario_path=path, scenario_yaml=text, mode="verify",

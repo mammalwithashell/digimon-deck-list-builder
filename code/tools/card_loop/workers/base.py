@@ -596,11 +596,16 @@ def capture_artifacts(worktree: str | os.PathLike, base_sha: str, out_dir: str |
                     base_sha, "--"], wt, env=env, text=False).stdout
     files = []
     for path, status, new_mode in _parse_raw_z(raw):
-        sha = None
+        sha = sha_lf = None
         fp = wt / path
         if status != "D" and new_mode != "160000" and fp.is_file():
-            sha = hashlib.sha256(fp.read_bytes()).hexdigest()
-        files.append({"path": path, "status": status, "sha256": sha})
+            data = fp.read_bytes()
+            sha = hashlib.sha256(data).hexdigest()
+            # Under core.autocrlf the diff carries LF-normalised text while the
+            # file may hold CRLF -- or MIXED endings, which no single-convention
+            # hash of the applied bytes can match (second pilot, BT26-005).
+            sha_lf = hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()
+        files.append({"path": path, "status": status, "sha256": sha, "sha256_lf": sha_lf})
     files.sort(key=lambda f: f["path"])
     diff_path = out / "worktree.diff"
     diff_path.write_bytes(diff)

@@ -1,4 +1,4 @@
-version: 2
+version: 3
 # Widen the engine or DSL substrate to fix {item_id}
 
 You are one stateless worker in the card-authoring loop. Do exactly this task in
@@ -26,7 +26,9 @@ substrate; do not route around it (CLAUDE.md rule 28).
   `docs/RUST_ENGINE_API.md`.
 - Clone safety: no closure-based pending selection; selections go through the
   resumable VM (CLAUDE.md rule 28).
-- Log what you closed in `qa/dsl-vocab-gaps.md` or `docs/RUST_ENGINE_GAPS.md`.
+- Do NOT edit `qa/dsl-vocab-gaps.md` or `docs/RUST_ENGINE_GAPS.md`: the trackers are
+  orchestrator-only and any edit to them is dropped at merge. Say what you closed in
+  `notes` and list what is still missing under `gaps`; the driver records both.
 - Cite why the old behaviour was wrong: a `general_rule.pdf` section
   (`docs/digimon-rules/`), a ruling `qa:<Q-number>`, or DCGO {dcgo_scripts}
   `:<line>`. No citation, no fix.

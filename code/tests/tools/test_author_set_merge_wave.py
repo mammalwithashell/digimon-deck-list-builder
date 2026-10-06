@@ -226,13 +226,56 @@ def test_transport_mismatch_is_an_error(repo, tmp_path):
     manifest = json.loads(Path(art["manifest"]).read_text())
     for f in manifest["files"]:
         if f["path"].endswith(".yaml"):
-            f["sha256"] = "0" * 64
+            f["sha256"] = f["sha256_lf"] = "0" * 64   # neither hash matches: not the worker's bytes
     Path(art["manifest"]).write_text(json.dumps(manifest))
 
     res = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
 
     assert not res.ok and "transport mismatch" in res.errors[0]
     assert status(root) == ""
+
+
+def test_mixed_line_endings_in_the_workers_file_are_not_a_transport_mismatch(repo, tmp_path):
+    # Second pilot, BT26-005: the worker's YAML mixed CRLF and LF lines; under
+    # core.autocrlf the diff carried LF-normalised text, and no single-convention
+    # hash of the applied bytes matched the manifest's raw sha256. Three
+    # attempts, three "transport mismatch" refusals.
+    root, base = repo
+    yaml = f"{ENG}/cards/bt21/BT21-029.yaml"
+    mixed = b"id: BT21-029\r\nname: Medusamon\nlevel: 6\r\n"
+    wt = tmp_path / "wt-mixed"
+    git(root, "worktree", "add", "-q", "--detach", str(wt), base)
+    for p, data in {**CARD_029, yaml: mixed}.items():
+        (wt / p).parent.mkdir(parents=True, exist_ok=True)
+        (wt / p).write_bytes(data)
+    git(root, "config", "core.autocrlf", "true")       # the pilots' Windows checkouts
+    art = capture_artifacts(wt, base, tmp_path / "art-mixed")
+    manifest = json.loads(Path(art["manifest"]).read_text())
+    entry = next(f for f in manifest["files"] if f["path"] == yaml)
+    assert entry["sha256_lf"] == __import__("hashlib").sha256(mixed.replace(b"\r\n", b"\n")).hexdigest()
+
+    res = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
+    assert res.ok, res.errors
+    assert (root / yaml).read_bytes().replace(b"\r\n", b"\n") == mixed.replace(b"\r\n", b"\n")
+
+    # Without the LF hash the old check still refuses it: the field is what carries it.
+    git(root, "reset", "-q", "--hard", base)
+    for f in manifest["files"]:
+        f.pop("sha256_lf", None)
+    Path(art["manifest"]).write_text(json.dumps(manifest))
+    res2 = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
+    if not res2.ok:
+        assert "transport mismatch" in res2.errors[0]
+
+
+def test_skip_paths_are_dropped_like_scratch_not_refused(repo, tmp_path):
+    root, base = repo
+    tracker = "qa/dsl-vocab-gaps.md"
+    art = worker(root, base, tmp_path, "a", {**CARD_029, tracker: b"# DSL\n## mine\n"})
+    res = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base, skip_paths=(tracker,))
+    assert res.ok, res.errors
+    assert res.skipped == [tracker] and not (root / tracker).exists()
+    assert (root / ENG / "cards/bt21/BT21-029.yaml").exists()
 
 
 def test_content_hashes_ignore_line_endings():

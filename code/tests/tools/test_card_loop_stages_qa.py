@@ -225,12 +225,13 @@ def test_probe_interactions_have_nothing_to_encode(repo):
 
 
 def test_a_malformed_author_block_is_a_gate_failure_not_a_verification(repo):
+    # The author's correction, retried in ENCODE under the stage cap -- not a
+    # deferral: deferring escalated Q2671 after a single malformed reply.
     bad = ok({"q_id": "Q77", "mode": "author", "expect_ruling": BLOCK, "agrees": True,
               "answer_quote": "x", "reasoning": "a reasoning long enough to pass"})
     workers = _workers(claude=[bad])
-    with pytest.raises(StageDeferred) as e:
-        EncodeExecutor().run(_ctx(repo, workers), _enc_item())
+    o = EncodeExecutor().run(_ctx(repo, workers), _enc_item())
     assert workers["codex"].calls == 0
-    o = e.value.outcome
+    assert o.next_state == "ENCODE" and "malformed" in o.reason
     assert [a.outcome for a in o.attempts] == ["gate_failed"]
     assert [(c.kind, c.by_gate) for c in o.corrections] == [("gate_fail", "encode_validate")]

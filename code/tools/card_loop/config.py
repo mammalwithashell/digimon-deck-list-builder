@@ -37,7 +37,7 @@ def _default_models() -> dict:
 def _default_attempt_caps() -> dict:
     return {"implement": 3, "author_clause": 3, "author_interaction": 3,
             "fix_card": 2, "fix_engine": 2, "triage": 1, "classify_qa": 1,
-            "encode_ruling": 1, "review": 1}
+            "encode_ruling": 2, "review": 1}
 
 
 def _default_prices() -> dict:

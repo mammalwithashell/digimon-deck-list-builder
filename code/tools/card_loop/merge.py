@@ -188,12 +188,11 @@ class LoopMerger:
             manifest, _ = mw.load_manifest(manifest_path)
         except (OSError, ValueError, mw.MergeWaveError) as e:
             return MergeResult(ok=False, errors=[f"manifest unreadable: {e}"])
-        paths = [f["path"] for f in manifest["files"]]
-        trackers = sorted(p for p in paths if p in TRACKER_PATHS)
-        if trackers:
-            return MergeResult(ok=False, errors=[
-                f"{', '.join(trackers)}: gap-tracker writes are orchestrator-only -- the worker "
-                f"must report gaps in its result's `gaps`, and the driver records them"])
+        # Gap-tracker writes are orchestrator-only: a worker's edit to one is
+        # dropped at apply (`skipped`), never refused -- refusing cost the second
+        # pilot a whole card fix (BT13-060#effect#2, `fix_card 2/2 spent`). The
+        # worker reports gaps in its result's `gaps`; the driver records them.
+        paths = [f["path"] for f in manifest["files"] if f["path"] not in TRACKER_PATHS]
         engine_paths = sorted(p for p in paths if is_engine_path(p))
         if engine_paths and not request.engine:
             return MergeResult(ok=False, errors=[
@@ -279,8 +278,8 @@ class LoopMerger:
         # merge). The apply checks that it is an ancestor of the target HEAD.
         applied = mw.apply_manifest_diff(tree, diff, manifest_path,
                                          manifest_base(manifest_path) or ctx.base_sha,
-                                         allowed_roots=self.allowed_roots)
-        result = MergeResult(ok=False, branch=branch, touched=applied.touched)
+                                         allowed_roots=self.allowed_roots, skip_paths=TRACKER_PATHS)
+        result = MergeResult(ok=False, branch=branch, touched=applied.touched, skipped=list(applied.skipped))
         if not applied.ok:
             result.errors = list(applied.errors)
             return result

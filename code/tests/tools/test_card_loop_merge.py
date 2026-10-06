@@ -208,11 +208,18 @@ def test_engine_code_without_engine_flag_is_refused(repo, tmp_path):
     assert git(root, "status", "--porcelain") == ""
 
 
-def test_tracker_edits_in_a_worker_diff_are_refused(repo, tmp_path):
+def test_tracker_edits_in_a_worker_diff_are_dropped_not_refused(repo, tmp_path):
+    # Refusing the whole diff cost the second pilot a card fix (BT13-060#effect#2,
+    # `fix_card 2/2 spent`): the tracker edit is skipped, the rest lands.
     root, base = repo
+    scenario = "qa/dcgo-exams/BT21/BT21-029-effect0.yaml"
     res = merger(tmp_path).merge(ctx_for(root, base, tmp_path, FakeRunner()), request(
-        artifacts(root, base, tmp_path, "a", {"qa/dsl-vocab-gaps.md": b"# DSL\n## mine\n"})))
-    assert not res.ok and "orchestrator-only" in res.errors[0]
+        artifacts(root, base, tmp_path, "a", {"qa/dsl-vocab-gaps.md": b"# DSL\n## mine\n",
+                                              scenario: b"card: BT21-029\n"})))
+    assert res.ok, res.errors
+    assert res.skipped == ["qa/dsl-vocab-gaps.md"]
+    assert (root / "qa/dsl-vocab-gaps.md").read_bytes() == b"# DSL\n"
+    assert (root / scenario).exists()
 
 
 def test_run_tree_on_main_is_refused(tmp_path, gitenv):

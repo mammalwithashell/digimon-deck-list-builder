@@ -262,6 +262,7 @@ class MergeResult:
     touched: list = field(default_factory=list)
     scope: dict = field(default_factory=dict)       # impact_scope output
     errors: list = field(default_factory=list)
+    skipped: list = field(default_factory=list)     # manifest paths dropped, not applied (scratch, trackers)
 
 
 @dataclass

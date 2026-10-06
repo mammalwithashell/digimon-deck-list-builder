@@ -257,7 +257,8 @@ def load_manifest(path: str | os.PathLike) -> tuple[dict, list[str]]:
             problems.append(f"{entry['path']}: unsupported status {status!r} (only A/M/D)")
         if status != "D" and not (isinstance(sha, str) and _SHA256.match(sha)):
             problems.append(f"{entry['path']}: manifest entry has no valid sha256")
-        files.append({"path": entry["path"], "status": status, "sha256": sha})
+        files.append({"path": entry["path"], "status": status, "sha256": sha,
+                      "sha256_lf": entry.get("sha256_lf")})
     out = dict(raw)
     out["files"] = files
     return out, problems
@@ -326,6 +327,18 @@ def content_hashes(data: bytes) -> set[str]:
     lf = data.replace(b"\r\n", b"\n")
     crlf = lf.replace(b"\n", b"\r\n")
     return {hashlib.sha256(v).hexdigest() for v in (data, lf, crlf)}
+
+
+def content_matches(entry: Mapping, data: bytes) -> bool:
+    """Are the applied bytes the worker's file? Its raw `sha256` under any one
+    line-ending convention, or its `sha256_lf` (capture_artifacts since the
+    second pilot) against the LF-normalised applied bytes -- the only hash a
+    worker file with MIXED endings can match, since `git diff` under
+    core.autocrlf normalises what the manifest hashed raw."""
+    if entry.get("sha256") in content_hashes(data):
+        return True
+    lf = entry.get("sha256_lf")
+    return bool(lf) and lf == hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()
 
 
 def is_registration_file(path: str) -> bool:
@@ -457,10 +470,12 @@ def _union_mod_lines(repo: Path, path: str, lines: Sequence[str]) -> bool:
 
 def apply_manifest_diff(repo: str | os.PathLike, diff_path: str | os.PathLike,
                         manifest_path: str | os.PathLike, base_sha: str, *,
-                        allowed_roots: Sequence[str] = ALLOWED_ROOTS) -> AppliedDiff:
+                        allowed_roots: Sequence[str] = ALLOWED_ROOTS,
+                        skip_paths: Sequence[str] = ()) -> AppliedDiff:
     """Apply a worker diff 3-way onto `repo`'s working tree and index, filtered
     to the manifest's paths. Never raises for a bad diff: problems land in
-    `errors`, and anything written is rolled back.
+    `errors`, and anything written is rolled back. `skip_paths` are manifest
+    paths dropped like scratch (`skipped`, never applied) rather than refused.
 
     Refused before anything is written: a manifest path that is not canonical
     or not under `allowed_roots` (`path_problem`), a manifest entry with no
@@ -480,6 +495,12 @@ def apply_manifest_diff(repo: str | os.PathLike, diff_path: str | os.PathLike,
     res.errors.extend(problems)
     files = {f["path"]: f for f in manifest["files"]}
     for p in sorted(files):
+        if p in skip_paths:
+            # A file only the orchestrator writes (the gap trackers): the
+            # worker's edit is dropped, reported, and costs the rest nothing.
+            res.skipped.append(p)
+            del files[p]
+            continue
         why = path_problem(p, allowed_roots)
         if why == _OUTSIDE_ROOTS and path_problem(p, None) is None:
             # Structurally safe but not a path a worker may deliver: a scratch
@@ -593,7 +614,7 @@ def apply_manifest_diff(repo: str | os.PathLike, diff_path: str | os.PathLike,
                     res.errors.append(f"{p}: still present after applying its deletion")
             elif not fp.is_file():
                 res.errors.append(f"{p}: missing after apply")
-            elif sha not in content_hashes(fp.read_bytes()):
+            elif not content_matches(files[p], fp.read_bytes()):
                 res.errors.append(f"{p}: content after apply does not match the manifest sha256 "
                                   f"{str(sha)[:12]} (transport mismatch)")
         for p, lines in unions.items():

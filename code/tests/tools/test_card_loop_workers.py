@@ -432,6 +432,19 @@ def test_capture_artifacts_full_worktree_vs_base(tmp_path):
     assert not (clean / "ignored").exists()
 
 
+def test_capture_artifacts_records_the_lf_normalised_hash_too(tmp_path):
+    # A worker file with MIXED line endings matches no single-convention hash of
+    # the LF-normalised diff after apply; `sha256_lf` is what the merge compares.
+    repo = tmp_path / "repo"
+    base_sha = init_repo(repo)
+    mixed = b"a: 1\r\nb: 2\nc: 3\r\n"
+    (repo / "mixed.yaml").write_bytes(mixed)
+    out = capture_artifacts(repo, base_sha, tmp_path / "out")
+    by_path = {f["path"]: f for f in json.loads(Path(out["manifest"]).read_text())["files"]}
+    assert by_path["mixed.yaml"]["sha256"] == hashlib.sha256(mixed).hexdigest()
+    assert by_path["mixed.yaml"]["sha256_lf"] == hashlib.sha256(b"a: 1\nb: 2\nc: 3\n").hexdigest()
+
+
 def test_capture_artifacts_clean_worktree_is_empty(tmp_path):
     repo = tmp_path / "repo"
     base_sha = init_repo(repo)
