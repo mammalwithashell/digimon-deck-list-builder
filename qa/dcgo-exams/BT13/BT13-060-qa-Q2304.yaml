@@ -107,3 +107,8 @@ steps:
     do: { attack: { attacker: field.0, target: field.0 } }
     expect: { prompt: main_phase }
 assert: []
+expect_ruling:
+  q_id: Q2304
+  assert:
+  - at: 20
+    that: {p1.security: 2}
