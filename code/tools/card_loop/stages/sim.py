@@ -8,7 +8,9 @@ first book that lowers and asserts clean -- exactly the CI driver's rule.
     every scenario passes     -> ORACLE, data["deck_books"] = {path: book}
     any scenario fails        -> AUTHORING, data["sim_failure"] = {path: [lines]},
                                  and a `gate_fail` (gate "sim") correction of the
-                                 authoring attempt (D11: an author's immediate correction)
+                                 authoring attempt (D11: an author's immediate correction).
+                                 A Q&A scenario whose `expect_ruling:` is not the block
+                                 both families agreed (ENCODE) fails the same way.
     the harness cannot run    -> StageDeferred (infrastructure, nobody's correction)
 """
 from __future__ import annotations
@@ -57,6 +59,18 @@ class SimExecutor:
                 first_failure = first_failure or report
             else:
                 failures[path] = list(first_failure.failures) or [first_failure.failure_text()]
+
+        # A Q&A exam's `expect_ruling:` is the value BOTH families agreed (D5/D7);
+        # the author must carry it verbatim, so an altered block is the author's error.
+        agreed = item.data.get("expect_ruling")
+        if agreed:
+            for path in paths:
+                if path in failures or not base.repo_path(ctx, path).is_file():
+                    continue
+                found = (base.load_yaml(base.repo_path(ctx, path)) or {}).get("expect_ruling")
+                if found != agreed:
+                    failures[path] = [f"the scenario's expect_ruling {found!r} is not the block both "
+                                      f"families agreed: {agreed!r}"]
 
         if failures:
             corrections = []

@@ -74,7 +74,7 @@ class AuthoringExecutor:
                 keywords=base.bullet_list(base.keywords_of([rec]), empty="(none)"),
                 attempt_id=attempt_id, previous=_previous(item))
 
-        refs = [base.bundle_path(card), script, *notes, "qa/exam-authoring-guide.json",
+        refs = [base.bundle_path(card), script, base.scenario_dir(card), *notes, "qa/exam-authoring-guide.json",
                 "docs/digimon-rules/keyword-semantics.md"]
         if base.repo_path(ctx, path).is_file():
             refs.append(path)
@@ -116,7 +116,8 @@ class AuthoringExecutor:
                 attempt_id=attempt_id, previous=_previous(item))
 
         refs = [*(base.bundle_path(c) for c in cards), *(base.dcgo_script(ctx, c) for c in cards),
-                base_line, *notes, "qa/exam-authoring-guide.json", "docs/digimon-rules/keyword-semantics.md"]
+                base_line, base.scenario_dir(primary), *notes, "qa/exam-authoring-guide.json",
+                "docs/digimon-rules/keyword-semantics.md"]
         return self._finish(ctx, item, "author_interaction", render, refs, implementer=implementer,
                             subject=iid, extra={"base_scenario": base_line})
 

@@ -257,6 +257,33 @@ def test_a_harness_that_cannot_start_defers_and_blames_no_author(repo):
     assert not e.value.outcome.corrections
 
 
+AGREED = {"q_id": "Q77", "assert": [{"at": 1, "that": {"p1.field": []}}]}
+QA_SCENARIO = SCENARIO.replace("seed: 1\n", 'interaction: {id: "qa:Q77", source: qa, kind: positive}\nseed: 1\n')
+
+
+def test_sim_refuses_a_scenario_that_altered_the_agreed_ruling_block(repo):
+    rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
+    _write_scenario(repo, rel, QA_SCENARIO + "expect_ruling:\n  q_id: Q77\n  assert:\n"
+                                              "    - at: 1\n      that: {p1.field: [ST1-02]}\n")
+    cmds = FakeCommands().on("--sim-only", 0, SIM_PASS)
+    item = _item("SIM", item="interaction:qa:Q77", scenario_paths=[rel], expect_ruling=AGREED,
+                 author_attempt="att-a", author_stage="author_interaction")
+    out = SimExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "AUTHORING"
+    assert "expect_ruling" in out.data["sim_failure"][rel][0]
+    assert out.corrections[0].stage == "author_interaction"
+
+
+def test_sim_accepts_the_agreed_ruling_block_verbatim(repo):
+    rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
+    _write_scenario(repo, rel, QA_SCENARIO + "expect_ruling:\n  q_id: Q77\n  assert:\n"
+                                              "    - at: 1\n      that: {p1.field: []}\n")
+    cmds = FakeCommands().on("--sim-only", 0, SIM_PASS)
+    item = _item("SIM", item="interaction:qa:Q77", scenario_paths=[rel], expect_ruling=AGREED)
+    assert SimExecutor().run(_ctx(repo, cmds=cmds), item).next_state == "ORACLE"
+
+
 def test_a_missing_scenario_file_is_an_authoring_failure(repo):
     out = SimExecutor().run(_ctx(repo), _item("SIM", scenario_paths=[SC]))
     assert out.next_state == "AUTHORING" and "not found" in out.data["sim_failure"][SC][0]

@@ -40,10 +40,10 @@ import dataclasses
 import json
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Mapping, Sequence
+from typing import Iterable, Iterator, Mapping, Sequence
 
 from .. import corrections as corr
 from ..contracts import FAMILIES, TaskPacket, WorkerResult, split_item_id
@@ -134,9 +134,6 @@ class WorkerCall:
         return attempt_from_call(self.packet, self.result, run_id=ctx.run_id,
                                  assignment=self.assignment, outcome=outcome,
                                  parent_attempt=parent, notes=notes, ts=ctx.now())
-
-
-Prompt = "str | Callable[[str], str]"   # text, or attempt_id -> text (provenance stamps)
 
 
 def call_worker(ctx, item: ItemRecord, *, stage: str, family: str, assignment: str, prompt,
@@ -424,11 +421,17 @@ def clauses_for(ctx, card_ids: Sequence[str]) -> list[dict]:
             out.extend(rows)
         else:
             missing.append(cid)
-    if missing:
-        from ..interactions.denominator import extract_clauses
-
-        out.extend(extract_clauses(missing))
+    for cid in missing:
+        out.extend(_extracted(cid))
     return out
+
+
+@lru_cache(maxsize=512)
+def _extracted(card_id: str) -> tuple:
+    """`tools.clause_coverage` extraction from committed card data, per card, cached."""
+    from ..interactions.denominator import extract_clauses
+
+    return tuple(extract_clauses([card_id]))
 
 
 def clause_record(ctx, clause_id: str) -> dict | None:
@@ -558,7 +561,7 @@ def _ledger_attempts(ctx) -> list:
     return list(attempts)
 
 
-def _load_yaml(path: Path) -> dict | None:
+def load_yaml(path: Path) -> dict | None:
     import yaml
 
     try:
@@ -569,7 +572,7 @@ def _load_yaml(path: Path) -> dict | None:
 
 
 def scenario_steps(ctx, rel: str) -> list:
-    data = _load_yaml(repo_path(ctx, rel)) or {}
+    data = load_yaml(repo_path(ctx, rel)) or {}
     steps = data.get("steps")
     return steps if isinstance(steps, list) else []
 
@@ -584,7 +587,7 @@ def find_scenarios(ctx, card_ids: Sequence[str], *, clause: str | None = None,
         if not root.is_dir():
             continue
         for p in sorted(root.glob("*.yaml")):
-            data = _load_yaml(p)
+            data = load_yaml(p)
             if not data:
                 continue
             inter = data.get("interaction") if isinstance(data.get("interaction"), dict) else None
