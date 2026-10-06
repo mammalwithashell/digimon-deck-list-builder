@@ -10,7 +10,7 @@ card: BT21-071
 clause: BT21-071#effect#0
 covers: [BT21-071#effect#0]
 interaction: {id: "qa:Q4577", source: qa, kind: positive}
-meta: {produced_by: 20261006T153314961120Z-pilot-three-musketeers-517aa7}
+meta: {produced_by: 20261006T153444588010Z-pilot-three-musketeers-08d233}
 seed: 424242
 decks:
   p0:
