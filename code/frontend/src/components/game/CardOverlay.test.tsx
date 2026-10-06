@@ -107,7 +107,8 @@ describe('CardOverlay right-click inspect (DCGO CardInfo -> CardDetail)', () => 
     render(
       <CardOverlay permanent={makePerm({ sources: [makeSource()] })} onClose={vi.fn()} />,
     );
-    expect(screen.getByText('[Your Turn] This Digimon gets +1000 DP.')).toBeInTheDocument();
+    // CardEffectText renders the [Your Turn] timing as a badge of its own.
+    expect(screen.getByText(/This Digimon gets \+1000 DP\./)).toBeInTheDocument();
   });
 });
 
