@@ -56,7 +56,10 @@ CITATION_KINDS = ("rule", "ruling", "dcgo")
 _RULE_REF = re.compile(r"^(?:general[_ ]rules?(?:\.pdf)?\s*[,:]?\s*)?§?\s*\d+(?:-\d+)+(?:\s+.*)?$",
                        re.IGNORECASE)
 _RULING_REF = re.compile(r"^qa:Q\d+$")
-_DCGO_REF = re.compile(r"^(?:[A-Za-z0-9_.$-]+/)*[A-Za-z0-9_.-]+\.cs(?::\d+(?:-\d+)?)?$")
+# A C# file, bare or under any path -- including the ABSOLUTE base-repo path
+# the prompts themselves hand the worker (`C:/.../DCGO/Assets/.../BT13_060.cs:218`
+# failed a landed card fix in the second pilot) -- with an optional :line or :a-b.
+_DCGO_REF = re.compile(r"^(?:[A-Za-z]:)?(?:[^\s:]+/)*[A-Za-z0-9_.-]+\.cs(?::\d+(?:-\d+)?)?$")
 _RUST_PATH = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)*$")
 _BINARY = re.compile(r"^[A-Za-z0-9_]+$")
 _RESULT_LINE = re.compile(r"^test (\S+) \.\.\. (ok|FAILED|ignored)\b", re.MULTILINE)

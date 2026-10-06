@@ -258,6 +258,11 @@ def test_parse_test_name():
     {"kind": "dcgo", "ref": "BT21_029.cs:45"},
     {"kind": "dcgo", "ref": "Assets/Scripts/CardEffect/BT21/Red/BT21_029.cs:120-131"},
     {"kind": "dcgo", "ref": "Assets\\Scripts\\CardEffect\\BT21\\Red\\BT21_029.cs"},
+    # the absolute base-repo path the triage/fix prompts hand the worker (a landed
+    # card fix failed the gate on it in the second pilot)
+    {"kind": "dcgo", "ref": "C:\\Users\\james\\Documents\\digimon-deck-list-builder-1\\DCGO\\Assets\\Scripts"
+                            "\\CardEffect\\BT13\\Green\\BT13_060.cs:218"},
+    {"kind": "dcgo", "ref": "/mnt/base/DCGO/Assets/Scripts/CardEffect/BT13/Green/BT13_060.cs:218"},
 ])
 def test_well_formed_citations(citation):
     assert citation_problem(citation) is None
