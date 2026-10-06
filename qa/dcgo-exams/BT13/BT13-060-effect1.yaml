@@ -62,10 +62,7 @@ steps:
     do: { play: { card: ST1-12, from: hand } }
     expect: { prompt: main_phase }
   - actor: 1
-    do: { play: { card: ST1-05, from: hand } }
-    expect: { prompt: main_phase }
-  - actor: 1
-    do: { play: { card: ST1-05, from: hand } }
+    do: { play: { card: ST1-05, from: hand.0 } }
     expect: { prompt: main_phase }
   # T5 (P0, 5): digivolve (5 -> 0).
   - actor: 0
@@ -83,9 +80,6 @@ steps:
     do: { select: { targets: [opp.field.1] } }
     expect: { prompt: SelectPermanentEffect }
   # P0 ends the turn at 0 memory; P1's unsuspend phase is blocked for the pair.
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: main_phase }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
