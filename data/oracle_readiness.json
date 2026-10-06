@@ -41619,7 +41619,9 @@
       "total_clauses": 4
     },
     "LM-057": {
-      "blocking": [],
+      "blocking": [
+        "LM-057#extraction#unresolved"
+      ],
       "by_verdict": {
         "confirmed": 0,
         "diverged": 0,
@@ -41627,11 +41629,13 @@
         "unmeasured": 0,
         "unreachable": 0
       },
-      "status": "ready",
+      "status": "not_ready",
       "total_clauses": 0
     },
     "LM-058": {
-      "blocking": [],
+      "blocking": [
+        "LM-058#extraction#unresolved"
+      ],
       "by_verdict": {
         "confirmed": 0,
         "diverged": 0,
@@ -41639,11 +41643,13 @@
         "unmeasured": 0,
         "unreachable": 0
       },
-      "status": "ready",
+      "status": "not_ready",
       "total_clauses": 0
     },
     "LM-059": {
-      "blocking": [],
+      "blocking": [
+        "LM-059#extraction#unresolved"
+      ],
       "by_verdict": {
         "confirmed": 0,
         "diverged": 0,
@@ -41651,11 +41657,13 @@
         "unmeasured": 0,
         "unreachable": 0
       },
-      "status": "ready",
+      "status": "not_ready",
       "total_clauses": 0
     },
     "LM-060": {
-      "blocking": [],
+      "blocking": [
+        "LM-060#extraction#unresolved"
+      ],
       "by_verdict": {
         "confirmed": 0,
         "diverged": 0,
@@ -41663,11 +41671,13 @@
         "unmeasured": 0,
         "unreachable": 0
       },
-      "status": "ready",
+      "status": "not_ready",
       "total_clauses": 0
     },
     "LM-061": {
-      "blocking": [],
+      "blocking": [
+        "LM-061#extraction#unresolved"
+      ],
       "by_verdict": {
         "confirmed": 0,
         "diverged": 0,
@@ -41675,11 +41685,13 @@
         "unmeasured": 0,
         "unreachable": 0
       },
-      "status": "ready",
+      "status": "not_ready",
       "total_clauses": 0
     },
     "LM-062": {
-      "blocking": [],
+      "blocking": [
+        "LM-062#extraction#unresolved"
+      ],
       "by_verdict": {
         "confirmed": 0,
         "diverged": 0,
@@ -41687,11 +41699,13 @@
         "unmeasured": 0,
         "unreachable": 0
       },
-      "status": "ready",
+      "status": "not_ready",
       "total_clauses": 0
     },
     "LM-065": {
-      "blocking": [],
+      "blocking": [
+        "LM-065#extraction#unresolved"
+      ],
       "by_verdict": {
         "confirmed": 0,
         "diverged": 0,
@@ -41699,7 +41713,7 @@
         "unmeasured": 0,
         "unreachable": 0
       },
-      "status": "ready",
+      "status": "not_ready",
       "total_clauses": 0
     },
     "P-007": {
@@ -48716,8 +48730,8 @@
     "total": 5097
   },
   "summary": {
-    "not_ready": 2905,
-    "ready": 140
+    "not_ready": 2912,
+    "ready": 133
   },
   "version": 1
 }

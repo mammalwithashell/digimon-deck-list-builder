@@ -69,21 +69,56 @@ def clause_is_adjudicated(clause: dict) -> bool:
     return False
 
 
+# Printed-text fields of the merged cards.json/overrides record; any of them
+# non-blank means the card prints something (mirrors the extractor's fallback).
+_TEXT_FIELDS = (
+    "effect_description_eng",
+    "inherited_effect_description_eng",
+    "security_effect_description_eng",
+    "xros_req",
+)
+
+
+def vanilla_confirmed(official_entry: dict | None, card_record: dict) -> bool:
+    """Two sources agree the card prints no effect, inherited or security text.
+
+    The extractor yields zero clauses whenever the official-mirror entry has no
+    text sections -- including a FAILED lookup, whose skeleton entry carries no
+    `colors` (e.g. LM-057..LM-062, LM-065, which print effects). So zero clauses
+    alone never proves "vanilla": the official entry must be a real lookup
+    (non-blank `colors`) AND the merged cards.json/overrides record must carry
+    no printed text either.
+    """
+    if not isinstance(official_entry, dict) or not _has_text(official_entry.get("colors")):
+        return False
+    if any(_has_text(card_record.get(f)) for f in _TEXT_FIELDS):
+        return False
+    dual = card_record.get("dual")
+    if isinstance(dual, dict) and _has_text((dual.get("option") or {}).get("effect_text")):
+        return False
+    return True
+
+
 def card_blockers(card_report: dict) -> list[str]:
     """Every adjudication unit of one card that keeps it out of training, sorted.
 
     THE extension seam of readiness. Today the units are the card's printed
     clauses (`exam_binding.bind()["cards"][cid]["clauses"]`), judged by
-    `clause_is_adjudicated`. When the gating-interaction join lands (card-loop
-    group 7, design D9), it joins HERE and nowhere else: `build_readiness`
-    attaches the card's `bind_interactions()` rows to `card_report`, and this
-    function appends the ids of the ones that are not adjudicated. The
-    artifact's `blocking` list, the `ready` status, the training gate and
-    `--plan` all consume this list unchanged.
+    `clause_is_adjudicated`, plus one synthetic `<id>#extraction#unresolved`
+    unit for a card with zero clauses that `build_readiness` could not confirm
+    as vanilla (`card_report["vanilla_confirmed"]`, fail-closed when absent).
+    When the gating-interaction join lands (card-loop group 7, design D9), it
+    joins HERE and nowhere else: `build_readiness` attaches the card's
+    `bind_interactions()` rows to `card_report`, and this function appends the
+    ids of the ones that are not adjudicated. The artifact's `blocking` list,
+    the `ready` status, the training gate and `--plan` all consume this list
+    unchanged.
     """
-    return sorted(
-        c["clause_id"] for c in card_report.get("clauses", []) if not clause_is_adjudicated(c)
-    )
+    clauses = card_report.get("clauses", [])
+    blocking = [c["clause_id"] for c in clauses if not clause_is_adjudicated(c)]
+    if not clauses and card_report.get("vanilla_confirmed") is not True:
+        blocking.append(f"{card_report.get('card_id', '?')}#extraction#unresolved")
+    return sorted(blocking)
 
 
 def card_status(card_report: dict) -> dict:
@@ -142,19 +177,51 @@ def _dcgo_disabled() -> Iterator[None]:
             os.environ["DIGIMON_DCGO_ROOT"] = previous
 
 
+def _default_vanilla_fn() -> Callable[[str], bool]:
+    """`vanilla_confirmed` over the same card-data files the extractor reads."""
+    from data_paths import CARD_OVERRIDES, CARDS_JSON
+    from tools.clause_coverage.card_sources import (
+        _merged_card_record,
+        load_cards_index,
+        load_official_index,
+        load_overrides_index,
+    )
+    from tools.clause_coverage.extract import DEFAULT_OFFICIAL_JSON
+
+    cards_index = load_cards_index(CARDS_JSON)
+    overrides_index = load_overrides_index(CARD_OVERRIDES)
+    official_index = load_official_index(DEFAULT_OFFICIAL_JSON)
+
+    def is_vanilla(card_id: str) -> bool:
+        record, _ = _merged_card_record(card_id, cards_index, overrides_index)
+        return vanilla_confirmed(official_index.get(card_id), record)
+
+    return is_vanilla
+
+
 def build_readiness(
     card_ids: Iterable[str],
     *,
     scenarios_dir: Path,
     verdicts_dir: Path,
     bind_fn: Callable | None = None,
+    vanilla_fn: Callable[[str], bool] | None = None,
 ) -> dict:
+    """`vanilla_fn(card_id)` confirms a zero-clause card prints nothing
+    (default: `vanilla_confirmed` over the extractor's card-data files); it is
+    consulted only for cards whose extraction yields zero clauses."""
     if bind_fn is None:
         from tools.clause_coverage.exam_binding import bind as bind_fn
     ids = sorted(set(card_ids))
     with _dcgo_disabled():
         report = bind_fn(ids, scenarios_dir, verdicts_dir, source_desc="oracle readiness")
-    cards = {cid: card_status(report["cards"][cid]) for cid in sorted(report["cards"])}
+    reports = {cid: dict(report["cards"][cid]) for cid in sorted(report["cards"])}
+    for cid, card_report in reports.items():
+        if not card_report.get("clauses"):
+            if vanilla_fn is None:
+                vanilla_fn = _default_vanilla_fn()
+            card_report["vanilla_confirmed"] = bool(vanilla_fn(cid))
+    cards = {cid: card_status(card_report) for cid, card_report in reports.items()}
     summary = Counter(s["status"] for s in cards.values())
     return {
         "version": ARTIFACT_VERSION,

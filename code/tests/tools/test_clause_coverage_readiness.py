@@ -9,6 +9,7 @@ from tools.clause_coverage.readiness import (
     clause_is_adjudicated,
     library_decklists,
     render,
+    vanilla_confirmed,
 )
 
 
@@ -51,8 +52,50 @@ def test_card_ready_only_when_every_clause_is_adjudicated():
 
 
 def test_zero_clause_card_is_ready():
-    report = {"card_id": "V", "total_clauses": 0, "by_verdict": {}, "clauses": []}
+    report = {"card_id": "V", "total_clauses": 0, "by_verdict": {}, "clauses": [],
+              "vanilla_confirmed": True}
     assert card_status(report)["status"] == "ready"
+
+
+def test_zero_clause_card_without_a_vanilla_confirmation_blocks():
+    # Zero extracted clauses is only "prints nothing" when a second source agrees;
+    # otherwise the extraction is unresolved and the card must not be admitted.
+    report = {"card_id": "V", "total_clauses": 0, "by_verdict": {}, "clauses": []}
+    status = card_status(report)
+    assert status["status"] == "not_ready"
+    assert status["blocking"] == ["V#extraction#unresolved"]
+
+
+@pytest.mark.parametrize(
+    "official, record, expected",
+    [
+        ({"colors": "Red", "text_sections": []}, {"card_kind": 0}, True),
+        # failed official lookup (no colors) -- a skeleton, not "prints nothing"
+        ({"text_sections": []}, {}, False),
+        ({"colors": "", "text_sections": []}, {}, False),
+        (None, {}, False),
+        # the official entry looks vanilla but cards.json/overrides print text
+        ({"colors": "Red"}, {"effect_description_eng": "[On Play] Draw 1."}, False),
+        ({"colors": "Red"}, {"inherited_effect_description_eng": "[Your Turn] +1000 DP"}, False),
+        ({"colors": "Red"}, {"security_effect_description_eng": "[Security] Play this."}, False),
+        ({"colors": "Red"}, {"xros_req": "[DigiXros -2] A x B"}, False),
+        ({"colors": "Red"}, {"dual": {"option": {"effect_text": "[Main] Delete 1."}}}, False),
+        ({"colors": "Red"}, {"effect_description_eng": "   "}, True),
+    ],
+)
+def test_vanilla_needs_a_real_official_entry_and_a_textless_card_record(official, record, expected):
+    assert vanilla_confirmed(official, record) is expected
+
+
+def test_failed_official_lookup_with_printed_text_is_not_ready(tmp_path):
+    # LM-057's official-mirror entry is a failed-lookup skeleton (no colors, no
+    # sections), so extraction yields zero clauses -- yet the card prints an
+    # effect and a security effect. A true vanilla (ST1-02) stays ready.
+    data = build_readiness(["LM-057", "ST1-02"], scenarios_dir=tmp_path / "none",
+                           verdicts_dir=tmp_path / "none")
+    assert data["cards"]["LM-057"]["status"] == "not_ready"
+    assert data["cards"]["LM-057"]["blocking"] == ["LM-057#extraction#unresolved"]
+    assert data["cards"]["ST1-02"]["status"] == "ready"
 
 
 def test_build_readiness_is_deterministic_and_summarised(tmp_path):
