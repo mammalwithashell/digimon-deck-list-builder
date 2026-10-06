@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-06T15:56:27.530854200+00:00",
+  "last_updated": "2026-10-06T15:58:38.315194800+00:00",
   "clauses": {
     "BT26-050#effect#0": {
       "clause_id": "BT26-050#effect#0",
@@ -12,6 +12,17 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-050-effect0",
       "recorded_at": "2026-10-06T15:56:27.530854200+00:00"
+    },
+    "BT26-050#effect#1": {
+      "clause_id": "BT26-050#effect#1",
+      "card_id": "BT26-050",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "993d91b9b5f10698a97541b5f0e2db9c4a9e7fb794de01af9319e3c0d83405ba",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-050-effect1.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-050-effect1",
+      "recorded_at": "2026-10-06T15:58:38.315194800+00:00"
     }
   }
 }
