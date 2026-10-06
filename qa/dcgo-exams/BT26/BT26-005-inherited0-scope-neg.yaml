@@ -1,0 +1,67 @@
+# NEGATIVE probe: Pinamon (BT26-005) inherited [On Deletion] must NOT fire when
+# no Tamer of yours has a face-down digivolution card (BT26_005.cs
+# CanActivateCondition requires a Tamer with HasFaceDownDigivolutionCards).
+# Extends BT26-005-inherited0.yaml, but Keenan's [Start of Your Main Phase]
+# stash is declined both turns, so Keenan (a Tamer in play) has 0 sources.
+# ST24-12 (2000 DP, carrying Pinamon) attacks security and is deleted by
+# ST1-02 (3000 DP); no prompt may appear and Pinamon stays in the trash.
+card: BT26-005
+clause: BT26-005#inherited#0
+interaction: {id: "probe:BT26-005#inherited#0:scope:neg", source: probe, kind: negative}
+covers:
+  - BT26-005#inherited#0
+meta: {produced_by: 20261006T145834227207Z-pilot-data-squad-7983ac}
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-094, ST24-12, ST24-04, ST24-15, BT26-076,
+            ST24-05, BT26-091, BT26-049, BT26-050, ST24-14,
+            ST24-04, BT26-091, ST24-05, BT26-072, ST24-04]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST24-12 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT26-094, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { attack: { attacker: field.1, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert: []
