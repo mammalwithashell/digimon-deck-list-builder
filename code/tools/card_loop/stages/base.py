@@ -47,6 +47,7 @@ from typing import Iterable, Iterator, Mapping, Sequence
 
 from .. import corrections as corr
 from ..contracts import FAMILIES, TaskPacket, WorkerResult, split_item_id
+from ..driver_contracts import StageDeferred as _ContractStageDeferred
 from ..driver_contracts import Escalation, ItemRecord, StageOutcome
 from ..ledger import Attempt, attempt_from_call
 from ..router import RoutingUnavailable, other_family, route
@@ -54,13 +55,14 @@ from ..workers.base import run_with_retry, schema_path
 from . import prompts
 
 
-class StageDeferred(RuntimeError):
-    """The stage cannot run now; leave the item where it is (see module doc)."""
+class StageDeferred(_ContractStageDeferred, RuntimeError):
+    """The stage cannot run now; leave the item where it is (see module doc).
+
+    Subclasses the contract's `StageDeferred`, which is what the driver
+    catches; `RuntimeError` is kept for callers that already catch it."""
 
     def __init__(self, reason: str, outcome: StageOutcome | None = None):
-        super().__init__(reason)
-        self.reason = reason
-        self.outcome = outcome
+        _ContractStageDeferred.__init__(self, reason, outcome)
 
 
 # ---------------------------------------------------------------------------
