@@ -1,7 +1,18 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T14:17:53.223689600+00:00",
+  "last_updated": "2026-10-06T15:32:10.882696800+00:00",
   "clauses": {
+    "BT13-060#effect#1": {
+      "clause_id": "BT13-060#effect#1",
+      "card_id": "BT13-060",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "d9345abda56abf04e1c00cdf37d8683892af84a6b8ef8fee77c42b2d94d93df2",
+      "scenario_path": "qa/dcgo-exams/BT13/BT13-060-effect1.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT13-060-effect1",
+      "recorded_at": "2026-10-06T15:32:10.882696800+00:00"
+    },
     "BT13-060#effect#2": {
       "clause_id": "BT13-060#effect#2",
       "card_id": "BT13-060",
