@@ -15,16 +15,18 @@
     6
   ],
   "type_eng": [
-    "Hacking (App Name)"
+    "Hacking (App Name)",
+    "Hacking"
   ],
   "form_eng": [
-    "Stnd."
+    "Stnd.",
+    "Appmon"
   ],
   "attribute_eng": [
     "System"
   ],
   "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Rei Katsura] from your hand without paying the cost.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
@@ -33,5 +35,6 @@
       "memory_cost": 0
     }
   ],
-  "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+  "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+  "link_effect_description_eng": "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
 }

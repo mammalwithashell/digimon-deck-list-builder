@@ -307,6 +307,37 @@ def normalize_misfiled_inherited(card: dict) -> bool:
     return True
 
 
+# A link card's link box (general_rule.pdf 2-3-12). The API marks a link card with
+# `link_requirements` and `link_dp`, and returns its link effect as `source_effect`, the
+# field convert_card files as the inherited effect: mostly without the effect's timing
+# ("All of your opponent's Security Digimon get -3000 DP." for BT21-041's "[Your Turn] ..."),
+# and on some cards as a copy of the link requirement instead.
+_LINK_REQUIREMENT_COPY_RE = re.compile(r"^\s*Link Requirements\b")
+
+
+def normalize_link_box(card: dict, api_card: dict) -> bool:
+    """File a link card's `source_effect` as its link effect, not as an inherited effect.
+
+    general_rule.pdf 4-2-4 / 4-2-6: a Digimon gains the inherited effects of its
+    digivolution cards and the link effects of its link card. Left in the inherited
+    field, a link card's link effect reached every Digimon with the card under it
+    (BT21-009 Gatchmon gave <Raid>), and the DSL's `has_inherited` predicate counted
+    every link card as a card with inherited effects. A `source_effect` that only
+    copies the link requirement is dropped: the API has no link effect for that card.
+    card_overrides.json restores the printed link effects the API drops or truncates.
+
+    Returns True iff the card was modified.
+    """
+    if not (api_card.get("link_requirements") or api_card.get("link_dp")):
+        return False
+    inherited = card.get("inherited_effect_description_eng") or ""
+    if not inherited and "link_effect_description_eng" in card:
+        return False
+    card["inherited_effect_description_eng"] = ""
+    card["link_effect_description_eng"] = "" if _LINK_REQUIREMENT_COPY_RE.match(inherited) else inherited.strip()
+    return True
+
+
 def convert_card(api_card):
     """Convert a digimoncard.io API card to our cards.json format."""
     card_id = api_card["id"]
@@ -386,6 +417,7 @@ def convert_card(api_card):
             },
         }
     normalize_misfiled_inherited(out)
+    normalize_link_box(out, api_card)
     return out
 
 

@@ -16,16 +16,18 @@
   ],
   "type_eng": [
     "Simulation (App Name)",
-    "Leviathan"
+    "Leviathan",
+    "Simulation"
   ],
   "form_eng": [
-    "Sup."
+    "Sup.",
+    "Appmon"
   ],
   "attribute_eng": [
     "Game"
   ],
   "effect_description_eng": "[On Play] [When Digivolving] Delete 1 of your opponent's level 3 Digimon.\r\n[All Turns] [Once Per Turn] When effects trash any of this Digimon's link cards, gain 1 memory.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
@@ -34,5 +36,6 @@
       "memory_cost": 2
     }
   ],
-  "xros_req": ""
+  "xros_req": "",
+  "link_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, delete 1 of your opponent's level 4 or lower Digimon."
 }
