@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T16:58:20.979553900+00:00",
+  "last_updated": "2026-10-06T21:54:47.972883+00:00",
   "clauses": {},
   "interactions": {
     "probe:BT26-005#inherited#0:leave_play": {
@@ -16,7 +16,7 @@
       "reason": "DIVERGED at step 16 (compared 17 of 22 ours / 19 dcgo steps (5 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-005-inherited0-leave-play",
-      "recorded_at": "2026-10-06T15:35:43.709859800+00:00"
+      "recorded_at": "2026-10-06T21:54:47.972883+00:00"
     },
     "probe:BT26-005#inherited#0:optional_decline": {
       "interaction_id": "probe:BT26-005#inherited#0:optional_decline",
