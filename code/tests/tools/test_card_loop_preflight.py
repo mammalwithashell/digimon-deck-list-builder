@@ -24,6 +24,7 @@ from tools.card_loop.preflight import (
     check_oracle_node,
     check_worker_clis,
     dcgo_script_presence,
+    dcgo_script_resolution,
     ensure_go,
     newly_available,
     run_preflight,
@@ -220,6 +221,161 @@ def test_dcgo_later_adds_the_card(tmp_path):
     after = dcgo_script_presence(["BT7-056", "EX7-008"], root)
     assert after["EX7-008"] == "Assets/Scripts/CardEffect/EX7/Red/EX7_008.cs"
     assert newly_available(before, after) == ["EX7-008"]
+
+
+# --- task 9.2: DCGO resolves a card's effects through its CardBaseEntity asset ---
+
+
+def _cs(root: Path, rel: str, body: str) -> None:
+    p = root / "Assets" / "Scripts" / "CardEffect" / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(body, encoding="utf-8", newline="\n")
+
+
+def _global_class(name: str) -> str:
+    return (f"public class {name} : CEntity_Effect\n{{\n"
+            "    public override List<ICardEffect> CardEffects(EffectTiming timing, "
+            "CardSource card) {}\n}\n")
+
+
+def _ns_class(ns: str, *names: str) -> str:
+    return f"namespace {ns}\n{{\n" + "".join(_global_class(n) for n in names) + "}\n"
+
+
+def _asset(root: Path, card_id: str, class_name: str, sub: str = "Red/Digimon") -> None:
+    """A CardBaseEntity asset (Unity YAML) naming the card's effect class."""
+    set_ = card_id.split("-")[0]
+    d = root / "Assets" / "CardBaseEntity" / set_ / sub
+    d.mkdir(parents=True, exist_ok=True)
+    stem = card_id.replace("-", "_")
+    (d / f"{stem}.asset").write_text(
+        "%YAML 1.1\n--- !u!114 &11400000\nMonoBehaviour:\n"
+        f"  m_Name: {stem}\n  CardEffectClassName: {class_name}\n  CardID: {card_id}\n",
+        encoding="utf-8", newline="\n")
+
+
+@pytest.fixture
+def asset_dcgo(tmp_path):
+    """A DCGO checkout WITH CardBaseEntity assets (the real layout)."""
+    root = tmp_path / "DCGO"
+    _cs(root, "BT1/Red/BT1_016.cs", _global_class("BT1_016"))   # <Jamming> only
+    _cs(root, "BT1/Red/BT1_021.cs", _global_class("BT1_021"))
+    _cs(root, "BT1/Red/BT1_040.cs", _global_class("BT1_040"))   # not what the asset runs
+    _cs(root, "BT7/Blue/BT7_056.cs", _global_class("BT7_056"))
+    _cs(root, "BT25/Yellow/BT25_002.cs",
+        _ns_class("DCGO.CardEffects.BT25", "BT25_002", "BT25_003"))
+    _cs(root, "BT10/Green/BT10_045.cs", _ns_class("DCGO.CardEffects.BT10", "BT10_045"))
+    _cs(root, "EX13/Red/EX13_001.cs", _ns_class("DCGO.CardEffects.EX13", "EX13_001"))
+    _cs(root, "BT4/Purple/BT4_038_token.cs", _ns_class("DCGO.CardEffects.Tokens", "BT4_038_token"))
+    _asset(root, "BT7-056", "BT7_056")
+    _asset(root, "BT1-032", "BT1_016")       # keyword-only reprint -> shared class
+    _asset(root, "BT1-040", "BT1_021")       # its own BT1_040.cs is not what DCGO runs
+    _asset(root, "BT25-003", "BT25_003")     # class lives in BT25_002.cs
+    _asset(root, "BT12-036", "BT10_045")     # namespaced in BT10: DCGO looks in BT12
+    _asset(root, "BT3-099", "")              # no class -> EmptyEffectClass
+    _asset(root, "P-999", "BT4_038_token")   # token-named class -> Tokens namespace
+    return root
+
+
+def test_asset_naming_a_shared_class_is_available(asset_dcgo):
+    """A keyword-only reprint (BT1-032, <Jamming>) has no `BT1_032.cs`; DCGO
+    plays it through the class its CardBaseEntity asset names."""
+    res = dcgo_script_resolution(["BT1-032", "BT7-056"], asset_dcgo)
+    assert res["BT1-032"].path == "Assets/Scripts/CardEffect/BT1/Red/BT1_016.cs"
+    assert "BT1_016" in res["BT1-032"].mechanism
+    assert res["BT7-056"].path == "Assets/Scripts/CardEffect/BT7/Blue/BT7_056.cs"
+    c, presence = check_dcgo_scripts(["BT1-032", "BT7-056"], asset_dcgo)
+    assert c.status == "ok"
+    assert presence["BT1-032"] == "Assets/Scripts/CardEffect/BT1/Red/BT1_016.cs"
+    assert "BT1-032" in c.detail and "CardEffectClassName" in c.detail
+
+
+def test_the_asset_class_wins_over_a_same_named_script(asset_dcgo):
+    assert dcgo_script_presence(["BT1-040"], asset_dcgo) == {
+        "BT1-040": "Assets/Scripts/CardEffect/BT1/Red/BT1_021.cs"}
+
+
+def test_a_class_declared_in_another_file_of_its_namespace_resolves(asset_dcgo):
+    # DCGO's BT25_003 (Frimon) is declared inside BT25_002.cs.
+    assert dcgo_script_presence(["BT25-003"], asset_dcgo) == {
+        "BT25-003": "Assets/Scripts/CardEffect/BT25/Yellow/BT25_002.cs"}
+
+
+def test_a_class_namespaced_under_another_set_does_not_resolve(asset_dcgo):
+    # AddCardEffect looks for `DCGO.CardEffects.BT12.BT10_045`; the class is in
+    # `DCGO.CardEffects.BT10`, so DCGO attaches EmptyEffectClass.
+    res = dcgo_script_resolution(["BT12-036"], asset_dcgo)
+    assert res["BT12-036"].path is None
+    assert "EmptyEffectClass" in res["BT12-036"].mechanism
+
+
+def test_two_classes_in_one_file_both_resolve(asset_dcgo):
+    # BT25_002.cs declares BT25_002 AND BT25_003: one file, two cards.
+    _asset(asset_dcgo, "BT25-002", "BT25_002")
+    assert dcgo_script_presence(["BT25-002", "BT25-003"], asset_dcgo) == {
+        "BT25-002": "Assets/Scripts/CardEffect/BT25/Yellow/BT25_002.cs",
+        "BT25-003": "Assets/Scripts/CardEffect/BT25/Yellow/BT25_002.cs",
+    }
+
+
+def test_the_whole_tree_is_scanned_at_most_once_per_call(asset_dcgo, monkeypatch):
+    # Unresolvable classes (vanilla cards, cross-set namespaces) must not each
+    # re-read every CardEffect file.
+    for i in range(5):
+        _asset(asset_dcgo, f"BT12-{100 + i}", "BT10_045")
+    files = len(list((asset_dcgo / "Assets" / "Scripts" / "CardEffect").rglob("*.cs")))
+    calls = []
+    real = pf._class_declarations
+    monkeypatch.setattr(pf, "_class_declarations", lambda p: calls.append(p) or real(p))
+    res = dcgo_script_resolution([f"BT12-{100 + i}" for i in range(5)], asset_dcgo)
+    assert all(r.path is None for r in res.values())
+    assert len(calls) <= files + 5   # one tree scan + one natural-file read per card
+
+
+def test_an_asset_with_no_class_is_unavailable(asset_dcgo):
+    # A vanilla card's asset has an empty `CardEffectClassName:`; the next
+    # line ("CardID: ...", "DP: 3000") must not be read as the class name.
+    res = dcgo_script_resolution(["BT3-099"], asset_dcgo)
+    assert res["BT3-099"].path is None
+    assert "names no CardEffectClassName" in res["BT3-099"].mechanism
+    assert "EmptyEffectClass" in res["BT3-099"].mechanism
+
+
+def test_a_token_named_class_resolves_in_the_tokens_namespace(asset_dcgo):
+    assert dcgo_script_presence(["P-999"], asset_dcgo) == {
+        "P-999": "Assets/Scripts/CardEffect/BT4/Purple/BT4_038_token.cs"}
+
+
+def test_a_card_with_no_asset_is_unavailable_even_with_a_script(asset_dcgo):
+    # EX13: scripts exist, but no CardBaseEntity asset -> not in DCGO's card list.
+    res = dcgo_script_resolution(["EX13-001"], asset_dcgo)
+    assert res["EX13-001"].path is None
+    assert "CardBaseEntity" in res["EX13-001"].mechanism
+    c, _ = check_dcgo_scripts(["EX13-001", "BT1-032"], asset_dcgo)
+    assert c.status == "warn" and "EX13-001" in c.detail
+
+
+def test_a_resume_after_dcgo_adds_the_asset_re_enters_the_card(asset_dcgo):
+    before = dcgo_script_presence(["EX13-001"], asset_dcgo)
+    _asset(asset_dcgo, "EX13-001", "EX13_001")
+    after = dcgo_script_presence(["EX13-001"], asset_dcgo)
+    assert after["EX13-001"] == "Assets/Scripts/CardEffect/EX13/Red/EX13_001.cs"
+    assert newly_available(before, after) == ["EX13-001"]
+
+
+def test_real_dcgo_resolves_keyword_only_and_shared_class_cards():
+    """Pins the task-9.2 finding against the base-repo DCGO (skipped if absent)."""
+    root = pf.resolve_dcgo_root()
+    if root is None or not (Path(root) / "Assets" / "CardBaseEntity").is_dir():
+        pytest.skip("base-repo DCGO not populated")
+    res = dcgo_script_resolution(
+        ["BT1-032", "ST13-08", "BT14-009", "BT25-003", "BT12-036", "EX13-001"], root)
+    assert res["BT1-032"].path.endswith("/BT1_016.cs")      # <Jamming> only
+    assert res["ST13-08"].path.endswith("/BT8_071.cs")
+    assert res["BT14-009"].path.endswith("/BT9_033.cs")
+    assert res["BT25-003"].path.endswith("/BT25_002.cs")
+    assert res["BT12-036"].path is None                      # cross-set namespace
+    assert res["EX13-001"].path is None                      # no CardBaseEntity asset
 
 
 # --------------------------------------------------------------------------

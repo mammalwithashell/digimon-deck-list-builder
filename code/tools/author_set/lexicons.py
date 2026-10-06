@@ -12,6 +12,7 @@ In ``cards.json`` the ``type_eng`` field is already a list of trait strings and
 from __future__ import annotations
 
 import json
+import re
 
 
 def build_trait_lexicon(cards: dict | list) -> set[str]:
@@ -42,6 +43,28 @@ def build_name_lexicon(cards: dict | list) -> set[str]:
         nm = r.get("card_name_eng")
         if nm and str(nm).strip():
             out.add(str(nm).strip().lower())
+    return out
+
+
+# "Sistermon Noir (Awakened)" / "Belphemon: Rage Mode" -> the family stem.
+_NAME_STEM_RE = re.compile(r"^(.+?)\s*(?:\(.*\)|:\s.*)$")
+
+
+def name_stems(names) -> set[str]:
+    """Card-family stems of the (lowercased) names that carry a mode suffix.
+
+    Printed text names a family by its stem — BT7-083 places "[Sistermon
+    Noir]" while the DB holds only "Sistermon Noir (Awakened)"; "[Belphemon]"
+    for "Belphemon: Rage Mode". Derived at read time, never stored: a stem is a
+    weaker match than a name and the keyword gate consults it last.
+    """
+    out: set[str] = set()
+    for n in names:
+        m = _NAME_STEM_RE.match(n)
+        if m:
+            stem = m.group(1).strip()
+            if stem and stem != n:
+                out.add(stem)
     return out
 
 

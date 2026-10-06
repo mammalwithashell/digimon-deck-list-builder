@@ -215,20 +215,18 @@
     "training",
     "vortex"
   ],
-  "auto_ingest_candidates": [
-    "blastdnadigivolve",
-    "detach",
-    "link",
-    "succession"
-  ],
-  "auto_ingest_simple": [
-    "detach",
-    "succession"
-  ],
-  "auto_ingest_subsystem": [
-    "blastdnadigivolve",
-    "link"
-  ],
+  "dsl_lowered_keywords": {
+    "assembly": "alt-path `kind: assembly` (digimon-dsl alt_path.rs)",
+    "blastdnadigivolve": "alt-path `kind: blast_dna_digivolve` (digimon-dsl alt_path.rs)",
+    "delay": "declarative `kind: delay` (digimon-dsl clause.rs DeclarativeKind::Delay)",
+    "detach": "replacement cost `trash_own_link_card` + `link_card_filter:` (digimon-dsl clause.rs ReplacementCostBody)",
+    "link": "declarative `kind: link_requirement` / `link_condition` (DigiLink); <Link +N> is an aura `modifier: ChangeLinkMax`",
+    "succession": "declarative `kind: succession` (digimon-dsl clause.rs DeclarativeKind::Succession)",
+    "usereq": "card field `use_requirement:` (digimon-dsl spec.rs; option color-requirement bypass)"
+  },
+  "auto_ingest_candidates": [],
+  "auto_ingest_simple": [],
+  "auto_ingest_subsystem": [],
   "rust_only_core_modeled": [
     "dedigivolve",
     "digiburst",
