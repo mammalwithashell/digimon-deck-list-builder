@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T19:14:39.927937800+00:00",
+  "last_updated": "2026-10-06T19:39:09.294924300+00:00",
   "clauses": {
     "BT24-088#effect#0": {
       "clause_id": "BT24-088#effect#0",
@@ -87,7 +87,7 @@
       "reason": "ours contradicts ruling qa:Q5677 (ours vs DCGO: diverge); DIVERGED at step 8 (compared 11 of 12 ours / 12 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT24-088-qa-Q5677",
-      "recorded_at": "2026-10-06T19:14:39.927937800+00:00"
+      "recorded_at": "2026-10-06T19:39:09.294924300+00:00"
     },
     "qa:Q5678": {
       "interaction_id": "qa:Q5678",
