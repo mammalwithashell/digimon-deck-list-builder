@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-06T16:06:19.049564600+00:00",
+  "last_updated": "2026-10-06T21:49:27.898000400+00:00",
   "clauses": {
     "BT26-050#effect#0": {
       "clause_id": "BT26-050#effect#0",
@@ -34,6 +34,17 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-050-effect3",
       "recorded_at": "2026-10-06T16:06:19.049564600+00:00"
+    },
+    "BT26-050#effect#5": {
+      "clause_id": "BT26-050#effect#5",
+      "card_id": "BT26-050",
+      "verdict": "confirmed",
+      "label": "DUAL Effect",
+      "text_sha256": "4507eb963d812dc8cda30176ad9adbc60ff0804300d13f4c71d5186b8ea80382",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-050-effect5.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-050-effect5",
+      "recorded_at": "2026-10-06T21:49:27.898000400+00:00"
     },
     "BT26-050#effect#6": {
       "clause_id": "BT26-050#effect#6",
