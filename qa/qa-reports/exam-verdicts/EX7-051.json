@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T14:13:55.213855900+00:00",
+  "last_updated": "2026-10-06T14:14:37.764971+00:00",
   "clauses": {
     "EX7-051#effect#0": {
       "clause_id": "EX7-051#effect#0",
@@ -44,6 +44,20 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-EX7-051-effect1-optional-decline",
       "recorded_at": "2026-10-06T14:12:36.823200100+00:00"
+    },
+    "probe:EX7-051#effect#1:scope:neg": {
+      "interaction_id": "probe:EX7-051#effect#1:scope:neg",
+      "card_ids": [
+        "EX7-051"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "4ebac99e88a76f75dd98a7c35d7fb52c7f1925b465094c30abc87801453e6e40",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-051-effect1-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-EX7-051-effect1-scope-neg",
+      "recorded_at": "2026-10-06T14:14:37.764971+00:00"
     },
     "probe:EX7-051#inherited#0:leave_play": {
       "interaction_id": "probe:EX7-051#inherited#0:leave_play",
