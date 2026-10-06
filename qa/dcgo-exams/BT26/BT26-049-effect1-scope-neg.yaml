@@ -1,0 +1,116 @@
+# Negative scope probe: Suspend 2 must not reach into the opponent's breeding
+# area to fill an otherwise empty second target slot, nor suspend Rosemon itself.
+# Extends BT26-049-effect1.yaml with ST1-04 digivolved in P1 breeding on T2.
+# Crowmon deletes ST1-03; Rosemon then sees only BT3-007 in P1's battle area.
+# Expected oracle witness: BT3-007 suspended, ST1-04 in breeding unsuspended,
+# Rosemon unsuspended. No second suspend target exists. The selection is mandatory.
+# DCGO BT26_049.cs: CanSelectSuspendTargetCondition requires opponent BATTLE AREA;
+# maxCount = min(2, matches). Rules digest section 2 / breeding (6-4): breeding
+# Digimon cannot be affected or referenced by other cards' ordinary effects.
+# The field/breeding pair deliberately shares the same owner and card kind.
+# On T6 promote ST1-04 so its unaffected suspend state enters the oracle's
+# battle-area projection (which does not expose breeding). The unsuspend phase
+# only unsuspends battle-area permanents, not a wrongly suspended breeding card.
+# Assertions remain empty for oracle backfill; sim-only is not confirmation.
+card: BT26-049
+clause: BT26-049#effect#1
+interaction: {id: "probe:BT26-049#effect#1:scope:neg", source: probe, kind: negative}
+covers:
+  - BT26-049#effect#0
+  - BT26-049#effect#1
+  - BT26-049#effect#2
+  - BT26-072#effect#0
+  - BT26-072#effect#2
+  - BT26-076#effect#0
+  - BT26-076#effect#1
+  - ST24-12#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-072, ST24-12, BT26-076, BT26-049, ST24-15,
+            ST24-05, ST24-10, ST24-04, BT26-050, ST24-14,
+            ST24-04, BT26-091, ST24-15, ST24-05, BT26-094]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-05, ST1-03, BT1-014, BT4-010, ST1-04, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0)
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST24-12 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2: build an unsuspended Digimon in breeding; keep it there through T5.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: breeding, using: ST1-04 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0)
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-072 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): leave ST1-04 in breeding and play BT3-007
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-076 } }
+    expect: { prompt: main_phase }
+  # Mysterious-bird's [When Digivolving] deletes ST1-03 (mandatory), leaving
+  # one P1 Digimon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: Rosemon [When Digivolving] suspends the remaining P1 Digimon.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-049 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The suspend fires Rosemon's [All Turns] reactive play; decline it.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # T6: expose the out-of-scope card's preserved state in the compared field.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+meta: {produced_by: 20261006T154040998377Z-pilot-data-squad-c27058}
+assert: []
+
