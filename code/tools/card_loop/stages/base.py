@@ -165,6 +165,22 @@ def call_worker(ctx, item: ItemRecord, *, stage: str, family: str, assignment: s
     return WorkerCall(stage=stage, family=family, assignment=assignment, packet=packet, result=result)
 
 
+def run_packet(ctx, item: ItemRecord, packet: TaskPacket, *, assignment: str) -> WorkerCall:
+    """Run an already-built packet (the two-family Q&A packets from
+    `interactions.packets`) in a leased worktree, with the family's model."""
+    model, effort = model_for(ctx, packet.family)
+    retry_kwargs = {}
+    if callable(getattr(ctx, "sleep", None)):
+        retry_kwargs["sleep"] = ctx.sleep
+    with worktree(ctx) as wt:
+        pkt = dataclasses.replace(packet, worktree=wt, model=model, effort=effort,
+                                  budget_usd=_budget(ctx, packet.stage))
+        result = run_with_retry(ctx.workers[packet.family], pkt, health=getattr(ctx, "health", None),
+                                **retry_kwargs)
+    return WorkerCall(stage=packet.stage, family=packet.family, assignment=assignment, packet=pkt,
+                      result=result)
+
+
 def _budget(ctx, stage: str) -> float | None:
     budgets = getattr(getattr(ctx, "config", None), "stage_budget_usd", None)
     if isinstance(budgets, Mapping):
@@ -218,8 +234,11 @@ def deferred(ctx, item: ItemRecord, calls: Sequence[WorkerCall], reason: str) ->
                             detail=(c.result.error or "")[:2000], ts=ctx.now())
         for c in calls if c.result.status == "schema_invalid"
     ]
-    outcome = StageOutcome(next_state=item.state, reason=reason,
-                           attempts=[c.attempt(ctx) for c in calls], corrections=corrections,
+    # A valid answer whose sibling call failed (a two-family pair) was not
+    # wrong; it is ledgered as accepted with a note, and the stage re-runs both.
+    attempts = [c.attempt(ctx, outcome="accepted", notes=f"output unused: deferred ({reason[:200]})")
+                if c.result.status == "ok" else c.attempt(ctx) for c in calls]
+    outcome = StageOutcome(next_state=item.state, reason=reason, attempts=attempts, corrections=corrections,
                            data={"history": history(item, *(c.attempt_id for c in calls))})
     return StageDeferred(reason, outcome)
 
