@@ -68,7 +68,7 @@ card: BT25-092
 clause: BT25-092#effect#1
 interaction: {id: "qa:Q6434", source: qa, kind: positive}
 covers: [BT25-092#effect#1]
-meta: {produced_by: 20261006T223812631575Z-pilot-three-musketeers-4551cf}
+meta: {produced_by: 20261006T224400920570Z-pilot-three-musketeers-ee7d48}
 seed: 424242
 decks:
   p0:
@@ -134,8 +134,14 @@ steps:
   # (no cancel offered; a `decline` here is refused at lowering with "recorded
   # cancel on a non-optional UnionZone prompt"), so the only legal answer is the
   # trash itself. Cost: trash 1 Option -- Bind Red Trigger (P-180) from hand.
+  # Ours installs a MANDATORY trash pick (a shared `decline` is refused at
+  # lowering), so our side trashes P-180. The DCGO side ATTEMPTS to decline the
+  # same prompt: a cancel offered there would diverge from the publisher's
+  # answer that the trash cannot be skipped once the Tamer is suspended.
   - actor: 0
-    do: { select: { cards: [P-180] } }
+    do: { select: { cards: [P-180], sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: SelectHandEffect }
   # "1 of your Digimon may digivolve": DemiDevimon.
   - actor: 0
