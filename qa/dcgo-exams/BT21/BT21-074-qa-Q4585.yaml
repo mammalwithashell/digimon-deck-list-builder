@@ -24,7 +24,7 @@ card: BT21-074
 clause: BT21-074#inherited#0
 interaction: {id: "qa:Q4585", source: qa, kind: positive}
 covers: [BT21-074#inherited#0]
-meta: {produced_by: 20261006T160729661629Z-pilot-three-musketeers-d3179d}
+meta: {produced_by: 20261006T165014940036Z-pilot-three-musketeers-d0c03f}
 seed: 424242
 decks:
   p0:
