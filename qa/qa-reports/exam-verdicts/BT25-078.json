@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T15:47:51.592608100+00:00",
+  "last_updated": "2026-10-06T15:49:05.248535800+00:00",
   "clauses": {
     "BT25-078#effect#0": {
       "clause_id": "BT25-078#effect#0",
@@ -81,6 +81,20 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT25-078-inherited0-leave-play",
       "recorded_at": "2026-10-06T15:47:51.592608100+00:00"
+    },
+    "qa:Q6379": {
+      "interaction_id": "qa:Q6379",
+      "card_ids": [
+        "BT25-078"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "4bd30cc72724b8c5f86de0451f9afd3b8ad3b0d895a41abbd4aaaaf8d694c999",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-078-qa-Q6379.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-078-qa-Q6379",
+      "recorded_at": "2026-10-06T15:49:05.248535800+00:00"
     }
   }
 }
