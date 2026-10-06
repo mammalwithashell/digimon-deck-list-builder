@@ -30,7 +30,7 @@
 #           trait: Cost 0", authored as the trait-gated alt_path.
 #     A plain red Lv.2 without [Appmon]/[Hero] digivolves via (a) only, so the
 #     trait gate alone under-modelled the card (fixed 2026-07-10).
-#   - `attribute: Social` is kept for attribute_is predicates (separate from traits).
+#   - `attribute: Social` joins the trait line with `traits:` (CompiledCard::all_traits).
 #   - Traits include all segments from the image: Stnd., Appmon, Social, Search, Hero.
 
 card: BT21-009

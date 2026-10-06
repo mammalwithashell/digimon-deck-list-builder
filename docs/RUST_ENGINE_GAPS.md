@@ -2,23 +2,19 @@
 
 Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`), discovered during archetype audits by `assess-rust-engine-archetype`. Distinct from [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md), which tracks Rust↔Python divergences in shared subsystems — this document catalogs **net-new primitives** the Rust scripting API needs before a given archetype can be implemented under the no-approximations policy (CLAUDE.md §17–18).
 
-> **Attribute-predicate matching unimplemented — OPEN (2026-06-20).** The DSL
-> predicate fields `attribute_is` / `form_is` are hard-coded to "no match"
-> (`dsl_cards/predicate.rs` returns `false` whenever they're set — "attribute
-> not yet tracked on CardData"). `CardData` *does* fold the attribute into its
-> merged `traits` list (`card_data.rs` extends `traits` with `attribute_eng`),
-> but there is no first-class attribute field nor a working attribute predicate.
-> Consequence surfaced by the `promote-official-bandai-card-source` change: cards
-> with a printed **`(Rule) Trait: Has [Free] attribute.`** grant (e.g. BT16-102
-> Magnamon X, BT17-077 Imperialdramon: Paladin Mode) now have the `Free`
-> attribute recovered into `attribute_eng` from the official Bandai DB, but any
-> requirement keyed on the `[Free]` attribute still won't match until
-> attribute-predicate matching is implemented. (Rule-granted *Type* traits are
-> fully fixed by that change — they route through `trait_has`, which already
-> matches `CardData.traits`.) Scope when picked up: add an attribute query
-> (a real `CardData.attribute` field, or an `attribute_is`/`attribute_in`
-> predicate that consults the trait list), keeping the RL mask and API in
-> lockstep.
+> **Attribute-predicate matching — RESOLVED (2026-10-05).** The DSL predicate
+> fields `attribute_is` / `form_is` were hard-coded to "no match", so BT16-077's
+> and EX3-008's "[Free] trait" filters (`attribute_is: Free`) never found a
+> target, in tests or in real games. They now match the trait line exactly like
+> `trait_has` (`ChangeTraits` overlays included): a form or an attribute is a
+> trait (general_rule.pdf 2-3-2-1), printed effects name either only as "the
+> [X] trait", and `CardData.traits` is the merged form + attribute + type line —
+> from cards.json in production, and, since the same change, from a DSL card's
+> `form:` + `attribute:` + `traits:` in DebugRunner (`CompiledCard::all_traits`;
+> it previously read `traits:` only). `attribute:` also takes a list for
+> rule-granted second attributes (`attribute: [Vaccine, Free]`). No separate
+> attribute field was added; the predicate shares `trait_has`'s evaluation, so
+> the RL mask and API stay in lockstep.
 
 > **Permanent-scoped `CannotSuspend` / `CannotUnsuspend` enforcement — RESOLVED 2026-06-13**
 > (Iceclad Liberator pool authoring: EX7-023, EX8-023, EX11-017). The

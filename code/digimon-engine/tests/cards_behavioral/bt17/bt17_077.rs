@@ -226,11 +226,7 @@ fn bt17_077_identity_matches_official_db() {
          '(Rule) Trait: Has [Free] attribute.'"
     );
     assert_eq!(c.form.as_deref(), Some("Mega"), "Form: Mega (official DB)");
-    assert_eq!(
-        c.attribute.as_deref(),
-        Some("Vaccine"),
-        "printed Attribute: Vaccine"
-    );
+    assert_eq!(c.attribute, ["Vaccine"], "printed Attribute: Vaccine");
 }
 
 /// ACE Overflow: top-level `ace_overflow: -5` per Group 8 closure.
