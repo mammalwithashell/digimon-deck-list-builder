@@ -1,0 +1,90 @@
+# Book: qa/dcgo-exams/BT26/bt26_dats_pool.json.
+# T2 Biyomon is played; T3 Ravemon is hard-played for 12 at 3 memory.
+# T4 pass; T5 evolve Ravemon via the DATA SQUAD cost-5 route. No other suspended
+# Digimon exists, so only suspend/lock activates: decline the optional suspend
+# pick and select Biyomon for the mandatory lock (it is already unsuspended).
+# T6 Biyomon attacks the stacked 1000-DP Agumon security and survives suspended.
+# T7 Rosemon attacks Biyomon, returns that target, and trashes P1's top security.
+# This witnesses the When Attacking arm; removing the attack target ends combat.
+# Shared ActivateClassesForSharedEffects uses optional:false, isSkippable:true:
+# direct SelectPermanentEffect (canNoSelect:true), with NO OptionalSkill gate.
+# Successful DeckBouncePeremanentAndProcessAccordingToResult invokes
+# IDestroySecurity(owner.Enemy, 1, ..., true). Biyomon has no leave triggers.
+# Final main-phase pass witnesses completed resolution.
+card: BT26-050
+clause: BT26-050#effect#3
+meta: {produced_by: 20261006T155036635093Z-pilot-data-squad-8af0da}
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-082, BT26-050, BT26-076, ST24-10, ST24-12,
+            ST24-05, BT26-072, BT26-091, BT26-094, ST24-04,
+            BT26-065, BT26-036, BT13-060, ST24-14]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-10, BT1-009, BT3-007, ST1-02,
+            BT1-014, BT4-010, BT3-007, ST1-04, BT1-009,
+            ST1-04, BT4-014, BT1-014, BT4-010]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-082, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-050 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert: []
