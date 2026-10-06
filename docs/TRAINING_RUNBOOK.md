@@ -255,9 +255,10 @@ python code/tools/meta_loader.py --build
 - Runtime gauntlet loading admits each decklist on its own. A list is training-ready when:
   1. every card ID is playable: registered in the Rust engine and present in the card database the game runner loads (`data/cards.json`), and
   2. no card's verdict in `qa/qa-reports/validated_cards_dsl.json` is `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT` or `AUDITED-MISSING-TESTS`. A playable card with no ledger entry counts as ready.
+  3. every card is oracle-ready in `data/oracle_readiness.json` — see [Oracle readiness gate](#oracle-readiness-gate-2026-10-04). Unlike check 2, this applies to every library path and to pool snapshots, and it has no off switch.
 - The ledger's `archetype` field is a batch label (`store-champs-june-2026`, `three-musketeers`), not a deck-library archetype key, so it plays no part in admission. An archetype is eligible when at least one of its lists is admitted.
 - `--archetypes` / `allowed_archetypes` narrows the pool further; each scoped name that ends up with no admitted list is logged at INFO with how many lists each check rejected.
-- The ledger is read only when loading the default `data/deck_library.json`, and a missing ledger skips check 2. The training image does not ship `qa/`, so cloud runs apply check 1 alone.
+- The ledger is read only when loading the default `data/deck_library.json`, and a missing ledger skips check 2. The training image does not ship `qa/`, so cloud runs skip check 2 (checks 1 and 3 still apply).
 - `code/tools/meta_coverage.py` reports the field share this gate admits as **Trainable today**.
 
 ### Configuration Parameters
@@ -946,3 +947,37 @@ Key RL/ML packages:
 - `sb3-contrib` >= 2.0
 - `numpy` >= 1.24
 - `tensorboard` (for monitoring)
+
+## Oracle readiness gate (2026-10-04)
+
+Training admits a decklist only when every card in it is oracle-ready:
+every printed clause is confirmed against DCGO, or unreachable/unavailable
+with a reason, or a diverged clause triaged as a cited DCGO quirk. The gate
+is always on — there is no flag to disable it. Source of truth:
+`data/oracle_readiness.json`, regenerated with
+
+    PYTHONPATH=code python -m tools.clause_coverage.readiness
+
+and checked in CI (`scripts/verify` tier 0). Regenerate it after any verdict
+change under `qa/qa-reports/exam-verdicts/`, any deck-library rebuild, and any
+card-text change (`cards.json`, `card_overrides.json`, `card_official.json`);
+a clause whose text changed loses its verdict and drops the card back to
+`not_ready`. The artifact also records how many library decklists have every
+card ready (`decklists.oracle_ready`), an upper bound on the admitted pool
+(the registry and ledger checks above still apply).
+
+If training stops with `EmptyTrainingPoolError`, the message names the cards
+blocking the most decklists (card, name, decklists blocked); the exam queue is
+
+    PYTHONPATH=code python -m tools.clause_coverage.readiness --plan --limit 25
+
+which ranks not-ready cards by greedy decklist completion over the lists that
+pass the other checks, with each pick's archetypes and outstanding clause ids.
+A missing artifact stops training with `OracleReadinessMissingError` — cloud
+runs read it from the mounted data volume (`DIGIMON_DATA_DIR`, override with
+`DIGIMON_ORACLE_READINESS`), so sync `data/oracle_readiness.json` with the rest
+of `data/`.
+
+Pool snapshots (`--curriculum-pool`, eval CLIs) are refused if they contain a
+non-ready card (`NotOracleReadyDeckError`). Spec:
+`docs/superpowers/specs/2026-10-04-dcgo-oracle-readiness-design.md`.
