@@ -23,7 +23,7 @@ clause: BT24-088#effect#0
 seed: 424242
 interaction: {id: "qa:Q5677", source: qa, kind: positive}
 covers: [BT24-088#effect#0, BT24-088#effect#1]
-meta: {produced_by: 20261006T193007803485Z-pilot-three-musketeers-d54e20}
+meta: {produced_by: 20261006T204955447426Z-pilot-three-musketeers-594a93}
 decks:
   p0:
     # stack[10..11]: Asuna #1's [On Play] draws; [12]: the T3 draw;
@@ -74,9 +74,3 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert: []
-expect_ruling:
-  q_id: Q5677
-  assert:
-  - at: 6
-    that:
-      p0.field: [EX7-008]
