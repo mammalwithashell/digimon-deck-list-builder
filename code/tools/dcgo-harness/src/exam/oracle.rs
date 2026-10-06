@@ -525,6 +525,18 @@ pub struct OracleExamResult {
     /// The player is wedged (on this job, or on another that kept this one
     /// unclaimed): `reason` says so, this carries the evidence for triage.
     pub stall: Option<Stall>,
+    /// The three-way legs of a measured run (card-loop design D7), as
+    /// structured fields so a driver never parses them out of `reason`:
+    /// `ours_vs_dcgo` = the differ was clean; `ours_vs_ruling` = our engine
+    /// meets the scenario's `expect_ruling:` (absent without one, or when the
+    /// block is vacuous); `ruling_q_id` = that block's Q-number. All absent
+    /// when the line was not measured.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ours_vs_dcgo: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ours_vs_ruling: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ruling_q_id: Option<String>,
 }
 
 pub struct OracleExamOptions<'a> {
@@ -759,6 +771,9 @@ pub fn run_oracle_exam_loaded(
         recorded: Vec::new(),
         refused: Vec::new(),
         stall: None,
+        ours_vs_dcgo: None,
+        ours_vs_ruling: None,
+        ruling_q_id: None,
     };
 
     let run = match submit_and_wait(opts.root, &job.job_id, &json, opts.timeout, opts.poll) {
@@ -821,12 +836,14 @@ pub fn run_oracle_exam_loaded(
         return Ok(result);
     }
 
-    let mut event = VerdictEvent::from_diff(
-        &s,
-        &od.report,
-        ruling_agrees(&s, &od.projections),
-        scenario.display().to_string(),
-    );
+    let ruling_ok = ruling_agrees(&s, &od.projections);
+    let mut event = VerdictEvent::from_diff(&s, &od.report, ruling_ok, scenario.display().to_string());
+    // The legs, structured (design D7): the differ's verdict and the ruling's,
+    // so `ours = DCGO != ruling` (ours_wrong + DCGO fork candidate) and
+    // `ours = ruling != DCGO` (dcgo_quirk) are read, not parsed from `reason`.
+    result.ours_vs_dcgo = Some(od.report.is_clean());
+    result.ours_vs_ruling = ruling_ok;
+    result.ruling_q_id = s.expect_ruling.as_ref().map(|r| r.q_id.clone());
     if !completed {
         event.reason = Some(format!("{}; {dcgo_said}", event.reason.unwrap_or_default()));
     }
@@ -1252,7 +1269,28 @@ mod verdict_event_tests {
             recorded: vec![],
             stall: None,
             refused: refused.iter().map(|s| s.to_string()).collect(),
+            ours_vs_dcgo: None,
+            ours_vs_ruling: None,
+            ruling_q_id: None,
         }
+    }
+
+    #[test]
+    fn the_three_way_legs_serialize_only_when_measured() {
+        // The Python driver reads these keys (card-loop design D7 / follow-up
+        // 9.8); an unmeasured line must not print `null` legs that a reader
+        // could mistake for "disagree".
+        let bare = serde_json::to_value(result("unmeasured", &[])).unwrap();
+        assert!(bare.get("ours_vs_dcgo").is_none() && bare.get("ours_vs_ruling").is_none());
+        assert!(bare.get("ruling_q_id").is_none());
+        let mut r = result("diverged", &[]);
+        r.ours_vs_dcgo = Some(true);
+        r.ours_vs_ruling = Some(false);
+        r.ruling_q_id = Some("Q1601".into());
+        let v = serde_json::to_value(r).unwrap();
+        assert_eq!(v["ours_vs_dcgo"], serde_json::json!(true));
+        assert_eq!(v["ours_vs_ruling"], serde_json::json!(false));
+        assert_eq!(v["ruling_q_id"], serde_json::json!("Q1601"));
     }
 
     #[test]
