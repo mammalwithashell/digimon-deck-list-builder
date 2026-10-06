@@ -1,0 +1,81 @@
+# Probe scope (negative): BT21-074#effect#2 [When Attacking] [Once Per Turn]
+# "By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your
+#  Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon."
+#
+# The clause is guarded by its cost: it needs an eligible card among a Digimon's
+# digivolution cards. Here P0 DECLINES the [On Play] tuck (as in
+# BT21-074-effect1-optional-decline.yaml), so Satellamon holds no digivolution
+# cards at all even though Scopemon (BT21-071, an [Appmon] card) sits in hand.
+# Satellamon then attacks while P1 has a Kokatorimon stack (Lv.4 over Biyomon)
+# that a wrongly-firing clause would De-Digivolve. Expected: no OptionalSkill,
+# no material pick, no target pick -- the attack goes straight to the security
+# check and Kokatorimon is untouched.
+card: BT21-074
+clause: BT21-074#effect#2
+interaction: {id: "probe:BT21-074#effect#2:scope:neg", source: probe, kind: negative}
+covers: [BT21-074#effect#2, BT21-074#effect#1]
+meta: {produced_by: 20261006T141947421066Z-pilot-three-musketeers-28a6b9}
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped);
+    # stack[10] = T3 draw, stack[11] = T5 draw.
+    stack: [BT21-074, BT21-071, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092]
+    rest: three-musketeers
+  p1:
+    # stack[9] = Agumon ST1-03 = TOP of security, flipped by Satellamon's attack.
+    stack: [ST1-02, BT1-014, ST1-03, ST1-03, ST1-03,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-03,
+            ST1-04, ST1-04, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon -- the future De-Digivolve remainder.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Satellamon; DECLINE the tuck so nothing sits under it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-074, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # T4 (P1, 4): Kokatorimon over Biyomon -- the would-be De-Digivolve target.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: field.0, using: BT1-014 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): attack with no eligible digivolution card -> clause must NOT fire.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Security check (Agumon 2000 vs 7000) resolves with no prompt.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
