@@ -1219,9 +1219,13 @@ class TestOracleReadinessGate:
     def test_missing_artifact_fails_at_load(self, tmp_path, monkeypatch):
         monkeypatch.setattr(gauntlet_module, "_ORACLE_READINESS_PATH", tmp_path / "absent.json")
         g = MetaGauntlet(implemented_card_ids=self.REGISTERED, not_ready_card_ids=set())
-        with pytest.raises(gauntlet_module.OracleReadinessMissingError,
-                           match="tools.clause_coverage.readiness"):
+        with pytest.raises(gauntlet_module.OracleReadinessMissingError) as exc:
             g.load(str(self._lib(tmp_path)))
+        message = str(exc.value)
+        # A cloud box has data/ but not qa/: say how to get the artifact there.
+        assert "copy it from the repo" in message
+        assert "qa/qa-reports/exam-verdicts" in message
+        assert "tools.clause_coverage.readiness" in message
 
     def test_empty_pool_fails_fast_naming_the_blockers(self, tmp_path):
         g = MetaGauntlet(

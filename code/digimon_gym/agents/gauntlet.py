@@ -176,7 +176,9 @@ def _load_oracle_ready_card_ids(path: Optional[str | Path] = None) -> Set[str]:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         raise OracleReadinessMissingError(
-            f"{path} is missing; regenerate it with `{_REGENERATE_READINESS}`"
+            f"{path} is missing; copy it from the repo (data/oracle_readiness.json), "
+            "or regenerate it in a checkout that has qa/qa-reports/exam-verdicts with "
+            f"`{_REGENERATE_READINESS}`"
         ) from None
     return {
         str(cid) for cid, entry in raw.get("cards", {}).items()
