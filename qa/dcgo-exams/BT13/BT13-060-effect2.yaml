@@ -1,0 +1,120 @@
+# Exam scenario: Rosemon: Burst Mode (BT13-060), clause BT13-060#effect#2 --
+# "[When Attacking] Trash the top card of your opponent's security stack for
+#  every 2 of your opponent's suspended Digimon and/or Tamers."
+#
+# The count needs TWO suspended opposing Digimon/Tamers at declaration. The
+# card's own [When Digivolving] supplies exactly that: it suspends 1 opposing
+# Digimon and 1 opposing Tamer, so the count is 2 / 2 = 1 and ONE security card
+# is trashed (the top one, stack[9]); the security check then reads stack[8].
+#
+# MEMORY. BT13-060 digivolves from a Lv.6 Green for 5. P0 arrives at T5 with
+# whatever P1 left it, and the turn ends the moment memory goes below 0, so
+# the attack needs P0 to hold >= 5 going in. P1 gets there by overspending on
+# T4 (7 -> -5: Biyomon 2, Tai 2, Birdramon 4, Birdramon 4), which hands P0 5.
+# After the digivolve P0 sits at exactly 0 -- still P0's turn -- and attacks.
+#
+#   T1 (P0): pass everything.
+#   T2 (P1, 3): pass everything.
+#   T3 (P0, 3): play Rosemon ST4-12 (10: 3 -> -7). It has no [On Play].
+#   T4 (P1, 7): Biyomon ST1-02, Tai Kamiya ST1-12 (a Tamer), Birdramon x2
+#            (12 total: 7 -> -5); the turn hands over on its own.
+#   T5 (P0, 5): digivolve ST4-12 into BT13-060 (cost 5: 5 -> 0).
+#            [When Digivolving] (BT13_060.cs, OnEnterFieldAnyone): NOT optional
+#            (SetUpActivateClass(..., -1, false, ...)), so no yes/no gate.
+#            1. SelectPermanentEffect(Mode.Tap, maxCount 1) over opposing
+#               Digimon -- three candidates (Biyomon, Birdramon x2); we pick
+#               Biyomon by slot (distinct id, so DCGO's centre-out frame order
+#               cannot make the pick ambiguous).
+#            2. SelectPermanentEffect(Mode.Tap, maxCount 1) over opposing
+#               Tamers -- Tai Kamiya, the only one.
+#            Then the can't-unsuspend modifier; nothing asked.
+#            THE CLAUSE: Rosemon attacks the player. [When Attacking]
+#            (OnAllyAttack) is mandatory (isOptional false) and live when
+#            security >= 1 and count() >= 1 (2 suspended / 2 = 1): no prompt on
+#            either side; IDestroySecurity trashes P1's top security card, the
+#            BT1-009 at stack[9]. The check then reads Dracomon ST1-04 (4000)
+#            at stack[8], which loses to Rosemon. P1 security 5 -> 3.
+#   T5 trailing: P0 passes at 0; P1 gets 3.
+card: BT13-060
+clause: BT13-060#effect#2
+seed: 424242
+meta: {produced_by: 20261006T134928466659Z-pilot-data-squad-de2b9b}
+decks:
+  p0:
+    # [0..4] hand; [5..9] security (never touched); [10], [11] = the T3 / T5 draws.
+    stack: [ST4-12, BT13-060, ST4-02, ST4-02, ST4-02,
+            ST4-04, ST4-04, ST4-04, ST4-04, ST4-05,
+            ST4-02, ST4-05]
+    rest: tm-rosemon-bm
+  p1:
+    # [0..4] hand; security stack[9] = BT1-009 (trashed by the clause),
+    # stack[8] = Dracomon ST1-04 (the check); [10], [11] = the T2 / T4 draws.
+    stack: [ST1-02, ST1-12, ST1-05, ST1-05, ST1-03,
+            BT1-009, BT1-009, BT1-009, ST1-04, BT1-009,
+            ST1-03, ST1-03]
+    rest: tm-rosemon-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Rosemon ST4-12 (3 -> -7); the turn hands over on its own.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST4-12, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, 7): Biyomon, Tai Kamiya (Tamer), Birdramon x2 (7 -> -5).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-05, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-05, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (P0, 5): digivolve (5 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT13-060 } }
+    expect: { prompt: main_phase }
+  # [When Digivolving] 1: suspend Biyomon (battle area slot 0).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # [When Digivolving] 2: suspend Tai Kamiya (the only Tamer, slot 1).
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: attack the player; 2 suspended -> trash 1 security card.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Trailing: P0 passes at 0 memory.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert: []
