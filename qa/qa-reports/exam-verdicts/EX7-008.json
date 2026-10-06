@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-09-21T04:44:56.488824400+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T22:54:51.368047600+00:00",
   "clauses": {
     "EX7-008#effect#0": {
       "clause_id": "EX7-008#effect#0",
@@ -31,6 +31,22 @@
       "text_sha256": "985ce1fea5836719754f0faa1b48ecc1aa5d8cc73562061197ed4c1847dbb36b",
       "scenario_path": "qa/dcgo-exams/EX7/EX7-008-inherited0.yaml",
       "recorded_at": "2026-09-18T07:55:14.662036700+00:00"
+    }
+  },
+  "interactions": {
+    "probe:EX7-008#inherited#0:scope:neg": {
+      "interaction_id": "probe:EX7-008#inherited#0:scope:neg",
+      "card_ids": [
+        "EX7-008"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "985ce1fea5836719754f0faa1b48ecc1aa5d8cc73562061197ed4c1847dbb36b",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-008-inherited0-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-EX7-008-inherited0-scope-neg",
+      "recorded_at": "2026-10-06T22:54:51.368047600+00:00"
     }
   }
 }
