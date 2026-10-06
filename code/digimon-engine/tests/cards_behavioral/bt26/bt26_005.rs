@@ -8,7 +8,7 @@
 
 use super::support::*;
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{CardColor, EffectTiming};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
 
 const CARD_ID: &str = "BT26-005";
 
@@ -80,6 +80,51 @@ fn bt26_005_filter_cost_and_trait() {
     let _ = r.auto_resolve();
     assert!(!field_ids(&r, 0).contains(&"DS6".to_string()));
     assert!(!field_ids(&r, 0).contains(&"PLAIN".to_string()));
+}
+
+/// DCGO BT26_005.cs:79 requires `HasPlayCost` — a Digi-Egg (no printed play
+/// cost, cannot be played as a new permanent) is never a candidate, even with a
+/// matching trait (Pinamon itself rides under a Digimon into the trash).
+#[test]
+fn bt26_005_excludes_digi_egg_from_trash() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT26-005")
+        .add_card(filler("FILLER"))
+        .add_card(tamer("TAMER", "Tamer", CardColor::Purple, &["DATA SQUAD"]))
+        .add_card({
+            let mut c = digimon("EGG", "Egg", CardColor::Purple, 2, 0, &["DATA SQUAD"]);
+            c.card_kind = CardKind::DigiEgg;
+            c
+        })
+        .add_card(digimon(
+            "AVIAN5",
+            "Peckmon",
+            CardColor::Purple,
+            4,
+            5,
+            &["Avian"],
+        ))
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(3)
+        .start();
+    r.set_first_player(0);
+    tamer_with_face_down(&mut r, 0, "TAMER", 1);
+    push_trash(&mut r, 0, "EGG");
+    push_trash(&mut r, 0, "AVIAN5");
+    let carrier = r.place_stack(0, &[CARD_ID, "FILLER"]);
+    fire(&mut r, EffectTiming::OnDeletion, carrier);
+    r.accept_optional_trigger().expect("optional clause");
+    pick_first(&mut r, 0); // Tamer
+    // The Egg is pushed first, so `pick_first` lands on it if it is offered.
+    pick_first(&mut r, 0);
+    let _ = r.auto_resolve();
+    assert!(
+        field_ids(&r, 0).contains(&"AVIAN5".to_string()),
+        "the Digi-Egg must not be a candidate; the Avian is the first offered"
+    );
+    assert!(!field_ids(&r, 0).contains(&"EGG".to_string()));
 }
 
 #[test]
