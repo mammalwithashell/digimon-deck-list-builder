@@ -1,0 +1,74 @@
+# NEGATIVE scope probe: BT25-082#effect#2 grants the cost-4 [Three Musketeers]
+# digivolve route to "this Digimon" (BlackGatomon) only. Here the Tamer condition
+# IS satisfied (Asuna Shiroki BT25-092, "[Three Musketeers] in its text", is
+# played from hand for 4) and BeelStarmon (BT25-085, Lv.6, [Three Musketeers]
+# trait) sits in hand -- but the only Digimon on the field is Sparrowmon
+# (EX7-051, Lv.3), NOT BlackGatomon, which stays in hand. The route must not
+# leak to Sparrowmon; the line then ends the turn with Sparrowmon un-digivolved.
+# Prefix, seed and decks as BT25-082-effect2.yaml. Prompt conventions as there:
+# Sparrowmon's [Start of Your Main Phase] is the shared OptionalSkill (BeelStarmon
+# in hand is a DUAL Option => payable), declined.
+card: BT25-082
+clause: BT25-082#effect#2
+interaction: {id: "probe:BT25-082#effect#2:scope:neg", source: probe, kind: negative}
+covers: [BT25-082#effect#2]
+meta: {produced_by: 20261006T145120291713Z-pilot-three-musketeers-6d1ee0}
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws in order. EVERY digivolution draws a
+    # card, so the draw budget is: T3 turn draw, T3 Sparrowmon draw, T5 turn
+    # draw, ... (deck shared with BT25-082-effect2.yaml; this line draws only
+    # through T5, so BlackGatomon and one BeelStarmon stay in hand).
+    stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-073,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, BT25-083, BT25-085,
+            BT21-071, BT25-078, BT21-074, EX7-008, BT25-083]
+    rest: three-musketeers
+  p1:
+    # Security is five vanilla low-DP Digimon so every security check on the
+    # EX7-073 lines built on this prefix is a prompt-free battle the attacker
+    # wins. Draws are vanilla bodies that stay in hand.
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Asuna (Tamer, 4): condition met, but no BlackGatomon on the field.
+  - actor: 0
+    do: { play: { card: BT25-092, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
