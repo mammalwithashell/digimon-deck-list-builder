@@ -45,6 +45,16 @@ export interface InheritedEffectInfo {
   text: string;
 }
 
+/** A link card's printed link effect, which the Digimon it is linked to
+ *  gains (general_rule.pdf 4-2-6). */
+export interface LinkEffectInfo {
+  /** Index into `linkedCardIds`. */
+  linkIndex: number;
+  cardId: string;
+  cardName: string | null;
+  text: string;
+}
+
 export interface KeywordBreakdown {
   innate: string[];
   gained: string[];
@@ -94,6 +104,8 @@ export interface PermanentInfo {
   sources: SourceInfo[];
   mainEffectText: string;
   inheritedEffects: InheritedEffectInfo[];
+  /** Link effects of the linked cards. Absent on older engine builds. */
+  linkEffects?: LinkEffectInfo[];
   modifiers: PermanentModifier[];
   dpBreakdown: DpBreakdown;
   turnPlayed: number;

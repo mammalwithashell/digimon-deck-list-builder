@@ -237,6 +237,7 @@ def _card_database_payload() -> list[dict]:
                 "main_effect": entry.get("effect_description_eng") or "",
                 "inherited_effect": entry.get("inherited_effect_description_eng") or "",
                 "security_effect": entry.get("security_effect_description_eng") or "",
+                "link_effect": entry.get("link_effect_description_eng") or "",
             }
         )
     return out

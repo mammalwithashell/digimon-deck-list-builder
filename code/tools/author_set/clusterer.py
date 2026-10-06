@@ -85,7 +85,7 @@ def reference_edges(set_cards: dict, name_index: dict[str, set[str]]) -> set[tup
     for cid, c in set_cards.items():
         text = " ".join(str(c.get(k, "") or "") for k in
                         ("effect_description_eng", "inherited_effect_description_eng",
-                         "security_effect_description_eng"))
+                         "security_effect_description_eng", "link_effect_description_eng"))
         for m in _TOKEN_RE.finditer(text):
             tgt_name = _norm_name(m.group(1))
             for tgt in name_index.get(tgt_name, ()):  # noqa: B007
@@ -100,7 +100,7 @@ def reference_frequency(set_cards: dict, name_index: dict[str, set[str]]) -> Cou
     for c in set_cards.values():
         text = " ".join(str(c.get(k, "") or "") for k in
                         ("effect_description_eng", "inherited_effect_description_eng",
-                         "security_effect_description_eng"))
+                         "security_effect_description_eng", "link_effect_description_eng"))
         for m in _TOKEN_RE.finditer(text):
             nm = _norm_name(m.group(1))
             if nm in name_index:
@@ -226,7 +226,7 @@ def cluster(
     for cid, c in set_cards.items():
         text = " ".join(str(c.get(k, "") or "") for k in
                         ("effect_description_eng", "inherited_effect_description_eng",
-                         "security_effect_description_eng"))
+                         "security_effect_description_eng", "link_effect_description_eng"))
         tgts: set[str] = set()
         for m in _TOKEN_RE.finditer(text):
             for tgt in name_index.get(_norm_name(m.group(1)), ()):

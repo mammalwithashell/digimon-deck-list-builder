@@ -41,6 +41,7 @@ SIGNIFICANT_FIELDS = (
     "effect_description_eng",
     "inherited_effect_description_eng",
     "security_effect_description_eng",
+    "link_effect_description_eng",
 )
 
 SCOPED_TEST_SOURCE_COMMAND = "python code/tools/impact_scope.py"
