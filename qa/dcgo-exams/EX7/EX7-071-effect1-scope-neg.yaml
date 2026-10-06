@@ -1,0 +1,138 @@
+# Extends the oracle-confirmed EX7-071-effect1.yaml deletion line.
+# Negative witnesses: opponent Agumon ST1-03 in breeding (zone), opponent
+# Phoenixmon ST1-10 (level 6), and own BlackGatomon BT25-082 (ownership).
+# BlackGatomon also has Three Musketeers in TEXT, not in its TRAITS: the
+# placement tail must skip it and dispose Hurricane Screw Shot to trash.
+# EX7_071.cs restricts deletion to opponent battle-area Digimon of exactly
+# levels 3/4/5; placement uses owner battle-area Digimon + EqualsTraits.
+# At each deletion pick only the named vanilla target is eligible. The three
+# battle-area targets must be deleted together; the three witnesses survive.
+# No attacks occur, so breeding Agumon's and Phoenixmon's stacks stay intact.
+# Asuna's paid On Play and declined Start of Turn follow the confirmed prefix.
+# BlackGatomon's On Play has no eligible Tamer in hand and silently skips.
+# Oracle should backfill the final board and the absence of a placement prompt.
+card: EX7-071
+clause: EX7-071#effect#1
+interaction: {id: "probe:EX7-071#effect#1:scope:neg", source: probe, kind: negative}
+meta: {produced_by: 20261006T141350806534Z-pilot-three-musketeers-5401e7}
+covers:
+  - EX7-071#effect#1
+  - BT24-088#effect#0
+  - BT24-088#effect#1
+  - BT25-082#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX7-071, BT24-088, BT21-074, BT21-074, BT25-082,
+            BT25-085, BT25-082, BT25-082, BT25-082, BT25-083,
+            BT25-083, BT25-083, BT25-083, BT25-092, BT25-092, BT25-092]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, BT1-014, BT4-014, ST1-03, ST1-10,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-009,
+            ST1-08, ST1-08, ST1-08, ST1-08, ST1-04, ST1-04, ST1-04]
+    rest: quiet-opponent
+steps:
+  # T1: purple Tamer; pay its cost, avoiding the known declined-draw issue.
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {play: {card: BT24-088, from: hand}}
+    expect: {prompt: main_phase}
+  - actor: 0
+    do: {select: {cards: [BT21-074]}}
+    expect: {prompt: OptionalSkill}
+  # T2: keep a level 3 in breeding, separately play a battle-area level 3.
+  - actor: 1
+    do: {hatch: {}}
+    expect: {prompt: breeding_action}
+  - actor: 1
+    do: {digivolve: {from: breeding, using: ST1-03}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {play: {card: ST1-02, from: hand}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  # T3: own level 4 with Three Musketeers text but no matching trait.
+  - actor: 0
+    do: {select: {decline: true}}
+    expect: {prompt: OptionalSkill}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {play: {card: BT25-082, from: hand}}
+    expect: {prompt: main_phase}
+  # T4: level 4 target; leave Agumon in breeding for the entire line.
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 1
+    do: {play: {card: BT1-014, from: hand}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  # T5.
+  - actor: 0
+    do: {select: {decline: true}}
+    expect: {prompt: OptionalSkill}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  # T6: level 5 target, memory 3 -> -2.
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 1
+    do: {play: {card: BT4-014, from: hand}}
+    expect: {prompt: main_phase}
+  # T7: wait for the level-6 decoy.
+  - actor: 0
+    do: {select: {decline: true}}
+    expect: {prompt: OptionalSkill}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  # T8: Phoenixmon is played, not digivolved over the level 5 target.
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 1
+    do: {play: {card: ST1-10, from: hand}}
+    expect: {prompt: main_phase}
+  # T9: starts at 7, so Asuna's <=4 start-of-turn gate does not fire.
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {play: {card: EX7-071, from: hand}}
+    expect: {prompt: main_phase}
+  - actor: 0
+    do: {select: {targets: [opp.field.0]}}
+    expect: {prompt: SelectPermanentEffect, candidates: [ST1-02]}
+  - actor: 0
+    do: {select: {targets: [opp.field.1]}}
+    expect: {prompt: SelectPermanentEffect, candidates: [BT1-014]}
+  - actor: 0
+    do: {select: {targets: [opp.field.2]}}
+    expect: {prompt: SelectPermanentEffect, candidates: [BT4-014]}
+  # At 28: own BlackGatomon and Asuna survive, opposing Phoenixmon survives,
+  # opposing Agumon remains in breeding; EX7-071 is in trash, not under the
+  # text-only BlackGatomon. No placement prompt is legal. Memory remains 1.
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+assert: []
