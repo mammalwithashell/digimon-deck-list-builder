@@ -1,4 +1,4 @@
-version: 2
+version: 3
 # Fix {card_name} ({card_id}) so it resolves like the cited source
 
 You are one stateless worker in the card-authoring loop. Do exactly this task in
@@ -34,6 +34,14 @@ Printed text: `{bundle_path}`. Rules: `docs/digimon-rules/`.
 ## Result
 Return only JSON matching `fix_card`:
 `{"files": [...], "tests": [...], "test_result_lines": [...], "gaps": [{"kind": "dsl" or "engine", "id": "...", "summary": "..."}], "citation": {"kind": "rule" or "ruling" or "dcgo", "ref": "..."}, "notes": "..."}`
+
+## Where the fix lives, and what the merge checks
+
+Edit the card's spec at its canonical path `code/digimon-engine/cards/<set>/<ID>.yaml`
+(the set directory the id names; never `cards/_examples/`, which holds curated
+samples). The merge compiles every YAML into the card pack and refuses a spec
+that does not parse, so before returning run `cargo run -p dsl-lint -- <that
+file>` and the card's behavioral test, and paste their result lines.
 
 ## Worktree hygiene
 

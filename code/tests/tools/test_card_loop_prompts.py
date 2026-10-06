@@ -106,4 +106,4 @@ def test_every_template_keeps_scratch_out_of_the_worktree():
     for stage in STAGES:
         text = prompts.template_text(stage).lower()
         assert "scratch" in text and "temp" in text, stage
-        assert prompts.version(stage) == "2", stage
+        assert int(prompts.version(stage)) >= 2, stage

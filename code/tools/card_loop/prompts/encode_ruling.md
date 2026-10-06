@@ -1,4 +1,4 @@
-version: 2
+version: 3
 # Encode an official ruling as an expect_ruling block
 
 You are one stateless worker in the card-authoring loop. Read only: do not edit
@@ -21,6 +21,17 @@ scenario's `assert:` (exam MCP `exam_authoring_guide`, topic `assert`). Rules:
 ## Result
 Return only JSON matching `encode_ruling`:
 `{"q_id": "...", "mode": "author" or "verify", "expect_ruling": {"assert": [{"at": 0, "that": [{"key": "p0.memory", "value_json": "3"}]}]} or null, "agrees": true or false or null, "answer_quote": "...", "reasoning": "..."}`
+
+## What makes an encoding valid
+
+The block must DISCRIMINATE: pick the observable that comes out differently
+under the publisher's answer and under the opposite reading of the question,
+at the step right after the ruling applies (a count, a zone's contents, a DP,
+a prompt offered or not offered). A block that only restates the setup -- the
+memory the line starts at, the cards stacked in hand -- is satisfied under
+every reading and encodes nothing; the verifier rejects it. In `verify` mode,
+agree only if the block would FAIL under the opposite reading; explain which
+reading it fails to separate otherwise.
 
 ## Worktree hygiene
 
