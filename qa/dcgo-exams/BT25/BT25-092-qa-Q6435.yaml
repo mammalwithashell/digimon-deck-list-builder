@@ -1,0 +1,133 @@
+# Exam scenario: Asuna Shiroki (BT25-092), interaction qa:Q6435 --
+# Q: "2 copies of this card are in the battle area. Can I activate the [Main]
+#  effect on both copies and digivolve my Digimon ... with the cost reduced by
+#  2?"  A (official): No -- you can't activate multiple digivolving effects at
+#  the same time.
+#
+# THE LINE: two Asuna Shiroki in the battle area, two Options (P-180) in hand,
+# two vanilla Purple Lv.3 hosts (DemiDevimon ST6-02) and two BlackGatomon
+# (BT25-082, [TS]) in hand; then BOTH [Main] effects are activated in the same
+# main phase, back to back (each suspends its own Tamer). Extends
+# BT25-092-qa-Q6434.yaml / BT25-092-effect1.yaml (book tm_bt25_092_pool.json).
+#
+#   T1 (P0, 0): play Asuna A (cost 4) -> -4.
+#   T3 (P0, 3): decline A's [Start of Your Main Phase]; play DemiDevimon x2.
+#   T5 (P0, 3): decline A's trigger; play Asuna B.
+#   T7 (P0, 3): both start triggers, then [Main] of A and [Main] of B.
+card: BT25-092
+clause: BT25-092#effect#1
+interaction: {id: "qa:Q6435", source: qa, kind: positive}
+covers: [BT25-092#effect#1]
+meta: {produced_by: 20261006T225136187070Z-pilot-three-musketeers-523eea}
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-092, ST6-02, ST6-02, BT25-092, P-180,
+            BT21-074, BT21-074, BT25-085, BT25-085, BT25-085,
+            P-180, BT25-082, BT25-082, BT25-083, BT25-083]
+    rest: tm-asuna-demidevimon
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-014,
+            ST1-08, ST1-08, ST1-08, ST1-08, ST1-02]
+    rest: quiet-opponent
+steps:
+  # T1
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-092, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: ST6-02, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: ST6-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: BT25-092, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  # [Main] of Asuna A
+  - actor: 0
+    do: { main: { on: field.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [P-180], sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { cards: [BT25-082] } }
+    expect: { prompt: SelectHandEffect }
+  # [Main] of Asuna B
+  - actor: 0
+    do: { main: { on: field.3 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [P-180], sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.2] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { cards: [BT25-082] } }
+    expect: { prompt: SelectHandEffect }
+  # Memory 3 -> 1 -> -1: the turn hands over after the second digivolve.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert: []
