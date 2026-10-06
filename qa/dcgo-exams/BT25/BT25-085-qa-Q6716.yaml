@@ -89,3 +89,8 @@ steps:
   # answers that blocker prompt (declines) and the line stops.
   - {actor: 0, do: {select: {decline: true}}, expect: {prompt: SelectPermanentEffect}}
 assert: []
+expect_ruling:
+  q_id: Q6716
+  assert:
+  - at: 39
+    that: {phase: BlockTiming}
