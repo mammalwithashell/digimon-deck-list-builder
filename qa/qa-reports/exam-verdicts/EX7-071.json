@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T14:15:44.075571400+00:00",
+  "last_updated": "2026-10-06T14:17:30.896870400+00:00",
   "clauses": {
     "EX7-071#effect#0": {
       "clause_id": "EX7-071#effect#0",
@@ -44,6 +44,20 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-EX7-071-effect0-optional-decline",
       "recorded_at": "2026-10-06T14:15:44.075571400+00:00"
+    },
+    "probe:EX7-071#security#0:scope:neg": {
+      "interaction_id": "probe:EX7-071#security#0:scope:neg",
+      "card_ids": [
+        "EX7-071"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "bb1f9379b6bc131ccff48068a6eca14b4ce973a47c803c071fc2c007380bfe67",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-071-security0-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-EX7-071-security0-scope-neg",
+      "recorded_at": "2026-10-06T14:17:30.896870400+00:00"
     }
   }
 }
