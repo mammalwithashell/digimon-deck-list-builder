@@ -81,3 +81,9 @@ steps:
   - actor: 0
     do: { digivolve: { from: breeding, using: BT25-085 } }
     expect: { prompt: main_phase }
+expect_ruling:
+  q_id: Q6388
+  assert:
+  - at: 16
+    that:
+      p0.hand: [BT25-085, EX7-073, BT25-083, BT21-071, BT21-074, BT25-083, BT25-082]
