@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T15:55:36.170358400+00:00",
+  "last_updated": "2026-10-06T16:07:52.400631900+00:00",
   "clauses": {
     "BT25-082#effect#0": {
       "clause_id": "BT25-082#effect#0",
@@ -67,6 +67,34 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT25-082-effect2-scope-neg",
       "recorded_at": "2026-10-06T15:55:36.170358400+00:00"
+    },
+    "probe:BT25-082#inherited#0:optional_decline": {
+      "interaction_id": "probe:BT25-082#inherited#0:optional_decline",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "aae3d133a53ff044123b9d74e486f600d87b71a31f57e2783ac631b48114bcc7",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-inherited0-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-inherited0-optional-decline",
+      "recorded_at": "2026-10-06T15:57:33.335381800+00:00"
+    },
+    "probe:BT25-082#inherited#0:scope:neg": {
+      "interaction_id": "probe:BT25-082#inherited#0:scope:neg",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "aae3d133a53ff044123b9d74e486f600d87b71a31f57e2783ac631b48114bcc7",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-inherited0-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-inherited0-scope-neg",
+      "recorded_at": "2026-10-06T16:07:52.400631900+00:00"
     }
   }
 }
