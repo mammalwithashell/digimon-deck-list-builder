@@ -10,19 +10,19 @@
 # MEMORY. BT13-060 digivolves from a Lv.6 Green for 5. P0 arrives at T5 with
 # whatever P1 left it, and the turn ends the moment memory goes below 0, so
 # the attack needs P0 to hold >= 5 going in. P1 gets there by overspending on
-# T4 (7 -> -7: Biyomon 2, Tai 2, Phoenixmon 10), which hands P0 7.
-# After the digivolve P0 sits at 2 -- still P0's turn -- and attacks.
+# T4 (7 -> -6: Biyomon 2, Tai 2, ST1-03 3, ST1-08 6), which hands P0 6.
+# After the digivolve P0 sits at 1 -- still P0's turn -- and attacks.
 #
 #   T1 (P0): pass everything.
 #   T2 (P1, 3): pass everything.
 #   T3 (P0, 3): play Rosemon ST4-12 (10: 3 -> -7). It has no [On Play].
-#   T4 (P1, 7): Biyomon ST1-02, Tai Kamiya ST1-12 (a Tamer), Phoenixmon ST1-10
-#            (14 total: 7 -> -7); the turn hands over on its own.
-#   T5 (P0, 5): digivolve ST4-12 into BT13-060 (cost 5: 7 -> 2).
+#   T4 (P1, 7): Biyomon ST1-02, Tai Kamiya ST1-12 (a Tamer), ST1-03, ST1-08
+#            (13 total: 7 -> -6); the turn hands over on its own.
+#   T5 (P0, 5): digivolve ST4-12 into BT13-060 (cost 5: 6 -> 1).
 #            [When Digivolving] (BT13_060.cs, OnEnterFieldAnyone): NOT optional
 #            (SetUpActivateClass(..., -1, false, ...)), so no yes/no gate.
 #            1. SelectPermanentEffect(Mode.Tap, maxCount 1) over opposing
-#               Digimon -- two candidates (Biyomon, Phoenixmon); we pick
+#               Digimon -- three candidates (Biyomon, ST1-03, ST1-08); we pick
 #               Biyomon by slot (distinct id, so DCGO's centre-out frame order
 #               cannot make the pick ambiguous).
 #            2. SelectPermanentEffect(Mode.Tap, maxCount 1) over opposing
@@ -38,7 +38,7 @@
 card: BT13-060
 clause: BT13-060#effect#2
 seed: 424242
-meta: {produced_by: 20261006T153258188208Z-pilot-data-squad-93abb2}
+meta: {produced_by: 20261006T153519382119Z-pilot-data-squad-e8ac51}
 interaction: {id: "qa:Q2304", source: qa, kind: positive}
 covers: [BT13-060#effect#2]
 expect_ruling:
@@ -57,7 +57,7 @@ decks:
   p1:
     # [0..4] hand; security stack[9] = BT1-009 (trashed by the clause),
     # stack[8] = Dracomon ST1-04 (the check); [10], [11] = the T2 / T4 draws.
-    stack: [ST1-02, ST1-12, ST1-10, ST1-05, ST1-05,
+    stack: [ST1-02, ST1-12, ST1-03, ST1-08, ST1-05,
             BT1-009, BT1-009, BT1-009, ST1-04, BT1-009,
             ST1-05, ST1-05]
     rest: tm-rosemon-opponent
@@ -83,7 +83,7 @@ steps:
   - actor: 0
     do: { play: { card: ST4-12, from: hand } }
     expect: { prompt: main_phase }
-  # T4 (P1, 7): Biyomon, Tai Kamiya (Tamer), Phoenixmon ST1-10 (cost 10): 7 -> -7.
+  # T4 (P1, 7): Biyomon, Tai Kamiya (Tamer), ST1-03, ST1-08 (7 -> -6).
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -94,9 +94,12 @@ steps:
     do: { play: { card: ST1-12, from: hand } }
     expect: { prompt: main_phase }
   - actor: 1
-    do: { play: { card: ST1-10, from: hand } }
+    do: { play: { card: ST1-03, from: hand } }
     expect: { prompt: main_phase }
-  # T5 (P0, 7): digivolve (7 -> 2).
+  - actor: 1
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  # T5 (P0, 6): digivolve (6 -> 1).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
