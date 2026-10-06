@@ -11,6 +11,7 @@ import sys
 
 COMMANDS = {
     "plan": ("tools.card_loop.workset", "cli_plan", "resolve inputs into a frozen run plan"),
+    "candidates": ("tools.card_loop.candidates", "cli_candidates", "rank meta archetypes/decklists for the next run"),
     "preflight": ("tools.card_loop.preflight", "cli_preflight", "new-set / node readiness checks"),
     "run": ("tools.card_loop.driver", "cli_run", "execute a planned run"),
     "resume": ("tools.card_loop.driver", "cli_resume", "continue an interrupted run"),
