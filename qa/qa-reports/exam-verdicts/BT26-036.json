@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-10-06T15:40:12.265081+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T15:41:12.519328900+00:00",
   "clauses": {
     "BT26-036#effect#0": {
       "clause_id": "BT26-036#effect#0",
@@ -32,6 +32,22 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-036-inherited0",
       "recorded_at": "2026-10-06T15:40:12.265081+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT26-036#inherited#0:optional_decline": {
+      "interaction_id": "probe:BT26-036#inherited#0:optional_decline",
+      "card_ids": [
+        "BT26-036"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "5a98f3b1487cdc67032daa89e6db0fe98b6b52335641779402ccc04de6068fc1",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-036-inherited0-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-036-inherited0-optional-decline",
+      "recorded_at": "2026-10-06T15:41:12.519328900+00:00"
     }
   }
 }
