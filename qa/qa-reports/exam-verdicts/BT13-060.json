@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T18:21:05.785931500+00:00",
+  "last_updated": "2026-10-06T18:26:33.006008600+00:00",
   "clauses": {
     "BT13-060#effect#1": {
       "clause_id": "BT13-060#effect#1",
@@ -65,10 +65,10 @@
       "verdict": "diverged",
       "text_sha256": "a935199bd8418372f155b412bb6879d3a6d33d33e3c1ccedf0225f47e7ebb7da",
       "scenario_path": "qa/dcgo-exams/BT13/BT13-060-qa-Q2304.yaml",
-      "reason": "ours contradicts ruling qa:Q2304 (ours vs DCGO: diverge); DIVERGED at step 16 (compared 22 of 22 ours / 22 dcgo steps)",
+      "reason": "ours contradicts ruling qa:Q2304 (ours vs DCGO: diverge); DIVERGED at step 16 (compared 21 of 21 ours / 21 dcgo steps)",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT13-060-qa-Q2304",
-      "recorded_at": "2026-10-06T18:21:05.785931500+00:00"
+      "recorded_at": "2026-10-06T18:26:33.006008600+00:00"
     }
   }
 }
