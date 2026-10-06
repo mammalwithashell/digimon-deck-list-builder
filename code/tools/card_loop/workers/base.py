@@ -236,6 +236,12 @@ QUOTA_PATTERNS: tuple[str, ...] = (
     "out of credits",
 )
 
+# The loop's OWN wall-clock kill of a worker (`run_cli` past `timeout_s`). Not
+# transient: a call that needed more than the cap will need it again, and the
+# second pilot retried hour-long fix workers three times over. Checked before
+# the transient patterns, which still cover API-side timeouts.
+CAP_PATTERNS: tuple[str, ...] = ("wall-clock cap",)
+
 # Transient: back off and retry. Checked AFTER quota (a 429 with
 # "insufficient_quota" is quota, not a rate limit).
 TRANSIENT_PATTERNS: tuple[str, ...] = (
@@ -283,7 +289,8 @@ AUTH_PATTERNS: tuple[str, ...] = (
 
 
 def classify_failure(text: str | None) -> str | None:
-    """`"quota"`, `"auth"`, `"transient"` or None (permanent / unknown) for an error text."""
+    """`"quota"`, `"auth"`, `"cap"` (the loop's own wall-clock kill), `"transient"` or
+    None (permanent / unknown) for an error text."""
     if not text:
         return None
     t = text.lower()
@@ -291,6 +298,8 @@ def classify_failure(text: str | None) -> str | None:
         return "quota"
     if any(p in t for p in AUTH_PATTERNS):
         return "auth"
+    if any(p in t for p in CAP_PATTERNS):
+        return "cap"
     if any(p in t for p in TRANSIENT_PATTERNS) or TRANSIENT_STATUS_RE.search(t):
         return "transient"
     return None
@@ -377,6 +386,10 @@ def run_with_retry(
         if status == "error" and classify_failure(error) == "auth":
             if health is not None:
                 health.disable(packet.family, f"auth: {error}")
+            return _with_notes(res, notes)
+        if status == "error" and classify_failure(error) == "cap":
+            # Our own kill at `timeout_s`: the work needed longer than the cap and
+            # a retry would too. The attempt counts toward the stage's cap instead.
             return _with_notes(res, notes)
         if status == "schema_invalid":
             if schema_retried:

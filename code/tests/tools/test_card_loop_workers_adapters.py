@@ -158,7 +158,7 @@ def test_parse_no_envelope_and_timeout():
     p = cw.parse_claude_envelope("", "Error: 529 overloaded", 1)
     assert p.status == "error" and "529 overloaded" in p.error
     p = cw.parse_claude_envelope("", "", None, timed_out=True, timeout_s=60)
-    assert p.status == "error" and p.error.startswith("timeout")
+    assert p.status == "error" and p.error.startswith("wall-clock cap") and "60" in p.error
     noisy = "warning: something\n" + fixture("claude_envelope_success_synth.json")
     assert cw.parse_claude_envelope(noisy).status == "ok"
 
@@ -384,7 +384,7 @@ def test_parse_codex_call_outcomes():
     nonfatal = '{"type":"error","message":"Reconnecting... 1/5"}\n' + fixture("codex_events_ok.jsonl")
     assert xw.parse_codex_call(nonfatal, "", 0, '{"ok": true}', prices=None).status == "ok"
     to = xw.parse_codex_call("", "", None, None, prices=None, timed_out=True, timeout_s=9)
-    assert to.status == "error" and to.error.startswith("timeout")
+    assert to.status == "error" and to.error.startswith("wall-clock cap") and "9" in to.error
 
 
 def test_codex_worker_run_end_to_end(repo, tmp_path):

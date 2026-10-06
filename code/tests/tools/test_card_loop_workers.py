@@ -170,7 +170,7 @@ def test_quota_texts(text):
     "API Error: 529 {\"type\":\"overloaded_error\"}",
     "rate_limit_error: Number of request tokens has exceeded your per-minute rate limit",
     "HTTP 503 Service Unavailable",
-    "timeout: claude exceeded 3600s",
+    "Request timed out while waiting for the API",
     "stream disconnected before completion",
     "Request failed with status 500",
 ])
@@ -268,6 +268,15 @@ def test_auth_error_is_not_retried_and_disables_vendor(tmp_path):
     res = run_with_retry(w, make_packet(tmp_path), health=health, sleep=lambda s: pytest.fail("slept"))
     assert res.status == "error" and w.calls == 1
     assert health.reason("claude").startswith("auth:")
+
+
+def test_the_loops_own_wall_clock_kill_is_not_retried(tmp_path):
+    # Second pilot: hour-long fix workers hit the 3600 s cap, read as a
+    # transient "timeout", and were retried three times over.
+    assert classify_failure("wall-clock cap: codex exceeded 3600s and was killed") == "cap"
+    w = FakeWorker([err("wall-clock cap: codex exceeded 3600s and was killed")])
+    res = run_with_retry(w, make_packet(tmp_path), sleep=lambda s: pytest.fail("slept"))
+    assert res.status == "error" and w.calls == 1
 
 
 def test_permanent_error_is_not_retried(tmp_path):

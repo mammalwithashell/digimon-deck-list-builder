@@ -290,7 +290,7 @@ def parse_codex_call(stdout: str, stderr: str, returncode: int | None, result_te
                                ev.cache_write_input_tokens)
              if ev.saw_usage else Usage())
     if timed_out:
-        return ParsedCall("error", usage=usage, error=f"timeout: codex exceeded {timeout_s}s")
+        return ParsedCall("error", usage=usage, error=f"wall-clock cap: codex exceeded {timeout_s}s and was killed")
     failed = bool(ev.failures) or returncode not in (0, None) or not ev.turns_completed
     if failed:
         parts = ev.failures + ev.errors
