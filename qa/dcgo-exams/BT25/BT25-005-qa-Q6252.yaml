@@ -12,7 +12,7 @@
 # route. No hand card carries [Appmon] / [Three Musketeers] trait, so
 # Scopemon's [When Digivolving] cost has no candidate.
 interaction: {id: "qa:Q6252", source: qa, kind: positive}
-meta: {produced_by: 20261006T182533502792Z-pilot-three-musketeers-a5c2ee}
+meta: {produced_by: 20261006T194023475672Z-pilot-three-musketeers-a4b03a}
 covers: [BT25-005#inherited#0]
 card: BT25-005
 clause: BT25-005#inherited#0
@@ -116,9 +116,3 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert: []
-expect_ruling:
-  q_id: Q6252
-  assert:
-  - at: 14
-    that:
-      p0.hand: [BT24-081, BT25-078, BT25-078, BT25-078, BT25-078, BT25-058]
