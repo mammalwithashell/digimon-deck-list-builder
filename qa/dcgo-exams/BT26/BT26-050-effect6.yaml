@@ -1,0 +1,42 @@
+# Book: qa/dcgo-exams/BT26/bt26_dats_pool.json. Clause: DUAL Rule
+# <Arts Digivolve> -- instead of being trashed after use, the Option digivolves
+# a Digimon into BT26-050 without paying the cost (DCGO ArtsDigivolveEffect ->
+# SelectPermanentEffect "Select 1 Digimon to Arts Digivolve", canNoSelect).
+# Line: T3 hard-plays Ravemon BT26-082 (purple, Lv.6, DATA SQUAD; 3 -> -9, no On
+# Play). T4 p1 passes. T5 p0 uses the Option face (cost 6, 3 -> -3; Use Req met by
+# Ravemon). [Main]: p1 has no Digimon/Tamers -> no prompt. Then the Arts pick:
+# Ravemon (Lv.6 DATA SQUAD, the alt-digivolve route) -> BT26-050 for free. The
+# When Digivolving suspend pick (canNoSelect) is declined, as in effect0; the lock
+# on an empty opposing board and the shared effect (no OTHER suspended Digimon)
+# are silent. Witness is the free digivolve (memory stays -3, Option not in trash).
+# Assertions intentionally left empty for oracle backfill.
+card: BT26-050
+clause: BT26-050#effect#6
+meta: {produced_by: 20261006T155650524019Z-pilot-data-squad-27689b}
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-082, BT26-050, BT26-076, ST24-10, ST24-12,
+            ST24-04, BT26-072, BT26-091, BT26-094, ST24-05,
+            BT26-065, BT26-036, BT13-060]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-10, BT1-009, BT3-007, ST1-02,
+            BT1-014, BT4-010, BT3-007, ST1-04, BT1-009,
+            ST1-04, BT4-014, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - {actor: 0, do: {pass: {}}, expect: {prompt: breeding_action}}
+  - {actor: 0, do: {pass: {}}, expect: {prompt: main_phase}}
+  - {actor: 1, do: {pass: {}}, expect: {prompt: breeding_action}}
+  - {actor: 1, do: {pass: {}}, expect: {prompt: main_phase}}
+  - {actor: 0, do: {pass: {}}, expect: {prompt: breeding_action}}
+  - {actor: 0, do: {play: {card: BT26-082, from: hand}}, expect: {prompt: main_phase}}
+  - {actor: 1, do: {pass: {}}, expect: {prompt: breeding_action}}
+  - {actor: 1, do: {pass: {}}, expect: {prompt: main_phase}}
+  - {actor: 0, do: {pass: {}}, expect: {prompt: breeding_action}}
+  - {actor: 0, do: {play: {card: BT26-050, from: hand}}, expect: {prompt: main_phase}}
+  - {actor: 0, do: {select: {targets: [own.field.0]}}, expect: {prompt: SelectPermanentEffect}}
+  - {actor: 0, do: {select: {decline: true}}, expect: {prompt: SelectPermanentEffect}}
+  - {actor: 1, do: {pass: {}}, expect: {prompt: breeding_action}}
+assert: []
