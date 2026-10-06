@@ -18493,5 +18493,15 @@
   },
   "ST23-05": {
     "inherited_effect_description_eng": ""
+  },
+  "_note_card_number_notes_2026_10": "2026-10-05: RB1-004 Agumon, RB1-006 Gammamon and RB1-007 Greymon print \"※Card Number: Also treated as [P-009]/[P-058]/[P-010]. A deck may not have more than 4 total copies of this and [...].\" (card images, official Bandai DB text and Q&A). The digimoncard.io API drops the note; deck_tools.rs reads it from effect_description_eng to count each reprint toward its promo's copy limit (general_rule.pdf 2-11-1, 1-4-1-2-2). code/tools/archive/restore_card_number_notes_2026_10.py applied it.",
+  "RB1-004": {
+    "effect_description_eng": "※Card Number: Also treated as [P-009]. A deck may not have more than 4 total copies of this and [P-009]."
+  },
+  "RB1-006": {
+    "effect_description_eng": "[Your Turn] While you have a red Tamer in play, this Digimon may also attack your opponent's unsuspended Digimon.\r\n※Card Number: Also treated as [P-058]. A deck may not have more than 4 total copies of this and [P-058]."
+  },
+  "RB1-007": {
+    "effect_description_eng": "[Your Turn] While this Digimon has an [Agumon] digivolution card, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n※Card Number: Also treated as [P-010]. A deck may not have more than 4 total copies of this and [P-010]."
   }
 }
