@@ -903,6 +903,25 @@ def test_a_card_fix_that_finds_a_gap_becomes_an_engine_fix_in_the_same_step(repo
     assert "G-DSL-EACH-TAMER" in workers["codex"].received[0].prompt
 
 
+def test_a_card_fix_whose_diff_touches_engine_code_lands_on_the_engine_branch(repo, tmp_path):
+    # Q4578: the card-fix worker edited game_actions/mod.rs without declaring a
+    # gap; the merger refused ("engine fixes land on their own branch") and the
+    # fix_card cap escalated the item. The diff is an engine fix: route it so.
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({"base_sha": "x", "files": [
+        {"path": "code/digimon-engine/src/game_actions/mod.rs", "status": "M", "sha256": "0" * 64},
+        {"path": "code/digimon-engine/cards/st23/ST23-04.yaml", "status": "M", "sha256": "0" * 64}]}),
+        encoding="utf-8")
+    workers = _workers(claude=[ok(FIX_OK, artifacts={"diff": str(tmp_path / "d.diff"), "manifest": str(manifest)})])
+    item = _fix_item()
+    out = FixExecutor().run(_ctx(repo, workers), item)
+    _check(item, out)
+    assert out.next_state == "GATE"
+    assert out.merge_request.engine is True and out.merge_request.gap_id == "fix-ST23-04-effect-0"
+    assert out.data["engine_fix"] is True and "game_actions/mod.rs" in out.data["engine_fix_reason"]
+    assert [a.stage for a in out.attempts] == ["fix_card"], "no second worker call: the diff itself decides"
+
+
 def test_a_fix_without_a_citation_escalates_as_a_finding(repo):
     workers = _workers(claude=[ok(dict(FIX_OK, citation={"kind": "rule", "ref": " "}))])
     item = _fix_item()
