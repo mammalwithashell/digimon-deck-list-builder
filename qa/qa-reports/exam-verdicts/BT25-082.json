@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-09-18T09:22:08.770469400+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T15:50:47.938809400+00:00",
   "clauses": {
     "BT25-082#effect#0": {
       "clause_id": "BT25-082#effect#0",
@@ -37,6 +37,22 @@
       "text_sha256": "aae3d133a53ff044123b9d74e486f600d87b71a31f57e2783ac631b48114bcc7",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-082-inherited0.yaml",
       "recorded_at": "2026-09-18T09:22:08.770469400+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT25-082#effect#1:optional_decline": {
+      "interaction_id": "probe:BT25-082#effect#1:optional_decline",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "78acb9f0ccc60ed8ca5af155579d4ac2d47cd77a95be9bdc321d9729c241d93f",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-effect1-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-effect1-optional-decline",
+      "recorded_at": "2026-10-06T15:50:47.938809400+00:00"
     }
   }
 }
