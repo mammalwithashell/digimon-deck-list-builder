@@ -41,6 +41,11 @@ pub struct CardSummary {
     /// Max copies allowed per deck. Defaults to 4; a handful of cards
     /// override it in the data file (e.g. starter-deck restrictions).
     pub max_count_in_deck: u32,
+    /// Card numbers this card is also treated as, from its printed
+    /// "※Card Number: Also treated as [P-009]." note (RB1-004 Agumon).
+    /// Rule 2-11-1 makes it the same card as P-009, so deck validation
+    /// counts it under both card numbers.
+    pub card_number_aliases: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -53,6 +58,8 @@ struct CardEntryRaw {
     rarity: u8,
     #[serde(default = "default_max_count")]
     max_count_in_deck: u32,
+    #[serde(default)]
+    effect_description_eng: String,
 }
 
 fn default_max_count() -> u32 {
@@ -86,6 +93,7 @@ pub fn card_database() -> &'static HashMap<String, CardSummary> {
         raw.into_iter()
             .map(|(k, v)| {
                 let rarity = parse_rarity(v.rarity, &k);
+                let card_number_aliases = parse_card_number_aliases(&v.effect_description_eng);
                 (
                     k,
                     CardSummary {
@@ -94,11 +102,41 @@ pub fn card_database() -> &'static HashMap<String, CardSummary> {
                         card_kind: v.card_kind,
                         rarity,
                         max_count_in_deck: v.max_count_in_deck,
+                        card_number_aliases,
                     },
                 )
             })
             .collect()
     })
+}
+
+/// Card numbers named by a printed "※Card Number: Also treated as [P-009]."
+/// note. The official Q&A calls it a rule, not an effect, so it holds in every
+/// area, the deck list included. A name alias ("The name of this card is also
+/// treated as [X]") leaves the card number alone and isn't read here.
+fn parse_card_number_aliases(effect_text: &str) -> Vec<String> {
+    const NOTE: &str = "Card Number: Also treated as";
+    let mut aliases: Vec<String> = Vec::new();
+    for (start, _) in effect_text.match_indices(NOTE) {
+        // The first sentence names the card numbers; the second ("A deck may
+        // not have more than 4 total copies of this and [P-009].") restates
+        // them as the deck-building rule.
+        let sentence = effect_text[start + NOTE.len()..]
+            .split('.')
+            .next()
+            .unwrap_or_default();
+        let mut rest = sentence;
+        while let Some((_, after_open)) = rest.split_once('[') {
+            let Some((number, after_close)) = after_open.split_once(']') else {
+                break;
+            };
+            if is_card_id(number) && !aliases.iter().any(|a| a == number) {
+                aliases.push(number.to_string());
+            }
+            rest = after_close;
+        }
+    }
+    aliases
 }
 
 /// Lazily-parsed full `CardData` map for the entire card pool baked into
@@ -326,10 +364,12 @@ pub fn validate_deck_for_game_mode(
 /// Checks (order preserved so error messages come out identically):
 ///   1. Unknown card warnings
 ///   2. Main = deck_size, Egg <= egg_max
-///   3. Per-card copy limits from `max_count_in_deck`
-///   4. Restricted list (banned → error, restricted → limit enforced) + singleton
+///   3. Copy limits from `max_count_in_deck`, per card number: a card whose
+///      note says "Also treated as [P-009]" counts toward P-009's limit
+///   4. Restricted list (banned → error, restricted → limit enforced) +
+///      singleton, per card number
 ///   5. Rarity policy (Pauper rarity gate / EDEN anomaly protocol)
-///   6. Choice-group exclusivity
+///   6. Choice-group exclusivity, per card number
 pub fn validate_deck(card_ids: &[String]) -> DeckValidationResult {
     let fmt = format::descriptor("standard").expect("standard format must exist");
     validate_deck_for_descriptor(card_ids, fmt)
@@ -343,6 +383,80 @@ pub fn validate_deck_for_mode(
     let fmt = format::descriptor_for_mode(mode)
         .ok_or_else(|| format!("Unsupported deck validation game mode: {mode:?}"))?;
     Ok(validate_deck_for_descriptor(card_ids, fmt))
+}
+
+/// A deck's copies of one card number.
+#[derive(Default)]
+struct NumberCopies<'a> {
+    count: u32,
+    /// The distinct deck cards counted under the number, sorted.
+    card_ids: Vec<&'a str>,
+}
+
+impl NumberCopies<'_> {
+    /// Whether the only card counted under `number` is another card also
+    /// treated as it (RB1-004 alone, under P-009). Its count and copy cap are
+    /// then that card's own, already checked under its own number.
+    fn repeats_another_card(&self, number: &str) -> bool {
+        matches!(self.card_ids.as_slice(), [only] if *only != number)
+    }
+
+    /// " (includes RB1-004, also treated as card number P-009)" when cards
+    /// other than `number`'s own count toward it; empty otherwise, so an
+    /// ordinary card's messages are unchanged.
+    fn alias_note(&self, number: &str) -> String {
+        let others: Vec<&str> = self
+            .card_ids
+            .iter()
+            .copied()
+            .filter(|id| *id != number)
+            .collect();
+        if others.is_empty() {
+            String::new()
+        } else {
+            format!(
+                " (includes {}, also treated as card number {number})",
+                others.join(", ")
+            )
+        }
+    }
+}
+
+/// A deck's copies per card number, sorted by number. A deck may hold 4
+/// copies of a card with the same card number (rule 1-4-1-2-2); a card counts
+/// under its own number and under each one its note says it is also treated
+/// as, so 4 P-009 + 1 RB1-004 is 5 copies of P-009.
+fn copies_by_card_number<'a>(
+    counts: &'a HashMap<String, u32>,
+    db: &'a HashMap<String, CardSummary>,
+) -> BTreeMap<&'a str, NumberCopies<'a>> {
+    let mut by_number: BTreeMap<&str, NumberCopies> = BTreeMap::new();
+    for (card_id, &count) in counts {
+        let aliases = db
+            .get(card_id)
+            .map_or(&[][..], |e| e.card_number_aliases.as_slice());
+        for number in std::iter::once(card_id).chain(aliases) {
+            let copies = by_number.entry(number.as_str()).or_default();
+            copies.count += count;
+            copies.card_ids.push(card_id.as_str());
+        }
+    }
+    for copies in by_number.values_mut() {
+        copies.card_ids.sort_unstable();
+    }
+    by_number
+}
+
+/// A card number's name for messages: its card's, else that of a card also
+/// treated as it (rule 2-11-1 pairs matching names), else the number itself.
+fn number_name<'a>(
+    number: &'a str,
+    card_ids: &[&'a str],
+    db: &'a HashMap<String, CardSummary>,
+) -> &'a str {
+    db.get(number)
+        .or_else(|| card_ids.iter().find_map(|id| db.get(*id)))
+        .map_or(number, |e| e.card_name_eng.as_str())
 }
 
 /// Generic deck validation derived entirely from a `FormatDescriptor` — no
@@ -398,40 +512,53 @@ pub fn validate_deck_for_descriptor(
         ));
     }
 
-    // Iterate counts in sorted order so error messages are deterministic.
-    let sorted_counts: BTreeMap<&String, &u32> = counts.iter().collect();
-    for (card_id, count) in &sorted_counts {
-        let count = **count;
-        if let Some(entity) = db.get(card_id.as_str()) {
-            if count > entity.max_count_in_deck {
-                errors.push(format!(
-                    "{} ({}): {} copies exceeds max {} per deck",
-                    card_id, entity.card_name_eng, count, entity.max_count_in_deck
-                ));
-            }
+    // Copy limits count per card number (see `copies_by_card_number`), in
+    // sorted order so error messages are deterministic.
+    let by_number = copies_by_card_number(&counts, db);
+    for (&number, copies) in &by_number {
+        if copies.repeats_another_card(number) {
+            continue;
+        }
+        // The tightest cap among the cards sharing the number: RB1-004 allows
+        // "not more than 4 total copies of this and [P-009]".
+        let Some(max) = copies
+            .card_ids
+            .iter()
+            .filter_map(|id| db.get(*id))
+            .map(|e| e.max_count_in_deck)
+            .min()
+        else {
+            continue;
+        };
+        if copies.count > max {
+            errors.push(format!(
+                "{number} ({}): {} copies exceeds max {max} per deck{}",
+                number_name(number, &copies.card_ids, db),
+                copies.count,
+                copies.alias_note(number)
+            ));
         }
     }
 
-    // Format restriction (banlist / restricted limits) + singleton cap.
-    for (card_id, count) in &sorted_counts {
-        let count = **count;
-        let name = db
-            .get(card_id.as_str())
-            .map(|e| e.card_name_eng.as_str())
-            .unwrap_or(card_id.as_str());
+    // Format restriction (banlist / restricted limits) + singleton cap, also
+    // per card number: a ban or limit on P-009 binds RB1-004.
+    for (&number, copies) in &by_number {
+        let count = copies.count;
+        let name = number_name(number, &copies.card_ids, db);
+        let note = copies.alias_note(number);
         let restriction_limit = fmt
             .restriction
             .card_limits
-            .get(card_id.as_str())
+            .get(number)
             .map(|l| u32::from(*l));
         let mut flagged = false;
         if let Some(limit) = restriction_limit {
             if limit == 0 {
-                errors.push(format!("{card_id} ({name}) is banned"));
+                errors.push(format!("{number} ({name}) is banned{note}"));
                 flagged = true;
             } else if count > limit {
                 errors.push(format!(
-                    "{card_id} ({name}): {count} copies exceeds restricted limit of {limit}"
+                    "{number} ({name}): {count} copies exceeds restricted limit of {limit}{note}"
                 ));
                 flagged = true;
             }
@@ -439,15 +566,17 @@ pub fn validate_deck_for_descriptor(
         // Singleton: at most one copy of any card. Skip when the restriction
         // branch above already reported a violation for this card so we don't
         // double-report (e.g. an EDEN "limited to 1" card under EDEN Singleton).
-        if fmt.singleton && count > 1 && !flagged {
+        if fmt.singleton && count > 1 && !flagged && !copies.repeats_another_card(number) {
             errors.push(format!(
-                "{card_id} ({name}): {count} copies ({} is singleton — max 1)",
+                "{number} ({name}): {count} copies ({} is singleton — max 1){note}",
                 fmt.name
             ));
         }
     }
 
-    // Rarity policy — generic over the descriptor's policy.
+    // Rarity policy — generic over the descriptor's policy. Rarity is per
+    // card, so iterate counts in sorted order.
+    let sorted_counts: BTreeMap<&String, &u32> = counts.iter().collect();
     match fmt.rarity_policy {
         RarityPolicy::All => {}
         RarityPolicy::CommonUncommon => {
@@ -496,15 +625,15 @@ pub fn validate_deck_for_descriptor(
         }
     }
 
-    // Choice-group exclusivity.
-    let deck_ids_set: HashSet<&str> = card_ids.iter().map(String::as_str).collect();
+    // Choice-group exclusivity, by card number: RB1-004 is a P-009 card.
+    let deck_numbers: HashSet<&str> = by_number.keys().copied().collect();
     for (group_a, group_b) in &fmt.restriction.choice_groups {
         let has_a = group_a
             .iter()
-            .any(|cid| deck_ids_set.contains(cid.as_str()));
+            .any(|cid| deck_numbers.contains(cid.as_str()));
         let has_b = group_b
             .iter()
-            .any(|cid| deck_ids_set.contains(cid.as_str()));
+            .any(|cid| deck_numbers.contains(cid.as_str()));
         if has_a && has_b {
             errors.push(format!(
                 "Choice restriction violated: cannot include cards from [{}] and [{}] in the same deck",
@@ -528,7 +657,9 @@ pub fn validate_deck_for_descriptor(
 /// cap (restriction limit / singleton / default, clamped to the card's
 /// intrinsic `max_count_in_deck`). `reason` explains an illegal or constrained
 /// card; the deck-level anomaly *total* cap is reported as a constraint here,
-/// not a hard rejection (only a full deck can exceed it).
+/// not a hard rejection (only a full deck can exceed it). Likewise the limit a
+/// card shares with a card-number alias (4 RB1-004 and P-009 together) is left
+/// to deck validation: `max_copies` is this card's own cap.
 #[derive(Debug, Clone, Serialize)]
 pub struct CardLegality {
     pub legal: bool,
@@ -551,11 +682,15 @@ pub fn card_legality(card_id: &str, game_mode: &str) -> Result<CardLegality, Str
 /// Per-card legality under a resolved format descriptor.
 pub fn card_legality_for_descriptor(card_id: &str, fmt: &FormatDescriptor) -> CardLegality {
     let db = card_database();
-    let restriction_limit = fmt
-        .restriction
-        .card_limits
-        .get(card_id)
-        .map(|l| u32::from(*l));
+    let entity = db.get(card_id);
+    // A ban or limit on any of the card's numbers binds it: RB1-004 is also
+    // card number P-009.
+    let aliases = entity.map_or(&[][..], |e| e.card_number_aliases.as_slice());
+    let restriction_limit = std::iter::once(card_id)
+        .chain(aliases.iter().map(String::as_str))
+        .filter_map(|number| fmt.restriction.card_limits.get(number))
+        .map(|l| u32::from(*l))
+        .min();
 
     // Banned dominates everything.
     if restriction_limit == Some(0) {
@@ -566,7 +701,6 @@ pub fn card_legality_for_descriptor(card_id: &str, fmt: &FormatDescriptor) -> Ca
         };
     }
 
-    let entity = db.get(card_id);
     let intrinsic = entity.map(|e| e.max_count_in_deck).unwrap_or(4);
     // Effective per-card cap, with the card-printed allowance able to RAISE
     // above the format default (BT11-061 Vemmon prints "You can include up to
@@ -888,5 +1022,32 @@ mod tests {
     #[should_panic(expected = "cards.json has unknown rarity value 42 for card TEST-001")]
     fn invalid_rarity_value_panics() {
         let _ = parse_rarity(42, "TEST-001");
+    }
+
+    #[test]
+    fn card_number_aliases_come_only_from_the_card_number_note() {
+        let cases: [(&str, &[&str]); 5] = [
+            // RB1-004 Agumon: the note is its whole effect box.
+            (
+                "※Card Number: Also treated as [P-009]. A deck may not have more than 4 total copies of this and [P-009].",
+                &["P-009"],
+            ),
+            // RB1-006 Gammamon: the note follows an effect.
+            (
+                "[Your Turn] While you have a red Tamer in play, this Digimon may also attack your opponent's unsuspended Digimon.\r\n※Card Number: Also treated as [P-058]. A deck may not have more than 4 total copies of this and [P-058].",
+                &["P-058"],
+            ),
+            // A name alias leaves the card number alone (BT8-061).
+            ("The name of this card/Digimon is also treated as [Mamemon].", &[]),
+            // So does a rule about the card's own number (BT11-061 Vemmon).
+            (
+                "You can include up to 50 copies of cards with this card's card number in your deck.",
+                &[],
+            ),
+            ("", &[]),
+        ];
+        for (text, want) in cases {
+            assert_eq!(parse_card_number_aliases(text), want, "{text}");
+        }
     }
 }

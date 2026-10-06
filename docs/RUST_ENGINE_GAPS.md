@@ -1845,6 +1845,16 @@ return-immunity modifiers" entry — verify at implementation; likely no longer 
 - **Workaround:** None — decks with more than 4 Vemmon are illegal to build; the card's deck-construction identity is unenforceable. BLOCKED.
 - **Related:** `deck_tools.rs` format descriptor / `restriction.card_limits` (downward-only path works).
 
+### Deck-construction copy limit shared with a card-number alias ("※Card Number: Also treated as [X]")
+- **Status: RESOLVED (2026-10-05).** `deck_tools.rs` parses the note from `effect_description_eng` into `CardSummary.card_number_aliases`, and `validate_deck_for_descriptor` counts copies per card number (each card under its own number and every alias), so the copy cap, format bans/limits, singleton and choice groups bind a reprint together with its promo; `card_legality_for_descriptor` applies a ban/limit on any of a card's numbers. The API drops the note, so RB1-004/006/007 carry it as `data/card_overrides.json` entries (`code/tools/archive/restore_card_number_notes_2026_10.py`); `tests/data_official_parity.rs::official_db_card_number_notes_reach_deck_validation` fails if the official DB prints a note deck validation can't see. The hosted API (`server/routers/deck_tools.py`, `matchmaking.py`, `desktop_decks.py`, `db/routers/decks.py`), the PyO3 `validate_deck*` and the Tauri `rust_validate_deck_raw` all call this one validator. Tests: deck_tools (8 new), lib `card_number_aliases_come_only_from_the_card_number_note`.
+- **Severity:** 🟡 PARTIAL (illegal decks validated; play unaffected)
+- **Discovered in:** RB1 card-number notes, image-verified 2026-10-05
+- **Card(s):** RB1-004 Agumon → P-009, RB1-006 Gammamon → P-058, RB1-007 Greymon → P-010 — the only card-number notes in `data/card_official.json` (2026-10-05). Official Q&A: a special rule, not an effect; the reprint has the promo's card number in every area, and a deck holds at most 4 of the two together (general_rule.pdf 2-11-1, 1-4-1-2-2).
+- **Effect text:** "※Card Number: Also treated as [P-009]. A deck may not have more than 4 total copies of this and [P-009]."
+- **What was missing:** copy limits counted per card id (4 RB1-004 + 4 P-009 validated), and cards.json had no trace of the note.
+- **Still per card id (unreachable while none of the six cards is on the tested allowlist):** the deck builder's add-button cap (`frontend/src/pages/DeckBuilderPage.tsx`, `count >= leg.max_copies`); the hosted API's EDH Commander singleton (`server/db/routers/decks.py`, Python `Counter(card_ids)`); in play, DigiXros `distinct_by: card_number` compares `CardData::card_id` (`digixros.rs`).
+- **Related:** the Vemmon "RAISES the cap" entry above.
+
 ### Whole-card "[X] in its text" predicate (DCGO `HasText` scope: name + traits + all requirement text)
 - **Status: RESOLVED (2026-07-03).** New leaf `in_text_contains` (+`event_card_in_text_contains`): case-insensitive over name + also_treated_as/DigiXros aliases + traits (incl. Rule-granted) + all printed text incl. dual faces (attribute line and numeric cost structs documented as not scanned; requirement wording lives in printed text). Trait-only regression (BT6-017/BT6-065/ST14-09) pinned. `effect_text_contains` intentionally NOT widened. Tests: tests/dsl/in_text_contains.rs.
 - **Severity:** 🟡 PARTIAL

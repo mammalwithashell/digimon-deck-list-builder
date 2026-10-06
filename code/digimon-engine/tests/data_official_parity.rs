@@ -197,3 +197,66 @@ fn official_db_inherited_text_matches_cards_json() {
         failures.join("\n")
     );
 }
+
+/// Printed card-number notes vs deck validation.
+///
+/// RB1-004 Agumon, RB1-006 Gammamon and RB1-007 Greymon print "※Card Number:
+/// Also treated as [P-009]. A deck may not have more than 4 total copies of this
+/// and [P-009]." (P-058, P-010). Rule 2-11-1 makes each the same card as its
+/// promo, and `deck_tools` reads the note from `effect_description_eng` so the
+/// two share one copy limit. The digimoncard.io API drops the note, so it
+/// reaches cards.json only through `data/card_overrides.json`; this fails with
+/// the card list when the official DB prints a note deck validation can't see.
+#[test]
+fn official_db_card_number_notes_reach_deck_validation() {
+    let official_path = repo_data("card_official.json");
+    if !official_path.exists() {
+        eprintln!("Skipping: data/card_official.json missing — full repo checkout required");
+        return;
+    }
+    let official: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&official_path).expect("read official"))
+            .expect("parse card_official.json");
+
+    const NOTE: &str = "Card Number: Also treated as [";
+    let db = digimon_engine::deck_tools::card_database();
+    let mut notes = 0;
+    let mut failures: Vec<String> = Vec::new();
+    for (id, entry) in official["cards"].as_object().expect("official cards map") {
+        let texts = entry["text_sections"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|s| s["text"].as_str());
+        for text in texts {
+            for (start, _) in text.match_indices(NOTE) {
+                let Some((number, _)) = text[start + NOTE.len()..].split_once(']') else {
+                    continue;
+                };
+                notes += 1;
+                let Some(card) = db.get(id.as_str()) else {
+                    // Not in cards.json yet, so no deck can hold it.
+                    continue;
+                };
+                if !card.card_number_aliases.iter().any(|a| a == number) {
+                    failures.push(format!(
+                        "{id}: the official DB treats it as card number {number}; deck validation does not"
+                    ));
+                }
+            }
+        }
+    }
+
+    assert!(
+        notes > 0,
+        "the official DB prints card-number notes on RB1-004/006/007 but none were found — \
+         has card_official.json's shape changed?"
+    );
+    assert!(
+        failures.is_empty(),
+        "{} card-number note(s) printed in the official Bandai DB are missing from \
+         data/cards.json's effect text (API-ingest drop — restore via data/card_overrides.json):\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}
