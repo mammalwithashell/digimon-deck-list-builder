@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T21:48:34.626633700+00:00",
+  "last_updated": "2026-10-06T21:51:50.007064400+00:00",
   "clauses": {
     "BT25-083#effect#0": {
       "clause_id": "BT25-083#effect#0",
@@ -137,7 +137,7 @@
       "reason": "ours contradicts ruling qa:Q6393 (ours vs DCGO: diverge); DIVERGED at step 24 (compared 25 of 26 ours / 26 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT25-083-qa-Q6393",
-      "recorded_at": "2026-10-06T21:39:50.335286300+00:00"
+      "recorded_at": "2026-10-06T21:51:50.007064400+00:00"
     },
     "qa:Q6395": {
       "interaction_id": "qa:Q6395",
