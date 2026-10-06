@@ -11,7 +11,8 @@
 #     HasThreeMusketeersTraits is CardTraits.Contains("Three Musketeers") -- a
 #     TRAIT test, not a text test ("[Three Musketeers] trait", not "in its
 #     text"). So the clause must NOT see them.
-#   - ST1-02 Biyomon: [Bird], no scope trait at all.
+#   (ST1-02 Biyomon is not in the three-musketeers deck, so it cannot be stacked
+#    for p0; the in-deck Tamers are the near-misses.)
 # The trash is empty. The tuck card P-180 of the positive line is gone.
 #
 # DCGO shape (BT21_071.cs, region "On Play"): CanActivateConditionShared only
@@ -29,11 +30,11 @@ card: BT21-071
 clause: BT21-071#effect#1
 covers: [BT21-071#effect#1]
 interaction: {id: "probe:BT21-071#effect#1:scope:neg", source: probe, kind: negative}
-meta: {produced_by: 20261006T134840115383Z-pilot-three-musketeers-6004b7}
+meta: {produced_by: 20261006T153150394486Z-pilot-three-musketeers-0e3a21}
 seed: 424242
 decks:
   p0:
-    stack: [BT21-071, BT24-088, ST1-02, BT24-088, BT24-088,
+    stack: [BT21-071, BT24-088, BT25-092, BT24-088, BT24-088,
             BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
             BT25-092]
     rest: three-musketeers
