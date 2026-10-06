@@ -70,6 +70,15 @@ class LoopConfig:
     escalations_dir: str = "qa/card-loop/escalations"
     harness_root: str | None = None     # dcgo-harness --root; None = harness default
     player_dir: str | None = None       # dcgo-harness --build
+    # The stage executors' optional knobs (stages/base.py): the harness binary
+    # (else DCGO_HARNESS_BIN / the per-worktree cargo target / PATH), the per-job
+    # oracle wait, a per-call USD cap, the clause-text book, and the base-repo
+    # DCGO root for worker references.
+    harness_bin: str | None = None
+    oracle_timeout_s: int = 300
+    stage_budget_usd: float | None = None
+    clause_text_json: str = "qa/exam-clause-text.json"
+    dcgo_root: str | None = None
 
     def __post_init__(self):
         unknown = set(self.routes) - set(STAGES)
