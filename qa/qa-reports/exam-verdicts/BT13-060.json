@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T18:26:33.006008600+00:00",
+  "last_updated": "2026-10-06T19:08:43.848455700+00:00",
   "clauses": {
     "BT13-060#effect#1": {
       "clause_id": "BT13-060#effect#1",
@@ -23,7 +23,7 @@
       "reason": "DIVERGED at step 16 (compared 18 of 18 ours / 18 dcgo steps)",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT13-060-effect2",
-      "recorded_at": "2026-10-06T14:14:19.861295600+00:00"
+      "recorded_at": "2026-10-06T19:08:43.848455700+00:00"
     }
   },
   "interactions": {
