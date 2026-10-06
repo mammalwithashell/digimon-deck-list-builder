@@ -1,21 +1,32 @@
 """Oracle readiness: which cards RL training may draw.
 
-A card is READY when every printed clause is adjudicated against the DCGO
-oracle: confirmed; unreachable/unavailable with a stated reason; or diverged
-and triaged as a cited DCGO quirk. Everything else blocks. Training reads only
-the committed artifact this module writes (`data/oracle_readiness.json`).
+A card is READY when every printed clause AND every gating interaction of the
+card is adjudicated against the DCGO oracle: confirmed; unreachable/unavailable
+with a stated reason; or diverged and triaged as a cited DCGO quirk. Everything
+else blocks -- an escalation is a human-queue entry, not a verdict, and blocks.
+Training reads only the committed artifact this module writes
+(`data/oracle_readiness.json`).
 
-Readiness today is clause-only. The ONE place a further adjudication input
-joins it (card-loop group 7: every gating interaction of the card, from
-`exam_binding.bind_interactions`) is `card_blockers` -- see its docstring.
+The two adjudication units join in `card_blockers` and nowhere else:
+
+* printed clauses -- `exam_binding.bind()`;
+* gating interactions (card-loop design D6/D9) -- `exam_binding.bind_interactions()`
+  over the committed denominator `data/interaction_denominator.json`: every
+  official Q&A ruling that prints the card plus every generated risk probe of
+  a PROMOTED family. A shared ruling is one interaction, adjudicated once and
+  counted for every card that prints it. A card the denominator never saw is a
+  stale denominator, not "no interactions", and blocks (fail-closed).
 
 Usage (from the repo root)::
 
     PYTHONPATH=code python -m tools.clause_coverage.readiness            # write
     PYTHONPATH=code python -m tools.clause_coverage.readiness --check    # CI drift
     PYTHONPATH=code python -m tools.clause_coverage.readiness --plan --limit 25
+    PYTHONPATH=code python -m tools.clause_coverage.readiness --clause-only --out /tmp/view.json
+                                        # report view without the interaction gate (never --check)
 
-Spec: `docs/superpowers/specs/2026-10-04-dcgo-oracle-readiness-design.md` §4.7.
+Spec: `docs/superpowers/specs/2026-10-04-dcgo-oracle-readiness-design.md` §4.7;
+the interaction join: `openspec/changes/add-card-authoring-loop/design.md` D9.
 """
 from __future__ import annotations
 
@@ -40,8 +51,15 @@ DEFAULT_TESTED = _REPO / "data" / "tested_cards.json"
 DEFAULT_LEDGER = _REPO / "qa" / "qa-reports" / "validated_cards_dsl.json"
 DEFAULT_VERDICTS = _REPO / "qa" / "qa-reports" / "exam-verdicts"
 DEFAULT_SCENARIOS = _REPO / "qa" / "dcgo-exams"
+DEFAULT_DENOMINATOR = _REPO / "data" / "interaction_denominator.json"
 
-ARTIFACT_VERSION = 1
+# 2 (2026-10-06): gating interactions join readiness -- `blocking` may name
+# interaction ids (`qa:<Q>`, `probe:<clause>:<family>[:neg]`) and the synthetic
+# `<id>#denominator#missing`; per card `total_interactions` /
+# `by_interaction_verdict`; top-level `gating` and `interactions`.
+ARTIFACT_VERSION = 2
+GATING_CLAUSES = "clauses"
+GATING_INTERACTIONS = "interactions"
 READY = "ready"
 NOT_READY = "not_ready"
 # Mirror of gauntlet._NOT_READY_DSL_STATUSES (gauntlet needs the engine binding,
@@ -67,6 +85,17 @@ def clause_is_adjudicated(clause: dict) -> bool:
     if verdict == "diverged":
         return clause.get("triage") == "dcgo_quirk" and _has_text(clause.get("citation"))
     return False
+
+
+def interaction_is_adjudicated(interaction: dict) -> bool:
+    """One gating interaction cleared (card-loop design D9): the clause rule,
+    applied to a row of `exam_binding.bind_interactions()` -- `verdict`,
+    `reason`, and for a diverged row the `triage` / `citation` twins the store
+    carries flat. `escalated` is a human-queue state, never a verdict: an
+    escalated interaction is `unmeasured` (no ending written) or `diverged` with
+    an `undetermined` triage in the store, and blocks either way. A stored
+    verdict whose text fingerprint drifted is already `unmeasured` here."""
+    return clause_is_adjudicated(interaction)
 
 
 # Printed-text fields of the merged cards.json/overrides record; any of them
@@ -100,35 +129,59 @@ def vanilla_confirmed(official_entry: dict | None, card_record: dict) -> bool:
 
 
 def card_blockers(card_report: dict) -> list[str]:
-    """Every adjudication unit of one card that keeps it out of training, sorted.
+    """Every adjudication unit of one card that keeps it out of training:
+    clause blockers (sorted), then interaction blockers (sorted).
 
-    THE extension seam of readiness. Today the units are the card's printed
-    clauses (`exam_binding.bind()["cards"][cid]["clauses"]`), judged by
-    `clause_is_adjudicated`, plus one synthetic `<id>#extraction#unresolved`
-    unit for a card with zero clauses that `build_readiness` could not confirm
-    as vanilla (`card_report["vanilla_confirmed"]`, fail-closed when absent).
-    When the gating-interaction join lands (card-loop group 7, design D9), it
-    joins HERE and nowhere else: `build_readiness` attaches the card's
-    `bind_interactions()` rows to `card_report`, and this function appends the
-    ids of the ones that are not adjudicated. The artifact's `blocking` list,
-    the `ready` status, the training gate and `--plan` all consume this list
-    unchanged.
+    THE extension seam of readiness; both units join here and nowhere else.
+
+    1. The card's printed clauses (`exam_binding.bind()["cards"][cid]["clauses"]`),
+       judged by `clause_is_adjudicated`, plus one synthetic
+       `<id>#extraction#unresolved` unit for a card with zero clauses that
+       `build_readiness` could not confirm as vanilla
+       (`card_report["vanilla_confirmed"]`, fail-closed when absent).
+    2. The card's gating interactions (card-loop design D9), which
+       `build_readiness` attaches from `exam_binding.bind_interactions()` as
+       `card_report["interactions"]` + `card_report["in_denominator"]`, judged
+       by `interaction_is_adjudicated`. A card the denominator never saw
+       (`in_denominator` False) gets the synthetic `<id>#denominator#missing`
+       unit: the denominator lists every card it considered (`[]` = no
+       interactions), so an absent card is a stale denominator, not a clear one.
+       A report with no `in_denominator` key was built clause-only (the
+       `--clause-only` report view) and contributes no interaction blockers.
+
+    The artifact's `blocking` list, the `ready` status, the training gate and
+    `--plan` all consume this list unchanged.
     """
     clauses = card_report.get("clauses", [])
     blocking = [c["clause_id"] for c in clauses if not clause_is_adjudicated(c)]
     if not clauses and card_report.get("vanilla_confirmed") is not True:
         blocking.append(f"{card_report.get('card_id', '?')}#extraction#unresolved")
-    return sorted(blocking)
+    blocking.sort()
+    joined = card_report.get("in_denominator")
+    if joined is None:
+        return blocking
+    if joined is False:
+        blocking.append(f"{card_report.get('card_id', '?')}#denominator#missing")
+    blocking.extend(sorted(
+        x["interaction_id"] for x in card_report.get("interactions", [])
+        if not interaction_is_adjudicated(x)
+    ))
+    return blocking
 
 
 def card_status(card_report: dict) -> dict:
     blocking = card_blockers(card_report)
-    return {
+    status = {
         "status": READY if not blocking else NOT_READY,
         "total_clauses": int(card_report.get("total_clauses", 0)),
         "by_verdict": dict(sorted((card_report.get("by_verdict") or {}).items())),
         "blocking": blocking,
     }
+    if card_report.get("in_denominator") is not None:
+        status["total_interactions"] = int(card_report.get("total_interactions", 0))
+        status["by_interaction_verdict"] = dict(sorted(
+            (card_report.get("by_interaction_verdict") or {}).items()))
+    return status
 
 
 def library_decklists(library_path: Path) -> list[list[str]]:
@@ -206,10 +259,19 @@ def build_readiness(
     verdicts_dir: Path,
     bind_fn: Callable | None = None,
     vanilla_fn: Callable[[str], bool] | None = None,
+    denominator_path: Path | str = DEFAULT_DENOMINATOR,
+    interactions_fn: Callable | None = None,
+    clause_only: bool = False,
 ) -> dict:
     """`vanilla_fn(card_id)` confirms a zero-clause card prints nothing
     (default: `vanilla_confirmed` over the extractor's card-data files); it is
-    consulted only for cards whose extraction yields zero clauses."""
+    consulted only for cards whose extraction yields zero clauses.
+
+    `interactions_fn(ids, denominator_path, verdicts_dir, gating_only=True)`
+    (default `exam_binding.bind_interactions`) joins every gating interaction;
+    a missing denominator file raises rather than reading as "no interactions".
+    `clause_only=True` skips the join for a REPORT view (marked `gating:
+    ["clauses"]`); the committed artifact is always the full gate."""
     if bind_fn is None:
         from tools.clause_coverage.exam_binding import bind as bind_fn
     ids = sorted(set(card_ids))
@@ -221,13 +283,32 @@ def build_readiness(
             if vanilla_fn is None:
                 vanilla_fn = _default_vanilla_fn()
             card_report["vanilla_confirmed"] = bool(vanilla_fn(cid))
+    bound_i = None
+    if not clause_only:
+        if interactions_fn is None:
+            from tools.clause_coverage.exam_binding import bind_interactions as interactions_fn
+        bound_i = interactions_fn(ids, denominator_path, verdicts_dir, gating_only=True)
+        for cid, card_report in reports.items():
+            irep = bound_i["cards"].get(cid) or {}
+            card_report["in_denominator"] = bool(irep.get("in_denominator"))
+            card_report["interactions"] = list(irep.get("interactions") or [])
+            card_report["total_interactions"] = int(irep.get("total_interactions") or 0)
+            card_report["by_interaction_verdict"] = dict(irep.get("by_verdict") or {})
     cards = {cid: card_status(card_report) for cid, card_report in reports.items()}
     summary = Counter(s["status"] for s in cards.values())
-    return {
+    out = {
         "version": ARTIFACT_VERSION,
+        "gating": [GATING_CLAUSES] if clause_only else [GATING_CLAUSES, GATING_INTERACTIONS],
         "cards": cards,
         "summary": {READY: summary.get(READY, 0), NOT_READY: summary.get(NOT_READY, 0)},
     }
+    if bound_i is not None:
+        den = bound_i["denominator"]
+        out["interactions"] = {
+            "gating_total": int(den["total_interactions"]),
+            "by_verdict": dict(sorted(den["by_verdict"].items())),
+        }
+    return out
 
 
 def render(data: dict) -> str:
@@ -334,11 +415,20 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--tested", type=Path, default=DEFAULT_TESTED)
     parser.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER)
+    parser.add_argument("--denominator", type=Path, default=DEFAULT_DENOMINATOR,
+                        help="the gating interaction denominator (card-loop `interactions build`)")
+    parser.add_argument("--clause-only", action="store_true",
+                        help="REPORT view without the interaction gate; refused with --check")
     parser.add_argument("--check", action="store_true", help="fail if --out is missing or stale")
     parser.add_argument("--plan", action="store_true", help="rank not-ready cards to examine next")
     parser.add_argument("--limit", type=int, default=25)
     parser.add_argument("--json", action="store_true", help="--plan output as JSON")
     args = parser.parse_args(argv)
+
+    if args.check and args.clause_only:
+        print("error: --clause-only is a report view; the committed artifact is always the full "
+              "gate, so --check never takes it", file=sys.stderr)
+        return 2
 
     labelled = library_archetype_decklists(args.library)
     decklists = [ids for _, ids in labelled]
@@ -371,6 +461,8 @@ def main(argv: list[str] | None = None) -> int:
         {c for deck in decklists for c in deck},
         scenarios_dir=args.scenarios,
         verdicts_dir=args.verdicts,
+        denominator_path=args.denominator,
+        clause_only=args.clause_only,
     )
     data["decklists"] = decklist_summary(decklists, data["cards"])
     text = render(data)
@@ -384,10 +476,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ok: {args.out} is up to date")
         return 0
     args.out.write_text(text, encoding="utf-8", newline="\n")
-    print(f"wrote {args.out}: {data['summary'][READY]} ready, "
+    gate = "+".join(data["gating"])
+    tail = ""
+    if "interactions" in data:
+        i = data["interactions"]
+        tail = (f"; gating interactions: {i['gating_total']} "
+                f"({i['by_verdict'].get('unmeasured', 0)} unmeasured)")
+    print(f"wrote {args.out} [{gate}]: {data['summary'][READY]} ready, "
           f"{data['summary'][NOT_READY]} not ready; "
           f"{data['decklists']['oracle_ready']}/{data['decklists']['total']} library decklists "
-          "have every card oracle-ready")
+          f"have every card oracle-ready{tail}")
     return 0
 
 

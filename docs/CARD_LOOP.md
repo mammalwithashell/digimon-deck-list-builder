@@ -212,14 +212,27 @@ scorecard.
 python -m tools.clause_coverage.readiness --out data/oracle_readiness.json   # regenerate (deterministic)
 python -m tools.clause_coverage.readiness --check                             # CI drift check
 python -m tools.clause_coverage.readiness --plan --limit 20                   # cards that unblock the most decklists
+python -m tools.clause_coverage.readiness --clause-only --out /tmp/view.json  # report view without the interaction gate
 python -m tools.card_loop interactions --check                                # the gating denominator has not drifted
 ```
 
-Training admits only decklists whose every card is `ready` (rule 34). Today
-readiness is clause-level; the interaction join (change task 7.x) will add
-"every gating interaction adjudicated". Adding a probe family is a promotion
+Training admits only decklists whose every card is `ready` (rule 34): every
+printed clause AND every gating interaction of the card adjudicated
+(confirmed; unreachable / unavailable with a reason; or a cited `dcgo_quirk`).
+An escalation is not a verdict and blocks. The gating interactions are the
+committed denominator's (`data/interaction_denominator.json`): the card's
+official Q&A rulings plus the probes of PROMOTED families; a shared ruling is
+adjudicated once and counts for every card that prints it; a card the
+denominator never saw blocks with `<id>#denominator#missing` (regenerate the
+denominator, don't read it as clear). `--clause-only` writes the pre-join view
+for comparison and is refused by `--check`: the committed artifact is always
+the full gate. At switch-on (2026-10-06) the pool went from 131 to 0
+oracle-ready library decklists; 511 interactions across 94 clause-ready cards
+restore it (change task 7.3). Adding a probe family is a promotion
 (`code/tools/card_loop/interactions/promotion.json`), never an edit: a new
 family gates only once promoted, because promotion drops cards from readiness.
+Run verdicts reach the artifact only when a run's tree is merged and the
+artifact regenerated (`report` prints the regenerate command).
 
 ## 9. Known limits
 
@@ -236,5 +249,6 @@ family gates only once promoted, because promotion drops cards from readiness.
   does.
 - Engine fixes wait for a human to merge their branch; the item sits in GATE
   with `engine_wait` until that branch is an ancestor of the run tree.
-- Group 7 (interaction readiness) and the first pilot's cost measurement
-  (change task 8.2) are still open.
+- The first pilots' cost measurement (change task 8.2) is still open; Codex
+  reports tokens but no price, so its share is unpriced until
+  `[prices.codex]` is set.

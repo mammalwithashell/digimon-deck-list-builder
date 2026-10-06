@@ -59,9 +59,9 @@ Groups 1–5 do not depend on the oracle-readiness plans and can proceed in para
 
 ## 7. Readiness extension (after readiness plan 2)
 
-- [ ] 7.1 Readiness generator joins gating interactions: `ready` requires every clause and every gating interaction adjudicated; blockers list interaction ids; vanilla/no-interaction cards unchanged
-- [ ] 7.2 Tests for the readiness scenarios (unexamined ruling blocks, shared ruling counts for both cards, escalated does not count)
-- [ ] 7.3 Regenerate `data/oracle_readiness.json` and report the pool delta vs clause-only readiness
+- [x] 7.1 Readiness generator joins gating interactions: `ready` requires every clause and every gating interaction adjudicated; blockers list interaction ids; vanilla/no-interaction cards unchanged — 2026-10-06: `card_blockers` joins `bind_interactions()` (gating only) over `data/interaction_denominator.json`; the clause rule applies unchanged to interaction rows (`interaction_is_adjudicated`; `bind_interactions` now surfaces the flat `triage`/`citation` twins). A card the denominator never saw blocks with `<id>#denominator#missing` (stale denominator ≠ no interactions). Artifact `version: 2` (`gating`, `interactions`, per-card `total_interactions` / `by_interaction_verdict`); `--denominator`; `--clause-only` is a report view the `--check` refuses
+- [x] 7.2 Tests for the readiness scenarios (unexamined ruling blocks, shared ruling counts for both cards, escalated does not count) — plus cited dcgo_quirk / reasoned endings adjudicate, non-gating probe and `[]` cards unchanged, text drift blocks, missing denominator refuses, clause-only view, CLI
+- [x] 7.3 Regenerate `data/oracle_readiness.json` and report the pool delta vs clause-only readiness — **clause-only 133 ready cards / 131 of 5097 library decklists → full gate 39 ready / 0 decklists.** 94 clause-ready cards are held by 511 gating interactions (292 promoted probes, 219 Q&A rulings; 1–12 per card, median 4): that is the adjudication backlog that restores the pre-join pool. 13,612 gating interactions over the library pool, none adjudicated in the committed store yet (the pilots' interaction verdicts live in their run trees until merged)
 
 ## 8. Pilot and documentation
 
