@@ -57,3 +57,9 @@ steps:
     do: { digivolve: { from: field.0, using: BT25-085 } }
     expect: { prompt: main_phase }
 assert: []
+expect_ruling:
+  q_id: Q6402
+  assert:
+  - at: 9
+    that:
+      p0.field: [BT25-085]
