@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-10-05T16:35:55.159234+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T14:30:41.351011600+00:00",
   "clauses": {
     "BT16-082#effect#0": {
       "clause_id": "BT16-082#effect#0",
@@ -10,6 +10,22 @@
       "text_sha256": "4ef6f4635125ea9108b49f24a925ce01ab141ade03f8aeb0dc410cd62a5cf38f",
       "scenario_path": "qa/dcgo-exams/BT16/BT16-082-effect0.yaml",
       "recorded_at": "2026-10-05T16:35:55.159234+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT16-082#effect#0:optional_decline": {
+      "interaction_id": "probe:BT16-082#effect#0:optional_decline",
+      "card_ids": [
+        "BT16-082"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "4ef6f4635125ea9108b49f24a925ce01ab141ade03f8aeb0dc410cd62a5cf38f",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-082-effect0-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT16-082-effect0-optional-decline",
+      "recorded_at": "2026-10-06T14:30:41.351011600+00:00"
     }
   }
 }
