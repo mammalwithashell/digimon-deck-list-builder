@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T21:57:11.605899300+00:00",
+  "last_updated": "2026-10-06T22:09:17.318984400+00:00",
   "clauses": {
     "BT25-085#effect#0": {
       "clause_id": "BT25-085#effect#0",
@@ -192,7 +192,7 @@
       "reason": "ours contradicts ruling qa:Q6402 (ours vs DCGO: agree); CLEAN (compared 10 of 10 ours / 10 dcgo steps)",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT25-085-qa-Q6402",
-      "recorded_at": "2026-10-06T21:57:11.605899300+00:00"
+      "recorded_at": "2026-10-06T22:09:17.318984400+00:00"
     }
   }
 }
