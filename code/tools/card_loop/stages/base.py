@@ -136,19 +136,25 @@ class WorkerCall:
                                  parent_attempt=parent, notes=notes, ts=ctx.now())
 
 
-def call_worker(ctx, item: ItemRecord, *, stage: str, family: str, assignment: str, prompt: str,
+Prompt = "str | Callable[[str], str]"   # text, or attempt_id -> text (provenance stamps)
+
+
+def call_worker(ctx, item: ItemRecord, *, stage: str, family: str, assignment: str, prompt,
                 references: Iterable[str] = (), prompt_version: str | None = None,
                 schema: str | os.PathLike | None = None) -> WorkerCall:
+    """One worker call. `prompt` is the rendered text, or a function of the
+    new attempt id for prompts that stamp provenance (`produced_by`)."""
     if family not in (getattr(ctx, "workers", None) or {}):
         raise RoutingUnavailable(f"no {family} worker registered for this run")
     model, effort = model_for(ctx, family)
     attempt_id = ctx.new_attempt_id()
+    text = prompt(attempt_id) if callable(prompt) else prompt
     retry_kwargs = {}
     if callable(getattr(ctx, "sleep", None)):
         retry_kwargs["sleep"] = ctx.sleep
     with worktree(ctx) as wt:
         packet = TaskPacket(
-            stage=stage, family=family, item=item.item, attempt_id=attempt_id, prompt=prompt,
+            stage=stage, family=family, item=item.item, attempt_id=attempt_id, prompt=text,
             prompt_version=prompt_version or prompts.version(stage),
             schema_path=str(schema or schema_path(stage)), worktree=wt,
             references=tuple(dict.fromkeys(r for r in references if r)),
