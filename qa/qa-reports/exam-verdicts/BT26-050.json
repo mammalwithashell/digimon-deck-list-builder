@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-06T15:58:38.315194800+00:00",
+  "last_updated": "2026-10-06T16:01:30.475712+00:00",
   "clauses": {
     "BT26-050#effect#0": {
       "clause_id": "BT26-050#effect#0",
@@ -23,6 +23,18 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-050-effect1",
       "recorded_at": "2026-10-06T15:58:38.315194800+00:00"
+    },
+    "BT26-050#effect#6": {
+      "clause_id": "BT26-050#effect#6",
+      "card_id": "BT26-050",
+      "verdict": "diverged",
+      "label": "DUAL Rule",
+      "text_sha256": "f47d9bc85635eee2013e33028330c63f170fed1f2762dc0a1bddfe1be343ebe8",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-050-effect6.yaml",
+      "reason": "DIVERGED at step 11 (compared 13 of 13 ours / 13 dcgo steps)",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-050-effect6",
+      "recorded_at": "2026-10-06T16:01:30.475712+00:00"
     }
   }
 }
