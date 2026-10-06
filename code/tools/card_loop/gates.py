@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import os
 import re
+import threading
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -168,6 +169,10 @@ def classify(results: Mapping[str, str], filt: str) -> tuple[str, list[str]]:
 # ---------------------------------------------------------------------------
 
 
+#: The run's single gate worktree is used by one gate at a time.
+_GATE_TREE_LOCK = threading.Lock()
+
+
 class FixGate:
     """`driver_contracts.Gate` for `fix_card` / `fix_engine` results."""
 
@@ -180,6 +185,13 @@ class FixGate:
         self.scope_timeout = scope_timeout
 
     def check(self, ctx: RunContext, item: ItemRecord, merge: MergeResult) -> GateResult:
+        # One gate worktree per run (`scratch_name(ctx, "gate")`): two gates at
+        # once reset it under each other's running tests and collide on its
+        # index.lock (the second pilot lost a landed fix to that). Serialized.
+        with _GATE_TREE_LOCK:
+            return self._check(ctx, item, merge)
+
+    def _check(self, ctx: RunContext, item: ItemRecord, merge: MergeResult) -> GateResult:
         reasons: list[str] = []
         evidence: dict = {}
         fix = fix_result(item)

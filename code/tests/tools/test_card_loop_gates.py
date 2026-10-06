@@ -401,3 +401,19 @@ def test_fix_result_lookup():
     assert fix_result(ItemRecord(item="clause:X#effect#0", state="GATE", data={"fix_result": f})) == f
     assert fix_result(ItemRecord(item="clause:X#effect#0", state="GATE", data=dict(f))) == f
     assert fix_result(ItemRecord(item="clause:X#effect#0", state="GATE", data={})) is None
+
+
+def test_the_gate_runs_under_the_shared_worktree_lock(monkeypatch):
+    # Two gates at once reset the run's single gate worktree under each other
+    # (second pilot: an index.lock collision cost a landed fix); `check` holds
+    # the module lock for the whole run.
+    import tools.card_loop.gates as G
+    seen = {}
+
+    def fake_check(self, ctx, item, merge):
+        seen["locked"] = G._GATE_TREE_LOCK.locked()
+        return "result"
+
+    monkeypatch.setattr(G.FixGate, "_check", fake_check)
+    assert G.FixGate().check(None, None, None) == "result"
+    assert seen["locked"] is True and not G._GATE_TREE_LOCK.locked()

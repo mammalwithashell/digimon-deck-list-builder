@@ -332,3 +332,16 @@ def test_a_diff_against_the_run_heads_newer_base_merges(repo, tmp_path):
     res = merger(tmp_path).merge(ctx, request(art, attempt="20261006T120001Z-run1-a2"))
     assert res.ok, res.errors
     assert (root / yaml).read_bytes().endswith(b"# re-authored\n")
+
+
+def test_engine_merges_run_under_the_shared_worktree_lock(monkeypatch, tmp_path):
+    import tools.card_loop.merge as M
+    seen = {}
+
+    def fake(self, ctx, request, diff, manifest_path):
+        seen["locked"] = M._ENGINE_TREE_LOCK.locked()
+        return "result"
+
+    monkeypatch.setattr(M.LoopMerger, "_merge_engine_locked", fake)
+    assert merger(tmp_path)._merge_engine(None, None, None, None) == "result"
+    assert seen["locked"] is True and not M._ENGINE_TREE_LOCK.locked()

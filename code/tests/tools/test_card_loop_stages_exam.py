@@ -746,6 +746,21 @@ def test_triage_scenario_wrong_goes_back_to_authoring_with_the_objection(repo):
     assert [a.outcome for a in out.attempts] == ["accepted"] and out.escalation is None
 
 
+def test_a_third_scenario_wrong_in_a_row_escalates_instead_of_another_round(repo):
+    # Q4577: author -> encode -> oracle -> triage "scenario_wrong" three times in
+    # thirty minutes, each round costing the full chain, until the author cap.
+    workers = _workers(claude=[ok(TRI_SCENARIO)])
+    item = _triage_item(item="interaction:qa:Q77", author_attempt="att-a", scenario_wrong_rounds=2)
+    out = TriageExecutor().run(_ctx(repo, workers, sources=_isrc()), item)
+    _check(item, out)
+    assert out.next_state == "ESCALATED" and "without converging" in out.escalation.reason
+    assert out.data["scenario_wrong_rounds"] == 3
+    # the first and second rounds still go back to the author
+    item2 = _triage_item(item="interaction:qa:Q77", author_attempt="att-a", scenario_wrong_rounds=1)
+    out2 = TriageExecutor().run(_ctx(repo, _workers(claude=[ok(TRI_SCENARIO)]), sources=_isrc()), item2)
+    assert out2.next_state == "AUTHORING" and out2.data["scenario_wrong_rounds"] == 2
+
+
 def test_triage_undetermined_escalates(repo):
     _write_scenario(repo)
     res = {"classification": "undetermined", "citation": None, "reasoning": "the sources do not decide it"}

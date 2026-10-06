@@ -43,6 +43,7 @@ stable name so its build stays warm across merges.
 from __future__ import annotations
 
 import json
+import threading
 
 import os
 import re
@@ -164,6 +165,10 @@ def manifest_base(manifest_path) -> str | None:
         return None
 
 
+#: The run's single engine worktree is used by one engine merge at a time.
+_ENGINE_TREE_LOCK = threading.Lock()
+
+
 class LoopMerger:
     """`driver_contracts.Merger`. Merges are serialised by the driver (D13)."""
 
@@ -236,6 +241,12 @@ class LoopMerger:
     # ------------------------------------------------------------------ engine branch
 
     def _merge_engine(self, ctx, request, diff, manifest_path) -> MergeResult:
+        # One engine worktree per run (`scratch_name(ctx, "eng")`): serialized
+        # for the same reason as the gate worktree.
+        with _ENGINE_TREE_LOCK:
+            return self._merge_engine_locked(ctx, request, diff, manifest_path)
+
+    def _merge_engine_locked(self, ctx, request, diff, manifest_path) -> MergeResult:
         repo = str(ctx.repo)
         branch = self.engine_branch(ctx, request)
         run_head = rev(repo, "HEAD")

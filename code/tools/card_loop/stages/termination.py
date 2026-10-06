@@ -118,7 +118,10 @@ class TerminationCheckExecutor:
         second = base.argument(call, call_value=out.get("classification"), citation=out.get("citation"),
                                reasoning=out.get("reasoning", ""))
         cites = [base.format_citation(first.get("citation")), base.format_citation(second["citation"])]
-        if second["call"] == "scenario_wrong" and first.get("call") != "scenario_wrong":
+        from .triage import SCENARIO_WRONG_ROUNDS
+        rounds = int(item.data.get("scenario_wrong_rounds") or 0) + 1
+        if (second["call"] == "scenario_wrong" and first.get("call") != "scenario_wrong"
+                and rounds <= SCENARIO_WRONG_ROUNDS):
             # The second family finds the exam itself wrong. That is not a
             # disagreement to escalate: a wrong exam ends nothing, so it goes
             # back to its author with both arguments (Q5677 escalated here as
@@ -132,7 +135,7 @@ class TerminationCheckExecutor:
                                 attempts=[call.attempt(ctx, outcome="accepted", parent=first.get("attempt_id"))],
                                 data={"triage_second": second, "triage_feedback": why, "expect_ruling": None,
                                       "encode_feedback": None, "sim_failure": None, "prompt_evidence": None,
-                                      "prompt_route": None},
+                                      "prompt_route": None, "scenario_wrong_rounds": rounds},
                                 reason=f"{family}: scenario_wrong against {first.get('family')}'s {first.get('call')} "
                                        f"-- {second.get('reasoning', '')[:160]}")
         problems = []

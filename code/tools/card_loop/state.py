@@ -67,7 +67,8 @@ EXAM_SCOPED_DATA = ("scenario_paths", "pool_files", "author_attempt", "author_fa
                     "expect_ruling", "encode_feedback", "triage_feedback", "encode_attempts", "base_scenario",
                     "sim_failure", "sim_notes", "deck_books", "ruling_contradicted", "ruling_block_written",
                     "prompt_evidence", "prompt_route", "oracle", "oracle_results", "oracle_retry_paths",
-                    "triage_packet", "triage_first", "termination", "escalation", "escalation_reason")
+                    "triage_packet", "triage_first", "termination", "escalation", "escalation_reason",
+                    "scenario_wrong_rounds")
 KIND_ORDER = {"card": 0, "clause": 1, "interaction": 2}
 COUNT_KEYS = ("confirmed", "terminal", "unavailable", "escalated", "unmeasured",
               "implemented", "parked")

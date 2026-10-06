@@ -935,13 +935,26 @@ class Driver:
                 # (the second pilot lost nine items to one such lock). A fresh
                 # run has no tree yet; a sweep that cannot run never stops the run.
                 from tools.git_retry import sweep_stale_index_lock
-                try:
-                    swept = sweep_stale_index_lock(self.repo)
-                except Exception as e:  # noqa: BLE001 -- best effort
-                    swept = None
-                    self.state.problems.append(f"stale index.lock sweep skipped: {e!r}")
-                if swept is not None:
-                    self.state.problems.append(f"removed a stale {swept} left by an earlier process")
+                trees = [Path(self.repo)]
+                merger = self.components.merger
+                if merger is not None and hasattr(merger, "worktree_root"):
+                    # the run's shared gate and engine worktrees (merge.py)
+                    from .merge import scratch_name, worktree_root
+                    try:
+                        base = worktree_root(self.ctx, merger.worktree_root)
+                        trees += [base / scratch_name(self.ctx, role) for role in ("gate", "eng")]
+                    except Exception:  # noqa: BLE001 -- best effort
+                        pass
+                for tree in trees:
+                    if not tree.is_dir():
+                        continue
+                    try:
+                        swept = sweep_stale_index_lock(tree)
+                    except Exception as e:  # noqa: BLE001 -- best effort
+                        swept = None
+                        self.state.problems.append(f"stale index.lock sweep skipped for {tree}: {e!r}")
+                    if swept is not None:
+                        self.state.problems.append(f"removed a stale {swept} left by an earlier process")
             self._on_start()
             if self.serial:
                 self._loop_serial()

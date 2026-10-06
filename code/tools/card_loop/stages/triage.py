@@ -22,6 +22,9 @@ from ..driver_contracts import ItemRecord, StageOutcome
 from . import base, prompts
 
 STAGE = "triage"
+#: How many times in a row triage may send one exam back to its author before
+#: the item escalates: the author/encoder/triage trio is not converging.
+SCENARIO_WRONG_ROUNDS = 2
 
 
 class DivergedExecutor:
@@ -99,6 +102,17 @@ class TriageExecutor:
             # reworked line (a block that claimed what the answer does not
             # decide is the usual cause). The author's attempt is corrected.
             why = f"{call.family} (triage): {result.get('reasoning', '')}"
+            rounds = int(item.data.get("scenario_wrong_rounds") or 0) + 1
+            if rounds > SCENARIO_WRONG_ROUNDS:
+                # Author, encoder and triage are not converging (Q4577 went round
+                # three times in half an hour): a human reads the three arguments.
+                reason = (f"the exam was judged wrong {rounds} times in a row and re-authored each time "
+                          f"without converging; last: {result.get('reasoning', '')[:300]}")
+                return base.outcome("ESCALATED", item=item, data={**data, "scenario_wrong_rounds": rounds},
+                                    reason=reason, attempts=prior + [call.attempt(ctx, outcome="escalated")],
+                                    escalation=base.escalation(item, reason, [first],
+                                                               extra_history=[c.attempt_id for c in calls]))
+            data["scenario_wrong_rounds"] = rounds
             corrections = []
             author = item.data.get("author_attempt")
             if author:
