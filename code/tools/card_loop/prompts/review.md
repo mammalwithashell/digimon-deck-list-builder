@@ -1,4 +1,4 @@
-version: 1
+version: 2
 # Review the implementation of {card_name} ({card_id})
 
 You are one stateless reviewer in the card-authoring loop. Read only: do not edit
@@ -26,3 +26,9 @@ The implementer reported:
 Return only JSON matching the `review` schema:
 `{"verdict": "accept" or "reject", "directives": [{"path": "<repo path>" or null, "directive": "..."}], "summary": "..."}`
 Reject only for a concrete defect, with one directive per required change.
+
+## Worktree hygiene
+
+Keep scratch out of the worktree: write temporary files (notes, probes, helper
+scripts) under the system temp directory, never inside the repository. Only
+the files you deliver may be left behind; anything else is dropped at merge.

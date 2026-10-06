@@ -163,6 +163,14 @@ class WorktreePool:
         finally:
             self.release(wt)
 
+    def retarget(self, base_sha: str) -> None:
+        """Move the base every later lease resets to -- the run branch's HEAD
+        once it has advanced past the plan's base, so a worker re-authoring a
+        file starts from the merged version and its diff applies cleanly."""
+        sha = self._git(["rev-parse", "--verify", f"{base_sha}^{{commit}}"], self.repo).strip()
+        with self._cond:
+            self.base_sha = sha
+
     def reset(self, wt: PooledWorktree) -> None:
         """Force `wt` back to `base_sha`: detached HEAD, no edits, no untracked or
         ignored files except `keep`. Recreates the worktree if git cannot."""

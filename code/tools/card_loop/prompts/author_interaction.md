@@ -1,4 +1,4 @@
-version: 1
+version: 2
 # Author an adversarial interaction exam: {interaction_id}
 
 You are one stateless worker in the card-authoring loop. Do exactly this task in
@@ -38,3 +38,9 @@ Return only JSON matching `author_interaction`:
 `{"scenario_paths": [repo-relative paths], "covers": [clause ids], "notes": "..."}`
 If no legal line reaches the interaction, return no paths and say why in `notes`;
 the loop measures it before anything is called unreachable.
+
+## Worktree hygiene
+
+Keep scratch out of the worktree: write temporary files (notes, probes, helper
+scripts) under the system temp directory, never inside the repository. Only
+the files you deliver may be left behind; anything else is dropped at merge.

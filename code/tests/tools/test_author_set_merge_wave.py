@@ -306,15 +306,32 @@ def test_absolute_or_non_canonical_manifest_path_is_refused(repo, tmp_path, bad)
     assert_untouched(root, tmp_path)
 
 
-def test_path_outside_the_allowed_roots_is_refused(repo, tmp_path):
+def test_paths_outside_the_allowed_roots_are_skipped_and_the_rest_applied(repo, tmp_path):
+    # A worker's scratch file (`scratch_q.py`, `.tmp_p.py`) or an edit to a file
+    # only the orchestrator writes must not cost the whole diff: the first
+    # pilot lost every authored scenario this way. Skipped, reported, the card
+    # still lands; a structurally unsafe path still refuses everything.
     root, base = repo
     art = worker(root, base, tmp_path, "a", {**CARD_029, "notes.txt": b"rewritten\n",
-                                             ".git-hooks/pre-commit": b"#!/bin/sh\n"})
+                                             ".git-hooks/pre-commit": b"#!/bin/sh\n",
+                                             "scratch_q.py": b"print(1)\n"})
     res = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
-    assert not res.ok
-    assert sorted(e.split(":", 1)[0] for e in res.errors) == [".git-hooks/pre-commit", "notes.txt"]
-    assert all("outside the allowed roots" in e for e in res.errors)
+    assert res.ok, res.errors
+    assert sorted(res.skipped) == [".git-hooks/pre-commit", "notes.txt", "scratch_q.py"]
+    assert all(p in res.touched for p in CARD_029)        # the card landed (mod.rs by union)
     assert (root / "notes.txt").read_bytes() == BASE_FILES["notes.txt"]
+    assert not (root / "scratch_q.py").exists() and not (root / ".git-hooks").exists()
+
+
+def test_a_structurally_unsafe_manifest_path_still_refuses_the_whole_diff(repo, tmp_path):
+    root, base = repo
+    art = worker(root, base, tmp_path, "a", {**CARD_029, "scratch_q.py": b"x\n"})
+    import json
+    m = json.loads(open(art["manifest"], encoding="utf-8").read())
+    m["files"].append({"path": "../outside.yaml", "status": "A", "sha256": "0" * 64})
+    open(art["manifest"], "w", encoding="utf-8").write(json.dumps(m))
+    res = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
+    assert not res.ok and any("'..' segment" in e for e in res.errors)
     assert_untouched(root, tmp_path)
 
 

@@ -310,3 +310,18 @@ def test_engine_branch_name_and_paths():
     assert is_engine_path(f"{ENG}/src/game.rs") and is_engine_path("code/digimon-dsl/src/x.rs")
     assert not is_engine_path(f"{ENG}/cards/bt21/BT21-001.yaml")
     assert not is_engine_path(f"{CB}/bt21/bt21_001.rs")
+
+
+def test_a_diff_against_the_run_heads_newer_base_merges(repo, tmp_path):
+    # Re-authoring: the second worker started from the run branch's HEAD (after
+    # the first merge), so its manifest base is newer than the plan's base.
+    root, base = repo
+    ctx = ctx_for(root, base, tmp_path, FakeRunner())
+    assert merger(tmp_path).merge(ctx, request(artifacts(root, base, tmp_path, "a", CARD_029))).ok
+    head = git(root, "rev-parse", "HEAD")
+    assert head != base
+    yaml = next(p for p in CARD_029 if p.endswith(".yaml"))
+    art = artifacts(root, head, tmp_path, "b", {yaml: CARD_029[yaml] + b"# re-authored\n"})
+    res = merger(tmp_path).merge(ctx, request(art, attempt="20261006T120001Z-run1-a2"))
+    assert res.ok, res.errors
+    assert (root / yaml).read_bytes().endswith(b"# re-authored\n")

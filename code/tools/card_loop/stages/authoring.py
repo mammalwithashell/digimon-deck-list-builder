@@ -165,7 +165,11 @@ class AuthoringExecutor:
         if not call.ok:
             raise base.defer_failed(ctx, item, calls)
         result = call.output
-        paths = list(dict.fromkeys(base.posix(p) for p in result.get("scenario_paths") or [] if p))
+        listed = list(dict.fromkeys(base.posix(p) for p in result.get("scenario_paths") or [] if p))
+        # A deck-pool JSON a worker added rides along as a pool file; only the
+        # YAML lines are scenarios the sim and oracle steps run.
+        paths = [p for p in listed if p.lower().endswith((".yaml", ".yml"))]
+        pool_files = [p for p in listed if p not in paths]
         if not paths:
             attempts = [c.attempt(ctx) for c in calls[:-1]] + [call.attempt(ctx, outcome="escalated")]
             reason = f"{call.family} found no legal line for {subject}: {result.get('notes') or '(no reason)'}"
@@ -174,7 +178,7 @@ class AuthoringExecutor:
                                     call, call_value="no_legal_line", reasoning=result.get("notes", ""))],
                                     extra_history=[c.attempt_id for c in calls]))
         attempts = [c.attempt(ctx) for c in calls[:-1]] + [call.attempt(ctx, outcome="accepted")]
-        data = {"scenario_paths": paths, "covers": list(result.get("covers") or []),
+        data = {"scenario_paths": paths, "pool_files": pool_files, "covers": list(result.get("covers") or []),
                 "author_attempt": call.attempt_id, "author_family": call.family, "author_stage": stage,
                 "sim_failure": None, "prompt_evidence": None, "prompt_route": None,
                 "deck_books": None, "oracle_results": None, "oracle_retry_paths": None, **(extra or {})}

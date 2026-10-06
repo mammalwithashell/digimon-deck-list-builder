@@ -162,8 +162,11 @@ def path_problem(path: str, allowed_roots: Sequence[str] | None = ALLOWED_ROOTS)
             return f"segment {seg!r} ends in '.' or space"
     if allowed_roots is not None and not any(
             path.startswith(r) if r.endswith("/") else path == r for r in allowed_roots):
-        return "outside the allowed roots (merge_wave.ALLOWED_ROOTS)"
+        return _OUTSIDE_ROOTS
     return None
+
+
+_OUTSIDE_ROOTS = "outside the allowed roots (merge_wave.ALLOWED_ROOTS)"
 
 
 def _is_link(p: Path) -> bool:
@@ -354,6 +357,8 @@ class AppliedDiff:
     applied: list = field(default_factory=list)          # written by this call (3-way apply)
     already_applied: list = field(default_factory=list)  # already in the target state (no-op)
     registered: list = field(default_factory=list)       # registration files merged as a mod-line union
+    skipped: list = field(default_factory=list)          # manifest paths outside the allowed roots:
+                                                         # reported, never applied (a worker's scratch)
     out_of_manifest: list = field(default_factory=list)  # in the diff, not in the manifest: never applied
     disallowed: list = field(default_factory=list)       # "path: reason" for out-of-manifest paths
                                                          # that also break the path policy
@@ -476,7 +481,14 @@ def apply_manifest_diff(repo: str | os.PathLike, diff_path: str | os.PathLike,
     files = {f["path"]: f for f in manifest["files"]}
     for p in sorted(files):
         why = path_problem(p, allowed_roots)
-        if why:
+        if why == _OUTSIDE_ROOTS and path_problem(p, None) is None:
+            # Structurally safe but not a path a worker may deliver: a scratch
+            # file, or a file only the orchestrator writes. Dropping it must
+            # not cost the rest of the diff (the first pilot lost every
+            # authored scenario that way); it is reported and never applied.
+            res.skipped.append(p)
+            del files[p]
+        elif why:
             res.errors.append(f"{p}: {why}")
         elif _GLOB_META.search(p):
             res.errors.append(f"{p}: glob metacharacters in a path cannot be filtered with "
@@ -513,7 +525,7 @@ def apply_manifest_diff(repo: str | os.PathLike, diff_path: str | os.PathLike,
         why = path_problem(p, None)
         if why:
             res.errors.append(f"{p}: the diff carries an unsafe path ({why})")
-    res.out_of_manifest = sorted(set(in_diff) - set(files))
+    res.out_of_manifest = sorted(set(in_diff) - set(files) - set(res.skipped))
     res.disallowed = [f"{p}: {path_problem(p, allowed_roots)}" for p in res.out_of_manifest
                       if path_problem(p, allowed_roots)]
     for p in sorted(set(files) - set(in_diff)):

@@ -1,4 +1,4 @@
-version: 1
+version: 2
 # Fix {card_name} ({card_id}) so it resolves like the cited source
 
 You are one stateless worker in the card-authoring loop. Do exactly this task in
@@ -34,3 +34,9 @@ Printed text: `{bundle_path}`. Rules: `docs/digimon-rules/`.
 ## Result
 Return only JSON matching `fix_card`:
 `{"files": [...], "tests": [...], "test_result_lines": [...], "gaps": [{"kind": "dsl" or "engine", "id": "...", "summary": "..."}], "citation": {"kind": "rule" or "ruling" or "dcgo", "ref": "..."}, "notes": "..."}`
+
+## Worktree hygiene
+
+Keep scratch out of the worktree: write temporary files (notes, probes, helper
+scripts) under the system temp directory, never inside the repository. Only
+the files you deliver may be left behind; anything else is dropped at merge.

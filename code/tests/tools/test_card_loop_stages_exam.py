@@ -690,3 +690,14 @@ def test_an_engine_fix_still_missing_substrate_escalates(repo):
     workers = _workers(codex=[ok(dict(FIX_OK, gaps=[gap]))])
     out = FixExecutor().run(_ctx(repo, workers), _fix_item(engine_fix=True))
     assert out.next_state == "ESCALATED" and "G-ENG-X" in out.escalation.reason
+
+
+def test_authoring_keeps_only_scenario_yaml_in_scenario_paths(repo):
+    # A worker that adds a deck-pool JSON lists it beside the scenario; the
+    # sim and oracle steps must not try to run the pool as a scenario.
+    res = {"scenario_paths": [SC, "qa/dcgo-exams/ST23/my_pool.json"], "covers": [CLAUSE], "notes": ""}
+    workers = _workers(claude=[ok(res, artifacts={"diff": "d", "manifest": "m"})])
+    out = AuthoringExecutor().run(_ctx(repo, workers), _item("AUTHORING"))
+    assert out.next_state == "SIM"
+    assert out.data["scenario_paths"] == [SC]
+    assert out.data["pool_files"] == ["qa/dcgo-exams/ST23/my_pool.json"]

@@ -1,4 +1,4 @@
-version: 1
+version: 2
 # Encode an official ruling as an expect_ruling block
 
 You are one stateless worker in the card-authoring loop. Read only: do not edit
@@ -21,3 +21,9 @@ scenario's `assert:` (exam MCP `exam_authoring_guide`, topic `assert`). Rules:
 ## Result
 Return only JSON matching `encode_ruling`:
 `{"q_id": "...", "mode": "author" or "verify", "expect_ruling": {"assert": [{"at": 0, "that": [{"key": "p0.memory", "value_json": "3"}]}]} or null, "agrees": true or false or null, "answer_quote": "...", "reasoning": "..."}`
+
+## Worktree hygiene
+
+Keep scratch out of the worktree: write temporary files (notes, probes, helper
+scripts) under the system temp directory, never inside the repository. Only
+the files you deliver may be left behind; anything else is dropped at merge.

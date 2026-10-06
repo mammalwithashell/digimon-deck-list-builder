@@ -222,3 +222,21 @@ def test_cargo_target_dir_and_env_helpers(tmp_path):
     env = worktree_env(tmp_path / "card-loop-3", "B", None, base_env={})
     assert env == {"CARGO_TARGET_DIR": os.path.join("B", "card-loop-3"), "CARGO_TARGET_DIR_PINNED": "1",
                    "CARGO_TARGET_BASE": "B"}
+
+
+def test_retarget_moves_the_base_every_later_lease_resets_to(repo, tmp_path):
+    # Workers must start from the run branch's HEAD, not the plan's base: a
+    # re-authored scenario diffed against the old base conflicts on merge.
+    pool = make_pool(repo, tmp_path, size=1)
+    first = pool.base_sha
+    root = repo[0] if isinstance(repo, tuple) else repo
+    (root / "later.txt").write_text("later\n", encoding="utf-8")
+    git(root, "add", "later.txt")
+    git(root, "commit", "-q", "-m", "later")
+    head = git(root, "rev-parse", "HEAD").strip()
+    assert head != first
+    pool.retarget(head)
+    with pool.lease() as wt:
+        assert git(wt.path, "rev-parse", "HEAD").strip() == head
+        assert (wt.path / "later.txt").exists()
+    pool.close()

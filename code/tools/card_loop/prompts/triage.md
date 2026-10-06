@@ -1,4 +1,4 @@
-version: 1
+version: 2
 # Triage a divergence: {item_id}
 
 You are one stateless worker in the card-authoring loop. Read only: do not edit
@@ -36,3 +36,9 @@ A `dcgo_quirk` or `unreachable` call without a citation is not accepted.
 ## Result
 Return only JSON matching `triage`:
 `{"classification": "...", "citation": {"kind": "rule" or "ruling" or "dcgo", "ref": "16-36" or "qa:Q1601" or "<path>.cs:<line>"} or null, "reasoning": "..."}`
+
+## Worktree hygiene
+
+Keep scratch out of the worktree: write temporary files (notes, probes, helper
+scripts) under the system temp directory, never inside the repository. Only
+the files you deliver may be left behind; anything else is dropped at merge.

@@ -42,6 +42,8 @@ stable name so its build stays warm across merges.
 """
 from __future__ import annotations
 
+import json
+
 import os
 import re
 import subprocess
@@ -148,6 +150,16 @@ def rev(repo: str | os.PathLike, ref: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
+def manifest_base(manifest_path) -> str | None:
+    """The `base_sha` a worker's manifest was captured against, or None."""
+    try:
+        with open(manifest_path, encoding="utf-8") as f:
+            v = json.load(f).get("base_sha")
+        return v if isinstance(v, str) and v else None
+    except (OSError, ValueError):
+        return None
+
+
 class LoopMerger:
     """`driver_contracts.Merger`. Merges are serialised by the driver (D13)."""
 
@@ -228,14 +240,15 @@ class LoopMerger:
         if git(repo, "check-ref-format", "--branch", branch).returncode != 0:
             return MergeResult(ok=False, errors=[f"{branch!r} is not a valid branch name"])
         wt = worktree_root(ctx, self.worktree_root) / scratch_name(ctx, "eng")
+        base = manifest_base(manifest_path) or ctx.base_sha
         try:
-            ensure_worktree(repo, wt, ctx.base_sha)
-            reset_worktree(wt, ctx.base_sha)
+            ensure_worktree(repo, wt, base)
+            reset_worktree(wt, base)
         except RuntimeError as e:
             return MergeResult(ok=False, branch=branch, errors=[f"engine worktree: {e}"])
         created = rev(repo, f"refs/heads/{branch}") is None
         if created:
-            cp = git(wt, "checkout", "-q", "-b", branch, ctx.base_sha)
+            cp = git(wt, "checkout", "-q", "-b", branch, base)
         else:
             cp = git(wt, "checkout", "-q", "--force", branch)
         if cp.returncode != 0:
@@ -248,7 +261,7 @@ class LoopMerger:
             res = self._apply_and_commit(ctx, request, str(wt), branch, diff, manifest_path)
         finally:
             git(wt, "checkout", "-q", "--force", "--detach")
-        if not res.ok and created and rev(repo, f"refs/heads/{branch}") in (ctx.base_sha, None):
+        if not res.ok and created and rev(repo, f"refs/heads/{branch}") in (base, None):
             git(repo, "branch", "-q", "-D", branch)
         if rev(repo, "HEAD") != run_head or current_branch(repo) != run_branch:
             res.ok = False
@@ -261,7 +274,11 @@ class LoopMerger:
 
     def _apply_and_commit(self, ctx, request, tree, branch, diff, manifest_path) -> MergeResult:
         runner = ctx.run_command
-        applied = mw.apply_manifest_diff(tree, diff, manifest_path, ctx.base_sha,
+        # The worker's own base: the run branch's HEAD when it was leased, which
+        # may be newer than the plan's base (re-authoring after an earlier
+        # merge). The apply checks that it is an ancestor of the target HEAD.
+        applied = mw.apply_manifest_diff(tree, diff, manifest_path,
+                                         manifest_base(manifest_path) or ctx.base_sha,
                                          allowed_roots=self.allowed_roots)
         result = MergeResult(ok=False, branch=branch, touched=applied.touched)
         if not applied.ok:

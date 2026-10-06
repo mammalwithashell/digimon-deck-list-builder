@@ -1,4 +1,4 @@
-version: 1
+version: 2
 # Widen the engine or DSL substrate to fix {item_id}
 
 You are one stateless worker in the card-authoring loop. Do exactly this task in
@@ -38,3 +38,9 @@ substrate; do not route around it (CLAUDE.md rule 28).
 ## Result
 Return only JSON matching `fix_engine`:
 `{"files": [...], "tests": [...], "test_result_lines": [...], "gaps": [{"kind": "dsl" or "engine", "id": "...", "summary": "..."}], "citation": {"kind": "rule" or "ruling" or "dcgo", "ref": "..."}, "notes": "..."}`
+
+## Worktree hygiene
+
+Keep scratch out of the worktree: write temporary files (notes, probes, helper
+scripts) under the system temp directory, never inside the repository. Only
+the files you deliver may be left behind; anything else is dropped at merge.
