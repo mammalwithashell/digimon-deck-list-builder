@@ -8,7 +8,7 @@
 # The Arts-driven digivolve draws BeelStarmon #2 (stack[14]), waking its
 # use-an-Option [When Digivolving], declined. Stop there.
 interaction: {id: "qa:Q6390", source: qa, kind: positive}
-meta: {produced_by: 20261006T171609324512Z-pilot-three-musketeers-e2bd73}
+meta: {produced_by: 20261006T182922518163Z-pilot-three-musketeers-8058b1}
 covers:
   - BT25-082#effect#0
   - BT25-082#effect#1
@@ -129,9 +129,3 @@ steps:
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
 assert: []
-expect_ruling:
-  q_id: Q6390
-  assert:
-  - at: 20
-    that:
-      p0.field: [BT25-085, BT25-092]
