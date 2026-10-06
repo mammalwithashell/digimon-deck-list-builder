@@ -131,11 +131,15 @@ line names the **unmeasured, escalated and unavailable** counts before the
 confirmed count. `resume` rebuilds from the committed ledgers first and the
 run's `events.jsonl` second, so a crashed run re-does only outstanding work.
 
-There is no graceful stop yet: to stop a running driver early, kill its
-process tree (`taskkill /PID <driver pid> /T /F` — the tree holds the worker
-CLIs and any `exam --oracle` waiting on the player), then `resume`. Work in
-flight at the kill is lost (its cost is real but unledgered). Run the CLI
-with `PYTHONPATH=code` (`pyproject.toml` sets that path for pytest only).
+To stop a running driver early, create `runs/card-loop/<run-id>/STOP`: no
+new task starts, in-flight worker calls and oracle round trips finish and are
+ledgered, `state.json` and `report.md` are written (stop reason `operator`).
+Remove the file before `resume`, or the resume stops at once. Do not kill the
+process tree: work in flight is lost (its cost is real but unledgered) and a
+`git` operation killed midway leaves the run tree's `index.lock` behind — the
+driver sweeps a lock older than five minutes at start and retries collisions,
+but the attempts lost in between stay lost. Run the CLI with
+`PYTHONPATH=code` (`pyproject.toml` sets that path for pytest only).
 
 ## 5. What lands where
 

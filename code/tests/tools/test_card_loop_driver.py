@@ -1146,3 +1146,37 @@ def test_cli_run_refuses_a_no_go_plan_without_fake(cli_ws, capsys):
     rc = drv.cli_run(["--plan", str(cli_ws["plan"])])
     assert rc == 1 and "NO-GO" in capsys.readouterr().err
     assert not (cli_ws["run_dir"] / "events.jsonl").exists()
+
+
+# --------------------------------------------------------------------------- the operator's STOP file
+
+
+def test_a_stop_file_present_at_start_stops_before_any_work(tmp_path):
+    author = author_ok()
+    h = Harness(tmp_path, [seed(C1, "AUTHORING")], [author, sim_ok(), oracle_confirms()])
+    h.run_dir.mkdir(parents=True, exist_ok=True)
+    (h.run_dir / drv.STOP_FILE).write_text("", encoding="utf-8")
+    result = h.run()
+    assert result.stop.reason == "operator" and "STOP" in result.stop.detail
+    assert author.calls == [] and h.states() == {C1: "AUTHORING"}
+    assert (h.run_dir / "state.json").exists() and (h.run_dir / "report.md").exists()
+
+
+def test_a_stop_file_written_mid_run_drains_in_flight_work_and_starts_nothing_new(tmp_path):
+    # The second pilot was stopped twice with `taskkill /T /F`: in-flight
+    # attempts were lost and a stale index.lock blocked every later merge.
+    holder = {}
+
+    def author_then_stop(ctx, it):
+        (holder["run_dir"] / drv.STOP_FILE).write_text("", encoding="utf-8")
+        return StageOutcome("SIM", reason="authored", attempts=[attempt(ctx, it, "author_clause")])
+
+    author = Exec("AUTHORING", author_then_stop)
+    sim = sim_ok()
+    h = Harness(tmp_path, [seed(C1, "AUTHORING"), seed(C2, "AUTHORING")], [author, sim, oracle_confirms()])
+    holder["run_dir"] = h.run_dir
+    result = h.run()
+    assert result.stop.reason == "operator"
+    assert author.calls == [C1], "the first task completed; no new task started"
+    assert h.states()[C1] == "SIM" and h.states()[C2] == "AUTHORING"
+    assert sim.calls == [], "SIM was not started after the stop"

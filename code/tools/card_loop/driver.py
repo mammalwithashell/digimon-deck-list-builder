@@ -143,6 +143,9 @@ CAP_RESETS = {
 MAX_IDLE_STEPS = 25
 FAKE_DIR = "fake"
 REPORT_NAME = "report.md"
+#: Touch this file in the run dir to stop a running driver gracefully (in-flight
+#: work drains, state and report are written); `resume` refuses while it exists.
+STOP_FILE = "STOP"
 ALL_STATES = frozenset(s for states in STATES_BY_KIND.values() for s in states)
 
 # Run-tree management (`manage_tree=True`; the CLI turns it on for a run tree).
@@ -376,7 +379,7 @@ class DriverContext:
 @dataclass
 class Stop:
     # complete | blocked | budget | wall_clock | plateau | max_attempts |
-    # vendors_exhausted | interrupted | error
+    # vendors_exhausted | interrupted | error | operator (the STOP file)
     reason: str
     detail: str = ""
     spent_usd: float = 0.0
@@ -536,7 +539,14 @@ class Driver:
         if self._stop is not None:
             return True
         cfg = self.config
-        if cfg.budget_usd is not None and self._spent >= cfg.budget_usd:
+        stop_file = self.run_dir / STOP_FILE
+        if stop_file.exists():
+            # The operator's switch: no new task starts, in-flight work drains
+            # (the loops wait on their futures once a stop is set), state and
+            # report are written. Killing the process instead lost in-flight
+            # attempts and left a stale index.lock in the second pilot.
+            self._stop = Stop("operator", f"{stop_file} is present; remove it to resume")
+        elif cfg.budget_usd is not None and self._spent >= cfg.budget_usd:
             self._stop = Stop("budget", f"spent ${self._spent:.2f} reached the ${cfg.budget_usd:.2f} cap")
         elif cfg.wall_clock_hours and self._elapsed() >= cfg.wall_clock_hours * 3600:
             self._stop = Stop("wall_clock", f"{self._elapsed() / 3600:.2f} h reached the "

@@ -561,3 +561,13 @@ def test_pack_check_failure_fails_the_wave(repo, tmp_path):
     summary = mw.merge_wave(root, [{"card": "BT21-029", **a}], base, runner=runner)
     assert not summary["ok"] and summary["pack_check"]["ok"] is False
     assert "dsl parse errors" in summary["pack_check"]["tail"]
+
+
+def test_an_empty_diff_is_named_as_such(repo, tmp_path):
+    # A fix worker that changed nothing: "diff unreadable ... No valid patches
+    # in input" read like a transport fault and consumed a fix attempt.
+    root, base = repo
+    art = worker(root, base, tmp_path, "a", CARD_029)
+    Path(art["diff"]).write_bytes(b"")
+    res = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
+    assert not res.ok and "empty" in res.errors[0] and "changed no file" in res.errors[0]

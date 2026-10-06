@@ -547,7 +547,11 @@ def apply_manifest_diff(repo: str | os.PathLike, diff_path: str | os.PathLike,
     try:
         in_diff = diff_paths(root, diff_path)
     except MergeWaveError as e:
-        res.errors.append(f"diff unreadable: {e}")
+        if "No valid patches" in str(e):
+            # `git apply --numstat` on an empty diff: the worker changed nothing.
+            res.errors.append("the diff is empty: the worker changed no file, so there is nothing to merge")
+        else:
+            res.errors.append(f"diff unreadable: {e}")
         return res
     for p in in_diff:
         why = path_problem(p, None)
