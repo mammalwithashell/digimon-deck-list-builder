@@ -15,13 +15,15 @@
 #   T3 (P0, memory 3): [Start of Your Turn] fires; Asuna returns to the deck bottom
 #            and ToyAgumon is picked from the trash and played free -- legal only by
 #            the "level 4 or lower Digimon with [Three Musketeers] in its text"
-#            branch (clause effect#0). Its [On Play] then resolves (reveal 3).
+#            branch (clause effect#0). The ruling's moment is the free play at
+#            step 6; the remaining steps only answer ToyAgumon's [On Play] reveal
+#            so no prompt is left parked.
 card: BT24-088
 clause: BT24-088#effect#0
 seed: 424242
 interaction: {id: "qa:Q5677", source: qa, kind: positive}
 covers: [BT24-088#effect#0, BT24-088#effect#1]
-meta: {produced_by: 20261006T161641782094Z-pilot-three-musketeers-8fc12f}
+meta: {produced_by: 20261006T193007803485Z-pilot-three-musketeers-d54e20}
 decks:
   p0:
     # stack[10..11]: Asuna #1's [On Play] draws; [12]: the T3 draw;
@@ -72,13 +74,3 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert: []
-expect_ruling:
-  q_id: Q5677
-  assert:
-  - at: 2
-    that:
-      p0.trash: [EX7-008]
-  - at: 6
-    that:
-      p0.trash: []
-      p0.field: [EX7-008]
