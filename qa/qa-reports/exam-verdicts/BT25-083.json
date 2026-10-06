@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T21:39:50.335286300+00:00",
+  "last_updated": "2026-10-06T21:44:44.664627700+00:00",
   "clauses": {
     "BT25-083#effect#0": {
       "clause_id": "BT25-083#effect#0",
@@ -132,13 +132,12 @@
       ],
       "source": "qa",
       "kind": "positive",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "text_sha256": "82a017416a4de944694836ff94a4edb4e95364221d06a073764173d0c8193b0b",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-083-qa-Q6395.yaml",
-      "reason": "ours contradicts ruling qa:Q6395 (ours vs DCGO: agree); CLEAN (compared 15 of 20 ours / 18 dcgo steps (5 sim-only row(s) with no DCGO prompt + 3 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT25-083-qa-Q6395",
-      "recorded_at": "2026-10-06T18:44:09.783228200+00:00"
+      "recorded_at": "2026-10-06T21:44:44.664627700+00:00"
     }
   }
 }
