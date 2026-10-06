@@ -127,3 +127,9 @@ steps:
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
 assert: []
+expect_ruling:
+  q_id: Q6389
+  assert:
+  - at: 18
+    that:
+      p0.field: [BT25-085, BT25-092]
