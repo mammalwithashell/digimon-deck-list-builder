@@ -1313,6 +1313,13 @@ def _config_for(plan: Mapping, config_path: str | None, budget_usd: float | None
     return config
 
 
+def _capped(config: LoopConfig, args) -> bool:
+    """A real run has some stop other than 'the work ran out': a USD cap, a
+    wall-clock cap, a session attempt cap, or an explicit `--no-cap`."""
+    return (getattr(args, "no_cap", False) or config.budget_usd is not None
+            or config.wall_clock_hours is not None or getattr(args, "max_attempts", None) is not None)
+
+
 def _fake_config(config: LoopConfig, run_dir: Path) -> LoopConfig:
     """`--fake` never writes the committed ledgers: attempts, corrections and
     escalations go under `<run_dir>/fake/`."""
@@ -1335,6 +1342,9 @@ def _add_run_options(p: argparse.ArgumentParser) -> None:
                         "<run_dir>/fake/")
     p.add_argument("--max-attempts", type=int, default=None, help="stop after N worker attempts this session")
     p.add_argument("--budget-usd", type=float, default=None, help="USD cap for the run (overrides config)")
+    p.add_argument("--no-cap", action="store_true",
+                   help="run with no USD / wall-clock / attempt cap ON PURPOSE (a real run without any "
+                        "cap is otherwise refused)")
     p.add_argument("--serial", action="store_true", help="one task at a time (deterministic)")
     p.add_argument("--worktree-root", default=None,
                    help="root for the worker worktree pool, the engine-fix and gate scratch trees and "
@@ -1410,6 +1420,13 @@ def _execute(plan: dict, run_dir: Path, args, *, command: str) -> int:
     if fake:
         config = _fake_config(config, run_dir)
         (Path(run_dir) / FAKE_DIR).mkdir(parents=True, exist_ok=True)   # marks the run as fake
+    elif not _capped(config, args):
+        # Design D13: an unattended run always carries a cap. Checked before
+        # anything that could invoke a worker; `--fake` is never billed.
+        print(f"{command}: refusing an uncapped real run -- set `budget_usd` or `wall_clock_hours` in "
+              "the config, pass --budget-usd / --max-attempts, or pass --no-cap to run uncapped on "
+              "purpose", file=sys.stderr)
+        return 2
     elif (plan.get("preflight") or {}).get("go") is False:
         print(f"{command}: the plan's preflight is NO-GO; no worker may be invoked (fix the failing "
               "checks and re-plan, or exercise the loop with --fake)", file=sys.stderr)

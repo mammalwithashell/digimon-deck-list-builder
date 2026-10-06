@@ -1143,7 +1143,7 @@ def test_cli_resume_refuses_fake_workers_on_a_real_run(cli_ws, capsys):
 
 
 def test_cli_run_refuses_a_no_go_plan_without_fake(cli_ws, capsys):
-    rc = drv.cli_run(["--plan", str(cli_ws["plan"])])
+    rc = drv.cli_run(["--plan", str(cli_ws["plan"]), "--budget-usd", "1"])
     assert rc == 1 and "NO-GO" in capsys.readouterr().err
     assert not (cli_ws["run_dir"] / "events.jsonl").exists()
 
@@ -1204,3 +1204,20 @@ def test_report_tells_how_to_land_the_verdicts_into_readiness():
     # a driver that does not manage a run tree (tests, fakes) has nothing to merge
     assert "## Landing the verdicts" not in report_mod.render_report(
         run_id="r", counts=counts, by_state={}, stop=stop)
+
+
+def test_cli_run_refuses_an_uncapped_real_run(cli_ws, capsys):
+    # Design D13 / open question "default budget": an unattended run must carry
+    # a cap. No budget_usd, no wall_clock_hours, no --max-attempts -> refused
+    # before any other check; --no-cap says "uncapped on purpose".
+    rc = drv.cli_run(["--plan", str(cli_ws["plan"])])
+    err = capsys.readouterr().err
+    assert rc == 2 and "cap" in err and "--no-cap" in err
+    assert not (cli_ws["run_dir"] / "events.jsonl").exists()
+    # any one cap gets past the guard to the next check (this plan is NO-GO)
+    for extra in (["--budget-usd", "5"], ["--max-attempts", "3"], ["--no-cap"]):
+        rc = drv.cli_run(["--plan", str(cli_ws["plan"]), *extra])
+        assert rc == 1 and "NO-GO" in capsys.readouterr().err, extra
+    # --fake runs are tests, never billed: exempt
+    rc = drv.cli_run(["--plan", str(cli_ws["plan"]), "--fake", str(cli_ws["canned"]), "--serial"])
+    assert rc == 0, capsys.readouterr()

@@ -72,6 +72,9 @@ loop never pushes and never touches `main`. `--budget-usd` overrides the
 config's cap; `--max-attempts N` stops after N worker calls; `--serial` runs
 one task at a time; `--fake <canned.json>` replays canned worker results (no
 model, ledgers under `<run-dir>/fake/`) — the way to smoke a plan for nothing.
+**A real run with no cap at all is refused**: give it `budget_usd` or
+`wall_clock_hours` in the config, `--budget-usd`, or `--max-attempts`, or say
+`--no-cap` to run uncapped on purpose (`--fake` is never billed and is exempt).
 
 ### What a run does to each item
 
