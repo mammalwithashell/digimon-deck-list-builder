@@ -53,3 +53,8 @@ steps:
   - actor: 0
     do: { select: { yes: true } }
 assert: []
+expect_ruling:
+  q_id: Q2669
+  assert:
+  - at: 9
+    that: {phase: breeding}
