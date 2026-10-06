@@ -247,6 +247,32 @@ def test_pending_and_diverged_route_by_kind_without_executors(tmp_path):
     assert "no executor for AUTHORING" in report
 
 
+P1 = "interaction:probe:BT1-001#effect#0:scope"
+
+
+def test_an_interaction_waits_while_one_of_its_cards_clauses_is_being_fixed(tmp_path):
+    # Data Squad pilot: BT13-060#effect#2 was DIVERGED -> FIX (our engine skips
+    # the security check) while Q2304, an interaction on the same clause, burnt
+    # its three authoring attempts failing the very assertion the fix targets.
+    author = author_ok()
+    h = Harness(tmp_path, [seed(C1, "FIX"), seed(P1, "AUTHORING", source="probe")], [author])
+    result = h.run()
+    assert author.calls == [], "the interaction must not be authored under an engine about to change"
+    assert h.states()[P1] == "AUTHORING"
+    assert result.stop.reason == "blocked"
+    assert f"waits for {C1} (FIX)" in result.blocked[P1]
+
+
+@pytest.mark.parametrize("clause_state", ["ESCALATED", "TERMINAL", "CONFIRMED"])
+def test_an_interaction_runs_once_the_clause_is_no_longer_under_fix(tmp_path, clause_state):
+    author = author_ok()
+    h = Harness(tmp_path, [seed(C1, clause_state), seed(P1, "AUTHORING", source="probe")],
+                [author, sim_ok(), oracle_confirms()])
+    h.run()
+    assert author.calls == [P1]
+    assert h.states()[P1] == "CONFIRMED"
+
+
 def test_an_illegal_next_state_is_refused_and_the_spend_still_ledgered(tmp_path):
     bad = Exec("AUTHORING", lambda ctx, it: StageOutcome(
         "CONFIRMED", attempts=[attempt(ctx, it, "author_clause")]))

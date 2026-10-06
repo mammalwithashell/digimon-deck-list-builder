@@ -430,6 +430,60 @@ def test_both_engines_contradicting_the_scenario_goes_back_to_authoring(repo):
     assert (c.kind, c.corrected_attempt, c.by_gate) == ("gate_fail", "att-a", "oracle_scenario")
 
 
+STALL = {"job_id": "exam-ST23-04-effect0", "claimed_for_s": 412, "limit_s": 180, "heartbeat_names_it": True,
+         "newest_recording": "C:/rec/x.jsonl",
+         "last_row": '{"kind":"selection","step":25,"actor":0,"prompt":"OptionalSkill","bool_value":true}'}
+STALL_REASON = ("player stalled on exam-ST23-04-effect0: claimed 412s ago (its own limit is 180s) and the "
+                "heartbeat still names it")
+
+
+def _stall_ctx(repo, cmds, heartbeat):
+    from tools.card_loop.config import LoopConfig
+    hroot = repo / "hroot"
+    hroot.mkdir(exist_ok=True)
+    (hroot / "harness.heartbeat").write_text(heartbeat + "\n", encoding="utf-8")
+    cfg = LoopConfig(exploration_share=0.0, harness_root=str(hroot), player_dir="P:/player")
+    return _ctx(repo, cmds=cmds, config=cfg)
+
+
+def test_a_stalled_player_goes_to_triage_and_the_player_is_restarted(repo):
+    # The pilots wedged on one DCGO job for 15 minutes: the scripted answer to a
+    # SelectCardEffect never completed it, and DCGO enforces no job timeout.
+    # The harness now reports the stall; the stage routes it to triage as
+    # `undetermined` (a model reads both sides) and restarts the player, since
+    # the heartbeat still names the stalled job.
+    _write_scenario(repo)
+    cmds = (FakeCommands()
+            .on("--oracle", 1, _row(verdict="unmeasured", job_outcome=None, reason=STALL_REASON, stall=STALL) + "\n")
+            .on(("node", "down"), 0, "stopped pid 1")
+            .on(("node", "up"), 0, "GO\nstarted pid 2"))
+    item = _oracle_item()
+    out = OracleExecutor().run(_stall_ctx(repo, cmds, "exam-ST23-04-effect0"), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED"
+    assert out.data["prompt_route"] == "undetermined"
+    ev = out.data["prompt_evidence"]
+    assert ev["stall"] == STALL and "stalled" in ev["explanation"] and "OptionalSkill" in ev["explanation"]
+    assert "stalled" in out.reason
+    node_calls = [c["argv"] for c in cmds.calls if "node" in c["argv"]]
+    assert [c[c.index("node") + 1] for c in node_calls] == ["down", "up"]
+    assert "--build" in node_calls[1] and "P:/player" in node_calls[1]
+    assert ev["player_restart"].startswith("restarted")
+    assert not cmds.argvs("--inspect"), "nothing to inspect: DCGO asked no prompt the line could not answer"
+
+
+def test_a_stall_the_player_already_left_behind_does_not_restart_it(repo):
+    # The other pilot's oracle call restarted the player first (the heartbeat
+    # now reads `idle`): a second restart would kill a healthy player mid-job.
+    _write_scenario(repo)
+    cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome=None,
+                                                 reason=STALL_REASON, stall=STALL) + "\n")
+    out = OracleExecutor().run(_stall_ctx(repo, cmds, "idle"), _oracle_item())
+    assert out.next_state == "DIVERGED"
+    assert not [c for c in cmds.calls if "node" in c["argv"]]
+    assert "idle" in out.data["prompt_evidence"]["player_restart"]
+
+
 def test_a_divergence_before_the_mismatch_is_a_plain_divergence(repo):
     _write_scenario(repo)
     row = _row(verdict="diverged", job_outcome="failed", reason="memory differs; " + MISMATCH,

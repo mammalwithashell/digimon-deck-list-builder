@@ -68,10 +68,39 @@ class OracleExecutor:
                 row = _unmeasured(path, f"oracle error: {rows[0]['error']}", error=rows[0]["error"])
             else:
                 row = rows[0]
+            if isinstance(row.get("stall"), Mapping):
+                # The player is wedged (DCGO enforces no job timeout). Restart it
+                # here, once per fresh report, so the lane is not dead for every
+                # later item -- but only while the heartbeat still names the
+                # stalled job: another run may have restarted it already.
+                row = {**row, "player_restart": self._restart_if_still_stalled(ctx, row["stall"])}
             results[path] = row
 
         routed = {p: self._classify(ctx, item, p, results[p]) for p in paths if p in results}
         return self._decide(ctx, item, paths, results, routed)
+
+    # ------------------------------------------------------------------ the player
+
+    def _restart_if_still_stalled(self, ctx, stall: Mapping) -> str:
+        beat = harness.heartbeat_job(ctx)
+        if beat != stall.get("job_id"):
+            return f"not restarted: the heartbeat now reads {beat!r}; the player has moved on"
+        return harness.restart_player(ctx)
+
+    @staticmethod
+    def _stall_evidence(path: str, row: Mapping, stall: Mapping) -> dict:
+        """Triage evidence for a line DCGO never finished: no prompt name to
+        compare, so the route is `undetermined` and a model reads both sides."""
+        last = stall.get("last_row")
+        explanation = (f"DCGO stalled on {stall.get('job_id')}: claimed {stall.get('claimed_for_s')}s ago against "
+                       f"its {stall.get('limit_s')}s limit while the heartbeat still named it. The scripted answer "
+                       f"after the last recorded row did not complete DCGO's prompt"
+                       + (f" (last recorded row: {last})" if last else "")
+                       + "; our engine ran the same line to completion sim-only. Compare what each engine "
+                         "asks at that step: a selection DCGO needs more picks (or a cancel) for than ours does.")
+        return {"scenario": path, "dcgo_row": None, "scenario_step": None, "step_mapping": None,
+                "expected": None, "dcgo_asked": None, "ours": None, "route": "undetermined",
+                "explanation": explanation, "stall": dict(stall), "player_restart": row.get("player_restart")}
 
     # ------------------------------------------------------------------ per scenario
 
@@ -83,6 +112,10 @@ class OracleExecutor:
         verdict = row.get("verdict")
         if verdict == "confirmed":
             return "confirmed", None
+        if isinstance(row.get("stall"), Mapping) and row["stall"].get("job_id") == row.get("job_id"):
+            # Wedged on THIS job: DCGO could not finish the line. (Wedged on
+            # another run's job, ours was simply never claimed: unmeasured.)
+            return "undetermined", self._stall_evidence(path, row, row["stall"])
         pm = harness.prompt_mismatch(row)
         hm = row.get("mismatch") if isinstance(row.get("mismatch"), Mapping) else None
         if pm is None and hm is not None and isinstance(hm.get("row"), int):
@@ -136,8 +169,12 @@ class OracleExecutor:
             p, (kind, evidence) = hit
             data = {**base_data, "oracle": results[p],
                     "prompt_route": None if kind == "diverged" else kind, "prompt_evidence": evidence}
-            reason = (results[p].get("first_divergence") or results[p].get("reason") or "diverged") \
-                if kind == "diverged" else f"prompt mismatch, {kind}: {evidence['explanation']}"
+            if kind == "diverged":
+                reason = results[p].get("first_divergence") or results[p].get("reason") or "diverged"
+            elif evidence.get("stall"):
+                reason = f"player stalled, {kind}: {evidence['explanation']}"
+            else:
+                reason = f"prompt mismatch, {kind}: {evidence['explanation']}"
             return base.outcome("DIVERGED", item=item, reason=reason, data=data)
         hit = first("scenario_wrong")
         if hit:

@@ -563,6 +563,26 @@ class Driver:
 
     # ------------------------------------------------------------------ readiness
 
+    # A clause in one of these states has a fix in flight (or a divergence
+    # awaiting triage): the engine under its card is about to change, and an
+    # interaction exam authored now fails the very assertion the fix targets
+    # and burns its attempts (Data Squad pilot: Q2304 under BT13-060#effect#2).
+    CLAUSE_FIX_STATES = frozenset({"DIVERGED", "TRIAGE", "FIX", "GATE"})
+
+    def _clauses_under_fix(self, rec: ItemRecord) -> list[tuple[str, str]]:
+        meta = self.state.meta.get(rec.item)
+        cards = set(meta.cards) if meta is not None else set()
+        if not cards:
+            return []
+        out = []
+        for other in self.state.records.values():
+            if other.kind != "clause" or other.state not in self.CLAUSE_FIX_STATES:
+                continue
+            om = self.state.meta.get(other.item)
+            if om is not None and cards & set(om.cards):
+                out.append((other.item, other.state))
+        return sorted(out)
+
     def _why_not_runnable(self, rec: ItemRecord) -> str | None:
         st = rec.state
         if st == "PARKED":
@@ -570,6 +590,11 @@ class Driver:
         unmet = self.state.unmet_requirements(rec.item)
         if unmet:
             return "waits for " + ", ".join(f"{r} ({self.state.records[r].state})" for r in unmet)
+        if rec.kind == "interaction":
+            fixing = self._clauses_under_fix(rec)
+            if fixing:
+                return ("waits for " + ", ".join(f"{c} ({s})" for c, s in fixing)
+                        + " -- a clause of the same card is being fixed, so the engine under this exam is about to change")
         if st in BUILTIN_STATES and st not in self.components.executors:
             return None
         if st == "GATE" and rec.data.get("engine_wait"):

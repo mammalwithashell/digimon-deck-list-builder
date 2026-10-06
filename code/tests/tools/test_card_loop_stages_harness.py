@@ -130,6 +130,27 @@ def test_sim_failure_lines_are_kept_verbatim():
     assert "p0.memory" in r.failure_text()
 
 
+SIM_RULING_FAIL = """exam: qa/dcgo-exams/BT13/BT13-060-qa-Q2304.yaml
+  lowered 18 step(s): [Action(62)]
+  assert: 0 check(s) over 0 assertion block(s), 0 failed
+  note: no `assert:` block, so this scenario checked NOTHING. Run the oracle pass and backfill before trusting it in CI.
+  RULING qa:Q2304 CONTRADICTED: at 15: p1.security expected 3 but our engine has 5
+  ruling qa:Q2304: ours CONTRADICTS the ruling (1 check(s), 1 failed)
+exam: scenarios seen 1 / lowered 1 / run 1 / diffed 0 / failed 1
+"""
+
+
+def test_a_contradicted_ruling_is_a_failure_line_the_author_sees():
+    # The first pilot re-authored Q2304 three times blind: the harness exits 0
+    # on a ruling contradiction and prints no FAILED line, so the feedback
+    # carried only the summary counts.
+    r = H.parse_sim_output(0, SIM_RULING_FAIL)
+    assert not r.passed
+    assert r.failures == ["RULING qa:Q2304 CONTRADICTED: at 15: p1.security expected 3 but our engine has 5",
+                          "ruling qa:Q2304: ours CONTRADICTS the ruling (1 check(s), 1 failed)"]
+    assert "p1.security expected 3" in r.failure_text()
+
+
 def test_a_harness_that_did_not_start_is_a_failure():
     r = H.parse_sim_output(None, "", "dcgo-harness could not be started: [WinError 2]")
     assert not r.passed and "WinError 2" in r.failure_text()

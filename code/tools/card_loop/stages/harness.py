@@ -163,6 +163,41 @@ def oracle_timeout(ctx) -> int:
     return int(getattr(getattr(ctx, "config", None), "oracle_timeout_s", None) or ORACLE_TIMEOUT_S)
 
 
+# --------------------------------------------------------------------------- the player
+
+NODE_TIMEOUT_S = 180.0
+
+
+def heartbeat_job(ctx) -> str | None:
+    """What the player's heartbeat names (`harness.heartbeat` under the harness
+    root): a job id, `idle`, or None without a readable heartbeat."""
+    root = getattr(getattr(ctx, "config", None), "harness_root", None)
+    if not root:
+        return None
+    try:
+        text = (Path(root) / "harness.heartbeat").read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return text or None
+
+
+def restart_player(ctx) -> str:
+    """`node down`, then `node up --build <player_dir>`: the only cure for a
+    player wedged on a job (DCGO enforces no job timeout). Returns a note for
+    the evidence; a failure is reported, never raised."""
+    build = getattr(getattr(ctx, "config", None), "player_dir", None)
+    if not build:
+        return "not restarted: no player_dir configured"
+    rc, out, err = run(ctx, [harness_bin(ctx), *_root_args(ctx), "node", "down"], NODE_TIMEOUT_S)
+    if rc != 0:
+        return f"restart failed at `node down` (exit {rc}): {(err or out).strip()[-300:]}"
+    rc, out, err = run(ctx, [harness_bin(ctx), *_root_args(ctx), "node", "up", "--build", str(build)],
+                       NODE_TIMEOUT_S)
+    if rc != 0:
+        return f"restart failed at `node up` (exit {rc}): {(err or out).strip()[-300:]}"
+    return "restarted the player (`node down`, then `node up`)"
+
+
 def verdict_triage_argv(ctx, clause_id: str, triage: str, citation: str) -> list[str]:
     return [harness_bin(ctx), "verdict-triage", "--clause", clause_id, "--triage", triage,
             "--citation", citation]
@@ -226,7 +261,11 @@ def parse_sim_output(rc: int | None, stdout: str, stderr: str = "") -> SimReport
             assert_line = line
         elif line.startswith("note:"):
             notes.append(line[len("note:"):].strip())
-        elif "FAILED" in line or "did not run to completion" in line or line.startswith("Error"):
+        elif ("FAILED" in line or "CONTRADICT" in line or "did not run to completion" in line
+              or line.startswith("Error")):
+            # `RULING <q> CONTRADICTED: at N: ...` is how the harness reports an
+            # `expect_ruling:` our engine does not meet -- exit 0, no FAILED
+            # line. Without it the author re-authors blind (first pilot, Q2304).
             failures.append(line)
     passed = rc == 0 and summary is not None and "/ failed 0" in summary
     if rc is None:
