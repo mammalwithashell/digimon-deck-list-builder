@@ -1,14 +1,14 @@
 # Book: qa/dcgo-exams/BT26/bt26_dats_pool.json. Clause: the Option face's [Main]
 # "Suspend 2 of your opponent's Digimon or Tamers. Then, until their turn ends,
 # none of their suspended Digimon or Tamers can digivolve or unsuspend."
-# Line: T3 plays ST24-12 (DATA SQUAD; declines its optional On Play) so the Green
+# Line: T3 plays ST24-12 (DATA SQUAD; no Tamer on our field, so its optional On Play never triggers in DCGO) so the Green
 # Option is usable via <Use Req.>; p1 plays BT1-009 + BT3-007 on T4; T5 p0 plays
 # BT26-050 as an Option and selects both opposing Digimon to suspend (exactly 2
 # candidates). The digivolve/unsuspend locks then apply to those suspended
 # Digimon. Assertions left empty for oracle backfill.
 card: BT26-050
 clause: BT26-050#effect#5
-meta: {produced_by: 20261006T155609495274Z-pilot-data-squad-700ba6}
+meta: {produced_by: 20261006T214522854458Z-pilot-data-squad-4aed1f}
 seed: 424242
 decks:
   p0:
@@ -28,7 +28,6 @@ steps:
   - {actor: 1, do: {pass: {}}, expect: {prompt: main_phase}}
   - {actor: 0, do: {pass: {}}, expect: {prompt: breeding_action}}
   - {actor: 0, do: {play: {card: ST24-12, from: hand}}, expect: {prompt: main_phase}}
-  - {actor: 0, do: {select: {decline: true}}, expect: {prompt: OptionalSkill}}
   - {actor: 0, do: {pass: {}}, expect: {prompt: main_phase}}
   - {actor: 1, do: {pass: {}}, expect: {prompt: breeding_action}}
   - {actor: 1, do: {play: {card: BT1-009, from: hand}}, expect: {prompt: main_phase}}
