@@ -309,6 +309,59 @@ def test_attempt_cap_escalates_with_the_attempt_history(tmp_path):
     assert result.stop.reason == "complete", "escalated is terminal for the run"
 
 
+def test_a_reimplemented_card_can_be_reviewed_again(tmp_path):
+    """Default caps: implement 3, review 1 -- the review cap restarts with every
+    implement attempt, or a card could never survive one "changes requested"."""
+    card = "card:BT1-001"
+    verdicts = iter(["IMPLEMENTING", "IMPLEMENTED"])
+    impl = Exec("IMPLEMENTING", lambda ctx, it: StageOutcome(
+        "REVIEW", attempts=[attempt(ctx, it, "implement")]))
+    review = Exec("REVIEW", lambda ctx, it: (lambda v: StageOutcome(
+        v, attempts=[attempt(ctx, it, "review", family="codex")], adjudicated=v == "IMPLEMENTED"))(next(verdicts)))
+    h = Harness(tmp_path, [seed(card, "IMPLEMENTING")], [impl, review])
+    h.run()
+    assert h.states() == {card: "IMPLEMENTED"}
+    assert review.calls == [card, card]
+    assert h.state.records[card].attempts == {"implement": 2, "review": 1}
+
+
+def test_a_new_fix_restarts_the_triage_cap(tmp_path):
+    oracle_results = iter(["DIVERGED", "CONFIRMED"])
+    oracle = Exec("ORACLE", lambda ctx, it: (lambda v: StageOutcome(v, adjudicated=v == "CONFIRMED"))(
+        next(oracle_results)))
+    triage = Exec("TRIAGE", lambda ctx, it: StageOutcome(
+        "FIX", attempts=[attempt(ctx, it, "triage")], data={"triage": "ours_wrong"}))
+    gate = FakeGate([GateResult(True), GateResult(True)])
+    h = Harness(tmp_path, [seed(C1, "DIVERGED")], [triage, _fix_with_merge(), oracle], gate=gate,
+                merger=FakeMerger(lambda: None))
+    h.run()
+    assert h.states() == {C1: "CONFIRMED"}
+    assert triage.calls == [C1, C1], "the fix made a new divergence worth a fresh triage"
+
+
+def test_an_executor_looping_without_attempts_is_set_aside(tmp_path):
+    a = Exec("AUTHORING", lambda ctx, it: StageOutcome("SIM", reason="scenario exists"))
+    s = Exec("SIM", lambda ctx, it: StageOutcome("AUTHORING", reason="sim failed"))
+    h = Harness(tmp_path, [seed(C1, "AUTHORING"), seed(C2, "AUTHORING")], [a, s])
+    result = h.run()
+    assert result.stop.reason == "blocked"
+    assert "without a worker attempt" in result.failed[C1]
+    assert len(a.calls) < 2 * drv.MAX_IDLE_STEPS
+
+
+def test_a_driver_error_still_writes_state_and_report(tmp_path):
+    h = Harness(tmp_path, [seed(C1, "AUTHORING")], [author_ok(), sim_ok(), oracle_confirms()])
+
+    def broken(_attempt):
+        raise OSError("disk full")
+    h.driver.ledger.append = broken
+    with pytest.raises(OSError, match="disk full"):
+        h.run()
+    first = (h.run_dir / "report.md").read_text(encoding="utf-8").splitlines()[0]
+    assert "stopped: error" in first
+    assert json.loads((h.run_dir / "state.json").read_text(encoding="utf-8"))["stop"]["reason"] == "error"
+
+
 def test_plateau_stops_the_run(tmp_path):
     sim_fails = Exec("SIM", lambda ctx, it: StageOutcome("AUTHORING"))
     h = Harness(tmp_path, [seed(C1, "AUTHORING"), seed(C2, "AUTHORING")], [author_ok(), sim_fails],
@@ -366,6 +419,20 @@ def test_wall_clock_stop_uses_the_injected_clock(tmp_path):
     assert result.stop.reason == "wall_clock"
     assert clock.t == pytest.approx(1.2 * 3600)
     assert result.stop.elapsed_s == pytest.approx(1.2 * 3600)
+
+
+def test_the_run_stops_when_every_vendor_is_exhausted(tmp_path):
+    from tools.card_loop.workers.health import VendorHealth
+    health = VendorHealth()
+    author = author_ok()
+    h = Harness(tmp_path, [seed(C1, "AUTHORING")], [author], health=health)
+    h.driver.ctx.workers = {"claude": object(), "codex": object()}
+    health.disable("claude", "credit balance too low")
+    health.disable("codex", "quota")
+    result = h.run()
+    assert result.stop.reason == "vendors_exhausted"
+    assert author.calls == []
+    assert "credit balance too low" in result.stop.detail
 
 
 def test_max_attempts_stops_after_n_worker_attempts(tmp_path):
@@ -784,8 +851,17 @@ def test_cli_run_fake_then_status_then_resume(cli_ws, capsys):
     out = capsys.readouterr().out
     assert rc == 0 and "2 confirmed" in out and "CONFIRMED" in out
 
+    rc = drv.cli_resume(["--run", "cli1", "--runs-dir", str(cli_ws["runs"])])
+    assert rc == 2 and "--fake" in capsys.readouterr().err, "a fake run never resumes on real workers"
+
     rc = drv.cli_resume(["--run", "cli1", "--runs-dir", str(cli_ws["runs"]), "--fake", str(cli_ws["canned"])])
     assert rc == 0, capsys.readouterr()
+
+
+def test_cli_resume_refuses_fake_workers_on_a_real_run(cli_ws, capsys):
+    (cli_ws["run_dir"] / "events.jsonl").write_text("", encoding="utf-8")   # started for real
+    rc = drv.cli_resume(["--run", "cli1", "--runs-dir", str(cli_ws["runs"]), "--fake", str(cli_ws["canned"])])
+    assert rc == 2 and "real workers" in capsys.readouterr().err
 
 
 def test_cli_run_refuses_a_no_go_plan_without_fake(cli_ws, capsys):

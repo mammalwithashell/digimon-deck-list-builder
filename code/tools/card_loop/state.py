@@ -372,19 +372,25 @@ class RunState:
         rec.state = ev.dst
         if drv.get("reset_attempts"):
             rec.attempts = {}
+        for key in drv.get("reset") or ():          # restart dependent caps, then count
+            rec.attempts.pop(key, None)
         for key in drv.get("count") or ():
             rec.attempts[key] = rec.attempts.get(key, 0) + 1
         rec.data.update(drv.get("item_data") or {})
 
     def _event(self, rec: ItemRecord, dst: str, *, reason: str, stage=None, attempt_id=None,
                item_data=None, event_data=None, count=(), reset_attempts=False,
-               attempt_ids: Iterable[str] = (), extra_driver: Mapping | None = None) -> Event:
+               attempt_ids: Iterable[str] = (), reset_keys: Iterable[str] = (),
+               extra_driver: Mapping | None = None) -> Event:
         drv = dict(extra_driver or {})
         attempt_ids = list(attempt_ids)
         if len(attempt_ids) > 1 or (attempt_ids and attempt_ids[0] != attempt_id):
             drv["attempt_ids"] = attempt_ids
         if item_data:
             drv["item_data"] = dict(item_data)
+        reset_keys = [k for k in reset_keys if k in rec.attempts]
+        if reset_keys:
+            drv["reset"] = reset_keys
         if count:
             drv["count"] = list(count)
         if reset_attempts:
@@ -401,26 +407,29 @@ class RunState:
     def transition(self, item: str, dst: str, *, reason: str, stage: str | None = None,
                    attempt_id: str | None = None, item_data: Mapping | None = None,
                    event_data: Mapping | None = None, count: Iterable[str] = (),
-                   reset_attempts: bool = False, attempt_ids: Iterable[str] = ()) -> Event:
+                   reset_attempts: bool = False, attempt_ids: Iterable[str] = (),
+                   reset_keys: Iterable[str] = ()) -> Event:
         """Validate (design D4), log, then apply one transition. `attempt_ids`
         lists every worker attempt behind the step when there is more than one
-        (a two-family termination check); `attempt_id` is the first."""
+        (a two-family termination check); `attempt_id` is the first.
+        `reset_keys` drops attempt counters before `count` bumps others."""
         rec = self.records[item]
         check_transition(rec.kind, rec.state, dst)
         return self._event(rec, dst, reason=reason, stage=stage, attempt_id=attempt_id,
                            item_data=item_data, event_data=event_data, count=tuple(count),
-                           reset_attempts=reset_attempts, attempt_ids=attempt_ids)
+                           reset_attempts=reset_attempts, attempt_ids=attempt_ids,
+                           reset_keys=tuple(reset_keys))
 
     def note(self, item: str, *, reason: str, stage: str | None = None,
              attempt_id: str | None = None, item_data: Mapping | None = None,
              event_data: Mapping | None = None, count: Iterable[str] = (),
-             attempt_ids: Iterable[str] = ()) -> Event:
+             attempt_ids: Iterable[str] = (), reset_keys: Iterable[str] = ()) -> Event:
         """A `src == dst` row: the item stayed put (merge failure, refused
         outcome, executor error) but data or attempt counters changed."""
         rec = self.records[item]
         return self._event(rec, rec.state, reason=reason, stage=stage, attempt_id=attempt_id,
                            item_data=item_data, event_data=event_data, count=tuple(count),
-                           attempt_ids=attempt_ids)
+                           attempt_ids=attempt_ids, reset_keys=tuple(reset_keys))
 
     def _force(self, item: str, dst: str, *, reason: str, item_data=None,
                reset_attempts: bool = False) -> Event:

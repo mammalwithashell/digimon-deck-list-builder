@@ -37,7 +37,11 @@ executor step that made worker calls (a two-family termination check is ONE
 `triage` pass), restored on resume from the event log, and checked before an
 executor runs: a spent cap escalates with the item's attempt history.
 ORACLE -> ORACLE retries count under `oracle_retry` (cap
-`attempt_caps["oracle_retry"]`, default 3).
+`attempt_caps["oracle_retry"]`, default 3). An upstream attempt restarts its
+dependents' counters (`CAP_RESETS`: a new implement attempt may be reviewed
+again, a new fix triaged again). An item that takes `MAX_IDLE_STEPS`
+consecutive executor steps with no worker attempt and no adjudication is set
+aside for the session, so an executor loop cannot spin below every cap.
 
 **Stop rules** (D13), checked before every submission; in-flight work drains:
 USD cap (`config.budget_usd`, summed over every attempt this run id has
@@ -45,8 +49,11 @@ ledgered, across sessions), wall-clock cap (`config.wall_clock_hours`, this
 session, injectable clock), plateau (`config.plateau_attempts` consecutive
 worker attempts with no new adjudication; this session), `max_attempts`
 (worker attempts this session). With nothing runnable the run stops
-`complete` (every item terminal) or `blocked`. Every stop writes `state.json`
-and `report.md`.
+`complete` (every item terminal) or `blocked`; Ctrl-C stops `interrupted`
+(in-flight work drains first) and a driver exception stops `error` (then
+re-raises). Every stop writes `state.json` and `report.md`. The run-level USD
+cap stops the run; it does not escalate the open items (they stay unmeasured
+and resume picks them up under a new cap).
 """
 from __future__ import annotations
 
@@ -95,6 +102,24 @@ ORACLE_STATES = frozenset({"ORACLE"})        # touch the oracle: one at a time
 BUILTIN_STATES = ("PENDING", "DIVERGED")     # driver steps unless an executor claims them
 ORACLE_RETRY_KEY = "oracle_retry"
 DEFAULT_ORACLE_RETRY_CAP = 3
+#: Counting an attempt of the key stage restarts its dependent stages' caps: a
+#: re-implemented card may be reviewed again (default review cap 1 would
+#: otherwise escalate every card after one "changes requested"), a new fix's
+#: re-divergence may be triaged again, a re-authored scenario or a new fix gets
+#: fresh oracle retries. The upstream caps (implement 3, fix 2, author 3) still
+#: bound the loop.
+CAP_RESETS = {
+    "implement": ("review",),
+    "fix_card": ("triage", ORACLE_RETRY_KEY),
+    "fix_engine": ("triage", ORACLE_RETRY_KEY),
+    "author_clause": (ORACLE_RETRY_KEY,),
+    "author_interaction": (ORACLE_RETRY_KEY,),
+}
+#: An item that takes this many consecutive executor steps with no worker
+#: attempt and no adjudication is set aside for the session (an executor loop
+#: such as SIM -> AUTHORING -> SIM that never calls a worker would otherwise
+#: spin forever below every cap).
+MAX_IDLE_STEPS = 25
 FAKE_DIR = "fake"
 REPORT_NAME = "report.md"
 ALL_STATES = frozenset(s for states in STATES_BY_KIND.values() for s in states)
@@ -288,7 +313,9 @@ class DriverContext:
 
 @dataclass
 class Stop:
-    reason: str            # complete | blocked | budget | wall_clock | plateau | max_attempts | interrupted
+    # complete | blocked | budget | wall_clock | plateau | max_attempts |
+    # vendors_exhausted | interrupted | error
+    reason: str
     detail: str = ""
     spent_usd: float = 0.0
     unpriced_attempts: int = 0
@@ -374,6 +401,7 @@ class Driver:
         self._plateau = 0
         self._session_attempts = 0
         self._failed: dict[str, str] = {}
+        self._idle_steps: dict[str, int] = {}
         self._last_merge: dict[str, MergeResult] = {}
         self._stop: Stop | None = None
         self._seq = 0
@@ -446,6 +474,11 @@ class Driver:
         elif self.max_attempts is not None and self._session_attempts >= self.max_attempts:
             self._stop = Stop("max_attempts", f"{self._session_attempts} worker attempts this session "
                                               f"(--max-attempts {self.max_attempts})")
+        elif self.ctx.workers and not self.health.available():
+            # Quota / credit exhaustion disables a family for the run; with none
+            # left every model step would fail or escalate, so stop instead.
+            why = "; ".join(f"{f}: {self.health.reason(f)}" for f in FAMILIES)
+            self._stop = Stop("vendors_exhausted", f"no model family is available ({why})")
         return self._stop is not None
 
     def _idle_stop(self) -> Stop:
@@ -618,6 +651,12 @@ class Driver:
                 self._loop_threaded()
         except KeyboardInterrupt:
             self._stop = self._stop or Stop("interrupted", "interrupted")
+        except Exception as e:
+            # The driver itself broke (a ledger write, a corrupt record): stop,
+            # still write state.json + report.md, then surface the error.
+            self._stop = Stop("error", f"{type(e).__name__}: {e}")
+            self._finish_run()
+            raise
         return self._finish_run()
 
     def _loop_serial(self) -> None:
@@ -722,11 +761,26 @@ class Driver:
                            errors=list(m.get("errors") or []))
 
     @staticmethod
-    def _count_keys(src: str, dst: str, attempts) -> list[str]:
+    def _count_keys(src: str, dst: str, attempts) -> tuple[list[str], list[str]]:
+        """`(count, reset)`: the attempt counters this step bumps (one per
+        distinct stage among its attempts, plus `oracle_retry` for an ORACLE
+        retry) and the dependent counters it restarts (`CAP_RESETS`)."""
         keys = sorted({a.stage for a in attempts})
+        reset = sorted({r for k in keys for r in CAP_RESETS.get(k, ())} - set(keys))
         if src in ORACLE_STATES and dst == src:
             keys.append(ORACLE_RETRY_KEY)
-        return keys
+        return keys, reset
+
+    def _idle_check(self, rec: ItemRecord, *, progressed: bool) -> None:
+        if progressed:
+            self._idle_steps.pop(rec.item, None)
+            return
+        n = self._idle_steps[rec.item] = self._idle_steps.get(rec.item, 0) + 1
+        if n >= MAX_IDLE_STEPS and not is_terminal(rec.kind, rec.state):
+            msg = (f"{n} consecutive steps without a worker attempt or an adjudication "
+                   f"(an executor loop?); last state {rec.state}")
+            self._failed[rec.item] = msg
+            self.state.note(rec.item, reason=f"set aside for this session: {msg}")
 
     def _apply_outcome(self, rec: ItemRecord, task: _Task, outcome: StageOutcome) -> None:
         item, kind, src, dst = rec.item, rec.kind, rec.state, outcome.next_state
@@ -742,14 +796,14 @@ class Driver:
         ids = [a.attempt_id for a in attempts]
         first = ids[0] if ids else None
         stage = attempts[0].stage if attempts else task.stage
-        count = self._count_keys(src, dst, attempts)
+        count, reset = self._count_keys(src, dst, attempts)
 
         try:
             check_transition(kind, src, dst)
         except ValueError as e:
             self._ledger(attempts, outcome.corrections)
             self.state.note(item, reason=f"refused: the {src} step proposed {src} -> {dst}: {e}",
-                            stage=stage, attempt_id=first, attempt_ids=ids, count=count,
+                            stage=stage, attempt_id=first, attempt_ids=ids, count=count, reset_keys=reset,
                             event_data={"refused_next_state": dst})
             self._failed[item] = str(e)
             self._tick(attempts, adjudicated=False)
@@ -760,7 +814,7 @@ class Driver:
         if req is not None:
             res = self._merge(req)
             if not res.ok:
-                self._merge_failed(rec, outcome, attempts, req, res, count, stage)
+                self._merge_failed(rec, outcome, attempts, req, res, count, reset, stage)
                 return
             self._last_merge[item] = res
             item_data["merge"] = {"ok": True, "sha": res.sha, "branch": res.branch,
@@ -774,13 +828,14 @@ class Driver:
             item_data.update(escalation=path.name, escalation_reason=esc.reason)
         self.state.transition(item, dst, reason=outcome.reason or f"{src} -> {dst}", stage=stage,
                               attempt_id=first, attempt_ids=ids, item_data=item_data,
-                              event_data=outcome.events_data, count=count)
+                              event_data=outcome.events_data, count=count, reset_keys=reset)
         if dst == "PARKED":
             self._park(rec)
         newly = bool(outcome.adjudicated) or (is_adjudicated(kind, dst) and not is_adjudicated(kind, src))
         self._tick(attempts, adjudicated=newly)
+        self._idle_check(rec, progressed=bool(attempts) or newly)
 
-    def _merge_failed(self, rec, outcome, attempts, req, res, count, stage) -> None:
+    def _merge_failed(self, rec, outcome, attempts, req, res, count, reset, stage) -> None:
         item = rec.item
         errors = list(res.errors) or ["merge failed (no error given)"]
         attempts = [replace(a, outcome="gate_failed")
@@ -791,7 +846,7 @@ class Driver:
         self._ledger(attempts, corrections)
         self.state.note(item, reason="merge failed: " + "; ".join(errors), stage=stage,
                         attempt_id=req.attempt_id, attempt_ids=[a.attempt_id for a in attempts],
-                        item_data={"merge_error": errors}, count=count,
+                        item_data={"merge_error": errors}, count=count, reset_keys=reset,
                         event_data={"merge": {"ok": False, "errors": errors, "branch": res.branch}})
         self._tick(attempts, adjudicated=False)
         key = self._cap_key(rec)
@@ -924,6 +979,7 @@ def _execute(plan: dict, run_dir: Path, args, *, command: str) -> int:
     fake = bool(args.fake)
     if fake:
         config = _fake_config(config, run_dir)
+        (Path(run_dir) / FAKE_DIR).mkdir(parents=True, exist_ok=True)   # marks the run as fake
     elif (plan.get("preflight") or {}).get("go") is False:
         print(f"{command}: the plan's preflight is NO-GO; no worker may be invoked (fix the failing "
               "checks and re-plan, or exercise the loop with --fake)", file=sys.stderr)
@@ -1012,8 +1068,13 @@ def cli_resume(argv: list[str] | None = None) -> int:
     except (OSError, ValueError) as e:
         print(f"resume: cannot read {run_dir / 'plan.json'}: {e}", file=sys.stderr)
         return 2
-    if (run_dir / FAKE_DIR).is_dir() and not args.fake:
+    started_fake = (run_dir / FAKE_DIR).is_dir()
+    if started_fake and not args.fake:
         print(f"resume: {args.run} was started with --fake; resume it with --fake too", file=sys.stderr)
+        return 2
+    if args.fake and not started_fake and (run_dir / EVENTS_NAME).exists():
+        print(f"resume: {args.run} was started with real workers; --fake would mix canned results "
+              "into its ledgers", file=sys.stderr)
         return 2
     return _execute(plan, run_dir, args, command="resume")
 
