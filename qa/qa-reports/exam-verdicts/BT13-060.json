@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-10-06T14:14:19.861295600+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T14:17:53.223689600+00:00",
   "clauses": {
     "BT13-060#effect#2": {
       "clause_id": "BT13-060#effect#2",
@@ -13,6 +13,22 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT13-060-effect2",
       "recorded_at": "2026-10-06T14:14:19.861295600+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT13-060#effect#2:scope:neg": {
+      "interaction_id": "probe:BT13-060#effect#2:scope:neg",
+      "card_ids": [
+        "BT13-060"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "803c246768ba4eb973ea9530879108996c74c90f08b6878808c3fe321b2428ee",
+      "scenario_path": "qa/dcgo-exams/BT13/BT13-060-effect2-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT13-060-effect2-scope-neg",
+      "recorded_at": "2026-10-06T14:17:53.223689600+00:00"
     }
   }
 }
