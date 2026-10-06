@@ -325,11 +325,23 @@ class RunState:
         """Build from the ledgers, replay `events.jsonl`, reconcile, and log a
         creation row for every item the log has not seen. `write=False` is a
         read-only view (nothing is appended)."""
-        s = cls(run_id or plan["run_id"], run_dir, now=now, write=write)
         escalated = load_escalated_items(paths.escalations_dir)
-        s._escalated = escalated
-        s._has_spec = _yaml_ids(paths.cards_dir)
-        for seed in build_items(plan, paths, escalated=escalated):
+        seeds = build_items(plan, paths, escalated=escalated)
+        return cls.from_seeds(run_id or plan["run_id"], run_dir, seeds, now=now, write=write,
+                              escalated=escalated, has_spec=_yaml_ids(paths.cards_dir))
+
+    @classmethod
+    def from_seeds(cls, run_id: str, run_dir: str | os.PathLike, seeds: Iterable[ItemSeed], *,
+                   now: Callable[[], str] = utc_now_iso, write: bool = True,
+                   escalated: Mapping[str, Path] | None = None,
+                   has_spec: Iterable[str] = ()) -> "RunState":
+        """`open` without the ledger build: items given directly (driver tests,
+        the end-to-end fake run). `escalated` = the open escalation files,
+        `has_spec` = card ids with a YAML spec, both as resume reconciliation sees them."""
+        s = cls(run_id, run_dir, now=now, write=write)
+        s._escalated = dict(escalated or {})
+        s._has_spec = set(has_spec)
+        for seed in seeds:
             s.records[seed.item] = ItemRecord(item=seed.item, state=seed.origin.state,
                                               data={**seed.data, **seed.origin.data})
             s.meta[seed.item] = seed.meta
@@ -366,8 +378,11 @@ class RunState:
 
     def _event(self, rec: ItemRecord, dst: str, *, reason: str, stage=None, attempt_id=None,
                item_data=None, event_data=None, count=(), reset_attempts=False,
-               extra_driver: Mapping | None = None) -> Event:
+               attempt_ids: Iterable[str] = (), extra_driver: Mapping | None = None) -> Event:
         drv = dict(extra_driver or {})
+        attempt_ids = list(attempt_ids)
+        if len(attempt_ids) > 1 or (attempt_ids and attempt_ids[0] != attempt_id):
+            drv["attempt_ids"] = attempt_ids
         if item_data:
             drv["item_data"] = dict(item_data)
         if count:
@@ -386,22 +401,26 @@ class RunState:
     def transition(self, item: str, dst: str, *, reason: str, stage: str | None = None,
                    attempt_id: str | None = None, item_data: Mapping | None = None,
                    event_data: Mapping | None = None, count: Iterable[str] = (),
-                   reset_attempts: bool = False) -> Event:
-        """Validate (design D4), log, then apply one transition."""
+                   reset_attempts: bool = False, attempt_ids: Iterable[str] = ()) -> Event:
+        """Validate (design D4), log, then apply one transition. `attempt_ids`
+        lists every worker attempt behind the step when there is more than one
+        (a two-family termination check); `attempt_id` is the first."""
         rec = self.records[item]
         check_transition(rec.kind, rec.state, dst)
         return self._event(rec, dst, reason=reason, stage=stage, attempt_id=attempt_id,
                            item_data=item_data, event_data=event_data, count=tuple(count),
-                           reset_attempts=reset_attempts)
+                           reset_attempts=reset_attempts, attempt_ids=attempt_ids)
 
     def note(self, item: str, *, reason: str, stage: str | None = None,
              attempt_id: str | None = None, item_data: Mapping | None = None,
-             event_data: Mapping | None = None, count: Iterable[str] = ()) -> Event:
+             event_data: Mapping | None = None, count: Iterable[str] = (),
+             attempt_ids: Iterable[str] = ()) -> Event:
         """A `src == dst` row: the item stayed put (merge failure, refused
         outcome, executor error) but data or attempt counters changed."""
         rec = self.records[item]
         return self._event(rec, rec.state, reason=reason, stage=stage, attempt_id=attempt_id,
-                           item_data=item_data, event_data=event_data, count=tuple(count))
+                           item_data=item_data, event_data=event_data, count=tuple(count),
+                           attempt_ids=attempt_ids)
 
     def _force(self, item: str, dst: str, *, reason: str, item_data=None,
                reset_attempts: bool = False) -> Event:
@@ -491,12 +510,18 @@ class RunState:
     def priority(self, item: str) -> tuple:
         return priority_key(item, self.meta.get(item, ItemMeta()))
 
-    def requirements_met(self, item: str) -> bool:
+    def unmet_requirements(self, item: str) -> list[str]:
+        """Card items this item waits on that are not IMPLEMENTED yet. A
+        required card with no item in the run (it had a spec) is met."""
+        out = []
         for req in self.meta.get(item, ItemMeta()).requires:
             rec = self.records.get(req)
             if rec is not None and rec.state != "IMPLEMENTED":
-                return False
-        return True
+                out.append(req)
+        return out
+
+    def requirements_met(self, item: str) -> bool:
+        return not self.unmet_requirements(item)
 
     def reenter_available(self, cards: Iterable[str]) -> list[str]:
         """Items UNAVAILABLE only because the plan found no DCGO script, one of
