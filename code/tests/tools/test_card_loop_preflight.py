@@ -309,9 +309,35 @@ def test_a_class_namespaced_under_another_set_does_not_resolve(asset_dcgo):
     assert "EmptyEffectClass" in res["BT12-036"].mechanism
 
 
+def test_two_classes_in_one_file_both_resolve(asset_dcgo):
+    # BT25_002.cs declares BT25_002 AND BT25_003: one file, two cards.
+    _asset(asset_dcgo, "BT25-002", "BT25_002")
+    assert dcgo_script_presence(["BT25-002", "BT25-003"], asset_dcgo) == {
+        "BT25-002": "Assets/Scripts/CardEffect/BT25/Yellow/BT25_002.cs",
+        "BT25-003": "Assets/Scripts/CardEffect/BT25/Yellow/BT25_002.cs",
+    }
+
+
+def test_the_whole_tree_is_scanned_at_most_once_per_call(asset_dcgo, monkeypatch):
+    # Unresolvable classes (vanilla cards, cross-set namespaces) must not each
+    # re-read every CardEffect file.
+    for i in range(5):
+        _asset(asset_dcgo, f"BT12-{100 + i}", "BT10_045")
+    files = len(list((asset_dcgo / "Assets" / "Scripts" / "CardEffect").rglob("*.cs")))
+    calls = []
+    real = pf._class_declarations
+    monkeypatch.setattr(pf, "_class_declarations", lambda p: calls.append(p) or real(p))
+    res = dcgo_script_resolution([f"BT12-{100 + i}" for i in range(5)], asset_dcgo)
+    assert all(r.path is None for r in res.values())
+    assert len(calls) <= files + 5   # one tree scan + one natural-file read per card
+
+
 def test_an_asset_with_no_class_is_unavailable(asset_dcgo):
+    # A vanilla card's asset has an empty `CardEffectClassName:`; the next
+    # line ("CardID: ...", "DP: 3000") must not be read as the class name.
     res = dcgo_script_resolution(["BT3-099"], asset_dcgo)
     assert res["BT3-099"].path is None
+    assert "names no CardEffectClassName" in res["BT3-099"].mechanism
     assert "EmptyEffectClass" in res["BT3-099"].mechanism
 
 

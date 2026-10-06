@@ -302,7 +302,10 @@ def _card_base_entity_dir(root: Path) -> Path:
 # card with no asset (all of EX13 at this DCGO) is absent from DCGO's card list
 # whatever scripts exist, and a class namespaced under another set (BT12-036 ->
 # `DCGO.CardEffects.BT10.BT10_045`) never resolves: both are `unavailable`.
-_ASSET_CLASS_RE = re.compile(r"^\s*CardEffectClassName:\s*['\"]?([^'\"\r\n]*?)['\"]?\s*$", re.M)
+# Horizontal whitespace only: a vanilla card's `CardEffectClassName:` is empty
+# and the next line ("DP: 3000") must not be read as its value.
+_ASSET_CLASS_RE = re.compile(
+    r"^[ \t]*CardEffectClassName:[ \t]*['\"]?([^'\"\r\n]*?)['\"]?[ \t]*\r?$", re.M)
 _NAMESPACE_RE = re.compile(r"^\s*namespace\s+([\w.]+)", re.M)
 
 
@@ -328,46 +331,61 @@ def _find_asset(root: Path, card_id: str, cache: dict[str, dict[str, Path]]) -> 
     return cache[set_name].get(card_id.replace("-", "_"))
 
 
-def _declares_class(path: Path, class_name: str, namespaces: tuple[str, ...]) -> bool:
-    """Does `path` declare `class <class_name> : CEntity_Effect` in one of
-    `namespaces` ("" = the global namespace)?"""
+_CLASS_DECL_RE = re.compile(r"\bclass\s+(\w+)\s*:\s*CEntity_Effect\b")
+
+
+def _class_declarations(path: Path) -> list[tuple[str, str]]:
+    """`[(class name, namespace)]` for each `class X : CEntity_Effect` in a
+    file ("" = the global namespace). One file can hold several cards'
+    classes (BT25_002.cs declares BT25_003 too)."""
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
-        return False
-    m = re.search(rf"\bclass\s+{re.escape(class_name)}\s*:\s*CEntity_Effect\b", text)
-    if not m:
-        return False
-    ns = [n.group(1) for n in _NAMESPACE_RE.finditer(text, 0, m.start())]
-    return (ns[-1] if ns else "") in namespaces
+        return []
+    out = []
+    for m in _CLASS_DECL_RE.finditer(text):
+        ns = [n.group(1) for n in _NAMESPACE_RE.finditer(text, 0, m.start())]
+        out.append((m.group(1), ns[-1] if ns else ""))
+    return out
 
 
-def _resolve_effect_class(root: Path, card_id: str, class_name: str) -> Path | None:
-    """The file declaring the class `AddCardEffect` would attach, or None."""
+class _ClassIndex:
+    """Class name -> [(namespace, file)] over the whole CardEffect tree, built
+    at most once per resolution call and only when a class is not in the file
+    named after it."""
+
+    def __init__(self, effect_dir: Path):
+        self._dir = effect_dir
+        self._index: dict[str, list[tuple[str, Path]]] | None = None
+
+    def lookup(self, class_name: str) -> list[tuple[str, Path]]:
+        if self._index is None:
+            self._index = {}
+            for path in sorted(self._dir.rglob("*.cs")):
+                for name, ns in _class_declarations(path):
+                    self._index.setdefault(name, []).append((ns, path))
+        return self._index.get(class_name, [])
+
+
+def _resolve_effect_class(root: Path, card_id: str, class_name: str,
+                          index: _ClassIndex) -> Path | None:
+    """The file declaring the class `AddCardEffect` would attach, or None:
+    the global type first, then the card-set (or Tokens) namespace."""
     card_set = card_id.partition("-")[0]
     scoped = "DCGO.CardEffects.Tokens" if "token" in class_name else f"DCGO.CardEffects.{card_set}"
-    namespaces = ("", scoped)
-    effect_dir = _card_effect_dir(root)
-
-    def candidates() -> Iterable[Path]:
-        # Usually the file named after the class (`BT1_016` -> BT1/Red/BT1_016.cs).
-        natural = _dcgo_script_path(root, class_name.replace("_", "-", 1).removesuffix("_token"))
-        if natural is not None:
-            yield natural.with_name(f"{class_name}.cs")
-        # Else another file of the card's or the class's set (BT25_003 is
-        # declared in BT25_002.cs), and only then anywhere.
-        for set_dir in dict.fromkeys([card_set, class_name.partition("_")[0]]):
-            if (effect_dir / set_dir).is_dir():
-                yield from sorted((effect_dir / set_dir).rglob("*.cs"))
-        yield from sorted(effect_dir.rglob("*.cs"))
-
-    seen: set[Path] = set()
-    for path in candidates():
-        if path in seen or not path.is_file():
-            continue
-        seen.add(path)
-        if _declares_class(path, class_name, namespaces):
-            return path
+    # Fast path: the file named after the class (`BT1_016` -> BT1/Red/BT1_016.cs).
+    # (It skips the theoretical global duplicate of a namespaced class.)
+    natural = _dcgo_script_path(root, class_name.replace("_", "-", 1).removesuffix("_token"))
+    if natural is not None:
+        natural = natural.with_name(f"{class_name}.cs")
+        decls = {ns for name, ns in _class_declarations(natural) if name == class_name}
+        if decls & {"", scoped}:
+            return natural
+    found = index.lookup(class_name)
+    for wanted in ("", scoped):
+        for ns, path in found:
+            if ns == wanted:
+                return path
     return None
 
 
@@ -396,6 +414,7 @@ def dcgo_script_resolution(
                          DcgoScript(None, "no script file named after the card"))
         return out
     assets: dict[str, dict[str, Path]] = {}
+    index = _ClassIndex(_card_effect_dir(root))
     out = {}
     for card in pool:
         asset = _find_asset(root, card, assets)
@@ -408,7 +427,7 @@ def dcgo_script_resolution(
             out[card] = DcgoScript(None, "asset names no CardEffectClassName: DCGO "
                                          "attaches EmptyEffectClass (no effects)")
             continue
-        path = _resolve_effect_class(root, card, class_name)
+        path = _resolve_effect_class(root, card, class_name, index)
         if path is None:
             out[card] = DcgoScript(None, f"asset class {class_name} does not resolve in "
                                          f"DCGO.CardEffects.{card.partition('-')[0]}: DCGO "
