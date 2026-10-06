@@ -1,6 +1,7 @@
 """merge_wave (harden-card-authoring-pipeline tasks 1.2, 1.4): manifest-filtered
 3-way apply, registration assertion, pack check hook, idempotency, wave summary."""
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -201,8 +202,9 @@ def test_stale_base_is_refused(repo, tmp_path):
 
 def test_conflict_rolls_back_only_what_it_touched(repo, tmp_path):
     root, base = repo
-    art = worker(root, base, tmp_path, "a", {**CARD_029, "notes.txt": b"one\nTWO\nthree\n"})
-    (root / "notes.txt").write_bytes(b"one\n2\nthree\n")
+    y001 = f"{ENG}/cards/bt21/BT21-001.yaml"
+    art = worker(root, base, tmp_path, "a", {**CARD_029, y001: b"id: BT21-001\nname: W\n"})
+    (root / y001).write_bytes(b"id: BT21-001\nname: R\n")
     git(root, "commit", "-qam", "conflicting edit")
     (root / "unrelated.txt").write_bytes(b"driver scratch\n")      # someone else's dirty file
     head_mod = (root / CB / "bt21/mod.rs").read_bytes()
@@ -211,7 +213,7 @@ def test_conflict_rolls_back_only_what_it_touched(repo, tmp_path):
 
     assert not res.ok and "git apply --3way failed" in res.errors[0]
     assert res.rolled_back and res.applied == [] and res.registered == []
-    assert (root / "notes.txt").read_bytes() == b"one\n2\nthree\n"
+    assert (root / y001).read_bytes() == b"id: BT21-001\nname: R\n"
     assert (root / CB / "bt21/mod.rs").read_bytes() == head_mod
     assert not (root / ENG / "cards/bt21/BT21-029.yaml").exists()
     assert not (root / CB / "bt21/bt21_029.rs").exists()
@@ -240,17 +242,148 @@ def test_content_hashes_ignore_line_endings():
     assert hashlib.sha256(b"a\r\nb\r\n").hexdigest() in mw.content_hashes(lf)
 
 
-def test_harden_style_manifest_with_bare_paths(repo, tmp_path):
+def test_harden_style_manifest(repo, tmp_path):
+    """harden D1's manifest: `files: [{path, sha256}]` beside card/verdict/... (no status)."""
     root, base = repo
     art = worker(root, base, tmp_path, "a", CARD_029)
+    files = [{"path": f["path"], "sha256": f["sha256"]}
+             for f in json.loads(Path(art["manifest"]).read_text())["files"]]
     Path(art["manifest"]).write_text(json.dumps({
-        "card": "BT21-029", "verdict": "IMPLEMENTED", "files": sorted(CARD_029),
+        "card": "BT21-029", "verdict": "IMPLEMENTED", "files": files,
         "test_result_lines": ["test result: ok. 1 passed"], "notes": "", "gaps": []}))
 
     res = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
     assert res.ok and res.touched == sorted(CARD_029)
     again = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
     assert again.noop, again.errors
+
+
+def test_manifest_entry_without_sha256_is_refused(repo, tmp_path):
+    root, base = repo
+    art = worker(root, base, tmp_path, "a", CARD_029)
+    Path(art["manifest"]).write_text(json.dumps({"base_sha": base, "files": sorted(CARD_029)}))
+    res = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
+    assert not res.ok and "sha256" in res.errors[0]
+    assert status(root) == ""
+
+
+# --- path safety (security review) ---------------------------------------------------------
+
+
+def rewrite_manifest(art, mutate):
+    manifest = json.loads(Path(art["manifest"]).read_text())
+    mutate(manifest)
+    Path(art["manifest"]).write_text(json.dumps(manifest))
+
+
+def assert_untouched(root, tmp_path):
+    assert status(root) == ""
+    assert git(root, "diff", "--cached", "--name-only") == ""
+    assert not (tmp_path / "outside.yaml").exists()
+
+
+def test_manifest_path_traversal_is_refused(repo, tmp_path):
+    root, base = repo
+    art = worker(root, base, tmp_path, "a", CARD_029)
+    rewrite_manifest(art, lambda m: m["files"].append(
+        {"path": "../outside.yaml", "status": "A", "sha256": "0" * 64}))
+
+    res = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
+
+    assert not res.ok
+    assert any("../outside.yaml" in e and "'..'" in e for e in res.errors), res.errors
+    assert_untouched(root, tmp_path)
+
+
+@pytest.mark.parametrize("bad", ["C:/Windows/evil.yaml", "/etc/evil.yaml", "c:evil.yaml",
+                                 "code\\digimon-engine\\cards\\x.yaml"])
+def test_absolute_or_non_canonical_manifest_path_is_refused(repo, tmp_path, bad):
+    root, base = repo
+    art = worker(root, base, tmp_path, "a", CARD_029)
+    rewrite_manifest(art, lambda m: m["files"].append({"path": bad, "status": "A", "sha256": "0" * 64}))
+    res = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
+    assert not res.ok and any(bad in e for e in res.errors), res.errors
+    assert_untouched(root, tmp_path)
+
+
+def test_path_outside_the_allowed_roots_is_refused(repo, tmp_path):
+    root, base = repo
+    art = worker(root, base, tmp_path, "a", {**CARD_029, "notes.txt": b"rewritten\n",
+                                             ".git-hooks/pre-commit": b"#!/bin/sh\n"})
+    res = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
+    assert not res.ok
+    assert sorted(e.split(":", 1)[0] for e in res.errors) == [".git-hooks/pre-commit", "notes.txt"]
+    assert all("outside the allowed roots" in e for e in res.errors)
+    assert (root / "notes.txt").read_bytes() == BASE_FILES["notes.txt"]
+    assert_untouched(root, tmp_path)
+
+
+def test_path_policy_unit():
+    ok = f"{ENG}/cards/bt21/BT21-029.yaml"
+    assert mw.path_problem(ok) is None
+    assert mw.path_problem("qa/dsl-vocab-gaps.md") is None
+    assert "outside the allowed roots" in mw.path_problem("qa/dsl-vocab-gaps.md.bak")
+    for bad in ("../x", f"{ENG}/cards/../../x.yaml", f"{ENG}/cards/./x.yaml", f"{ENG}/cards//x.yaml",
+                f"{ENG}/cards/x.yaml:stream", f"{ENG}/cards/.git/config", f"{ENG}/cards/x.",
+                "-rf", "", f"{ENG}/cards/x\0.yaml"):
+        assert mw.path_problem(bad) is not None, bad
+    assert mw.canonical("./code/x") == "code/x" and mw.canonical("../x") == "../x"
+
+
+SYMLINK_DIFF = (
+    "diff --git a/{p} b/{p}\n"
+    "new file mode 120000\n"
+    "index 0000000000000000000000000000000000000000..1111111111111111111111111111111111111111\n"
+    "--- /dev/null\n"
+    "+++ b/{p}\n"
+    "@@ -0,0 +1 @@\n"
+    "+../../../../../outside.yaml\n"
+    "\\ No newline at end of file\n")
+
+
+def test_symlink_creating_diff_is_refused(repo, tmp_path):
+    root, base = repo
+    p = f"{ENG}/cards/bt21/BT21-099.yaml"
+    diff = tmp_path / "evil.diff"
+    diff.write_bytes(SYMLINK_DIFF.format(p=p).encode())
+    manifest = tmp_path / "evil.json"
+    manifest.write_text(json.dumps({"base_sha": base, "files": [
+        {"path": p, "status": "A", "sha256": "0" * 64}]}))
+
+    res = mw.apply_manifest_diff(root, diff, manifest, base)
+
+    assert not res.ok and any("symlink" in e and p in e for e in res.errors), res.errors
+    assert not (root / p).exists() and not os.path.lexists(root / p)
+    assert_untouched(root, tmp_path)
+
+
+def make_link(link: Path, target: Path) -> None:
+    """A directory symlink, or a junction where symlinks need privileges (Windows)."""
+    try:
+        os.symlink(target, link, target_is_directory=True)
+        return
+    except (OSError, NotImplementedError):
+        pass
+    try:
+        import _winapi
+        _winapi.CreateJunction(str(target), str(link))
+    except (ImportError, OSError) as e:
+        pytest.skip(f"cannot create a symlink or junction here: {e}")
+
+
+def test_diff_under_an_existing_symlink_is_refused(repo, tmp_path):
+    root, base = repo
+    art = worker(root, base, tmp_path, "a", {f"{ENG}/cards/evil/BT21-099.yaml": b"id: BT21-099\n"})
+    outside = tmp_path / "outside-dir"
+    outside.mkdir()
+    make_link(root / ENG / "cards" / "evil", outside)
+
+    res = mw.apply_manifest_diff(root, art["diff"], art["manifest"], base)
+
+    assert not res.ok and any("symlink" in e or "outside the repository" in e
+                              for e in res.errors), res.errors
+    assert list(outside.iterdir()) == []
+    assert git(root, "diff", "--cached", "--name-only") == ""
 
 
 # --- commands ------------------------------------------------------------------------------
