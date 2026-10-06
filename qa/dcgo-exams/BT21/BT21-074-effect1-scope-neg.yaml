@@ -1,0 +1,52 @@
+# Adversarial negative probe: Satellamon (BT21-074) clause BT21-074#effect#1.
+# "By placing 1 [Appmon] or [Three Musketeers] trait card from your hand or
+#  trash ..." -- scope of the tuck card. The hand holds ONLY near-miss cards:
+#  four Dark Animal/Iliad/[TS] Digimon (BT25-082, whose text mentions
+#  [Three Musketeers] but whose trait line does not carry it). Scopemon
+#  (BT21-071, the Appmon card) is buried in the security stack, trash is empty.
+#  [On Play] must find no qualifying card: no prompt, no digivolution card,
+#  no protections. DCGO's CanTuckOrTrash = EqualsTraits("Appmon") ||
+#  HasThreeMusketeersTraits; the script's canSelectHand/canSelectTrash are both
+#  false so nothing is asked at all. A divergence would be either engine
+#  treating [TS] / "Three Musketeers in text" as the trait.
+card: BT21-074
+clause: BT21-074#effect#1
+seed: 424242
+meta: {produced_by: 20261006T141913695147Z-pilot-three-musketeers-2dddcc}
+interaction: {id: "probe:BT21-074#effect#1:scope:neg", source: probe, kind: negative}
+covers: [BT21-074#effect#1]
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security; stack[10] = T3 draw.
+    stack: [BT21-074, BT25-082, BT25-082, BT25-082, BT25-082,
+            BT24-088, BT24-088, BT24-088, BT21-071, BT25-058,
+            BT25-092]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-02, ST1-04,
+            BT1-009]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Play Satellamon (7: 3 -> -4). [On Play] has no qualifying card: nothing asked.
+  - actor: 0
+    do: { play: { card: BT21-074, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
