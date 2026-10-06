@@ -1,0 +1,44 @@
+# card-loop configuration (python -m tools.card_loop run --config <this file>).
+# Every key overrides a LoopConfig default (code/tools/card_loop/config.py).
+# Copy to a local file; the oracle paths are machine-specific.
+
+# The DCGO oracle node (dcgo-harness --root / --build). Both are needed for the
+# ORACLE stage; without them preflight only warns and no oracle exam can run.
+harness_root = "C:/Users/james/AppData/LocalLow/DCGO/DCGO/dcgo_harness"
+player_dir = "D:/dcgo-build/scripted-v19"
+
+# Stopping (design D13). An unattended run should always carry a USD cap.
+budget_usd = 25.0
+wall_clock_hours = 6.0
+plateau_attempts = 10
+
+# Worker concurrency and the warm worktree pool (rule 31: targets under D:).
+concurrency = 3
+worktree_pool_size = 3
+cargo_target_base = "D:/cargo-target"
+sccache_dir = "D:/sccache"
+
+# Routing defaults (design D12) until the scorecard has >= 30 samples per cell.
+[routes]
+implement = "claude"
+review = "codex"
+author_clause = "claude"
+author_interaction = "claude"
+triage = "claude"
+classify_qa = "claude"
+encode_ruling = "claude"
+fix_card = "claude"
+fix_engine = "codex"
+
+[models.claude]
+model = "sonnet"
+
+[models.codex]
+effort = "high"
+
+# USD per million tokens for Codex, which reports tokens but no cost. Leave a
+# price unset to record cost as unknown rather than guessed.
+# [prices.codex]
+# input = 1.25
+# cached_input = 0.125
+# output = 10.0
