@@ -1,0 +1,111 @@
+# Q6395: LadyDevimon's [When Attacking] "By trashing 1 Option card from any of your
+# Digimon's digivolution cards, you may use 1 [Three Musketeers] trait Option card
+# from your trash with the cost reduced by 3" -- can the card trashed as the cost be
+# BeelStarmon BT25-085 (a DUAL card: Digimon face, Option face) and then be the card
+# used from the trash?
+#
+#   T1 (P0): pass.  T2 (P1): pass.
+#   T3 (P0, 3): play LadyDevimon (3 -> -4). Her [On Play] tucks the only [Three
+#            Musketeers] TRAIT card in hand -- BeelStarmon BT25-085 -- under herself
+#            (the only own Digimon), then <Draw 1>. This is the ONLY way the dual
+#            card reaches the digivolution cards without being on the board.
+#   T4 (P1): pass (hands P0 the usual 3).
+#   T5 (P0, 3): LadyDevimon (alone on the board: field.0 on both engines) attacks
+#            security. THE CLAUSE: trash BT25-085 from her digivolution cards, then
+#            use that same BT25-085 from the trash as an Option at cost 6 - 3 = 3
+#            (memory 3 -> 0). The Option's <Use Req. ([Three Musketeers] in text)> is
+#            met by LadyDevimon's text. P1 has no Digimon (nothing to delete), no
+#            [Three Musketeers] trait card is in hand/trash for the place half, and
+#            <Arts Digivolve> is offered on LadyDevimon and declined.
+#            The attack then checks 1 security: Biyomon (3000) loses to 7000.
+#
+# PROMPT SHAPE: same as BT25-083-effect2.yaml (optional gate sim-only; DCGO's
+# SelectPermanentEffect + SelectCardEffect over the digivolution cards vs our single
+# union-material pick; then SelectCardEffect over the trash). The dual card's [Main]
+# asks nothing on this board.
+card: BT25-083
+clause: BT25-083#effect#2
+meta: {produced_by: 20261006T183942809627Z-pilot-three-musketeers-6021c6}
+interaction: {id: "qa:Q6395", source: qa, kind: positive}
+covers: [BT25-083#effect#1, BT25-083#effect#2]
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-083, BT25-085, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            EX7-051, EX7-051, BT25-092]
+    rest: tm-q6395
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-03, ST1-04,
+            BT1-009, BT1-009, BT1-009, BT1-009, ST1-02,
+            ST1-04, ST1-04, ST1-04, ST1-05]
+    rest: quiet-q6395
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): LadyDevimon; [On Play] tucks BeelStarmon from hand.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-083, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { select: { cards: [BT25-085] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT25-083], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-085], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # Use BeelStarmon (Option face) from the trash for 3 (memory 3 -> 0).
+  - actor: 0
+    do: { select: { cards: [BT25-085] } }
+    expect: { prompt: SelectCardEffect }
+  # <Arts Digivolve> (LadyDevimon is Lv.5): decline, the Option is trashed.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # Security check resolves; memory 0, still P0's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert: []
