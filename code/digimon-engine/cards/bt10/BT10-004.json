@@ -19,8 +19,8 @@
   ],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When a Digimon is suspended by an effect, this Digimon gets +1000 DP for the turn.",
-  "inherited_effect_description_eng": "",
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When an effect suspends a Digimon, this Digimon gets +1000 DP for the turn.",
   "security_effect_description_eng": "",
   "evo_costs": [],
   "xros_req": ""

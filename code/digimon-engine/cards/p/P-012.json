@@ -17,7 +17,7 @@
   "type_eng": [],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "[Main] If you have a Digimon with [Veedramon] in its name, by suspending this Tamer, activate 1 of the effects below.\r\n・＜Draw 1＞ (Draw 1 card from your deck.)\r\n・1 of your Digimon gets +1000 DP for the turn.",
+  "effect_description_eng": "[Main] If you have a Digimon with [Veedramon] in its name, you may suspend this Tamer to activate one of the following effects:\r\n・Trigger ＜Draw 1＞ (Draw 1 card from your deck.)\r\n・1 of your Digimon gets +1000 DP for the turn.",
   "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
   "security_effect_description_eng": "",
   "evo_costs": [],

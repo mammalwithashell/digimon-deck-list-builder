@@ -18,7 +18,7 @@
   "type_eng": [],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "[Start of Your Main Phase] If you have 1 or fewer Digimon in play, you may play 1 [Terriermon] or [Lopmon] from your hand without paying the cost. Digimon played by this effect can't digivolve and are deleted at the end of your opponent's turn.\r\n[Your Turn] When one of your Digimon with [Terriermon] or [Lopmon] in its digivolution cards would digivolve, by suspending this Tamer, reduce the digivolution cost by 1.",
+  "effect_description_eng": "[Start of Your Main Phase] If you have 1 or fewer Digimon in play, you may play 1 [Terriermon] or [Lopmon] from your hand without paying the cost. Digimon played by this effect can't digivolve and are deleted at the next end of your opponent's turn.\r\n[Your Turn] When one of your Digimon with [Terriermon] or [Lopmon] in its digivolution cards would digivolve, by suspending this Tamer, reduce the digivolution cost by 1.",
   "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
   "security_effect_description_eng": "",
   "evo_costs": [],

@@ -57,6 +57,14 @@ REVIEWED = (
     "BT8-061", "BT13-006", "BT22-001", "BT24-020", "BT24-022", "EX10-069", "BT20-073", "BT24-025",
     # Its Virus attribute override (d3fb5686e) had never been applied to cards.json (2026-10-04).
     "BT25-044",
+    # Bandai's card errata, 2026-10-05 (code/tools/archive/apply_card_errata_2026_10.py;
+    # test_cards_json_errata.py holds the wording). The mirror still has the pre-errata text of
+    # ST10-06, EX2-028, EX2-053, EX3-069 and LM-013, with the same tokens.
+    "BT3-097", "BT8-110", "BT9-067", "BT9-071", "BT10-093", "BT10-096", "BT10-097", "BT10-107",
+    "BT12-037", "BT13-089", "BT14-002", "BT14-091", "BT16-060", "BT18-099", "BT23-078", "EX1-073",
+    "EX2-028", "EX2-053", "EX3-003", "EX3-008", "EX3-014", "EX3-023", "EX3-026", "EX3-035",
+    "EX3-045", "EX3-058", "EX3-069", "EX4-063", "EX4-071", "LM-013", "P-012", "P-029", "P-030",
+    "ST10-06", "ST16-11",
 )
 
 # What the card prints, where data/card_official.json is wrong (checked against the card

@@ -21,8 +21,8 @@
     "In-Training"
   ],
   "attribute_eng": [],
-  "effect_description_eng": "Inherited Effect [Your Turn] While your opponent has no Digimon with with as many or more digivolution cards than this Digimon, this Digimon gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.).",
-  "inherited_effect_description_eng": "",
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[Your Turn] While your opponent has no Digimon with as many or more digivolution cards as this Digimon, this Digimon gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.).",
   "security_effect_description_eng": "",
   "evo_costs": [],
   "xros_req": ""

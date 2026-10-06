@@ -19,7 +19,7 @@
   ],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "[Main] Reveal the top 6 cards of your deck. You may add 2 cards with the [Blue Flare] trait among them to your hand, and play 1 [Kiriha Aonuma] among them without paying its memory cost. Place the rest at the bottom of your deck in any order. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+  "effect_description_eng": "[Main] Reveal the top 6 cards of your deck. You may add 2 cards with [Blue Flare] in their traits among them to your hand, and play 1 [Kiriha Aonuma] among them without paying its memory cost. Place the rest at the bottom of your deck in any order. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
   "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
   "security_effect_description_eng": "",
   "evo_costs": [],

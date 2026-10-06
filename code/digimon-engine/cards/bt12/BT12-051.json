@@ -23,10 +23,15 @@
   "attribute_eng": [
     "Free"
   ],
-  "effect_description_eng": "[On Play] [When Digivolving] You may play 1 [Airu Suzaki], [Ren Tobari] or [Ryoma Mogami] from your hand without paying its cost.\r\n[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers.",
+  "effect_description_eng": "[On Play] [When Digivolving] You may play 1 [Airu Suzaki], [Ren Tobari], or [Ryoma Mogami] card from your hand without paying its cost.\r\n[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers.",
   "inherited_effect_description_eng": "[Your Turn] While this Digimon has ＜Save＞ in its text, it gets +2000 DP.",
   "security_effect_description_eng": "",
   "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    },
     {
       "card_color": 3,
       "level": 3,
