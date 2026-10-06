@@ -119,17 +119,31 @@ Verify the active corpus without mutation:
 cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- verify --goldens qa/replay-goldens --cards data/cards.json
 ```
 
-Generate the deterministic greedy corpus:
+Generate the deterministic greedy corpus. The committed corpus is 10 games of
+at most 64 actions from base seed 20260708; the binary's defaults (50 games of
+up to 256 actions) are the design's eventual size, not what is committed:
 
 ```bash
-cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- generate --deck-library data/deck_library.json --cards data/cards.json --out qa/replay-goldens
+cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- generate --deck-library data/deck_library.json --cards data/cards.json --out qa/replay-goldens --games 10 --max-steps 64 --seed 20260708
 ```
+
+`cards_hash` is a hash of the raw file bytes. On a Windows checkout
+(`core.autocrlf`), pass an LF copy (`git show HEAD:data/cards.json`) so the
+recorded hash matches the committed blob and what Linux CI would compute.
 
 Bless intended behavior changes:
 
 ```bash
 cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- bless --goldens qa/replay-goldens --cards data/cards.json
 ```
+
+`bless` rewrites the digests of games whose recorded actions still replay and
+retires the rest; it does not record replacements. To replace a retired game,
+run `generate` with the parameters above into a scratch directory and copy in
+only the retired games' files. A file name encodes the game index, deck pair
+and seed, so a replacement has its predecessor's name unless newly implemented
+decks changed the pairing. If every game retired, generate straight into
+`qa/replay-goldens`.
 
 Convert reconstructible legacy training recordings:
 
@@ -146,6 +160,30 @@ Review convention:
   replay payload and a reason. Do not silently delete unreconstructible games.
 - Generated corpus updates should state the command, game count, max-step
   budget, and seed used to produce them.
+
+When to re-bless (rule, 2026-10-05):
+
+- A change that moves any golden's digest stream re-blesses in the same commit
+  or PR, and the corpus diff is reviewed with it. Run `verify` before merging
+  any of the changes below. A corpus left red "for later" hides the next real
+  regression behind the old divergence.
+- Three kinds of change move the stream. All three hit the corpus between July
+  and October 2026 without a re-bless:
+  1. **The digest format**: anything `Game::verification_digest` hashes, which
+     includes its version tag, every hashed field, and the `Debug` text of
+     hashed types (a new field on `TriggerContext` or `PendingAttack` changes
+     it). A tag bump changes every digest at step 1 by construction
+     (`1c178b5ac`, v1 → v2).
+  2. **Engine or card behaviour** that a corpus game reaches.
+  3. **Card-data ingests that add or remove card ids**: `write_card` hashes
+     `data_index`, the card's rank in the sorted card DB, so a new set
+     renumbers every card sorting after it. The BT26 ingest (`4f59266a0`)
+     moved the first digest of every golden with no gameplay change.
+- Do not count on CI to flag a stale corpus. As of 2026-10-05, none of the 20
+  push-triggered tier-2 runs had reached the goldens: each stopped earlier, at
+  `determinism_guard` (8) or the tier-0 `impact_index_check` (12). Nightly
+  tier 3 failed every night for other reasons. So the corpus stayed red from
+  2026-07-12 to 2026-10-05 unnoticed.
 
 ---
 

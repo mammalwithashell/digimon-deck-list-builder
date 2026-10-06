@@ -4901,7 +4901,8 @@ The failing seed moved with the implemented-deck pool (decks are drawn from full
    `HashMap`); digest tag bumped to `v2`. Test:
    `infra::verification_digest::verification_digest_includes_pending_selection_prompt_and_resume`.
    (`qa/replay-goldens` already diverged at step 1 on this branch AND main before this change; they need a
-   `replay_corpus bless`.)
+   `replay_corpus bless`. Re-blessed 2026-10-05 in `e69e655fe`. The step-1 divergence predates this change:
+   the BT26 ingest renumbered the hashed `data_index`. See G-VERIFY-DIGEST-HASHES-INCIDENTAL-STATE.)
 3. **Rules check kept deleting past a parked deletion — EX12-036 `<Decode>` asked twice (seed 20260708005
    step 100, found by a 24-game sweep).** [G-ENGINE-RULES-CHECK-CONTINUES-PAST-PARKED-DELETION]
    `run_state_based_rules_check` deletes the ≤0-DP Digimon one by one; when Ryugumon's deletion parked its
@@ -4936,3 +4937,53 @@ The failing seed moved with the implemented-deck pool (decks are drawn from full
 - `CanNotSwitchAttackTarget` and `CannotSwitchAttackTarget` both exist; only the latter suppresses
   Block/Raid/redirects (BT26-021). AD1-011 Paildramon uses `CannotSwitchAttackTarget`. Candidate for
   consolidation; AD1-012's inherited aura uses the other spelling and should be checked.
+
+## Found by the replay-golden re-bless review (2026-10-05)
+
+Method: the July goldens (blessed `9b615fe29`) were replayed on the July engine (`d9fbcb3b7`, which reproduces
+all 602 recorded digests) and on main (`cc3a81a69`), with every token fed to `verification_digest` traced. With
+`data_index` masked and the v2-only fields dropped, the first remaining difference in each game is a real state
+change. Corpus re-blessed in `e69e655fe`.
+
+### Declining an optional `select_reveal` deletes the revealed cards  [G-ENGINE-DECLINED-REVEAL-LOSES-CARDS] — OPEN
+- `install_select_reveal` (`dsl_cards/step/selections.rs`) parks its `RunTail` frame with
+  `decline: ResumeDecline::None`, so a PASS drops the rest of the clause, including `place_remainder_on_deck`.
+  The revealed cards stay in `Game::revealed_cards` until `rotate_turn_player` (`game_phases.rs`) clears it,
+  and then they are in no zone at all: card conservation breaks.
+- Seen in 7 of the 10 July goldens and in 7 of the 10 regenerated ones, 2-5 cards per event. In the new corpus,
+  8 of the 12 events come right after a declined "Select 1 red card to add to your hand"; the other 4 follow a
+  TriggerOrder, BT21-081's optional trigger and a digivolve pick (untraced). The greedy policy passed on all
+  17 "Select 1 red card …" prompts in the new corpus.
+- DCGO `CardEffectCommons.SimplifiedRevealDeckTopCardsAndSelect` always places the remainder
+  (`RemainingCardsPlace`), whether or not anything was selected.
+- Cards with an optional `select_reveal` followed by `place_remainder_on_deck` (crude YAML scan): P-039,
+  P-103, P-107, P-151, P-206, P-235, P-236, BT24-100, EX11-027, EX7-074, LM-055.
+- A fix needs a decline path that still places the remainder (and runs any mandatory rest of the clause), a
+  card-conservation check (e.g. in `invariant_fuzz`), and a corpus re-bless.
+
+### P-103 Offense Training: illegal PASS on its reveal pick, then trashed instead of placed  [G-CARD-P103-OPTIONAL-REVEAL-PICK] — OPEN
+- DCGO `P_103.cs` calls `SimplifiedRevealDeckTopCardsAndSelect` with the default `canNoSelect = false`: when
+  a red card is revealed, the pick is mandatory. The YAML's `optional: true` exposes a PASS anyway (the
+  optional-on-mandatory pitfall). DCGO then calls `PlaceDelayOptionCards` unconditionally.
+- On that PASS, G-ENGINE-DECLINED-REVEAL-LOSES-CARDS also drops `place_self_as_delay_option`. Before
+  `58bab5ef5` (2026-10-03) `dispose_option`'s implicit Delay placement still seated P-103; since then
+  `explicit_self_placement` turns it into a Standard disposal and P-103 is trashed. This is the first gameplay
+  difference in 8 of the 10 July goldens.
+- Check the other optional reveal picks listed above for the same pitfall.
+
+### Verification digest hashes incidental state  [G-VERIFY-DIGEST-HASHES-INCIDENTAL-STATE] — OPEN
+- `write_card` hashes `data_index`, a card's rank in the sorted card DB, next to `card_id`, so an ingest that
+  adds card ids renumbers every card sorting after them. The BT26 ingest (`4f59266a0`, 104 ids) moved every
+  golden at step 1 with no gameplay change; the `7016e5c13` engine run with the pre-BT26 cards.json matches
+  all 10 at step 1 again.
+- `debug_field` hashes `Debug` text, so adding a field to a hashed struct changes the digest whenever a value
+  of that type is present. Observed: `TriggerContext` (`battle_deleter`, `battle_opponent_card`,
+  `event_cause_effect`) and `PendingAttack` (`battle_defender_deleted`).
+- Suggested fix: drop `data_index` (`card_id` already identifies the card) and hash evolving structs field by
+  field; bump the tag to v3 and re-bless in the same change (CLAUDE.md rule 34).
+
+### Golden divergence to triage: security-check trigger timing (July game 008, step 28)
+- July: P0 attacks, P1 declines to block, the checked card (BT24-016 Lamiamon) battles and is trashed, then
+  BT21-001 Gigimon's inherited "[Your Turn] [Once Per Turn] When your opponent's security stack is removed
+  from, …" digivolve prompt opens. Main opens that prompt while the checked card is still in
+  `pending_security`. Not yet checked against `general_rule.pdf` or DCGO; it may be an intended timing fix.

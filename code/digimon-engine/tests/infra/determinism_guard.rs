@@ -112,13 +112,19 @@ fn verification_replay_digests_are_process_deterministic() {
         String::from_utf8_lossy(&output.stderr)
     );
 
+    // Search inside lines, not at their start: the helper inherits
+    // RUST_TEST_THREADS, and single-threaded libtest (CI tier 2/3 set it to 1)
+    // prints `test <name> ... ` before running the test, so the marker lands
+    // mid-line after that prefix.
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let line = stdout
+    let stream_json = stdout
         .lines()
-        .find(|line| line.starts_with(DIGEST_STREAM_PREFIX))
+        .find_map(|line| {
+            line.find(DIGEST_STREAM_PREFIX)
+                .map(|at| &line[at + DIGEST_STREAM_PREFIX.len()..])
+        })
         .unwrap_or_else(|| panic!("digest helper did not print stream marker; stdout={stdout}"));
-    let cross_process: Vec<u64> =
-        serde_json::from_str(&line[DIGEST_STREAM_PREFIX.len()..]).unwrap();
+    let cross_process: Vec<u64> = serde_json::from_str(stream_json).unwrap();
 
     assert_eq!(
         first, cross_process,
