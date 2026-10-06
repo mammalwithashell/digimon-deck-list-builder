@@ -260,6 +260,7 @@ artifact regenerated (`report` prints the regenerate command).
   does.
 - Engine fixes wait for a human to merge their branch; the item sits in GATE
   with `engine_wait` until that branch is an ancestor of the run tree.
-- The first pilots' cost measurement (change task 8.2) is still open; Codex
-  reports tokens but no price, so its share is unpriced until
-  `[prices.codex]` is set.
+- Codex reports tokens but no price, so its share of a run is unpriced until
+  `[prices.codex]` is set. The first two pilots' costs and scorecard are in
+  `qa/card-loop/pilot-costs-2026-10-06.md` (marginal ≈ $1 per adjudication on
+  Sonnet, all-in ≈ $2.5 including work that did not adjudicate).
