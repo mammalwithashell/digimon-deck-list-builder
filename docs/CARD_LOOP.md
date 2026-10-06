@@ -105,6 +105,14 @@ clause/int:  PENDING → [CLASSIFY] → AUTHORING → [ENCODE] → SIM → ORACL
   the heartbeat still names that job, so two runs sharing a player do not
   restart it twice. A retry whose identical job is still on the player waits
   for it; a claim the heartbeat no longer names is set aside under `aside/`.
+- **Triage** classifies an oracle divergence `ours_wrong` (→ FIX), `dcgo_quirk`
+  / `unreachable` (→ the two-family termination check), `scenario_wrong` (→
+  back to AUTHORING with the objection: the exam picks the wrong card, asserts
+  at the wrong step, or its `expect_ruling:` claims something the answer does
+  not decide) or `undetermined` (→ ESCALATED). A ruling's `expect_ruling:`
+  entries claim only the keys they name: `{card_id, sources}` matches a
+  projected permanent that also carries `dp`, and a bare card id matches the
+  entry with that `card_id`.
 - **An interaction waits** (`waits for <clause> (FIX)` in the blocked report)
   while any clause of its card is DIVERGED / TRIAGE / FIX / GATE: the engine
   under the exam is about to change, and an exam authored now fails the very
@@ -168,7 +176,9 @@ DCGO's C#, then the card data), then either
 - fix the card / scenario and delete the file; `resume` re-enters the item.
 
 Deleting the file alone withdraws the escalation: `resume` puts the item back
-at its ledger state with its attempt counters reset. Do that for escalations
+at its ledger state (a ledger `diverged` re-measures from PENDING — it is a
+finding, not an adjudication) with its attempt counters and stage data
+reset. Do that for escalations
 the tooling caused (an `oracle_retry 3/3` behind a stalled player, a merge the
 transport refused) rather than re-planning the run. The files live in the run
 tree (`<run tree>/qa/card-loop/escalations/`) and are committed there.
