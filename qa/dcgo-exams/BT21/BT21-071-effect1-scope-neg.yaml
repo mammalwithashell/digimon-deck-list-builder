@@ -1,0 +1,82 @@
+# NEGATIVE scope probe: Scopemon (BT21-071), clause BT21-071#effect#1 --
+# "[On Play] [When Digivolving] By placing 1 card with the [Appmon] or [Three
+#  Musketeers] trait from your hand or trash as 1 of your Digimon's bottom
+#  digivolution card, gain 1 memory."
+#
+# Extends BT21-071-effect1.yaml (oracle-confirmed positive line) with ONE change:
+# the hand holds NO card in the clause's scope. The near-misses are deliberate:
+#   - BT24-088 / BT25-092 Asuna Shiroki: [TS]-trait Tamers whose TEXT says
+#     "Three Musketeers". DCGO's CanTuckCondition is
+#     EqualsTraits("Appmon") || HasThreeMusketeersTraits, and
+#     HasThreeMusketeersTraits is CardTraits.Contains("Three Musketeers") -- a
+#     TRAIT test, not a text test ("[Three Musketeers] trait", not "in its
+#     text"). So the clause must NOT see them.
+#   - ST1-02 Biyomon: [Bird], no scope trait at all.
+# The trash is empty. The tuck card P-180 of the positive line is gone.
+#
+# DCGO shape (BT21_071.cs, region "On Play"): CanActivateConditionShared only
+# needs hand >= 1 and an own Digimon, so the OptionalSkill yes/no IS asked.
+# On yes, canSelectHand = canSelectTrash = false, so the whole body is skipped:
+# no zone question, no SelectHandEffect, no SelectPermanentEffect, no
+# AddDigivolutionCardsBottom, NO AddMemory. Our engine parks nothing at all, so
+# the OptionalSkill row is wire-only (dcgo_only), as in the positive line.
+#
+# Memory is engineered as in the positive line: P1 overspends on T2, P0 has 5
+# on T3, Scopemon (cost 4) takes it to 1. A firing clause would make it 2; the
+# oracle backfill must read 1, Scopemon with NO digivolution sources, and every
+# hand card still in hand.
+card: BT21-071
+clause: BT21-071#effect#1
+covers: [BT21-071#effect#1]
+interaction: {id: "probe:BT21-071#effect#1:scope:neg", source: probe, kind: negative}
+meta: {produced_by: 20261006T134840115383Z-pilot-three-musketeers-6004b7}
+seed: 424242
+decks:
+  p0:
+    stack: [BT21-071, BT24-088, ST1-02, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-08, ST1-03, ST1-03, ST1-03,
+            ST1-02, ST1-02, ST1-02, ST1-04, ST1-04,
+            ST1-03, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): overspend to 5 on P0's side.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (P0, 5): play Scopemon with only out-of-scope cards in hand.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO asks the OptionalSkill (hand non-empty); accept it and nothing follows.
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # Memory must still be 1 (the clause gave nothing). The assert reads the
+  # pre-step state here.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
