@@ -1256,3 +1256,72 @@ def test_the_run_exports_dcgo_fork_candidates_from_the_three_way_legs(tmp_path):
     assert rows[0]["card_ids"] == ["BT1-001"] and rows[0]["scenario_path"].endswith("Q1601.yaml")
     commits = cmds.argvs("git", "commit")
     assert any("DCGO fork candidates" in c[c.index("-m") + 1] for c in commits), commits
+
+
+# --------------------------------------------------------------------------- the run-tree harness
+
+
+def _rust_tree(tmp_path):
+    tree = tmp_path / "tree"
+    tree.mkdir()
+    (tree / "Cargo.toml").write_text("[workspace]\n", encoding="utf-8")
+    return tree
+
+
+def test_the_driver_builds_and_pins_a_harness_from_the_run_tree(tmp_path):
+    # SIM and ORACLE must judge the RUN TREE's engine (where the loop's card
+    # fixes land). The first Data Squad pilot's harness lookup fell through to
+    # the developer checkout's binary, so a landed fix never reached the oracle
+    # and every fixed card diverged again.
+    import os
+    from tools.card_loop.stages import harness as hz
+    cmds = _tree_cmds().on(("cargo", "build"), 0)
+    tree = _rust_tree(tmp_path)
+    h = Harness(tmp_path, [seed(C1, "ORACLE")], [oracle_confirms()], run_command=cmds, repo=tree,
+                manage_tree=True)
+    result = h.run()
+    assert h.states() == {C1: "CONFIRMED"} and result.stop.reason == "complete"
+    builds = [c for c in cmds.calls if c["argv"][:2] == ["cargo", "build"]]
+    assert len(builds) == 1, "one build per session when nothing engine-side changed"
+    target = os.path.join(h.config.cargo_target_base, "tree")
+    assert builds[0]["argv"][2:] == ["-p", "dcgo-harness", "--target-dir", target]
+    assert builds[0]["cwd"] == str(tree)
+    assert h.driver.ctx.harness_bin == os.path.join(target, "debug", hz._exe("dcgo-harness"))
+    # the build ran before the first harness call
+    first_harness = next(i for i, c in enumerate(cmds.calls) if c["argv"][:2] == ["cargo", "build"])
+    oracle_calls = [i for i, c in enumerate(cmds.calls) if "--oracle" in c["argv"]]
+    assert all(first_harness < i for i in oracle_calls)
+
+
+def test_a_failed_harness_build_holds_every_sim_and_oracle_item(tmp_path):
+    cmds = _tree_cmds().on(("cargo", "build"), 101, "", "error[E0308]: mismatched types")
+    tree = _rust_tree(tmp_path)
+    oracle = oracle_confirms()
+    h = Harness(tmp_path, [seed(C1, "ORACLE")], [oracle], run_command=cmds, repo=tree, manage_tree=True)
+    result = h.run()
+    assert oracle.calls == [] and h.states() == {C1: "ORACLE"}
+    assert result.stop.reason == "blocked"
+    assert "harness" in result.blocked[C1] and "E0308" in result.blocked[C1]
+
+
+def test_a_merge_touching_the_engine_rebuilds_the_harness(tmp_path):
+    cmds = _tree_cmds().on(("cargo", "build"), 0)
+    tree = _rust_tree(tmp_path)
+    card = "card:BT1-001"
+    merger = FakeMerger(lambda: None)         # touched: code/digimon-engine/cards/x.yaml
+    h = Harness(tmp_path, [seed(card, "IMPLEMENTING")], [_impl_with_merge()], merger=merger,
+                run_command=cmds, repo=tree, manage_tree=True)
+    h.run()
+    assert merger.calls, "the implementer merged"
+    builds = [c for c in cmds.calls if c["argv"][:2] == ["cargo", "build"]]
+    assert len(builds) == 2, "session start + after the merge that changed a card spec"
+
+
+def test_a_tree_without_cargo_metadata_is_not_built():
+    # fakes / tests run the driver against a bare directory: nothing to build,
+    # the lookup stays as it was
+    assert drv.harness_inputs_touched(["qa/dcgo-exams/BT1/x.yaml", "qa/card-loop/attempts.jsonl"]) is False
+    assert drv.harness_inputs_touched(["code/digimon-engine/cards/bt26/BT26-005.yaml"]) is True
+    assert drv.harness_inputs_touched(["code/digimon-dsl/src/lower.rs"]) is True
+    assert drv.harness_inputs_touched(["code/tools/dcgo-harness/src/exam/oracle.rs", "docs/x.md"]) is True
+    assert drv.harness_inputs_touched(["Cargo.lock"]) is True

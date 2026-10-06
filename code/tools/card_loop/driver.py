@@ -352,6 +352,24 @@ def default_run_command(argv, cwd, timeout):
     return p.returncode, p.stdout, p.stderr
 
 
+#: Run-tree paths whose change changes what `dcgo-harness` embeds (the engine
+#: and its compiled card specs) or the harness itself -- a merge touching one
+#: rebuilds the run tree's harness before the next SIM / ORACLE call.
+HARNESS_INPUT_PREFIXES = ("code/digimon-engine/", "code/digimon-dsl/", "code/tools/dcgo-harness/")
+HARNESS_INPUT_FILES = ("Cargo.toml", "Cargo.lock")
+#: Stages that run the harness binary against the run tree's engine.
+HARNESS_STATES = frozenset({"SIM", "ORACLE"})
+
+
+def harness_inputs_touched(paths) -> bool:
+    """Whether any of `paths` (repo-relative) changes the harness's embedded engine."""
+    for p in paths or ():
+        s = str(p).replace("\\", "/").lstrip("./")
+        if s in HARNESS_INPUT_FILES or s.startswith(HARNESS_INPUT_PREFIXES):
+            return True
+    return False
+
+
 @dataclass
 class DriverContext:
     """`driver_contracts.RunContext` as a concrete object."""
@@ -470,6 +488,7 @@ class Driver:
         # run the clause-text prelude, record parked gaps in the trackers.
         self.manage_tree = manage_tree
         self._prelude: str | None = None          # None = not run; "ok"; or the failure
+        self._harness_build: str | None = None    # the run-tree harness: None = not built; "ok"; or the failure
         self._branch_ok: bool | None = None
         self._engine_wait_problems: set[str] = set()
 
@@ -614,6 +633,8 @@ class Driver:
             ew = rec.data["engine_wait"]
             return (f"the fix gate passed; waits for a human to merge {ew.get('branch') or 'the engine branch'}"
                     f" ({(ew.get('sha') or '?')[:12]}) into the run branch")
+        if st in HARNESS_STATES and self.manage_tree and self._harness_build not in (None, "ok"):
+            return f"the run tree's dcgo-harness build failed: {self._harness_build}"
         if st in ORACLE_STATES and self.manage_tree and self._prelude not in (None, "ok"):
             return f"the clause-text book prelude failed: {self._prelude}"
         if st == "GATE":
@@ -662,6 +683,8 @@ class Driver:
                 continue
             if self._check_stop():
                 return
+            if st in HARNESS_STATES and self.manage_tree and self._harness_build not in (None, "ok"):
+                continue                      # the run tree's harness did not build; see _why_not_runnable
             if st in ORACLE_STATES and self.manage_tree and self._prelude is None and not self._run_prelude():
                 continue
             free[lane] -= 1
@@ -919,6 +942,49 @@ class Driver:
         self._commit_paths([self.FORK_CANDIDATES_PATH],
                            f"card-loop: DCGO fork candidates for run {self.run_id} ({len(candidates)})")
 
+    HARNESS_BUILD_TIMEOUT_S = 3600
+
+    def _ensure_run_harness(self, why: str) -> bool:
+        """Build `dcgo-harness` FROM THE RUN TREE and pin it on the context.
+
+        SIM and ORACLE must judge the run tree's engine -- the one the loop's
+        card fixes land in -- so the harness they run is built there, under the
+        tree's own `CARGO_TARGET_DIR` (rule 31). Without this the binary lookup
+        falls through to whichever checkout built one last: the first Data Squad
+        pilot ran its oracle on the developer's checkout, so a landed card fix
+        never reached the oracle's engine and every fixed card diverged again
+        (BT26-005#inherited#0: gate passed, oracle diverged, fix cap spent).
+
+        Called at session start, after a merge that touched an engine / DSL /
+        harness path, and when an engine branch lands. Skipped (lookup as
+        before) for a tree with no `Cargo.toml` (fakes, tests) or when the
+        config pins `harness_bin` explicitly. A failed build holds every SIM /
+        ORACLE item with the compiler's last lines, like a failed prelude.
+        """
+        if not self.manage_tree or getattr(self.config, "harness_bin", None):
+            return True
+        tree = Path(self.repo)
+        if not (tree / "Cargo.toml").is_file():
+            return True
+        from .stages.harness import _exe
+        from .workers.pool import cargo_target_dir
+
+        base = getattr(self.config, "cargo_target_base", None)
+        target = cargo_target_dir(tree, base) if base else str(tree / "target")
+        argv = ["cargo", "build", "-p", "dcgo-harness", "--target-dir", target]
+        try:
+            rc, out, err = self.ctx.run_command(argv, str(tree), self.HARNESS_BUILD_TIMEOUT_S)
+        except Exception as e:  # noqa: BLE001 -- a build that cannot start is a failed build
+            rc, out, err = None, "", f"{type(e).__name__}: {e}"
+        if rc != 0:
+            tail = " | ".join((err or out or "").strip().splitlines()[-4:])[-400:]
+            self._harness_build = f"`cargo build -p dcgo-harness` in {tree} exited {rc} ({why}): {tail}"
+            self.state.problems.append(f"run-tree harness: {self._harness_build}")
+            return False
+        self.ctx.harness_bin = os.path.join(target, "debug", _exe("dcgo-harness"))
+        self._harness_build = "ok"
+        return True
+
     def _release_engine_waits(self) -> None:
         """GATE items whose engine fix passed the gate wait for a human to merge
         the engine branch into the run branch (D13); once its sha is an
@@ -932,6 +998,7 @@ class Driver:
                 self.state.transition(rec.item, "ORACLE", reason=f"engine fix {ew.get('branch')} "
                                                                   "landed on the run branch",
                                       item_data={"engine_wait": None, "engine_landed": dict(ew)})
+                self._ensure_run_harness(f"engine fix {ew.get('branch')} landed")
             elif rc != 1 and rec.item not in self._engine_wait_problems:
                 self._engine_wait_problems.add(rec.item)
                 self.state.problems.append(f"{rec.item}: cannot tell whether {ew.get('branch')} landed "
@@ -952,6 +1019,7 @@ class Driver:
         return dcgo_script_presence(cards, root)
 
     def _on_start(self) -> None:
+        self._ensure_run_harness("session start")
         scripts = (self.plan.get("dcgo") or {}).get("scripts") or {}
         missing = [c for c, p in scripts.items() if p is None]
         if missing:
@@ -1180,6 +1248,10 @@ class Driver:
             item_data["merge"] = {"ok": True, "sha": res.sha, "branch": res.branch,
                                   "touched": list(res.touched), "scope": dict(res.scope),
                                   "attempt_id": req.attempt_id, "engine": req.engine}
+            if not req.engine and harness_inputs_touched(res.touched):
+                # A card fix changed what the engine embeds: SIM / ORACLE must
+                # judge the fixed engine, so rebuild the run tree's harness now.
+                self._ensure_run_harness(f"merge for {item} touched engine inputs")
 
         self._ledger(attempts, outcome.corrections)
         if dst == "ESCALATED":

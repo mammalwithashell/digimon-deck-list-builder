@@ -64,9 +64,16 @@ python -m tools.card_loop resume --run <run-id> --config my-loop.toml --worktree
 ```
 
 A real run checks out the run branch `card-loop/<run-id>/run` from the plan's
-base sha in its own tree (`--run-tree`), extends the clause-text book for the
-pool, and commits every tree write (scenarios, backfilled asserts, verdicts,
-ledgers) with `Loop-Attempt:` / `Loop-Model:` / `Loop-Run:` trailers. Engine
+base sha in its own tree (`--run-tree`), **builds `dcgo-harness` from that tree**
+(`cargo build -p dcgo-harness --target-dir <cargo_target_base>/<tree>`, at
+session start and again after any merge that touches `code/digimon-engine/`,
+`code/digimon-dsl/`, `code/tools/dcgo-harness/` or the Cargo files, or when an
+engine branch lands) so SIM and ORACLE judge the engine the loop's fixes land
+in -- never a binary some other checkout built -- extends the clause-text book
+for the pool, and commits every tree write (scenarios, backfilled asserts,
+verdicts, ledgers) with `Loop-Attempt:` / `Loop-Model:` / `Loop-Run:` trailers.
+A failed harness build holds every SIM / ORACLE item with the compiler's last
+lines (set `harness_bin` in the config only to bypass this on purpose). Engine
 fixes land on `card-loop/<run-id>/engine-<gap>` branches for human merge. The
 loop never pushes and never touches `main`. `--budget-usd` overrides the
 config's cap; `--max-attempts N` stops after N worker calls; `--serial` runs
