@@ -32,7 +32,6 @@ use crate::exam::assertions::check_assertions;
 use crate::exam::deckbook::{ordered_deck, DeckBook};
 use crate::exam::differ::{diff, DiffReport};
 use crate::exam::projection::StateProjection;
-use crate::exam::scenario::StepAction;
 use crate::exam::scenario::Scenario;
 
 /// Default `cards.json`, used when the caller (the MCP) has no natural place

@@ -297,6 +297,10 @@ pub struct OracleExamResult {
     /// The differ's lead line when the diff was not clean.
     pub first_divergence: Option<String>,
     pub divergence: Option<DivergenceAt>,
+    /// Set when DCGO stopped the job on a prompt mismatch: which SCENARIO step
+    /// the mismatched wire row belongs to, so a caller never has to guess the
+    /// step from DCGO's row index.
+    pub mismatch: Option<MismatchAt>,
     /// Why the verdict is not `confirmed`.
     pub reason: Option<String>,
     /// The differ's compared-row counts, when a diff ran.
@@ -332,6 +336,53 @@ pub struct OracleExamOptions<'a> {
     pub backfill: bool,
     pub timeout: Duration,
     pub poll: Duration,
+}
+
+/// A DCGO prompt mismatch, placed on the scenario: DCGO's message names its
+/// input ROW (`step N` is the job's N-th wire row); `step` is the scenario
+/// step that put that row on the wire (`LoweredRun::wire_rows_per_step`).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct MismatchAt {
+    pub row: usize,
+    pub step: u32,
+    /// The prompt the row expected / DCGO asked, when the message names them
+    /// (an actor mismatch names neither).
+    pub expected: Option<String>,
+    pub asked: Option<String>,
+}
+
+/// Parse DCGO's `prompt mismatch: step N expected prompt 'X' but DCGO asked 'Y'`
+/// (or `... expected actor A but DCGO asked actor B`) into
+/// `(row, expected prompt, asked prompt)`.
+pub fn parse_prompt_mismatch(message: &str) -> Option<(usize, Option<String>, Option<String>)> {
+    let rest = message.split("prompt mismatch:").nth(1)?.trim();
+    let rest = rest.strip_prefix("step ")?;
+    let (row_s, tail) = rest.split_once(' ')?;
+    let row: usize = row_s.parse().ok()?;
+    let quoted = |s: &str| -> Option<String> {
+        let a = s.find('\'')?;
+        let b = s[a + 1..].find('\'')?;
+        Some(s[a + 1..a + 1 + b].to_string())
+    };
+    let (expected, asked) = match tail.split_once(" but DCGO asked") {
+        Some((e, a)) if e.trim_start().starts_with("expected prompt") => (quoted(e), quoted(a)),
+        _ => (None, None),
+    };
+    Some((row, expected, asked))
+}
+
+/// The scenario step whose wire rows include `row`, from the rows each
+/// scenario step put on the DCGO wire (a fold is two rows, a sim-only step
+/// none). `None` when `row` is past the wire.
+pub fn scenario_step_for_row(wire_rows_per_step: &[usize], row: usize) -> Option<usize> {
+    let mut first = 0usize;
+    for (step, rows) in wire_rows_per_step.iter().enumerate() {
+        if row < first + rows {
+            return Some(step);
+        }
+        first += rows;
+    }
+    None
 }
 
 /// The first divergence as fields (spec 4.2(6)): the scenario step it was
@@ -490,6 +541,7 @@ pub fn run_oracle_exam_loaded(
         verdict: "unmeasured".to_string(),
         first_divergence: None,
         divergence: None,
+        mismatch: None,
         reason: None,
         denominator: None,
         job_id: job.job_id.clone(),
@@ -517,6 +569,15 @@ pub fn run_oracle_exam_loaded(
     } else {
         format!("DCGO job {outcome}: {}", run.message)
     };
+    if !completed {
+        result.mismatch = parse_prompt_mismatch(&run.message).map(|(row, expected, asked)| MismatchAt {
+            row,
+            step: scenario_step_for_row(&lowered.wire_rows_per_step, row)
+                .unwrap_or(lowered.wire_rows_per_step.len().saturating_sub(1)) as u32,
+            expected,
+            asked,
+        });
+    }
     let Some(sidecar) = run.sidecar_path.as_ref() else {
         result.reason = Some(format!("{dcgo_said} (no recording filed)"));
         return Ok(result);
@@ -603,6 +664,31 @@ pub fn run_oracle_exam_loaded(
         recorder.save(dir)?;
     }
     Ok(result)
+}
+
+#[cfg(test)]
+mod mismatch_tests {
+    use super::*;
+
+    #[test]
+    fn rows_map_to_the_scenario_step_that_put_them_on_the_wire() {
+        // step 0: 1 row, step 1: 2 rows (a fold), step 2: 0 rows (sim-only), step 3: 1 row
+        let wire = [1usize, 2, 0, 1];
+        assert_eq!(scenario_step_for_row(&wire, 0), Some(0));
+        assert_eq!(scenario_step_for_row(&wire, 1), Some(1));
+        assert_eq!(scenario_step_for_row(&wire, 2), Some(1));
+        assert_eq!(scenario_step_for_row(&wire, 3), Some(3));
+        assert_eq!(scenario_step_for_row(&wire, 4), None);
+    }
+
+    #[test]
+    fn dcgos_mismatch_messages_parse() {
+        let m = parse_prompt_mismatch("prompt mismatch: step 12 expected prompt 'main_phase' but DCGO asked 'SelectDigiXrosClass'").unwrap();
+        assert_eq!((m.0, m.1.as_deref(), m.2.as_deref()), (12, Some("main_phase"), Some("SelectDigiXrosClass")));
+        let m = parse_prompt_mismatch("prompt mismatch: step 14 expected actor 0 but DCGO asked actor 1").unwrap();
+        assert_eq!((m.0, m.1, m.2), (14, None, None));
+        assert!(parse_prompt_mismatch("bad deck").is_none());
+    }
 }
 
 #[cfg(test)]
@@ -829,6 +915,7 @@ mod verdict_event_tests {
             verdict: verdict.into(),
             first_divergence: None,
             divergence: None,
+            mismatch: None,
             reason: None,
             denominator: None,
             job_id: "exam-s".into(),
@@ -1072,6 +1159,31 @@ mod oracle_exam_tests {
         assert_eq!(r.verdict, "diverged", "{r:?}");
         assert!(r.reason.as_deref().unwrap_or("").contains("prompt mismatch"), "{r:?}");
         assert_eq!(r.job_outcome.as_deref(), Some("failed"));
+    }
+
+    #[test]
+    fn a_prompt_mismatch_names_the_scenario_step_not_dcgos_row() {
+        // ST23-04-effect0 has sim-only rows, so DCGO's row index and the
+        // scenario step drift apart; the harness knows the wire rows per step.
+        let b = bench(true, true);
+        let sc = b.scenario("ST23-04-effect0");
+        let h = b.play(
+            "ST23-04-effect0",
+            Filing {
+                outcome: "failed",
+                message: "prompt mismatch: step 14 expected actor 0 but DCGO asked actor 1",
+                sidecar_lines: None,
+            },
+        );
+        let r = run_oracle_exam(&sc, &b.opts(Duration::from_secs(60))).unwrap();
+        h.join().unwrap();
+        let m = r.mismatch.expect("a prompt-mismatch job carries its mismatch");
+        assert_eq!(m.row, 14);
+        let s = crate::exam::scenario::Scenario::from_yaml(&std::fs::read_to_string(&sc).unwrap()).unwrap();
+        assert!((m.step as usize) < s.steps.len(), "{m:?}");
+        assert!(m.step >= 14, "sim-only rows before it push the step past the row: {m:?}");
+        assert_eq!(m.expected, None);
+        assert_eq!(m.asked, None);
     }
 
     #[test]

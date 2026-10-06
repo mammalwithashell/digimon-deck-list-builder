@@ -615,6 +615,38 @@ impl VerdictStore {
         self.interactions.insert(v.interaction_id.clone(), v);
     }
 
+    /// Classify a stored interaction row (`extra["triage"]` / `extra["citation"]`,
+    /// the clause row's `triage` / `citation` twins). Marks its cards dirty.
+    pub fn set_interaction_triage(
+        &mut self,
+        interaction_id: &str,
+        triage: Triage,
+        citation: Option<String>,
+    ) -> Result<(), String> {
+        let citation = citation.map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
+        if matches!(triage, Triage::OursWrong | Triage::DcgoQuirk) && citation.is_none() {
+            return Err(format!("triage {triage:?} for `{interaction_id}` needs a citation"));
+        }
+        let row = self
+            .interactions
+            .get_mut(interaction_id)
+            .ok_or_else(|| format!("no stored verdict for `{interaction_id}`"))?;
+        row.extra.insert("triage".into(), serde_json::Value::String(
+            match triage {
+                Triage::OursWrong => "ours_wrong",
+                Triage::DcgoQuirk => "dcgo_quirk",
+                Triage::Undetermined => "undetermined",
+            }
+            .into(),
+        ));
+        match citation {
+            Some(c) => { row.extra.insert("citation".into(), serde_json::Value::String(c)); }
+            None => { row.extra.remove("citation"); }
+        }
+        self.dirty.extend(row.card_ids.iter().cloned());
+        Ok(())
+    }
+
     /// The stored interaction verdict, drift or no drift.
     pub fn get_interaction(&self, interaction_id: &str) -> Option<&InteractionVerdict> {
         self.interactions.get(interaction_id)
@@ -1040,6 +1072,88 @@ pub fn record_interaction_verdict(
         recorded_at,
         extra: BTreeMap::new(),
     });
+    Ok(())
+}
+
+fn needs_reason(verdict: Verdict) -> bool {
+    matches!(verdict, Verdict::Unreachable | Verdict::Unavailable)
+}
+
+fn check_triage(triage: &Option<(Triage, Option<String>)>) -> Result<(), String> {
+    if let Some((t, c)) = triage {
+        let cited = c.as_deref().map(str::trim).filter(|c| !c.is_empty()).is_some();
+        if matches!(t, Triage::OursWrong | Triage::DcgoQuirk) && !cited {
+            return Err(format!("triage {t:?} needs a citation (rules section, DCGO file:line, or qa:<Q>)"));
+        }
+    }
+    Ok(())
+}
+
+/// Record an ending the exam itself cannot produce for a CLAUSE -- an
+/// `unreachable` (no legal line) or `unavailable` verdict with its reason, or
+/// a verdict plus triage in one step. Keeps an existing row's scenario path
+/// and provenance. Refuses an orphan id, a reason-less unreachable /
+/// unavailable, and an uncited `ours_wrong` / `dcgo_quirk`; the store is
+/// untouched on refusal.
+pub fn set_clause_verdict(
+    store: &mut VerdictStore,
+    book: &ClauseTextBook,
+    clause_id: &str,
+    verdict: Verdict,
+    reason: Option<String>,
+    triage: Option<(Triage, Option<String>)>,
+    recorded_at: String,
+) -> Result<(), String> {
+    let reason = reason.map(|r| r.trim().to_string()).filter(|r| !r.is_empty());
+    if needs_reason(verdict) && reason.is_none() {
+        return Err(format!("verdict {verdict} for `{clause_id}` needs a reason"));
+    }
+    check_triage(&triage)?;
+    if triage.is_some() && verdict != Verdict::Diverged {
+        return Err(format!("a triage applies to a diverged row; `{clause_id}` is being set {verdict}"));
+    }
+    let previous = store.get(clause_id).cloned();
+    record_scenario_verdict(
+        store,
+        book,
+        clause_id,
+        verdict,
+        previous.as_ref().and_then(|p| p.scenario_path.clone()),
+        reason,
+        recorded_at,
+    )?;
+    if let Some(p) = previous {
+        store.set_provenance(clause_id, p.job_id, p.dcgo_build)?;
+    }
+    if let Some((t, c)) = triage {
+        store.set_triage(clause_id, t, c)?;
+    }
+    Ok(())
+}
+
+/// The interaction counterpart of [`set_clause_verdict`]: the verdict (and
+/// optional triage) for an interaction id in the denominator, filed under
+/// every card it counts for. Triage and citation live in the row's `extra`
+/// map (`triage`, `citation`), which the loader carries through.
+pub fn set_interaction_verdict(
+    store: &mut VerdictStore,
+    book: &InteractionBook,
+    interaction_id: &str,
+    combo_cards: &[String],
+    verdict: Verdict,
+    reason: Option<String>,
+    triage: Option<(Triage, Option<String>)>,
+    recorded_at: String,
+) -> Result<(), String> {
+    let reason = reason.map(|r| r.trim().to_string()).filter(|r| !r.is_empty());
+    if needs_reason(verdict) && reason.is_none() {
+        return Err(format!("verdict {verdict} for `{interaction_id}` needs a reason"));
+    }
+    check_triage(&triage)?;
+    record_interaction_verdict(store, book, interaction_id, combo_cards, verdict, None, reason, recorded_at)?;
+    if let Some((t, c)) = triage {
+        store.set_interaction_triage(interaction_id, t, c)?;
+    }
     Ok(())
 }
 
@@ -1593,6 +1707,91 @@ mod tests {
             "label":"Effect","text_sha256":"abc","recorded_at":"x"}}}"#;
         let store = VerdictStore::from_json(text).unwrap();
         assert_eq!(store.get("BT1-001#effect#0").unwrap().triage, None);
+    }
+}
+
+#[cfg(test)]
+mod verdict_set_tests {
+    //! `dcgo-harness verdict-set`: the loop's way to record an ending the
+    //! exam itself cannot produce -- an `unreachable` clause (no legal line),
+    //! an interaction ending, and a triage on either.
+    use super::*;
+
+    fn book() -> ClauseTextBook {
+        ClauseTextBook::from_json(
+            r#"{"clauses":[{"id":"BT7-056#effect#0","label":"[On Play]","text":"t"}]}"#, "t",
+        ).unwrap()
+    }
+
+    fn ibook() -> InteractionBook {
+        InteractionBook::from_json(
+            r#"{"version":1,"interactions":{"qa:Q1":{"source":"qa","card_ids":["BT7-056"],"kind":"positive","gating":true,"text_sha256":"abc"}}}"#,
+            "t",
+        ).unwrap()
+    }
+
+    #[test]
+    fn an_unreachable_clause_is_recorded_with_its_reason() {
+        let mut store = VerdictStore::default();
+        set_clause_verdict(&mut store, &book(), "BT7-056#effect#0", Verdict::Unreachable,
+                           Some("no legal line reaches the window".into()), None, "t".into()).unwrap();
+        let row = store.get("BT7-056#effect#0").unwrap();
+        assert_eq!(row.verdict, Verdict::Unreachable);
+        assert_eq!(row.reason.as_deref(), Some("no legal line reaches the window"));
+    }
+
+    #[test]
+    fn unreachable_and_unavailable_need_a_reason() {
+        let mut store = VerdictStore::default();
+        let err = set_clause_verdict(&mut store, &book(), "BT7-056#effect#0", Verdict::Unreachable,
+                                     None, None, "t".into()).unwrap_err();
+        assert!(err.contains("reason"), "{err}");
+        assert!(store.get("BT7-056#effect#0").is_none());
+    }
+
+    #[test]
+    fn a_triage_rides_along_on_a_diverged_clause() {
+        let mut store = VerdictStore::default();
+        set_clause_verdict(&mut store, &book(), "BT7-056#effect#0", Verdict::Diverged,
+                           Some("DIVERGED at step 3".into()),
+                           Some((Triage::DcgoQuirk, Some("qa:Q1".into()))), "t".into()).unwrap();
+        let row = store.get("BT7-056#effect#0").unwrap();
+        assert_eq!(row.triage, Some(Triage::DcgoQuirk));
+        assert_eq!(row.citation.as_deref(), Some("qa:Q1"));
+    }
+
+    #[test]
+    fn an_orphan_clause_is_refused() {
+        let mut store = VerdictStore::default();
+        let err = set_clause_verdict(&mut store, &book(), "BT9-999#effect#0", Verdict::Unreachable,
+                                     Some("x".into()), None, "t".into()).unwrap_err();
+        assert!(err.contains("refusing"), "{err}");
+    }
+
+    #[test]
+    fn an_interaction_ending_is_recorded_under_every_card_with_its_triage() {
+        let mut store = VerdictStore::default();
+        set_interaction_verdict(&mut store, &ibook(), "qa:Q1", &[], Verdict::Diverged,
+                                Some("ours contradicts ruling".into()),
+                                Some((Triage::DcgoQuirk, Some("qa:Q1".into()))), "t".into()).unwrap();
+        let row = store.get_interaction("qa:Q1").unwrap();
+        assert_eq!(row.verdict, Verdict::Diverged);
+        assert_eq!(row.card_ids, vec!["BT7-056".to_string()]);
+        assert_eq!(row.extra.get("triage").and_then(|v| v.as_str()), Some("dcgo_quirk"));
+        assert_eq!(row.extra.get("citation").and_then(|v| v.as_str()), Some("qa:Q1"));
+        let dir = tempfile::tempdir().unwrap();
+        store.save_dir(dir.path()).unwrap();
+        let back = VerdictStore::load_dir(dir.path()).unwrap();
+        assert_eq!(back.get_interaction("qa:Q1").unwrap().extra.get("triage").and_then(|v| v.as_str()), Some("dcgo_quirk"));
+    }
+
+    #[test]
+    fn a_quirk_triage_without_a_citation_is_refused_for_interactions_too() {
+        let mut store = VerdictStore::default();
+        let err = set_interaction_verdict(&mut store, &ibook(), "qa:Q1", &[], Verdict::Diverged,
+                                          Some("x".into()), Some((Triage::DcgoQuirk, None)), "t".into()).unwrap_err();
+        assert!(err.contains("citation"), "{err}");
+        assert!(store.get_interaction("qa:Q1").is_none());
     }
 }
 

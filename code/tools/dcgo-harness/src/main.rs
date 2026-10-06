@@ -235,6 +235,34 @@ enum Command {
         #[arg(long, default_value = "qa/qa-reports/exam-verdicts")]
         verdicts: PathBuf,
     },
+    /// Record an ending the exam cannot produce: an `unreachable` /
+    /// `unavailable` clause or interaction with its reason, optionally with
+    /// a triage. Exactly one of --clause / --interaction.
+    VerdictSet {
+        #[arg(long, conflicts_with = "interaction", required_unless_present = "interaction")]
+        clause: Option<String>,
+        #[arg(long)]
+        interaction: Option<String>,
+        /// Cards a `combo:` interaction is filed under (others come from the denominator).
+        #[arg(long)]
+        card: Vec<String>,
+        /// confirmed | diverged | unreachable | unavailable
+        #[arg(long)]
+        verdict: String,
+        #[arg(long)]
+        reason: Option<String>,
+        /// ours_wrong | dcgo_quirk | undetermined (with --citation for the first two)
+        #[arg(long)]
+        triage: Option<String>,
+        #[arg(long)]
+        citation: Option<String>,
+        #[arg(long, default_value = "qa/exam-clause-text.json")]
+        clause_text_json: PathBuf,
+        #[arg(long, default_value = dcgo_harness::exam::verdict::DEFAULT_INTERACTION_DENOMINATOR)]
+        interaction_denominator: PathBuf,
+        #[arg(long, default_value = "qa/qa-reports/exam-verdicts")]
+        verdicts: PathBuf,
+    },
     /// Serve the exam's agent surface over stdio (MCP, JSON-RPC 2.0).
     Mcp,
     /// Bring this machine up as an oracle node: preflight, then launch.
@@ -316,6 +344,7 @@ fn needs_root(command: &Command) -> bool {
         Command::Exam { .. }
             | Command::MigrateVerdicts { .. }
             | Command::VerdictTriage { .. }
+            | Command::VerdictSet { .. }
             | Command::Mcp
     )
 }
@@ -653,6 +682,48 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             store.set_triage(clause, class, citation.clone())?;
             store.save_dir(verdicts)?;
             println!("verdict-triage: {clause} -> {triage}");
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::VerdictSet {
+            clause, interaction, card, verdict, reason, triage, citation,
+            clause_text_json, interaction_denominator, verdicts,
+        } => {
+            use dcgo_harness::exam::verdict::{
+                set_clause_verdict, set_interaction_verdict, ClauseTextBook, InteractionBook,
+                Triage, Verdict, VerdictStore,
+            };
+            let v = match verdict.as_str() {
+                "confirmed" => Verdict::Confirmed,
+                "diverged" => Verdict::Diverged,
+                "unreachable" => Verdict::Unreachable,
+                "unavailable" => Verdict::Unavailable,
+                other => return Err(format!(
+                    "--verdict must be confirmed | diverged | unreachable | unavailable, got `{other}`"
+                )),
+            };
+            let t = match triage.as_deref() {
+                None => None,
+                Some("ours_wrong") => Some((Triage::OursWrong, citation.clone())),
+                Some("dcgo_quirk") => Some((Triage::DcgoQuirk, citation.clone())),
+                Some("undetermined") => Some((Triage::Undetermined, citation.clone())),
+                Some(other) => return Err(format!(
+                    "--triage must be ours_wrong | dcgo_quirk | undetermined, got `{other}`"
+                )),
+            };
+            let now = chrono::Utc::now().to_rfc3339();
+            let mut store = VerdictStore::load_dir(verdicts)?;
+            let target = if let Some(id) = clause {
+                let book = ClauseTextBook::load(clause_text_json)?;
+                set_clause_verdict(&mut store, &book, id, v, reason.clone(), t, now)?;
+                id.clone()
+            } else {
+                let id = interaction.as_deref().expect("clap requires one of --clause/--interaction");
+                let book = InteractionBook::load(interaction_denominator)?;
+                set_interaction_verdict(&mut store, &book, id, card, v, reason.clone(), t, now)?;
+                id.to_string()
+            };
+            store.save_dir(verdicts)?;
+            println!("verdict-set: {target} -> {verdict}{}", triage.as_ref().map(|t| format!(" ({t})")).unwrap_or_default());
             Ok(ExitCode::SUCCESS)
         }
         Command::Mcp => {
@@ -1504,6 +1575,19 @@ mod oracle_cli_tests {
             assert!(parse(&a).is_err(), "--oracle with {other:?} must be refused");
         }
         assert!(parse(&["--build", "b"]).is_err(), "--build is an --oracle flag");
+    }
+
+    #[test]
+    fn verdict_set_takes_exactly_one_of_clause_or_interaction() {
+        let p = |extra: &[&str]| {
+            let mut argv = vec!["dcgo-harness", "verdict-set", "--verdict", "unreachable", "--reason", "r"];
+            argv.extend_from_slice(extra);
+            Args::try_parse_from(argv)
+        };
+        assert!(p(&["--clause", "BT7-056#effect#0"]).is_ok());
+        assert!(p(&["--interaction", "qa:Q1"]).is_ok());
+        assert!(p(&[]).is_err(), "one target is required");
+        assert!(p(&["--clause", "x", "--interaction", "y"]).is_err(), "not both");
     }
 
     #[test]
