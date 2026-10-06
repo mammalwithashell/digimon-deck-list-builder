@@ -84,3 +84,9 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert: []
+expect_ruling:
+  q_id: Q5676
+  assert:
+  - at: 16
+    that:
+      p1.trash: []
