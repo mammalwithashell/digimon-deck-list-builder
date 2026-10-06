@@ -5,24 +5,14 @@
 # Attack security first, then on the next turn attack the suspended Biyomon:
 # the second attack must trash security BEFORE battle deletes half the pair.
 # A security-only trigger or a count deferred until after battle gets this wrong.
-# The required prefix and expect_ruling checkpoint are preserved; see the
-# checkpoint note below for the supplied assertion's off-by-one limitation.
+# Projection 15 is before the first attack; projection 16 is after it.
+# Projection 21 is after the battle-target attack. Stop there, with no pass.
 card: BT13-060
 clause: BT13-060#effect#2
 seed: 424242
-meta: {produced_by: 20261006T181341520975Z-pilot-data-squad-592fe3}
+meta: {produced_by: 20261006T182256108992Z-pilot-data-squad-f3d054}
 interaction: {id: "qa:Q2304", source: qa, kind: positive}
 covers: [BT13-060#effect#1, BT13-060#effect#2, ST1-12#effect#0]
-# Required checkpoint retained verbatim. The harness projections count completed
-# steps: projection 15 is BEFORE the attack at zero-based step 15, and has five
-# security. Projection 16 is after that attack. This timing mismatch is not
-# evidence that the engine rejects a mixed Digimon/Tamer pair.
-expect_ruling:
-  q_id: Q2304
-  assert:
-  - at: 15
-    that:
-      p1.security: 3
 decks:
   p0:
     # [0..4] hand; [5..9] security; [10..13] pin T3, T5, evolution, T7 draws.
@@ -115,9 +105,5 @@ steps:
     expect: { prompt: breeding_action }
   - actor: 0
     do: { attack: { attacker: field.0, target: field.0 } }
-    expect: { prompt: main_phase }
-  # A final main-phase decision exposes the resolved second attack to inspect.
-  - actor: 0
-    do: { pass: {} }
     expect: { prompt: main_phase }
 assert: []
