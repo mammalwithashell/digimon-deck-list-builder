@@ -1,0 +1,91 @@
+# Exam scenario: Rosemon (BT26-049), clause BT26-049#effect#1 --
+# "[When Digivolving] [When Attacking] [Once Per Turn] Suspend 2 of your
+# opponent's Digimon or Tamers."
+#
+# Same route to Rosemon as BT26-049-effect0 (purple Lv.5 [DATA SQUAD] -> Rosemon
+# for cost 3), but P1 puts Digimon on the field first (ST1-03 on T2, BT3-007 on
+# T4). BT26-076's mandatory [When Digivolving] delete takes one on T5, so Rosemon's
+# [When Digivolving] meets exactly one legal target (Suspend 2 -> min(2, 1)).
+# (BT26_049.cs: SelectPermanentEffect, maxCount = min(2, matches), mode Tap,
+# not optional, canNoSelect false.)
+card: BT26-049
+clause: BT26-049#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-072, ST24-12, BT26-076, BT26-049, ST24-15,
+            ST24-05, ST24-10, ST24-04, BT26-050, ST24-14,
+            ST24-04, BT26-091, ST24-15, ST24-05, BT26-094]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0)
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST24-12 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): play ST1-03
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0)
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-072 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): play ST1-04
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT3-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-076 } }
+    expect: { prompt: main_phase }
+  # Mysterious-bird's [When Digivolving] deletes ST1-03 (mandatory), leaving
+  # one P1 Digimon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: Rosemon [When Digivolving] suspends the remaining P1 Digimon.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-049 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The suspend fires Rosemon's [All Turns] reactive play; decline it.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+meta: {produced_by: 20261006T153515580538Z-pilot-data-squad-ea5ad8}
+assert: []
