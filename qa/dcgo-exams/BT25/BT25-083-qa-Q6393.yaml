@@ -1,0 +1,135 @@
+# Q6393 ("X in its text"): LadyDevimon's inherited [On Deletion] revives a Lv.4-or-lower
+# Digimon "with [Three Musketeers] in its text". Target: Impmon BT6-068 (Lv.3, Evil;
+# NOT a [Three Musketeers]-trait card). [Three Musketeers] appears ONLY in its
+# [On Play] effect text -- so the revive must accept an effect-text match. Same
+# board shape as BT25-083-inherited0.yaml (Impmon dies on T5, LadyDevimon is
+# digivolved under BeelStarmon, which ties Phoenixmon on T9).
+card: BT25-083
+clause: BT25-083#inherited#0
+meta: {produced_by: 20261006T183558696188Z-pilot-three-musketeers-48d4ef}
+interaction: {id: "qa:Q6393", source: qa, kind: positive}
+covers: [BT25-083#inherited#0]
+seed: 424242
+decks:
+  p0:
+    stack: [BT6-068, BT25-083, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092, BT25-085, BT25-092, EX7-051]
+    rest: tm-impmon
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-10, ST1-05,
+            BT1-009, BT1-009, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Scopemon -- the future revive target.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT6-068, from: hand } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: Scopemon's [On Play] OptionalSkill is VACUOUS here. BT21_071.cs
+  # gates it on CanActivateConditionShared -- "hand or trash non-empty and an
+  # own non-token Digimon exists" -- and only checks for an ELIGIBLE
+  # [Appmon]/[Three Musketeers] trait card inside the coroutine, so DCGO asks
+  # the yes/no even though there is nothing to place. Our engine installs no
+  # prompt when the pick has zero candidates (docs/DCGO_EXAM.md, "DCGO parks
+  # vacuous optional-cost gates our engine skips"). Declined on the wire.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # Impmon costs 3 (memory 3 -> 0): the turn does not end on its own; pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): Scopemon into Birdramon (deleted, to trash), THEN LadyDevimon
+  # -- alone on P0's board, so field.0 on both engines from here on.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT25-083, from: hand } }
+    expect: { prompt: main_phase }
+  # T6 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): BeelStarmon on top of LadyDevimon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-085 } }
+    expect: { prompt: main_phase }
+  # BeelStarmon opens TWO routes from LadyDevimon -- the printed Purple Lv.5 /
+  # cost 4 circle and "[Digivolve] Lv.5 w/[Three Musketeers] in text or
+  # w/[TS] trait: Cost 3" (LadyDevimon satisfies both) -- so both engines ask
+  # which cost to pay: DCGO through the digivolution-cost SelectCountEffect
+  # (BT25_085.cs registers the alt route with `ignoreDigivolutionRequirement:
+  # true`, which Player.CanIgnoreDigivolutionRequirement answers `true` by
+  # default -- it only returns false under a "can't ignore" effect), ours
+  # through the rule-17 distinct-cost EffectChoice. The answer is the VALUE
+  # (EX12-015 idiom): 4 keeps the printed route and the 3 -> -1 arithmetic
+  # this line is built on. (Added 2026-09-16: the row was missing when this
+  # file was first committed; BT25-085's alt route landed in the card spec
+  # afterwards, 9aa21ed0f.)
+  - actor: 0
+    do: { select: { value: 4 } }
+    expect: { prompt: SelectCountEffect }
+  # T8 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0, 3): BeelStarmon (field.0) into Phoenixmon: tie.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: "You may play ..." -- take it, then choose Scopemon.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT6-068] } }
+    expect: { prompt: SelectCardEffect }
+  # Revived Scopemon's [On Play] (BeelStarmon in trash qualifies): decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Memory 3, still P0's turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
