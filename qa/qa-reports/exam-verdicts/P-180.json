@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-09-18T11:14:10.281301500+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T14:18:42.582081500+00:00",
   "clauses": {
     "P-180#effect#0": {
       "clause_id": "P-180#effect#0",
@@ -28,6 +28,22 @@
       "text_sha256": "75743ad016f816a6844d265e863d7016494ed0b54110e5a107baafeda38dba12",
       "scenario_path": "qa/dcgo-exams/P/P-180-effect2.yaml",
       "recorded_at": "2026-09-18T11:14:10.281301500+00:00"
+    }
+  },
+  "interactions": {
+    "probe:P-180#effect#1:scope:neg": {
+      "interaction_id": "probe:P-180#effect#1:scope:neg",
+      "card_ids": [
+        "P-180"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "1e4e84dae332c0ad7ee35e6baa68c5b8e9ddc3c37fbe81d7178b8feb2b303179",
+      "scenario_path": "qa/dcgo-exams/P/P-180-effect1-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-P-180-effect1-scope-neg",
+      "recorded_at": "2026-10-06T14:18:42.582081500+00:00"
     }
   }
 }
