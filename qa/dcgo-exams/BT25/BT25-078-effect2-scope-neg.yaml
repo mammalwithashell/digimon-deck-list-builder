@@ -1,0 +1,58 @@
+# NEGATIVE scope probe: BT25-078#effect#2 says the placed [Three Musketeers] trait
+# card goes under "this Digimon" (Gazimon). Another Digimon (Pagumon, ST6-01, hatched
+# into the breeding area on T1 and left there) must NOT receive it. Line: T1 hatch,
+# T3 play Gazimon from hand (memory 3 -> 0), take the "place as bottom digivolution
+# card" branch with Hurricane Screw Shot (EX7-071). Prompt shape as in
+# BT25-078-effect1.yaml (outer gate / branch row sim_only, ordering split sim_only +
+# dcgo_only, DCGO's post-helper generic_bool dcgo_only).
+card: BT25-078
+clause: BT25-078#effect#2
+interaction: {id: "probe:BT25-078#effect#2:scope:neg", source: probe, kind: negative}
+covers: [BT25-078#effect#2]
+meta: {produced_by: 20261006T144746365429Z-pilot-three-musketeers-a2eddd}
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-078, BT21-074, BT21-074, BT25-085, BT25-085,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-083,
+            BT25-083,
+            EX7-071, BT25-058, BT24-081]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-014]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT25-078, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { choice: "bottom digivolution card", sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [EX7-071] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [BT25-058, BT24-081], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-058, BT24-081], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
