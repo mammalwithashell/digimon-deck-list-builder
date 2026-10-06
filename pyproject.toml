@@ -43,6 +43,7 @@ asyncio_mode = "auto"
 markers = [
     "ai_pipeline: AI pipeline tests (server.ai.* and DB deps)",
     "slow: Tests that take >10s (greedy baselines)",
+    "oracle_gate: test exercises the real oracle readiness gate (no permissive default)",
 ]
 
 [build-system]

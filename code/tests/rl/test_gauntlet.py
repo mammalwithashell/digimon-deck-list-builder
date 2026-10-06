@@ -1178,3 +1178,89 @@ class TestAllowedArchetypes:
         assert sampled_archetypes <= {"Rocks", "Yellow Hybrid"}
         # Verify both members are reachable (not stuck on one).
         assert sampled_archetypes == {"Rocks", "Yellow Hybrid"}
+
+
+# ─── Oracle readiness gate (spec 2026-10-04 §4.7) ──────────────────────
+
+@pytest.mark.oracle_gate
+class TestOracleReadinessGate:
+    REGISTERED = {"BT12-002", "BT12-022", "BT12-031"}
+
+    def _lib(self, tmp_path):
+        lib = _make_deck_library({"Mixed": _make_archetype("Mixed", n_decks=2)})
+        lib["archetypes"]["Mixed"]["decklists"][1]["decklist"] = _with_card("BT12-031")
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+        return path
+
+    def test_list_with_a_not_ready_card_is_rejected(self, tmp_path):
+        g = MetaGauntlet(
+            implemented_card_ids=self.REGISTERED,
+            not_ready_card_ids=set(),
+            oracle_ready_card_ids={"BT12-002", "BT12-022"},
+        )
+        g.load(str(self._lib(tmp_path)))
+        assert g.deck_count == 1
+        assert g._deck_pool[0].source_deck_id == "mixed_000"
+
+    def test_gate_applies_to_a_non_default_library_path(self, tmp_path, monkeypatch):
+        # The ledger gate only auto-loads for the default path; the oracle gate
+        # must not inherit that hole. Nothing is injected here: the loader runs.
+        readiness = tmp_path / "oracle_readiness.json"
+        readiness.write_text(json.dumps({"version": 1, "cards": {
+            "BT12-002": {"status": "ready"}, "BT12-022": {"status": "ready"},
+            "BT12-031": {"status": "not_ready"},
+        }}))
+        monkeypatch.setattr(gauntlet_module, "_ORACLE_READINESS_PATH", readiness)
+        g = MetaGauntlet(implemented_card_ids=self.REGISTERED, not_ready_card_ids=set())
+        g.load(str(self._lib(tmp_path)))
+        assert g.deck_count == 1
+
+    def test_missing_artifact_fails_at_load(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(gauntlet_module, "_ORACLE_READINESS_PATH", tmp_path / "absent.json")
+        g = MetaGauntlet(implemented_card_ids=self.REGISTERED, not_ready_card_ids=set())
+        with pytest.raises(gauntlet_module.OracleReadinessMissingError,
+                           match="tools.clause_coverage.readiness"):
+            g.load(str(self._lib(tmp_path)))
+
+    def test_empty_pool_fails_fast_naming_the_blockers(self, tmp_path):
+        g = MetaGauntlet(
+            implemented_card_ids=self.REGISTERED,
+            not_ready_card_ids=set(),
+            oracle_ready_card_ids={"BT12-002"},
+        )
+        with pytest.raises(gauntlet_module.EmptyTrainingPoolError) as exc:
+            g.load(str(self._lib(tmp_path)))
+        message = str(exc.value)
+        assert "BT12-022" in message
+        assert "BT12-022 ExVeemon (2)" in message  # card, name, decklists blocked
+        assert "--plan" in message
+
+    def test_allowed_archetypes_empty_set_still_produces_an_empty_pool_quietly(self, tmp_path):
+        # No decklist reached the oracle gate, so this is not an oracle failure.
+        g = MetaGauntlet(
+            implemented_card_ids=self.REGISTERED,
+            not_ready_card_ids=set(),
+            oracle_ready_card_ids=set(),
+            allowed_archetypes=set(),
+        )
+        g.load(str(self._lib(tmp_path)))
+        assert g.deck_count == 0
+
+    def test_generalist_pool_loader_passes_the_ready_set_through(self, tmp_path):
+        pool = gauntlet_module.load_generalist_deck_pool(
+            str(self._lib(tmp_path)),
+            implemented_card_ids=self.REGISTERED,
+            not_ready_card_ids=set(),
+            oracle_ready_card_ids={"BT12-002", "BT12-022"},
+        )
+        assert pool.deck_count == 1
+
+    def test_starter_curriculum_archetypes_are_gated(self):
+        # ST-1..6 live in the real deck library; with nothing oracle-ready the
+        # starter archetype fails fast instead of training on nothing.
+        with pytest.raises(gauntlet_module.EmptyTrainingPoolError):
+            gauntlet_module.load_generalist_deck_pool(
+                allowed_archetypes={"ST-1 Gaia Red"},
+                oracle_ready_card_ids=set(),
+            )
