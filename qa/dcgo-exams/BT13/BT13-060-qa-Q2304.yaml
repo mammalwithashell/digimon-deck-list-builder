@@ -38,7 +38,7 @@
 card: BT13-060
 clause: BT13-060#effect#2
 seed: 424242
-meta: {produced_by: 20261006T142357748740Z-pilot-data-squad-c0fac7}
+meta: {produced_by: 20261006T153258188208Z-pilot-data-squad-93abb2}
 interaction: {id: "qa:Q2304", source: qa, kind: positive}
 covers: [BT13-060#effect#2]
 expect_ruling:
