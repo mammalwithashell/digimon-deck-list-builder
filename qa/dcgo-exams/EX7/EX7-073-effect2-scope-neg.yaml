@@ -1,139 +1,106 @@
-# Probe scope (negative): EX7-073#effect#2 -- "this Digimon's digivolution cards".
-# Only cards under THIS Digimon may pay. P-180 (Bind Red Trigger, a [Three
-# Musketeers]-trait card) is left in P0's HAND (clause 1 declined), so the
-# stack under EX7-073 holds exactly ONE trait card (BT25-085). The clause needs
-# two; the hand copy is outside its scope and must not be reachable. Expected:
-# no trash, no delete (Vermilimon BT4-014 stays), P1 security stays 5.
-# Line is EX7-073-effect2.yaml's through the T7 digivolve.
+# NEGATIVE scope probe for EX7-073#effect#2: "By trashing 2 cards with the
+# [Three Musketeers] trait from THIS Digimon's digivolution cards, delete 1 of
+# your opponent's Digimon with the highest level, and trash their top security
+# card."
+#
+# Same line as EX7-073-effect2.yaml, except clause 1 (use an Option from hand)
+# is DECLINED, so Bind Red Trigger P-180 -- a [Three Musketeers]-trait card --
+# stays in P0's HAND. The only trait source under EX7-073 is BT25-085. A trait
+# card in hand is outside "this Digimon's digivolution cards", so the two-card
+# cost is unpayable: nothing is trashed, Vermilimon BT4-014 (the only, highest-
+# level target) survives, and P1's security stays at 5.
+#
+# Vermilimon is 8000 DP so P-180's own trash trigger could not fire anyway; it
+# is never trashed here.
 card: EX7-073
 clause: EX7-073#effect#2
+meta: {produced_by: 20261006T153235483893Z-pilot-three-musketeers-405e9d}
 interaction: {id: "probe:EX7-073#effect#2:scope:neg", source: probe, kind: negative}
 covers: [EX7-073#effect#2]
-meta: {produced_by: 20261006T143144830894Z-pilot-three-musketeers-e77b66}
 seed: 424242
 decks:
   p0:
-    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
-    # never attacks); stack[10..] = draws in order. Draw budget: T3 turn draw
-    # [10], T3 Sparrowmon digivolve draw [11], T5 turn draw [12], T5
-    # BlackGatomon digivolve draw [13], T5 grant-digivolve draw [14], T7 turn
-    # draw [15] = P-180, T7 EX7-073 digivolve draw [16].
     stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-073,
             BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
             BT25-083, BT21-071, BT21-074, BT25-083, BT25-083,
             P-180, BT25-078, BT21-074, EX7-008, BT25-083]
     rest: three-musketeers
   p1:
-    # [0] Vermilimon BT4-014, the Lv.5 / 8000 DP vanilla body this line needs.
-    # Security [5..9] is five vanilla low-DP Digimon; [10] T2 draw, [11] T4
-    # draw, [12] T6 draw.
     stack: [BT4-014, ST1-04, ST1-04, BT1-009, BT1-009,
             ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
             BT1-009, BT1-009, BT3-007, BT3-007, BT3-007]
     rest: quiet-opponent
 steps:
-  # T1 (P0): hatch.
   - actor: 0
     do: { hatch: {} }
     expect: { prompt: breeding_action }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T2 (P1): hatch, pass out (memory 3 -> P0 3).
   - actor: 1
     do: { hatch: {} }
     expect: { prompt: breeding_action }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T3 (P0): breeding-digivolve -> Sparrowmon. No breeding prompt this turn:
-  # Pagumon is a Lv.2 (cannot move) and the egg slot is occupied.
   - actor: 0
     do: { digivolve: { from: breeding, using: EX7-051 } }
     expect: { prompt: main_phase }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T4 (P1, memory 3): Koromon is a Lv.2 in an occupied breeding area -- no
-  # breeding prompt. Hard-play Vermilimon for 5 (3 -> -2); the turn ends on
-  # the play and P0 opens T5 on 2.
   - actor: 1
     do: { play: { card: BT4-014, from: hand } }
     expect: { prompt: main_phase }
-  # T5 (P0, memory 2): promote Sparrowmon.
   - actor: 0
     do: { move: { from: breeding } }
     expect: { prompt: breeding_action }
-  # Sparrowmon's [Start of Your Main Phase] -- SHARED (BeelStarmon BT25-085 in
-  # hand is a DUAL card, a [Three Musketeers] trait Option, so the placement
-  # cost IS payable). Declined.
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
-  # Digivolve BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2
-  # (2 -> 0).
   - actor: 0
     do: { digivolve: { from: field.0, using: BT25-082 } }
     expect: { prompt: main_phase }
   - actor: 0
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
-  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
-  # park -- DCGO builds this effect non-optional and carries the "may" on the
-  # pick's canNoSelect), then the shared hand pick: Asuna BT25-092.
   - actor: 0
     do: { select: { yes: true, sim_only: true } }
   - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
-  # With Asuna on the field, BlackGatomon (Lv.4) digivolves into BeelStarmon
-  # BT25-085 (Lv.6) for 4, ignoring digivolution requirements (0 -> -4). Its
-  # own [When Digivolving] clauses find no Option in hand or under it, so
-  # neither engine asks anything. The turn hands over; P1 opens T6 on 4.
   - actor: 0
     do: { digivolve: { from: field.0, using: BT25-085 } }
     expect: { prompt: main_phase }
-  # T6 (P1, memory 4): a single main-phase pass (no breeding prompt).
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T7 (P0, memory 3): empty breeding area -> breeding prompt; pass it. The
-  # turn draw is P-180.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
-  # Asuna's [Start of Your Main Phase] -- a different card's clause, declined.
-  # TWO rows for one decision: BT25_092.cs builds it `optional: false` and
-  # asks ONE cancellable SelectHandEffect, while our engine installs an outer
-  # accept/decline gate before its hand pick.
   - actor: 0
     do: { select: { decline: true, sim_only: true } }
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: SelectHandEffect }
-  # EX7-073 onto BeelStarmon for 1 (memory 3 -> 2).
   - actor: 0
     do: { digivolve: { from: field.0, using: EX7-073 } }
     expect: { prompt: main_phase }
-  # Trigger order between EX7-073's two [When Digivolving] effects: clause 1
-  # FIRST, so the Option it uses is a digivolution card by the time clause 2's
-  # CanActivateCondition is evaluated.
   - actor: 0
     do: { select: { cards: [EX7-073], ordinal: 0 } }
     expect: { prompt: MultipleSkills, count: 1, candidates: [EX7-073, EX7-073] }
-  # Clause 1: decline the Option (P-180 stays in hand).
+  # Clause 1: decline the "may" use of P-180; it stays in hand.
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
-  # Clause 2 with ONE in-scope trait source: DCGO's OptionalSkill gate (our
-  # engine has none), then the pick -- only BT25-085 is offered; P-180 in hand
-  # is out of scope. Fewer than 2 chosen -> nothing trashed, nothing deleted.
+  # Clause 2: gate declined on both wires (one trait source under this Digimon;
+  # P-180 in hand does not count).
   - actor: 0
-    do: { select: { yes: true, dcgo_only: true } }
+    do: { select: { decline: true, sim_only: true } }
     expect: { prompt: OptionalSkill }
   - actor: 0
-    do: { select: { cards: [BT25-085] } }
-    expect: { prompt: SelectCardEffect }
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
