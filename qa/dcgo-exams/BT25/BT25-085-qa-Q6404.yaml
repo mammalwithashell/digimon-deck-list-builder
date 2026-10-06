@@ -74,3 +74,9 @@ steps:
     do: { select: { cards: [BT25-085] } }
     expect: { prompt: SelectHandEffect }
 assert: []
+expect_ruling:
+  q_id: Q6404
+  assert:
+  - at: 16
+    that:
+      p0.trash: [BT25-085]
