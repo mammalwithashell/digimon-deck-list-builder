@@ -133,3 +133,9 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
+expect_ruling:
+  q_id: Q6393
+  assert:
+  - at: 23
+    that:
+      p0.field: [BT6-068]
