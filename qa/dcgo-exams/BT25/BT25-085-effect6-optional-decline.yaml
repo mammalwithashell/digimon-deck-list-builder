@@ -1,0 +1,101 @@
+# Decline probe for the DUAL rule <Arts Digivolve> (BT25-085#effect#6).
+# Same prefix as BT25-085-effect6.yaml, but at the "Select 1 Digimon to Arts
+# Digivolve." pick (canNoSelect: true) P0 DECLINES. "Instead of trashing after
+# use, your cards MAY digivolve" -- declining must fall back to the ordinary
+# disposal: Fly Bullet goes to the trash, SkullMeramon stays un-digivolved
+# (sources: []), memory is 3 - 6 = -3 (no digivolve cost either way).
+# A wrong engine would either force the digivolve, or lose the Option card
+# (neither trashed nor digivolved).
+card: BT25-085
+clause: BT25-085#effect#6
+interaction: {id: "probe:BT25-085#effect#6:optional_decline", source: probe, kind: positive}
+covers:
+  - BT25-085#effect#6
+meta: {produced_by: 20261006T164434077681Z-pilot-three-musketeers-9c0f8c}
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped -- P1
+    # never attacks); stack[10] = T3 turn draw, stack[11] = T5 turn draw,
+    # stack[12] = T7 turn draw, stack[13] = the Arts Digivolve digivolution
+    # draw. None of the four is an Option, so none of them can wake
+    # BeelStarmon's [When Digivolving] use-an-Option clause on the way in.
+    stack: [BT2-052, BT3-085, BT25-085, ST1-03, ST1-03,
+            BT1-009, BT1-009, BT1-009, BT1-009, ST1-13,
+            BT3-007, ST1-02, ST1-04, ST1-05]
+    rest: tm-dual-085
+  p1:
+    stack: [ST1-02, ST1-03, ST1-03, ST1-04, ST1-04,
+            BT1-009, BT1-009, BT1-009, BT1-009, ST1-13,
+            BT3-007, ST1-05, BT1-014, ST1-08]
+    rest: quiet-red-085
+steps:
+  # T1 (P0, memory 0): never hatch -- the breeding area must stay empty so it
+  # cannot become an Arts Digivolve target of its own.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, 3): Biyomon -- the [Main] delete target.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Hagurumon -- the BLACK half of the colour requirement.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT2-052, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, 3): a quiet turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): the vanilla Purple Lv.5 Arts base (3 -> -2 ends the turn).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT3-085, from: hand } }
+    expect: { prompt: main_phase }
+  # T6 (P1, 2): a quiet turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, 3): use Fly Bullet for 6.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-085, from: hand } }
+    expect: { prompt: main_phase }
+  # The [Main] mandatory delete (a different clause's body, shared here).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE, DECLINED: the Arts Digivolve pick is optional; declining
+  # trashes Fly Bullet as for any ordinary Option.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # T8 (P1): one step past the clause, for the reading below.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
