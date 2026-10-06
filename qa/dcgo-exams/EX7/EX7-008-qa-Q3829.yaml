@@ -1,11 +1,15 @@
-# Q3829: ToyAgumon reveal; pick the dual-fit Hurricane Screw Shot (TM text AND
-# cost-6 Option) for bucket 1, which would starve bucket 2. The ruling says you
-# must add as many cards as possible, so Sparrowmon should be the pick.
+# Q3829: ToyAgumon reveals Sparrowmon (EX7-051, Three Musketeers text only),
+# Hurricane Screw Shot (EX7-071, TM text AND a cost-6 Option) and Titamon +
+# SkullBaluchimon (BT24-081, fits neither). The ruling: "you must add as many
+# cards to your hand as possible". The line picks Sparrowmon (EX7-051) for
+# bucket 1 so that Hurricane Screw Shot (EX7-071) is still available for
+# bucket 2 and BOTH are added -- two cards, the maximum. Taking EX7-071 for
+# bucket 1 would starve bucket 2 and add only one.
 card: EX7-008
 clause: EX7-008#effect#1
 covers: [EX7-008#effect#1]
 interaction: {id: "qa:Q3829", source: qa, kind: positive}
-meta: {produced_by: 20261006T225434864211Z-pilot-three-musketeers-917586}
+meta: {produced_by: 20261006T225552409291Z-pilot-three-musketeers-2d4183}
 seed: 424242
 decks:
   p0:
@@ -44,13 +48,18 @@ steps:
     do: { play: { card: EX7-008, from: hand } }
     expect: { prompt: main_phase }
   # Bucket 1: "1 card with [Three Musketeers] in its text" -- Sparrowmon
-  # (Hurricane Screw Shot also qualifies; see the header).
+  # (EX7-051), leaving the dual-fit Hurricane Screw Shot for bucket 2.
+  - actor: 0
+    do: { select: { cards: [EX7-051] } }
+    expect: { prompt: SelectCardEffect }
+  # Bucket 2: "1 Option card with a use cost of 6" -- Hurricane Screw Shot.
   - actor: 0
     do: { select: { cards: [EX7-071] } }
     expect: { prompt: SelectCardEffect }
-  # Bucket 2 has no Option left; the two unpicked cards go to the bottom.
+  # SIM-ONLY: Titamon + SkullBaluchimon returns to the bottom (our engine's
+  # one-choice OrderedPermutation; DCGO asks nothing).
   - actor: 0
-    do: { select: { cards: [EX7-051, BT24-081], sim_only: true } }
+    do: { select: { cards: [BT24-081], sim_only: true } }
   # One step past the clause: memory 0 is still P0's turn.
   - actor: 0
     do: { pass: {} }
