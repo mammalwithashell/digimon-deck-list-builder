@@ -77,7 +77,7 @@ model, ledgers under `<run-dir>/fake/`) — the way to smoke a plan for nothing.
 
 ```
 card:        PENDING → IMPLEMENTING → REVIEW → IMPLEMENTED   (or PARKED on a gap)
-clause/int:  PENDING → [CLASSIFY → ENCODE] → AUTHORING → SIM → ORACLE → CONFIRMED
+clause/int:  PENDING → [CLASSIFY] → AUTHORING → [ENCODE] → SIM → ORACLE → CONFIRMED
                                          └── DIVERGED → TRIAGE → ours_wrong → FIX → GATE → ORACLE
                                                                → dcgo_quirk | unreachable → TERMINATION_CHECK → TERMINAL
                                                                → undetermined → ESCALATED
@@ -112,9 +112,14 @@ clause/int:  PENDING → [CLASSIFY → ENCODE] → AUTHORING → SIM → ORACLE 
 - **Interactions** start from the gating denominator
   (`data/interaction_denominator.json`): official rulings `qa:<Q>` and
   generated probes `probe:<clause>:<family>[:neg]`. A ruling is first
-  classified (behavioral / textual / not_examinable), then its publisher
-  answer is encoded as `expect_ruling:` by one family and verified by the
-  other, then authored by a family other than the card's implementer.
+  classified (behavioral / textual / not_examinable), then a line that
+  exercises it is authored by a family other than the card's implementer, then
+  its publisher answer is encoded as `expect_ruling:` against that line by one
+  family and verified blind by the other; the sim step writes the agreed block
+  into the scenario. A line that never reaches the ruling's situation goes
+  back to its author with the objection. A legal line on which our engine
+  contradicts the ruling goes on to the oracle and triage (the engine's
+  finding), not back to the author.
 
 ### Stopping
 

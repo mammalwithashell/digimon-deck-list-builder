@@ -409,7 +409,8 @@ def test_codex_worker_run_end_to_end(repo, tmp_path):
     assert 'model_reasoning_effort="medium"' in argv and argv[-1] == "-"
     assert runner.calls[0]["env"]["CARGO_TARGET_DIR"] == target
     files = json.loads(Path(res.artifacts["manifest"]).read_text())["files"]
-    assert files == [{"path": "a.yaml", "status": "M", "sha256": files[0]["sha256"]}]
+    assert files == [{"path": "a.yaml", "status": "M", "sha256": files[0]["sha256"],
+                      "sha256_lf": files[0]["sha256_lf"]}]
     assert Path(res.transcript_path).name == "events.jsonl"
 
 

@@ -1,4 +1,4 @@
-version: 2
+version: 3
 # Triage a divergence: {item_id}
 
 You are one stateless worker in the card-authoring loop. Read only: do not edit
@@ -23,6 +23,16 @@ Our engine and DCGO ran the same scripted line and disagreed.
    `data/card_qa.json`.
 Replay our side with the exam MCP `exam_probe` (sim-only, `inspect_step: N`) to
 see our prompt and board at the divergent step.
+
+Two shapes of finding carry no field divergence and are still divergences:
+- A line DCGO STOPPED (its `reason` names a prompt, actor or candidate
+  mismatch; the prompt evidence above spells out who asked what): the engines
+  disagree about that prompt -- one asks it, the other does not, or they offer
+  different candidates. Decide who is right about asking it there. Do not
+  answer "nothing to classify": the stopped line is the finding.
+- A `reason` of `ours contradicts ruling qa:<Q>`: our engine against the
+  publisher's own answer, which outranks DCGO. `ours_wrong` unless the ruling
+  is misread (then say exactly which words).
 
 ## Classify
 - `ours_wrong`: our engine contradicts a correct rule, ruling or DCGO behaviour.

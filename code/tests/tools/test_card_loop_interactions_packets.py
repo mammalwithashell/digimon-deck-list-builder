@@ -134,12 +134,12 @@ def test_either_family_saying_behavioral_means_examine():
     assert a.value == "behavioral" and not a.escalate
 
 
-AUTHOR = {"q_id": "Q2001", "mode": "author", "agrees": None, "answer_quote": "you must add it",
+AUTHOR = {"q_id": "Q2001", "mode": "author", "agrees": None, "line_exercises_ruling": None, "answer_quote": "you must add it",
           "reasoning": "the answer says the add is mandatory when possible",
           "expect_ruling": {"assert": [{"at": 1, "that": [
               {"key": "p0.hand", "value_json": "[\"BT7-056\"]"},
               {"key": "p0.memory", "value_json": "3"}]}]}}
-VERIFY_YES = {"q_id": "Q2001", "mode": "verify", "agrees": True, "expect_ruling": None,
+VERIFY_YES = {"q_id": "Q2001", "mode": "verify", "agrees": True, "line_exercises_ruling": None, "expect_ruling": None,
               "answer_quote": "you must add it", "reasoning": "the block asserts the added card"}
 
 

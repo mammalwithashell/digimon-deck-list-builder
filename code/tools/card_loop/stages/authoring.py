@@ -33,6 +33,11 @@ def _previous(item: ItemRecord) -> str:
             f"- `{ev.get('scenario')}`: at step {ev.get('scenario_step')} the scenario expected "
             f"`{ev.get('expected')}`, DCGO asked `{ev.get('dcgo_asked')}`, our engine asked "
             f"`{ev.get('ours')}` ({ev.get('explanation')}). Fix the `expect:` and the line, not the engines.")
+    fb = item.data.get("encode_feedback")
+    if fb:
+        parts.append(f"- the publisher's ruling could not be encoded against your line: {fb}\n"
+                     "  Rework the line so the situation the question describes happens on it, and stop "
+                     "right after it resolves.")
     if not parts:
         return ""
     return ("\n## Your previous scenario did not hold\n" + "\n".join(parts)
@@ -118,8 +123,12 @@ class AuthoringExecutor:
         refs = [*(base.bundle_path(c) for c in cards), *(base.dcgo_script(ctx, c) for c in cards),
                 base_line, base.scenario_dir(primary), *notes, "qa/exam-authoring-guide.json",
                 "docs/digimon-rules/keyword-semantics.md"]
+        # A ruling not yet encoded is encoded against THIS line next (ENCODE ->
+        # SIM); a block agreed earlier rides along to the sim check directly.
+        next_state = "ENCODE" if iid.startswith("qa:") and not item.data.get("expect_ruling") else "SIM"
         return self._finish(ctx, item, "author_interaction", render, refs, implementer=implementer,
-                            subject=iid, extra={"base_scenario": base_line})
+                            subject=iid, extra={"base_scenario": base_line, "encode_feedback": None},
+                            next_state=next_state)
 
     def _target(self, ctx, item, iid, entry, cards):
         if iid.startswith("qa:"):
@@ -131,8 +140,8 @@ class AuthoringExecutor:
             clause_ids = list(cls.get("examined_clauses") or []) or [
                 c["id"] for c in base.clauses_for(ctx, cards)]
             block = item.data.get("expect_ruling")
-            ruling_rule = ""
             if block:
+                # An item encoded under the earlier order (block before line).
                 ruling_rule = (
                     "- Copy this `expect_ruling:` block into the scenario verbatim. Two model families "
                     "agreed it encodes the publisher's answer: do not change its values. Its `at:` "
@@ -140,6 +149,13 @@ class AuthoringExecutor:
                     "`at:` unchanged.\n```yaml\nexpect_ruling:\n"
                     + "".join(f"  {ln}\n" for ln in yaml.safe_dump(block, sort_keys=False).splitlines())
                     + "```")
+            else:
+                ruling_rule = (
+                    "- Build the line so the situation the question describes actually happens -- the "
+                    "card, timing and choice the answer rules on -- and stop right after it resolves. "
+                    "Do not write an `expect_ruling:` block and leave `assert:` empty: once your line "
+                    "passes, another model family encodes the publisher's answer against its steps and "
+                    "a third checks that encoding blind.")
             return clause_ids, target, ruling_rule
         clause = entry.get("clause_id") or iid.split(":")[1]
         family = entry.get("family") or (iid.split(":")[2] if iid.count(":") >= 2 else "?")
@@ -159,7 +175,8 @@ class AuthoringExecutor:
                                                     "prompt_evidence": None},
                             reason=f"reusing library scenario(s) {', '.join(found)}")
 
-    def _finish(self, ctx, item, stage, render, refs, *, implementer, subject, extra=None) -> StageOutcome:
+    def _finish(self, ctx, item, stage, render, refs, *, implementer, subject, extra=None,
+                next_state: str = "SIM") -> StageOutcome:
         call, calls = base.routed_call(ctx, item, stage=stage, prompt=render, references=refs,
                                        implementer=implementer)
         if not call.ok:
@@ -185,5 +202,5 @@ class AuthoringExecutor:
         merge = MergeRequest(attempt_id=call.attempt_id, family=call.family, model=call.packet.model,
                              artifacts=dict(call.result.artifacts or {}), engine=False,
                              subject=f"card-loop: exam scenario for {subject}")
-        return base.outcome("SIM", item=item, attempts=attempts, data=data, merge_request=merge,
+        return base.outcome(next_state, item=item, attempts=attempts, data=data, merge_request=merge,
                             reason=f"{stage} by {call.family} ({call.assignment})")

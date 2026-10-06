@@ -149,6 +149,20 @@ def test_a_contradicted_ruling_is_a_failure_line_the_author_sees():
     assert r.failures == ["RULING qa:Q2304 CONTRADICTED: at 15: p1.security expected 3 but our engine has 5",
                           "ruling qa:Q2304: ours CONTRADICTS the ruling (1 check(s), 1 failed)"]
     assert "p1.security expected 3" in r.failure_text()
+    # the LINE ran clean; only the ruling failed -- the oracle can still measure it
+    assert r.ruling_contradicted and r.line_ok
+    assert not H.parse_sim_output(1, SIM_FAIL).line_ok and not H.parse_sim_output(1, SIM_FAIL).ruling_contradicted
+    assert H.parse_sim_output(0, SIM_PASS).line_ok
+
+
+def test_a_candidate_mismatch_is_parsed_from_dcgos_message():
+    row = {"job_outcome": "failed",
+           "reason": "DCGO job failed: SelectCardEffect: wanted card 'BT26-005' (pick 0 of [BT26-005]) is not "
+                     "among the offered candidates [ST24-05,ST24-12] -- stopped before the line finished"}
+    m = H.candidate_mismatch(row)
+    assert (m.prompt, m.wanted, m.offered) == ("SelectCardEffect", "BT26-005", ["ST24-05", "ST24-12"])
+    assert H.candidate_mismatch({"job_outcome": "completed", "reason": row["reason"]}) is None
+    assert H.candidate_mismatch({"job_outcome": "failed", "reason": "prompt mismatch: step 2 ..."}) is None
 
 
 def test_a_harness_that_did_not_start_is_a_failure():

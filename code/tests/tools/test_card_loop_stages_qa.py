@@ -80,13 +80,14 @@ def test_probe_interactions_skip_classification(repo):
     assert workers["claude"].calls == workers["codex"].calls == 0
 
 
-def test_both_behavioral_goes_to_encode_and_both_saw_the_same_packet(repo):
+def test_both_behavioral_goes_to_authoring_and_both_saw_the_same_packet(repo):
+    # The line is authored first; the encoding anchors on it (second pilot).
     workers = _workers(claude=[_cls("behavioral")],
                        codex=[_cls("behavioral", clauses=(CLAUSE, "ST23-04#inherited#0"))])
     item = ItemRecord(item=ITEM, state="CLASSIFY")
     out = ClassifyExecutor().run(_ctx(repo, workers), item)
     _check(item, out)
-    assert out.next_state == "ENCODE"
+    assert out.next_state == "AUTHORING"
     a, b = workers["claude"].received[0], workers["codex"].received[0]
     assert a.prompt == b.prompt and a.references == b.references and a.schema_path == b.schema_path
     assert "Can the -5000 target a Tamer?" in a.prompt
@@ -125,7 +126,7 @@ def test_terminating_disagreement_escalates_with_both_arguments(repo):
 def test_one_behavioral_call_is_enough_to_examine(repo):
     workers = _workers(claude=[_cls("behavioral")], codex=[_cls("textual")])
     out = ClassifyExecutor().run(_ctx(repo, workers), ItemRecord(item=ITEM, state="CLASSIFY"))
-    assert out.next_state == "ENCODE"
+    assert out.next_state == "AUTHORING"
     assert len(out.corrections) == 2      # the disagreement is still recorded
 
 
@@ -167,32 +168,49 @@ def test_a_failed_classification_call_defers(repo):
 BLOCK = {"assert": [{"at": 0, "that": [{"key": "p1.field", "value_json": "[]"}]}]}
 
 
-def _author(block=BLOCK):
+def _author(block=BLOCK, line_exercises_ruling=None, reasoning="the Tamer stays on the field untouched"):
     return ok({"q_id": "Q77", "mode": "author", "expect_ruling": block, "agrees": None,
-               "answer_quote": "It only affects Digimon.", "reasoning": "the Tamer stays on the field untouched"})
+               "line_exercises_ruling": line_exercises_ruling,
+               "answer_quote": "It only affects Digimon.", "reasoning": reasoning})
 
 
-def _verify(agrees=True):
+def _verify(agrees=True, line_exercises_ruling=None, reasoning="the block asserts exactly the answer"):
     return ok({"q_id": "Q77", "mode": "verify", "expect_ruling": None, "agrees": agrees,
-               "answer_quote": "It only affects Digimon.", "reasoning": "the block asserts exactly the answer"})
+               "line_exercises_ruling": line_exercises_ruling,
+               "answer_quote": "It only affects Digimon.", "reasoning": reasoning})
+
+
+AUTHORED = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
 
 
 def _enc_item(**data):
-    d = {"classification": {"q_id": "Q77", "examined_clauses": [CLAUSE]}}
+    # Since the second pilot the line is AUTHORED before it is encoded: the
+    # block anchors on the line that exercises the ruling, not on a library
+    # line that never reaches the situation (60% of pilot encodings escalated
+    # on exactly that).
+    d = {"classification": {"q_id": "Q77", "examined_clauses": [CLAUSE]}, "scenario_paths": [AUTHORED]}
     d.update(data)
     return ItemRecord(item=ITEM, state="ENCODE", data=d)
 
 
-def test_encoding_author_and_blind_verifier_agree(repo):
+@pytest.fixture
+def authored(repo):
+    p = repo / AUTHORED
+    p.write_text(SCENARIO.replace("seed: 1\n", 'interaction: {id: "qa:Q77", source: qa, kind: positive}\nseed: 1\n'),
+                 encoding="utf-8")
+    return repo
+
+
+def test_encoding_author_and_blind_verifier_agree(authored):
     workers = _workers(claude=[_author()], codex=[_verify(True)])
     item = _enc_item()
-    out = EncodeExecutor().run(_ctx(repo, workers), item)
+    out = EncodeExecutor().run(_ctx(authored, workers), item)
     _check(item, out)
-    assert out.next_state == "AUTHORING"
+    assert out.next_state == "SIM"
     assert out.data["expect_ruling"] == {"q_id": "Q77", "assert": [{"at": 0, "that": {"p1.field": []}}]}
-    assert out.data["base_scenario"] == SC
+    assert out.data["base_scenario"] == AUTHORED
     author_pkt, verify_pkt = workers["claude"].received[0], workers["codex"].received[0]
-    assert "ST23-04-effect0.yaml" in author_pkt.prompt
+    assert "ST23-04-qa-Q77.yaml" in author_pkt.prompt and "qa:Q77" in author_pkt.prompt
     # the verifier sees the candidate block, never the author's argument
     assert '"candidate"' in verify_pkt.prompt and "the Tamer stays on the field untouched" not in verify_pkt.prompt
     (a, v) = out.attempts
@@ -200,9 +218,56 @@ def test_encoding_author_and_blind_verifier_agree(repo):
     assert (v.family, v.assignment, v.parent_attempt) == ("codex", "forced", a.attempt_id)
 
 
-def test_a_verifier_that_disagrees_escalates(repo):
-    workers = _workers(claude=[_author()], codex=[_verify(False)])
+def test_without_an_authored_line_an_agreed_encoding_still_precedes_authoring(repo):
+    # Items encoded under the earlier order (in flight at the upgrade) keep it.
+    workers = _workers(claude=[_author()], codex=[_verify(True)])
+    out = EncodeExecutor().run(_ctx(repo, workers), _enc_item(scenario_paths=[]))
+    assert out.next_state == "AUTHORING" and out.data["base_scenario"] == SC
+
+
+def test_a_verifier_who_finds_the_line_not_exercising_the_ruling_sends_it_back_to_authoring(authored):
+    workers = _workers(claude=[_author()], codex=[_verify(False, line_exercises_ruling=False,
+                                                           reasoning="step 3 is a normal digivolution; Fly Bullet is never used")])
     item = _enc_item()
+    out = EncodeExecutor().run(_ctx(authored, workers), item)
+    _check(item, out)
+    assert out.next_state == "AUTHORING"
+    assert out.data["expect_ruling"] is None
+    assert "Fly Bullet is never used" in out.data["encode_feedback"]
+    assert [a.outcome for a in out.attempts] == ["gate_failed", "accepted"]
+    assert len(out.corrections) == 2 and out.escalation is None
+
+
+def test_a_verifier_who_rejects_the_block_itself_lets_it_be_re_encoded(authored):
+    workers = _workers(claude=[_author()], codex=[_verify(False, reasoning="memory 3 is the setup, not the outcome")])
+    item = _enc_item()
+    out = EncodeExecutor().run(_ctx(authored, workers), item)
+    _check(item, out)
+    assert out.next_state == "ENCODE", "the stage cap bounds the re-encodes"
+    assert "memory 3 is the setup" in out.data["encode_feedback"]
+    assert [a.outcome for a in out.attempts] == ["gate_failed", "accepted"]
+
+
+def test_an_author_who_says_the_line_misses_the_ruling_sends_it_back_without_a_verifier(authored):
+    workers = _workers(claude=[_author(block=None, line_exercises_ruling=False,
+                                       reasoning="the line never plays the Option the question is about")])
+    item = _enc_item()
+    out = EncodeExecutor().run(_ctx(authored, workers), item)
+    _check(item, out)
+    assert out.next_state == "AUTHORING" and workers["codex"].calls == 0
+    assert "never plays the Option" in out.data["encode_feedback"]
+    assert [a.outcome for a in out.attempts] == ["accepted"]
+
+
+def test_the_encoder_sees_the_earlier_rejection(authored):
+    workers = _workers(claude=[_author()], codex=[_verify(True)])
+    EncodeExecutor().run(_ctx(authored, workers), _enc_item(encode_feedback="verifier: memory 3 is the setup"))
+    assert "memory 3 is the setup" in workers["claude"].received[0].prompt
+
+
+def test_a_disagreement_without_an_authored_line_escalates(repo):
+    workers = _workers(claude=[_author()], codex=[_verify(False)])
+    item = _enc_item(scenario_paths=[])
     out = EncodeExecutor().run(_ctx(repo, workers), item)
     _check(item, out)
     assert out.next_state == "ESCALATED" and "verifier disagrees" in out.escalation.reason
@@ -227,7 +292,7 @@ def test_probe_interactions_have_nothing_to_encode(repo):
 def test_a_malformed_author_block_is_a_gate_failure_not_a_verification(repo):
     # The author's correction, retried in ENCODE under the stage cap -- not a
     # deferral: deferring escalated Q2671 after a single malformed reply.
-    bad = ok({"q_id": "Q77", "mode": "author", "expect_ruling": BLOCK, "agrees": True,
+    bad = ok({"q_id": "Q77", "mode": "author", "expect_ruling": BLOCK, "agrees": True, "line_exercises_ruling": None,
               "answer_quote": "x", "reasoning": "a reasoning long enough to pass"})
     workers = _workers(claude=[bad])
     o = EncodeExecutor().run(_ctx(repo, workers), _enc_item())

@@ -109,6 +109,8 @@ Model-authored combo interactions from `qa/archetype-qa/*-model.md` are examined
 
 A Q&A-sourced scenario carries the ruling as an `expect_ruling:` block: an assertion encoding the publisher's answer, with the Q-number. One family authors it and the other must agree that it encodes the answer (D5's packet discipline), because this assertion is the expected value.
 
+*Amended 2026-10-06 (second pilot).* The block is encoded **after** the line is authored, against that line: `CLASSIFY → AUTHORING → ENCODE → SIM`. The original order (encode first, on a library line of a related clause) made 60% of encodings escalate — the verifier was right each time that a block on a line which never reaches the ruling's situation cannot discriminate the answer. Independence is kept by discipline, not order: the line's author writes no `expect_ruling:` (the sim step places the agreed block), the encoder derives values from the publisher's answer and sees no sim output, and the other family verifies blind. An encoder or verifier who finds the line does not exercise the ruling sends it back to its author (`line_exercises_ruling: false`); a verifier who rejects the block itself triggers one re-encode under the stage cap. A line our engine runs legally but on which it **contradicts** the ruling proceeds to the oracle (for DCGO's answer) and then triage — the engine's finding, not the author's failure.
+
 | ours = DCGO | ours = ruling | Outcome |
 |---|---|---|
 | yes | yes | `confirmed` |

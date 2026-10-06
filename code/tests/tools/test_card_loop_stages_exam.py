@@ -199,6 +199,20 @@ def test_forced_author_unavailable_defers_never_falls_back_to_the_implementer(re
     assert ctx.workers["claude"].calls == 0
 
 
+def test_qa_interaction_without_an_encoding_is_authored_then_encoded(repo):
+    # The line comes first, so the encoding can anchor on steps that exercise
+    # the ruling (second pilot: 60% of encodings against library lines escalated).
+    workers = _workers(claude=[ok(dict(INT_OK, scenario_paths=["qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"]))])
+    item = _item("AUTHORING", item="interaction:qa:Q77")
+    out = AuthoringExecutor().run(_ctx(repo, workers, sources=_isrc()), item)
+    _check(item, out)
+    assert out.next_state == "ENCODE"
+    pkt = workers["claude"].received[0]
+    assert "only affects Digimon" in pkt.prompt
+    assert "expect_ruling" in pkt.prompt and "Do not write" in pkt.prompt
+    assert out.merge_request is not None
+
+
 def test_qa_interaction_author_gets_the_ruling_and_the_agreed_block(repo):
     workers = _workers(claude=[ok(dict(INT_OK, scenario_paths=["qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"]))])
     block = {"q_id": "Q77", "assert": [{"at": 3, "that": {"p1.field": []}}]}
@@ -261,18 +275,24 @@ AGREED = {"q_id": "Q77", "assert": [{"at": 1, "that": {"p1.field": []}}]}
 QA_SCENARIO = SCENARIO.replace("seed: 1\n", 'interaction: {id: "qa:Q77", source: qa, kind: positive}\nseed: 1\n')
 
 
-def test_sim_refuses_a_scenario_that_altered_the_agreed_ruling_block(repo):
+def test_sim_writes_the_agreed_ruling_block_into_the_scenario(repo):
+    # The block both families agreed is the orchestrator's to place: the file's
+    # stale or missing block is replaced, the rest of the file (comments
+    # included) is kept, and the write is reported for the tree commit.
     rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
-    _write_scenario(repo, rel, QA_SCENARIO + "expect_ruling:\n  q_id: Q77\n  assert:\n"
-                                              "    - at: 1\n      that: {p1.field: [ST1-02]}\n")
+    _write_scenario(repo, rel, "# the line\n" + QA_SCENARIO + "expect_ruling:\n  q_id: Q77\n  assert:\n"
+                                                              "    - at: 1\n      that: {p1.field: [ST1-02]}\n")
     cmds = FakeCommands().on("--sim-only", 0, SIM_PASS)
     item = _item("SIM", item="interaction:qa:Q77", scenario_paths=[rel], expect_ruling=AGREED,
                  author_attempt="att-a", author_stage="author_interaction")
     out = SimExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
-    assert out.next_state == "AUTHORING"
-    assert "expect_ruling" in out.data["sim_failure"][rel][0]
-    assert out.corrections[0].stage == "author_interaction"
+    assert out.next_state == "ORACLE" and not out.corrections
+    text = (repo / rel).read_text(encoding="utf-8")
+    assert text.startswith("# the line\n") and "ST1-02" not in text
+    import yaml
+    assert yaml.safe_load(text)["expect_ruling"] == AGREED
+    assert out.data["ruling_block_written"] == [rel]
 
 
 def test_sim_accepts_the_agreed_ruling_block_verbatim(repo):
@@ -281,7 +301,31 @@ def test_sim_accepts_the_agreed_ruling_block_verbatim(repo):
                                               "    - at: 1\n      that: {p1.field: []}\n")
     cmds = FakeCommands().on("--sim-only", 0, SIM_PASS)
     item = _item("SIM", item="interaction:qa:Q77", scenario_paths=[rel], expect_ruling=AGREED)
-    assert SimExecutor().run(_ctx(repo, cmds=cmds), item).next_state == "ORACLE"
+    out = SimExecutor().run(_ctx(repo, cmds=cmds), item)
+    assert out.next_state == "ORACLE" and not out.data.get("ruling_block_written")
+
+
+SIM_RULING_CONTRADICTED = ("exam: x\n  lowered 4 step(s): []\n  assert: 0 check(s) over 0 assertion block(s), 0 failed\n"
+                           "  RULING qa:Q77 CONTRADICTED: at 3: p1.field expected [] but our engine has [ST1-02]\n"
+                           "  ruling qa:Q77: ours CONTRADICTS the ruling (1 check(s), 1 failed)\n"
+                           "exam: scenarios seen 1 / lowered 1 / run 1 / diffed 0 / failed 1\n")
+
+
+def test_a_ruling_contradiction_on_a_complete_line_goes_to_the_oracle(repo):
+    # Our engine disagreeing with the publisher is a finding for triage (after
+    # DCGO's answer is in), not the author's failure: Q2304 burnt six authoring
+    # attempts across two resumes on an assertion the engine fix targets.
+    rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
+    _write_scenario(repo, rel, QA_SCENARIO + "expect_ruling:\n  q_id: Q77\n  assert:\n"
+                                              "    - at: 1\n      that: {p1.field: []}\n")
+    cmds = FakeCommands().on("--sim-only", 0, SIM_RULING_CONTRADICTED)
+    item = _item("SIM", item="interaction:qa:Q77", scenario_paths=[rel], expect_ruling=AGREED,
+                 author_attempt="att-a", author_stage="author_interaction")
+    out = SimExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "ORACLE" and not out.corrections
+    assert "CONTRADICTED" in out.data["ruling_contradicted"][rel][0]
+    assert "contradicts" in out.reason
 
 
 def test_a_missing_scenario_file_is_an_authoring_failure(repo):
@@ -499,6 +543,51 @@ def test_a_stall_the_player_already_left_behind_does_not_restart_it(repo):
     assert out.next_state == "DIVERGED"
     assert not [c for c in cmds.calls if "node" in c["argv"]]
     assert "idle" in out.data["prompt_evidence"]["player_restart"]
+
+
+ACTOR = ("DCGO job failed: prompt mismatch: step 27 expected actor 0 but DCGO asked actor 1 -- stopped before the "
+         "line finished, with no divergence before it")
+
+
+def test_an_actor_mismatch_names_who_acts_for_triage(repo):
+    # EX7-070#effect#0:optional_decline: DCGO handed the turn to actor 1 where the
+    # scenario (sim-only clean) has actor 0 act. The row went to triage labelled
+    # by the differ's "TRUNCATED, no divergence found" with null prompts, and the
+    # triage model answered "there is no divergence to classify".
+    _write_scenario(repo)
+    row = _row(verdict="unmeasured", job_outcome="failed", reason=ACTOR,
+               first_divergence="TRUNCATED, no divergence found (compared 22 of 34 ours / 27 dcgo steps)",
+               mismatch={"row": 27, "step": 3, "expected": None, "asked": None})
+    cmds = FakeCommands().on("--oracle", 1, row + "\n")
+    item = _oracle_item()
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED"
+    assert out.data["prompt_route"] == "engines_disagree"
+    ev = out.data["prompt_evidence"]
+    assert (ev["scenario_step"], ev["expected"], ev["dcgo_asked"]) == (3, "actor 0", "actor 1")
+    assert "actor 1" in ev["explanation"] and "step 3" in ev["explanation"]
+    assert "TRUNCATED" not in out.reason and "actor 1" in out.reason
+
+
+CANDIDATES = ("DCGO job failed: SelectCardEffect: wanted card 'BT26-005' (pick 0 of [BT26-005]) is not among the "
+              "offered candidates [ST24-05,ST24-12] -- stopped before the line finished, with no divergence before it")
+
+
+def test_dcgo_offering_other_candidates_is_an_engine_disagreement_for_triage(repo):
+    # BT26-005#inherited#0: DCGO offered [ST24-05, ST24-12] where our engine
+    # (sim-only clean) offered BT26-005. The message is not a prompt mismatch,
+    # so it was retried three times as "unmeasured" and escalated.
+    _write_scenario(repo)
+    cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=CANDIDATES) + "\n")
+    item = _oracle_item()
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED"
+    assert out.data["prompt_route"] == "engines_disagree"
+    ev = out.data["prompt_evidence"]
+    assert ev["dcgo_asked"] == "SelectCardEffect" and "ST24-05" in ev["explanation"] and "BT26-005" in ev["explanation"]
+    assert not cmds.argvs("--inspect")
 
 
 def test_a_divergence_before_the_mismatch_is_a_plain_divergence(repo):

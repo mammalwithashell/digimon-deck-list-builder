@@ -62,9 +62,17 @@ _CARD_TRANSITIONS = {
 
 _EXAM_TRANSITIONS = {
     "PENDING": ("CLASSIFY", "AUTHORING", "UNAVAILABLE", "ESCALATED"),
+    # A behavioral ruling is AUTHORED first, then ENCODED against that line
+    # (ENCODE -> SIM); ENCODE -> AUTHORING sends back a line that never reaches
+    # the ruling's situation. CLASSIFY -> ENCODE and an agreed ENCODE ->
+    # AUTHORING are the earlier order, kept so in-flight items and old event
+    # logs replay (second pilot: 60% of encodings anchored on a library line
+    # that did not exercise the ruling escalated).
     "CLASSIFY": ("ENCODE", "AUTHORING", "TERMINATION_CHECK", "ESCALATED"),
-    "ENCODE": ("AUTHORING", "TERMINATION_CHECK", "ESCALATED"),
-    "AUTHORING": ("SIM", "ESCALATED"),
+    # ENCODE -> ENCODE: the verifier rejected the block (or the author's was
+    # malformed) and the ruling is encoded again, under the stage's attempt cap.
+    "ENCODE": ("ENCODE", "SIM", "AUTHORING", "TERMINATION_CHECK", "ESCALATED"),
+    "AUTHORING": ("SIM", "ENCODE", "ESCALATED"),
     "SIM": ("ORACLE", "AUTHORING", "ESCALATED"),
     # ORACLE -> ORACLE: an unmeasured round trip (timeout, quarantine) retried
     # within the attempt cap. ORACLE -> AUTHORING: both engines contradicted

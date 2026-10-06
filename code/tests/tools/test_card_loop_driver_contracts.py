@@ -75,3 +75,13 @@ def test_records_round_trip():
     assert dc.Event.from_row(ev.to_row()) == ev
     bare = dc.Event(ts="t", run_id="r", item=rec.item, src=None, dst="PENDING")
     assert "stage" not in bare.to_row() and "data" not in bare.to_row()
+
+
+def test_qa_interactions_are_encoded_after_authoring():
+    # Second pilot: encodings anchored on a library line that never exercised
+    # the ruling escalated 60% of the time; the line now comes first.
+    from tools.card_loop.driver_contracts import check_transition
+    check_transition("interaction", "AUTHORING", "ENCODE")
+    check_transition("interaction", "ENCODE", "SIM")
+    check_transition("interaction", "ENCODE", "AUTHORING")   # the line did not exercise the ruling
+    check_transition("interaction", "CLASSIFY", "ENCODE")    # in-flight items from the earlier order replay

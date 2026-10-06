@@ -831,7 +831,12 @@ class Driver:
             if isinstance(row, Mapping) and row.get("backfilled") and row.get("scenario"):
                 paths.append(row["scenario"])
         paths.append(VERDICTS_DIR)
-        what = "oracle verdict and backfill" if src in ORACLE_STATES else f"{src.lower()} verdict"
+        if src in ORACLE_STATES:
+            what = "oracle verdict and backfill"
+        elif src == "SIM":
+            what = "agreed expect_ruling block"        # placed by the sim step (D7)
+        else:
+            what = f"{src.lower()} verdict"
         self._commit_paths(list(dict.fromkeys(paths)), f"card-loop: {what} for {rec.item}",
                            attempt_id=attempts[0].attempt_id if attempts else None)
 
@@ -1092,7 +1097,8 @@ class Driver:
                               event_data=outcome.events_data, count=count, reset_keys=reset)
         if dst == "PARKED":
             self._park(rec)
-        if self.manage_tree and src in TREE_WRITING_STATES:
+        if self.manage_tree and (src in TREE_WRITING_STATES
+                                 or (src == "SIM" and rec.data.get("ruling_block_written"))):
             self._commit_tree_writes(rec, src, attempts)
         newly = bool(outcome.adjudicated) or (is_adjudicated(kind, dst) and not is_adjudicated(kind, src))
         self._tick(attempts, adjudicated=newly)

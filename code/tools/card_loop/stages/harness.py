@@ -259,14 +259,19 @@ def run(ctx, argv: Sequence[str], timeout: float) -> tuple[int | None, str, str]
 class SimReport:
     passed: bool
     rc: int | None
-    failures: list = field(default_factory=list)      # FAILED / ASSERT FAILED / stall lines
+    failures: list = field(default_factory=list)      # FAILED / ASSERT FAILED / stall / CONTRADICT lines
     notes: list = field(default_factory=list)          # `note:` lines
     summary: str | None = None                         # `exam: scenarios seen ...`
     assert_line: str | None = None                     # `assert: N check(s) ... M failed`
+    line_ok: bool = False                              # the line lowered and ran clean (ruling aside)
+    ruling_contradicted: bool = False                  # `RULING <q> CONTRADICTED` -- our engine vs the publisher
 
     def failure_text(self) -> str:
         lines = list(self.failures) or ([self.summary] if self.summary else [])
         return "\n".join(lines) if lines else f"sim-only exited {self.rc} with no failure line"
+
+    def ruling_lines(self) -> list[str]:
+        return [l for l in self.failures if "CONTRADICT" in l]
 
 
 def parse_sim_output(rc: int | None, stdout: str, stderr: str = "") -> SimReport:
@@ -293,8 +298,10 @@ def parse_sim_output(rc: int | None, stdout: str, stderr: str = "") -> SimReport
     passed = rc == 0 and summary is not None and "/ failed 0" in summary
     if rc is None:
         failures.append((stderr or "").strip() or "harness did not start")
+    ruling = [l for l in failures if "CONTRADICT" in l]
+    line_ok = rc == 0 and summary is not None and len(ruling) == len(failures)
     return SimReport(passed=passed, rc=rc, failures=failures, notes=notes, summary=summary,
-                     assert_line=assert_line)
+                     assert_line=assert_line, line_ok=line_ok, ruling_contradicted=bool(ruling))
 
 
 def parse_inspect(stdout: str) -> dict | None:
@@ -359,6 +366,48 @@ def prompt_mismatch(result: Mapping) -> PromptMismatch | None:
     if not m:
         return None
     return PromptMismatch(row=int(m.group(1)), expected=m.group(2), asked=m.group(3))
+
+
+_ACTOR = re.compile(r"prompt mismatch: step (\d+) expected actor (\d) but DCGO asked actor (\d)")
+
+
+def actor_mismatch(result: Mapping) -> tuple[int, int] | None:
+    """`(expected actor, actor DCGO asked)` from a failed job's actor mismatch."""
+    if result.get("job_outcome") != "failed":
+        return None
+    m = _ACTOR.search(str(result.get("reason") or ""))
+    return (int(m.group(2)), int(m.group(3))) if m else None
+
+
+@dataclass(frozen=True)
+class CandidateMismatch:
+    """DCGO's prompt matched but offered other candidates than the pick the
+    scenario (sim-only clean in our engine) makes: the engines disagree on
+    what that selection offers."""
+    prompt: str
+    wanted: str
+    pick: int
+    wanted_list: list
+    offered: list
+
+
+# InputDriver.cs: `<Prompt>: wanted card 'X' (pick i of [..]) is not among the offered candidates [..]`
+_CANDIDATES = re.compile(r"(\w+): wanted card '([^']*)' \(pick (\d+) of \[([^\]]*)\]\) is not among the "
+                         r"offered candidates \[([^\]]*)\]")
+
+
+def candidate_mismatch(result: Mapping) -> CandidateMismatch | None:
+    if result.get("job_outcome") != "failed":
+        return None
+    m = _CANDIDATES.search(str(result.get("reason") or ""))
+    if not m:
+        return None
+
+    def split(s: str) -> list:
+        return [x.strip() for x in s.split(",") if x.strip()]
+
+    return CandidateMismatch(prompt=m.group(1), wanted=m.group(2), pick=int(m.group(3)),
+                             wanted_list=split(m.group(4)), offered=split(m.group(5)))
 
 
 # DCGO's closed prompt vocabulary (InputDriver.cs); these three take an action id

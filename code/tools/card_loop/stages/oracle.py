@@ -121,12 +121,33 @@ class OracleExecutor:
         if pm is None and hm is not None and isinstance(hm.get("row"), int):
             # DCGO stopped on a mismatch its message does not spell out as
             # prompts (an actor mismatch): the engines disagreed on WHO acts at
-            # that step, which triage must see; another oracle run cannot help.
-            evidence = {"scenario": path, "dcgo_row": hm["row"], "scenario_step": hm.get("step"),
-                        "step_mapping": "harness", "expected": hm.get("expected"),
-                        "dcgo_asked": hm.get("asked"), "route": "engines_disagree",
-                        "explanation": str(row.get("reason") or "")}
-            return "diverged", evidence
+            # that step, which triage must see spelled out -- the differ's
+            # "TRUNCATED, no divergence found" read as nothing to classify.
+            step = hm.get("step")
+            am = harness.actor_mismatch(row)
+            expected = f"actor {am[0]}" if am else hm.get("expected")
+            asked = f"actor {am[1]}" if am else hm.get("asked")
+            explanation = (
+                f"DCGO stopped at its row {hm['row']} (scenario step {step}): the scenario, which our engine runs "
+                f"sim-only, has {expected} act there, but DCGO asked {asked} -- the engines disagree on who acts at "
+                f"step {step} (a prompt one engine asks and the other skips, or a turn that ends differently). "
+                f"Nothing diverged in the {row.get('denominator') or 'compared rows'} before it."
+                if am else str(row.get("reason") or ""))
+            evidence = {"scenario": path, "dcgo_row": hm["row"], "scenario_step": step,
+                        "step_mapping": "harness", "expected": expected, "dcgo_asked": asked,
+                        "ours": expected, "route": "engines_disagree", "explanation": explanation}
+            return "engines_disagree", evidence
+        cm = harness.candidate_mismatch(row) if pm is None else None
+        if cm is not None:
+            # DCGO's prompt matched but offered other cards than the pick our
+            # engine accepted sim-only: the engines disagree on that selection
+            # (BT26-005#inherited#0 was retried three times as "unmeasured").
+            evidence = {"scenario": path, "dcgo_row": None, "scenario_step": None, "step_mapping": None,
+                        "expected": cm.prompt, "dcgo_asked": cm.prompt, "ours": cm.prompt, "route": "engines_disagree",
+                        "explanation": (f"DCGO's {cm.prompt} offered {cm.offered} where the scenario picks {cm.wanted} "
+                                        f"(pick {cm.pick} of {cm.wanted_list}); our engine accepted that pick sim-only, "
+                                        f"so the two engines offer different candidates at that selection")}
+            return "engines_disagree", evidence
         if pm is None:
             return ("diverged" if verdict == "diverged" else "unmeasured"), None
         steps = base.scenario_steps(ctx, path)
