@@ -1,0 +1,107 @@
+# Interaction exam: official ruling Q4578 -- a linked Shotmon (BT21-054, link
+# requirement [Appmon] trait) is trashed at rule-check timing when its host
+# digivolves into a card that no longer meets that requirement.
+#
+# Host = Scopemon (BT21-071; form Appmon). Shotmon is linked from hand
+# (BT21-071-inherited0 / BT21-054-inherited0 convention, link cost 1). Scopemon
+# then digivolves into Gigadramon EX7-044 (Cyborg / Ultimate / Virus -- not
+# [Appmon]) via its "Lv.4 w/[Three Musketeers] in text" clause (Scopemon is
+# purple, so the black circle is closed and the clause is the single route, as
+# in EX7-044-effect0.yaml). The line stops right after the digivolve resolves.
+#
+#   T1 (P0) / T2 (P1): pass.
+#   T3 (P0, 3): play Scopemon (3 -> -1). Hand holds only [TS]/non-trait cards
+#            -> vacuous [On Play] (dcgo_only decline).
+#   T4 (P1, 3): pass.  P0 gets 3.
+#   T5 (P0, 3): draw Shotmon. Link it onto Scopemon (3 -> 2). Opponent board is
+#            empty so [When Linking] is silent. Digivolve Scopemon into
+#            Gigadramon (2 -> -1). Mandatory reveal finds no TM Option; the
+#            remainder goes to the bottom. Turn ends on memory -1.
+card: BT21-071
+clause: BT21-071#inherited#0
+covers: [BT21-071#inherited#0]
+interaction: {id: "qa:Q4578", source: qa, kind: positive}
+meta: {produced_by: 20261006T160739785859Z-pilot-three-musketeers-fefe81}
+seed: 424242
+decks:
+  p0:
+    # [0..4] hand; [5..9] security; [10] T3 draw; [11] T5 draw (Shotmon);
+    # [12] digivolve draw; [13..16] the revealed four (to the bottom).
+    stack: [BT21-071, EX7-044, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT21-054, BT25-092, BT21-071, BT21-071,
+            BT21-074, BT25-083]
+    rest: tm-q4578
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-04, ST1-04,
+            BT1-009, BT1-009, ST1-02, ST1-02, ST1-02,
+            ST1-04, ST1-04, BT1-009]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, 3): Scopemon, the host.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  # Memory -1: P0's turn ended on the play. T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, 3): link Shotmon onto Scopemon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { link: { card: BT21-054, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  # THE INTERACTION: host digivolves into the non-[Appmon] Gigadramon.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX7-044 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { choice: "Bottom of deck", sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  - actor: 0
+    do: { select: { cards: [BT21-071], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT21-071], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT21-074], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT25-083], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [BT21-071, BT21-071, BT21-074, BT25-083], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # T6 (P1): trailing step (memory -1 ended P0's turn).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert: []
