@@ -5,7 +5,7 @@
 # BlackGatomon into BeelStarmon (BT25-085, Lv.6, reachable only via the grant).
 # Slot note: P-108 is placed after Asuna so it is field.2 (Digimon, Tamer, Option) on both wires.
 interaction: {id: "qa:Q6392", source: qa, kind: positive}
-meta: {produced_by: 20261006T213649784891Z-pilot-three-musketeers-f0a405}
+meta: {produced_by: 20261006T214544288124Z-pilot-three-musketeers-f869c9}
 covers:
   - BT25-082#effect#0
   - BT25-082#effect#1
@@ -107,9 +107,3 @@ steps:
   - actor: 0
     do: { pass: {} }
 assert: []
-expect_ruling:
-  q_id: Q6392
-  assert:
-  - at: 23
-    that:
-      p0.field: [BT25-085, BT25-092]
