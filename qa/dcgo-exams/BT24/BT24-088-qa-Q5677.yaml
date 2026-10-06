@@ -1,0 +1,74 @@
+# Interaction exam: official ruling Q5677 (2025-12-25) on Asuna Shiroki (BT24-088).
+# "What does a card with 'X in its text' refer to?
+#  A: A card that contains the specified text in its name, traits, effects, ...
+#     e.g. [Knightmon] in its text includes [DarkKnightmon] and cards whose effects
+#     mention [Knightmon]."
+#
+# THE LINE (extends BT24-088-effect0.yaml / -qa-Q5678.yaml). The probe card is
+# ToyAgumon EX7-008: a level-3 Digimon whose traits are Puppet / Vaccine -- NO [TS]
+# trait -- and which carries [Three Musketeers] ONLY inside its [On Play] effect
+# text. So it qualifies for "[Three Musketeers] in its text" purely through the
+# effect-text scope of the ruling.
+#   T1 (P0): play Asuna #1. Her [On Play] ("By trashing 1 card with [Three
+#            Musketeers] in its text or the [TS] trait from your hand") is PAID with
+#            ToyAgumon -- legal only by the text scope (clause effect#1).
+#   T3 (P0, memory 3): [Start of Your Turn] fires; Asuna returns to the deck bottom
+#            and ToyAgumon is picked from the trash and played free -- legal only by
+#            the "level 4 or lower Digimon with [Three Musketeers] in its text"
+#            branch (clause effect#0). Its [On Play] then resolves (reveal 3).
+card: BT24-088
+clause: BT24-088#effect#0
+seed: 424242
+interaction: {id: "qa:Q5677", source: qa, kind: positive}
+covers: [BT24-088#effect#0, BT24-088#effect#1]
+meta: {produced_by: 20261006T161641782094Z-pilot-three-musketeers-8fc12f}
+decks:
+  p0:
+    # stack[10..11]: Asuna #1's [On Play] draws; [12]: the T3 draw;
+    # [13..15]: ToyAgumon's revealed top 3.
+    stack: [BT24-088, EX7-008, BT25-078, BT21-074, BT21-074,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-085,
+            BT25-083, BT25-083, BT25-092, EX7-051, EX7-071,
+            BT24-081]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-014]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-088, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX7-008] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [EX7-008] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [EX7-051] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [EX7-071] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [BT25-092], sim_only: true } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert: []
