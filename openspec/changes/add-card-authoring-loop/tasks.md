@@ -1,4 +1,4 @@
-Groups 1–5 do not depend on the oracle-readiness plans and can proceed in parallel (group 1 first). Readiness **Plan 1** (harness fixes, structured triage, `--backfill`, changed-cards-only verdict writes) is merged into this change's branch (PR #715, 2026-10-05). Readiness **Plan 3** (one-call `exam --oracle` / MCP `run_scenario`+`exam_probe` `sim_only:false`, step introspection `--inspect`/`inspect_step`, `deck-budget` lint) is built on this branch too (2026-10-05), so group 6 can start; group 7 waits on **Plan 2** (readiness artifact + always-on gate). Spec and plans: `docs/superpowers/specs/2026-10-04-dcgo-oracle-readiness-design.md`, `docs/superpowers/plans/2026-10-04-oracle-readiness-*.md`.
+Groups 1–5 do not depend on the oracle-readiness plans and can proceed in parallel (group 1 first). Readiness **Plan 1** (harness fixes, structured triage, `--backfill`, changed-cards-only verdict writes) is merged into this change's branch (PR #715, 2026-10-05). Readiness **Plan 3** (one-call `exam --oracle` / MCP `run_scenario`+`exam_probe` `sim_only:false`, step introspection `--inspect`/`inspect_step`, `deck-budget` lint) and **Plan 2** (`data/oracle_readiness.json`, the always-on training gate, `--plan`; CLAUDE.md rule 34) are built on this branch too (2026-10-05/06). Group 6 (the driver) is built: `python -m tools.card_loop run|resume|status`, stages, gates, gap lane, merger (`author_set/merge_wave.py` core), and the end-to-end run on fakes. Group 7 (the readiness join with gating interactions) is the next gate change; `candidates` ranks what to run next. Spec and plans: `docs/superpowers/specs/2026-10-04-dcgo-oracle-readiness-design.md`, `docs/superpowers/plans/2026-10-04-oracle-readiness-*.md`.
 
 ## 1. Official Q&A mirror (first)
 
@@ -47,15 +47,15 @@ Groups 1–5 do not depend on the oracle-readiness plans and can proceed in para
 
 ## 6. Driver orchestration (after readiness plans 1 and 3)
 
-- [ ] 6.1 Item state machine (`state.py`) with `events.jsonl`, rebuild-from-ledger `resume`, and terminal-state accounting where `escalated` is not adjudicated
-- [ ] 6.2 Stage executors: implement (DSL-first per rule 28, reviewer = other family), clause author, interaction author, triage, fix, Q&A classify; prompts under `prompts/` with `version:` headers that reference the exam MCP, scenario library and rules docs instead of embedding them
-- [ ] 6.3 Oracle stage via readiness's one-call `exam --oracle` (no model); prompt-failure routing by who disagreed, using readiness's step introspection
-- [ ] 6.4 Two-family termination check and the escalation queue `qa/card-loop/escalations/`
-- [ ] 6.5 Fix gate (citation, failing-then-passing test, `cards_behavioral` green via the verification ladder's `impact_scope`); engine fixes on `card-loop/<run>/engine-<gap>` branches; never push to `main`
-- [ ] 6.6 Gap lane: park on gap id, rank gaps by core clauses blocked, unpark on merge; route gap records through the orchestrator only (align with `harden-card-authoring-pipeline` tracker hygiene)
-- [ ] 6.7 Merge integration reusing `harden-card-authoring-pipeline`'s diff + manifest transport and `merge_wave.py` semantics (build it there if still unbuilt; do not fork it)
-- [ ] 6.8 Budgets and stopping: USD cap, wall-clock cap, per-item attempt caps, plateau rule; report whose first line names unmeasured / escalated / unavailable counts
-- [ ] 6.9 End-to-end driver test on the fake worker covering confirm, diverge→fix, diverge→quirk (agree), diverge→escalate (disagree), park→unpark, resume after a simulated crash
+- [x] 6.1 Item state machine (`state.py`) with `events.jsonl`, rebuild-from-ledger `resume`, and terminal-state accounting where `escalated` is not adjudicated
+- [x] 6.2 Stage executors: implement (DSL-first per rule 28, reviewer = other family), clause author, interaction author, triage, fix, Q&A classify; prompts under `prompts/` with `version:` headers that reference the exam MCP, scenario library and rules docs instead of embedding them
+- [x] 6.3 Oracle stage via readiness's one-call `exam --oracle` (no model); prompt-failure routing by who disagreed, using readiness's step introspection
+- [x] 6.4 Two-family termination check and the escalation queue `qa/card-loop/escalations/`
+- [x] 6.5 Fix gate (citation, failing-then-passing test, `cards_behavioral` green via the verification ladder's `impact_scope`); engine fixes on `card-loop/<run>/engine-<gap>` branches; never push to `main`
+- [x] 6.6 Gap lane: park on gap id, rank gaps by core clauses blocked, unpark on merge; route gap records through the orchestrator only (align with `harden-card-authoring-pipeline` tracker hygiene)
+- [x] 6.7 Merge integration reusing `harden-card-authoring-pipeline`'s diff + manifest transport and `merge_wave.py` semantics (build it there if still unbuilt; do not fork it)
+- [x] 6.8 Budgets and stopping: USD cap, wall-clock cap, per-item attempt caps, plateau rule; report whose first line names unmeasured / escalated / unavailable counts
+- [x] 6.9 End-to-end driver test on the fake worker covering confirm, diverge→fix, diverge→quirk (agree), diverge→escalate (disagree), park→unpark, resume after a simulated crash
 
 ## 7. Readiness extension (after readiness plan 2)
 
@@ -72,8 +72,8 @@ Groups 1–5 do not depend on the oracle-readiness plans and can proceed in para
 
 ## 9. Follow-ups found while building groups 2–5
 
-- [ ] 9.1 Keyword-gate false positives make every real pool NO-GO: `link` (still classed a subsystem in the DCGO keyword manifest — blocks Rocks via ST22-09), `delay`, `digi-burst up to`, `sistermon noir` (BT7). Fix the `tools.author_set` lexicon/manifest; preflight meanwhile fails the gate only for cards with no YAML spec (warn otherwise)
-- [ ] 9.2 177 cards with printed effects have no per-card DCGO `.cs` (e.g. keyword-only cards such as one carrying only `<Jamming>`). Establish how DCGO implements keyword-only cards before preflight's `.cs` presence check marks them `unavailable`
+- [x] 9.1 Keyword-gate false positives make every real pool NO-GO: `link` (still classed a subsystem in the DCGO keyword manifest — blocks Rocks via ST22-09), `delay`, `digi-burst up to`, `sistermon noir` (BT7). Fix the `tools.author_set` lexicon/manifest; preflight meanwhile fails the gate only for cards with no YAML spec (warn otherwise)
+- [x] 9.2 177 cards with printed effects have no per-card DCGO `.cs` (e.g. keyword-only cards such as one carrying only `<Jamming>`). Establish how DCGO implements keyword-only cards before preflight's `.cs` presence check marks them `unavailable`
 - [ ] 9.3 Promote module-level defaults proposed by the groups into `LoopConfig` / `contracts`: `dcgo_root`, `node_status_timeout_s` (group 2); `corrections_path`, `audits_path` (group 4); `worktree_root` (short path — MAX_PATH), `worker_timeout_s`, `max_transient_retries`, `retry_base_delay_s`, `claude_permission_mode`, `claude_allowed_tools`, `claude_read_only_dirs`, `codex_extra_config`, `pool_keep_patterns`, real `prices.codex` incl. `cache_write_input`; `TaskPacket.base_sha` / `artifacts_dir`, `WorkerResult.calls` / `session_id`, `Usage.cost_complete` (group 3); `interaction_denominator_path`, `card_qa_path`, `promotion_path`, `exam_verdicts_dir`, `fork_candidates_path`; `INTERACTION_SOURCES`, `QA_CLASSES` (group 5)
 - [ ] 9.4 The router's scorecard override matches the configured model alias by exact string (`sonnet`; Codex `None` pools all models) — the driver must record the configured alias in attempts, or the scorecard must normalise resolved model names
 - [x] 9.5 Stale-on-main tests failing at `ad68542ee` before any card-loop change: `test_real_library_reproduces_the_published_toho_figures` (deck library refreshed: Toho Braves now 114 lists, test expects 45) and `test_faq_conformance_generator::test_generated_faq_conformance_module_is_current` — fix in their own commits (CLAUDE.md rule 33) — RESOLVED upstream: both pass after merging origin/main (9a26d538a pins the Toho figures; 0bb4361be regenerates stale verification artifacts)
