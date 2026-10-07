@@ -90,15 +90,24 @@ steps:
   # row after the play below.
   - actor: 0
     do: { select: { decline: true, sim_only: true } }
-  # ... then the free play from the trash.
+  # ... then the free play from the trash. Pinamon itself is not offered in
+  # our trash prompt, so the pick is Falcomon ST24-12 (the deleted Digimon,
+  # [DATA SQUAD], play cost 3).
   - actor: 0
-    do: { select: { cards: [BT26-005] } }
+    do: { select: { cards: [ST24-12] } }
     expect: { prompt: SelectCardEffect }
+  # The free-played Falcomon ST24-12 ([On Play] "you may": ours asks a
+  # Replacement yes/no, DCGO an OptionalSkill) and Keenan's stacked trigger.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: OptionalSkill }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-meta: {produced_by: 20261006T164919942702Z-pilot-data-squad-dcc0c8}
+meta: {produced_by: 20261007T003331248167Z-pilot-data-squad-d0b80b}
 assert: []
