@@ -1,0 +1,54 @@
+# Exam scenario: Crowmon (BT26-076), clause BT26-076#effect#0 -- the Special
+# Digivolution Condition "Lv.4 w/[DATA SQUAD] trait: Cost 3".
+#
+# THE LINE: the carrier is ST24-05 (Yellow/Red Lv4, [DATA SQUAD]). Crowmon's
+# standard circle needs a PURPLE Lv4, so ST24-05 -> BT26-076 is reachable ONLY
+# through this alt requirement (BT26_076.cs: AddSelfDigivolutionRequirementStaticEffect,
+# permanent TopCard.EqualsTraits("DATA SQUAD"), cost 3, level 4).
+# T1: hatch, digivolve breeding -> BT26-036 (0) -> ST24-05 (2); the breeding area
+# cannot go to Lv5, so T3 moves ST24-05 to the field (after P1 plays ST1-03) and
+# digivolves it into Crowmon for 3. Crowmon's [When Digivolving] then asks for the
+# delete target (mandatory pick, P1's lone Lv<=4 Digimon); no Tamer has a
+# face-down source, so DCGO asks no Tamer/hand prompts.
+card: BT26-076
+clause: BT26-076#effect#0
+seed: 424242
+meta: {produced_by: 20261007T005933429982Z-pilot-data-squad-dc821e}
+decks:
+  p0:
+    stack: [BT26-036, ST24-05, BT26-076, BT26-072, ST24-15,
+            ST24-04, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-12, ST24-04, BT26-082]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-036 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST24-05 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: non-purple Lv4 [DATA SQUAD] -> Crowmon for 3 via the alt requirement.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-076 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+assert: []
