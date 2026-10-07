@@ -8,7 +8,7 @@ interaction: {id: "qa:Q7096", source: qa, kind: positive}
 covers:
   - BT26-072#effect#2
   - BT26-094#effect#0
-meta: {produced_by: 20261007T005440354963Z-pilot-data-squad-4b99ba}
+meta: {produced_by: 20261007T005628027901Z-pilot-data-squad-c2118b}
 seed: 424242
 decks:
   p0:
