@@ -7,12 +7,12 @@
 # Ravemon (alt cost 3); Ravemon's [When Digivolving] pays "Delete this
 # Digimon" (choice 1); the [On Deletion] makes P1 trash 1 hand card (ST1-04),
 # then P0 (hand <= 7) says yes to placing Ravemon face up as bottom security.
-# Crowmon's own optional [On Deletion] is stacked alongside and declined.
-# The line stops there: the placement is the clause's whole effect.
+# The line ends there: the placement is the clause's whole effect. Crowmon's
+# own [On Deletion] prompt belongs to BT26-076#inherited#0, not this clause.
 card: BT26-082
 clause: BT26-082#effect#3
 seed: 424242
-meta: {produced_by: 20261007T015400812792Z-pilot-data-squad-c566f4}
+meta: {produced_by: 20261007T021847729011Z-pilot-data-squad-1e9a19}
 decks:
   p0:
     stack: [BT26-036, ST24-05, BT26-076, BT26-082, ST24-15,
@@ -77,6 +77,4 @@ steps:
     expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { select: { yes: true } }
-  - actor: 0
-    do: { select: { decline: true } }
 assert: []
