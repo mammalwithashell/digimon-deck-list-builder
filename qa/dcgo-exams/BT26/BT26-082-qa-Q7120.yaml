@@ -8,13 +8,14 @@
 # Same oracle-confirmed prefix as the Q7119 line: P1 strips P0's five security
 # cards over T2-T8, P0 builds Crowmon (BT26-076) -> Ravemon (alt cost 3), pays
 # "Delete this Digimon", P1 trashes ST1-04, P0 places Ravemon face up, declines
-# Crowmon's [On Deletion]. T10: P1 attacks security, checking the face-up card.
+# Crowmon's [On Deletion]. T10: P1 attacks security, checking the face-up card,
+# then P1 passes so [End of Opponent's Turn] fires (play Ravemon); P0 passes once.
 card: BT26-082
 clause: BT26-082#effect#1
 covers: [BT26-082#effect#1, BT26-082#effect#3]
 interaction: {id: "qa:Q7120", source: qa, kind: positive}
 seed: 424242
-meta: {produced_by: 20261007T023313431943Z-pilot-data-squad-5a755b}
+meta: {produced_by: 20261007T023439877703Z-pilot-data-squad-1c7d3d}
 decks:
   p0:
     stack: [BT26-036, ST24-05, BT26-076, BT26-082, ST24-15,
@@ -107,4 +108,8 @@ steps:
     do: { pass: {} }
   - actor: 1
     do: { attack: { attacker: field.0, target: security } }
+  - actor: 1
+    do: { pass: {} }
+  - actor: 0
+    do: { pass: {} }
 assert: []
