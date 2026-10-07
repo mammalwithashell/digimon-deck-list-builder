@@ -16,7 +16,7 @@ clause: BT26-082#effect#3
 covers: [BT26-082#effect#3, BT26-082#effect#1]
 interaction: {id: "qa:Q7119", source: qa, kind: positive}
 seed: 424242
-meta: {produced_by: 20261007T022734388767Z-pilot-data-squad-84e94f}
+meta: {produced_by: 20261007T023409303791Z-pilot-data-squad-cc976b}
 decks:
   p0:
     stack: [BT26-036, ST24-05, BT26-076, BT26-082, ST24-15,
@@ -109,4 +109,6 @@ steps:
     do: { pass: {} }
   - actor: 1
     do: { attack: { attacker: field.0, target: security } }
+  - actor: 1
+    do: { pass: {} }
 assert: []
