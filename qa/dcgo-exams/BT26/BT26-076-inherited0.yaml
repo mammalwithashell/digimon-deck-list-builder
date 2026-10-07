@@ -20,7 +20,7 @@
 card: BT26-076
 clause: BT26-076#inherited#0
 seed: 424242
-meta: {produced_by: 20261007T010550121310Z-pilot-data-squad-95d21d}
+meta: {produced_by: 20261007T015313590092Z-pilot-data-squad-0eacf4}
 decks:
   p0:
     stack: [ST24-12, BT26-072, BT26-076, BT26-049, ST24-15,
@@ -94,7 +94,7 @@ steps:
     do: { play: { card: ST1-16, from: hand.0 } }
     expect: { prompt: main_phase }
   - actor: 1
-    do: { select: { targets: [opp.field.0], sim_only: true } }
+    do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
   # THE CLAUSE (after trigger ordering).
   - actor: 0
