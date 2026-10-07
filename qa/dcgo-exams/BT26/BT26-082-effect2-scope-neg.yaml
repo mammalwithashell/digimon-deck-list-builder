@@ -4,7 +4,11 @@
 # somewhere in the board/stack, making slot-zero and card-ID source mistakes visible.
 # No Tamer exists: choose the self-deletion cost, never a generic own-Digimon pick.
 # At step 23, only the Ravemon stack must be in trash; bare GeoGreymon must survive.
-# Resolve Ravemon's hand trash, decline its security placement and Crowmon's play.
+# Resolve Ravemon's hand trash, then decline its security placement. Crowmon's
+# inherited play opens a declinable SelectCardEffect from trash at step 28;
+# decline that pick directly. It is not an OptionalSkill gate (oracle triage).
+# Sim inspect_step 28 confirms the live optional Trash pick; declining it keeps
+# the original bare GeoGreymon as the sole survivor, with no new permanent.
 # The surviving GeoGreymon then attacks (step 29). The following Main-phase pass
 # proves it survived and there is no stray Ravemon End of Attack trigger from trash.
 # DCGO BT26_082.cs binds the cost to card.PermanentOfThisCard(). Its deletion target
@@ -27,7 +31,7 @@ covers:
   - ST24-05#inherited#0
   - BT26-005#inherited#0
 seed: 424242
-meta: {produced_by: 20261007T015459101625Z-pilot-data-squad-ef6397}
+meta: {produced_by: 20261007T022613750152Z-pilot-data-squad-3a1506}
 decks:
   p0:
     stack: [BT26-036, ST24-05, BT26-076, BT26-082, ST24-05,
@@ -125,7 +129,7 @@ steps:
     expect: { prompt: generic_bool }
   - actor: 0
     do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
+    expect: { prompt: SelectCardEffect }
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
