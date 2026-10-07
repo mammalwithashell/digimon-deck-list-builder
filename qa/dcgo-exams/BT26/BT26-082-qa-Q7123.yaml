@@ -16,7 +16,12 @@ clause: BT26-082#effect#2
 interaction: {id: "qa:Q7123", source: qa, kind: positive}
 covers: [BT26-082#effect#2]
 seed: 424242
-meta: {produced_by: 20261007T030329347816Z-pilot-data-squad-1bebe2}
+meta: {produced_by: 20261007T030816288587Z-pilot-data-squad-b08d8c}
+# NOTE: attempting the partial payment ("Trash 2 ..." with one face-down card)
+# cannot be scripted: both engines omit that option, so lowering refuses it
+# (sim: branches are only "Delete this Digimon" | "Don't pay the cost"). The
+# observable is the cost menu itself: with exactly 1 face-down card the menu
+# has no trash option, and the only payable route left is delete-self.
 decks:
   p0:
     stack: [BT26-036, ST24-05, BT26-076, BT26-082, ST24-14,
