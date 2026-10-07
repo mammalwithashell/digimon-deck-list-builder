@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-07T03:12:49.703086200+00:00",
+  "clauses": {
+    "P-235#security#0": {
+      "clause_id": "P-235#security#0",
+      "card_id": "P-235",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "6931865ac48e8e08cdc6db2cf42272e7e1c5a18de272c3544f34aaf5b3c94f55",
+      "scenario_path": "qa/dcgo-exams/P/P-235-security0.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-P-235-security0",
+      "recorded_at": "2026-10-07T03:12:49.703086200+00:00"
+    }
+  }
+}
