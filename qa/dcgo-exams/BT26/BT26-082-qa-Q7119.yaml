@@ -112,3 +112,10 @@ steps:
   - actor: 1
     do: { pass: {} }
 assert: []
+expect_ruling:
+  q_id: Q7119
+  assert:
+  - at: 40
+    that:
+      p0.security: 0
+      p1.field: []
