@@ -9,7 +9,7 @@
 # is ACCEPTED here, then the trash pick takes the digivolution target.
 card: BT26-076
 clause: BT26-076#effect#2
-meta: {produced_by: 20261007T010655794813Z-pilot-data-squad-f1d05d}
+meta: {produced_by: 20261007T010910085853Z-pilot-data-squad-9547ac}
 seed: 424242
 decks:
   p0:
@@ -67,21 +67,26 @@ steps:
   - actor: 0
     do: {select: {targets: [own.field.0]}}
     expect: {prompt: SelectPermanentEffect, count: 1}
+  # Our engine parks the trigger order first; DCGO asks P1's hand pick first.
+  - actor: 0
+    do: {select: {cards: [BT26-076], sim_only: true}}
+  - actor: 0
+    do: {select: {cards: [BT26-082], sim_only: true}}
+  - actor: 0
+    do: {select: {choice: "pay", sim_only: true}}
   - actor: 1
     do: {select: {cards: [ST1-08]}}
     expect: {prompt: SelectHandEffect}
   - actor: 0
-    do: {select: {cards: [BT26-076]}}
+    do: {select: {cards: [BT26-076], dcgo_only: true}}
     expect: {prompt: MultipleSkills}
   # THE CLAUSE: accept the optional gate (DCGO-only), then pick the target.
   - actor: 0
     do: {select: {yes: true, dcgo_only: true}}
     expect: {prompt: OptionalSkill}
   - actor: 0
-    do: {select: {cards: [BT26-082]}}
+    do: {select: {cards: [BT26-082], dcgo_only: true}}
     expect: {prompt: SelectCardEffect}
-  - actor: 0
-    do: {select: {choice: "pay", sim_only: true}}
   # Keenan reacts to the Tamer-source trash and the hand trash; decline both.
   - actor: 0
     do: {select: {decline: true}}
