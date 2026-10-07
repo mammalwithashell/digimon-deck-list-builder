@@ -15,8 +15,11 @@
 **Initial states** come from the committed ledgers: a stored `confirmed`
 verdict -> CONFIRMED; `diverged` triaged `dcgo_quirk` with a citation, or
 `unreachable` with a reason -> TERMINAL; a stored `unavailable` -> UNAVAILABLE;
-an open escalation file -> ESCALATED; any other `diverged` -> DIVERGED (its
-triage carried in `data`); otherwise PENDING. A card in the plan's
+an open escalation file -> ESCALATED; any other `diverged` -> ORACLE with its
+stored scenario (re-measured by the CURRENT engine before anyone triages it --
+a stored divergence is an older engine's finding, and triaging it cold handed
+the models an empty oracle result), or PENDING when no scenario path was
+stored; otherwise PENDING. A card in the plan's
 `dcgo.unavailable` makes its not-yet-adjudicated clause items -- and the
 interactions whose every pool card is unavailable -- UNAVAILABLE.
 
@@ -181,7 +184,15 @@ def exam_origin(verdict: str, stored: Mapping | None, *, escalation: Path | None
                       {**data, "unavailable_source": "plan",
                        "unavailable_reason": "DCGO has no script (plan.dcgo.unavailable)"})
     if data.get("verdict") == "diverged":
-        return Origin("DIVERGED", "ledger: diverged, not adjudicated", data)
+        # A stored, uncited divergence is an OLDER engine's finding. Triaging it
+        # cold handed the models an empty oracle result and no line (the Data
+        # Squad pilot escalated BT26-065#effect#1 that way); re-measure it with
+        # the current engine first, on its stored scenario.
+        path = data.get("scenario_path")
+        if path:
+            return Origin("ORACLE", "ledger: diverged, not adjudicated -- re-measured by the current "
+                                    "engine before triage", {**data, "scenario_paths": [path]})
+        return Origin("PENDING", "ledger: diverged, not adjudicated, no stored scenario -- re-author", data)
     return Origin("PENDING", f"ledger: {verdict or 'unmeasured'}", data)
 
 
