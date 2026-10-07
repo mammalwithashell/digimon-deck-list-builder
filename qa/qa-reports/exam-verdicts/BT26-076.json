@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-07T01:02:46.450972500+00:00",
+  "clauses": {
+    "BT26-076#effect#0": {
+      "clause_id": "BT26-076#effect#0",
+      "card_id": "BT26-076",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "66b04b6d4ee3d44f86deada4e232d1754e7739e6d35e7800460a1481af263534",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-076-effect0.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-076-effect0",
+      "recorded_at": "2026-10-07T01:02:46.450972500+00:00"
+    }
+  }
+}
