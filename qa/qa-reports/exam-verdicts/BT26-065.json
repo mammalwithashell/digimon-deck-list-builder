@@ -23,6 +23,8 @@
       "reason": "DIVERGED at step 3 (compared 5 of 6 ours / 5 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-065-effect1",
+      "triage": "dcgo_quirk",
+      "citation": "C:/Users/james/Documents/digimon-deck-list-builder-1/DCGO/Assets/Scripts/Script/CardEffectCommons/RevealLibrary.cs:291",
       "recorded_at": "2026-10-07T00:34:05.738513100+00:00"
     },
     "BT26-065#inherited#0": {
