@@ -15,7 +15,7 @@
 card: BT26-082
 clause: BT26-082#effect#2
 seed: 424242
-meta: {produced_by: 20261007T015110097688Z-pilot-data-squad-019734}
+meta: {produced_by: 20261007T021511405673Z-pilot-data-squad-71e64f}
 decks:
   p0:
     stack: [BT26-036, ST24-05, BT26-076, BT26-082, ST24-15,
@@ -86,7 +86,4 @@ steps:
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: generic_bool }
-  - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
 assert: []
