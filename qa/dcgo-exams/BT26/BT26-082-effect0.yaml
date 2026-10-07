@@ -1,0 +1,78 @@
+# Exam scenario: Ravemon (BT26-082), clause BT26-082#effect#0 -- the Special
+# Digivolution Condition "[Crowmon]/Lv.5 w/[DATA SQUAD] trait: Cost 3".
+#
+# THE LINE: Crowmon (BT26-076, purple Lv5, [DATA SQUAD]) is reached via the
+# BT26-076 alt condition (ST24-05 -> Crowmon, same prefix as BT26-076-effect0),
+# then Crowmon digivolves into Ravemon. Ravemon's standard circle is Purple
+# Lv.5 / cost 4, so a cost of exactly 3 can only come from this alt requirement
+# (BT26_082.cs: AddSelfDigivolutionRequirementStaticEffect x2, Crowmon name /
+# DATA SQUAD Lv5, both cost 3). Crowmon also matches both alt arms; both cost 3.
+# Crowmon's [When Digivolving] delete pick (P1's lone Lv<=4 Digimon) is
+# mandatory; no Tamer exists, so no Tamer/hand prompts. Ravemon's [When
+# Digivolving] asks "Will you pay the cost?" (SetIntSelection: delete this /
+# don't pay; the Tamer option is absent) -- we choose not to pay.
+card: BT26-082
+clause: BT26-082#effect#0
+seed: 424242
+meta: {produced_by: 20261007T011101116621Z-pilot-data-squad-b9b025}
+decks:
+  p0:
+    stack: [BT26-036, ST24-05, BT26-076, BT26-082, ST24-15,
+            ST24-04, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-12, ST24-04, BT26-072]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-036 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST24-05 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-076 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Crowmon's digivolve spent the memory; P1 passes the turn back (P0 gets 3).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: Crowmon -> Ravemon for 3 via the alt requirement. Two costs
+  # are legal (Purple Lv.5 circle 4, alt 3): both engines ask which to pay
+  # (DCGO SelectCountEffect / our EffectChoice), answered by VALUE.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { select: { choice: "Don't pay the cost", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 3, dcgo_only: true } }
+    expect: { prompt: generic_int }
+assert: []
