@@ -414,21 +414,9 @@ fn ex10_036_clause_a_plain_sources_do_not_count() {
 /// Positive behavioral: Clause A's delete-opponent effect fires after the
 /// source-trash cost is paid, prompting for an opponent Digimon (OppField).
 ///
-/// # Execution sequence (with Clause B interaction)
-///
-/// When `trash_selected_sources` trashes the first source, it fires
-/// `fire_digivolution_card_trashed` which calls `drain_effect_queue()`.
-/// Clause B is still in the queue at that point (TriggerOrder only dequeued
-/// Clause A), so it fires immediately. Clause B sees 1 Mineral card in trash
-/// (the just-trashed src1) and installs a SelectTrash pending. This parks
-/// Clause A's remaining inner-tail steps (select_opponent_permanent, delete,
-/// trash_top_security) as `dsl_outer_tail`.
-///
-/// After Clause B resolves all 3 picks and places the sources on EX10-036,
-/// `drain_dsl_outer_tail` resumes Clause A's inner tail → OppField is prompted.
-///
-/// This test verifies that OppField DOES eventually appear (after Clause B runs),
-/// confirming that Clause A's delete effect fires despite the interleaving.
+/// general_rule.pdf 15-8-3-2: paying the source-trash cost must not activate
+/// the waiting sibling Clause B. Finish Clause A's delete and security trash
+/// first, then let Clause B select the three newly trashed sources.
 #[test]
 fn ex10_036_clause_a_after_source_trash_prompts_opp_field_delete() {
     let src_a = make_mineral_source("BEH-SRC-A1");
@@ -493,22 +481,19 @@ fn ex10_036_clause_a_after_source_trash_prompts_opp_field_delete() {
             .expect("source pick resolves");
     }
 
-    // After the 3rd source pick, final_callback fires:
-    //   1. trash_selected_sources trashes src1 → fire_digivolution_card_trashed
-    //      → drain_effect_queue fires Clause B (still queued).
-    //   2. Clause B picks up the just-trashed Mineral card; SelectTrash pending
-    //      installed. Clause A's remaining steps parked as outer tail.
-    //
-    // Resolve Clause B's 3 trash picks one at a time (NOT with auto_resolve()).
-    // auto_resolve() loops until no pending — it would also consume the OppField
-    // prompt that fires after Clause B completes. Use individual resolve_selection
-    // calls so we can check the final pending state.
-    assert!(
-        matches!(runner.pending_kind(), Some(SelectionKind::Trash)),
-        "after Clause A's cost is paid, Clause B fires from the trash event \
-         and installs a SelectTrash pending; got {:?}",
-        runner.pending_kind()
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OppField),
+        "Clause A must finish before the waiting sibling activates"
     );
+    assert_eq!(runner.trash_size(0), 3);
+    assert_eq!(runner.game.players[1].security.len(), 1);
+    let view = runner.pending_selection_view().expect("delete pick");
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("Clause A delete resolves");
+    assert_eq!(runner.game.players[1].battle_area.len(), 1);
+    assert!(runner.game.players[1].security.is_empty());
     // Pick each of Clause B's 3 trash cards individually.
     for pick in 1..=3 {
         assert!(
@@ -527,14 +512,14 @@ fn ex10_036_clause_a_after_source_trash_prompts_opp_field_delete() {
             .expect(&format!("Clause B trash pick {pick}/3 resolves"));
     }
 
-    // Step 2: after Clause B's 3rd pick resolves, drain_dsl_outer_tail resumes
-    // Clause A's inner tail → select_opponent_permanent → OppField prompted.
+    assert!(runner.pending_kind().is_none());
+    assert_eq!(runner.trash_size(0), 0);
     assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::OppField),
-        "after Clause B resolves, Clause A's outer tail runs and prompts OppField; \
-         got {:?}",
-        runner.pending_kind()
+        runner.game.players[0].battle_area[magnet.index as usize]
+            .card_sources
+            .len(),
+        4,
+        "all three sources were available to the waiting sibling"
     );
 }
 

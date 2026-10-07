@@ -2053,14 +2053,12 @@ impl Game {
                 cause,
             },
         );
-        // Intentionally NOT routed through maybe_drain: EX10-036 (and
-        // similar multi-source trash chains) rely on observers firing
-        // synchronously between source trashes so secondary clauses can
-        // pick up the just-trashed cards mid-resolution. Behavioral test
-        // `ex10_036_clause_a_after_source_trash_prompts_opp_field_delete`
-        // documents the expected interleaving. Other observer fires
-        // (place_security, leave_field, link, attack, play) are deferred.
-        self.drain_effect_queue();
+        // 15-8-3-2: source-trash observers (and already-waiting sibling
+        // effects) cannot activate while the causing effect is processing.
+        // Enqueue each event now, but respect the effect/selection deferred
+        // scope so the rest of its body, including player choices, finishes
+        // first. Outside a resolving effect this still drains immediately.
+        self.maybe_drain_effect_queue();
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
