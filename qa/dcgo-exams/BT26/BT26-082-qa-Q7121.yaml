@@ -7,6 +7,9 @@
 # end-of-opponent's-turn window. This is the orientation witness: Ravemon's
 # face-up-only security effect would change both field and security count
 # if the shuffle left it face up. No attacks or further security changes.
+# The completed observation boundary is at: 23, AFTER the final main-phase
+# pass; at: 22 is still before that pass. Field projections contain permanent
+# objects, not card-id strings. Leave the ruling encoding to independent backfill.
 # Deck book: BT26-082-qa-Q7121-pool.json; bt26-dats with one ST24-15 -> BT1-087.
 # No oracle run; assertions intentionally await independent backfill.
 card: BT26-082
@@ -25,7 +28,7 @@ covers:
   - BT26-082#effect#3
   - BT1-087#effect#1
 seed: 424242
-meta: {produced_by: 20261007T025648185045Z-pilot-data-squad-34110d}
+meta: {produced_by: 20261007T030643464432Z-pilot-data-squad-e65e4f}
 decks:
   p0:
     stack: [BT26-036, ST24-05, BT26-076, BT26-082, BT1-087,
@@ -108,9 +111,3 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert: []
-expect_ruling:
-  q_id: Q7121
-  assert:
-  - at: 22
-    that:
-      p0.field: [BT1-087]
