@@ -18,6 +18,104 @@ use digimon_engine::enums::{CardColor, EffectTiming, ModifierType};
 
 const CARD_ID: &str = "BT26-050";
 
+#[test]
+fn bt26_050_arts_digivolve_offers_when_digivolving_before_turn_end() {
+    use digimon_engine::action::space::{encode_attack, PASS};
+    use digimon_engine::dcgo_recording::{FrameTarget, SelectionRow};
+    use digimon_engine::runners::selection_resolve::resolve_next;
+    use digimon_engine::selection::OptionPlayResult;
+
+    // DCGO BT26/Green/BT26_050.cs:78-123: even a lone Arts-evolved
+    // Rosemon offers the optional (clamped to one) suspend selection.
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .unwrap()
+        .dsl_card("BT26-082")
+        .unwrap()
+        .add_card(filler("FILLER"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .hand(0, &[CARD_ID])
+        .memory(3)
+        .start();
+    r.set_first_player(0);
+    let base = r.place_on_field(0, "BT26-082", Some(0));
+    r.game.enter_main_phase();
+    let turn = r.game.turn_count;
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    assert!(r
+        .pending_selection_view()
+        .unwrap()
+        .prompt
+        .contains("Arts Digivolve"));
+    let arts_row = SelectionRow {
+        step: 0,
+        actor: 0,
+        prompt: "SelectPermanentEffect".into(),
+        phase: "Main".into(),
+        targets: Some(vec![FrameTarget {
+            player: 0,
+            frame: base.index as i32,
+        }]),
+        card_ids: None,
+        indexes: None,
+        count: None,
+        candidates: None,
+        int_value: None,
+        bool_value: None,
+        cancel: None,
+        board_p0: None,
+        board_p1: None,
+        memory: None,
+        mechanic: None,
+        zone: None,
+    };
+
+    // Resume the Arts choice on a clone, then branch again at the triggered
+    // selection: both selections must survive the resumable VM clone path.
+    r.game = r.game.clone();
+    let arts_pick = resolve_next(&r.game, &arts_row, 0).unwrap().unwrap();
+    assert_eq!(arts_pick, encode_attack(0, base.index as u16));
+    r.game.decode_action(arts_pick, 0);
+    assert_eq!(
+        resolve_next(&r.game, &arts_row, 1),
+        Ok(None),
+        "the completed Arts row must not decline the new When Digivolving selection"
+    );
+    let prompt = r
+        .pending_selection_view()
+        .expect("When Digivolving suspend prompt");
+    assert_eq!(prompt.prompt, "You may suspend 2 Digimon or Tamers");
+    assert!(prompt.is_optional);
+    assert_eq!(r.game.turn_count, turn);
+    assert_eq!(r.game.memory, -3);
+    assert_eq!(r.game.players[0].hand.len(), 1, "one digivolution draw");
+    assert_eq!(r.game.players[0].battle_area[0].stack_size(), 2);
+    assert_eq!(field_ids(&r, 0), vec![CARD_ID]);
+    assert_eq!(r.trash_size(0), 0);
+
+    let pick = prompt
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != PASS)
+        .unwrap();
+    let mask = digimon_engine::action::mask::build_action_mask(&r.game, 0);
+    assert_eq!(mask[PASS as usize], 1.0, "declining is a legal action");
+    assert_eq!(mask[pick as usize], 1.0, "suspending self is a legal action");
+    let parked = r.game.clone();
+    r.execute_action(0, PASS).unwrap();
+    assert_eq!(r.game.turn_count, turn + 1);
+    assert!(!r.game.players[0].battle_area[0].is_suspended);
+    r.game = parked;
+    r.execute_action(0, pick).unwrap();
+    assert_eq!(r.game.turn_count, turn + 1);
+    assert!(r.game.players[0].battle_area[0].is_suspended);
+}
+
 fn setup() -> DebugRunner {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
