@@ -101,6 +101,9 @@ steps:
   - actor: 0
     do: { select: { decline: true, sim_only: true } }
   - actor: 0
+    do: { select: { cards: [ST24-12], dcgo_only: true } }
+    expect: { prompt: MultipleSkills }
+  - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: OptionalSkill }
   - actor: 0
@@ -109,5 +112,5 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-meta: {produced_by: 20261007T003331248167Z-pilot-data-squad-d0b80b}
+meta: {produced_by: 20261007T003726102993Z-pilot-data-squad-84787e}
 assert: []
