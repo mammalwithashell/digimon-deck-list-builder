@@ -88,3 +88,9 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
 assert: []
+expect_ruling:
+  q_id: Q7120
+  assert:
+  - at: 29
+    that:
+      p0.field: [BT26-021]
