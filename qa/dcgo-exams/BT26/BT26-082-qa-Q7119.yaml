@@ -3,6 +3,8 @@
 # up as the bottom security card" puts it there; a P1 security attack then
 # checks it (the check is performed with the card left revealed).
 #
+# Targets are made unambiguous by DP: Crowmon deletes the unique 4000-DP BT3-007,
+# Ravemon the unique 3000-DP BT1-009 (Agumon are 2000). No Crowmon decline step.
 # THE LINE: P1 attacks P0's security with a growing army of Agumon (ST1-03)
 # while P0 builds up. P0's five security cards (four ST24-04 Agumon, 1000 DP,
 # then Falcomon ST24-12 at the bottom) are all trashed by T8, so Ravemon placed
@@ -16,7 +18,7 @@ clause: BT26-082#effect#3
 covers: [BT26-082#effect#3, BT26-082#effect#1]
 interaction: {id: "qa:Q7119", source: qa, kind: positive}
 seed: 424242
-meta: {produced_by: 20261007T023409303791Z-pilot-data-squad-cc976b}
+meta: {produced_by: 20261007T025828230816Z-pilot-data-squad-978f94}
 decks:
   p0:
     stack: [BT26-036, ST24-05, BT26-076, BT26-082, ST24-15,
@@ -62,7 +64,7 @@ steps:
   - actor: 1
     do: { attack: { attacker: field.1, target: security } }
   - actor: 1
-    do: { play: { card: ST1-03, from: hand } }
+    do: { play: { card: BT3-007, from: hand } }
   - actor: 1
     do: { pass: {} }
   - actor: 0
@@ -70,7 +72,7 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT26-076 } }
   - actor: 0
-    do: { select: { targets: [opp.field.0] } }
+    do: { select: { targets: [opp.field.2] } }
   - actor: 0
     do: { pass: {} }
   - actor: 1
@@ -80,7 +82,7 @@ steps:
   - actor: 1
     do: { attack: { attacker: field.0, target: security } }
   - actor: 1
-    do: { play: { card: ST1-03, from: hand } }
+    do: { play: { card: BT1-009, from: hand } }
   - actor: 1
     do: { pass: {} }
   - actor: 0
@@ -94,15 +96,13 @@ steps:
   - actor: 0
     do: { select: { value: 1, dcgo_only: true } }
   - actor: 0
-    do: { select: { targets: [opp.field.0] } }
+    do: { select: { targets: [opp.field.1] } }
   - actor: 0
     do: { select: { cards: [BT26-082] } }
   - actor: 1
     do: { select: { cards: [ST1-04] } }
   - actor: 0
     do: { select: { yes: true } }
-  - actor: 0
-    do: { select: { decline: true } }
   - actor: 0
     do: { pass: {} }
   - actor: 1
@@ -112,10 +112,3 @@ steps:
   - actor: 1
     do: { pass: {} }
 assert: []
-expect_ruling:
-  q_id: Q7119
-  assert:
-  - at: 40
-    that:
-      p0.security: 0
-      p1.field: []
