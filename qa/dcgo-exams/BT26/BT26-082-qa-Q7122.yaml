@@ -239,3 +239,8 @@ steps:
     do: {select: {decline: true}}
     expect: {prompt: SelectPermanentEffect}
 assert: []
+expect_ruling:
+  q_id: Q7122
+  assert:
+  - at: 47
+    that: {phase: GameOver, p0.security: 0}
