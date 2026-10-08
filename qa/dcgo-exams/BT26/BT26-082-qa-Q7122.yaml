@@ -19,10 +19,14 @@
 # Rules: digest.md sections 5-6 (11-5-1, 15-4-3); official Q7122 governs the
 # pending non-turn-player end-of-turn effect during this attack.
 #
-# Adversarial witness observed in the local sim: after the final Alliance decline,
-# Ravemon is in trash and the game remains in EndOfTurnAction. It was checked
-# instead of its pending security effect playing it before attack success.
-# This is a sim/official-ruling timing divergence candidate; no oracle was run.
+# The final Alliance selection is ANSWERED, and the attack runs to completion.
+# expect.prompt describes the prompt BEFORE its row, not a pending prompt AFTER it.
+# There are 53 action rows (0..52) and 54 state projections (0..53): projection 53
+# is AFTER the last selection and is the interaction's resolved endpoint.
+# See exam/run.rs::lower_and_run: each row appends projection i+1. In contrast,
+# inspect_step:52 reports the pre-selection snapshot and is NOT the endpoint.
+# The final attack accepts Alliance, testing the same zero-security boundary
+# even with an additional security check. There is no later attack or turn pass.
 # Independent models must encode and review the ruling. assert stays empty.
 card: BT26-082
 clause: BT26-082#effect#1
@@ -44,7 +48,7 @@ covers:
 - BT25-033#effect#2
 seed: 424242
 meta:
-  produced_by: 20261008T024711094115Z-pilot-data-squad-f640cb
+  produced_by: 20261008T025711347703Z-pilot-data-squad-38e4c1
 decks:
   p0:
     rest: bt26-dats
@@ -259,8 +263,10 @@ steps:
   - actor: 1
     do: {attack: {attacker: field.0, target: security}}
     expect: {prompt: OptionalSkill}
-  # Decline Alliance; finish the attack. STOP here, without another pass or attack.
+  # Answer Alliance by suspending the first Aegiomon. This is the last decision:
+  # no Counter card or Blocker is available to P0, so the attack then resolves.
+  # The resolved state is projection 53, AFTER this row; projection 52 is before.
   - actor: 1
-    do: {select: {decline: true}}
+    do: {select: {targets: [own.field.1]}}
     expect: {prompt: SelectPermanentEffect}
 assert: []
