@@ -18,6 +18,10 @@ Examples:
   python resolve_cards.py "Xros Heart" --type archetype
   python resolve_cards.py Wormmon --paths-only        # just the image paths, one per line
   python resolve_cards.py Wormmon --json              # structured manifest
+  python resolve_cards.py "Xros Heart" --aegis        # force the Aegis IR section on
+
+ID / name queries also print each card's Aegis IR record (third-party, LOW trust,
+requirement fields stripped) via code/tools/aegis_ir.py; --no-aegis turns it off.
 """
 from __future__ import annotations
 
@@ -244,9 +248,30 @@ def build_manifest(args) -> list[dict]:
     return results
 
 
-def print_human(results: list[dict]) -> None:
+def aegis_module(root: Path):
+    """Import code/tools/aegis_ir.py, or None if the snapshot is unavailable."""
+    tools = str(root / "code" / "tools")
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    try:
+        import aegis_ir
+        aegis_ir.load_effects()
+        return aegis_ir
+    except Exception:
+        return None
+
+
+def want_aegis(args, rtype: str) -> bool:
+    if args.no_aegis:
+        return False
+    # Archetype pools are 40-60 cards; only include them on request.
+    return args.aegis or rtype in ("id", "name")
+
+
+def print_human(results: list[dict], args=None) -> None:
     all_paths: list[str] = []
     bundle_dir = repo_root() / "data" / "card_bundles"
+    aegis = aegis_module(repo_root()) if args is not None else None
     for entry in results:
         q, rtype = entry["query"], entry["resolved_type"]
         n = len(entry["cards"])
@@ -276,6 +301,9 @@ def print_human(results: list[dict]) -> None:
                 print(f"    bundle    : {bundle}")
                 print("                ^ AUTHORITATIVE digivolve costs (official Bandai DB) + "
                       "special/DNA conditions + official text. Read this for digivolution data.")
+            if aegis is not None and want_aegis(args, rtype):
+                print("\n" + "\n".join("    " + ln for ln in
+                                       aegis.aegis_section(c["id"], heading="###").splitlines()))
             all_paths.extend(img["paths"])
 
     if all_paths:
@@ -299,6 +327,9 @@ def main(argv=None) -> int:
     ap.add_argument("--paths-only", action="store_true",
                     help="print only resolved image paths, one per line")
     ap.add_argument("--json", action="store_true", help="emit the manifest as JSON")
+    ap.add_argument("--aegis", action="store_true",
+                    help="include the Aegis IR section for every card (default: ID/name queries only)")
+    ap.add_argument("--no-aegis", action="store_true", help="omit the Aegis IR section")
     args = ap.parse_args(argv)
 
     # Card text contains fullwidth/ideographic chars; force UTF-8 so output
@@ -312,6 +343,14 @@ def main(argv=None) -> int:
     results = build_manifest(args)
 
     if args.json:
+        aegis = aegis_module(repo_root())
+        if aegis is not None:
+            for entry in results:
+                if want_aegis(args, entry["resolved_type"]):
+                    for c in entry["cards"]:
+                        # Labeled so a consumer can't mistake it for project data.
+                        c["aegis_ir_low_trust"] = {"label": aegis.SECTION_TITLE,
+                                                   "record": aegis.aegis_record(c["id"])}
         print(json.dumps(results, indent=2, ensure_ascii=False))
     elif args.paths_only:
         for entry in results:
@@ -319,7 +358,7 @@ def main(argv=None) -> int:
                 for p in c["image"]["paths"]:
                     print(p)
     else:
-        print_human(results)
+        print_human(results, args)
     return 0
 
 

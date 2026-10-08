@@ -71,6 +71,12 @@ A card missing from the local mirror is auto-downloaded from the digimoncard.io 
 - **Behavior** ("how does it resolve"): keep following the project's source-priority
   chain — DCGO C# → `general_rule.pdf` → fandom wiki. The image tells you the text;
   DCGO/rules tell you how that text actually plays out.
+- **Aegis IR** (printed for ID / name queries; `--aegis` forces it for archetypes,
+  `--no-aegis` hides it): a third-party simulator's compiled effect record, vendored at
+  `data/third_party/aegis/`. **LOW trust — last in every chain above.** Use it only to
+  cross-check how the text splits into clauses (trigger, action order, `optional`,
+  frequency). Never copy its digivolve / Assembly requirement data (stripped from the
+  output) and ignore its self-reported `coverage`.
 
 ### Authoritative card data — tooling
 
@@ -100,6 +106,7 @@ When implementing a card or writing a real-card test/scenario, prefer the bundle
 - `--paths-only` — print just the image paths (handy when you only need the files to `Read`).
 - `--json` — structured manifest.
 - `--no-download` — skip the CDN fallback (local-only).
+- `--aegis` / `--no-aegis` — force the LOW-trust Aegis IR section on (e.g. archetypes) / off.
 
 ## Notes
 

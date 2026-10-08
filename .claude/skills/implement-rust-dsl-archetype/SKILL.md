@@ -57,11 +57,18 @@ Load reference files only when needed:
    - Run broader DSL/action/selection suites when shared DSL, mask, selection, replacement, or engine behavior changed.
    - Run `git diff --check`.
 
+## Source Priority
+
+Printed data: card image / official bundle `data/card_bundles/<ID>.md` → `data/card_overrides.json` → `data/cards.json`. Behavior: `general_rule.pdf` (rules) → DCGO C# (how the card resolves) → printed text → fandom wiki → **Aegis IR, last**. See CLAUDE.md "Source priority".
+
+**Aegis IR** (`python code/tools/aegis_ir.py <CARD_ID>`, vendored at `data/third_party/aegis/`) is a third-party compiled-effect record. Treat it as LOW trust: use it only to cross-check clause decomposition (trigger, action order, `optional`, frequency); never let it decide behavior, never copy its digivolve / Assembly requirement data (the script strips those fields), and ignore its self-reported `coverage`.
+
 ## Task Requirements
 
 Every task must include:
 
-- Printed text evidence from `data/cards.json`.
+- Printed text evidence from the official bundle `data/card_bundles/<ID>.md` (or `data/card_overrides.json` / `data/cards.json` when no bundle exists).
+- The card's Aegis IR section, pasted verbatim from `python code/tools/aegis_ir.py <CARD_ID>` (keeps its LOW-trust label).
 - Existing YAML/DSL examples to mimic when possible.
 - A failing test under `code/digimon-engine/tests/` before YAML or engine edits.
 - Action-mask or pending-selection assertions for every player-visible choice.

@@ -20,7 +20,10 @@ Each implementer task should include:
 Use TDD to implement <CARD-ID> <clause/primitive>.
 
 Context:
-- Printed text: <effect/inherited/security text from data/cards.json>
+- Printed text: <effect/inherited/security text from data/card_bundles/<ID>.md, else card_overrides.json / cards.json>
+- DCGO C#: <path + body, or "absent">
+- Aegis IR (third-party, self-audited, LOW trust — a structural hint only; printed text, DCGO and general_rule.pdf govern; never copy its digivolve/Assembly requirement data):
+  <verbatim output of `python code/tools/aegis_ir.py --no-heading <CARD-ID>` — cross-check clause decomposition only; printed text, DCGO and general_rule.pdf win every disagreement>
 - Required docs: AGENTS.md, docs/RUST_DSL_AGENT_GUIDE.md, docs/RUST_DSL_TEST_API.md, docs/RUST_ENGINE_API.md
 - Existing examples to inspect: <YAML/test paths>
 - Known gaps to respect: <tracker entries or "none">
@@ -53,6 +56,7 @@ Review this completed task for spec compliance only.
 
 Check:
 - Printed card text is faithfully represented for the claimed scope.
+- No behavior was adopted on the strength of the Aegis IR alone, and no Aegis requirement data was copied.
 - The task did not implement extra unrequested card behavior.
 - Every player-visible choice is exposed through action masks or PendingSelection.
 - Optionality, PASS, filters, event subjects, replacement causes, and OPT are covered where relevant.

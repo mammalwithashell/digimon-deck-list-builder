@@ -53,6 +53,7 @@ The positional argument is either an archetype name from `data/deck_library.json
 | Deck library | `data/deck_library.json` |
 | DSL test pool (curated) | `qa/dsl-test-pool.md` |
 | C# reference | `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID_UNDERSCORE}.cs` |
+| Aegis IR (third-party, LOW trust) | `python code/tools/aegis_ir.py --no-heading <CARD_ID>` (snapshot: `data/third_party/aegis/`) |
 | Verdict tracker | `qa/qa-reports/validated_cards_dsl.json` |
 | Engine-gap tracker | `qa/archetype-qa/engine-gaps.md` |
 | DSL-vocab-gap tracker | `qa/dsl-vocab-gaps.md` |
@@ -250,9 +251,11 @@ For each card in the current batch, collect:
 
 2. **DCGO C# reference**: glob `DCGO/Assets/Scripts/CardEffect/<SET>/*/<CARD_ID_UNDERSCORE>.cs` where `<CARD_ID_UNDERSCORE> = card_id.replace("-", "_")` (e.g. `BT15-003` → `BT15_003.cs`). Read the file body if found; record "absent" if not. Promo cards (`P-...`) frequently lack DCGO files; that is acceptable, the worker proceeds with printed text only.
 
-3. **Prior verdict** from `validated_cards_dsl.json` (if any).
+3. **Aegis IR (third-party, LOW trust)** — run `python code/tools/aegis_ir.py --no-heading <CARD_ID>` and paste its output verbatim as `{{AEGIS_IR_SECTION}}` (the prompt templates already carry the LOW-trust section label; never drop it). The script emits a provenance line, strips every digivolve / DNA / DigiXros / Assembly / Link / App-Fusion requirement field, and says so when a card has no record (paste that line too). Do not summarize or reorder it — the label is what keeps workers from over-trusting it. It ranks below DCGO, the official bundle and `card_overrides.json` / `cards.json` (see "Source priority" in the prompts).
 
-4. **AUDIT-mode only** — also read:
+4. **Prior verdict** from `validated_cards_dsl.json` (if any).
+
+5. **AUDIT-mode only** — also read:
    - `code/digimon-engine/cards/<set>/<CARD_ID>.yaml` (the existing YAML body)
    - `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs` if present (existing tests)
 
@@ -295,6 +298,9 @@ Path: {{CSHARP_PATH}}
 {{CSHARP_BODY}}
 ```
 
+## Aegis IR (third-party, self-audited, LOW trust — a structural hint only; printed text, DCGO and general_rule.pdf govern; never copy its digivolve/Assembly requirement data)
+{{AEGIS_IR_SECTION}}
+
 # Reference docs (cite paths — Read what you need, do not paste full bodies)
 
 - DSL test API (test patterns + anti-patterns): `docs/RUST_DSL_TEST_API.md`
@@ -317,18 +323,24 @@ Produce a curated brief for the implementer. The brief must:
 
 5. **Sketch behavioral test scope per `docs/RUST_DSL_TEST_API.md` §5.** Enumerate: structural assertions (clauses by scope/timing), per-branch behavioral tests, negative tests, OPT enforcement test (if applicable), event-log test (if applicable).
 
-6. **Pre-flight gap suspicion.** Emit one of:
+6. **Clause cross-check (Aegis IR, LOW trust).** Compare your clause list against the Aegis IR section's `effects[]` (trigger, action order, `optional`, `frequency`, `isInherited`). If Aegis shows a clause/step you did not, re-read the printed text and DCGO to decide — note the outcome under "Behavioral test scope". Never adopt Aegis behavior that the printed text / DCGO doesn't support.
+
+7. **Pre-flight gap suspicion.** Emit one of:
    - `NONE` — no gap suspected.
    - `ENGINE-GAP: <description>` — engine lacks a primitive (the DSL verb you would use lowers to a method that does not exist in `EffectContext`).
    - `DSL-GAP: <description>` — engine has the primitive but no DSL verb maps to it.
    - `HYBRID: <description>` — both.
    You may return any verdict here; the implementer will confirm or refute.
 
-# Source priority (for behavioral questions)
+# Source priority
 
-1. Printed card text (above) — authoritative.
-2. `docs/RULES_CONTEXT.md` and fandom wiki — keyword + interaction semantics.
-3. DCGO C# (above) — implementation-detail tiebreaker only.
+Printed data ("what does the card say"): card image / official bundle `data/card_bundles/<ID>.md` → `data/card_overrides.json` → per-card JSON / `data/cards.json`.
+Behavior ("how does it resolve"):
+1. `general_rule.pdf` (base repo; verified derivations in `docs/digimon-rules/`) — rules, keyword semantics, timing.
+2. DCGO C# (above) — how this card actually resolves; outranks the card-text JSON for behavior.
+3. Printed text (per the printed-data order above) — the no-approximations target.
+4. Fandom wiki — community rulings.
+5. **Aegis IR (lowest — below all of the above).** Use it ONLY to cross-check your clause decomposition (did you miss a clause, an `optional`, a once-per-turn, an action-order step?). Never adopt a behavior because Aegis says so, never copy its digivolve / Assembly / DNA / DigiXros requirement data, and when it disagrees with any higher source, the higher source wins with no further discussion. Its `coverage: full` is self-reported.
 
 Do NOT cite Python scripts (`code/engine_py_legacy/`) — they are out of scope for this skill.
 
@@ -389,6 +401,9 @@ Path: {{CSHARP_PATH}}
 {{CSHARP_BODY}}
 ```
 
+## Aegis IR (third-party, self-audited, LOW trust — a structural hint only; printed text, DCGO and general_rule.pdf govern; never copy its digivolve/Assembly requirement data)
+{{AEGIS_IR_SECTION}}
+
 ## Prior verdict (if any)
 {{PRIOR_VERDICT_JSON}}
 
@@ -420,11 +435,15 @@ The hybrid checklist is the union of:
 
 When you need a specific verb's parameters or an `EffectContext` method signature, Read the relevant section of the document above. Do not guess.
 
-# Source priority (for behavioral questions)
+# Source priority
 
-1. Printed card text — authoritative.
-2. `docs/RULES_CONTEXT.md` and fandom wiki — keyword + interaction semantics.
-3. DCGO C# — implementation-detail tiebreaker only.
+Printed data ("what does the card say"): card image / official bundle `data/card_bundles/<ID>.md` → `data/card_overrides.json` → per-card JSON / `data/cards.json`.
+Behavior ("how does it resolve"):
+1. `general_rule.pdf` (base repo; verified derivations in `docs/digimon-rules/`) — rules, keyword semantics, timing.
+2. DCGO C# (above) — how this card actually resolves; outranks the card-text JSON for behavior.
+3. Printed text (per the printed-data order above) — the no-approximations target.
+4. Fandom wiki — community rulings.
+5. **Aegis IR (lowest — below all of the above).** Use it ONLY to cross-check your clause decomposition (did you miss a clause, an `optional`, a once-per-turn, an action-order step?). Never adopt a behavior because Aegis says so, never copy its digivolve / Assembly / DNA / DigiXros requirement data, and when it disagrees with any higher source, the higher source wins with no further discussion. Its `coverage: full` is self-reported.
 
 Do NOT cite Python scripts (`code/engine_py_legacy/`).
 
@@ -441,6 +460,7 @@ Deliverables (and ONLY these — do NOT touch any `mod.rs`, `main.rs`, `cards.rs
 
 **Step 1 — Decompose card text into numbered clauses.**
 For each clause, capture: (a) timing (OnPlay / WhenAttacking / Inherited / WhenRemoveField / Security / etc.), (b) exact text, (c) expected behavior, (d) DCGO mapping (which method in the C# reference, if any).
+Then cross-check the list against the Aegis IR section (LOW trust): a clause, `optional`, or once-per-turn Aegis has and you lack is a prompt to re-read the printed text and DCGO — not evidence. Resolve every disagreement in favor of printed text / DCGO / `general_rule.pdf`.
 
 **Step 2 — Write the test file FIRST.**
 
@@ -557,6 +577,9 @@ Path: {{CSHARP_PATH}}
 {{CSHARP_BODY}}
 ```
 
+## Aegis IR (third-party, self-audited, LOW trust — a structural hint only; printed text, DCGO and general_rule.pdf govern; never copy its digivolve/Assembly requirement data)
+{{AEGIS_IR_SECTION}}
+
 ## Existing YAML
 Path: `code/digimon-engine/cards/{{SET_LOWER}}/{{CARD_ID}}.yaml`
 ```yaml
@@ -577,11 +600,15 @@ Path: `code/digimon-engine/tests/cards_behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER}
 ## Skill positive-rules appendix
 {{SKILL_POSITIVE_RULES_APPENDIX}}
 
-# Source priority (for behavioral questions)
+# Source priority
 
-1. Printed card text — authoritative.
-2. `docs/RULES_CONTEXT.md` and fandom wiki — keyword + interaction semantics.
-3. DCGO C# — implementation-detail tiebreaker only.
+Printed data ("what does the card say"): card image / official bundle `data/card_bundles/<ID>.md` → `data/card_overrides.json` → per-card JSON / `data/cards.json`.
+Behavior ("how does it resolve"):
+1. `general_rule.pdf` (base repo; verified derivations in `docs/digimon-rules/`) — rules, keyword semantics, timing.
+2. DCGO C# (above) — how this card actually resolves; outranks the card-text JSON for behavior.
+3. Printed text (per the printed-data order above) — the no-approximations target.
+4. Fandom wiki — community rulings.
+5. **Aegis IR (lowest — below all of the above).** Use it ONLY to cross-check your clause decomposition (did you miss a clause, an `optional`, a once-per-turn, an action-order step?). Never adopt a behavior because Aegis says so, never copy its digivolve / Assembly / DNA / DigiXros requirement data, and when it disagrees with any higher source, the higher source wins with no further discussion. Its `coverage: full` is self-reported.
 
 Do NOT cite Python scripts.
 
@@ -594,7 +621,7 @@ Do NOT cite Python scripts.
    - Condition gaps (printed text "if X"; YAML unconditional, or wrong condition).
    - OPT misses ([Once Per Turn] in text but YAML lacks `once_per_turn: true`).
 
-2. **Behavioral fidelity diff against DCGO C#.** For nuances printed text doesn't pin down (e.g., processing order of an interaction, exact target eligibility), confirm the YAML matches DCGO. Per CLAUDE.md source priority, DCGO is a tiebreaker — printed text wins on disagreements. Note any printed-vs-DCGO disagreement explicitly.
+2. **Behavioral fidelity diff against DCGO C#.** For nuances printed text doesn't pin down (e.g., processing order of an interaction, exact target eligibility), confirm the YAML matches DCGO. Per CLAUDE.md source priority, DCGO governs *behavior* over the card-text JSON, `general_rule.pdf` governs rules over DCGO, and the official bundle / card image governs what the card *prints*. Note any printed-vs-DCGO disagreement explicitly. Aegis IR never decides a drift verdict on its own.
 
 3. **Test coverage inventory.** Compare the existing test file (if any) against the test API §5 expected coverage:
    - Section 1: structural assertions present? Cover every clause's scope/timing/optional/once_per_turn?
@@ -671,14 +698,19 @@ For each card in this batch, you have:
 - The files they wrote: `code/digimon-engine/cards/<set>/<CARD_ID>.yaml` and `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs`.
 - The card's authoritative metadata + printed text.
 - The DCGO C# reference body.
+- The card's Aegis IR section (third-party, LOW trust — clause-decomposition cross-check only).
 
 {{PER_CARD_MATERIALS — for each card, repeat the metadata block + worker verdict + paths to written files}}
 
-# Source priority (for behavioral questions)
+# Source priority
 
-1. Printed card text — authoritative.
-2. `docs/RULES_CONTEXT.md` and fandom wiki — keyword + interaction semantics.
-3. DCGO C# — implementation-detail tiebreaker only.
+Printed data ("what does the card say"): card image / official bundle `data/card_bundles/<ID>.md` → `data/card_overrides.json` → per-card JSON / `data/cards.json`.
+Behavior ("how does it resolve"):
+1. `general_rule.pdf` (base repo; verified derivations in `docs/digimon-rules/`) — rules, keyword semantics, timing.
+2. DCGO C# (above) — how this card actually resolves; outranks the card-text JSON for behavior.
+3. Printed text (per the printed-data order above) — the no-approximations target.
+4. Fandom wiki — community rulings.
+5. **Aegis IR (lowest — below all of the above).** Use it ONLY to cross-check your clause decomposition (did you miss a clause, an `optional`, a once-per-turn, an action-order step?). Never adopt a behavior because Aegis says so, never copy its digivolve / Assembly / DNA / DigiXros requirement data, and when it disagrees with any higher source, the higher source wins with no further discussion. Its `coverage: full` is self-reported.
 
 # Your task — for each card, emit ONE of:
 
@@ -814,7 +846,7 @@ This appendix is the "C" half of the hybrid checklist. The "A" half is `docs/RUS
 7. **Use `dsl_card(id)`, never inline-paste production YAML** (test API §11.1). Inline fixtures are reserved for the cases enumerated in §10.
 8. **Use `digimon_engine::action::space::*` constants, never hard-code action IDs** (test API §11.12).
 9. **No approximations.** Every player choice surfaces through `pending_selection`. No `.iter().next()`, no `[0]`, no `min`/`max` over targets, no auto-resolutions of multi-option choices.
-10. **No Python references.** Do not cite `code/engine_py_legacy/`, do not import Python script structure as ground truth. Ground truth is printed text + `docs/RULES_CONTEXT.md` / fandom wiki + DCGO C#.
+10. **No Python references.** Do not cite `code/engine_py_legacy/`, do not import Python script structure as ground truth. Ground truth is printed text (image / official bundle) + `general_rule.pdf` + DCGO C#. Aegis IR is a LOW-trust structural hint only — never cite it as ground truth.
 11. **Engine-gap vs DSL-vocab-gap discipline.** Before declaring `BLOCKED`, confirm: does the engine *really* lack the primitive (read `docs/RUST_ENGINE_API.md`), or does only the DSL lack a verb that would lower to it (read the DSL spec)? Set `gap_kind` accordingly.
 12. **No `place_on_field` shortcuts when testing OnPlay paths** (test API §11.11). `place_on_field` is for post-play state only.
 13. **No `auto_resolve` through a multi-branch prompt when testing a specific branch** (test API §11.4). Use `execute_branch` / `execute_action`, then `auto_resolve` only after the branching choice is locked.

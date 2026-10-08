@@ -16,3 +16,6 @@ data/card_meta/** text eol=lf
 # Union merge concatenates both sides instead of conflicting; the log is
 # one JSON object per line precisely so this is correct.
 qa/qa-reports/exam-log.jsonl merge=union
+
+# Vendored third-party snapshot (byte-reproducible gzip; see its README).
+data/third_party/aegis/*.gz binary

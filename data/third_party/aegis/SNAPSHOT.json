@@ -1,0 +1,8 @@
+{
+  "upstream": "https://github.com/vinicius3333/aegis-digimon-tcg",
+  "path": "packages/shared/src/effects/effects.json",
+  "commit": "ec0cd22f0e51f373a78a5546ca5dfa0e2a772c4b",
+  "effects_json_sha256": "bb3f4fbdb06c7d7f83955efa6a2e28acfc347a5e7f96290486a0dcd14d343eff",
+  "effects_json_bytes": 7630214,
+  "card_count": 4481
+}
