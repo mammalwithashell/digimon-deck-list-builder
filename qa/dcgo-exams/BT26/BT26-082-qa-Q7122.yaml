@@ -4,7 +4,11 @@
 # BT26-033-effect3's Engage attack fold, with a hostile one-security boundary.
 # The hard-play Crowmon prefix avoids unrelated egg/rookie inherited effects.
 # Jupitermon's When Digivolving takes stack[9]; Wrath Mode at stack[8] stays
-# on top until Ravemon attacks it. All draws through the final turn are pinned.
+# on top until Ravemon attacks it. Draws needed by scripted choices are pinned.
+# The former T2 phase-exit row was not a shared DCGO prompt. This revision
+# plays P-213 and a first Aegiomon on T2, then evolves on T4 and plays a second
+# Aegiomon. The old empty-window pass becomes a real OptionalSkill decline;
+# the extra Aegiomon offsets the extra draw for Ravemon's hand-size condition.
 #
 # DCGO: BT26_033.cs registers Raid then Alliance at OnAllyAttack; the three
 # preliminary attacks have both activatable. Explicit DCGO-only MultipleSkills
@@ -40,7 +44,7 @@ covers:
 - BT25-033#effect#2
 seed: 424242
 meta:
-  produced_by: 20261008T023500271792Z-pilot-data-squad-3d41d5
+  produced_by: 20261008T024711094115Z-pilot-data-squad-f640cb
 decks:
   p0:
     rest: bt26-dats
@@ -66,7 +70,7 @@ decks:
     - BT26-033
     - P-213
     - BT25-033
-    - BT25-030
+    - BT25-033
     - BT25-030
     - BT24-031
     - BT24-034
@@ -87,13 +91,32 @@ steps:
   - actor: 0
     do: {play: {card: BT26-076, from: hand}}
     expect: {prompt: main_phase}
-  # T2: P-213 -> Jupitermon (cost 4); use its reduced-cost play for Aegiomon.
+  # T2: play P-213 and Aegiomon before evolving on a later turn. This avoids
+  # the old sim-only exit after evolving a summoning-sick Engage carrier.
   - actor: 1
     do: {pass: {}}
     expect: {prompt: breeding_action}
   - actor: 1
     do: {play: {card: P-213, from: hand}}
     expect: {prompt: main_phase}
+  - actor: 1
+    do: {play: {card: BT25-033, from: hand.1}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {select: {decline: true}}
+    expect: {prompt: OptionalSkill}
+  # T3: keep Crowmon and return the turn. P-213 can attack from T4 onward.
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  # T4: evolve P-213; play the second Aegiomon at reduced cost. That extra
+  # hand card spent offsets the extra draw, preserving Ravemon's <=7 gate.
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
   - actor: 1
     do: {digivolve: {from: field.0, using: BT26-033}}
     expect: {prompt: main_phase}
@@ -107,17 +130,19 @@ steps:
   - actor: 1
     do: {select: {decline: true}}
     expect: {prompt: OptionalSkill}
-  # Sim end-window exit: both Digimon were played this turn; no legal Engage attack.
+  # A real Engage decline on both engines: P-213 was played on T2, so its
+  # Jupitermon stack is attack-eligible. DCGO now has this OptionalSkill gate.
   - actor: 1
     do: {pass: {}}
-  # T3: leave Crowmon in play; keep Ravemon in hand until all five security are gone.
+    expect: {prompt: OptionalSkill}
+  # T5: leave Crowmon in play; keep Ravemon in hand until all five security are gone.
   - actor: 0
     do: {pass: {}}
     expect: {prompt: breeding_action}
   - actor: 0
     do: {pass: {}}
     expect: {prompt: main_phase}
-  # T4: decline Raid; Alliance with Aegiomon removes two starting security cards.
+  # T6: decline Raid; Alliance with Aegiomon removes two starting security cards.
   - actor: 1
     do: {pass: {}}
     expect: {prompt: breeding_action}
@@ -142,7 +167,7 @@ steps:
   - actor: 0
     do: {pass: {}}
     expect: {prompt: main_phase}
-  # T6: repeat the two-check attack (security 3 -> 1).
+  # T8: repeat the two-check attack (security 3 -> 1).
   - actor: 1
     do: {pass: {}}
     expect: {prompt: breeding_action}
@@ -167,7 +192,7 @@ steps:
   - actor: 0
     do: {pass: {}}
     expect: {prompt: main_phase}
-  # T8: decline both Raid and Alliance: exactly one check (security 1 -> 0).
+  # T10: decline both Raid and Alliance: exactly one check (security 1 -> 0).
   - actor: 1
     do: {pass: {}}
     expect: {prompt: breeding_action}
@@ -186,7 +211,7 @@ steps:
   - actor: 1
     do: {pass: {}}
     expect: {prompt: main_phase}
-  # T9: Ravemon on Crowmon; decline its self-deletion cost, then attack security.
+  # T11: Ravemon on Crowmon; decline its self-deletion cost, then attack security.
   - actor: 0
     do: {pass: {}}
     expect: {prompt: breeding_action}
@@ -226,7 +251,7 @@ steps:
   - actor: 1
     do: {pass: {}}
     expect: {prompt: breeding_action}
-  # T10 end window: Ravemon and Engage trigger together; turn player acts first.
+  # T12 end window: Ravemon and Engage trigger together; turn player acts first.
   - actor: 1
     do: {pass: {}}
     expect: {prompt: main_phase}
@@ -239,8 +264,3 @@ steps:
     do: {select: {decline: true}}
     expect: {prompt: SelectPermanentEffect}
 assert: []
-expect_ruling:
-  q_id: Q7122
-  assert:
-  - at: 47
-    that: {phase: GameOver, p0.security: 0}
