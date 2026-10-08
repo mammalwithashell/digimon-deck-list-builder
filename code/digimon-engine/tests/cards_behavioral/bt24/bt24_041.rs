@@ -29,7 +29,7 @@ fn bt24_041_has_printed_metadata_alt_paths_cost_reduction_formula_and_auras() {
     );
     assert_eq!(compiled.cost, Some(12));
     assert_eq!(compiled.dp, Some(12000));
-    assert_eq!(compiled.attribute.as_deref(), Some("Virus"));
+    assert_eq!(compiled.attribute, ["Virus"]);
     for trait_name in ["Shaman", "Olympos XII", "Iliad", "TS"] {
         assert!(
             compiled.traits.iter().any(|t| t == trait_name),

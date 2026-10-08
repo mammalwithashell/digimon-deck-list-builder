@@ -31,7 +31,7 @@
 #     [Appmon] had NO digivolve route (fixed 2026-07-10).
 #   - The link box "DP +2000" aura was missing entirely (fixed 2026-07-10).
 #   - `attribute: Game` (image + official DB "Attribute: Game") — was
-#     mis-authored as Free; kept for attribute_is predicates.
+#     mis-authored as Free.
 #   - Traits include all segments from the image: Stnd., Appmon, Game, Online
 #     (the API-lossy cards.json drops the form segments; DCGO EqualsTraits spans
 #     the whole trait line, e.g. Onmon itself is a [Game] trait card).

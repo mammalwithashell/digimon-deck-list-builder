@@ -59,7 +59,7 @@ fn bt6_082_has_printed_metadata() {
     assert_eq!(card.dp, Some(3000));
     assert_eq!(card.color, vec![CompiledColor::White]);
     assert!(card.traits.iter().any(|name| name == "Puppet"));
-    assert_eq!(card.attribute.as_deref(), Some("Vaccine"));
+    assert_eq!(card.attribute, ["Vaccine"]);
 }
 
 #[test]

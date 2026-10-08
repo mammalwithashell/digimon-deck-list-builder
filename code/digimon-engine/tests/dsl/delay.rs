@@ -57,7 +57,7 @@ fn fixture_delay(scope: CompiledScope, trigger: CompiledTiming) -> CompiledCard 
         dp: None,
         traits: vec![],
         form: None,
-        attribute: None,
+        attribute: Vec::new(),
         ace_overflow: None,
         identity: None,
         digixros_aliases: Vec::new(),

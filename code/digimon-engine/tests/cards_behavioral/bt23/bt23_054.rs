@@ -87,7 +87,7 @@ fn bt23_054_has_printed_metadata_routes_and_blocker() {
     assert_eq!(card.color, vec![CompiledColor::Black, CompiledColor::Blue]);
     assert!(card.traits.iter().any(|name| name == "Royal Knight"));
     assert!(card.traits.iter().any(|name| name == "CS"));
-    assert_eq!(card.attribute.as_deref(), Some("Free"));
+    assert_eq!(card.attribute, ["Free"]);
 
     // Printed circles: Black Lv.3 / cost 4 and Blue Lv.3 / cost 4
     // (official Bandai DB — the card was previously mis-authored White).

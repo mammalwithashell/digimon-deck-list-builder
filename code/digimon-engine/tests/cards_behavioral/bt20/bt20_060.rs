@@ -54,7 +54,7 @@ fn bt20_060_has_printed_metadata_ace_overflow_and_routes() {
     assert!(card.traits.iter().any(|name| name == "X Antibody"));
     assert!(card.traits.iter().any(|name| name == "Royal Knight"));
     assert!(card.traits.iter().any(|name| name == "Chronicle"));
-    assert_eq!(card.attribute.as_deref(), Some("Vaccine"));
+    assert_eq!(card.attribute, ["Vaccine"]);
     assert_eq!(card.ace_overflow, Some(-5));
 
     assert!(card.alt_paths.iter().any(|path| {

@@ -102,7 +102,7 @@ fn ex6_011_metadata_matches_printed_card() {
     assert_eq!(card.color, vec![CompiledColor::Red, CompiledColor::Black]);
     assert!(card.traits.contains(&"Unique".to_string()));
     assert!(card.traits.contains(&"Legend-Arms".to_string()));
-    assert_eq!(card.attribute.as_deref(), Some("Virus"));
+    assert_eq!(card.attribute, ["Virus"]);
     assert_eq!(card.ace_overflow, Some(-5));
 }
 

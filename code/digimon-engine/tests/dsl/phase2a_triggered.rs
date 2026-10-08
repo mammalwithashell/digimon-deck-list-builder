@@ -141,7 +141,7 @@ fn fixture_on_play_gain_memory(n: i32) -> CompiledCard {
         dp: Some(2000),
         traits: vec![],
         form: None,
-        attribute: None,
+        attribute: Vec::new(),
         ace_overflow: None,
         identity: None,
         digixros_aliases: Vec::new(),

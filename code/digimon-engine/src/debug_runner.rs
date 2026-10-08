@@ -1343,7 +1343,7 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
             .copied()
             .map(compiled_color_to_engine)
             .collect(),
-        traits: card.traits.clone(),
+        traits: card.all_traits(),
         evo_costs,
         dna_costs,
         effect_text: String::new(),

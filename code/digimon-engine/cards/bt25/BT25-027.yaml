@@ -6,7 +6,7 @@ color: [blue, green]
 cost: 7
 dp: 7000
 traits: [Cyborg, DATA SQUAD]
-attribute: Vaccine
+attribute: Data
 
 # Printed text:
 #   [When Digivolving][When Attacking][Once Per Turn] You may return 1 of your

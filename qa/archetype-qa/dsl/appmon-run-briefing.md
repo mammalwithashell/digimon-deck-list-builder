@@ -58,14 +58,14 @@ each with an established DSL modeling (all verified against the engine, 2026-06-
 ## 2. YAML traits must carry the FULL merged trait line
 
 Production `CardData::load_from_str` merges `form_eng + attribute_eng + type_eng` into `traits`.
-DebugRunner DSL cards get traits ONLY from your YAML `traits:` list (`attribute:` is a separate
-compiled field consumed by `attribute_is` predicates — it is NOT folded into traits for DSL-loaded
-cards). All Appmon machinery keys off `trait_has` (Appmon link conditions, "Stnd."/"Sup." digivolve
-gates, Social/Navi/Tool link filters), so:
+DebugRunner merges a DSL card's `form:` + `attribute:` + `traits:` the same way
+(`CompiledCard::all_traits`, since 2026-10-05; before that it read `traits:` only). All Appmon
+machinery keys off `trait_has` (Appmon link conditions, "Stnd."/"Sup." digivolve gates,
+Social/Navi/Tool link filters), so every segment of the trait line must be in one of those fields:
 
-- Put the complete trait line from the CARD IMAGE into `traits:`, including the form segment
-  ("Stnd.", "Sup.", "God"), "Appmon", the app-attribute (e.g. "Social"), and the type traits
-  (e.g. "Search", "Hero").
+- Put the trait line from the CARD IMAGE into `traits:`, including the form segments
+  ("Stnd.", "Sup.", "God") and "Appmon" (`form:` holds one value), the app-attribute (e.g.
+  "Social", also in `attribute:`), and the type traits (e.g. "Search", "Hero").
   Example — BT21-009 image trait line `Stnd./Appmon | Social | Search/Hero`:
   ```yaml
   traits: ["Stnd.", Appmon, Social, Search, Hero]

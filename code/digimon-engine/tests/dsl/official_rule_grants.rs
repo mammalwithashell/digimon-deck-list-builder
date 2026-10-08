@@ -15,13 +15,13 @@
 //!
 //! 1. **Production** — `deck_tools::full_card_data()` (cards.json-built
 //!    `CardData.traits`, what every runtime trait predicate reads).
-//! 2. **Compiled DSL** — the embedded pack's `traits:` (what DebugRunner
-//!    behavioral tests match against).
+//! 2. **Compiled DSL** — the embedded pack's trait line, `form:` +
+//!    `attribute:` + `traits:` (what DebugRunner behavioral tests match
+//!    against).
 //!
 //! Reconcile any production failure from the official DB via
 //! `code/tools/audit_digivolve/reconcile_traits.py --apply` (then fold the
-//! overrides into cards.json); fix compiled failures in the card's YAML
-//! `traits:` line.
+//! overrides into cards.json); fix compiled failures in the card's YAML.
 
 use std::collections::HashMap;
 
@@ -204,9 +204,10 @@ fn check_production_grants() {
 }
 
 /// COMPILED DSL: every official Rule trait grant must also be present in the
-/// card's compiled YAML `traits:` — that is the trait list DebugRunner
-/// behavioral tests match against (`card_data_from_compiled`), so a grant
-/// missing here makes tests diverge from production.
+/// card's compiled trait line (`CompiledCard::all_traits`) — that is the
+/// trait list DebugRunner behavioral tests match against
+/// (`card_data_from_compiled`), so a grant missing here makes tests diverge
+/// from production.
 #[test]
 fn compiled_dsl_traits_carry_official_rule_trait_grants() {
     std::thread::Builder::new()
@@ -227,16 +228,12 @@ fn check_compiled_grants() {
         let Some(granted) = grants.get(card_id) else {
             continue;
         };
+        let traits = compiled.all_traits();
         for trait_name in granted {
-            if !compiled
-                .traits
-                .iter()
-                .any(|t| t.eq_ignore_ascii_case(trait_name))
-            {
+            if !traits.iter().any(|t| t.eq_ignore_ascii_case(trait_name)) {
                 violations.push(format!(
-                    "  {card_id}: rule-granted trait {trait_name:?} absent from YAML \
-                     traits {:?}",
-                    compiled.traits
+                    "  {card_id}: rule-granted trait {trait_name:?} absent from its YAML \
+                     trait line {traits:?}"
                 ));
             }
         }
@@ -246,8 +243,9 @@ fn check_compiled_grants() {
     assert!(
         violations.is_empty(),
         "{} DSL card(s) omit a printed `(Rule) Trait: Has [X]` grant from their YAML \
-         `traits:` line — behavioral tests would miss trait interactions production \
-         must support. Add the granted trait to each card's YAML `traits:`:\n{}",
+         trait line — behavioral tests would miss trait interactions production \
+         must support. Add the granted trait to each card's YAML (`attribute:` for an \
+         attribute grant, otherwise `traits:`):\n{}",
         violations.len(),
         violations.join("\n"),
     );

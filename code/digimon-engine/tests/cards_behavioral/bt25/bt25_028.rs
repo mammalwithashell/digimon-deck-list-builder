@@ -1,5 +1,5 @@
 //! BT25-028 Dianamon — Digimon, Lv.6, Blue/White, DP 12000, Cost 12.
-//! Traits: Shaman, Olympos XII, Iliad, TS. Attribute: Vaccine.
+//! Traits: Shaman, Olympos XII, Iliad, TS. Attribute: Data.
 //!
 //! # Card text (card image BT25-028 — authoritative for printed text)
 //! When this card would be played, if your opponent has a level 6 or higher
