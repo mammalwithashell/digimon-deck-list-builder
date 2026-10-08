@@ -2,8 +2,10 @@
 # Distinct sources expose prepend/append or reversal mistakes: first ST24-12,
 # then BT26-076, then BT26-082 while both earlier cards remain underneath.
 # Stop immediately after the third placement, Draw 1 and memory gain resolve.
-# The final main_phase row records that resolved boundary (projections are
-# captured BEFORE each action); no later opponent action is scripted.
+# The final selection is the last action: do not pass the turn after resolution.
+# Sim inspection: step 15 shows two existing sources and the third hand choice.
+# A temporary main_phase sentinel can inspect the resolved boundary at step 16;
+# it is deliberately absent from this delivered line.
 # Encoding limitation: exam/projection.rs PermanentProjection::normalize sorts
 # sources, so p0.field preserves under-card membership but NOT under-card order.
 # Do not encode Q7144 as a sorted sources assertion: it cannot distinguish
@@ -12,7 +14,7 @@ card: BT26-091
 clause: BT26-091#effect#0
 interaction: {id: "qa:Q7144", source: qa, kind: positive}
 covers: ["BT26-091#effect#0"]
-meta: {produced_by: 20261008T023523628415Z-pilot-data-squad-1d1936}
+meta: {produced_by: 20261008T023803010217Z-pilot-data-squad-c936fd}
 seed: 424242
 decks:
   p0:
@@ -78,8 +80,4 @@ steps:
   - actor: 0
     do: { select: { cards: [BT26-082] } }
     expect: { prompt: SelectHandEffect }
-  # Capture the resolved third placement, draw and memory gain at step 16.
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: main_phase }
 assert: []
