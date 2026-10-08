@@ -1325,3 +1325,50 @@ def test_a_tree_without_cargo_metadata_is_not_built():
     assert drv.harness_inputs_touched(["code/digimon-dsl/src/lower.rs"]) is True
     assert drv.harness_inputs_touched(["code/tools/dcgo-harness/src/exam/oracle.rs", "docs/x.md"]) is True
     assert drv.harness_inputs_touched(["Cargo.lock"]) is True
+
+
+# --------------------------------------------------------------------------- a systemic executor error
+
+
+def test_the_same_executor_error_on_item_after_item_stops_the_run(tmp_path):
+    # Data Squad pilot 2026-10-07: one worker-pool fault failed 79 items one by
+    # one ("WinError 32 ... card-loop-0") and the run then reported "blocked",
+    # which reads like finished work. The same error on item after item is the
+    # infrastructure, not the items: stop and say so.
+    items = [f"clause:BT1-001#effect#{i}" for i in range(8)]
+
+    def boom(ctx, it):
+        raise PermissionError("[WinError 32] being used by another process: 'D:\\cl-ds\\card-loop-0'")
+
+    h = Harness(tmp_path, [seed(i, "AUTHORING") for i in items], [Exec("AUTHORING", boom)])
+    result = h.run()
+    assert result.stop.reason == "error"
+    assert "5 items in a row" in result.stop.detail and "WinError 32" in result.stop.detail
+    assert len(result.failed) == 5, "the run stops instead of failing the rest"
+
+
+def test_a_success_between_identical_errors_resets_the_streak(tmp_path):
+    items = [f"clause:BT1-001#effect#{i}" for i in range(9)]
+
+    def mixed(ctx, it):
+        if it.item.endswith("#4"):
+            return StageOutcome("SIM", attempts=[attempt(ctx, it, "author_clause")])
+        raise RuntimeError("same failure")
+
+    h = Harness(tmp_path, [seed(i, "AUTHORING") for i in items],
+                [Exec("AUTHORING", mixed), sim_ok(), oracle_confirms()])
+    result = h.run()
+    assert result.stop.reason != "error"
+    assert len(result.failed) == 8
+
+
+def test_worker_pool_incidents_reach_the_report(tmp_path):
+    class Pool:
+        incidents = ["card-loop-0: reset failed (index.lock exists); recreating"]
+
+        def close(self, **kw):
+            pass
+
+    h = Harness(tmp_path, [seed(C1, "ORACLE")], [oracle_confirms()], pool=Pool())
+    result = h.run()
+    assert any(p.startswith("worker pool: card-loop-0: reset failed") for p in result.problems)

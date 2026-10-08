@@ -499,6 +499,7 @@ class Driver:
         self._plateau = 0
         self._session_attempts = 0
         self._failed: dict[str, str] = {}
+        self._error_streak: tuple[str | None, int] = (None, 0)   # (message, items in a row)
         self._idle_steps: dict[str, int] = {}
         self._last_merge: dict[str, MergeResult] = {}
         self._stop: Stop | None = None
@@ -1142,6 +1143,8 @@ class Driver:
                                        "outcome dropped")
             return
         tag = result[0]
+        if tag != "error":
+            self._error_streak = (None, 0)        # an executor returned: the streak is broken
         if tag == "error":
             self._executor_failed(rec, task, result[1], result[2])
         elif tag == "deferred":
@@ -1164,6 +1167,16 @@ class Driver:
         self._failed[rec.item] = msg
         self.state.note(rec.item, reason=f"executor error in {task.state}: {msg}", stage=task.stage,
                         event_data={"traceback": tb[-2000:]} if tb else None)
+        # The same error on item after item is the infrastructure (the first
+        # Data Squad pilot failed 79 items on one held worktree, then read
+        # "blocked"): stop and name it rather than burn through the queue.
+        last, n = self._error_streak
+        n = n + 1 if msg == last else 1
+        self._error_streak = (msg, n)
+        limit = getattr(self.config, "executor_error_streak", 0)
+        if limit and n >= limit and self._stop is None:
+            self._stop = Stop("error", f"{n} items in a row failed with the same executor error -- an "
+                                       f"infrastructure fault, not the items: {msg[:400]}")
 
     def _merge(self, request: MergeRequest) -> MergeResult:
         merger = self.components.merger
@@ -1387,6 +1400,10 @@ class Driver:
         if self.manage_tree:
             self._commit_ledgers()
             self._export_fork_candidates()
+        for incident in getattr(self.ctx.pool, "incidents", None) or ():
+            line = f"worker pool: {incident}"
+            if line not in self.state.problems:
+                self.state.problems.append(line)
         blocked = self._scan_blocked()
         counts = self.state.counts()
         extra = {"stop": stop.to_dict(), "blocked": blocked, "failed": dict(self._failed),

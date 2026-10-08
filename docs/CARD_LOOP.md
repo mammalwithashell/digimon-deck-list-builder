@@ -143,8 +143,14 @@ clause/int:  PENDING → [CLASSIFY] → AUTHORING → [ENCODE] → SIM → ORACL
 
 The USD cap, the wall-clock cap, per-stage attempt caps (`attempt_caps` in the
 config: author 3, fix 2, one triage per family …), a plateau of
-`plateau_attempts` worker calls with no new adjudication, or every vendor
-exhausted. Every stop writes `state.json` and `report.md`; the report's first
+`plateau_attempts` worker calls with no new adjudication, every vendor
+exhausted, or **`error`**: the same executor error on `executor_error_streak`
+(default 5) items in a row is an infrastructure fault, not the items, so the
+run stops and names it instead of failing the rest of the queue one by one.
+A `blocked` stop means no open item is runnable; read the report's "Items that
+failed" and "Waiting items" before treating it as finished work. Worker-pool
+recoveries (failed resets, a held worktree directory, a member set aside) are
+listed under "Problems". Every stop writes `state.json` and `report.md`; the report's first
 line names the **unmeasured, escalated and unavailable** counts before the
 confirmed count. `resume` rebuilds from the committed ledgers first and the
 run's `events.jsonl` second, so a crashed run re-does only outstanding work.

@@ -54,6 +54,9 @@ class LoopConfig:
     concurrency: int = 3
     worktree_pool_size: int = 3
     plateau_attempts: int = 10
+    # The same executor error on this many items in a row stops the run with
+    # reason "error": it is the infrastructure, not the items (0 = never).
+    executor_error_streak: int = 5
     routing_min_samples: int = 30
     late_correction_weight: float = 3.0
     seed: int = 0
