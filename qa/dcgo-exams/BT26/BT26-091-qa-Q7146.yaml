@@ -1,12 +1,11 @@
-# Q7146: Yoshino places a hand card FACE DOWN under her; the opponent (P1) must not
-# be able to search/look at it. The line makes the placement happen, then hands the
-# turn to P1 (the would-be looker) and stops, so inspect_step at the end shows the
-# face-down source from both seats' perspectives.
+# Q7146: Yoshino places a hand card FACE DOWN under her. The line stops right after the
+# placement resolves; the ruling (only the card's owner may look/search; the opponent
+# may not) is encoded against this step by the next stage.
 card: BT26-091
 clause: BT26-091#effect#0
 interaction: {id: "qa:Q7146", source: qa, kind: positive}
 covers: ["BT26-091#effect#0"]
-meta: {produced_by: 20261008T024726773706Z-pilot-data-squad-5ced51}
+meta: {produced_by: 20261008T024832635713Z-pilot-data-squad-1eb24f}
 seed: 424242
 decks:
   p0:
@@ -43,8 +42,4 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # P1's turn begins: the opponent now holds the view that must not see it.
-  - actor: 1
-    do: { pass: {} }
-    expect: { prompt: breeding_action }
 assert: []
