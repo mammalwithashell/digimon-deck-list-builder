@@ -18,8 +18,10 @@ An entry is imported only if it traces to the official source:
     related card IDs) — any other field is dropped and reported, never imported;
   - a Q-number carries the same question and answer on every card it is listed under.
 
-Output: data/card_official_qa.json, keyed by card ID, each ruling with its official URL and
-the crawl it came through. With --bundles, each data/card_bundles/<ID>.md's "## Official Q&A"
+Output: data/card_official_qa.json, keyed by the card page each ruling is listed on, each ruling
+with that page's URL, the crawl it came through, and `about`: the card the ruling is about. A
+ruling about one card that names another is listed on both pages; `about` is derived from that
+cross-listing (see select_rulings), not taken from the crawl. With --bundles, each data/card_bundles/<ID>.md's "## Official Q&A"
 section is rewritten from it (cards the crawl lacks keep their existing section).
 
 Usage:
@@ -78,6 +80,21 @@ def select_rulings(qa):
     bad_q = {q for q, t in texts.items() if len(t) > 1}
     report["inconsistent_qnos"] = sorted(bad_q)
 
+    # A ruling about card S that names card P is listed on both cards' official pages, but on
+    # P's page it sits under S's heading. The crawl keeps only the page it came from and drops
+    # that page's own ID from `related`, so the copy on S's page is the one whose `related` names
+    # every other page it is listed on. `about` records S; a single-page ruling is about its page.
+    pages = {}
+    for cid, entries in qa.items():
+        for e in entries:
+            if _valid(e):
+                pages.setdefault(e["qno"], {})[cid] = e["related"]
+    about = {}
+    for qno, m in pages.items():
+        subj = [c for c, rel in m.items() if all(d in rel for d in m if d != c)]
+        about[qno] = subj[0] if len(subj) == 1 else None
+    report["unresolved_subject"] = sorted(q for q, s in about.items() if s is None)
+
     out = {}
     for cid in sorted(qa):
         if not _CARD_ID.match(cid):
@@ -97,6 +114,7 @@ def select_rulings(qa):
                 "qno": e["qno"], "date": e["date"],
                 "question": e["question"].strip(), "answer": e["answer"].strip(),
                 "related": list(e["related"]),
+                "about": about.get(e["qno"]),
                 "source_url": OFFICIAL_QA_URL.format(cid),
             })
     return out, report
@@ -114,8 +132,10 @@ def build_sidecar(rulings, qa_manifest, via):
             ],
             "crawl_failed_cards": qa_manifest.get("failed", []),
             "note": "Rulings are Bandai's text. Only official-shaped entries are imported; the "
-                    "crawler's own interpretations are never imported. Regenerate with "
-                    "code/tools/import_official_qa.py.",
+                    "crawler's own interpretations are never imported. `about` is derived here "
+                    "from how a ruling is cross-listed on the official pages (the card it is "
+                    "about; null if unresolved); `source_url` is the page it was read from. "
+                    "Regenerate with code/tools/import_official_qa.py.",
         },
         "count": sum(len(v) for v in rulings.values()),
         "cards": rulings,
@@ -132,6 +152,10 @@ def render_qa_section(card_id, rulings):
              f"_Source: {OFFICIAL_QA_URL.format(card_id)} (via data/card_official_qa.json)_"]
     for r in rulings:
         rel = f" _(related: {', '.join(r['related'])})_" if r["related"] else ""
+        if r.get("about") and r["about"] != card_id:
+            rel = f" _(a ruling on {r['about']}; this card is named in it)_"
+        elif r.get("about") is None:
+            rel += " _(subject card unresolved)_"
         lines.append(f"- **{r['qno']}** ({r['date']}) Q: {_one_line(r['question'])} "
                      f"— A: {_one_line(r['answer'])}{rel}")
     return lines
@@ -169,7 +193,8 @@ def main(argv=None):
         f.write("\n")
     print(f"# {sidecar['count']} rulings on {len(rulings)} cards -> {args.out}; "
           f"rejected {len(report['rejected'])}, dropped fields {report['dropped_fields']}, "
-          f"inconsistent Q-numbers {len(report['inconsistent_qnos'])}", file=sys.stderr)
+          f"inconsistent Q-numbers {len(report['inconsistent_qnos'])}, "
+          f"unresolved subjects {len(report['unresolved_subject'])}", file=sys.stderr)
 
     if args.bundles:
         n = 0

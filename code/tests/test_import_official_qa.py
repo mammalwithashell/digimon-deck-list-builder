@@ -25,7 +25,8 @@ def test_manifest_must_name_the_official_rule_pages():
 
 def test_official_shaped_entries_are_imported_with_their_page():
     out, report = iq.select_rulings({"BT16-082": [GOOD]})
-    assert out["BT16-082"] == [dict(GOOD, source_url="https://world.digimoncard.com/rule/?card_no=BT16-082")]
+    assert out["BT16-082"] == [dict(GOOD, about="BT16-082",
+                                    source_url="https://world.digimoncard.com/rule/?card_no=BT16-082")]
     assert not report["rejected"]
 
 
@@ -41,8 +42,20 @@ def test_entries_not_shaped_like_an_official_ruling_are_rejected(bad):
 
 def test_crawler_annotations_are_dropped_not_imported():
     out, report = iq.select_rulings({"BT16-082": [dict(GOOD, interpretation="engine should X", status="proven")]})
-    assert set(out["BT16-082"][0]) == set(iq.FIELDS) | {"source_url"}
+    assert set(out["BT16-082"][0]) == set(iq.FIELDS) | {"about", "source_url"}
     assert report["dropped_fields"] == {"interpretation": 1, "status": 1}
+
+
+def test_a_cross_listed_ruling_is_about_the_card_whose_copy_names_the_other_page():
+    # Q6250 is a ruling on Shakkoumon (BT23-032) naming Angemon (BT23-027); the official
+    # Angemon page lists it under Shakkoumon's heading, and the crawl drops the page's own ID.
+    ruling = dict(GOOD, qno="Q6250")
+    out, report = iq.select_rulings({"BT23-027": [dict(ruling, related=[])],
+                                     "BT23-032": [dict(ruling, related=["BT23-027"])]})
+    assert out["BT23-027"][0]["about"] == out["BT23-032"][0]["about"] == "BT23-032"
+    assert not report["unresolved_subject"]
+    md = "\n".join(iq.render_qa_section("BT23-027", out["BT23-027"]))
+    assert "a ruling on BT23-032" in md
 
 
 def test_a_q_number_with_two_texts_is_rejected_everywhere():
@@ -72,7 +85,8 @@ def test_committed_sidecar_holds_only_official_rulings():
     for cid, rs in data["cards"].items():
         for r in rs:
             n += 1
-            assert set(r) == set(iq.FIELDS) | {"source_url"}, (cid, r.get("qno"))
+            assert set(r) == set(iq.FIELDS) | {"about", "source_url"}, (cid, r.get("qno"))
             assert re.match(r"^Q\d+$", r["qno"]), (cid, r["qno"])
             assert r["source_url"] == f"https://world.digimoncard.com/rule/?card_no={cid}"
+            assert r["about"] is None or re.match(r"^[A-Z]+\d*-\d+$", r["about"]), (cid, r["qno"])
     assert n == data["count"]
