@@ -1,20 +1,16 @@
-# Q7144: successive Start of Main Phase placements under the same Yoshino.
-# Distinct sources expose prepend/append or reversal mistakes: first ST24-12,
-# then BT26-076, then BT26-082 while both earlier cards remain underneath.
-# Stop immediately after the third placement, Draw 1 and memory gain resolve.
-# The final selection is the last action: do not pass the turn after resolution.
-# Sim inspection: step 15 shows two existing sources and the third hand choice.
-# A temporary main_phase sentinel can inspect the resolved boundary at step 16;
-# it is deliberately absent from this delivered line.
-# Encoding limitation: exam/projection.rs PermanentProjection::normalize sorts
-# sources, so p0.field preserves under-card membership but NOT under-card order.
-# Do not encode Q7144 as a sorted sources assertion: it cannot distinguish
-# bottom insertion from top insertion. An order-preserving projection is needed.
+# Q7144: place three distinct cards under the same Yoshino on successive turns.
+# Placement chronology is ST24-15, BT26-076, BT26-082 (not card-ID sort order).
+# Step 15 places the third card while two earlier face-down cards remain.
+# The projection sorts sources, so use ST24-12's bottom-card trash cost as the
+# minimal order-sensitive observation. Decline recovery to preserve that card
+# in trash, then decline Yoshino's resulting trigger and stop without passing.
+# inspect_step 15 observes the occupied Tamer and pending placement; step 19
+# observes the removed card in trash before the optional recovery decision.
 card: BT26-091
 clause: BT26-091#effect#0
 interaction: {id: "qa:Q7144", source: qa, kind: positive}
-covers: ["BT26-091#effect#0"]
-meta: {produced_by: 20261008T023803010217Z-pilot-data-squad-c936fd}
+covers: ["BT26-091#effect#0", "BT26-091#effect#1", "ST24-12#effect#1"]
+meta: {produced_by: 20261008T024010820742Z-pilot-data-squad-db58fe}
 seed: 424242
 decks:
   p0:
@@ -44,9 +40,9 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
-  # THE CLAUSE: place ST24-12 face down under Yoshino.
+  # THE CLAUSE: place ST24-15 face down under Yoshino; retain ST24-12 in hand.
   - actor: 0
-    do: { select: { cards: [ST24-12] } }
+    do: { select: { cards: [ST24-15] } }
     expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { pass: {} }
@@ -80,4 +76,24 @@ steps:
   - actor: 0
     do: { select: { cards: [BT26-082] } }
     expect: { prompt: SelectHandEffect }
+  # Read the resulting order by paying a bottom-card trash cost.
+  - actor: 0
+    do: { play: { card: ST24-12, from: hand } }
+    expect: { prompt: main_phase }
+  # Our engine adds a Replacement gate. DCGO ST24_12.cs goes directly to
+  # the declinable Tamer pick, so this gate contributes no DCGO wire row.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Preserve the removed card in trash; do not recover it.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectCardEffect }
+  # The trash event triggered Yoshino. Decline her optional suspend cost.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
 assert: []
