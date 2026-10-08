@@ -329,6 +329,12 @@ function toPermanentInfo(perm: PermanentDto): PermanentInfo {
       cardName: e.card_name,
       text: e.text,
     })),
+    linkEffects: (perm.link_effects ?? []).map((e) => ({
+      linkIndex: e.link_index,
+      cardId: e.card_id,
+      cardName: e.card_name,
+      text: e.text,
+    })),
     modifiers: (perm.modifiers ?? []).map((m) => ({
       type: m.type,
       value: m.value,

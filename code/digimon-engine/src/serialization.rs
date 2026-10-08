@@ -469,6 +469,27 @@ fn perm_data(
 
     let linked_card_ids: Vec<&str> = perm.linked_cards.iter().map(|c| c.card_id(data)).collect();
 
+    // ── Link effects conferred by linked cards (general_rule.pdf 4-2-6) ──
+    // A link card's link effect applies to this Digimon only while the card is
+    // linked; as one of the digivolution cards it confers nothing (4-7-2).
+    let link_effects: Vec<Value> = perm
+        .linked_cards
+        .iter()
+        .enumerate()
+        .filter_map(|(i, cs)| {
+            let cd = &data[cs.data_index];
+            if cd.link_text.trim().is_empty() {
+                return None;
+            }
+            Some(json!({
+                "linkIndex": i,
+                "cardId": cs.card_id(data),
+                "cardName": cd.card_name,
+                "text": cd.link_text,
+            }))
+        })
+        .collect();
+
     json!({
         "topCardId": top.card_id(data),
         "topCardName": top_data.card_name,
@@ -488,6 +509,7 @@ fn perm_data(
         "sources": sources,
         "mainEffectText": top_data.effect_text,
         "inheritedEffects": inherited_effects,
+        "linkEffects": link_effects,
         "modifiers": modifiers,
         "dpBreakdown": json!({
             "base": base_dp,

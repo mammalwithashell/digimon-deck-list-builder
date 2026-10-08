@@ -83,6 +83,7 @@ def _card_text_from_meta(meta: dict) -> str:
             meta.get("effect_description_eng", "") or "",
             meta.get("inherited_effect_description_eng", "") or "",
             meta.get("security_effect_description_eng", "") or "",
+            meta.get("link_effect_description_eng", "") or "",
         ]
     ).strip()
 

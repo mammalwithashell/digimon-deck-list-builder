@@ -15,16 +15,18 @@
     5
   ],
   "type_eng": [
-    "Time Slip (App Name)"
+    "Time Slip (App Name)",
+    "Time Slip"
   ],
   "form_eng": [
-    "Sup."
+    "Sup.",
+    "Appmon"
   ],
   "attribute_eng": [
     "Tool"
   ],
   "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
@@ -33,5 +35,6 @@
       "memory_cost": 2
     }
   ],
-  "xros_req": "[App Fusion] [Watchmon] & [Savemon] & [Calendamon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+  "xros_req": "[App Fusion] [Watchmon] & [Savemon] & [Calendamon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+  "link_effect_description_eng": "[When Linking] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
 }

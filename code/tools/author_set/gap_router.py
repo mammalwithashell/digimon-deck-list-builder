@@ -39,7 +39,7 @@ def cards_using_keyword(keyword: str, set_cards: dict) -> list[str]:
     for cid, c in set_cards.items():
         text = " ".join(str(c.get(k, "") or "") for k in
                         ("effect_description_eng", "inherited_effect_description_eng",
-                         "security_effect_description_eng"))
+                         "security_effect_description_eng", "link_effect_description_eng"))
         # Reuse the gate's fullwidth-aware scanner (＜…＞ keyword tokens) so this
         # stays consistent with detection — a stale ASCII-only regex here misses
         # every ＜Keyword＞ and reports zero affected cards.

@@ -751,6 +751,8 @@ pub struct CardMeta {
     pub main_effect: String,
     pub inherited_effect: String,
     pub security_effect: String,
+    /// A link card's link effect (general_rule.pdf 2-3-12-6); empty otherwise.
+    pub link_effect: String,
 }
 
 #[derive(Deserialize)]
@@ -787,6 +789,8 @@ struct CardMetaRaw {
     inherited_effect_description_eng: String,
     #[serde(default)]
     security_effect_description_eng: String,
+    #[serde(default)]
+    link_effect_description_eng: String,
     #[serde(default)]
     evo_costs: Vec<EvoCostRaw>,
 }
@@ -858,6 +862,7 @@ pub fn tested_card_metadata() -> &'static [CardMeta] {
                 main_effect: entry.effect_description_eng,
                 inherited_effect: entry.inherited_effect_description_eng,
                 security_effect: entry.security_effect_description_eng,
+                link_effect: entry.link_effect_description_eng,
                 card_id: entry.card_id,
             })
             .collect();

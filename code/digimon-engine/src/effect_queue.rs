@@ -2725,7 +2725,7 @@ impl Game {
         //   * `Game::has_keyword_from_card_sources` excludes every origin whose
         //     auto-effects `build_effects_for_card` already synthesizes into a
         //     scanned effect list — printed face keywords, a below-top source's
-        //     or a link card's inherited keywords, and SELF-aura /
+        //     inherited keywords or a link card's link keywords, and SELF-aura /
         //     `scope: inherited` grants that DO carry the `granted_keyword`
         //     marker.
         //

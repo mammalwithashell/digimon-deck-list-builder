@@ -168,6 +168,38 @@ fn source_and_inherited_effect_text_populated() {
     );
 }
 
+/// A link card's link effect is listed for the Digimon it is linked to
+/// (general_rule.pdf 4-2-6), never as an inherited effect: a link card among
+/// the digivolution cards confers nothing (4-2-4, 4-7-2).
+#[test]
+fn link_effect_text_listed_for_link_cards_only() {
+    let mut linked = make_test_card("LNK", "LinkMon");
+    linked.link_text = "[When Linking] Gain 1 memory.".to_string();
+    let mut buried = make_test_card("LSRC", "BuriedLinkMon");
+    buried.link_text = "[Your Turn] This Digimon gets +1000 DP.".to_string();
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("TOP", "TopMon"))
+        .add_card(linked)
+        .add_card(buried)
+        .start();
+    let handle = r.place_stack(0, &["LSRC", "TOP"]);
+    r.push_linked_owned(handle, "LNK", 0);
+
+    let v = to_ui_json(&r.game);
+    let p = perm0(&v);
+    let links = p["linkEffects"].as_array().expect("linkEffects array");
+    assert_eq!(links.len(), 1, "one link effect, from the link card: {links:?}");
+    assert_eq!(links[0]["linkIndex"], serde_json::json!(0));
+    assert_eq!(links[0]["cardId"], serde_json::json!("LNK"));
+    assert_eq!(links[0]["cardName"], serde_json::json!("LinkMon"));
+    assert_eq!(links[0]["text"], serde_json::json!("[When Linking] Gain 1 memory."));
+    assert_eq!(
+        p["inheritedEffects"].as_array().unwrap().len(),
+        0,
+        "a link card among the digivolution cards confers no inherited effect"
+    );
+}
+
 #[test]
 fn single_card_permanent_has_no_inherited_effects() {
     let mut top = make_test_card("SOLO", "Solo");
@@ -242,6 +274,7 @@ fn permanent_has_documented_keys() {
         "sources",
         "mainEffectText",
         "inheritedEffects",
+        "linkEffects",
         "modifiers",
         "dpBreakdown",
         "turnPlayed",

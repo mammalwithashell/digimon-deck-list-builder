@@ -157,6 +157,8 @@ interface CardMetaDto {
   main_effect: string;
   inherited_effect: string;
   security_effect: string;
+  /** A link card's link effect. Absent on older servers. */
+  link_effect?: string;
 }
 
 function cardMetaToCardData(meta: CardMetaDto): DigimonCardData {
@@ -183,6 +185,7 @@ function cardMetaToCardData(meta: CardMetaDto): DigimonCardData {
     cardnumber: meta.card_id,
     maineffect: `${meta.main_effect}${securityLine}`,
     soureeffect: meta.inherited_effect,
+    ...(meta.link_effect ? { linkeffect: meta.link_effect } : {}),
     set_name: meta.card_id.split('-')[0] ?? '',
     card_sets: [],
     image_url: '',

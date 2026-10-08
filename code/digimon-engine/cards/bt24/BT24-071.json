@@ -16,23 +16,31 @@
     0
   ],
   "type_eng": [
-    "Super Hacking (App Name)"
+    "Super Hacking (App Name)",
+    "Super Hacking"
   ],
   "form_eng": [
-    "Sup."
+    "Sup.",
+    "Appmon"
   ],
   "attribute_eng": [
     "System"
   ],
   "effect_description_eng": "[On Play] [When Digivolving] 1 of your Digimon with the [System], [Life] or [Transmutation (App Name)] trait gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.) for the turn.\r\n[On Deletion] You may play 1 level 3 Digimon card with the [Appmon] trait from your trash without paying the cost.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
       "card_color": 6,
       "level": 3,
       "memory_cost": 3
+    },
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
     }
   ],
-  "xros_req": "[App Fusion] [Hackmon] & [Protecmon] & [Pipomon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+  "xros_req": "[App Fusion] [Hackmon] & [Protecmon] & [Pipomon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+  "link_effect_description_eng": "[On Deletion] You may play 1 level 3 [Appmon] trait Digimon card from your trash without paying the cost."
 }

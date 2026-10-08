@@ -106,6 +106,7 @@ fn fingerprint(all_card_data: &HashMap<String, CardData>) -> u64 {
         d.effect_text.len().hash(&mut h);
         d.inherited_text.len().hash(&mut h);
         d.security_text.len().hash(&mut h);
+        d.link_text.len().hash(&mut h);
         d.effect_class_name.len().hash(&mut h);
         d.evo_costs.len().hash(&mut h);
         // `dna_costs` are hashed by discriminating CONTENT, not just length.

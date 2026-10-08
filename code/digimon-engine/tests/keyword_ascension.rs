@@ -47,6 +47,7 @@ fn ascension_card(id: &str) -> CardData {
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        link_text: String::new(),
         // Printed-only Ascension: the auto-install MUST be the sole behavior.
         keywords: vec![Keyword::Ascension],
         dual: None,

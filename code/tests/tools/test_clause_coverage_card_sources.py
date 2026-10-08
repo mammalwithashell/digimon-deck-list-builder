@@ -490,6 +490,27 @@ def test_a_real_clause_that_merely_starts_with_the_label_text_survives():
     assert effect[0].text.startswith("Inherited Effect This Digimon")
 
 
+def test_a_link_effect_is_an_effect_zone_clause_not_an_inherited_one():
+    """cards.json keeps a link card's link box in `link_effect_description_eng`;
+    without an official bundle it is zoned "effect", as the bundle path zones a
+    "Link Effect" section."""
+    cards_index = {
+        "X-015": {
+            "card_kind": CARD_KIND_DIGIMON,
+            "effect_description_eng": "[On Play] Draw 1.",
+            "link_effect_description_eng": "[When Linking] Suspend 1 of your opponent's Digimon.",
+        }
+    }
+    clauses = extract_card_clauses(
+        "X-015", cards_index=cards_index, overrides_index={}, official_index={}, dcgo_root=None
+    )
+    assert not any(c.zone == "inherited" for c in clauses)
+    effect = [c for c in clauses if c.zone == "effect"]
+    assert len(effect) == 2
+    assert effect[0].text == "Draw 1."
+    assert effect[1].text.endswith("Suspend 1 of your opponent's Digimon.")
+
+
 def test_mediawiki_key_line_residue_is_dropped():
     """Observed on 33 cards pool-wide: `inherited_effect_description_eng` is
     literally `|applinkdp =` -- a MediaWiki template key that leaked through

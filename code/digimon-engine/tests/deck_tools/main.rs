@@ -217,6 +217,23 @@ fn tested_card_metadata_covers_allowlist_with_display_fields() {
     assert_eq!(stingmon.level, Some(4));
 }
 
+/// A link card's link box is its link effect, not an inherited effect
+/// (general_rule.pdf 2-3-12): BT21-009 Gatchmon prints <Raid> in its link box
+/// and has no inherited effect.
+#[test]
+fn tested_card_metadata_shows_a_link_box_as_the_link_effect() {
+    let gatchmon = digimon_engine::deck_tools::tested_card_metadata()
+        .iter()
+        .find(|m| m.card_id == "BT21-009")
+        .expect("BT21-009 should be implemented");
+    assert_eq!(gatchmon.inherited_effect, "");
+    assert!(
+        gatchmon.link_effect.starts_with("＜Raid＞"),
+        "{:?}",
+        gatchmon.link_effect
+    );
+}
+
 #[test]
 fn st3_starter_deck_fixture_has_canonical_counts() {
     let st3 = st3_fixture();

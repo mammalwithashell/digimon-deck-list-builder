@@ -554,6 +554,13 @@ fn collect_candidates(
                 ) {
                     continue;
                 }
+                // A link effect (`.linked()`) applies to the Digimon this card
+                // is linked to (general_rule.pdf 4-2-6) — `push_linked_from_perm`
+                // offers it there — never to the card's own permanent. Mirrors
+                // the top-card skip in `enqueue_from_permanent`.
+                if effect.linked {
+                    continue;
+                }
                 if effect.timing != timing {
                     continue;
                 }
@@ -693,6 +700,17 @@ fn collect_candidates(
             };
             for (slot, effect) in effects.iter().enumerate() {
                 if !effect.linked {
+                    continue;
+                }
+                // A `scope: linked` keyword grant also materializes onto the
+                // host (the linked-card pass of `tick_declarative_effects`),
+                // and the `granted_keywords` scan in `push_from_perm` offers
+                // that keyword's replacement from there. Skip the grant's
+                // synthesized copy so the host is offered it once.
+                if effect
+                    .keyword_source
+                    .is_some_and(|kw| game.modifiers.granted_keywords(h).contains(&kw))
+                {
                     continue;
                 }
                 if effect.timing != timing {

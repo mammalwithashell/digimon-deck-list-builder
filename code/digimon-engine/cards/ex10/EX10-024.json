@@ -15,16 +15,18 @@
     5
   ],
   "type_eng": [
-    "Wallpaper (App Name)"
+    "Wallpaper (App Name)",
+    "Wallpaper"
   ],
   "form_eng": [
-    "Stnd."
+    "Stnd.",
+    "Appmon"
   ],
   "attribute_eng": [
     "System"
   ],
   "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
@@ -33,5 +35,6 @@
       "memory_cost": 0
     }
   ],
-  "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+  "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+  "link_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
 }
