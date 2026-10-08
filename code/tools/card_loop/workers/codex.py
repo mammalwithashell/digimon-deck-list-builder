@@ -50,6 +50,13 @@ APPROVAL = "never"
 #: exam server only (`AppToolApproval`: auto | prompt | writes | approve); no
 #: other MCP server is touched. Older builds ignore the unknown key.
 MCP_APPROVALS: tuple[str, ...] = ('mcp_servers.dcgo-exam.default_tools_approval_mode="approve"',)
+#: The Windows sandbox implementation (`elevated | unelevated | mxc`). Since the
+#: 26.1002 update the elevated sandbox's setup refresh fails on this machine (it
+#: cannot re-ACL a locked runtime exe, os error 32), rejecting every shell command
+#: a worker runs with "setup refresh had errors". The unelevated sandbox needs no
+#: setup and still confines writes to the workspace (checked: a write to the user
+#: profile was denied). Ignored off Windows. Overriding it is refused.
+WINDOWS_SANDBOX = "unelevated"
 DEFAULT_TIMEOUT_S = 3600.0
 
 
@@ -162,6 +169,8 @@ def check_sandbox_args(argv: Sequence[str]) -> None:
                 raise SandboxPolicyError(f"sandbox_mode override {value!r} is refused")
             if key == "approval_policy" and value != APPROVAL:
                 raise SandboxPolicyError(f"approval_policy override {value!r} is refused")
+            if key == "windows.sandbox" and value != WINDOWS_SANDBOX:
+                raise SandboxPolicyError(f"windows.sandbox override {value!r} is refused")
     if sandboxes != [SANDBOX]:
         raise SandboxPolicyError(f"expected exactly one `-s {SANDBOX}`, got {sandboxes}")
 
@@ -178,7 +187,8 @@ def build_codex_argv(
     extra_config: Sequence[str] = (),
     extra_args: Sequence[str] = (),
 ) -> list[str]:
-    argv = [exe, "exec", "-C", str(worktree), "-s", SANDBOX, "-c", f'approval_policy="{APPROVAL}"']
+    argv = [exe, "exec", "-C", str(worktree), "-s", SANDBOX, "-c", f'approval_policy="{APPROVAL}"',
+            "-c", f'windows.sandbox="{WINDOWS_SANDBOX}"']
     for kv in MCP_APPROVALS:
         argv += ["-c", kv]
     for d in writable_dirs:

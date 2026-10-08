@@ -317,6 +317,7 @@ def test_build_codex_argv_exact():
     argv = xw.build_codex_argv(exe="codex", worktree="W", schema_path="S.json", result_path="R.json",
                                writable_dirs=["T", "SC"], model="gpt-x", effort="high")
     assert argv == ["codex", "exec", "-C", "W", "-s", "workspace-write", "-c", 'approval_policy="never"',
+                    "-c", 'windows.sandbox="unelevated"',
                     "-c", 'mcp_servers.dcgo-exam.default_tools_approval_mode="approve"',
                     "--add-dir", "T", "--add-dir", "SC", "--output-schema", "S.json", "-o", "R.json",
                     "--json", "--color", "never", "-m", "gpt-x", "-c", 'model_reasoning_effort="high"', "-"]
@@ -333,6 +334,20 @@ def test_codex_pre_approves_only_the_exam_mcp_tools():
     approvals = [argv[i + 1] for i, a in enumerate(argv[:-1]) if a == "-c" and "approval_mode" in argv[i + 1]]
     assert approvals == ['mcp_servers.dcgo-exam.default_tools_approval_mode="approve"']
     assert argv[argv.index("-s") + 1] == "workspace-write"
+
+
+def test_codex_uses_the_unelevated_windows_sandbox():
+    # The elevated sandbox's setup refresh fails on this machine since the
+    # 26.1002 update (it cannot re-ACL a locked runtime exe), so every shell
+    # command a worker ran was rejected: "setup refresh had errors". The
+    # unelevated sandbox still confines writes to the workspace (checked by
+    # hand: a write to the user profile was denied). Still workspace-write.
+    argv = xw.build_codex_argv(exe="c", worktree="W", schema_path="S", result_path="R")
+    assert 'windows.sandbox="unelevated"' in argv
+    assert argv[argv.index('windows.sandbox="unelevated"') - 1] == "-c"
+    with pytest.raises(xw.SandboxPolicyError):
+        xw.build_codex_argv(exe="c", worktree="W", schema_path="S", result_path="R",
+                            extra_config=['windows.sandbox="elevated"'])
 
 
 @pytest.mark.parametrize("extra", [
@@ -417,8 +432,9 @@ def test_codex_worker_run_end_to_end(repo, tmp_path):
     assert argv[:8] == ["codex.exe", "exec", "-C", str(repo), "-s", "workspace-write", "-c",
                         'approval_policy="never"']
     assert argv[argv.index("--output-schema") + 1] == os.path.abspath(schema_path("review"))
-    assert argv[8:10] == ["-c", 'mcp_servers.dcgo-exam.default_tools_approval_mode="approve"']
-    assert ["--add-dir", target, "--add-dir", str(tmp_path / "sc")] == argv[10:14]
+    assert argv[8:12] == ["-c", 'windows.sandbox="unelevated"',
+                          "-c", 'mcp_servers.dcgo-exam.default_tools_approval_mode="approve"']
+    assert ["--add-dir", target, "--add-dir", str(tmp_path / "sc")] == argv[12:16]
     assert Path(target).is_dir()                                     # created so codex can grant it
     assert 'model_reasoning_effort="medium"' in argv and argv[-1] == "-"
     assert runner.calls[0]["env"]["CARGO_TARGET_DIR"] == target
