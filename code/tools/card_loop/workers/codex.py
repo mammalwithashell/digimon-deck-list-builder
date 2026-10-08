@@ -54,8 +54,11 @@ MCP_APPROVALS: tuple[str, ...] = ('mcp_servers.dcgo-exam.default_tools_approval_
 #: 26.1002 update the elevated sandbox's setup refresh fails on this machine (it
 #: cannot re-ACL a locked runtime exe, os error 32), rejecting every shell command
 #: a worker runs with "setup refresh had errors". The unelevated sandbox needs no
-#: setup and still confines writes to the workspace (checked: a write to the user
-#: profile was denied). Ignored off Windows. Overriding it is refused.
+#: setup. Measured 2026-10-08: writes outside the workspace are denied, the
+#: worktree's `.git` pointer and gitdir are write-protected, network is blocked,
+#: but files in the user profile ARE readable (the elevated sandbox's separate
+#: account would have denied that). Accepted as a stopgap; return to "elevated"
+#: once its setup refresh works again. Ignored off Windows. Overriding it is refused.
 WINDOWS_SANDBOX = "unelevated"
 DEFAULT_TIMEOUT_S = 3600.0
 
@@ -144,6 +147,18 @@ def _config_kv(kv: str) -> tuple[str, str]:
     return key.strip(), value.strip().strip('"').strip("'")
 
 
+#: Config roots that can change the sandbox or approvals. Codex parses `-c`
+#: values as TOML, so `windows={sandbox="..."}`, `"windows".sandbox=...` or a
+#: profile reach the same setting as `windows.sandbox=...`: anything under these
+#: roots other than the adapter's own exact settings is refused.
+_GUARDED_ROOTS = ("sandbox", "windows", "approval", "profile")
+_REFUSED_FLAGS = ("-p", "--profile", "--enable", "--disable")
+
+
+def _normal_key(key: str) -> str:
+    return ".".join(part.strip().strip('"').strip("'") for part in key.split("."))
+
+
 def check_sandbox_args(argv: Sequence[str]) -> None:
     """Raise `SandboxPolicyError` unless the effective sandbox is exactly
     `workspace-write` with `approval_policy="never"`."""
@@ -156,6 +171,8 @@ def check_sandbox_args(argv: Sequence[str]) -> None:
             raise SandboxPolicyError(f"danger-full-access is refused: {a!r}")
         if low.startswith("--dangerously-bypass") or low in ("--yolo", "--full-auto"):
             raise SandboxPolicyError(f"refused flag {a!r}")
+        if a in _REFUSED_FLAGS or any(a.startswith(f + "=") for f in _REFUSED_FLAGS if f.startswith("--")):
+            raise SandboxPolicyError(f"refused flag {a!r}: profiles and feature toggles can change the sandbox")
         if a in ("-s", "--sandbox"):
             sandboxes.append(nxt)
         elif a.startswith("--sandbox="):
@@ -165,12 +182,11 @@ def check_sandbox_args(argv: Sequence[str]) -> None:
         kv = nxt if a in ("-c", "--config") else (a.split("=", 1)[1] if a.startswith("--config=") else None)
         if kv is not None:
             key, value = _config_kv(kv)
-            if key == "sandbox_mode" and value != SANDBOX:
-                raise SandboxPolicyError(f"sandbox_mode override {value!r} is refused")
-            if key == "approval_policy" and value != APPROVAL:
-                raise SandboxPolicyError(f"approval_policy override {value!r} is refused")
-            if key == "windows.sandbox" and value != WINDOWS_SANDBOX:
-                raise SandboxPolicyError(f"windows.sandbox override {value!r} is refused")
+            key = _normal_key(key)
+            allowed = {"sandbox_mode": SANDBOX, "approval_policy": APPROVAL, "windows.sandbox": WINDOWS_SANDBOX}
+            if key.lower().startswith(_GUARDED_ROOTS) and allowed.get(key) != value:
+                raise SandboxPolicyError(f"config override {kv!r} is refused: only the adapter's own "
+                                         f"sandbox_mode / approval_policy / windows.sandbox are allowed")
     if sandboxes != [SANDBOX]:
         raise SandboxPolicyError(f"expected exactly one `-s {SANDBOX}`, got {sandboxes}")
 

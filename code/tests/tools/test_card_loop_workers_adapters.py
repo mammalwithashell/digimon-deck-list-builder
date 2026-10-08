@@ -358,6 +358,19 @@ def test_codex_uses_the_unelevated_windows_sandbox():
     dict(extra_config=["sandbox_mode=read-only"]),
     dict(extra_config=['approval_policy="on-request"']),
     dict(extra_args=["-s", "workspace-write"]),           # a second -s is ambiguous: refused
+    # Codex parses -c values as TOML, not as `key=value` text: any spelling that
+    # reaches a sandbox / approval / profile setting other than the adapter's own
+    # exact lines is refused (security review of 7b7b0bd0b).
+    dict(extra_config=['windows={sandbox="elevated"}']),
+    dict(extra_config=['windows.sandbox = "mxc"']),
+    dict(extra_config=['"windows".sandbox="elevated"']),
+    dict(extra_config=["sandbox_workspace_write.network_access=true"]),
+    dict(extra_config=['profiles.x.sandbox_mode="read-only"']),
+    dict(extra_config=['approvals_reviewer="auto"']),
+    dict(extra_args=["-p", "x"]),
+    dict(extra_args=["--profile=x"]),
+    dict(extra_args=["--enable", "elevated_windows_sandbox"]),
+    dict(extra_args=["--disable=x"]),
 ])
 def test_codex_refuses_anything_but_workspace_write(extra):
     with pytest.raises(xw.SandboxPolicyError):
