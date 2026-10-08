@@ -1,0 +1,20 @@
+# produced_by: 20261008T030149185426Z-pilot-data-squad-40ea04
+card: BT5-021
+name: Syakomon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+traits: [Crustacean]
+attribute: Virus
+
+# [Opponent's Turn] Your opponent can't reduce digivolution costs.
+# DCGO (BT5_021.cs): CannotReduceCostClass, opponent player condition,
+# IsOpponentTurn -- identical shape to BT5-008 clause 2 / BT5-033.
+effects:
+  - kind: flood_gate
+    summary: "[Opponent's Turn] Opponent can't reduce digivolution costs"
+    active_when: { opponents_turn: true }
+    target_player: opponent
+    modifier: CannotReduceDigivolveCost
