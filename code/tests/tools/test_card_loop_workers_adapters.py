@@ -317,9 +317,22 @@ def test_build_codex_argv_exact():
     argv = xw.build_codex_argv(exe="codex", worktree="W", schema_path="S.json", result_path="R.json",
                                writable_dirs=["T", "SC"], model="gpt-x", effort="high")
     assert argv == ["codex", "exec", "-C", "W", "-s", "workspace-write", "-c", 'approval_policy="never"',
+                    "-c", 'mcp_servers.dcgo-exam.default_tools_approval_mode="approve"',
                     "--add-dir", "T", "--add-dir", "SC", "--output-schema", "S.json", "-o", "R.json",
                     "--json", "--color", "never", "-m", "gpt-x", "-c", 'model_reasoning_effort="high"', "-"]
     assert "-m" not in xw.build_codex_argv(exe="c", worktree="W", schema_path="S", result_path="R")
+
+
+def test_codex_pre_approves_only_the_exam_mcp_tools():
+    # Codex 0.162 (Store 26.1002, 2026-10-07) gates MCP tool calls behind an
+    # approval that `approval_policy="never"` never gives: the first Data Squad
+    # call after the update had exam_validate / exam_probe / exam_authoring_guide
+    # refused and escalated a ruling as "no legal line". Only the loop's own exam
+    # server is pre-approved; the sandbox and approval policy are unchanged.
+    argv = xw.build_codex_argv(exe="c", worktree="W", schema_path="S", result_path="R")
+    approvals = [argv[i + 1] for i, a in enumerate(argv[:-1]) if a == "-c" and "approval_mode" in argv[i + 1]]
+    assert approvals == ['mcp_servers.dcgo-exam.default_tools_approval_mode="approve"']
+    assert argv[argv.index("-s") + 1] == "workspace-write"
 
 
 @pytest.mark.parametrize("extra", [
@@ -404,7 +417,8 @@ def test_codex_worker_run_end_to_end(repo, tmp_path):
     assert argv[:8] == ["codex.exe", "exec", "-C", str(repo), "-s", "workspace-write", "-c",
                         'approval_policy="never"']
     assert argv[argv.index("--output-schema") + 1] == os.path.abspath(schema_path("review"))
-    assert ["--add-dir", target, "--add-dir", str(tmp_path / "sc")] == argv[8:12]
+    assert argv[8:10] == ["-c", 'mcp_servers.dcgo-exam.default_tools_approval_mode="approve"']
+    assert ["--add-dir", target, "--add-dir", str(tmp_path / "sc")] == argv[10:14]
     assert Path(target).is_dir()                                     # created so codex can grant it
     assert 'model_reasoning_effort="medium"' in argv and argv[-1] == "-"
     assert runner.calls[0]["env"]["CARGO_TARGET_DIR"] == target

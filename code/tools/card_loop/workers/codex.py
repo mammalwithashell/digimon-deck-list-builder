@@ -44,6 +44,12 @@ APPX_EXE = ("app", "resources", "codex.exe")
 
 SANDBOX = "workspace-write"
 APPROVAL = "never"
+#: Codex 0.162 (Store 26.1002, 2026-10-07) gates every MCP tool call behind an
+#: approval, which `approval_policy="never"` refuses -- so workers silently lost
+#: exam_validate / exam_probe / exam_authoring_guide. Pre-approve the loop's own
+#: exam server only (`AppToolApproval`: auto | prompt | writes | approve); no
+#: other MCP server is touched. Older builds ignore the unknown key.
+MCP_APPROVALS: tuple[str, ...] = ('mcp_servers.dcgo-exam.default_tools_approval_mode="approve"',)
 DEFAULT_TIMEOUT_S = 3600.0
 
 
@@ -173,6 +179,8 @@ def build_codex_argv(
     extra_args: Sequence[str] = (),
 ) -> list[str]:
     argv = [exe, "exec", "-C", str(worktree), "-s", SANDBOX, "-c", f'approval_policy="{APPROVAL}"']
+    for kv in MCP_APPROVALS:
+        argv += ["-c", kv]
     for d in writable_dirs:
         argv += ["--add-dir", str(d)]
     argv += ["--output-schema", str(schema_path), "-o", str(result_path), "--json", "--color", "never"]
