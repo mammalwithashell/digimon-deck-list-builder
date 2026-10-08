@@ -97,3 +97,9 @@ steps:
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
 assert: []
+expect_ruling:
+  q_id: Q7144
+  assert:
+  - at: 19
+    that:
+      p0.trash: [BT26-082]
