@@ -1,0 +1,241 @@
+# Q7122: an end-of-turn attack begins against one face-up Ravemon in security.
+# Uses the existing ts_jupitermon_pool.json book (bt26-dats / ts-jupitermon).
+# Reuses BT26-082-effect1's Ravemon/Crowmon deletion-to-security mechanism and
+# BT26-033-effect3's Engage attack fold, with a hostile one-security boundary.
+# The hard-play Crowmon prefix avoids unrelated egg/rookie inherited effects.
+# Jupitermon's When Digivolving takes stack[9]; Wrath Mode at stack[8] stays
+# on top until Ravemon attacks it. All draws through the final turn are pinned.
+#
+# DCGO: BT26_033.cs registers Raid then Alliance at OnAllyAttack; the three
+# preliminary attacks have both activatable. Explicit DCGO-only MultipleSkills
+# rows choose Raid first; our combat machine already orders Raid before Alliance.
+# BT25_033.cs gates its On Play cost with OptionalSkill. BT26_082.cs uses a
+# generic_int cost menu and generic_bool for its face-up security placement.
+# The final attack has no Raid candidate at declaration: P0's battle area is empty.
+# Rules: digest.md sections 5-6 (11-5-1, 15-4-3); official Q7122 governs the
+# pending non-turn-player end-of-turn effect during this attack.
+#
+# Adversarial witness observed in the local sim: after the final Alliance decline,
+# Ravemon is in trash and the game remains in EndOfTurnAction. It was checked
+# instead of its pending security effect playing it before attack success.
+# This is a sim/official-ruling timing divergence candidate; no oracle was run.
+# Independent models must encode and review the ruling. assert stays empty.
+card: BT26-082
+clause: BT26-082#effect#1
+interaction:
+  id: qa:Q7122
+  source: qa
+  kind: positive
+covers:
+- BT26-082#effect#0
+- BT26-082#effect#1
+- BT26-082#effect#2
+- BT26-082#effect#3
+- BT26-076#inherited#0
+- BT26-033#effect#0
+- BT26-033#effect#1
+- BT26-033#effect#2
+- BT26-033#effect#3
+- BT26-033#effect#4
+- BT25-033#effect#2
+seed: 424242
+meta:
+  produced_by: 20261008T023500271792Z-pilot-data-squad-3d41d5
+decks:
+  p0:
+    rest: bt26-dats
+    stack:
+    - BT26-082
+    - BT26-076
+    - ST24-15
+    - ST24-12
+    - ST24-12
+    - BT26-036
+    - ST24-05
+    - BT26-076
+    - BT26-072
+    - BT13-060
+    - ST24-04
+    - ST24-04
+    - ST24-10
+    - ST24-10
+    - BT26-049
+  p1:
+    rest: ts-jupitermon
+    stack:
+    - BT26-033
+    - P-213
+    - BT25-033
+    - BT25-030
+    - BT25-030
+    - BT24-031
+    - BT24-034
+    - BT26-029
+    - BT26-103
+    - BT24-083
+    - BT25-022
+    - BT24-034
+    - BT25-033
+    - BT25-030
+    - BT26-092
+    - BT4-104
+steps:
+  # T1: hard-play Crowmon. No When Digivolving effect on a hard play.
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {play: {card: BT26-076, from: hand}}
+    expect: {prompt: main_phase}
+  # T2: P-213 -> Jupitermon (cost 4); use its reduced-cost play for Aegiomon.
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 1
+    do: {play: {card: P-213, from: hand}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {digivolve: {from: field.0, using: BT26-033}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {select: {value: 4}}
+    expect: {prompt: SelectCountEffect}
+  - actor: 1
+    do: {select: {cards: [BT25-033]}}
+    expect: {prompt: SelectHandEffect}
+  # Decline Aegiomon's On Play security-to-hand cost; preserve the pinned Wrath Mode.
+  - actor: 1
+    do: {select: {decline: true}}
+    expect: {prompt: OptionalSkill}
+  # Sim end-window exit: both Digimon were played this turn; no legal Engage attack.
+  - actor: 1
+    do: {pass: {}}
+  # T3: leave Crowmon in play; keep Ravemon in hand until all five security are gone.
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  # T4: decline Raid; Alliance with Aegiomon removes two starting security cards.
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 1
+    do: {attack: {attacker: field.0, target: security}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {select: {cards: [BT26-033], trigger: Raid, dcgo_only: true}}
+    expect: {prompt: MultipleSkills}
+  - actor: 1
+    do: {select: {decline: true}}
+    expect: {prompt: OptionalSkill}
+  - actor: 1
+    do: {select: {targets: [own.field.1]}}
+    expect: {prompt: SelectPermanentEffect}
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  # T6: repeat the two-check attack (security 3 -> 1).
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 1
+    do: {attack: {attacker: field.0, target: security}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {select: {cards: [BT26-033], trigger: Raid, dcgo_only: true}}
+    expect: {prompt: MultipleSkills}
+  - actor: 1
+    do: {select: {decline: true}}
+    expect: {prompt: OptionalSkill}
+  - actor: 1
+    do: {select: {targets: [own.field.1]}}
+    expect: {prompt: SelectPermanentEffect}
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  # T8: decline both Raid and Alliance: exactly one check (security 1 -> 0).
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 1
+    do: {attack: {attacker: field.0, target: security}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {select: {cards: [BT26-033], trigger: Raid, dcgo_only: true}}
+    expect: {prompt: MultipleSkills}
+  - actor: 1
+    do: {select: {decline: true}}
+    expect: {prompt: OptionalSkill}
+  - actor: 1
+    do: {select: {decline: true}}
+    expect: {prompt: SelectPermanentEffect}
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  # T9: Ravemon on Crowmon; decline its self-deletion cost, then attack security.
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {digivolve: {from: field.0, using: BT26-082}}
+    expect: {prompt: main_phase}
+  - actor: 0
+    do: {select: {value: 3}}
+    expect: {prompt: SelectCountEffect}
+  - actor: 0
+    do: {select: {choice: Don't pay the cost, sim_only: true}}
+  - actor: 0
+    do: {select: {dcgo_only: true, value: 3}}
+    expect: {prompt: generic_int}
+  # The pinned 16000-DP Wrath Mode defeats 12000-DP Ravemon in security battle.
+  - actor: 0
+    do: {attack: {attacker: field.0, target: security}}
+    expect: {prompt: main_phase}
+  # Resolve Crowmon's inherited revival first and decline; then resolve Ravemon.
+  - actor: 0
+    do: {select: {cards: [BT26-076]}}
+    expect: {prompt: MultipleSkills}
+  - actor: 0
+    do: {select: {decline: true}}
+    expect: {prompt: SelectCardEffect}
+  # P1 has eight hand cards: discard one to reach seven, enabling face-up placement.
+  - actor: 1
+    do: {select: {cards: [BT25-033]}}
+    expect: {prompt: SelectHandEffect}
+  - actor: 0
+    do: {select: {'yes': true}}
+    expect: {prompt: generic_bool}
+  # Ravemon is now P0's sole security card. Pass to P1 without another attack.
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  # T10 end window: Ravemon and Engage trigger together; turn player acts first.
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  # Declare the Engage attack against P0 while Ravemon is still the sole security.
+  - actor: 1
+    do: {attack: {attacker: field.0, target: security}}
+    expect: {prompt: OptionalSkill}
+  # Decline Alliance; finish the attack. STOP here, without another pass or attack.
+  - actor: 1
+    do: {select: {decline: true}}
+    expect: {prompt: SelectPermanentEffect}
+assert: []
