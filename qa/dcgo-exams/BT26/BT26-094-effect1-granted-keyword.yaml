@@ -1,0 +1,81 @@
+# Exam scenario: Keenan Crier (BT26-094), clause BT26-094#effect#1 --
+# "[Your Turn] When your opponent's hand is trashed from or effects trash cards
+#  from under this Tamer, by suspending this Tamer, 1 of your [DATA SQUAD] trait
+#  Digimon gains <Execute> for the turn."
+#
+# THE LINE:
+#   T1 (P0): play Keenan (0 -> -3).            -> P1's turn
+#   T2 (P1): pass.                             -> P0 at 3
+#   T3 (P0): draw; SOMP places ST24-15 face down under Keenan (+1 draw, 3 -> 4);
+#            play Falcomon ST24-12 (cost 3); its [On Play] trashes the bottom
+#            face-down card from under Keenan -> THE CLAUSE (OnDigivolutionCardDiscarded):
+#            accept, suspend Keenan, Falcomon gains <Execute>. Pass.
+# PROMPT SHAPE:
+#   ST24_12.cs [On Play] is not isOptional (no yes/no gate); it opens with a
+#   SelectPermanentEffect (canNoSelect) over Tamers with a face-down source.
+#   Our engine gates the cost with an engine-only yes/no first -> sim_only row.
+#   BT26_094.cs reactive grant is isOptional=true -> OptionalSkill (yes/no), then
+#   SelectPermanentEffect over [DATA SQUAD] Digimon (Falcomon only; canNoSelect false).
+#   Falcomon's follow-up "return DS Digimon from trash" has no candidates (maxCount 0).
+# UNPREDICTED: whether DCGO prompts an <Execute> attack choice at end of turn
+#   (ours parks nothing); the oracle pass will show it.
+card: BT26-094
+clause: BT26-094#effect#1
+covers:
+  - BT26-094#effect#1
+interaction: {id: "probe:BT26-094#effect#1:granted_keyword", source: probe, kind: positive}
+seed: 424242
+meta: {produced_by: 20261008T032402311172Z-pilot-data-squad-1772f8}
+decks:
+  p0:
+    stack: [BT26-094, ST24-12, ST24-15, ST24-04, BT26-082,
+            ST24-05, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-04, BT26-091, ST24-05, BT26-065, ST24-04]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+# GRANTED-KEYWORD PROBE: the grant must be USABLE -- after the clause, pass the main
+# phase and reach the granted <Execute> end-of-turn window (carrier played this turn).
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-094, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST24-15] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: ST24-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Granted <Execute> on the same-turn-played Falcomon: our engine opens no
+  # end-of-turn gate (P1's breeding is next). DCGO may offer one -- oracle decides.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert: []
