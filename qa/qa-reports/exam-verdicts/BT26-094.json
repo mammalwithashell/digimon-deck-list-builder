@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-08T03:03:20.386516800+00:00",
+  "last_updated": "2026-10-08T03:20:29.219632100+00:00",
   "clauses": {
     "BT26-094#effect#0": {
       "clause_id": "BT26-094#effect#0",
@@ -21,6 +21,17 @@
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-094-effect1",
       "recorded_at": "2026-10-08T03:03:20.386516800+00:00"
+    },
+    "BT26-094#security#0": {
+      "clause_id": "BT26-094#security#0",
+      "card_id": "BT26-094",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-094-security0.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-094-security0",
+      "recorded_at": "2026-10-08T03:20:29.219632100+00:00"
     }
   }
 }
