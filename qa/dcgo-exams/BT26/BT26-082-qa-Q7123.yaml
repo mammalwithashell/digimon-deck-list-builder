@@ -2,11 +2,7 @@
 # Digivolving] "By deleting this Digimon or trashing 2 bottom face-down cards
 # from under any of your Tamers, delete 1 of your opponent's highest DP Digimon."
 #
-# Q7123 LINE: P0's only Tamer (ST24-14) holds exactly ONE face-down card (its
-# On Play placed it; the next start-of-main placement is declined). Ravemon's
-# cost menu then must NOT offer "trash 2 bottom face-down cards" (1 < 2 -- a
-# 'by' cost can't be partly paid); only delete-self / don't-pay exist. We take
-# "Don't pay" and stop: no opponent Digimon is deleted. Base prefix:
+# Base prefix:
 # same prefix as BT26-082-effect0 (ST24-05 -> Crowmon BT26-076 ->
 # Ravemon via the cost-3 alt requirement). P1 re-fields ST1-04 on its turn
 # (Crowmon's When Digivolving deleted the first Digimon) so a delete target
@@ -17,16 +13,15 @@ interaction: {id: "qa:Q7123", source: qa, kind: positive}
 covers: [BT26-082#effect#2]
 seed: 424242
 meta: {produced_by: 20261007T030816288587Z-pilot-data-squad-b08d8c}
-# NOTE: attempting the partial payment ("Trash 2 ..." with one face-down card)
-# cannot be scripted: both engines omit that option, so lowering refuses it
-# (sim: branches are only "Delete this Digimon" | "Don't pay the cost"). The
-# observable is the cost menu itself: with exactly 1 face-down card the menu
-# has no trash option, and the only payable route left is delete-self.
+# Two Tamers (ST24-14 x2) each hold ONE face-down card, so the 'Trash 2' route is
+# offered (1+1). The cost is paid in two per-Tamer picks; our engine makes the 2nd pick
+# mandatory (no partial stop), DCGO forbids ending with 1 card. Line stops after the
+# opponent's Digimon is deleted by the fully paid cost.
 decks:
   p0:
     stack: [BT26-036, ST24-05, BT26-076, BT26-082, ST24-14,
-            ST24-04, ST24-10, BT26-049, BT26-050, ST24-14,
-            ST24-12, ST24-04, BT26-072]
+            ST24-04, ST24-10, BT26-049, BT26-050, ST24-04,
+            ST24-12, ST24-14, BT26-072]
     rest: bt26-dats
   p1:
     stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
@@ -68,7 +63,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
-    do: { play: { card: ST24-14, from: hand } }
+    do: { play: { card: ST24-14, from: hand.1 } }
   - actor: 0
     do: { select: { yes: true } }
   - actor: 1
@@ -82,12 +77,25 @@ steps:
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
   - actor: 0
+    do: { play: { card: ST24-14, from: hand } }
+  - actor: 0
+    do: { select: { yes: true } }
+  - actor: 0
     do: { digivolve: { from: field.0, using: BT26-082 } }
   - actor: 0
     do: { select: { value: 3 } }
   - actor: 0
-    do: { select: { choice: "Don't pay the cost", sim_only: true } }
+    do: { select: { choice: "Trash 2", sim_only: true } }
   - actor: 0
-    do: { select: { value: 3, dcgo_only: true } }
-    expect: { prompt: generic_int }
+    do: { select: { value: 2, dcgo_only: true } }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+  - actor: 0
+    do: { select: { targets: [own.field.2] } }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+  - actor: 0
+    do: { select: { cards: [ST24-14], ordinal: 0 } }
+  - actor: 0
+    do: { select: { cards: [ST24-14], ordinal: 0 } }
 assert: []
