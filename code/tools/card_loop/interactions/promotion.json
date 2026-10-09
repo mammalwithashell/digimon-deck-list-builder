@@ -1,0 +1,7 @@
+{
+  "families@1": {
+    "promoted": true,
+    "families": ["optional_decline", "scope", "granted_keyword", "leave_play"],
+    "note": "Decided 2026-10-05: official rulings always gate; of families@1 only these four gate to start (the families behind past faithfulness bugs). The other four (timing_gate, once_per_turn_multi, would_replacement, immunity) are still generated and examinable but do not gate readiness. Run `python -m tools.card_loop interactions promotion-report --version families@1 [--family F]` before widening this list to see which cards would drop out of readiness."
+  }
+}

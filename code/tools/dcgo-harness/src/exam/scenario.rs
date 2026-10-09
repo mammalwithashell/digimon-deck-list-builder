@@ -945,11 +945,122 @@ pub struct ScenarioStep {
     pub expect: Option<Expect>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Assertion {
     /// Step index this assertion is checked after.
     pub at: u32,
     pub that: BTreeMap<String, serde_yml::Value>,
+}
+
+/// Where an interaction exam's id comes from (card-loop design D6).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InteractionSource {
+    /// An official Q&A ruling: `qa:<Q-number>`. Gating.
+    Qa,
+    /// A generated risk probe: `probe:<clause-id>:<family>[:neg]`. Gating once
+    /// its family version is promoted.
+    Probe,
+    /// A model-authored combo: `combo:<slug>`. Examined and reported, NEVER
+    /// gating -- a model-written list is not a stable denominator, so these ids
+    /// are deliberately absent from it and exempt from the orphan rule.
+    Combo,
+}
+
+impl InteractionSource {
+    /// The id prefix this source's ids must carry.
+    pub fn prefix(self) -> &'static str {
+        match self {
+            InteractionSource::Qa => "qa:",
+            InteractionSource::Probe => "probe:",
+            InteractionSource::Combo => "combo:",
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            InteractionSource::Qa => "qa",
+            InteractionSource::Probe => "probe",
+            InteractionSource::Combo => "combo",
+        }
+    }
+}
+
+/// Whether the scenario shows the interaction HAPPENING (`positive`) or shows a
+/// clause NOT firing where it must not (`negative` -- a wrong-turn timing gate,
+/// a non-target left untouched).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InteractionKind {
+    Positive,
+    Negative,
+}
+
+impl InteractionKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            InteractionKind::Positive => "positive",
+            InteractionKind::Negative => "negative",
+        }
+    }
+}
+
+/// `interaction: { id: "qa:Q1601", source: qa, kind: positive }`.
+///
+/// Its presence makes the scenario an INTERACTION exam: its verdict is filed
+/// under the interaction id (the per-card verdict file's `interactions` map),
+/// never under `clause:` -- a negative probe that passes proves the clause did
+/// NOT fire, which must not read as that clause being confirmed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Interaction {
+    pub id: String,
+    pub source: InteractionSource,
+    pub kind: InteractionKind,
+}
+
+/// `expect_ruling: { q_id: Q1601, assert: [ { at: 7, that: {...} } ] }`.
+///
+/// The publisher's answer to an official Q&A ruling, encoded as observables in
+/// the SAME row shape as `assert:` so `exam::assertions` evaluates it with the
+/// one shared checker. It is the third oracle of a Q&A exam (design D7): the
+/// differ compares our engine with DCGO, and this block compares our engine
+/// with the ruling. Unlike `assert:` it is never backfilled from an oracle run
+/// -- it is the expected value, authored by one model family and agreed by the
+/// other (design D5).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExpectRuling {
+    /// The ruling's number as `card_qa.json` keys it (`Q1601`) -- the citation
+    /// a `dcgo_quirk` outcome carries as `qa:<q_id>`.
+    pub q_id: String,
+    #[serde(rename = "assert")]
+    pub assertions: Vec<Assertion>,
+}
+
+/// Split a probe id `probe:<clause-id>:<family>[:neg]` into
+/// `(clause_id, family, negative)`. `None` when it is not one.
+///
+/// The one Rust reading of the id grammar `tools.card_loop.interactions.probes`
+/// writes (`probe_id` / `parse_probe_id` there).
+pub fn parse_probe_id(id: &str) -> Option<(&str, &str, bool)> {
+    let rest = id.strip_prefix("probe:")?;
+    let parts: Vec<&str> = rest.split(':').collect();
+    let (clause, family, negative) = match parts.as_slice() {
+        [clause, family] => (*clause, *family, false),
+        [clause, family, "neg"] => (*clause, *family, true),
+        _ => return None,
+    };
+    if !is_clause_id_shaped(clause) || family.is_empty() {
+        return None;
+    }
+    Some((clause, family, negative))
+}
+
+/// `{card_id}#{zone}#{idx}` with three non-empty parts.
+pub fn is_clause_id_shaped(id: &str) -> bool {
+    let parts: Vec<&str> = id.split('#').collect();
+    parts.len() == 3 && parts.iter().all(|p| !p.is_empty())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -957,11 +1068,23 @@ pub struct Scenario {
     pub card: String,
     /// A `clause_coverage.models.Clause.id`: `{card_id}#{zone}#{idx}`.
     pub clause: String,
+    /// Every clause this line exercises, in the same id form. Absent means
+    /// exactly `[clause]` -- see [`Scenario::covered_clauses`]. May name other
+    /// cards' clauses (a ruling or combo spanning two cards), and must include
+    /// `clause` itself.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub covers: Option<Vec<String>>,
+    /// Present on interaction exams only -- see [`Interaction`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interaction: Option<Interaction>,
     pub seed: u64,
     pub decks: ScenarioDecks,
     pub steps: Vec<ScenarioStep>,
     #[serde(rename = "assert", default)]
     pub assertions: Vec<Assertion>,
+    /// Q&A interaction exams only -- see [`ExpectRuling`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expect_ruling: Option<ExpectRuling>,
 }
 
 impl Scenario {
@@ -969,6 +1092,15 @@ impl Scenario {
         let s: Scenario = serde_yml::from_str(text).map_err(|e| e.to_string())?;
         s.validate()?;
         Ok(s)
+    }
+
+    /// The clauses this line exercises: `covers:` when written, else exactly
+    /// `[clause]` (every legacy scenario).
+    pub fn covered_clauses(&self) -> Vec<String> {
+        match &self.covers {
+            Some(c) => c.clone(),
+            None => vec![self.clause.clone()],
+        }
     }
 
     fn validate(&self) -> Result<(), String> {
@@ -1012,6 +1144,127 @@ impl Scenario {
             }
         }
 
+        self.validate_covers()?;
+        self.validate_interaction()?;
+        self.validate_expect_ruling()?;
+        Ok(())
+    }
+
+    /// Shape only: whether each id exists is `exam::validate`'s job (it has the
+    /// extractor's denominator; the parser does not).
+    fn validate_covers(&self) -> Result<(), String> {
+        let Some(covers) = &self.covers else {
+            return Ok(());
+        };
+        if covers.is_empty() {
+            return Err("`covers: []` covers nothing; omit the key to cover exactly \
+                        `clause:`, or list every clause the line exercises"
+                .to_string());
+        }
+        let mut seen = std::collections::BTreeSet::new();
+        for id in covers {
+            if !is_clause_id_shaped(id) {
+                return Err(format!(
+                    "covers entry '{id}' is not a clause_coverage id (expected card_id#zone#index)"
+                ));
+            }
+            if !seen.insert(id.as_str()) {
+                return Err(format!("covers names '{id}' twice"));
+            }
+        }
+        if !seen.contains(self.clause.as_str()) {
+            return Err(format!(
+                "covers must include the scenario's own clause '{}': `clause:` is the \
+                 line's primary clause and `covers:` the full set it exercises",
+                self.clause
+            ));
+        }
+        Ok(())
+    }
+
+    fn validate_interaction(&self) -> Result<(), String> {
+        let Some(i) = &self.interaction else {
+            return Ok(());
+        };
+        let prefix = i.source.prefix();
+        let Some(rest) = i.id.strip_prefix(prefix) else {
+            return Err(format!(
+                "interaction id '{}' does not match `source: {}` (expected the `{prefix}` prefix)",
+                i.id,
+                i.source.as_str()
+            ));
+        };
+        if rest.is_empty() || rest.chars().any(char::is_whitespace) {
+            return Err(format!("interaction id '{}' has an empty or spaced name", i.id));
+        }
+        match i.source {
+            InteractionSource::Qa => {
+                if rest.contains(':') {
+                    return Err(format!(
+                        "interaction id '{}' is not `qa:<Q-number>` (one ruling per id)",
+                        i.id
+                    ));
+                }
+            }
+            InteractionSource::Probe => {
+                let Some((clause, _family, negative)) = parse_probe_id(&i.id) else {
+                    return Err(format!(
+                        "interaction id '{}' is not `probe:<clause-id>:<family>[:neg]`",
+                        i.id
+                    ));
+                };
+                if negative != (i.kind == InteractionKind::Negative) {
+                    return Err(format!(
+                        "interaction '{}' is {} but `kind: {}`: a `:neg` probe is exactly a \
+                         negative one",
+                        i.id,
+                        if negative { "a `:neg` probe" } else { "not a `:neg` probe" },
+                        i.kind.as_str()
+                    ));
+                }
+                if !self.covered_clauses().iter().any(|c| c == clause) {
+                    return Err(format!(
+                        "interaction '{}' probes clause '{clause}', which this scenario does \
+                         not cover -- add it to `covers:` (or make it the `clause:`)",
+                        i.id
+                    ));
+                }
+            }
+            InteractionSource::Combo => {}
+        }
+        Ok(())
+    }
+
+    fn validate_expect_ruling(&self) -> Result<(), String> {
+        let Some(r) = &self.expect_ruling else {
+            return Ok(());
+        };
+        let Some(i) = self.interaction.as_ref().filter(|i| i.source == InteractionSource::Qa)
+        else {
+            return Err("`expect_ruling:` encodes an official Q&A answer, so it needs \
+                        `interaction: { id: qa:<Q-number>, source: qa, ... }`"
+                .to_string());
+        };
+        if i.id != format!("qa:{}", r.q_id) {
+            return Err(format!(
+                "expect_ruling q_id '{}' does not match interaction id '{}'",
+                r.q_id, i.id
+            ));
+        }
+        if r.assertions.is_empty() {
+            return Err("`expect_ruling.assert` is empty: a ruling with no observable \
+                        asserts nothing, so the three-way comparison would have no third leg"
+                .to_string());
+        }
+        for a in &r.assertions {
+            if a.at as usize > self.steps.len() {
+                return Err(format!(
+                    "expect_ruling assertion at step {} can never fire: the line is {} steps long",
+                    a.at,
+                    self.steps.len()
+                ));
+            }
+        }
         Ok(())
     }
 }
@@ -1947,6 +2200,208 @@ mod dcgo_only_tests {
         assert!(yaml.contains("dcgo_only"), "flag survives serialization: {yaml}");
         let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
         assert_eq!(back, s.steps[0].act);
+    }
+}
+
+#[cfg(test)]
+mod interaction_tests {
+    //! `covers:`, `interaction:` and `expect_ruling:` (card-loop design D8).
+    use super::*;
+
+    const BASE: &str = "card: BT7-056\nclause: BT7-056#effect#0\nseed: 7\ndecks:\n  p0: { stack: [BT7-056], rest: vb-standard }\n  p1: { stack: [], rest: vb-standard }\nsteps:\n  - actor: 0\n    do: { hatch: {} }\n  - actor: 0\n    do: { pass: {} }\n";
+
+    fn with(extra: &str) -> Result<Scenario, String> {
+        Scenario::from_yaml(&format!("{BASE}{extra}"))
+    }
+
+    #[test]
+    fn a_legacy_scenario_covers_exactly_its_clause() {
+        let s = with("").expect("legacy parses");
+        assert_eq!(s.covered_clauses(), vec!["BT7-056#effect#0".to_string()]);
+        assert!(s.interaction.is_none());
+        assert!(s.expect_ruling.is_none());
+    }
+
+    #[test]
+    fn a_legacy_scenario_serializes_without_the_new_keys() {
+        // backfill re-serializes whole scenarios; a legacy file must come back
+        // without `covers: null` / `interaction: null` noise.
+        let yaml = serde_yml::to_string(&with("").unwrap()).unwrap();
+        for key in ["covers", "interaction", "expect_ruling"] {
+            assert!(!yaml.contains(key), "{key} leaked into {yaml}");
+        }
+    }
+
+    #[test]
+    fn covers_may_name_several_clauses_across_cards() {
+        let s = with("covers: [BT7-056#effect#0, BT7-056#inherited#0, ST1-12#effect#0]\n")
+            .expect("parses");
+        assert_eq!(s.covered_clauses().len(), 3);
+    }
+
+    #[test]
+    fn covers_must_include_the_primary_clause() {
+        let err = with("covers: [BT7-056#inherited#0]\n").unwrap_err();
+        assert!(err.contains("must include"), "got: {err}");
+    }
+
+    #[test]
+    fn covers_rejects_malformed_duplicate_and_empty_lists() {
+        assert!(with("covers: [BT7-056#effect#0, on_play]\n").unwrap_err().contains("on_play"));
+        assert!(with("covers: [BT7-056#effect#0, BT7-056#effect#0]\n").unwrap_err().contains("twice"));
+        assert!(with("covers: []\n").unwrap_err().contains("covers nothing"));
+    }
+
+    #[test]
+    fn a_qa_interaction_parses() {
+        let s = with("interaction: { id: \"qa:Q1601\", source: qa, kind: positive }\n").unwrap();
+        let i = s.interaction.unwrap();
+        assert_eq!(i.id, "qa:Q1601");
+        assert_eq!(i.source, InteractionSource::Qa);
+        assert_eq!(i.kind, InteractionKind::Positive);
+    }
+
+    #[test]
+    fn an_interaction_id_must_carry_its_sources_prefix() {
+        let err = with("interaction: { id: \"qa:Q1601\", source: probe, kind: positive }\n")
+            .unwrap_err();
+        assert!(err.contains("probe:"), "got: {err}");
+    }
+
+    #[test]
+    fn an_interaction_block_rejects_unknown_keys_and_sources() {
+        assert!(with("interaction: { id: \"qa:Q1\", source: qa, kind: positive, gating: true }\n").is_err());
+        assert!(with("interaction: { id: \"x:Q1\", source: forum, kind: positive }\n").is_err());
+        assert!(with("interaction: { id: \"qa:Q1\", source: qa, kind: sideways }\n").is_err());
+    }
+
+    #[test]
+    fn a_negative_probe_must_be_kind_negative_and_vice_versa() {
+        let neg = "interaction: { id: \"probe:BT7-056#effect#0:scope:neg\", source: probe, kind: negative }\n";
+        assert!(with(neg).is_ok());
+        let err = with(&neg.replace("kind: negative", "kind: positive")).unwrap_err();
+        assert!(err.contains(":neg"), "got: {err}");
+        let pos = "interaction: { id: \"probe:BT7-056#effect#0:optional_decline\", source: probe, kind: negative }\n";
+        assert!(with(pos).is_err());
+    }
+
+    #[test]
+    fn a_probe_must_be_on_a_covered_clause() {
+        let err = with(
+            "interaction: { id: \"probe:BT7-056#inherited#0:once_per_turn_multi\", source: probe, kind: positive }\n",
+        )
+        .unwrap_err();
+        assert!(err.contains("does not cover"), "got: {err}");
+        assert!(with(
+            "covers: [BT7-056#effect#0, BT7-056#inherited#0]\ninteraction: { id: \"probe:BT7-056#inherited#0:once_per_turn_multi\", source: probe, kind: positive }\n",
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn malformed_probe_ids_are_refused() {
+        for id in ["probe:BT7-056:scope", "probe:BT7-056#effect#0", "probe:BT7-056#effect#0:scope:pos"] {
+            let y = format!("interaction: {{ id: \"{id}\", source: probe, kind: positive }}\n");
+            assert!(with(&y).is_err(), "{id} must be refused");
+        }
+    }
+
+    #[test]
+    fn parse_probe_id_reads_the_python_grammar() {
+        assert_eq!(
+            parse_probe_id("probe:BT7-056#effect#0:scope:neg"),
+            Some(("BT7-056#effect#0", "scope", true))
+        );
+        assert_eq!(
+            parse_probe_id("probe:EX12-035#effect#3:once_per_turn_multi"),
+            Some(("EX12-035#effect#3", "once_per_turn_multi", false))
+        );
+        assert_eq!(parse_probe_id("qa:Q1601"), None);
+    }
+
+    #[test]
+    fn a_combo_interaction_is_accepted_without_a_denominator_shape() {
+        assert!(with("interaction: { id: \"combo:toho-braves:raid-into-fortitude\", source: combo, kind: positive }\n").is_ok());
+    }
+
+    const RULING: &str = "interaction: { id: \"qa:Q1601\", source: qa, kind: positive }\nexpect_ruling:\n  q_id: Q1601\n  assert:\n    - at: 2\n      that: { p0.memory: 3 }\n";
+
+    #[test]
+    fn expect_ruling_parses_with_the_assert_row_shape() {
+        let s = with(RULING).expect("parses");
+        let r = s.expect_ruling.as_ref().unwrap();
+        assert_eq!(r.q_id, "Q1601");
+        assert_eq!(r.assertions.len(), 1);
+        assert_eq!(r.assertions[0].at, 2);
+        assert!(r.assertions[0].that.contains_key("p0.memory"));
+    }
+
+    #[test]
+    fn expect_ruling_needs_a_matching_qa_interaction() {
+        let no_interaction = RULING.replace(
+            "interaction: { id: \"qa:Q1601\", source: qa, kind: positive }\n",
+            "",
+        );
+        assert!(with(&no_interaction).unwrap_err().contains("needs"));
+        let wrong_q = RULING.replace("q_id: Q1601", "q_id: Q99");
+        assert!(with(&wrong_q).unwrap_err().contains("Q99"));
+    }
+
+    #[test]
+    fn expect_ruling_must_assert_something_reachable() {
+        let empty = "interaction: { id: \"qa:Q1601\", source: qa, kind: positive }\nexpect_ruling: { q_id: Q1601, assert: [] }\n";
+        assert!(with(empty).unwrap_err().contains("empty"));
+        let late = RULING.replace("at: 2", "at: 9");
+        assert!(with(&late).unwrap_err().contains("can never fire"));
+    }
+
+    #[test]
+    fn the_new_blocks_round_trip_through_yaml() {
+        let s = with(&format!("covers: [BT7-056#effect#0, BT7-056#inherited#0]\n{RULING}")).unwrap();
+        let yaml = serde_yml::to_string(&s).unwrap();
+        let back = Scenario::from_yaml(&yaml).expect("re-parses");
+        assert_eq!(back.covers, s.covers);
+        assert_eq!(back.interaction, s.interaction);
+        assert_eq!(back.expect_ruling, s.expect_ruling);
+    }
+
+    /// Every committed scenario must still parse, unchanged, and still cover
+    /// exactly its own clause -- the schema extension is additive (design D8).
+    #[test]
+    fn every_committed_scenario_still_parses() {
+        let root = std::env::var("DIGIMON_REPO_ROOT")
+            .unwrap_or_else(|_| concat!(env!("CARGO_MANIFEST_DIR"), "/../../..").to_string());
+        let dir = std::path::Path::new(&root).join("qa/dcgo-exams");
+        let mut files = Vec::new();
+        let mut stack = vec![dir.clone()];
+        while let Some(d) = stack.pop() {
+            for e in std::fs::read_dir(&d).unwrap_or_else(|e| panic!("{}: {e}", d.display())) {
+                let p = e.unwrap().path();
+                if p.is_dir() {
+                    stack.push(p);
+                } else if p.extension().and_then(|x| x.to_str()) == Some("yaml") {
+                    files.push(p);
+                }
+            }
+        }
+        files.sort();
+        assert!(files.len() > 100, "expected the committed corpus under {}", dir.display());
+        let mut failures = Vec::new();
+        for f in &files {
+            let text = std::fs::read_to_string(f).unwrap();
+            match Scenario::from_yaml(&text) {
+                Ok(s) if s.interaction.is_none() && s.covered_clauses() == vec![s.clause.clone()] => {}
+                Ok(_) => failures.push(format!("{}: unexpectedly uses the new blocks", f.display())),
+                Err(e) => failures.push(format!("{}: {e}", f.display())),
+            }
+        }
+        assert!(
+            failures.is_empty(),
+            "{} of {} committed scenarios no longer parse unchanged:\n{}",
+            failures.len(),
+            files.len(),
+            failures.join("\n")
+        );
     }
 }
 

@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T16:35:06.585071+00:00",
+  "clauses": {
+    "BT24-041#effect#0": {
+      "clause_id": "BT24-041#effect#0",
+      "card_id": "BT24-041",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "32052a3797c00da5d68d09dd199ffc6c9e0d0f0bcab31760dcbbfce7c66f6af4",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-041-effect0.yaml",
+      "recorded_at": "2026-10-05T16:35:04.500545900+00:00"
+    },
+    "BT24-041#effect#1": {
+      "clause_id": "BT24-041#effect#1",
+      "card_id": "BT24-041",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "0b38cdd771bfdfce44c6a1e9b395ab0127b42226977e3f53a6a7d554ef091260",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-041-effect1.yaml",
+      "recorded_at": "2026-10-05T16:35:05.164954400+00:00"
+    },
+    "BT24-041#effect#2": {
+      "clause_id": "BT24-041#effect#2",
+      "card_id": "BT24-041",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "5315562ef1c038dcdbe4096e8dcef80d6ff424b51dc12eb3754bc810b94eb28f",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-041-effect2.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 12 of 13 ours / 12 dcgo steps)",
+      "recorded_at": "2026-10-05T16:35:05.842502800+00:00"
+    },
+    "BT24-041#effect#3": {
+      "clause_id": "BT24-041#effect#3",
+      "card_id": "BT24-041",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "f016469ec604083dccd35704ee6470957529375e6164b8e0ee27efbd73e96fea",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-041-effect3.yaml",
+      "recorded_at": "2026-10-05T16:35:06.585071+00:00"
+    }
+  }
+}

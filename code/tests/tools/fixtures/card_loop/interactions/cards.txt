@@ -1,0 +1,5 @@
+# The fixture universe: one card per denominator case.
+BT7-056    # two own rulings + one shared ruling + probes
+EX4-030    # shares Q2002 with BT7-056
+BT21-029   # a ruling + probes on several families
+ST1-02     # vanilla: no rulings, no clauses -> ready on its clauses alone

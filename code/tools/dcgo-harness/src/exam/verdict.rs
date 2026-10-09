@@ -27,8 +27,18 @@
 //! The on-disk shape is `{"version": 1, "last_updated": "...", "clauses":
 //! {...}}`, mirroring `qa/qa-reports/validated_cards_dsl.json`
 //! (`version` / `last_updated` / `cards`) so the QA artifacts read alike.
+//!
+//! **Version 2** (card-loop design D8) adds an `interactions` map beside
+//! `clauses`, one [`InteractionVerdict`] per interaction id (`qa:<Q>`,
+//! `probe:<clause>:<family>[:neg]`, `combo:<slug>`). A file is written as v2
+//! ONLY when its card carries an interaction verdict, so the existing v1 files
+//! are never rewritten just because the reader learned v2. An interaction that
+//! counts for several cards (one official ruling printed on two cards) is
+//! written, identically, into EVERY one of those cards' files: a card stays the
+//! unit of a file, which is what keeps disjoint fleet writers merge-clean, and
+//! the loader refuses two copies of one interaction that disagree.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -75,6 +85,19 @@ impl std::fmt::Display for Verdict {
     }
 }
 
+/// Whose bug a `diverged` clause is. `general_rule.pdf` outranks DCGO, so a
+/// divergence is not automatically ours.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Triage {
+    /// Our engine is wrong; the rules or DCGO's correct behavior is cited.
+    OursWrong,
+    /// DCGO is wrong or differs only in a rules-neutral way; cited.
+    DcgoQuirk,
+    /// Not yet decided. Blocks readiness.
+    Undetermined,
+}
+
 /// One clause's exam record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClauseVerdict {
@@ -102,8 +125,51 @@ pub struct ClauseVerdict {
     /// Which harness job ran it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub job_id: Option<String>,
+    /// Whose bug a `diverged` clause is, once triaged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub triage: Option<Triage>,
+    /// Evidence for the triage class (rules section, DCGO file:line, or
+    /// gap-tracker id).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub citation: Option<String>,
     /// RFC 3339 timestamp of the recording.
     pub recorded_at: String,
+}
+
+/// One interaction's exam record (verdict-store v2): the [`ClauseVerdict`]
+/// shape, keyed by interaction id instead of clause id, and naming every card
+/// it counts for.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InteractionVerdict {
+    /// `qa:<Q>` / `probe:<clause>:<family>[:neg]` / `combo:<slug>` -- from the
+    /// interaction denominator (`data/interaction_denominator.json`), never
+    /// invented here (combo ids excepted: they are never gating).
+    pub interaction_id: String,
+    /// Every card this verdict counts for; the record is filed under each.
+    pub card_ids: Vec<String>,
+    /// `qa` | `probe` | `combo`.
+    pub source: String,
+    /// `positive` | `negative`.
+    pub kind: String,
+    pub verdict: Verdict,
+    /// The denominator's drift fingerprint for this interaction (the ruling's
+    /// question + answer, or the probed clause's text). A mismatch reports the
+    /// verdict `unmeasured`, exactly like a clause.
+    pub text_sha256: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scenario_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dcgo_build: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_id: Option<String>,
+    pub recorded_at: String,
+    /// Fields this reader does not model (a triage block, a citation,
+    /// `produced_by` provenance) are carried through a load/save round trip
+    /// rather than silently dropped.
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
 }
 
 /// Counts over a supplied denominator. `total` is the size of that
@@ -143,6 +209,9 @@ fn default_version() -> u32 {
     1
 }
 
+/// The verdict-file versions this reader understands.
+pub const SUPPORTED_VERSIONS: &[u32] = &[1, 2];
+
 /// The durable per-clause verdict record.
 ///
 /// `current_text_shas` is scratch state, not part of the file: callers load
@@ -156,8 +225,14 @@ pub struct VerdictStore {
     pub last_updated: String,
     #[serde(default)]
     clauses: BTreeMap<String, ClauseVerdict>,
+    /// v2 only; omitted from a file that has none, which is then written as v1.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    interactions: BTreeMap<String, InteractionVerdict>,
     #[serde(skip)]
     current_text_shas: BTreeMap<String, String>,
+    /// Card ids whose rows changed since load; `save_dir` writes only these.
+    #[serde(skip)]
+    dirty: BTreeSet<String>,
 }
 
 impl Default for VerdictStore {
@@ -166,7 +241,9 @@ impl Default for VerdictStore {
             version: 1,
             last_updated: String::new(),
             clauses: BTreeMap::new(),
+            interactions: BTreeMap::new(),
             current_text_shas: BTreeMap::new(),
+            dirty: BTreeSet::new(),
         }
     }
 }
@@ -196,6 +273,14 @@ impl VerdictStore {
         }
         let mut text = self.to_json()?;
         text.push('\n');
+        // Keep the file's existing line endings: core.autocrlf checkouts hold
+        // CRLF, and an LF rewrite shows up as a modified file for no reason.
+        let existing_crlf = std::fs::read(path)
+            .map(|b| b.windows(2).any(|w| w == b"\r\n"))
+            .unwrap_or(false);
+        if existing_crlf {
+            text = text.replace('\n', "\r\n");
+        }
         std::fs::write(path, text)
             .map_err(|e| format!("failed to write verdict store {}: {e}", path.display()))
     }
@@ -230,6 +315,9 @@ impl VerdictStore {
         // Deterministic order so an error is reproducible.
         paths.sort();
 
+        // Which file each merged interaction came from, for the disagreement
+        // message below.
+        let mut interaction_origin: BTreeMap<String, PathBuf> = BTreeMap::new();
         for path in paths {
             let expected_card = path
                 .file_stem()
@@ -248,6 +336,35 @@ impl VerdictStore {
                     ));
                 }
                 merged.clauses.insert(clause_id, cv);
+            }
+            for (id, iv) in one.interactions.into_iter() {
+                // Same misfiling rule as clauses: a card's file only holds
+                // interactions that count for that card.
+                if !iv.card_ids.iter().any(|c| *c == expected_card) {
+                    return Err(format!(
+                        "verdict file {} holds interaction {id:?}, which counts for {:?} \
+                         but not for {expected_card:?}; each file holds exactly one card's \
+                         verdicts",
+                        path.display(),
+                        iv.card_ids
+                    ));
+                }
+                // A shared ruling is written into every card's file in one
+                // commit, so its copies must agree; two that differ mean a
+                // partial write or a bad merge, and picking one would hide it.
+                if let Some(existing) = merged.interactions.get(&id) {
+                    if *existing != iv {
+                        return Err(format!(
+                            "interaction {id:?} has disagreeing copies in {} and {}; a shared \
+                             verdict must be written identically into every listed card's file",
+                            interaction_origin[&id].display(),
+                            path.display()
+                        ));
+                    }
+                    continue;
+                }
+                interaction_origin.insert(id.clone(), path.clone());
+                merged.interactions.insert(id, iv);
             }
             if one.last_updated > merged.last_updated {
                 merged.last_updated = one.last_updated;
@@ -274,9 +391,24 @@ impl VerdictStore {
                 per.last_updated = cv.recorded_at.clone();
             }
         }
+        // A shared interaction lands in EVERY card file it counts for.
+        for (id, iv) in self.interactions.iter() {
+            for card_id in &iv.card_ids {
+                let per = by_card.entry(card_id.clone()).or_default();
+                per.interactions.insert(id.clone(), iv.clone());
+                if iv.recorded_at > per.last_updated {
+                    per.last_updated = iv.recorded_at.clone();
+                }
+            }
+        }
 
         for (card_id, per) in by_card.iter() {
-            per.save(&dir.join(card_file_name(card_id)))?;
+            let file = dir.join(card_file_name(card_id));
+            // Only cards whose rows changed this run are rewritten; a file that
+            // does not exist yet is always written.
+            if self.dirty.contains(card_id) || !file.exists() {
+                per.save(&file)?;
+            }
         }
 
         // Prune files for cards we no longer carry.
@@ -308,20 +440,34 @@ impl VerdictStore {
         Ok(())
     }
 
-    /// Serialize to the `{version, last_updated, clauses}` JSON shape.
+    /// Serialize to the `{version, last_updated, clauses[, interactions]}`
+    /// JSON shape: version 1 when there are no interaction verdicts (so a
+    /// clause-only file reads exactly as before), version 2 otherwise.
     pub fn to_json(&self) -> Result<String, String> {
         let mut snapshot = self.clone();
         if snapshot.last_updated.is_empty() {
             snapshot.last_updated = chrono::Utc::now().to_rfc3339();
         }
+        snapshot.version = if snapshot.interactions.is_empty() { 1 } else { 2 };
         serde_json::to_string_pretty(&snapshot)
             .map_err(|e| format!("failed to serialize verdict store: {e}"))
     }
 
-    /// Parse the `{version, last_updated, clauses}` JSON shape.
+    /// Parse the v1 `{version, last_updated, clauses}` or v2 `{..., interactions}`
+    /// JSON shape.
     pub fn from_json(text: &str) -> Result<VerdictStore, String> {
         let mut store: VerdictStore =
             serde_json::from_str(text).map_err(|e| format!("invalid verdict store JSON: {e}"))?;
+        if !SUPPORTED_VERSIONS.contains(&store.version) {
+            return Err(format!(
+                "verdict store version {} is not one this reader understands ({SUPPORTED_VERSIONS:?})",
+                store.version
+            ));
+        }
+        if store.version == 1 && !store.interactions.is_empty() {
+            return Err("a version-1 verdict store cannot carry `interactions` (that is v2)"
+                .to_string());
+        }
         // The clause id is the map key; keep the embedded copy honest so a
         // hand-edited file cannot hand out a verdict labelled with someone
         // else's clause id.
@@ -335,13 +481,86 @@ impl VerdictStore {
                 ));
             }
         }
+        for (key, iv) in store.interactions.iter_mut() {
+            if iv.interaction_id.is_empty() {
+                iv.interaction_id = key.clone();
+            } else if &iv.interaction_id != key {
+                return Err(format!(
+                    "verdict store key {key:?} disagrees with its interaction_id {:?}",
+                    iv.interaction_id
+                ));
+            }
+            if iv.card_ids.is_empty() {
+                return Err(format!(
+                    "interaction verdict {key:?} names no card: it would count for nothing"
+                ));
+            }
+        }
         Ok(store)
     }
 
-    /// Insert or replace one clause's verdict.
+    /// Insert or replace one clause's verdict, marking its card file dirty.
     pub fn record(&mut self, v: ClauseVerdict) {
         self.last_updated = v.recorded_at.clone();
+        self.dirty.insert(v.card_id.clone());
         self.clauses.insert(v.clause_id.clone(), v);
+    }
+
+    /// Classify a `diverged` row. `ours_wrong` and `dcgo_quirk` need a citation
+    /// (a `general_rule.pdf` section, a DCGO `file:line`, or a gap-tracker entry
+    /// that carries one); `undetermined` does not. Marks the card dirty.
+    pub fn set_triage(
+        &mut self,
+        clause_id: &str,
+        triage: Triage,
+        citation: Option<String>,
+    ) -> Result<(), String> {
+        let citation = citation.map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
+        if matches!(triage, Triage::OursWrong | Triage::DcgoQuirk) && citation.is_none() {
+            return Err(format!(
+                "triage {triage:?} for `{clause_id}` needs --citation (rules section, \
+                 DCGO file:line, or gap-tracker id)"
+            ));
+        }
+        let row = self
+            .clauses
+            .get_mut(clause_id)
+            .ok_or_else(|| format!("no stored verdict for `{clause_id}`"))?;
+        if row.verdict != Verdict::Diverged {
+            return Err(format!(
+                "`{clause_id}` is {} -- not diverged; only a diverged row is triaged",
+                row.verdict
+            ));
+        }
+        row.triage = Some(triage);
+        row.citation = citation;
+        self.dirty.insert(row.card_id.clone());
+        Ok(())
+    }
+
+    /// Stamp the oracle provenance (which harness job ran it, which DCGO build
+    /// answered) on a recorded clause or interaction row, and mark its card(s)
+    /// dirty so the stamp is written.
+    pub fn set_provenance(
+        &mut self,
+        id: &str,
+        job_id: Option<String>,
+        dcgo_build: Option<String>,
+    ) -> Result<(), String> {
+        if let Some(row) = self.clauses.get_mut(id) {
+            row.job_id = job_id;
+            row.dcgo_build = dcgo_build;
+            self.dirty.insert(row.card_id.clone());
+            return Ok(());
+        }
+        let row = self
+            .interactions
+            .get_mut(id)
+            .ok_or_else(|| format!("no stored verdict for `{id}`"))?;
+        row.job_id = job_id;
+        row.dcgo_build = dcgo_build;
+        self.dirty.extend(row.card_ids.iter().cloned());
+        Ok(())
     }
 
     /// The stored verdict, drift or no drift. Use [`Self::get_validated`]
@@ -371,14 +590,104 @@ impl VerdictStore {
 
     /// True when a stored verdict was recorded against different clause text
     /// than the one most recently supplied via [`Self::set_current_text_sha`].
+    ///
+    /// Also answers for interaction ids: the two id spaces cannot collide
+    /// (`qa:` / `probe:` / `combo:` vs `card#zone#idx`), so one scratch map
+    /// serves both.
     pub fn is_invalidated(&self, clause_id: &str) -> bool {
-        match (
-            self.clauses.get(clause_id),
-            self.current_text_shas.get(clause_id),
-        ) {
-            (Some(cv), Some(current)) => &cv.text_sha256 != current,
-            _ => false,
+        let Some(current) = self.current_text_shas.get(clause_id) else {
+            return false;
+        };
+        if let Some(cv) = self.clauses.get(clause_id) {
+            return &cv.text_sha256 != current;
         }
+        match self.interactions.get(clause_id) {
+            Some(iv) => &iv.text_sha256 != current,
+            None => false,
+        }
+    }
+
+    /// Insert or replace one interaction's verdict, marking every card file it
+    /// is filed under dirty (`save_dir` writes only dirty cards).
+    pub fn record_interaction(&mut self, v: InteractionVerdict) {
+        self.last_updated = v.recorded_at.clone();
+        self.dirty.extend(v.card_ids.iter().cloned());
+        self.interactions.insert(v.interaction_id.clone(), v);
+    }
+
+    /// Classify a stored interaction row (`extra["triage"]` / `extra["citation"]`,
+    /// the clause row's `triage` / `citation` twins). Marks its cards dirty.
+    pub fn set_interaction_triage(
+        &mut self,
+        interaction_id: &str,
+        triage: Triage,
+        citation: Option<String>,
+    ) -> Result<(), String> {
+        let citation = citation.map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
+        if matches!(triage, Triage::OursWrong | Triage::DcgoQuirk) && citation.is_none() {
+            return Err(format!("triage {triage:?} for `{interaction_id}` needs a citation"));
+        }
+        let row = self
+            .interactions
+            .get_mut(interaction_id)
+            .ok_or_else(|| format!("no stored verdict for `{interaction_id}`"))?;
+        row.extra.insert("triage".into(), serde_json::Value::String(
+            match triage {
+                Triage::OursWrong => "ours_wrong",
+                Triage::DcgoQuirk => "dcgo_quirk",
+                Triage::Undetermined => "undetermined",
+            }
+            .into(),
+        ));
+        match citation {
+            Some(c) => { row.extra.insert("citation".into(), serde_json::Value::String(c)); }
+            None => { row.extra.remove("citation"); }
+        }
+        self.dirty.extend(row.card_ids.iter().cloned());
+        Ok(())
+    }
+
+    /// The stored interaction verdict, drift or no drift.
+    pub fn get_interaction(&self, interaction_id: &str) -> Option<&InteractionVerdict> {
+        self.interactions.get(interaction_id)
+    }
+
+    /// Every stored interaction verdict, in id order.
+    pub fn iter_interactions(&self) -> impl Iterator<Item = (&String, &InteractionVerdict)> {
+        self.interactions.iter()
+    }
+
+    /// How many interaction verdicts are stored (not a denominator either).
+    pub fn interaction_count(&self) -> usize {
+        self.interactions.len()
+    }
+
+    /// Count the five classes over `all_interaction_ids` -- the interaction
+    /// denominator -- with the same unmeasured / invalidated rules as
+    /// [`Self::summary`].
+    pub fn interaction_summary(&self, all_interaction_ids: &[String]) -> VerdictSummary {
+        let mut sum = VerdictSummary {
+            total: all_interaction_ids.len(),
+            ..Default::default()
+        };
+        for id in all_interaction_ids {
+            let verdict = match self.interactions.get(id) {
+                None => Verdict::Unmeasured,
+                Some(_) if self.is_invalidated(id) => {
+                    sum.invalidated += 1;
+                    Verdict::Unmeasured
+                }
+                Some(iv) => iv.verdict,
+            };
+            match verdict {
+                Verdict::Confirmed => sum.confirmed += 1,
+                Verdict::Diverged => sum.diverged += 1,
+                Verdict::Unreachable => sum.unreachable += 1,
+                Verdict::Unavailable => sum.unavailable += 1,
+                Verdict::Unmeasured => sum.unmeasured += 1,
+            }
+        }
+        sum
     }
 
     /// Every stored verdict, in clause-id order.
@@ -445,6 +754,10 @@ pub struct ClauseText {
 
 #[derive(Debug, Deserialize)]
 struct ClauseTextFile {
+    /// Cards the extract covered -- including those with zero clauses, which
+    /// the `clauses` list alone cannot show.
+    #[serde(default)]
+    cards: Vec<String>,
     clauses: Vec<ClauseText>,
 }
 
@@ -459,6 +772,9 @@ struct ClauseTextFile {
 #[derive(Debug, Clone)]
 pub struct ClauseTextBook {
     by_id: BTreeMap<String, ClauseText>,
+    /// Every card the book covers: the file's `cards` list plus the card
+    /// prefix of every clause id.
+    cards: std::collections::BTreeSet<String>,
     source: String,
 }
 
@@ -473,13 +789,23 @@ impl ClauseTextBook {
         let file: ClauseTextFile = serde_json::from_str(text)
             .map_err(|e| format!("invalid clause-text JSON ({source}): {e}"))?;
         let mut by_id = BTreeMap::new();
+        let mut cards: std::collections::BTreeSet<String> = file.cards.into_iter().collect();
         for c in file.clauses {
+            if let Some(card) = c.id.split('#').next() {
+                cards.insert(card.to_string());
+            }
             by_id.insert(c.id.clone(), c);
         }
         Ok(ClauseTextBook {
             by_id,
+            cards,
             source: source.to_string(),
         })
+    }
+
+    /// True when the book's extract covered this card (even with zero clauses).
+    pub fn has_card(&self, card_id: &str) -> bool {
+        self.cards.contains(card_id)
     }
 
     pub fn get(&self, clause_id: &str) -> Option<&ClauseText> {
@@ -581,9 +907,300 @@ pub fn record_scenario_verdict(
         reason,
         dcgo_build: None,
         job_id: None,
+        triage: None,
+        citation: None,
         recorded_at,
     });
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Interaction denominator -- the bridge between a scenario's `interaction.id`
+// and the cards / fingerprint its verdict must carry.
+// ---------------------------------------------------------------------------
+
+/// The committed interaction denominator, as
+/// `python -m tools.card_loop interactions build` writes it.
+pub const DEFAULT_INTERACTION_DENOMINATOR: &str = "data/interaction_denominator.json";
+
+/// One denominator row. Only the fields the exam needs; the file carries more.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct InteractionEntry {
+    pub source: String,
+    pub card_ids: Vec<String>,
+    pub kind: String,
+    #[serde(default)]
+    pub gating: bool,
+    #[serde(default)]
+    pub text_sha256: String,
+    #[serde(default)]
+    pub clause_id: Option<String>,
+    #[serde(default)]
+    pub family: Option<String>,
+    #[serde(default)]
+    pub family_version: Option<String>,
+    #[serde(default)]
+    pub q_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct InteractionFile {
+    version: u32,
+    interactions: BTreeMap<String, InteractionEntry>,
+}
+
+/// The interaction denominator, loaded. The orphan rule for interactions: a
+/// `qa:` / `probe:` id absent from this book can neither validate nor be given
+/// a verdict, for the same reason as an unknown clause id.
+#[derive(Debug, Clone)]
+pub struct InteractionBook {
+    by_id: BTreeMap<String, InteractionEntry>,
+    source: String,
+}
+
+impl InteractionBook {
+    /// Load the denominator. A missing file is an error that says the
+    /// denominator was never generated -- interaction scenarios are refused
+    /// rather than examined against nothing; legacy clause scenarios never
+    /// need this book.
+    pub fn load(path: &Path) -> Result<InteractionBook, String> {
+        let text = std::fs::read_to_string(path).map_err(|e| {
+            format!(
+                "interaction denominator not generated: cannot read {} ({e}). Build it with \
+                 `python -m tools.card_loop interactions build`",
+                path.display()
+            )
+        })?;
+        Self::from_json(&text, &path.display().to_string())
+    }
+
+    pub fn from_json(text: &str, source: &str) -> Result<InteractionBook, String> {
+        let file: InteractionFile = serde_json::from_str(text)
+            .map_err(|e| format!("invalid interaction denominator JSON ({source}): {e}"))?;
+        if file.version != 1 {
+            return Err(format!(
+                "interaction denominator {source} is version {}, this reader knows 1",
+                file.version
+            ));
+        }
+        Ok(InteractionBook {
+            by_id: file.interactions,
+            source: source.to_string(),
+        })
+    }
+
+    pub fn get(&self, interaction_id: &str) -> Option<&InteractionEntry> {
+        self.by_id.get(interaction_id)
+    }
+
+    /// Every interaction id, sorted.
+    pub fn ids(&self) -> Vec<String> {
+        self.by_id.keys().cloned().collect()
+    }
+
+    /// The GATING interaction ids that count for `card_id`, sorted.
+    pub fn gating_ids_for_card(&self, card_id: &str) -> Vec<String> {
+        self.by_id
+            .iter()
+            .filter(|(_, e)| e.gating && e.card_ids.iter().any(|c| c == card_id))
+            .map(|(id, _)| id.clone())
+            .collect()
+    }
+
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+}
+
+/// Record one interaction scenario run's verdict, or refuse (the orphan rule).
+///
+/// A `qa:` / `probe:` id must be in `book`; the record takes its cards, kind and
+/// fingerprint from there, so it is filed under every card the interaction
+/// counts for. A `combo:` id is accepted without the book (combos never gate),
+/// filed under `combo_cards`. The store is untouched on refusal.
+#[allow(clippy::too_many_arguments)]
+pub fn record_interaction_verdict(
+    store: &mut VerdictStore,
+    book: &InteractionBook,
+    interaction_id: &str,
+    combo_cards: &[String],
+    verdict: Verdict,
+    scenario_path: Option<String>,
+    reason: Option<String>,
+    recorded_at: String,
+) -> Result<(), String> {
+    let (card_ids, source, kind, text_sha256) = if interaction_id.starts_with("combo:") {
+        if combo_cards.is_empty() {
+            return Err(format!(
+                "refusing to record combo interaction `{interaction_id}` under no card"
+            ));
+        }
+        (
+            combo_cards.to_vec(),
+            "combo".to_string(),
+            "positive".to_string(),
+            String::new(),
+        )
+    } else {
+        let e = book.get(interaction_id).ok_or_else(|| {
+            format!(
+                "refusing to record a verdict for interaction `{interaction_id}`: it is not in \
+                 the interaction denominator ({}). A verdict keyed outside it would count toward \
+                 nothing (the orphan rule) -- rebuild the denominator, or fix the scenario's \
+                 `interaction.id`.",
+                book.source()
+            )
+        })?;
+        (
+            e.card_ids.clone(),
+            e.source.clone(),
+            e.kind.clone(),
+            e.text_sha256.clone(),
+        )
+    };
+    store.record_interaction(InteractionVerdict {
+        interaction_id: interaction_id.to_string(),
+        card_ids,
+        source,
+        kind,
+        verdict,
+        text_sha256,
+        scenario_path,
+        reason,
+        dcgo_build: None,
+        job_id: None,
+        recorded_at,
+        extra: BTreeMap::new(),
+    });
+    Ok(())
+}
+
+fn needs_reason(verdict: Verdict) -> bool {
+    matches!(verdict, Verdict::Unreachable | Verdict::Unavailable)
+}
+
+fn check_triage(triage: &Option<(Triage, Option<String>)>) -> Result<(), String> {
+    if let Some((t, c)) = triage {
+        let cited = c.as_deref().map(str::trim).filter(|c| !c.is_empty()).is_some();
+        if matches!(t, Triage::OursWrong | Triage::DcgoQuirk) && !cited {
+            return Err(format!("triage {t:?} needs a citation (rules section, DCGO file:line, or qa:<Q>)"));
+        }
+    }
+    Ok(())
+}
+
+/// Record an ending the exam itself cannot produce for a CLAUSE -- an
+/// `unreachable` (no legal line) or `unavailable` verdict with its reason, or
+/// a verdict plus triage in one step. Keeps an existing row's scenario path
+/// and provenance. Refuses an orphan id, a reason-less unreachable /
+/// unavailable, and an uncited `ours_wrong` / `dcgo_quirk`; the store is
+/// untouched on refusal.
+pub fn set_clause_verdict(
+    store: &mut VerdictStore,
+    book: &ClauseTextBook,
+    clause_id: &str,
+    verdict: Verdict,
+    reason: Option<String>,
+    triage: Option<(Triage, Option<String>)>,
+    recorded_at: String,
+) -> Result<(), String> {
+    let reason = reason.map(|r| r.trim().to_string()).filter(|r| !r.is_empty());
+    if needs_reason(verdict) && reason.is_none() {
+        return Err(format!("verdict {verdict} for `{clause_id}` needs a reason"));
+    }
+    check_triage(&triage)?;
+    if triage.is_some() && verdict != Verdict::Diverged {
+        return Err(format!("a triage applies to a diverged row; `{clause_id}` is being set {verdict}"));
+    }
+    let previous = store.get(clause_id).cloned();
+    record_scenario_verdict(
+        store,
+        book,
+        clause_id,
+        verdict,
+        previous.as_ref().and_then(|p| p.scenario_path.clone()),
+        reason,
+        recorded_at,
+    )?;
+    if let Some(p) = previous {
+        store.set_provenance(clause_id, p.job_id, p.dcgo_build)?;
+    }
+    if let Some((t, c)) = triage {
+        store.set_triage(clause_id, t, c)?;
+    }
+    Ok(())
+}
+
+/// The interaction counterpart of [`set_clause_verdict`]: the verdict (and
+/// optional triage) for an interaction id in the denominator, filed under
+/// every card it counts for. Triage and citation live in the row's `extra`
+/// map (`triage`, `citation`), which the loader carries through.
+pub fn set_interaction_verdict(
+    store: &mut VerdictStore,
+    book: &InteractionBook,
+    interaction_id: &str,
+    combo_cards: &[String],
+    verdict: Verdict,
+    reason: Option<String>,
+    triage: Option<(Triage, Option<String>)>,
+    recorded_at: String,
+) -> Result<(), String> {
+    let reason = reason.map(|r| r.trim().to_string()).filter(|r| !r.is_empty());
+    if needs_reason(verdict) && reason.is_none() {
+        return Err(format!("verdict {verdict} for `{interaction_id}` needs a reason"));
+    }
+    check_triage(&triage)?;
+    record_interaction_verdict(store, book, interaction_id, combo_cards, verdict, None, reason, recorded_at)?;
+    if let Some((t, c)) = triage {
+        store.set_interaction_triage(interaction_id, t, c)?;
+    }
+    Ok(())
+}
+
+/// Write one (possibly shared) interaction verdict into EVERY listed card's
+/// file under `dir`, leaving each file's other verdicts as they were.
+///
+/// Returns the files written, so the caller commits them together (design D8:
+/// "a shared Q&A verdict is written into every card file that prints it in the
+/// same commit"). Each card's file is loaded first (or started empty), so this
+/// never prunes or rewrites another card's verdicts the way a whole-store
+/// [`VerdictStore::save_dir`] from a partial store would.
+pub fn write_interaction_to_card_files(
+    dir: &Path,
+    v: &InteractionVerdict,
+) -> Result<Vec<PathBuf>, String> {
+    if v.card_ids.is_empty() {
+        return Err(format!(
+            "interaction verdict {:?} names no card to file it under",
+            v.interaction_id
+        ));
+    }
+    std::fs::create_dir_all(dir)
+        .map_err(|e| format!("failed to create verdict directory {}: {e}", dir.display()))?;
+    let mut written = Vec::new();
+    for card_id in &v.card_ids {
+        let path = dir.join(card_file_name(card_id));
+        let mut one = if path.exists() {
+            VerdictStore::load(&path)?
+        } else {
+            VerdictStore::default()
+        };
+        one.record_interaction(v.clone());
+        // `record_interaction` stamps last_updated from this verdict; keep the
+        // file's newest timestamp instead when it already had a later one.
+        let newest = one
+            .clauses
+            .values()
+            .map(|c| c.recorded_at.as_str())
+            .chain(one.interactions.values().map(|i| i.recorded_at.as_str()))
+            .max()
+            .unwrap_or_default()
+            .to_string();
+        one.last_updated = newest;
+        one.save(&path)?;
+        written.push(path);
+    }
+    Ok(written)
 }
 
 #[cfg(test)]
@@ -601,6 +1218,8 @@ mod tests {
             reason: None,
             dcgo_build: None,
             job_id: None,
+            triage: None,
+            citation: None,
             recorded_at: "2026-08-21T00:00:00Z".to_string(),
         }
     }
@@ -729,6 +1348,25 @@ mod tests {
             book.clause_ids(),
             vec!["ST1-12#effect#0".to_string(), "ST1-12#security#0".to_string()]
         );
+    }
+
+    #[test]
+    fn book_knows_zero_clause_cards() {
+        let book = ClauseTextBook::from_json(
+            r#"{"cards":["BT1-009","ST1-07"],"clauses":[{"id":"ST1-07#inherited#0","label":"Inherited Effect","text":"x"}]}"#,
+            "t",
+        )
+        .unwrap();
+        assert!(book.has_card("BT1-009"));
+        assert!(book.has_card("ST1-07"));
+        assert!(!book.has_card("EX10-025"));
+    }
+
+    #[test]
+    fn book_without_a_cards_array_still_knows_the_cards_of_its_clauses() {
+        let book = ClauseTextBook::from_json(EXTRACT_JSON, "t").unwrap();
+        assert!(book.has_card("ST1-12"));
+        assert!(!book.has_card("ST1-13"));
     }
 
     #[test]
@@ -943,5 +1581,571 @@ mod tests {
             assert_eq!(after.text_sha256, before.text_sha256);
             assert_eq!(after.recorded_at, before.recorded_at);
         }
+    }
+
+    #[test]
+    fn save_dir_rewrites_only_touched_cards_and_keeps_crlf() {
+        let dir = std::env::temp_dir().join("verdict-dirty-only-test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let row = |card: &str| {
+            format!(
+                "{{\r\n  \"version\": 1,\r\n  \"last_updated\": \"2026-01-01T00:00:00Z\",\r\n  \
+                 \"clauses\": {{\r\n    \"{card}#effect#0\": {{\r\n      \"clause_id\": \"{card}#effect#0\",\r\n      \
+                 \"card_id\": \"{card}\",\r\n      \"verdict\": \"confirmed\",\r\n      \"label\": \"Effect\",\r\n      \
+                 \"text_sha256\": \"abc\",\r\n      \"recorded_at\": \"2026-01-01T00:00:00Z\"\r\n    }}\r\n  }}\r\n}}\r\n"
+            )
+        };
+        std::fs::write(dir.join("BT1-001.json"), row("BT1-001")).unwrap();
+        std::fs::write(dir.join("BT1-002.json"), row("BT1-002")).unwrap();
+        let untouched_before = std::fs::read(dir.join("BT1-002.json")).unwrap();
+
+        let mut store = VerdictStore::load_dir(&dir).unwrap();
+        store.record(ClauseVerdict {
+            clause_id: "BT1-001#effect#0".into(),
+            card_id: "BT1-001".into(),
+            verdict: Verdict::Diverged,
+            label: "Effect".into(),
+            text_sha256: "abc".into(),
+            scenario_path: None,
+            reason: Some("DIVERGED at step 1".into()),
+            dcgo_build: None,
+            job_id: None,
+            triage: None,
+            citation: None,
+            recorded_at: "2026-02-01T00:00:00Z".into(),
+        });
+        store.save_dir(&dir).unwrap();
+
+        assert_eq!(std::fs::read(dir.join("BT1-002.json")).unwrap(), untouched_before);
+        let touched = std::fs::read_to_string(dir.join("BT1-001.json")).unwrap();
+        assert!(touched.contains("\"diverged\""));
+        assert!(touched.contains("\r\n"), "an existing CRLF file must stay CRLF");
+        assert!(!touched.replace("\r\n", "").contains('\n'), "no bare LF lines");
+    }
+
+    #[test]
+    fn set_provenance_stamps_job_and_build_and_the_row_is_written() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut store = VerdictStore::default();
+        store.record(diverged_row("BT1-001"));
+        store.save_dir(dir.path()).unwrap();
+
+        let mut store = VerdictStore::load_dir(dir.path()).unwrap();
+        store
+            .set_provenance("BT1-001#effect#0", Some("exam-BT1-001-effect0".into()), Some("8b6c39ea1".into()))
+            .unwrap();
+        store.save_dir(dir.path()).unwrap();
+
+        let back = VerdictStore::load_dir(dir.path()).unwrap();
+        let row = back.get("BT1-001#effect#0").unwrap();
+        assert_eq!(row.job_id.as_deref(), Some("exam-BT1-001-effect0"));
+        assert_eq!(row.dcgo_build.as_deref(), Some("8b6c39ea1"));
+        assert!(store.set_provenance("BT9-999#effect#0", None, None).is_err());
+    }
+
+    pub(super) fn diverged_row_for(card: &str) -> ClauseVerdict {
+        diverged_row(card)
+    }
+
+    fn diverged_row(card: &str) -> ClauseVerdict {
+        ClauseVerdict {
+            clause_id: format!("{card}#effect#0"),
+            card_id: card.into(),
+            verdict: Verdict::Diverged,
+            label: "Effect".into(),
+            text_sha256: "abc".into(),
+            scenario_path: None,
+            reason: Some("DIVERGED at step 3".into()),
+            dcgo_build: None,
+            job_id: None,
+            triage: None,
+            citation: None,
+            recorded_at: "2026-02-01T00:00:00Z".into(),
+        }
+    }
+
+    #[test]
+    fn set_triage_records_class_and_citation_on_a_diverged_row() {
+        let mut store = VerdictStore::default();
+        store.record(diverged_row("BT6-060"));
+        store
+            .set_triage("BT6-060#effect#0", Triage::DcgoQuirk, Some("G-EXAM-REVEAL-BUCKET-ADD-TIMING".into()))
+            .unwrap();
+        let row = store.get("BT6-060#effect#0").unwrap();
+        assert_eq!(row.triage, Some(Triage::DcgoQuirk));
+        assert_eq!(row.citation.as_deref(), Some("G-EXAM-REVEAL-BUCKET-ADD-TIMING"));
+        let json = store.to_json().unwrap();
+        assert!(json.contains("\"triage\": \"dcgo_quirk\""));
+    }
+
+    #[test]
+    fn set_triage_refuses_quirk_or_ours_wrong_without_citation() {
+        let mut store = VerdictStore::default();
+        store.record(diverged_row("BT6-060"));
+        assert!(store.set_triage("BT6-060#effect#0", Triage::DcgoQuirk, None).is_err());
+        assert!(store.set_triage("BT6-060#effect#0", Triage::OursWrong, Some("  ".into())).is_err());
+        assert!(store.set_triage("BT6-060#effect#0", Triage::Undetermined, None).is_ok());
+    }
+
+    #[test]
+    fn set_triage_refuses_a_non_diverged_row() {
+        let mut store = VerdictStore::default();
+        let mut row = diverged_row("BT1-001");
+        row.verdict = Verdict::Confirmed;
+        store.record(row);
+        let err = store
+            .set_triage("BT1-001#effect#0", Triage::DcgoQuirk, Some("x".into()))
+            .unwrap_err();
+        assert!(err.contains("not diverged"), "got: {err}");
+    }
+
+    #[test]
+    fn old_rows_without_triage_still_parse() {
+        let text = r#"{"version":1,"last_updated":"x","clauses":{"BT1-001#effect#0":{
+            "clause_id":"BT1-001#effect#0","card_id":"BT1-001","verdict":"diverged",
+            "label":"Effect","text_sha256":"abc","recorded_at":"x"}}}"#;
+        let store = VerdictStore::from_json(text).unwrap();
+        assert_eq!(store.get("BT1-001#effect#0").unwrap().triage, None);
+    }
+}
+
+#[cfg(test)]
+mod verdict_set_tests {
+    //! `dcgo-harness verdict-set`: the loop's way to record an ending the
+    //! exam itself cannot produce -- an `unreachable` clause (no legal line),
+    //! an interaction ending, and a triage on either.
+    use super::*;
+
+    fn book() -> ClauseTextBook {
+        ClauseTextBook::from_json(
+            r#"{"clauses":[{"id":"BT7-056#effect#0","label":"[On Play]","text":"t"}]}"#, "t",
+        ).unwrap()
+    }
+
+    fn ibook() -> InteractionBook {
+        InteractionBook::from_json(
+            r#"{"version":1,"interactions":{"qa:Q1":{"source":"qa","card_ids":["BT7-056"],"kind":"positive","gating":true,"text_sha256":"abc"}}}"#,
+            "t",
+        ).unwrap()
+    }
+
+    #[test]
+    fn an_unreachable_clause_is_recorded_with_its_reason() {
+        let mut store = VerdictStore::default();
+        set_clause_verdict(&mut store, &book(), "BT7-056#effect#0", Verdict::Unreachable,
+                           Some("no legal line reaches the window".into()), None, "t".into()).unwrap();
+        let row = store.get("BT7-056#effect#0").unwrap();
+        assert_eq!(row.verdict, Verdict::Unreachable);
+        assert_eq!(row.reason.as_deref(), Some("no legal line reaches the window"));
+    }
+
+    #[test]
+    fn unreachable_and_unavailable_need_a_reason() {
+        let mut store = VerdictStore::default();
+        let err = set_clause_verdict(&mut store, &book(), "BT7-056#effect#0", Verdict::Unreachable,
+                                     None, None, "t".into()).unwrap_err();
+        assert!(err.contains("reason"), "{err}");
+        assert!(store.get("BT7-056#effect#0").is_none());
+    }
+
+    #[test]
+    fn a_triage_rides_along_on_a_diverged_clause() {
+        let mut store = VerdictStore::default();
+        set_clause_verdict(&mut store, &book(), "BT7-056#effect#0", Verdict::Diverged,
+                           Some("DIVERGED at step 3".into()),
+                           Some((Triage::DcgoQuirk, Some("qa:Q1".into()))), "t".into()).unwrap();
+        let row = store.get("BT7-056#effect#0").unwrap();
+        assert_eq!(row.triage, Some(Triage::DcgoQuirk));
+        assert_eq!(row.citation.as_deref(), Some("qa:Q1"));
+    }
+
+    #[test]
+    fn an_orphan_clause_is_refused() {
+        let mut store = VerdictStore::default();
+        let err = set_clause_verdict(&mut store, &book(), "BT9-999#effect#0", Verdict::Unreachable,
+                                     Some("x".into()), None, "t".into()).unwrap_err();
+        assert!(err.contains("refusing"), "{err}");
+    }
+
+    #[test]
+    fn an_interaction_ending_is_recorded_under_every_card_with_its_triage() {
+        let mut store = VerdictStore::default();
+        set_interaction_verdict(&mut store, &ibook(), "qa:Q1", &[], Verdict::Diverged,
+                                Some("ours contradicts ruling".into()),
+                                Some((Triage::DcgoQuirk, Some("qa:Q1".into()))), "t".into()).unwrap();
+        let row = store.get_interaction("qa:Q1").unwrap();
+        assert_eq!(row.verdict, Verdict::Diverged);
+        assert_eq!(row.card_ids, vec!["BT7-056".to_string()]);
+        assert_eq!(row.extra.get("triage").and_then(|v| v.as_str()), Some("dcgo_quirk"));
+        assert_eq!(row.extra.get("citation").and_then(|v| v.as_str()), Some("qa:Q1"));
+        let dir = tempfile::tempdir().unwrap();
+        store.save_dir(dir.path()).unwrap();
+        let back = VerdictStore::load_dir(dir.path()).unwrap();
+        assert_eq!(back.get_interaction("qa:Q1").unwrap().extra.get("triage").and_then(|v| v.as_str()), Some("dcgo_quirk"));
+    }
+
+    #[test]
+    fn a_quirk_triage_without_a_citation_is_refused_for_interactions_too() {
+        let mut store = VerdictStore::default();
+        let err = set_interaction_verdict(&mut store, &ibook(), "qa:Q1", &[], Verdict::Diverged,
+                                          Some("x".into()), Some((Triage::DcgoQuirk, None)), "t".into()).unwrap_err();
+        assert!(err.contains("citation"), "{err}");
+        assert!(store.get_interaction("qa:Q1").is_none());
+    }
+}
+
+#[cfg(test)]
+mod interaction_store_tests {
+    //! Verdict-store v2 (card-loop design D8): `interactions` beside `clauses`.
+    use super::*;
+
+    fn clause_row(clause: &str) -> ClauseVerdict {
+        ClauseVerdict {
+            clause_id: clause.to_string(),
+            card_id: clause.split('#').next().unwrap().to_string(),
+            verdict: Verdict::Confirmed,
+            label: "Effect".to_string(),
+            text_sha256: "c-sha".to_string(),
+            scenario_path: None,
+            reason: None,
+            dcgo_build: None,
+            job_id: None,
+            recorded_at: "2026-10-01T00:00:00Z".to_string(),
+            triage: None,
+            citation: None,
+        }
+    }
+
+    #[test]
+    fn set_provenance_also_stamps_an_interaction_row() {
+        let mut store = VerdictStore::default();
+        store.record_interaction(iv("qa:Q1", &["BT1-001"], Verdict::Confirmed));
+        store.set_provenance("qa:Q1", Some("exam-BT1-001-qa1".into()), None).unwrap();
+        assert_eq!(store.get_interaction("qa:Q1").unwrap().job_id.as_deref(), Some("exam-BT1-001-qa1"));
+    }
+
+    #[test]
+    fn an_interaction_verdict_for_a_card_that_already_has_a_file_is_saved() {
+        // record_interaction must mark its cards dirty: save_dir rewrites only
+        // dirty cards, so an interaction filed under a card that already has a
+        // verdict file was reported "recorded" and silently never written.
+        let dir = tempfile::tempdir().unwrap();
+        let mut store = VerdictStore::default();
+        store.record(super::tests::diverged_row_for("BT1-001"));
+        store.save_dir(dir.path()).unwrap();
+
+        let mut store = VerdictStore::load_dir(dir.path()).unwrap();
+        store.record_interaction(iv("qa:Q7", &["BT1-001"], Verdict::Confirmed));
+        store.save_dir(dir.path()).unwrap();
+
+        let back = VerdictStore::load_dir(dir.path()).unwrap();
+        assert!(back.get_interaction("qa:Q7").is_some(), "the interaction verdict was not written");
+    }
+
+    fn iv(id: &str, cards: &[&str], verdict: Verdict) -> InteractionVerdict {
+        InteractionVerdict {
+            interaction_id: id.to_string(),
+            card_ids: cards.iter().map(|c| c.to_string()).collect(),
+            source: if id.starts_with("qa:") { "qa" } else { "probe" }.to_string(),
+            kind: "positive".to_string(),
+            verdict,
+            text_sha256: "i-sha".to_string(),
+            scenario_path: Some("qa/dcgo-exams/BT7/BT7-056-qa-Q1601.yaml".to_string()),
+            reason: None,
+            dcgo_build: None,
+            job_id: None,
+            recorded_at: "2026-10-02T00:00:00Z".to_string(),
+            extra: BTreeMap::new(),
+        }
+    }
+
+    fn tmp(name: &str) -> PathBuf {
+        let p = std::env::temp_dir().join(format!("exam_verdicts_v2_{name}"));
+        let _ = std::fs::remove_dir_all(&p);
+        p
+    }
+
+    const BOOK: &str = r#"{"version": 1, "interactions": {
+        "qa:Q1601": {"source": "qa", "q_id": "Q1601", "card_ids": ["BT7-056", "EX4-030"],
+                     "kind": "positive", "gating": true, "text_sha256": "ruling-sha"},
+        "probe:BT7-056#effect#0:scope:neg": {"source": "probe", "card_ids": ["BT7-056"],
+                     "clause_id": "BT7-056#effect#0", "family": "scope",
+                     "family_version": "families@1", "kind": "negative", "gating": true,
+                     "text_sha256": "clause-sha", "why": "text:this digimon"}}}"#;
+
+    #[test]
+    fn a_clause_only_store_still_writes_version_1_without_an_interactions_key() {
+        let mut s = VerdictStore::default();
+        s.record(clause_row("BT7-056#effect#0"));
+        let json = s.to_json().unwrap();
+        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["version"], 1);
+        assert!(value.get("interactions").is_none(), "{json}");
+    }
+
+    #[test]
+    fn a_store_with_an_interaction_writes_version_2_and_round_trips() {
+        let mut s = VerdictStore::default();
+        s.record(clause_row("BT7-056#effect#0"));
+        s.record_interaction(iv("qa:Q1601", &["BT7-056"], Verdict::Confirmed));
+        let json = s.to_json().unwrap();
+        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["version"], 2);
+        let back = VerdictStore::from_json(&json).unwrap();
+        assert_eq!(back.get_interaction("qa:Q1601").unwrap().verdict, Verdict::Confirmed);
+        assert_eq!(back.get("BT7-056#effect#0").unwrap().verdict, Verdict::Confirmed);
+    }
+
+    #[test]
+    fn unknown_fields_on_an_interaction_survive_a_round_trip() {
+        // A triage block / citation / produced_by written by a newer tool must
+        // not be dropped by an older reader's load-then-save.
+        let mut row = iv("qa:Q1601", &["BT7-056"], Verdict::Diverged);
+        row.extra.insert("citation".to_string(), serde_json::json!("qa:Q1601"));
+        let mut s = VerdictStore::default();
+        s.record_interaction(row);
+        let back = VerdictStore::from_json(&s.to_json().unwrap()).unwrap();
+        assert_eq!(
+            back.get_interaction("qa:Q1601").unwrap().extra["citation"],
+            serde_json::json!("qa:Q1601")
+        );
+    }
+
+    #[test]
+    fn from_json_refuses_unknown_versions_and_v1_interactions_and_key_mismatches() {
+        let err = VerdictStore::from_json(r#"{"version": 3, "clauses": {}}"#).unwrap_err();
+        assert!(err.contains("version 3"), "{err}");
+
+        let mut s = VerdictStore::default();
+        s.record_interaction(iv("qa:Q1601", &["BT7-056"], Verdict::Confirmed));
+        let v2 = s.to_json().unwrap();
+        let v1 = v2.replace("\"version\": 2", "\"version\": 1");
+        assert!(VerdictStore::from_json(&v1).unwrap_err().contains("version-1"));
+
+        let mismatched =
+            v2.replace("\"interaction_id\": \"qa:Q1601\"", "\"interaction_id\": \"qa:Q9\"");
+        assert!(VerdictStore::from_json(&mismatched).unwrap_err().contains("qa:Q9"));
+    }
+
+    #[test]
+    fn save_dir_files_a_shared_ruling_under_every_card_and_load_dir_merges_it_once() {
+        let dir = tmp("shared");
+        let mut s = VerdictStore::default();
+        s.record(clause_row("BT7-056#effect#0"));
+        s.record_interaction(iv("qa:Q1601", &["BT7-056", "EX4-030"], Verdict::Confirmed));
+        s.save_dir(&dir).unwrap();
+
+        for card in ["BT7-056", "EX4-030"] {
+            let text = std::fs::read_to_string(dir.join(format!("{card}.json"))).unwrap();
+            assert!(text.contains("qa:Q1601"), "{card} file lacks the shared ruling");
+            assert!(text.contains("\"version\": 2"));
+        }
+        let back = VerdictStore::load_dir(&dir).unwrap();
+        assert_eq!(back.interaction_count(), 1, "one interaction, two copies");
+        assert_eq!(back.len(), 1);
+    }
+
+    #[test]
+    fn load_dir_refuses_disagreeing_copies_of_one_interaction() {
+        let dir = tmp("disagree");
+        let mut s = VerdictStore::default();
+        s.record_interaction(iv("qa:Q1601", &["BT7-056", "EX4-030"], Verdict::Confirmed));
+        s.save_dir(&dir).unwrap();
+        // A partial rewrite: only EX4-030's copy moves to diverged.
+        let mut other = VerdictStore::default();
+        other.record_interaction(iv("qa:Q1601", &["BT7-056", "EX4-030"], Verdict::Diverged));
+        other.save(&dir.join("EX4-030.json")).unwrap();
+
+        let err = VerdictStore::load_dir(&dir).unwrap_err();
+        assert!(err.contains("disagreeing copies"), "{err}");
+        assert!(err.contains("BT7-056.json") && err.contains("EX4-030.json"), "{err}");
+    }
+
+    #[test]
+    fn load_dir_refuses_an_interaction_misfiled_under_a_card_it_does_not_count_for() {
+        let dir = tmp("misfiled");
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut s = VerdictStore::default();
+        s.record_interaction(iv("qa:Q1601", &["BT7-056"], Verdict::Confirmed));
+        std::fs::write(dir.join("ST1-12.json"), s.to_json().unwrap()).unwrap();
+        let err = VerdictStore::load_dir(&dir).unwrap_err();
+        assert!(err.contains("ST1-12"), "{err}");
+    }
+
+    #[test]
+    fn the_committed_v1_ledger_still_loads_and_would_be_written_back_as_v1() {
+        let root = std::env::var("DIGIMON_REPO_ROOT")
+            .unwrap_or_else(|_| concat!(env!("CARGO_MANIFEST_DIR"), "/../../..").to_string());
+        let dir = Path::new(&root).join("qa/qa-reports/exam-verdicts");
+        let store = VerdictStore::load_dir(&dir).expect("committed ledger loads");
+        assert!(!store.is_empty(), "expected committed verdicts under {}", dir.display());
+        assert_eq!(store.interaction_count(), 0);
+        let value: serde_json::Value = serde_json::from_str(&store.to_json().unwrap()).unwrap();
+        assert_eq!(value["version"], 1, "a clause-only ledger must not be upgraded to v2");
+    }
+
+    /// The Python writer (`exam_binding.write_interaction_verdict`, the one the
+    /// card-loop driver uses) and this one must agree byte for byte: the
+    /// fixture was written by Python, is read here, and re-saved identically.
+    #[test]
+    fn the_python_writers_v2_files_round_trip_byte_identically() {
+        let root = std::env::var("DIGIMON_REPO_ROOT")
+            .unwrap_or_else(|_| concat!(env!("CARGO_MANIFEST_DIR"), "/../../..").to_string());
+        let fixture =
+            Path::new(&root).join("code/tests/tools/fixtures/card_loop/interactions/verdicts_v2");
+        let store = VerdictStore::load_dir(&fixture).expect("python-written v2 files load");
+        assert_eq!(store.interaction_count(), 2);
+        let shared = store.get_interaction("qa:Q2002").unwrap();
+        assert_eq!(shared.card_ids, vec!["BT7-056".to_string(), "EX4-030".to_string()]);
+        assert_eq!(shared.extra["produced_by"], serde_json::json!("att-0001"));
+
+        let out = tmp("python_round_trip");
+        store.save_dir(&out).unwrap();
+        for card in ["BT7-056", "EX4-030"] {
+            let name = format!("{card}.json");
+            let ours = std::fs::read_to_string(out.join(&name)).unwrap();
+            let theirs = std::fs::read_to_string(fixture.join(&name)).unwrap().replace("\r\n", "\n");
+            assert_eq!(ours, theirs, "{name} differs between the Rust and Python writers");
+        }
+    }
+
+    #[test]
+    fn record_interaction_verdict_takes_cards_and_fingerprint_from_the_denominator() {
+        let book = InteractionBook::from_json(BOOK, "test").unwrap();
+        let mut store = VerdictStore::default();
+        record_interaction_verdict(
+            &mut store,
+            &book,
+            "qa:Q1601",
+            &[],
+            Verdict::Confirmed,
+            Some("x.yaml".to_string()),
+            None,
+            "2026-10-04T00:00:00Z".to_string(),
+        )
+        .unwrap();
+        let row = store.get_interaction("qa:Q1601").unwrap();
+        assert_eq!(row.card_ids, vec!["BT7-056".to_string(), "EX4-030".to_string()]);
+        assert_eq!(row.text_sha256, "ruling-sha");
+        assert_eq!(row.source, "qa");
+    }
+
+    #[test]
+    fn an_orphan_interaction_is_refused_and_the_store_is_untouched() {
+        let book = InteractionBook::from_json(BOOK, "test").unwrap();
+        let mut store = VerdictStore::default();
+        let err = record_interaction_verdict(
+            &mut store,
+            &book,
+            "qa:Q9999",
+            &[],
+            Verdict::Confirmed,
+            None,
+            None,
+            "2026-10-04T00:00:00Z".to_string(),
+        )
+        .unwrap_err();
+        assert!(err.contains("qa:Q9999"), "{err}");
+        assert_eq!(store.interaction_count(), 0);
+    }
+
+    #[test]
+    fn a_combo_interaction_needs_no_denominator_entry_but_needs_a_card() {
+        let book = InteractionBook::from_json(BOOK, "test").unwrap();
+        let mut store = VerdictStore::default();
+        assert!(record_interaction_verdict(
+            &mut store,
+            &book,
+            "combo:x",
+            &[],
+            Verdict::Confirmed,
+            None,
+            None,
+            "t".to_string()
+        )
+        .is_err());
+        record_interaction_verdict(
+            &mut store,
+            &book,
+            "combo:x",
+            &["BT7-056".to_string()],
+            Verdict::Confirmed,
+            None,
+            None,
+            "t".to_string(),
+        )
+        .unwrap();
+        assert_eq!(store.get_interaction("combo:x").unwrap().source, "combo");
+    }
+
+    #[test]
+    fn a_missing_denominator_says_it_was_never_generated() {
+        let err = InteractionBook::load(&tmp("no-book").join("interaction_denominator.json"))
+            .unwrap_err();
+        assert!(err.contains("not generated"), "{err}");
+    }
+
+    #[test]
+    fn the_book_lists_gating_ids_per_card() {
+        let book = InteractionBook::from_json(BOOK, "test").unwrap();
+        assert_eq!(
+            book.gating_ids_for_card("BT7-056"),
+            vec![
+                "probe:BT7-056#effect#0:scope:neg".to_string(),
+                "qa:Q1601".to_string()
+            ]
+        );
+        assert_eq!(book.gating_ids_for_card("EX4-030"), vec!["qa:Q1601".to_string()]);
+    }
+
+    #[test]
+    fn write_interaction_to_card_files_keeps_each_files_other_verdicts() {
+        let dir = tmp("writer");
+        let mut s = VerdictStore::default();
+        s.record(clause_row("BT7-056#effect#0"));
+        s.record(clause_row("ST1-12#effect#0"));
+        s.save_dir(&dir).unwrap();
+        let st1_before = std::fs::read_to_string(dir.join("ST1-12.json")).unwrap();
+
+        let shared = iv("qa:Q1601", &["BT7-056", "EX4-030"], Verdict::Confirmed);
+        let written = write_interaction_to_card_files(&dir, &shared).unwrap();
+        assert_eq!(written.len(), 2);
+        let back = VerdictStore::load_dir(&dir).unwrap();
+        assert_eq!(back.get("BT7-056#effect#0").unwrap().verdict, Verdict::Confirmed);
+        assert_eq!(back.interaction_count(), 1);
+        assert_eq!(
+            std::fs::read_to_string(dir.join("ST1-12.json")).unwrap(),
+            st1_before,
+            "a card the ruling does not print on is never rewritten"
+        );
+        let bt7: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(dir.join("BT7-056.json")).unwrap())
+                .unwrap();
+        assert_eq!(bt7["version"], 2);
+        assert_eq!(bt7["last_updated"], "2026-10-02T00:00:00Z");
+    }
+
+    #[test]
+    fn interaction_summary_keeps_the_denominator_and_flags_drift() {
+        let mut s = VerdictStore::default();
+        s.record_interaction(iv("qa:Q1601", &["BT7-056"], Verdict::Confirmed));
+        s.record_interaction(iv(
+            "probe:BT7-056#effect#0:scope:neg",
+            &["BT7-056"],
+            Verdict::Diverged,
+        ));
+        s.set_current_text_sha("qa:Q1601", "edited-answer-sha");
+        let ids = vec![
+            "qa:Q1601".to_string(),
+            "probe:BT7-056#effect#0:scope:neg".to_string(),
+            "qa:Q1602".to_string(),
+        ];
+        let sum = s.interaction_summary(&ids);
+        assert_eq!(sum.total, 3);
+        assert_eq!(
+            (sum.confirmed, sum.diverged, sum.unmeasured, sum.invalidated),
+            (0, 1, 2, 1)
+        );
     }
 }

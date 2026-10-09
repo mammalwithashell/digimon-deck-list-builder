@@ -27,12 +27,11 @@ use std::path::Path;
 use digimon_engine::runners::replay::ReplaySession;
 use digimon_engine::CardData;
 
-use crate::exam::adapter::{LoweredStep, ScenarioAdapter};
+use crate::exam::adapter::{LoweredStep, ScenarioAdapter, SelectSource};
 use crate::exam::assertions::check_assertions;
 use crate::exam::deckbook::{ordered_deck, DeckBook};
 use crate::exam::differ::{diff, DiffReport};
 use crate::exam::projection::StateProjection;
-use crate::exam::scenario::StepAction;
 use crate::exam::scenario::Scenario;
 
 /// Default `cards.json`, used when the caller (the MCP) has no natural place
@@ -53,10 +52,96 @@ pub const DEFAULT_DECK_POOL: &str = "qa/dcgo-exams/EX12/toho_pool.json";
 /// the same override) -- can point this at the real repo without mutating the
 /// process's working directory, which would race every other test thread
 /// sharing that CWD.
-fn resolve_default(rel: &str) -> std::path::PathBuf {
+pub(crate) fn resolve_default(rel: &str) -> std::path::PathBuf {
     match std::env::var("DIGIMON_REPO_ROOT") {
         Ok(root) => std::path::Path::new(&root).join(rel),
         Err(_) => std::path::PathBuf::from(rel),
+    }
+}
+
+/// Our engine's live prompt immediately BEFORE one scenario step -- what that
+/// step answers (`exam --inspect N`, MCP `exam_probe(inspect_step: N)`).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct StepSnapshot {
+    pub step: usize,
+    /// Debug-formatted `SelectionKind` of the prompt live before this step, if any.
+    pub pending_kind: Option<String>,
+    pub pending_optional: Option<bool>,
+    pub pending_prompt: Option<String>,
+    /// The prompt's legal action ids, each with the card it picks when the id
+    /// names one (`explain_action`).
+    pub candidates: Vec<(u16, Option<String>)>,
+}
+
+impl StepSnapshot {
+    fn of(game: &digimon_engine::Game, step: usize) -> StepSnapshot {
+        let p = game.pending_selection.as_ref();
+        StepSnapshot {
+            step,
+            pending_kind: p.map(|p| format!("{:?}", p.kind)),
+            pending_optional: p.map(|p| p.is_optional),
+            pending_prompt: p.map(|p| p.prompt.clone()),
+            candidates: p
+                .map(|p| {
+                    p.valid_action_ids
+                        .iter()
+                        .map(|id| (*id, candidate_card(game, p, *id)))
+                        .collect()
+                })
+                .unwrap_or_default(),
+        }
+    }
+}
+
+/// The card a live prompt's action id picks, decoded with the same encodings
+/// the scenario resolver (`runners::selection_resolve::resolve_next`) answers
+/// by identity: battle-area targets (`100 + slot`, side from the kind; `AnyField`
+/// carries the player), hand / trash / reveal indices of the zone's owner.
+/// Other kinds fall back to `explain_action`; `None` means "not resolved
+/// here", never "no card".
+fn candidate_card(
+    game: &digimon_engine::Game,
+    p: &digimon_engine::selection::PendingSelection,
+    id: u16,
+) -> Option<String> {
+    use digimon_engine::action::space::{
+        ATTACK_START, PLAY_HAND_START, SEL_REVEAL_START, TARGETS_PER_ATTACKER, TRASH_EFFECT_START,
+    };
+    use digimon_engine::selection::SelectionKind;
+    let cards = &game.card_data;
+    let field = |player: digimon_engine::PlayerId, slot: u16| {
+        game.player(player)
+            .battle_area
+            .get(slot as usize)
+            .map(|perm| perm.top_card().card_id(cards).to_string())
+    };
+    let at = |zone: &[digimon_engine::CardSource], base: u16| {
+        id.checked_sub(base)
+            .and_then(|i| zone.get(i as usize))
+            .map(|c| c.card_id(cards).to_string())
+    };
+    let owner = game.player(p.zone_owner.unwrap_or(p.selecting_player));
+    let rel = id.checked_sub(ATTACK_START);
+    match &p.kind {
+        SelectionKind::OwnField => rel.filter(|s| *s < TARGETS_PER_ATTACKER).and_then(|s| field(p.selecting_player, s)),
+        SelectionKind::OppField => rel
+            .filter(|s| *s < TARGETS_PER_ATTACKER)
+            .and_then(|s| field(game.next_clockwise(p.selecting_player), s)),
+        SelectionKind::AnyField => rel.and_then(|abs| {
+            field((abs / TARGETS_PER_ATTACKER) as digimon_engine::PlayerId, abs % TARGETS_PER_ATTACKER)
+        }),
+        SelectionKind::Hand | SelectionKind::UnionZone { .. } if id < SEL_REVEAL_START => {
+            at(&owner.hand, PLAY_HAND_START)
+        }
+        SelectionKind::Hand | SelectionKind::UnionZone { .. } | SelectionKind::Trash
+            if id >= TRASH_EFFECT_START =>
+        {
+            at(&owner.trash, TRASH_EFFECT_START)
+        }
+        SelectionKind::Reveal | SelectionKind::RevealBucket { .. } => {
+            at(&game.revealed_cards, SEL_REVEAL_START)
+        }
+        _ => digimon_engine::action::explain::explain_action(game, p.selecting_player, id).card_id,
     }
 }
 
@@ -69,6 +154,10 @@ fn resolve_default(rel: &str) -> std::path::PathBuf {
 /// reaches its last step. Only [`ScenarioAdapter::from_scenario`] and
 /// [`ReplaySession`] construction are true failures to lower.
 pub struct LoweredRun {
+    /// Our live prompt before every scenario step, in step order.
+    pub snapshots: Vec<StepSnapshot>,
+    /// The card that raised each select step's prompt (`exam --explain-selects`).
+    pub select_sources: Vec<SelectSource>,
     /// Every step's lowered form, in scenario order -- what `--emit-job`
     /// turns into a DCGO scripted job.
     pub lowered_steps: Vec<LoweredStep>,
@@ -112,6 +201,7 @@ pub fn lower_and_run(
     let adapter = ScenarioAdapter::from_scenario(s, deck_p0, deck_p1, card_data)?;
     let lowered_steps = adapter.lowered_steps().to_vec();
     let lowered_owners = adapter.lowered_owners().to_vec();
+    let select_sources = adapter.select_sources().to_vec();
     // Captured BEFORE the adapter moves into the replay session below.
     let wire_rows_per_step = adapter.dcgo_wire_rows_per_step(s.steps.len());
     let ours_present_per_step = adapter.ours_present_per_step(s.steps.len());
@@ -135,7 +225,9 @@ pub fn lower_and_run(
     // row. Our state genuinely does not move at such a step, so the previous
     // projection is repeated.
     let mut projections = vec![StateProjection::from_game(&session.game, 0)];
+    let mut snapshots = Vec::with_capacity(s.steps.len());
     for i in 0..s.steps.len() {
+        snapshots.push(StepSnapshot::of(&session.game, i));
         for _ in 0..specs_per_step[i] {
             session.step();
         }
@@ -143,6 +235,8 @@ pub fn lower_and_run(
     }
 
     Ok(LoweredRun {
+        snapshots,
+        select_sources,
         lowered_steps,
         lowered_owners,
         wire_rows_per_step,
@@ -159,49 +253,71 @@ pub fn lower_and_run(
     })
 }
 
-/// Run one scenario **sim-only** and report what happened, without touching
-/// the verdict store or emitting a DCGO job.
-///
-/// `sim_only: false` is refused rather than faked: an oracle diff needs a
-/// DCGO state sidecar next to a real recording, and nothing upstream of this
-/// call (a freshly-written probe scratch file, or a scenario path handed to
-/// `run_scenario`) has run Unity to produce one. Pretending to answer that
-/// question with sim-only data is exactly the mistake this tool exists to
-/// prevent -- see the module doc and `SIM_ONLY_NOTE` in `mcp::handlers`.
-///
-/// `root` is accepted for the day this queues a real harness job against
-/// `root`'s job directories and polls for the sidecar it writes; today it is
-/// unused because that queueing does not exist yet.
-pub fn run_one(
-    scenario: &Path,
-    sim_only: bool,
-    root: Option<&Path>,
-) -> Result<DiffReport, String> {
+/// The deck book a scenario's `rest:` names live in: a pool beside it, else
+/// anywhere under `qa/dcgo-exams/` ([`crate::exam::deckbook::book_for`]),
+/// else [`DEFAULT_DECK_POOL`] (the stock starter decks resolve under any book).
+pub fn deck_book_for(scenario: &Path, s: &Scenario) -> std::path::PathBuf {
+    crate::exam::deckbook::book_for(
+        scenario,
+        &[s.decks.p0.rest.as_str(), s.decks.p1.rest.as_str()],
+        &resolve_default("qa/dcgo-exams"),
+    )
+    .unwrap_or_else(|| resolve_default(DEFAULT_DECK_POOL))
+}
+
+/// Read, lower and step one scenario file sim-only over its deck book (`decks`,
+/// else [`deck_book_for`]) and the default `cards.json` -- whether or not the
+/// line runs to completion.
+fn lower_scenario_file(scenario: &Path, decks: Option<&Path>) -> Result<(Scenario, LoweredRun), String> {
     let text = std::fs::read_to_string(scenario)
         .map_err(|e| format!("reading {}: {e}", scenario.display()))?;
     let s = Scenario::from_yaml(&text)?;
-
-    if !sim_only {
-        let _ = root;
-        return Err(
-            "oracle mode (sim_only: false) needs a DCGO state sidecar next to a real \
-             recording, and this probe has not run one -- there is no Unity trace behind \
-             a scratch scenario or a bare scenario path. Run the CLI's \
-             `dcgo-harness exam --sidecar <dir>` against a recording captured through the \
-             harness queue once one exists."
-                .to_string(),
-        );
-    }
-
     let cards_json = resolve_default(DEFAULT_CARDS_JSON);
     let card_data = dcgo_replay::load_card_data_at(&cards_json)
         .map_err(|e| format!("loading {}: {e}", cards_json.display()))?;
-    let deck_pool = resolve_default(DEFAULT_DECK_POOL);
+    let deck_pool = match decks {
+        Some(d) => d.to_path_buf(),
+        None => deck_book_for(scenario, &s),
+    };
     let book = DeckBook::load(Some(&deck_pool), &cards_json)?;
     let deck_p0 = ordered_deck(&s.decks.p0, &book)?;
     let deck_p1 = ordered_deck(&s.decks.p1, &book)?;
-
     let run = lower_and_run(&s, deck_p0, deck_p1, &card_data)?;
+    Ok((s, run))
+}
+
+/// `{snapshot, projection, complete, steps_run}` for step `n`: our live prompt
+/// BEFORE step `n` (what that step answers) and the board it sees.
+pub fn inspect_payload(run: &LoweredRun, n: usize) -> Result<serde_json::Value, String> {
+    let out_of_range = || {
+        format!(
+            "inspect step {n} is out of range: the line has {} step(s), numbered from 0",
+            run.snapshots.len()
+        )
+    };
+    let snapshot = run.snapshots.get(n).ok_or_else(out_of_range)?;
+    let projection = run.projections.get(n).ok_or_else(out_of_range)?;
+    Ok(serde_json::json!({
+        "snapshot": snapshot,
+        "projection": projection,
+        "complete": run.complete,
+        "steps_run": run.steps_run,
+    }))
+}
+
+/// [`inspect_payload`] for a scenario file, lowered sim-only. Works on a line
+/// that stalls or fails its asserts -- exactly when an author needs it.
+pub fn inspect_one(scenario: &Path, decks: Option<&Path>, n: usize) -> Result<serde_json::Value, String> {
+    let (_, run) = lower_scenario_file(scenario, decks)?;
+    inspect_payload(&run, n)
+}
+
+/// Run one scenario **sim-only** and report what happened, without touching
+/// the verdict store or emitting a DCGO job. `decks` overrides the deck book
+/// [`deck_book_for`] would pick. The oracle route is
+/// [`crate::exam::oracle::run_oracle_exam`].
+pub fn run_one(scenario: &Path, decks: Option<&Path>) -> Result<DiffReport, String> {
+    let (s, run) = lower_scenario_file(scenario, decks)?;
     if !run.complete {
         return Err(format!(
             "the line did not run to completion: {} of {} steps",
@@ -225,4 +341,59 @@ pub fn run_one(
     // states this in its own "clean" / "note" fields; this report is the raw
     // material for that, not the final word.
     Ok(diff(&run.projections, &[]))
+}
+
+#[cfg(test)]
+mod snapshot_tests {
+    use super::*;
+
+    fn ex10_run() -> (Scenario, LoweredRun) {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+        let yaml = std::fs::read_to_string(root.join("qa/dcgo-exams/EX10/EX10-025-effect0.yaml")).unwrap();
+        let s = Scenario::from_yaml(&yaml).unwrap();
+        let book = DeckBook::load(
+            Some(root.join("qa/dcgo-exams/EX10/rocks_pool.json").as_path()),
+            root.join("data/cards.json").as_path(),
+        )
+        .unwrap();
+        let p0 = ordered_deck(&s.decks.p0, &book).unwrap();
+        let p1 = ordered_deck(&s.decks.p1, &book).unwrap();
+        let run = lower_and_run(&s, p0, p1, &crate::exam::test_support::load_card_data()).unwrap();
+        (s, run)
+    }
+
+    #[test]
+    fn lowered_run_snapshots_every_step() {
+        let (s, run) = ex10_run();
+        assert_eq!(run.snapshots.len(), s.steps.len());
+        assert!(
+            run.snapshots.iter().any(|sn| sn.pending_kind.is_some()),
+            "a line with select rows must show at least one live prompt"
+        );
+        assert!(run.snapshots.iter().enumerate().all(|(i, sn)| sn.step == i));
+    }
+
+    #[test]
+    fn inspect_pairs_the_live_prompt_with_the_board_before_the_step() {
+        let (s, run) = ex10_run();
+        let n = run.snapshots.iter().position(|sn| sn.pending_kind.is_some()).unwrap();
+        let v = inspect_payload(&run, n).unwrap();
+        assert_eq!(v["snapshot"]["step"], serde_json::json!(n));
+        assert!(v["snapshot"]["pending_kind"].is_string(), "{v}");
+        assert_eq!(v["projection"]["step"], serde_json::json!(n), "the board BEFORE step n: {v}");
+        let err = inspect_payload(&run, s.steps.len()).unwrap_err();
+        assert!(err.contains("out of range"), "{err}");
+    }
+
+    #[test]
+    fn a_live_prompts_candidates_name_the_cards_they_pick() {
+        let (_, run) = ex10_run();
+        let named = run
+            .snapshots
+            .iter()
+            .filter(|sn| sn.pending_kind.is_some())
+            .flat_map(|sn| sn.candidates.iter())
+            .any(|(_, card)| card.is_some());
+        assert!(named, "candidates must carry card identities, not bare ids: {:?}", run.snapshots);
+    }
 }

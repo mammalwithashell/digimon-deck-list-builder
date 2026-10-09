@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T16:35:44.142765600+00:00",
+  "clauses": {
+    "BT26-090#effect#0": {
+      "clause_id": "BT26-090#effect#0",
+      "card_id": "BT26-090",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "3b17ed74de1ace124e5d21a26df7a8bc475b1f7d4fe69ded58a9548f7ddace96",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-090-effect0.yaml",
+      "recorded_at": "2026-10-05T16:35:43.532520900+00:00"
+    },
+    "BT26-090#security#0": {
+      "clause_id": "BT26-090#security#0",
+      "card_id": "BT26-090",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-090-effect1.yaml",
+      "recorded_at": "2026-10-05T16:35:44.142765600+00:00"
+    }
+  }
+}

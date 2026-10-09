@@ -1,0 +1,39 @@
+{
+  "title": "card-loop implement result v1",
+  "description": "Stage `implement` (design D4 card items; CLAUDE.md rules 18/28, DSL-first). The worker authored or audited ONE card's YAML DSL spec and its DebugRunner behavioral tests in its worktree; the driver reads the diff from the worktree, not from this result. `files`: repo-relative paths created or changed. `tests`: test names added or relied on. `test_result_lines`: the verbatim cargo `test result:` / pytest summary lines observed (honesty contract: pasted, never paraphrased; empty if no test was run). `gaps`: DSL vocabulary (`dsl`, qa/dsl-vocab-gaps.md) or engine primitives (`engine`, docs/RUST_ENGINE_GAPS.md) the card needs and the substrate lacks; a non-empty list parks the card on those gap ids (no approximations). Schema is strict-mode compatible: every property is required.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["files", "tests", "test_result_lines", "gaps", "notes"],
+  "properties": {
+    "files": {
+      "type": "array",
+      "description": "Repo-relative paths created or modified (YAML spec, behavioral test, registrations).",
+      "items": {"type": "string"}
+    },
+    "tests": {
+      "type": "array",
+      "description": "Behavioral test names (e.g. `bt7::bt7_056::on_play_draws`).",
+      "items": {"type": "string"}
+    },
+    "test_result_lines": {
+      "type": "array",
+      "description": "Verbatim summary lines from the test runs, e.g. `test result: ok. 4 passed; 0 failed; ...`.",
+      "items": {"type": "string"}
+    },
+    "gaps": {
+      "type": "array",
+      "description": "Missing substrate; non-empty => the card is PARKED on these ids.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "id", "summary"],
+        "properties": {
+          "kind": {"type": "string", "enum": ["dsl", "engine"]},
+          "id": {"type": "string", "description": "Stable gap id (existing tracker id when one exists)."},
+          "summary": {"type": "string"}
+        }
+      }
+    },
+    "notes": {"type": "string", "description": "Anything the reviewer must know; empty string if none."}
+  }
+}

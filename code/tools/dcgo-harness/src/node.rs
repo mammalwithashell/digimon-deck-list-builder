@@ -11,8 +11,25 @@
 //! produce a readable report, not an error string.
 
 use std::path::Path;
+use std::path::PathBuf;
 
 use crate::{daemon, manifest};
+
+/// The harness root an oracle node uses when none is passed: the
+/// `DCGO_HARNESS_ROOT` override, else the DCGO player's LocalLow directory
+/// when it exists. The `USERPROFILE` fallback is Windows-only: on any other
+/// platform `USERPROFILE` is unset and only `DCGO_HARNESS_ROOT` can supply a root.
+pub fn default_harness_root() -> Option<PathBuf> {
+    if let Ok(p) = std::env::var("DCGO_HARNESS_ROOT") {
+        if !p.trim().is_empty() {
+            return Some(PathBuf::from(p));
+        }
+    }
+    let profile = std::env::var("USERPROFILE").ok()?;
+    let p = Path::new(&profile)
+        .join("AppData/LocalLow/DCGO/DCGO/dcgo_harness");
+    p.is_dir().then_some(p)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CheckStatus {
@@ -285,5 +302,14 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
         let h = health(&root, Some(Path::new("does/not/exist")));
         assert!(!h.go);
+    }
+
+    #[test]
+    fn default_harness_root_honours_the_env_override() {
+        let dir = std::env::temp_dir().join("harness-root-env-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_var("DCGO_HARNESS_ROOT", &dir);
+        assert_eq!(super::default_harness_root(), Some(dir.clone()));
+        std::env::remove_var("DCGO_HARNESS_ROOT");
     }
 }

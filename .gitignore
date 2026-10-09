@@ -12,6 +12,9 @@ dcgo_build_errors_*
 .vscode/settings.json
 models/
 runs/
+# card-loop run dirs (plan.json, events.jsonl, transcripts); `runs/` above already
+# covers them -- explicit so the card loop's contract survives a narrowing of it.
+runs/card-loop/
 .claude/settings.local.json
 nul
 code/frontend/dist/

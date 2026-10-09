@@ -1,0 +1,47 @@
+{
+  "$id": "card-loop/classify_qa@1",
+  "title": "classify_qa result",
+  "description": "Classify one official Q&A ruling before any oracle time is spent (design D6). TERMINATING when textual or not_examinable: both model families answer independently from the same packet and must agree (design D5); disagreement or a missing citation escalates. Strict-mode compatible: every property is required and objects are closed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "q_id",
+    "classification",
+    "reasoning",
+    "citation",
+    "examined_clauses"
+  ],
+  "properties": {
+    "q_id": {
+      "type": "string",
+      "minLength": 2,
+      "description": "The ruling's number exactly as card_qa.json keys it, e.g. Q1601."
+    },
+    "classification": {
+      "type": "string",
+      "enum": [
+        "behavioral",
+        "textual",
+        "not_examinable"
+      ],
+      "description": "behavioral: how play resolves -- exam it. textual: only clarifies printed data (name, traits, colour, cost wording) -- checked against card data, no oracle. not_examinable: tournament procedure, or a state no legal line of play can reach."
+    },
+    "reasoning": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Why this class, in terms of the question and answer text."
+    },
+    "citation": {
+      "type": "string",
+      "minLength": 3,
+      "description": "Always starts with qa:<Q-number>. textual: also the printed field it clarifies (e.g. 'card_bundles/BT7-056.md traits'). not_examinable: also why no line reaches it (a general_rule.pdf section, or the procedure named)."
+    },
+    "examined_clauses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Clause ids (card_id#zone#index, from the packet) the ruling is about -- the scenario's covers: if behavioral. May be empty."
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "title": "card-loop author_clause result v1",
+  "description": "Stage `author_clause` (design D4 clause items: PENDING -> AUTHORING -> SIM -> ORACLE). The worker wrote exam scenario file(s) for one printed clause in its worktree (`qa/dcgo-exams/<SET>/...yaml`, contract per the exam MCP `exam_authoring_guide`) and validated them with `exam_validate`. `scenario_paths`: repo-relative scenario files written. `covers`: clause ids the scenarios exercise (D8 `covers`, defaults to the item's clause). `notes`: anything the driver or a reviewer must know (empty string if none; if no scenario could be authored, `scenario_paths` is empty and `notes` says why). Strict-mode compatible.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scenario_paths", "covers", "notes"],
+  "properties": {
+    "scenario_paths": {"type": "array", "items": {"type": "string"}},
+    "covers": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Clause ids, e.g. `BT7-056#effect#0`."
+    },
+    "notes": {"type": "string"}
+  }
+}

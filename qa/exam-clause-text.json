@@ -1,6 +1,6 @@
 {
   "generated_at": "2026-09-13T07:58:14.783202+00:00",
-  "source": "--card-ids (38 explicit ids) + three-musketeers-1 (60 explicit ids, additive merge 2026-09-13); 24 'Security Effect' ids moved to the security zone (2026-10-03)",
+  "source": "--card-ids (38 explicit ids) + three-musketeers-1 (60 explicit ids, additive merge 2026-09-13); 24 'Security Effect' ids moved to the security zone (2026-10-03) + book add EX10-025, EX10-028, EX8-067 + book add BT13-060, BT16-082, BT26-005, BT26-036, BT26-049, BT26-050, BT26-065, BT26-072, BT26-076, BT26-082, BT26-091, BT26-094, P-235, ST24-04, ST24-05, ST24-10, ST24-12, ST24-14, ST24-15",
   "cards": [
     "BT11-089",
     "BT8-097",
@@ -99,7 +99,29 @@
     "P-180",
     "P-198",
     "P-212",
-    "ST13-08"
+    "ST13-08",
+    "EX10-025",
+    "EX10-028",
+    "EX8-067",
+    "BT13-060",
+    "BT16-082",
+    "BT26-005",
+    "BT26-036",
+    "BT26-049",
+    "BT26-050",
+    "BT26-065",
+    "BT26-072",
+    "BT26-076",
+    "BT26-082",
+    "BT26-091",
+    "BT26-094",
+    "P-235",
+    "ST24-04",
+    "ST24-05",
+    "ST24-10",
+    "ST24-12",
+    "ST24-14",
+    "ST24-15"
   ],
   "clauses": [
     {
@@ -5043,18 +5065,1083 @@
       "text": "Players can't reduce play costs.",
       "source": "bundle",
       "image_path": null
+    },
+    {
+      "id": "EX10-025#effect#0",
+      "card_id": "EX10-025",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "You may place 2 cards with the [Mineral] or [Rock] trait from your trash as 1 of your [Mineral] or [Rock] trait Digimon's bottom digivolution cards. (Rule) Trait: Has [Mineral] Type.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX10-025#inherited#0",
+      "card_id": "EX10-025",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX10-028#effect#0",
+      "card_id": "EX10-028",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By trashing any 1 card with the [Mineral] or [Rock] trait from your Digimon's digivolution cards, 1 of your Digimon with the [Mineral] or [Rock] trait gains ＜Reboot＞, ＜Blocker＞ and +3000 DP until your opponent's turn ends.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX10-028#inherited#0",
+      "card_id": "EX10-028",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX8-067#effect#0",
+      "card_id": "EX8-067",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Turn"
+      ],
+      "keyword": null,
+      "text": "If you have 2 or less memory, set it to 3.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX8-067#effect#1",
+      "card_id": "EX8-067",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your Digimon digivolve into a [Mineral] or [Rock] trait Digimon, by suspending this Tamer, place up to 2 cards with the [Mineral] or [Rock] trait from your trash as that Digimon's bottom digivolution cards.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX8-067#security#0",
+      "card_id": "EX8-067",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT13-060#effect#0",
+      "card_id": "BT13-060",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Burst Digivolve"
+      ],
+      "keyword": null,
+      "text": "0 from [Rosemon] by returning 1 [Yoshino Fujieda] to hand At the end of the burst digivolution turn, trash this Digimon’s top card",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT13-060#effect#1",
+      "card_id": "BT13-060",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Suspend 1 of your opponent's Digimon and 1 of their Tamers. Until the end of your opponent's turn, all of their Digimon and Tamers don't unsuspend.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT13-060#effect#2",
+      "card_id": "BT13-060",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking"
+      ],
+      "keyword": null,
+      "text": "Trash the top card of your opponent’s security stack for every 2 of your opponent's suspended Digimon and/or Tamers.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT16-082#effect#0",
+      "card_id": "BT16-082",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your Digimon move from the breeding area to the battle area, reveal the top 3 cards of your deck. Add 1 Digimon card or Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, you may hatch in your breeding area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-005#inherited#0",
+      "card_id": "BT26-005",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "By trashing the bottom face-down card from under any of your Tamers, you may play 1 play cost 5 or lower [Avian] or [DATA SQUAD] trait card from your trash without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-036#effect#0",
+      "card_id": "BT26-036",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[DATA SQUAD] trait: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-036#effect#1",
+      "card_id": "BT26-036",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "[When Moving]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-036#effect#2",
+      "card_id": "BT26-036",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 card with the [Vegetation], [Fairy] or [DATA SQUAD] trait or 1 green Tamer card among them to the hand. Return the rest to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-036#inherited#0",
+      "card_id": "BT26-036",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "You may suspend 1 of your opponent's Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-049#effect#0",
+      "card_id": "BT26-049",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Lilamon]/Lv.5 w/[DATA SQUAD] trait: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-049#effect#1",
+      "card_id": "BT26-049",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving",
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "Suspend 2 of your opponent's Digimon or Tamers.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-049#effect#2",
+      "card_id": "BT26-049",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your opponent's Digimon or Tamers suspend, or effects trash cards from under your Tamers, you may play or use 1 play or use cost 3 or lower [DATA SQUAD] trait card from your hand without paying the cost. For each suspended Digimon or Tamer, add 1 to the cost maximum.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-049#inherited#0",
+      "card_id": "BT26-049",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "ー",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-050#effect#0",
+      "card_id": "BT26-050",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.6 w/[DATA SQUAD] trait: Cost 5",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-050#effect#1",
+      "card_id": "BT26-050",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Burst Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Rosemon]: Cost 0 by returning 1 [Yoshino Fujieda] to the hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-050#effect#2",
+      "card_id": "BT26-050",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "You may suspend 2 Digimon or Tamers. Then, 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-050#effect#3",
+      "card_id": "BT26-050",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving",
+        "When Attacking"
+      ],
+      "keyword": null,
+      "text": "By returning 1 other suspended Digimon to the bottom of the deck, trash your opponent's top security card.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-050#effect#4",
+      "card_id": "BT26-050",
+      "zone": "effect",
+      "label": "DUAL Effect",
+      "kind": "timing",
+      "timings": [
+        "Use Req."
+      ],
+      "keyword": null,
+      "text": "(Specified cards let you ignore color requirements.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-050#effect#5",
+      "card_id": "BT26-050",
+      "zone": "effect",
+      "label": "DUAL Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Suspend 2 of your opponent's Digimon or Tamers. Then, until their turn ends, none of their suspended Digimon or Tamers can digivolve or unsuspend.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-050#effect#6",
+      "card_id": "BT26-050",
+      "zone": "effect",
+      "label": "DUAL Rule",
+      "kind": "timing",
+      "timings": [
+        "Arts Digivolve"
+      ],
+      "keyword": null,
+      "text": "(Instead of trashing after use, your cards may digivolve into this card without paying the cost.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-065#effect#0",
+      "card_id": "BT26-065",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[DATA SQUAD] trait: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-065#effect#1",
+      "card_id": "BT26-065",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 [Keenan Crier] or card with the [DATA SQUAD] trait and 1 purple card with [Ravemon] in its name or [Avian] or [Bird] in any of its traits among them to the hand. Return the rest to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-065#inherited#0",
+      "card_id": "BT26-065",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-065#inherited#1",
+      "card_id": "BT26-065",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Draw 1",
+      "text": "and trash 1 card in your hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-072#effect#0",
+      "card_id": "BT26-072",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[DATA SQUAD] trait: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-072#effect#1",
+      "card_id": "BT26-072",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-072#effect#2",
+      "card_id": "BT26-072",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 card in your hand or placing it face down under any of your [Keenan Crier]s, delete 1 of your opponent's level 4 or lower Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-072#inherited#0",
+      "card_id": "BT26-072",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "Your opponent trashes 1 card in their hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-076#effect#0",
+      "card_id": "BT26-076",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.4 w/[DATA SQUAD] trait: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-076#effect#1",
+      "card_id": "BT26-076",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's level 4 or lower Digimon. Then, by trashing the bottom face-down card from under any of your Tamers, they trash 1 card in their hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-076#effect#2",
+      "card_id": "BT26-076",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When your opponent's hand is trashed from or effects trash cards from under your Tamers, this Digimon may digivolve into [Ravemon] or a [DATA SQUAD] trait Digimon card in the trash with the cost reduced by 1.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-076#inherited#0",
+      "card_id": "BT26-076",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "You may play 1 play cost 5 or lower card with [Avian] or [Bird] in any of its traits or the [DATA SQUAD] trait from your trash without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-082#effect#0",
+      "card_id": "BT26-082",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Crowmon]/Lv.5 w/[DATA SQUAD] trait: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-082#effect#1",
+      "card_id": "BT26-082",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "{Security} [End of Opponent's Turn] Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-082#effect#2",
+      "card_id": "BT26-082",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving",
+        "End of Attack"
+      ],
+      "keyword": null,
+      "text": "By deleting this Digimon or trashing 2 bottom face-down cards from under any of your Tamers, delete 1 of your opponent's highest DP Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-082#effect#3",
+      "card_id": "BT26-082",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "Your opponent trashes 1 card in their hand. Then, if their hand has 7 or fewer cards, you may place this card face up as the bottom security card. (Rule) Trait: Has [Birdkin] Type.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-082#inherited#0",
+      "card_id": "BT26-082",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "ー",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-091#effect#0",
+      "card_id": "BT26-091",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Main Phase"
+      ],
+      "keyword": null,
+      "text": "By placing 1 [DATA SQUAD] trait card from your hand face down under this Tamer, ＜Draw 1＞ and gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-091#effect#1",
+      "card_id": "BT26-091",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your opponent's Digimon or Tamers suspend, or effects trash cards from under this Tamer, by suspending this Tamer, 1 of your Digimon may digivolve into a [Vegetation], [Fairy] or [DATA SQUAD] trait Digimon card in the hand with the cost reduced by 1.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-091#security#0",
+      "card_id": "BT26-091",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-094#effect#0",
+      "card_id": "BT26-094",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Main Phase"
+      ],
+      "keyword": null,
+      "text": "By placing 1 [DATA SQUAD] trait card from your hand face down under this Tamer, ＜Draw 1＞ and gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-094#effect#1",
+      "card_id": "BT26-094",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When your opponent's hand is trashed from or effects trash cards from under this Tamer, by suspending this Tamer, 1 of your [DATA SQUAD] trait Digimon gains ＜Execute＞ for the turn.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-094#security#0",
+      "card_id": "BT26-094",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-235#effect#0",
+      "card_id": "P-235",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Use Req."
+      ],
+      "keyword": null,
+      "text": "(Specified cards let you ignore color requirements.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-235#effect#1",
+      "card_id": "P-235",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 card with the [DATA SQUAD] trait among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-235#effect#2",
+      "card_id": "P-235",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main",
+        "Delay"
+      ],
+      "keyword": null,
+      "text": "Gain 2 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-235#security#0",
+      "card_id": "P-235",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-04#effect#0",
+      "card_id": "ST24-04",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Koromon]/Lv.2 w/[DATA SQUAD] trait: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-04#effect#1",
+      "card_id": "ST24-04",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "[When Moving]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-04#effect#2",
+      "card_id": "ST24-04",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Among them, add 1 [DATA SQUAD] trait card to the hand and place 1 such card face down under any of your [DATA SQUAD] trait Tamers. Return the rest to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-04#inherited#0",
+      "card_id": "ST24-04",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-05#effect#0",
+      "card_id": "ST24-05",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-05#effect#1",
+      "card_id": "ST24-05",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[DATA SQUAD] trait: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-05#effect#2",
+      "card_id": "ST24-05",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "If you have 1 or fewer Tamers, you may play 1 Tamer card with the [DATA SQUAD] trait from your hand without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-05#inherited#0",
+      "card_id": "ST24-05",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-10#effect#0",
+      "card_id": "ST24-10",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.4 w/[DATA SQUAD] trait: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-10#effect#1",
+      "card_id": "ST24-10",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving",
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "Suspend 1 of your opponent's Digimon or Tamers. It can't unsuspend until their turn ends. Then, by trashing 2 bottom face-down cards from under any of your Tamers, this Digimon may digivolve into a [DATA SQUAD] trait Digimon card in the hand without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-10#inherited#0",
+      "card_id": "ST24-10",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When this Digimon with [Rosemon] in its name or the [DATA SQUAD] trait would leave the battle area, by trashing the bottom face-down card from under any of your Tamers, it doesn't leave.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-12#effect#0",
+      "card_id": "ST24-12",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.2 w/[DATA SQUAD] trait: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-12#effect#1",
+      "card_id": "ST24-12",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "By trashing the bottom face-down card from under any of your Tamers, you may return 1 Digimon card with the [DATA SQUAD] trait from your trash to the hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-12#inherited#0",
+      "card_id": "ST24-12",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's level 3 Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-14#effect#0",
+      "card_id": "ST24-14",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Main Phase",
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "You may place the top card of your deck face down under this Tamer. Then, if your opponent has a Digimon, gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-14#effect#1",
+      "card_id": "ST24-14",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When effects trash cards from under this Tamer, by suspending this Tamer, suspend 1 of your opponent's Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-14#effect#2",
+      "card_id": "ST24-14",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Rule"
+      ],
+      "keyword": null,
+      "text": "Name: Also treated as [Yoshino Fujieda]/[Keenan Crier].",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-14#security#0",
+      "card_id": "ST24-14",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-15#effect#0",
+      "card_id": "ST24-15",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Use Req."
+      ],
+      "keyword": null,
+      "text": "(Specified cards let you ignore color requirements.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-15#effect#1",
+      "card_id": "ST24-15",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "You may play 1 [DATA SQUAD] trait card with a play cost of 4 or less from your hand or trash without paying the cost. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-15#effect#2",
+      "card_id": "ST24-15",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Main Phase"
+      ],
+      "keyword": null,
+      "text": "By placing this card from the battle area face down under any of your [DATA SQUAD] trait Tamers, ＜Draw 1＞ and gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST24-15#security#0",
+      "card_id": "ST24-15",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Activate this card's [Main] effects.",
+      "source": "bundle",
+      "image_path": null
     }
   ],
   "denominator": {
-    "total_clauses": 361,
-    "total_cards": 98,
+    "total_clauses": 437,
+    "total_cards": 120,
     "by_zone": {
-      "effect": 290,
-      "inherited": 43,
-      "security": 28
+      "effect": 346,
+      "inherited": 57,
+      "security": 34
     },
     "by_source": {
-      "bundle": 259,
+      "bundle": 335,
       "cards_json": 98,
       "image-required": 4
     },

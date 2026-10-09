@@ -1,0 +1,7326 @@
+{
+  "version": 1,
+  "generated_at": "2026-10-06T05:08:09+00:00",
+  "base_sha": "e3ace280318c672fba1019f6def129eb1cc2a0d8",
+  "command": "python -m tools.card_loop candidates",
+  "parameters": {
+    "top": 60,
+    "min_played": 10,
+    "core_fraction": 0.7,
+    "non_top_cut_weight": 0.25,
+    "half_life_days": 180,
+    "closeness_k": 250,
+    "tier_a_max_impl": 5,
+    "tier_b_max_impl": 30,
+    "tier_b_small_impl": 10,
+    "tier_b_min_top2_share": 0.6,
+    "not_ready_statuses": [
+      "AUDITED-DRIFT",
+      "AUDITED-MISSING-TESTS",
+      "BLOCKED",
+      "PARTIAL"
+    ]
+  },
+  "reference_date": "2026-09-12",
+  "undated_recency": 0.4172,
+  "library": {
+    "archetypes": 449,
+    "eligible": 107,
+    "scored": 60
+  },
+  "notes": {
+    "dcgo_available": true,
+    "dcgo_root": "C:\\Users\\james\\Documents\\digimon-deck-list-builder-1\\DCGO",
+    "cards_bound": 1751,
+    "clauses_bound": 6068,
+    "clause_verdicts_by_class": {
+      "confirmed": 484,
+      "diverged": 55,
+      "unreachable": 14,
+      "unavailable": 1,
+      "unmeasured": 5514
+    },
+    "invalidated_clause_ids": [
+      "EX12-004#inherited#0"
+    ],
+    "image_required_clause_ids": [
+      "EX12-001#security#0",
+      "EX12-002#security#0",
+      "EX12-003#security#0",
+      "EX12-004#security#0",
+      "EX12-005#security#0",
+      "EX12-006#security#0",
+      "EX12-007#security#0",
+      "EX12-008#security#0",
+      "EX12-009#security#0",
+      "EX12-010#security#0",
+      "EX12-011#security#0",
+      "EX12-012#security#0",
+      "EX12-013#security#0",
+      "EX12-014#security#0",
+      "EX12-015#security#0",
+      "EX12-016#security#0",
+      "EX12-017#security#0",
+      "EX12-019#security#0",
+      "EX12-020#security#0",
+      "EX12-021#security#0",
+      "EX12-022#security#0",
+      "EX12-024#security#0",
+      "EX12-025#security#0",
+      "EX12-026#security#0",
+      "EX12-029#security#0",
+      "EX12-031#security#0",
+      "EX12-032#security#0",
+      "EX12-034#security#0",
+      "EX12-035#security#0",
+      "EX12-036#security#0",
+      "EX12-037#security#0",
+      "EX12-038#security#0",
+      "EX12-039#security#0",
+      "EX12-040#security#0",
+      "EX12-041#security#0",
+      "EX12-042#security#0",
+      "EX12-043#security#0",
+      "EX12-044#security#0",
+      "EX12-045#security#0",
+      "EX12-046#security#0",
+      "EX12-047#security#0",
+      "EX12-053#security#0",
+      "EX12-054#security#0",
+      "EX12-055#security#0",
+      "EX12-056#security#0",
+      "EX12-057#security#0",
+      "EX12-058#security#0",
+      "EX12-059#security#0",
+      "EX12-060#security#0",
+      "EX12-061#security#0",
+      "EX12-062#security#0",
+      "EX12-063#security#0",
+      "EX12-064#security#0",
+      "EX12-066#security#0",
+      "EX12-069#security#0",
+      "EX12-070#security#0",
+      "EX12-071#security#0",
+      "EX12-072#security#0",
+      "EX12-073#security#0",
+      "EX12-074#security#0",
+      "EX12-075#security#0",
+      "EX12-076#security#0",
+      "EX12-077#security#0",
+      "P-241#security#0",
+      "P-243#security#0"
+    ],
+    "interaction_verdicts_in_ledger": 0,
+    "cards_missing_from_interaction_denominator": [
+      "P-241",
+      "P-243"
+    ],
+    "unknown_ids": [
+      "P-241",
+      "P-243"
+    ],
+    "no_dcgo_script_with_text": [
+      "BT3-021",
+      "BT3-061",
+      "BT3-068",
+      "BT3-077",
+      "BT4-001",
+      "BT5-033",
+      "BT5-041",
+      "BT6-021",
+      "BT7-049",
+      "BT9-047",
+      "BT14-009",
+      "BT14-069",
+      "BT25-003",
+      "RB1-001",
+      "ST10-02",
+      "ST12-03",
+      "ST13-08"
+    ],
+    "diverged_awaiting_triage": [
+      "BT24-031#effect#1",
+      "BT24-031#inherited#0",
+      "BT24-034#effect#0",
+      "BT24-041#effect#2",
+      "BT24-101#effect#4",
+      "BT24-102#effect#1",
+      "BT25-022#effect#1",
+      "BT25-022#inherited#0",
+      "BT25-025#effect#3",
+      "BT25-032#effect#1",
+      "BT25-035#effect#1",
+      "BT25-035#inherited#0",
+      "BT25-041#effect#1",
+      "BT25-041#inherited#0",
+      "BT25-043#effect#3",
+      "BT25-046#effect#1",
+      "BT25-049#effect#2",
+      "BT25-049#inherited#0",
+      "BT25-057#effect#0",
+      "BT25-057#effect#1",
+      "BT25-057#effect#2",
+      "BT25-057#effect#3",
+      "BT25-057#effect#4",
+      "BT25-057#effect#5",
+      "BT25-088#effect#1",
+      "BT25-088#effect#2",
+      "BT25-090#effect#1",
+      "BT25-090#effect#2",
+      "BT26-029#inherited#0",
+      "BT26-065#effect#1",
+      "BT26-075#effect#3",
+      "EX10-025#inherited#0",
+      "EX10-028#inherited#0",
+      "ST23-01#inherited#0",
+      "ST23-03#effect#2",
+      "ST23-03#inherited#0",
+      "ST23-04#effect#0",
+      "ST23-04#effect#1",
+      "ST23-04#effect#2",
+      "ST23-04#inherited#0",
+      "ST23-06#effect#1",
+      "ST23-06#effect#2",
+      "ST23-08#inherited#0",
+      "ST23-11#effect#2",
+      "ST23-12#effect#1",
+      "ST23-13#effect#1",
+      "ST23-14#effect#1",
+      "ST23-15#effect#0",
+      "ST23-15#effect#1",
+      "ST23-15#effect#2",
+      "ST23-15#security#0"
+    ],
+    "union_open_units": {
+      "implement": 942,
+      "clauses": 5549,
+      "interactions": 8539,
+      "total": 15030
+    }
+  },
+  "candidates": [
+    {
+      "archetype": "Toho Braves",
+      "tier": "A",
+      "score": 26.8646,
+      "closeness": 0.4078,
+      "meta": {
+        "weight": 65.8719,
+        "times_played": 114,
+        "top_cuts": 66,
+        "newest_event": "2026-09-07",
+        "undated_lists": 0
+      },
+      "lists": 114,
+      "pool": 50,
+      "core": 17,
+      "core_threshold": 80,
+      "cards": {
+        "with_yaml": 50,
+        "without_yaml": 0,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 0,
+        "core_needs_impl": 0,
+        "needs_impl_ids": []
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 115,
+          "diverged": 0,
+          "unreachable": 13,
+          "unavailable": 0,
+          "unmeasured": 94,
+          "total": 222,
+          "adjudicated": 128,
+          "open": 94,
+          "planned_unavailable": 0,
+          "open_image_required": 16
+        },
+        "core": {
+          "confirmed": 66,
+          "diverged": 0,
+          "unreachable": 13,
+          "unavailable": 0,
+          "unmeasured": 3,
+          "total": 82,
+          "adjudicated": 79,
+          "open": 3,
+          "planned_unavailable": 0,
+          "open_image_required": 2
+        }
+      },
+      "interactions": {
+        "total": 269,
+        "adjudicated": 0,
+        "open": 269,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 0,
+        "clauses": 94,
+        "interactions": 269,
+        "total": 363,
+        "first_list": 100,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {},
+        "n_sets": 0,
+        "top2": [],
+        "top2_share": null
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Toho Braves\"",
+      "rationale": "66 top cuts in 114 lists (weight 65.9); nothing to implement; 94 clause + 269 interaction exams (incl. 16 image-required security slot(s)); first decklist ready after ~100 units",
+      "rank": 1
+    },
+    {
+      "archetype": "Glowing Dawn",
+      "tier": "B",
+      "score": 23.2369,
+      "closeness": 0.372,
+      "meta": {
+        "weight": 62.4608,
+        "times_played": 130,
+        "top_cuts": 60,
+        "newest_event": "2026-09-08",
+        "undated_lists": 1
+      },
+      "lists": 130,
+      "pool": 52,
+      "core": 18,
+      "core_threshold": 91,
+      "cards": {
+        "with_yaml": 45,
+        "without_yaml": 7,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT25-003"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 7,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT6-103",
+          "BT9-083",
+          "BT26-004",
+          "BT26-057",
+          "BT26-061",
+          "BT26-095",
+          "P-238"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 78,
+          "diverged": 38,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 76,
+          "total": 192,
+          "adjudicated": 78,
+          "open": 113,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 40,
+          "diverged": 33,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 0,
+          "total": 73,
+          "adjudicated": 40,
+          "open": 33,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 304,
+        "adjudicated": 0,
+        "open": 302,
+        "planned_unavailable": 2
+      },
+      "units": {
+        "implement": 7,
+        "clauses": 113,
+        "interactions": 302,
+        "total": 422,
+        "first_list": 128,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT26": 4,
+          "BT6": 1,
+          "BT9": 1,
+          "P": 1
+        },
+        "n_sets": 4,
+        "top2": [
+          "BT26",
+          "BT6"
+        ],
+        "top2_share": 0.7142857142857143
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Glowing Dawn\"",
+      "rationale": "60 top cuts in 130 lists (weight 62.5); 7 card(s) to implement over 4 sets (71% in BT26+BT6); 113 clause + 302 interaction exams; first decklist ready after ~128 units",
+      "rank": 2
+    },
+    {
+      "archetype": "Three Musketeers",
+      "tier": "A",
+      "score": 19.4923,
+      "closeness": 0.4274,
+      "meta": {
+        "weight": 45.612,
+        "times_played": 102,
+        "top_cuts": 42,
+        "newest_event": "2026-09-07",
+        "undated_lists": 5
+      },
+      "lists": 102,
+      "pool": 64,
+      "core": 15,
+      "core_threshold": 72,
+      "cards": {
+        "with_yaml": 64,
+        "without_yaml": 0,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "ST13-08"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 0,
+        "core_needs_impl": 0,
+        "needs_impl_ids": []
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 224,
+          "diverged": 4,
+          "unreachable": 1,
+          "unavailable": 1,
+          "unmeasured": 5,
+          "total": 235,
+          "adjudicated": 230,
+          "open": 5,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 53,
+          "diverged": 1,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 0,
+          "total": 54,
+          "adjudicated": 54,
+          "open": 0,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 334,
+        "adjudicated": 0,
+        "open": 330,
+        "planned_unavailable": 4
+      },
+      "units": {
+        "implement": 0,
+        "clauses": 5,
+        "interactions": 330,
+        "total": 335,
+        "first_list": 79,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {},
+        "n_sets": 0,
+        "top2": [],
+        "top2_share": null
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Three Musketeers\"",
+      "rationale": "42 top cuts in 102 lists (weight 45.6); nothing to implement; 5 clause + 330 interaction exams; first decklist ready after ~79 units",
+      "rank": 3
+    },
+    {
+      "archetype": "Vemmon",
+      "tier": "A",
+      "score": 16.1109,
+      "closeness": 0.5841,
+      "meta": {
+        "weight": 27.5818,
+        "times_played": 51,
+        "top_cuts": 27,
+        "newest_event": "2026-09-09",
+        "undated_lists": 0
+      },
+      "lists": 51,
+      "pool": 21,
+      "core": 16,
+      "core_threshold": 36,
+      "cards": {
+        "with_yaml": 19,
+        "without_yaml": 2,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 2,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT11-065",
+          "BT21-051"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 68,
+          "total": 68,
+          "adjudicated": 0,
+          "open": 68,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 46,
+          "total": 46,
+          "adjudicated": 0,
+          "open": 46,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 108,
+        "adjudicated": 0,
+        "open": 108,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 2,
+        "clauses": 68,
+        "interactions": 108,
+        "total": 178,
+        "first_list": 115,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT11": 1,
+          "BT21": 1
+        },
+        "n_sets": 2,
+        "top2": [
+          "BT11",
+          "BT21"
+        ],
+        "top2_share": 1.0
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Vemmon\"",
+      "rationale": "27 top cuts in 51 lists (weight 27.6); 2 straggler card(s) to implement, none in the core; 68 clause + 108 interaction exams; first decklist ready after ~115 units",
+      "rank": 4
+    },
+    {
+      "archetype": "Medusamon",
+      "tier": "A",
+      "score": 13.9885,
+      "closeness": 0.3129,
+      "meta": {
+        "weight": 44.7071,
+        "times_played": 149,
+        "top_cuts": 75,
+        "newest_event": "2026-06-14",
+        "undated_lists": 13
+      },
+      "lists": 149,
+      "pool": 66,
+      "core": 15,
+      "core_threshold": 105,
+      "cards": {
+        "with_yaml": 63,
+        "without_yaml": 3,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "ST12-03"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 3,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT14-017",
+          "BT19-011",
+          "LM-045"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 21,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 213,
+          "total": 234,
+          "adjudicated": 21,
+          "open": 212,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 11,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 37,
+          "total": 48,
+          "adjudicated": 11,
+          "open": 37,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 338,
+        "adjudicated": 0,
+        "open": 334,
+        "planned_unavailable": 4
+      },
+      "units": {
+        "implement": 3,
+        "clauses": 212,
+        "interactions": 334,
+        "total": 549,
+        "first_list": 143,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT14": 1,
+          "BT19": 1,
+          "LM": 1
+        },
+        "n_sets": 3,
+        "top2": [
+          "BT14",
+          "BT19"
+        ],
+        "top2_share": 0.6666666666666666
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Medusamon\"",
+      "rationale": "75 top cuts in 149 lists (weight 44.7); 3 straggler card(s) to implement, none in the core; 212 clause + 334 interaction exams; first decklist ready after ~143 units",
+      "rank": 5
+    },
+    {
+      "archetype": "TS Angels",
+      "tier": "C",
+      "score": 12.4072,
+      "closeness": 0.3027,
+      "meta": {
+        "weight": 40.9934,
+        "times_played": 72,
+        "top_cuts": 46,
+        "newest_event": "2026-09-05",
+        "undated_lists": 1
+      },
+      "lists": 72,
+      "pool": 73,
+      "core": 13,
+      "core_threshold": 51,
+      "cards": {
+        "with_yaml": 63,
+        "without_yaml": 10,
+        "blocked_status": [
+          "BT15-037",
+          "BT25-097"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT25-003"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 11,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT9-082",
+          "BT9-083",
+          "BT15-037",
+          "BT16-019",
+          "BT16-088",
+          "BT24-025",
+          "BT25-097",
+          "EX5-033",
+          "EX6-030",
+          "LM-052",
+          "P-026"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 86,
+          "diverged": 11,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 178,
+          "total": 275,
+          "adjudicated": 86,
+          "open": 188,
+          "planned_unavailable": 1,
+          "open_image_required": 1
+        },
+        "core": {
+          "confirmed": 3,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 39,
+          "total": 42,
+          "adjudicated": 3,
+          "open": 39,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 379,
+        "adjudicated": 0,
+        "open": 377,
+        "planned_unavailable": 2
+      },
+      "units": {
+        "implement": 11,
+        "clauses": 188,
+        "interactions": 377,
+        "total": 576,
+        "first_list": 134,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT9": 2,
+          "BT16": 2,
+          "BT15": 1,
+          "BT24": 1,
+          "BT25": 1,
+          "EX5": 1,
+          "EX6": 1,
+          "LM": 1,
+          "P": 1
+        },
+        "n_sets": 9,
+        "top2": [
+          "BT9",
+          "BT16"
+        ],
+        "top2_share": 0.36363636363636365
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"TS Angels\"",
+      "rationale": "46 top cuts in 72 lists (weight 41.0); 11 card(s) to implement over 9 sets (36% in BT9+BT16); 188 clause + 377 interaction exams (incl. 1 image-required security slot(s)); first decklist ready after ~134 units",
+      "rank": 6
+    },
+    {
+      "archetype": "TS Jupitermon",
+      "tier": "B",
+      "score": 12.0309,
+      "closeness": 0.2246,
+      "meta": {
+        "weight": 53.5616,
+        "times_played": 118,
+        "top_cuts": 56,
+        "newest_event": "2026-09-09",
+        "undated_lists": 1
+      },
+      "lists": 118,
+      "pool": 102,
+      "core": 14,
+      "core_threshold": 83,
+      "cards": {
+        "with_yaml": 97,
+        "without_yaml": 5,
+        "blocked_status": [
+          "BT24-093",
+          "BT25-097"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 6,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT4-105",
+          "BT9-083",
+          "BT24-092",
+          "BT24-093",
+          "BT25-097",
+          "LM-045"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 131,
+          "diverged": 10,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 257,
+          "total": 398,
+          "adjudicated": 131,
+          "open": 267,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 27,
+          "diverged": 6,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 17,
+          "total": 50,
+          "adjudicated": 27,
+          "open": 23,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 590,
+        "adjudicated": 0,
+        "open": 590,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 6,
+        "clauses": 267,
+        "interactions": 590,
+        "total": 863,
+        "first_list": 139,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT24": 2,
+          "BT4": 1,
+          "BT9": 1,
+          "BT25": 1,
+          "LM": 1
+        },
+        "n_sets": 5,
+        "top2": [
+          "BT24",
+          "BT4"
+        ],
+        "top2_share": 0.5
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"TS Jupitermon\"",
+      "rationale": "56 top cuts in 118 lists (weight 53.6); 6 card(s) to implement over 5 sets (50% in BT24+BT4); 267 clause + 590 interaction exams; first decklist ready after ~139 units",
+      "rank": 7
+    },
+    {
+      "archetype": "Saiyu Warriors",
+      "tier": "A",
+      "score": 11.536,
+      "closeness": 0.5531,
+      "meta": {
+        "weight": 20.8571,
+        "times_played": 46,
+        "top_cuts": 17,
+        "newest_event": "2026-09-09",
+        "undated_lists": 0
+      },
+      "lists": 46,
+      "pool": 26,
+      "core": 18,
+      "core_threshold": 33,
+      "cards": {
+        "with_yaml": 26,
+        "without_yaml": 0,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 0,
+        "core_needs_impl": 0,
+        "needs_impl_ids": []
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 52,
+          "diverged": 0,
+          "unreachable": 2,
+          "unavailable": 0,
+          "unmeasured": 67,
+          "total": 121,
+          "adjudicated": 54,
+          "open": 67,
+          "planned_unavailable": 0,
+          "open_image_required": 15
+        },
+        "core": {
+          "confirmed": 34,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 53,
+          "total": 87,
+          "adjudicated": 34,
+          "open": 53,
+          "planned_unavailable": 0,
+          "open_image_required": 14
+        }
+      },
+      "interactions": {
+        "total": 135,
+        "adjudicated": 0,
+        "open": 135,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 0,
+        "clauses": 67,
+        "interactions": 135,
+        "total": 202,
+        "first_list": 130,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {},
+        "n_sets": 0,
+        "top2": [],
+        "top2_share": null
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Saiyu Warriors\"",
+      "rationale": "17 top cuts in 46 lists (weight 20.9); nothing to implement; 67 clause + 135 interaction exams (incl. 15 image-required security slot(s)); first decklist ready after ~130 units",
+      "rank": 8
+    },
+    {
+      "archetype": "Rocks",
+      "tier": "B",
+      "score": 10.9729,
+      "closeness": 0.3397,
+      "meta": {
+        "weight": 32.3042,
+        "times_played": 140,
+        "top_cuts": 58,
+        "newest_event": "2026-06-27",
+        "undated_lists": 4
+      },
+      "lists": 140,
+      "pool": 59,
+      "core": 16,
+      "core_threshold": 98,
+      "cards": {
+        "with_yaml": 51,
+        "without_yaml": 8,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT14-009",
+          "ST13-08"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 8,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT2-105",
+          "BT4-109",
+          "BT5-105",
+          "EX7-064",
+          "P-033",
+          "P-161",
+          "ST15-16",
+          "ST22-09"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 22,
+          "diverged": 8,
+          "unreachable": 0,
+          "unavailable": 1,
+          "unmeasured": 163,
+          "total": 194,
+          "adjudicated": 23,
+          "open": 170,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 4,
+          "diverged": 2,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 38,
+          "total": 44,
+          "adjudicated": 4,
+          "open": 40,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 314,
+        "adjudicated": 0,
+        "open": 308,
+        "planned_unavailable": 6
+      },
+      "units": {
+        "implement": 8,
+        "clauses": 170,
+        "interactions": 308,
+        "total": 486,
+        "first_list": 119,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "P": 2,
+          "BT2": 1,
+          "BT4": 1,
+          "BT5": 1,
+          "EX7": 1,
+          "ST15": 1,
+          "ST22": 1
+        },
+        "n_sets": 7,
+        "top2": [
+          "P",
+          "BT2"
+        ],
+        "top2_share": 0.375
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Rocks\"",
+      "rationale": "58 top cuts in 140 lists (weight 32.3); 8 card(s) to implement over 7 sets (38% in P+BT2); 170 clause + 308 interaction exams; first decklist ready after ~119 units",
+      "rank": 9
+    },
+    {
+      "archetype": "Hudiemon",
+      "tier": "C",
+      "score": 10.2065,
+      "closeness": 0.2262,
+      "meta": {
+        "weight": 45.1127,
+        "times_played": 210,
+        "top_cuts": 89,
+        "newest_event": "2026-08-17",
+        "undated_lists": 6
+      },
+      "lists": 210,
+      "pool": 89,
+      "core": 12,
+      "core_threshold": 147,
+      "cards": {
+        "with_yaml": 45,
+        "without_yaml": 44,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT3-061",
+          "ST13-08"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 44,
+        "core_needs_impl": 9,
+        "needs_impl_ids": [
+          "BT3-061",
+          "BT8-042",
+          "BT8-059",
+          "BT16-013",
+          "BT16-063",
+          "BT18-072",
+          "BT22-012",
+          "BT22-031",
+          "BT22-043",
+          "BT22-044",
+          "BT22-054",
+          "BT22-063",
+          "BT22-077",
+          "BT22-092",
+          "BT22-093",
+          "BT22-100",
+          "BT22-101",
+          "BT23-002",
+          "BT23-017",
+          "BT23-020",
+          "BT23-040",
+          "BT23-041",
+          "BT23-048",
+          "BT23-050",
+          "BT23-051",
+          "BT23-073",
+          "BT23-081",
+          "BT23-084",
+          "BT23-085",
+          "BT23-089",
+          "BT23-090",
+          "BT23-091",
+          "BT23-092",
+          "BT23-094",
+          "BT23-095",
+          "BT23-100",
+          "EX1-071",
+          "EX5-033",
+          "EX6-035",
+          "LM-045",
+          "P-203",
+          "P-225",
+          "P-238",
+          "ST17-08"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 12,
+          "diverged": 6,
+          "unreachable": 0,
+          "unavailable": 1,
+          "unmeasured": 316,
+          "total": 335,
+          "adjudicated": 13,
+          "open": 321,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 43,
+          "total": 43,
+          "adjudicated": 0,
+          "open": 43,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 496,
+        "adjudicated": 0,
+        "open": 490,
+        "planned_unavailable": 6
+      },
+      "units": {
+        "implement": 44,
+        "clauses": 321,
+        "interactions": 490,
+        "total": 855,
+        "first_list": 184,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT23": 19,
+          "BT22": 11,
+          "P": 3,
+          "BT8": 2,
+          "BT16": 2,
+          "BT3": 1,
+          "BT18": 1,
+          "EX1": 1,
+          "EX5": 1,
+          "EX6": 1,
+          "LM": 1,
+          "ST17": 1
+        },
+        "n_sets": 12,
+        "top2": [
+          "BT23",
+          "BT22"
+        ],
+        "top2_share": 0.6818181818181818
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Hudiemon\"",
+      "rationale": "89 top cuts in 210 lists (weight 45.1); 44 card(s) to implement over 12 sets (68% in BT23+BT22); 321 clause + 490 interaction exams; first decklist ready after ~184 units",
+      "rank": 10
+    },
+    {
+      "archetype": "Beelstar",
+      "tier": "A",
+      "score": 9.6983,
+      "closeness": 0.4472,
+      "meta": {
+        "weight": 21.6855,
+        "times_played": 37,
+        "top_cuts": 31,
+        "newest_event": "2026-06-28",
+        "undated_lists": 0
+      },
+      "lists": 37,
+      "pool": 53,
+      "core": 15,
+      "core_threshold": 26,
+      "cards": {
+        "with_yaml": 51,
+        "without_yaml": 2,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 2,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "LM-053",
+          "ST10-04"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 167,
+          "diverged": 2,
+          "unreachable": 1,
+          "unavailable": 0,
+          "unmeasured": 24,
+          "total": 194,
+          "adjudicated": 170,
+          "open": 24,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 53,
+          "diverged": 1,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 0,
+          "total": 54,
+          "adjudicated": 54,
+          "open": 0,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 283,
+        "adjudicated": 0,
+        "open": 283,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 2,
+        "clauses": 24,
+        "interactions": 283,
+        "total": 309,
+        "first_list": 79,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "LM": 1,
+          "ST10": 1
+        },
+        "n_sets": 2,
+        "top2": [
+          "LM",
+          "ST10"
+        ],
+        "top2_share": 1.0
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Beelstar\"",
+      "rationale": "31 top cuts in 37 lists (weight 21.7); 2 straggler card(s) to implement, none in the core; 24 clause + 283 interaction exams; first decklist ready after ~79 units",
+      "rank": 11
+    },
+    {
+      "archetype": "TS Vulcanusmon",
+      "tier": "A",
+      "score": 9.3773,
+      "closeness": 0.3165,
+      "meta": {
+        "weight": 29.6324,
+        "times_played": 60,
+        "top_cuts": 29,
+        "newest_event": "2026-09-07",
+        "undated_lists": 0
+      },
+      "lists": 60,
+      "pool": 67,
+      "core": 14,
+      "core_threshold": 42,
+      "cards": {
+        "with_yaml": 65,
+        "without_yaml": 2,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "ST12-03"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 2,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT24-015",
+          "BT24-024"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 80,
+          "diverged": 6,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 184,
+          "total": 270,
+          "adjudicated": 81,
+          "open": 188,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 25,
+          "diverged": 1,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 35,
+          "total": 61,
+          "adjudicated": 26,
+          "open": 35,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 354,
+        "adjudicated": 0,
+        "open": 350,
+        "planned_unavailable": 4
+      },
+      "units": {
+        "implement": 2,
+        "clauses": 188,
+        "interactions": 350,
+        "total": 540,
+        "first_list": 131,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT24": 2
+        },
+        "n_sets": 1,
+        "top2": [
+          "BT24"
+        ],
+        "top2_share": 1.0
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"TS Vulcanusmon\"",
+      "rationale": "29 top cuts in 60 lists (weight 29.6); 2 straggler card(s) to implement, none in the core; 188 clause + 350 interaction exams; first decklist ready after ~131 units",
+      "rank": 12
+    },
+    {
+      "archetype": "Zephagamon",
+      "tier": "C",
+      "score": 8.402,
+      "closeness": 0.2525,
+      "meta": {
+        "weight": 33.2719,
+        "times_played": 107,
+        "top_cuts": 56,
+        "newest_event": "2026-08-24",
+        "undated_lists": 3
+      },
+      "lists": 107,
+      "pool": 85,
+      "core": 13,
+      "core_threshold": 75,
+      "cards": {
+        "with_yaml": 23,
+        "without_yaml": 62,
+        "blocked_status": [
+          "ST17-07"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT7-049",
+          "BT9-047"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 63,
+        "core_needs_impl": 8,
+        "needs_impl_ids": [
+          "BT1-068",
+          "BT1-078",
+          "BT1-089",
+          "BT2-047",
+          "BT3-046",
+          "BT3-054",
+          "BT4-090",
+          "BT6-004",
+          "BT7-004",
+          "BT7-045",
+          "BT7-049",
+          "BT8-102",
+          "BT9-047",
+          "BT10-103",
+          "BT14-042",
+          "BT14-044",
+          "BT14-046",
+          "BT17-047",
+          "BT20-085",
+          "BT20-101",
+          "BT21-051",
+          "BT22-096",
+          "BT23-095",
+          "BT24-044",
+          "BT24-048",
+          "BT24-049",
+          "EX2-004",
+          "EX2-066",
+          "EX2-072",
+          "EX4-002",
+          "EX7-004",
+          "EX7-031",
+          "EX7-032",
+          "EX7-034",
+          "EX7-036",
+          "EX7-064",
+          "EX11-026",
+          "EX11-028",
+          "EX11-029",
+          "EX11-032",
+          "EX11-033",
+          "EX11-035",
+          "EX11-062",
+          "EX11-072",
+          "EX12-052",
+          "LM-038",
+          "P-038",
+          "P-131",
+          "P-132",
+          "P-133",
+          "P-166",
+          "ST17-07",
+          "ST17-08",
+          "ST17-12",
+          "ST18-01",
+          "ST18-04",
+          "ST18-05",
+          "ST18-08",
+          "ST18-10",
+          "ST18-12",
+          "ST18-15",
+          "ST21-15",
+          "ST22-13"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 4,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 258,
+          "total": 262,
+          "adjudicated": 4,
+          "open": 256,
+          "planned_unavailable": 2,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 48,
+          "total": 48,
+          "adjudicated": 0,
+          "open": 48,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 431,
+        "adjudicated": 0,
+        "open": 421,
+        "planned_unavailable": 10
+      },
+      "units": {
+        "implement": 63,
+        "clauses": 256,
+        "interactions": 421,
+        "total": 740,
+        "first_list": 226,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX11": 8,
+          "ST18": 7,
+          "EX7": 6,
+          "P": 5,
+          "BT1": 3,
+          "BT7": 3,
+          "BT14": 3,
+          "BT24": 3,
+          "EX2": 3,
+          "ST17": 3,
+          "BT3": 2,
+          "BT20": 2,
+          "BT2": 1,
+          "BT4": 1,
+          "BT6": 1,
+          "BT8": 1,
+          "BT9": 1,
+          "BT10": 1,
+          "BT17": 1,
+          "BT21": 1,
+          "BT22": 1,
+          "BT23": 1,
+          "EX4": 1,
+          "EX12": 1,
+          "LM": 1,
+          "ST21": 1,
+          "ST22": 1
+        },
+        "n_sets": 27,
+        "top2": [
+          "EX11",
+          "ST18"
+        ],
+        "top2_share": 0.23809523809523808
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Zephagamon\"",
+      "rationale": "56 top cuts in 107 lists (weight 33.3); 63 card(s) to implement over 27 sets (24% in EX11+ST18); 256 clause + 421 interaction exams; first decklist ready after ~226 units",
+      "rank": 13
+    },
+    {
+      "archetype": "Styracomon",
+      "tier": "A",
+      "score": 8.2863,
+      "closeness": 0.4708,
+      "meta": {
+        "weight": 17.6002,
+        "times_played": 43,
+        "top_cuts": 13,
+        "newest_event": "2026-09-07",
+        "undated_lists": 0
+      },
+      "lists": 43,
+      "pool": 39,
+      "core": 19,
+      "core_threshold": 31,
+      "cards": {
+        "with_yaml": 39,
+        "without_yaml": 0,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "ST12-03"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 0,
+        "core_needs_impl": 0,
+        "needs_impl_ids": []
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 24,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 102,
+          "total": 126,
+          "adjudicated": 24,
+          "open": 101,
+          "planned_unavailable": 1,
+          "open_image_required": 1
+        },
+        "core": {
+          "confirmed": 8,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 53,
+          "total": 61,
+          "adjudicated": 8,
+          "open": 53,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 184,
+        "adjudicated": 0,
+        "open": 180,
+        "planned_unavailable": 4
+      },
+      "units": {
+        "implement": 0,
+        "clauses": 101,
+        "interactions": 180,
+        "total": 281,
+        "first_list": 140,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {},
+        "n_sets": 0,
+        "top2": [],
+        "top2_share": null
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Styracomon\"",
+      "rationale": "13 top cuts in 43 lists (weight 17.6); nothing to implement; 101 clause + 180 interaction exams (incl. 1 image-required security slot(s)); first decklist ready after ~140 units",
+      "rank": 14
+    },
+    {
+      "archetype": "DNA Omnimon",
+      "tier": "C",
+      "score": 6.4548,
+      "closeness": 0.2191,
+      "meta": {
+        "weight": 29.4597,
+        "times_played": 116,
+        "top_cuts": 57,
+        "newest_event": "2026-06-22",
+        "undated_lists": 0
+      },
+      "lists": 116,
+      "pool": 101,
+      "core": 12,
+      "core_threshold": 82,
+      "cards": {
+        "with_yaml": 76,
+        "without_yaml": 25,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 25,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "AD1-022",
+          "BT9-020",
+          "BT9-024",
+          "BT11-002",
+          "BT13-065",
+          "BT14-014",
+          "BT15-024",
+          "BT15-083",
+          "BT17-012",
+          "BT17-028",
+          "BT17-094",
+          "EX5-018",
+          "EX9-014",
+          "EX9-020",
+          "LM-053",
+          "P-036",
+          "P-073",
+          "ST20-01",
+          "ST20-02",
+          "ST20-03",
+          "ST20-07",
+          "ST20-13",
+          "ST21-01",
+          "ST21-07",
+          "ST21-08"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 7,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 378,
+          "total": 385,
+          "adjudicated": 7,
+          "open": 378,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 59,
+          "total": 59,
+          "adjudicated": 0,
+          "open": 59,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 488,
+        "adjudicated": 0,
+        "open": 488,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 25,
+        "clauses": 378,
+        "interactions": 488,
+        "total": 891,
+        "first_list": 169,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "ST20": 5,
+          "BT17": 3,
+          "ST21": 3,
+          "BT9": 2,
+          "BT15": 2,
+          "EX9": 2,
+          "P": 2,
+          "AD1": 1,
+          "BT11": 1,
+          "BT13": 1,
+          "BT14": 1,
+          "EX5": 1,
+          "LM": 1
+        },
+        "n_sets": 13,
+        "top2": [
+          "ST20",
+          "BT17"
+        ],
+        "top2_share": 0.32
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"DNA Omnimon\"",
+      "rationale": "57 top cuts in 116 lists (weight 29.5); 25 card(s) to implement over 13 sets (32% in ST20+BT17); 378 clause + 488 interaction exams; first decklist ready after ~169 units",
+      "rank": 15
+    },
+    {
+      "archetype": "TS Olympos",
+      "tier": "C",
+      "score": 6.0576,
+      "closeness": 0.2019,
+      "meta": {
+        "weight": 29.9971,
+        "times_played": 102,
+        "top_cuts": 48,
+        "newest_event": "2026-06-20",
+        "undated_lists": 9
+      },
+      "lists": 102,
+      "pool": 126,
+      "core": 8,
+      "core_threshold": 72,
+      "cards": {
+        "with_yaml": 98,
+        "without_yaml": 28,
+        "blocked_status": [
+          "BT24-093"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 29,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT4-105",
+          "BT5-087",
+          "BT7-082",
+          "BT9-069",
+          "BT9-110",
+          "BT16-063",
+          "BT17-041",
+          "BT24-002",
+          "BT24-015",
+          "BT24-019",
+          "BT24-022",
+          "BT24-024",
+          "BT24-025",
+          "BT24-027",
+          "BT24-028",
+          "BT24-029",
+          "BT24-039",
+          "BT24-050",
+          "BT24-092",
+          "BT24-093",
+          "EX2-067",
+          "EX2-070",
+          "EX6-003",
+          "EX7-068",
+          "EX9-068",
+          "LM-045",
+          "P-195",
+          "P-199",
+          "ST20-07"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 70,
+          "diverged": 9,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 349,
+          "total": 428,
+          "adjudicated": 70,
+          "open": 358,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 14,
+          "diverged": 5,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 10,
+          "total": 29,
+          "adjudicated": 14,
+          "open": 15,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 601,
+        "adjudicated": 0,
+        "open": 601,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 29,
+        "clauses": 358,
+        "interactions": 601,
+        "total": 988,
+        "first_list": 134,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT24": 13,
+          "BT9": 2,
+          "EX2": 2,
+          "P": 2,
+          "BT4": 1,
+          "BT5": 1,
+          "BT7": 1,
+          "BT16": 1,
+          "BT17": 1,
+          "EX6": 1,
+          "EX7": 1,
+          "EX9": 1,
+          "LM": 1,
+          "ST20": 1
+        },
+        "n_sets": 14,
+        "top2": [
+          "BT24",
+          "BT9"
+        ],
+        "top2_share": 0.5172413793103449
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"TS Olympos\"",
+      "rationale": "48 top cuts in 102 lists (weight 30.0); 29 card(s) to implement over 14 sets (52% in BT24+BT9); 358 clause + 601 interaction exams; first decklist ready after ~134 units",
+      "rank": 16
+    },
+    {
+      "archetype": "Sakuyamon",
+      "tier": "C",
+      "score": 5.9855,
+      "closeness": 0.199,
+      "meta": {
+        "weight": 30.0712,
+        "times_played": 125,
+        "top_cuts": 65,
+        "newest_event": "2026-09-06",
+        "undated_lists": 0
+      },
+      "lists": 125,
+      "pool": 112,
+      "core": 15,
+      "core_threshold": 88,
+      "cards": {
+        "with_yaml": 35,
+        "without_yaml": 77,
+        "blocked_status": [
+          "BT19-093"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT3-077",
+          "BT5-041",
+          "BT14-009",
+          "ST12-03"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 78,
+        "core_needs_impl": 12,
+        "needs_impl_ids": [
+          "BT5-036",
+          "BT5-038",
+          "BT5-041",
+          "BT5-044",
+          "BT6-006",
+          "BT7-035",
+          "BT7-036",
+          "BT10-032",
+          "BT10-036",
+          "BT10-039",
+          "BT10-041",
+          "BT10-095",
+          "BT10-105",
+          "BT14-070",
+          "BT15-008",
+          "BT16-068",
+          "BT16-075",
+          "BT17-031",
+          "BT17-032",
+          "BT17-035",
+          "BT17-038",
+          "BT17-041",
+          "BT17-085",
+          "BT18-036",
+          "BT19-003",
+          "BT19-030",
+          "BT19-034",
+          "BT19-037",
+          "BT19-040",
+          "BT19-083",
+          "BT19-093",
+          "EX2-003",
+          "EX2-019",
+          "EX2-021",
+          "EX2-023",
+          "EX2-024",
+          "EX2-060",
+          "EX2-066",
+          "EX2-067",
+          "EX2-068",
+          "EX2-070",
+          "EX2-072",
+          "EX4-024",
+          "EX4-028",
+          "EX4-030",
+          "EX4-068",
+          "EX4-072",
+          "EX5-057",
+          "EX5-059",
+          "EX5-061",
+          "EX5-062",
+          "EX5-070",
+          "EX6-031",
+          "EX7-026",
+          "EX8-029",
+          "EX8-031",
+          "EX8-037",
+          "EX8-064",
+          "LM-023",
+          "LM-045",
+          "P-040",
+          "P-041",
+          "P-095",
+          "P-221",
+          "P-223",
+          "ST19-15",
+          "ST21-15",
+          "ST22-01",
+          "ST22-02",
+          "ST22-03",
+          "ST22-04",
+          "ST22-05",
+          "ST22-06",
+          "ST22-07",
+          "ST22-09",
+          "ST22-10",
+          "ST22-13",
+          "ST22-14"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 16,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 322,
+          "total": 338,
+          "adjudicated": 16,
+          "open": 318,
+          "planned_unavailable": 4,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 53,
+          "total": 53,
+          "adjudicated": 0,
+          "open": 53,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 622,
+        "adjudicated": 0,
+        "open": 610,
+        "planned_unavailable": 12
+      },
+      "units": {
+        "implement": 78,
+        "clauses": 318,
+        "interactions": 610,
+        "total": 1006,
+        "first_list": 190,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX2": 11,
+          "ST22": 11,
+          "BT19": 7,
+          "BT10": 6,
+          "BT17": 6,
+          "EX4": 5,
+          "EX5": 5,
+          "P": 5,
+          "BT5": 4,
+          "EX8": 4,
+          "BT7": 2,
+          "BT16": 2,
+          "LM": 2,
+          "BT6": 1,
+          "BT14": 1,
+          "BT15": 1,
+          "BT18": 1,
+          "EX6": 1,
+          "EX7": 1,
+          "ST19": 1,
+          "ST21": 1
+        },
+        "n_sets": 21,
+        "top2": [
+          "EX2",
+          "ST22"
+        ],
+        "top2_share": 0.28205128205128205
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Sakuyamon\"",
+      "rationale": "65 top cuts in 125 lists (weight 30.1); 78 card(s) to implement over 21 sets (28% in EX2+ST22); 318 clause + 610 interaction exams; first decklist ready after ~190 units",
+      "rank": 17
+    },
+    {
+      "archetype": "Royal Knights",
+      "tier": "C",
+      "score": 5.8797,
+      "closeness": 0.237,
+      "meta": {
+        "weight": 24.8122,
+        "times_played": 90,
+        "top_cuts": 61,
+        "newest_event": "2026-07-04",
+        "undated_lists": 1
+      },
+      "lists": 90,
+      "pool": 89,
+      "core": 12,
+      "core_threshold": 63,
+      "cards": {
+        "with_yaml": 81,
+        "without_yaml": 8,
+        "blocked_status": [
+          "BT13-102",
+          "BT19-093",
+          "BT20-056"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT14-009"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 11,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT6-089",
+          "BT8-059",
+          "BT13-056",
+          "BT13-102",
+          "BT19-093",
+          "BT20-056",
+          "BT23-073",
+          "ST15-14",
+          "ST15-16",
+          "ST16-15",
+          "ST17-13"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 8,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 333,
+          "total": 341,
+          "adjudicated": 8,
+          "open": 332,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 55,
+          "total": 55,
+          "adjudicated": 0,
+          "open": 55,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 464,
+        "adjudicated": 0,
+        "open": 462,
+        "planned_unavailable": 2
+      },
+      "units": {
+        "implement": 11,
+        "clauses": 332,
+        "interactions": 462,
+        "total": 805,
+        "first_list": 195,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT13": 2,
+          "ST15": 2,
+          "BT6": 1,
+          "BT8": 1,
+          "BT19": 1,
+          "BT20": 1,
+          "BT23": 1,
+          "ST16": 1,
+          "ST17": 1
+        },
+        "n_sets": 9,
+        "top2": [
+          "BT13",
+          "ST15"
+        ],
+        "top2_share": 0.36363636363636365
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Royal Knights\"",
+      "rationale": "61 top cuts in 90 lists (weight 24.8); 11 card(s) to implement over 9 sets (36% in BT13+ST15); 332 clause + 462 interaction exams; first decklist ready after ~195 units",
+      "rank": 18
+    },
+    {
+      "archetype": "Apps Reboot",
+      "tier": "B",
+      "score": 5.5705,
+      "closeness": 0.3882,
+      "meta": {
+        "weight": 14.3496,
+        "times_played": 32,
+        "top_cuts": 12,
+        "newest_event": "2026-09-06",
+        "undated_lists": 0
+      },
+      "lists": 32,
+      "pool": 44,
+      "core": 11,
+      "core_threshold": 23,
+      "cards": {
+        "with_yaml": 36,
+        "without_yaml": 8,
+        "blocked_status": [],
+        "unknown_ids": [
+          "P-241"
+        ],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 9,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT21-053",
+          "BT22-050",
+          "BT23-021",
+          "BT23-022",
+          "BT23-033",
+          "BT23-039",
+          "BT23-093",
+          "P-190",
+          "P-241"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 14,
+          "diverged": 6,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 193,
+          "total": 213,
+          "adjudicated": 14,
+          "open": 199,
+          "planned_unavailable": 0,
+          "open_image_required": 1
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 62,
+          "total": 62,
+          "adjudicated": 0,
+          "open": 62,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 186,
+        "adjudicated": 0,
+        "open": 186,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 9,
+        "clauses": 199,
+        "interactions": 186,
+        "total": 394,
+        "first_list": 166,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT23": 5,
+          "P": 2,
+          "BT21": 1,
+          "BT22": 1
+        },
+        "n_sets": 4,
+        "top2": [
+          "BT23",
+          "P"
+        ],
+        "top2_share": 0.7777777777777778
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Apps Reboot\"",
+      "rationale": "12 top cuts in 32 lists (weight 14.3); 9 card(s) to implement over 4 sets (78% in BT23+P); 199 clause + 186 interaction exams (incl. 1 image-required security slot(s)); first decklist ready after ~166 units",
+      "rank": 19
+    },
+    {
+      "archetype": "Omni Ladder",
+      "tier": "A",
+      "score": 5.1578,
+      "closeness": 0.3817,
+      "meta": {
+        "weight": 13.5135,
+        "times_played": 27,
+        "top_cuts": 12,
+        "newest_event": "2026-09-07",
+        "undated_lists": 0
+      },
+      "lists": 27,
+      "pool": 44,
+      "core": 13,
+      "core_threshold": 19,
+      "cards": {
+        "with_yaml": 40,
+        "without_yaml": 4,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 4,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT11-062",
+          "BT13-065",
+          "ST13-06",
+          "ST20-01"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 7,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 168,
+          "total": 175,
+          "adjudicated": 7,
+          "open": 168,
+          "planned_unavailable": 0,
+          "open_image_required": 4
+        },
+        "core": {
+          "confirmed": 3,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 52,
+          "total": 55,
+          "adjudicated": 3,
+          "open": 52,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 233,
+        "adjudicated": 0,
+        "open": 233,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 4,
+        "clauses": 168,
+        "interactions": 233,
+        "total": 405,
+        "first_list": 130,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT11": 1,
+          "BT13": 1,
+          "ST13": 1,
+          "ST20": 1
+        },
+        "n_sets": 4,
+        "top2": [
+          "BT11",
+          "BT13"
+        ],
+        "top2_share": 0.5
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Omni Ladder\"",
+      "rationale": "12 top cuts in 27 lists (weight 13.5); 4 straggler card(s) to implement, none in the core; 168 clause + 233 interaction exams (incl. 4 image-required security slot(s)); first decklist ready after ~130 units",
+      "rank": 20
+    },
+    {
+      "archetype": "BG Imperial",
+      "tier": "C",
+      "score": 5.0767,
+      "closeness": 0.2709,
+      "meta": {
+        "weight": 18.743,
+        "times_played": 95,
+        "top_cuts": 48,
+        "newest_event": "2026-06-24",
+        "undated_lists": 0
+      },
+      "lists": 95,
+      "pool": 85,
+      "core": 16,
+      "core_threshold": 67,
+      "cards": {
+        "with_yaml": 54,
+        "without_yaml": 31,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT3-021"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 31,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT3-021",
+          "BT3-104",
+          "BT5-086",
+          "BT5-088",
+          "BT8-053",
+          "BT8-088",
+          "BT8-099",
+          "BT12-055",
+          "BT12-090",
+          "BT14-002",
+          "BT14-026",
+          "BT16-018",
+          "BT16-041",
+          "BT16-046",
+          "BT16-092",
+          "BT17-084",
+          "BT17-094",
+          "BT21-032",
+          "BT21-036",
+          "EX1-019",
+          "EX2-068",
+          "EX2-072",
+          "EX7-015",
+          "P-036",
+          "P-109",
+          "P-110",
+          "P-124",
+          "ST8-01",
+          "ST9-14",
+          "ST17-01",
+          "ST17-13"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 23,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 251,
+          "total": 274,
+          "adjudicated": 23,
+          "open": 250,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 44,
+          "total": 44,
+          "adjudicated": 0,
+          "open": 44,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 392,
+        "adjudicated": 0,
+        "open": 392,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 31,
+        "clauses": 250,
+        "interactions": 392,
+        "total": 673,
+        "first_list": 150,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT16": 4,
+          "P": 4,
+          "BT8": 3,
+          "BT3": 2,
+          "BT5": 2,
+          "BT12": 2,
+          "BT14": 2,
+          "BT17": 2,
+          "BT21": 2,
+          "EX2": 2,
+          "ST17": 2,
+          "EX1": 1,
+          "EX7": 1,
+          "ST8": 1,
+          "ST9": 1
+        },
+        "n_sets": 15,
+        "top2": [
+          "BT16",
+          "P"
+        ],
+        "top2_share": 0.25806451612903225
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"BG Imperial\"",
+      "rationale": "48 top cuts in 95 lists (weight 18.7); 31 card(s) to implement over 15 sets (26% in BT16+P); 250 clause + 392 interaction exams; first decklist ready after ~150 units",
+      "rank": 21
+    },
+    {
+      "archetype": "TS Marsmon",
+      "tier": "A",
+      "score": 4.9971,
+      "closeness": 0.3709,
+      "meta": {
+        "weight": 13.4723,
+        "times_played": 23,
+        "top_cuts": 19,
+        "newest_event": "2026-06-21",
+        "undated_lists": 1
+      },
+      "lists": 23,
+      "pool": 51,
+      "core": 13,
+      "core_threshold": 17,
+      "cards": {
+        "with_yaml": 51,
+        "without_yaml": 0,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 0,
+        "core_needs_impl": 0,
+        "needs_impl_ids": []
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 53,
+          "diverged": 5,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 140,
+          "total": 198,
+          "adjudicated": 54,
+          "open": 144,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 6,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 41,
+          "total": 47,
+          "adjudicated": 6,
+          "open": 41,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 280,
+        "adjudicated": 0,
+        "open": 280,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 0,
+        "clauses": 144,
+        "interactions": 280,
+        "total": 424,
+        "first_list": 162,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {},
+        "n_sets": 0,
+        "top2": [],
+        "top2_share": null
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"TS Marsmon\"",
+      "rationale": "19 top cuts in 23 lists (weight 13.5); nothing to implement; 144 clause + 280 interaction exams; first decklist ready after ~162 units",
+      "rank": 22
+    },
+    {
+      "archetype": "Jesmon",
+      "tier": "C",
+      "score": 4.9923,
+      "closeness": 0.1938,
+      "meta": {
+        "weight": 25.7603,
+        "times_played": 119,
+        "top_cuts": 59,
+        "newest_event": "2026-05-17",
+        "undated_lists": 2
+      },
+      "lists": 119,
+      "pool": 129,
+      "core": 9,
+      "core_threshold": 84,
+      "cards": {
+        "with_yaml": 75,
+        "without_yaml": 54,
+        "blocked_status": [
+          "BT13-102",
+          "BT20-013",
+          "BT20-056"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT4-001",
+          "BT14-009",
+          "ST12-03"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 56,
+        "core_needs_impl": 6,
+        "needs_impl_ids": [
+          "BT3-097",
+          "BT4-001",
+          "BT5-086",
+          "BT6-009",
+          "BT6-011",
+          "BT6-015",
+          "BT7-009",
+          "BT7-082",
+          "BT8-001",
+          "BT9-001",
+          "BT9-109",
+          "BT10-016",
+          "BT10-068",
+          "BT10-085",
+          "BT10-095",
+          "BT10-110",
+          "BT10-112",
+          "BT12-001",
+          "BT13-009",
+          "BT13-013",
+          "BT13-016",
+          "BT13-102",
+          "BT17-001",
+          "BT18-009",
+          "BT19-011",
+          "BT20-008",
+          "BT20-013",
+          "BT20-014",
+          "BT20-019",
+          "BT20-056",
+          "BT20-057",
+          "BT22-004",
+          "BT22-031",
+          "BT22-037",
+          "BT22-043",
+          "BT22-044",
+          "BT22-046",
+          "BT22-056",
+          "BT22-063",
+          "BT22-077",
+          "BT22-093",
+          "BT22-101",
+          "BT23-006",
+          "BT23-030",
+          "BT23-044",
+          "BT23-076",
+          "BT23-089",
+          "BT23-091",
+          "BT23-099",
+          "EX2-064",
+          "ST12-01",
+          "ST12-06",
+          "ST12-08",
+          "ST12-10",
+          "ST12-13",
+          "ST12-14"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 19,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 399,
+          "total": 418,
+          "adjudicated": 19,
+          "open": 396,
+          "planned_unavailable": 3,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 25,
+          "total": 25,
+          "adjudicated": 0,
+          "open": 25,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 595,
+        "adjudicated": 0,
+        "open": 588,
+        "planned_unavailable": 7
+      },
+      "units": {
+        "implement": 56,
+        "clauses": 396,
+        "interactions": 588,
+        "total": 1040,
+        "first_list": 143,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT22": 11,
+          "BT23": 7,
+          "BT10": 6,
+          "BT20": 6,
+          "ST12": 6,
+          "BT13": 4,
+          "BT6": 3,
+          "BT7": 2,
+          "BT9": 2,
+          "BT3": 1,
+          "BT4": 1,
+          "BT5": 1,
+          "BT8": 1,
+          "BT12": 1,
+          "BT17": 1,
+          "BT18": 1,
+          "BT19": 1,
+          "EX2": 1
+        },
+        "n_sets": 18,
+        "top2": [
+          "BT22",
+          "BT23"
+        ],
+        "top2_share": 0.32142857142857145
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Jesmon\"",
+      "rationale": "59 top cuts in 119 lists (weight 25.8); 56 card(s) to implement over 18 sets (32% in BT22+BT23); 396 clause + 588 interaction exams; first decklist ready after ~143 units",
+      "rank": 23
+    },
+    {
+      "archetype": "Millenniummon",
+      "tier": "C",
+      "score": 4.9426,
+      "closeness": 0.2242,
+      "meta": {
+        "weight": 22.0441,
+        "times_played": 64,
+        "top_cuts": 39,
+        "newest_event": "2026-06-20",
+        "undated_lists": 12
+      },
+      "lists": 64,
+      "pool": 113,
+      "core": 13,
+      "core_threshold": 45,
+      "cards": {
+        "with_yaml": 53,
+        "without_yaml": 60,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT3-077",
+          "BT14-069"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 60,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT2-068",
+          "BT2-070",
+          "BT2-077",
+          "BT3-098",
+          "BT5-071",
+          "BT5-107",
+          "BT6-107",
+          "BT9-006",
+          "BT9-102",
+          "BT11-072",
+          "BT13-078",
+          "BT14-069",
+          "BT15-069",
+          "BT16-006",
+          "BT19-068",
+          "BT19-087",
+          "BT19-102",
+          "BT20-006",
+          "BT20-052",
+          "BT21-064",
+          "BT21-068",
+          "BT21-076",
+          "BT22-049",
+          "BT22-061",
+          "BT24-066",
+          "EX1-073",
+          "EX2-046",
+          "EX8-009",
+          "EX8-012",
+          "EX8-015",
+          "EX8-056",
+          "EX9-002",
+          "EX9-006",
+          "EX9-009",
+          "EX9-010",
+          "EX9-011",
+          "EX9-014",
+          "EX9-015",
+          "EX9-016",
+          "EX9-017",
+          "EX9-022",
+          "EX9-025",
+          "EX9-026",
+          "EX9-029",
+          "EX9-037",
+          "EX9-038",
+          "EX9-051",
+          "EX9-052",
+          "EX9-059",
+          "EX9-061",
+          "EX9-062",
+          "EX9-064",
+          "EX9-065",
+          "EX9-068",
+          "EX9-069",
+          "EX9-070",
+          "EX9-072",
+          "LM-050",
+          "LM-053",
+          "P-177"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 26,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 346,
+          "total": 372,
+          "adjudicated": 26,
+          "open": 344,
+          "planned_unavailable": 2,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 7,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 51,
+          "total": 58,
+          "adjudicated": 7,
+          "open": 51,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 464,
+        "adjudicated": 0,
+        "open": 461,
+        "planned_unavailable": 3
+      },
+      "units": {
+        "implement": 60,
+        "clauses": 344,
+        "interactions": 461,
+        "total": 865,
+        "first_list": 145,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX9": 26,
+          "EX8": 4,
+          "BT2": 3,
+          "BT19": 3,
+          "BT21": 3,
+          "BT5": 2,
+          "BT9": 2,
+          "BT20": 2,
+          "BT22": 2,
+          "LM": 2,
+          "BT3": 1,
+          "BT6": 1,
+          "BT11": 1,
+          "BT13": 1,
+          "BT14": 1,
+          "BT15": 1,
+          "BT16": 1,
+          "BT24": 1,
+          "EX1": 1,
+          "EX2": 1,
+          "P": 1
+        },
+        "n_sets": 21,
+        "top2": [
+          "EX9",
+          "EX8"
+        ],
+        "top2_share": 0.5
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Millenniummon\"",
+      "rationale": "39 top cuts in 64 lists (weight 22.0); 60 card(s) to implement over 21 sets (50% in EX9+EX8); 344 clause + 461 interaction exams; first decklist ready after ~145 units",
+      "rank": 24
+    },
+    {
+      "archetype": "Gallantmon",
+      "tier": "C",
+      "score": 4.9233,
+      "closeness": 0.2254,
+      "meta": {
+        "weight": 21.8397,
+        "times_played": 93,
+        "top_cuts": 41,
+        "newest_event": "2026-08-28",
+        "undated_lists": 1
+      },
+      "lists": 93,
+      "pool": 114,
+      "core": 13,
+      "core_threshold": 66,
+      "cards": {
+        "with_yaml": 41,
+        "without_yaml": 73,
+        "blocked_status": [
+          "BT24-068"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT14-009",
+          "ST12-03"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 74,
+        "core_needs_impl": 5,
+        "needs_impl_ids": [
+          "AD1-003",
+          "AD1-008",
+          "BT2-001",
+          "BT3-098",
+          "BT5-071",
+          "BT5-083",
+          "BT6-108",
+          "BT9-109",
+          "BT10-112",
+          "BT12-001",
+          "BT12-010",
+          "BT12-089",
+          "BT14-076",
+          "BT16-075",
+          "BT17-010",
+          "BT17-013",
+          "BT17-080",
+          "BT17-096",
+          "BT18-009",
+          "BT19-007",
+          "BT19-009",
+          "BT19-011",
+          "BT19-015",
+          "BT19-067",
+          "BT19-080",
+          "BT20-061",
+          "BT20-069",
+          "BT20-074",
+          "BT20-075",
+          "BT20-077",
+          "BT20-090",
+          "BT20-096",
+          "BT21-064",
+          "BT21-068",
+          "BT21-076",
+          "BT21-079",
+          "BT21-089",
+          "BT21-100",
+          "BT24-066",
+          "BT24-068",
+          "BT24-069",
+          "BT24-070",
+          "BT24-076",
+          "BT24-080",
+          "EX2-001",
+          "EX2-008",
+          "EX2-056",
+          "EX2-073",
+          "EX3-056",
+          "EX3-062",
+          "EX4-008",
+          "EX4-010",
+          "EX4-011",
+          "EX5-061",
+          "EX5-070",
+          "EX7-006",
+          "EX7-050",
+          "EX7-053",
+          "EX7-055",
+          "EX7-057",
+          "EX7-062",
+          "EX7-065",
+          "EX8-009",
+          "EX8-012",
+          "EX8-015",
+          "EX10-009",
+          "EX10-037",
+          "LM-038",
+          "LM-050",
+          "P-040",
+          "P-091",
+          "P-177",
+          "ST7-03",
+          "ST7-05"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 15,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 324,
+          "total": 339,
+          "adjudicated": 15,
+          "open": 322,
+          "planned_unavailable": 2,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 44,
+          "total": 44,
+          "adjudicated": 0,
+          "open": 44,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 469,
+        "adjudicated": 0,
+        "open": 463,
+        "planned_unavailable": 6
+      },
+      "units": {
+        "implement": 74,
+        "clauses": 322,
+        "interactions": 463,
+        "total": 859,
+        "first_list": 198,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT20": 7,
+          "EX7": 7,
+          "BT19": 6,
+          "BT21": 6,
+          "BT24": 6,
+          "BT17": 4,
+          "EX2": 4,
+          "BT12": 3,
+          "EX4": 3,
+          "EX8": 3,
+          "P": 3,
+          "AD1": 2,
+          "BT5": 2,
+          "EX3": 2,
+          "EX5": 2,
+          "EX10": 2,
+          "LM": 2,
+          "ST7": 2,
+          "BT2": 1,
+          "BT3": 1,
+          "BT6": 1,
+          "BT9": 1,
+          "BT10": 1,
+          "BT14": 1,
+          "BT16": 1,
+          "BT18": 1
+        },
+        "n_sets": 26,
+        "top2": [
+          "BT20",
+          "EX7"
+        ],
+        "top2_share": 0.1891891891891892
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Gallantmon\"",
+      "rationale": "41 top cuts in 93 lists (weight 21.8); 74 card(s) to implement over 26 sets (19% in BT20+EX7); 322 clause + 463 interaction exams; first decklist ready after ~198 units",
+      "rank": 25
+    },
+    {
+      "archetype": "TS Bears",
+      "tier": "A",
+      "score": 4.7595,
+      "closeness": 0.4209,
+      "meta": {
+        "weight": 11.3086,
+        "times_played": 28,
+        "top_cuts": 9,
+        "newest_event": "2026-09-05",
+        "undated_lists": 0
+      },
+      "lists": 28,
+      "pool": 44,
+      "core": 13,
+      "core_threshold": 20,
+      "cards": {
+        "with_yaml": 41,
+        "without_yaml": 3,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 3,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT1-089",
+          "BT9-083",
+          "EX7-004"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 57,
+          "diverged": 4,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 99,
+          "total": 160,
+          "adjudicated": 58,
+          "open": 102,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 14,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 38,
+          "total": 52,
+          "adjudicated": 14,
+          "open": 38,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 239,
+        "adjudicated": 0,
+        "open": 239,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 3,
+        "clauses": 102,
+        "interactions": 239,
+        "total": 344,
+        "first_list": 142,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT1": 1,
+          "BT9": 1,
+          "EX7": 1
+        },
+        "n_sets": 3,
+        "top2": [
+          "BT1",
+          "BT9"
+        ],
+        "top2_share": 0.6666666666666666
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"TS Bears\"",
+      "rationale": "9 top cuts in 28 lists (weight 11.3); 3 straggler card(s) to implement, none in the core; 102 clause + 239 interaction exams; first decklist ready after ~142 units",
+      "rank": 26
+    },
+    {
+      "archetype": "Puppets",
+      "tier": "A",
+      "score": 4.5991,
+      "closeness": 0.3411,
+      "meta": {
+        "weight": 13.4845,
+        "times_played": 54,
+        "top_cuts": 14,
+        "newest_event": "2026-09-12",
+        "undated_lists": 11
+      },
+      "lists": 54,
+      "pool": 70,
+      "core": 9,
+      "core_threshold": 38,
+      "cards": {
+        "with_yaml": 67,
+        "without_yaml": 3,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT5-033"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 3,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT23-076",
+          "EX9-056",
+          "LM-062"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 23,
+          "diverged": 0,
+          "unreachable": 3,
+          "unavailable": 0,
+          "unmeasured": 190,
+          "total": 216,
+          "adjudicated": 26,
+          "open": 189,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 29,
+          "total": 29,
+          "adjudicated": 0,
+          "open": 29,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 294,
+        "adjudicated": 0,
+        "open": 291,
+        "planned_unavailable": 3
+      },
+      "units": {
+        "implement": 3,
+        "clauses": 189,
+        "interactions": 291,
+        "total": 483,
+        "first_list": 150,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT23": 1,
+          "EX9": 1,
+          "LM": 1
+        },
+        "n_sets": 3,
+        "top2": [
+          "BT23",
+          "EX9"
+        ],
+        "top2_share": 0.6666666666666666
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Puppets\"",
+      "rationale": "14 top cuts in 54 lists (weight 13.5); 3 straggler card(s) to implement, none in the core; 189 clause + 291 interaction exams; first decklist ready after ~150 units",
+      "rank": 27
+    },
+    {
+      "archetype": "Metal Empire",
+      "tier": "B",
+      "score": 4.1534,
+      "closeness": 0.3546,
+      "meta": {
+        "weight": 11.7126,
+        "times_played": 32,
+        "top_cuts": 8,
+        "newest_event": "2026-09-01",
+        "undated_lists": 0
+      },
+      "lists": 32,
+      "pool": 47,
+      "core": 16,
+      "core_threshold": 23,
+      "cards": {
+        "with_yaml": 25,
+        "without_yaml": 22,
+        "blocked_status": [
+          "BT13-102"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "ST12-03",
+          "ST13-08"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 23,
+        "core_needs_impl": 12,
+        "needs_impl_ids": [
+          "BT9-102",
+          "BT12-072",
+          "BT13-102",
+          "BT18-026",
+          "BT18-053",
+          "BT22-012",
+          "BT22-056",
+          "EX4-068",
+          "EX9-018",
+          "EX9-068",
+          "EX11-041",
+          "EX12-003",
+          "EX12-008",
+          "EX12-038",
+          "EX12-041",
+          "EX12-053",
+          "EX12-054",
+          "EX12-055",
+          "EX12-058",
+          "EX12-059",
+          "EX12-060",
+          "EX12-064",
+          "EX12-072"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 12,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 1,
+          "unmeasured": 180,
+          "total": 193,
+          "adjudicated": 13,
+          "open": 179,
+          "planned_unavailable": 1,
+          "open_image_required": 18
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 83,
+          "total": 83,
+          "adjudicated": 0,
+          "open": 83,
+          "planned_unavailable": 0,
+          "open_image_required": 16
+        }
+      },
+      "interactions": {
+        "total": 261,
+        "adjudicated": 0,
+        "open": 253,
+        "planned_unavailable": 8
+      },
+      "units": {
+        "implement": 23,
+        "clauses": 179,
+        "interactions": 253,
+        "total": 455,
+        "first_list": 156,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX12": 12,
+          "BT18": 2,
+          "BT22": 2,
+          "EX9": 2,
+          "BT9": 1,
+          "BT12": 1,
+          "BT13": 1,
+          "EX4": 1,
+          "EX11": 1
+        },
+        "n_sets": 9,
+        "top2": [
+          "EX12",
+          "BT18"
+        ],
+        "top2_share": 0.6086956521739131
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Metal Empire\"",
+      "rationale": "8 top cuts in 32 lists (weight 11.7); 23 card(s) to implement over 9 sets (61% in EX12+BT18); 179 clause + 253 interaction exams (incl. 18 image-required security slot(s)); first decklist ready after ~156 units",
+      "rank": 28
+    },
+    {
+      "archetype": "Shoes-Puppet",
+      "tier": "C",
+      "score": 4.07,
+      "closeness": 0.2934,
+      "meta": {
+        "weight": 13.8704,
+        "times_played": 31,
+        "top_cuts": 25,
+        "newest_event": "2026-05-17",
+        "undated_lists": 0
+      },
+      "lists": 31,
+      "pool": 73,
+      "core": 15,
+      "core_threshold": 22,
+      "cards": {
+        "with_yaml": 49,
+        "without_yaml": 24,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 24,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT4-106",
+          "BT7-098",
+          "BT17-031",
+          "BT17-035",
+          "BT19-034",
+          "BT19-040",
+          "BT19-083",
+          "EX2-019",
+          "EX2-023",
+          "EX2-024",
+          "EX2-060",
+          "EX2-066",
+          "EX2-070",
+          "EX8-033",
+          "EX8-037",
+          "EX9-056",
+          "P-223",
+          "ST22-01",
+          "ST22-03",
+          "ST22-04",
+          "ST22-06",
+          "ST22-07",
+          "ST22-09",
+          "ST22-10"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 9,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 222,
+          "total": 231,
+          "adjudicated": 9,
+          "open": 222,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 45,
+          "total": 45,
+          "adjudicated": 0,
+          "open": 45,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 356,
+        "adjudicated": 0,
+        "open": 356,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 24,
+        "clauses": 222,
+        "interactions": 356,
+        "total": 602,
+        "first_list": 124,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "ST22": 7,
+          "EX2": 6,
+          "BT19": 3,
+          "BT17": 2,
+          "EX8": 2,
+          "BT4": 1,
+          "BT7": 1,
+          "EX9": 1,
+          "P": 1
+        },
+        "n_sets": 9,
+        "top2": [
+          "ST22",
+          "EX2"
+        ],
+        "top2_share": 0.5416666666666666
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Shoes-Puppet\"",
+      "rationale": "25 top cuts in 31 lists (weight 13.9); 24 card(s) to implement over 9 sets (54% in ST22+EX2); 222 clause + 356 interaction exams; first decklist ready after ~124 units",
+      "rank": 29
+    },
+    {
+      "archetype": "Dark Masters",
+      "tier": "C",
+      "score": 3.908,
+      "closeness": 0.249,
+      "meta": {
+        "weight": 15.6946,
+        "times_played": 40,
+        "top_cuts": 30,
+        "newest_event": "2026-08-07",
+        "undated_lists": 0
+      },
+      "lists": 40,
+      "pool": 78,
+      "core": 8,
+      "core_threshold": 28,
+      "cards": {
+        "with_yaml": 38,
+        "without_yaml": 40,
+        "blocked_status": [
+          "BT13-102",
+          "BT19-093",
+          "EX10-020"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT14-009"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 43,
+        "core_needs_impl": 6,
+        "needs_impl_ids": [
+          "BT5-087",
+          "BT13-078",
+          "BT13-080",
+          "BT13-102",
+          "BT15-008",
+          "BT15-027",
+          "BT15-031",
+          "BT15-050",
+          "BT15-052",
+          "BT15-062",
+          "BT15-064",
+          "BT15-066",
+          "BT15-072",
+          "BT15-077",
+          "BT15-079",
+          "BT16-006",
+          "BT16-026",
+          "BT16-046",
+          "BT17-001",
+          "BT17-068",
+          "BT18-009",
+          "BT18-079",
+          "BT19-064",
+          "BT19-093",
+          "BT21-051",
+          "BT23-007",
+          "EX2-007",
+          "EX2-046",
+          "EX2-067",
+          "EX5-016",
+          "EX8-026",
+          "EX9-020",
+          "EX9-068",
+          "EX10-012",
+          "EX10-020",
+          "EX10-035",
+          "EX10-057",
+          "EX10-061",
+          "EX10-072",
+          "EX10-074",
+          "LM-043",
+          "P-041",
+          "P-216"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 24,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 254,
+          "total": 278,
+          "adjudicated": 24,
+          "open": 253,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 3,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 31,
+          "total": 34,
+          "adjudicated": 3,
+          "open": 31,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 460,
+        "adjudicated": 0,
+        "open": 458,
+        "planned_unavailable": 2
+      },
+      "units": {
+        "implement": 43,
+        "clauses": 253,
+        "interactions": 458,
+        "total": 754,
+        "first_list": 222,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT15": 11,
+          "EX10": 7,
+          "BT13": 3,
+          "BT16": 3,
+          "EX2": 3,
+          "BT17": 2,
+          "BT18": 2,
+          "BT19": 2,
+          "EX9": 2,
+          "P": 2,
+          "BT5": 1,
+          "BT21": 1,
+          "BT23": 1,
+          "EX5": 1,
+          "EX8": 1,
+          "LM": 1
+        },
+        "n_sets": 16,
+        "top2": [
+          "BT15",
+          "EX10"
+        ],
+        "top2_share": 0.4186046511627907
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Dark Masters\"",
+      "rationale": "30 top cuts in 40 lists (weight 15.7); 43 card(s) to implement over 16 sets (42% in BT15+EX10); 253 clause + 458 interaction exams; first decklist ready after ~222 units",
+      "rank": 30
+    },
+    {
+      "archetype": "Titans",
+      "tier": "C",
+      "score": 3.816,
+      "closeness": 0.3137,
+      "meta": {
+        "weight": 12.1655,
+        "times_played": 28,
+        "top_cuts": 9,
+        "newest_event": "2026-09-07",
+        "undated_lists": 0
+      },
+      "lists": 28,
+      "pool": 68,
+      "core": 12,
+      "core_threshold": 20,
+      "cards": {
+        "with_yaml": 53,
+        "without_yaml": 15,
+        "blocked_status": [
+          "BT25-097"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 15,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT4-089",
+          "BT6-006",
+          "BT6-081",
+          "BT6-108",
+          "BT7-076",
+          "BT7-077",
+          "BT9-079",
+          "BT10-080",
+          "BT14-073",
+          "BT16-048",
+          "BT16-075",
+          "BT16-079",
+          "BT17-025",
+          "BT24-074",
+          "BT25-097"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 39,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 204,
+          "total": 243,
+          "adjudicated": 39,
+          "open": 204,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 9,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 36,
+          "total": 45,
+          "adjudicated": 9,
+          "open": 36,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 328,
+        "adjudicated": 0,
+        "open": 328,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 15,
+        "clauses": 204,
+        "interactions": 328,
+        "total": 547,
+        "first_list": 181,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT6": 3,
+          "BT16": 3,
+          "BT7": 2,
+          "BT4": 1,
+          "BT9": 1,
+          "BT10": 1,
+          "BT14": 1,
+          "BT17": 1,
+          "BT24": 1,
+          "BT25": 1
+        },
+        "n_sets": 10,
+        "top2": [
+          "BT6",
+          "BT16"
+        ],
+        "top2_share": 0.4
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Titans\"",
+      "rationale": "9 top cuts in 28 lists (weight 12.2); 15 card(s) to implement over 10 sets (40% in BT6+BT16); 204 clause + 328 interaction exams; first decklist ready after ~181 units",
+      "rank": 31
+    },
+    {
+      "archetype": "XrosHeart",
+      "tier": "B",
+      "score": 3.8016,
+      "closeness": 0.3811,
+      "meta": {
+        "weight": 9.9753,
+        "times_played": 19,
+        "top_cuts": 17,
+        "newest_event": "2026-05-17",
+        "undated_lists": 0
+      },
+      "lists": 19,
+      "pool": 41,
+      "core": 16,
+      "core_threshold": 14,
+      "cards": {
+        "with_yaml": 35,
+        "without_yaml": 6,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 6,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT10-008",
+          "BT11-012",
+          "BT11-076",
+          "BT11-086",
+          "BT17-041",
+          "BT17-079"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 4,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 156,
+          "total": 160,
+          "adjudicated": 4,
+          "open": 156,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 68,
+          "total": 68,
+          "adjudicated": 0,
+          "open": 68,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 244,
+        "adjudicated": 0,
+        "open": 244,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 6,
+        "clauses": 156,
+        "interactions": 244,
+        "total": 406,
+        "first_list": 175,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT11": 3,
+          "BT17": 2,
+          "BT10": 1
+        },
+        "n_sets": 3,
+        "top2": [
+          "BT11",
+          "BT17"
+        ],
+        "top2_share": 0.8333333333333334
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"XrosHeart\"",
+      "rationale": "17 top cuts in 19 lists (weight 10.0); 6 card(s) to implement over 3 sets (83% in BT11+BT17); 156 clause + 244 interaction exams; first decklist ready after ~175 units",
+      "rank": 32
+    },
+    {
+      "archetype": "Mastemon (Tribal)",
+      "tier": "C",
+      "score": 3.7419,
+      "closeness": 0.2395,
+      "meta": {
+        "weight": 15.6262,
+        "times_played": 57,
+        "top_cuts": 38,
+        "newest_event": "2026-06-17",
+        "undated_lists": 0
+      },
+      "lists": 57,
+      "pool": 104,
+      "core": 14,
+      "core_threshold": 40,
+      "cards": {
+        "with_yaml": 43,
+        "without_yaml": 61,
+        "blocked_status": [
+          "BT15-037",
+          "BT23-102",
+          "EX10-031"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT5-033",
+          "ST10-02"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 64,
+        "core_needs_impl": 10,
+        "needs_impl_ids": [
+          "BT4-084",
+          "BT6-089",
+          "BT6-100",
+          "BT8-024",
+          "BT8-035",
+          "BT8-077",
+          "BT8-082",
+          "BT9-082",
+          "BT10-101",
+          "BT11-043",
+          "BT11-080",
+          "BT11-083",
+          "BT11-094",
+          "BT13-003",
+          "BT13-034",
+          "BT14-003",
+          "BT14-037",
+          "BT14-093",
+          "BT14-102",
+          "BT15-034",
+          "BT15-037",
+          "BT15-038",
+          "BT15-042",
+          "BT16-024",
+          "BT16-088",
+          "BT18-034",
+          "BT18-082",
+          "BT22-004",
+          "BT22-031",
+          "BT22-034",
+          "BT22-043",
+          "BT22-044",
+          "BT22-046",
+          "BT22-054",
+          "BT22-056",
+          "BT22-093",
+          "BT22-101",
+          "BT23-031",
+          "BT23-067",
+          "BT23-102",
+          "EX2-003",
+          "EX6-003",
+          "EX6-016",
+          "EX6-020",
+          "EX6-022",
+          "EX6-030",
+          "EX6-053",
+          "EX6-063",
+          "EX6-074",
+          "EX7-064",
+          "EX8-064",
+          "EX10-031",
+          "EX10-051",
+          "LM-043",
+          "P-122",
+          "P-187",
+          "P-221",
+          "P-225",
+          "ST10-02",
+          "ST10-04",
+          "ST10-06",
+          "ST10-12",
+          "ST10-14",
+          "ST20-05"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 12,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 304,
+          "total": 316,
+          "adjudicated": 12,
+          "open": 302,
+          "planned_unavailable": 2,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 52,
+          "total": 52,
+          "adjudicated": 0,
+          "open": 52,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 436,
+        "adjudicated": 0,
+        "open": 428,
+        "planned_unavailable": 8
+      },
+      "units": {
+        "implement": 64,
+        "clauses": 302,
+        "interactions": 428,
+        "total": 794,
+        "first_list": 189,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT22": 10,
+          "EX6": 8,
+          "ST10": 5,
+          "BT8": 4,
+          "BT11": 4,
+          "BT14": 4,
+          "BT15": 4,
+          "P": 4,
+          "BT23": 3,
+          "BT6": 2,
+          "BT13": 2,
+          "BT16": 2,
+          "BT18": 2,
+          "EX10": 2,
+          "BT4": 1,
+          "BT9": 1,
+          "BT10": 1,
+          "EX2": 1,
+          "EX7": 1,
+          "EX8": 1,
+          "LM": 1,
+          "ST20": 1
+        },
+        "n_sets": 22,
+        "top2": [
+          "BT22",
+          "EX6"
+        ],
+        "top2_share": 0.28125
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Mastemon (Tribal)\"",
+      "rationale": "38 top cuts in 57 lists (weight 15.6); 64 card(s) to implement over 22 sets (28% in BT22+EX6); 302 clause + 428 interaction exams; first decklist ready after ~189 units",
+      "rank": 33
+    },
+    {
+      "archetype": "Magneticdra",
+      "tier": "A",
+      "score": 3.7202,
+      "closeness": 0.4394,
+      "meta": {
+        "weight": 8.4672,
+        "times_played": 33,
+        "top_cuts": 28,
+        "newest_event": "2025-12-22",
+        "undated_lists": 0
+      },
+      "lists": 33,
+      "pool": 40,
+      "core": 16,
+      "core_threshold": 24,
+      "cards": {
+        "with_yaml": 37,
+        "without_yaml": 3,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT14-009",
+          "ST13-08"
+        ],
+        "no_dcgo_script_vanilla": 1,
+        "needs_impl": 3,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT10-062",
+          "EX1-071",
+          "LM-025"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 8,
+          "diverged": 2,
+          "unreachable": 0,
+          "unavailable": 1,
+          "unmeasured": 108,
+          "total": 119,
+          "adjudicated": 9,
+          "open": 109,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 4,
+          "diverged": 2,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 38,
+          "total": 44,
+          "adjudicated": 4,
+          "open": 40,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 213,
+        "adjudicated": 0,
+        "open": 207,
+        "planned_unavailable": 6
+      },
+      "units": {
+        "implement": 3,
+        "clauses": 109,
+        "interactions": 207,
+        "total": 319,
+        "first_list": 139,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT10": 1,
+          "EX1": 1,
+          "LM": 1
+        },
+        "n_sets": 3,
+        "top2": [
+          "BT10",
+          "EX1"
+        ],
+        "top2_share": 0.6666666666666666
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Magneticdra\"",
+      "rationale": "28 top cuts in 33 lists (weight 8.5); 3 straggler card(s) to implement, none in the core; 109 clause + 207 interaction exams; first decklist ready after ~139 units",
+      "rank": 34
+    },
+    {
+      "archetype": "Data Squad",
+      "tier": "B",
+      "score": 3.6939,
+      "closeness": 0.2741,
+      "meta": {
+        "weight": 13.4752,
+        "times_played": 33,
+        "top_cuts": 10,
+        "newest_event": "2026-09-08",
+        "undated_lists": 0
+      },
+      "lists": 33,
+      "pool": 77,
+      "core": 5,
+      "core_threshold": 24,
+      "cards": {
+        "with_yaml": 69,
+        "without_yaml": 8,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT14-009"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 8,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT13-049",
+          "BT13-050",
+          "BT13-100",
+          "BT17-037",
+          "BT18-047",
+          "EX2-004",
+          "EX4-007",
+          "EX4-053"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 16,
+          "diverged": 1,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 239,
+          "total": 256,
+          "adjudicated": 16,
+          "open": 239,
+          "planned_unavailable": 1,
+          "open_image_required": 1
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 18,
+          "total": 18,
+          "adjudicated": 0,
+          "open": 18,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 417,
+        "adjudicated": 0,
+        "open": 415,
+        "planned_unavailable": 2
+      },
+      "units": {
+        "implement": 8,
+        "clauses": 239,
+        "interactions": 415,
+        "total": 662,
+        "first_list": 227,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT13": 3,
+          "EX4": 2,
+          "BT17": 1,
+          "BT18": 1,
+          "EX2": 1
+        },
+        "n_sets": 5,
+        "top2": [
+          "BT13",
+          "EX4"
+        ],
+        "top2_share": 0.625
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Data Squad\"",
+      "rationale": "10 top cuts in 33 lists (weight 13.5); 8 card(s) to implement over 5 sets (62% in BT13+EX4); 239 clause + 415 interaction exams (incl. 1 image-required security slot(s)); first decklist ready after ~227 units",
+      "rank": 35
+    },
+    {
+      "archetype": "Shine",
+      "tier": "A",
+      "score": 3.4977,
+      "closeness": 0.4921,
+      "meta": {
+        "weight": 7.1074,
+        "times_played": 13,
+        "top_cuts": 13,
+        "newest_event": "2026-05-07",
+        "undated_lists": 0
+      },
+      "lists": 13,
+      "pool": 31,
+      "core": 17,
+      "core_threshold": 10,
+      "cards": {
+        "with_yaml": 28,
+        "without_yaml": 3,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 3,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT9-008",
+          "BT21-045",
+          "EX4-007"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 4,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 92,
+          "total": 96,
+          "adjudicated": 4,
+          "open": 92,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 3,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 52,
+          "total": 55,
+          "adjudicated": 3,
+          "open": 52,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 163,
+        "adjudicated": 0,
+        "open": 163,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 3,
+        "clauses": 92,
+        "interactions": 163,
+        "total": 258,
+        "first_list": 166,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT9": 1,
+          "BT21": 1,
+          "EX4": 1
+        },
+        "n_sets": 3,
+        "top2": [
+          "BT9",
+          "BT21"
+        ],
+        "top2_share": 0.6666666666666666
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Shine\"",
+      "rationale": "13 top cuts in 13 lists (weight 7.1); 3 straggler card(s) to implement, none in the core; 92 clause + 163 interaction exams; first decklist ready after ~166 units",
+      "rank": 36
+    },
+    {
+      "archetype": "Galacticmon",
+      "tier": "B",
+      "score": 3.3419,
+      "closeness": 0.4153,
+      "meta": {
+        "weight": 8.0472,
+        "times_played": 33,
+        "top_cuts": 18,
+        "newest_event": "2026-04-24",
+        "undated_lists": 2
+      },
+      "lists": 33,
+      "pool": 39,
+      "core": 13,
+      "core_threshold": 24,
+      "cards": {
+        "with_yaml": 23,
+        "without_yaml": 16,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "ST13-08"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 16,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT7-005",
+          "BT7-105",
+          "BT11-065",
+          "BT11-111",
+          "BT21-051",
+          "EX11-006",
+          "EX11-029",
+          "EX11-033",
+          "EX11-036",
+          "EX11-040",
+          "EX11-042",
+          "EX11-045",
+          "EX11-062",
+          "EX11-070",
+          "EX11-073",
+          "LM-048"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 1,
+          "unmeasured": 134,
+          "total": 135,
+          "adjudicated": 1,
+          "open": 134,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 37,
+          "total": 37,
+          "adjudicated": 0,
+          "open": 37,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 206,
+        "adjudicated": 0,
+        "open": 202,
+        "planned_unavailable": 4
+      },
+      "units": {
+        "implement": 16,
+        "clauses": 134,
+        "interactions": 202,
+        "total": 352,
+        "first_list": 96,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX11": 10,
+          "BT7": 2,
+          "BT11": 2,
+          "BT21": 1,
+          "LM": 1
+        },
+        "n_sets": 5,
+        "top2": [
+          "EX11",
+          "BT7"
+        ],
+        "top2_share": 0.75
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Galacticmon\"",
+      "rationale": "18 top cuts in 33 lists (weight 8.0); 16 card(s) to implement over 5 sets (75% in EX11+BT7); 134 clause + 202 interaction exams; first decklist ready after ~96 units",
+      "rank": 37
+    },
+    {
+      "archetype": "Diaboromon",
+      "tier": "C",
+      "score": 3.3185,
+      "closeness": 0.3644,
+      "meta": {
+        "weight": 9.1061,
+        "times_played": 45,
+        "top_cuts": 18,
+        "newest_event": "2026-03-07",
+        "undated_lists": 1
+      },
+      "lists": 45,
+      "pool": 57,
+      "core": 13,
+      "core_threshold": 32,
+      "cards": {
+        "with_yaml": 13,
+        "without_yaml": 44,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT3-061",
+          "ST13-08"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 44,
+        "core_needs_impl": 10,
+        "needs_impl_ids": [
+          "BT2-006",
+          "BT2-053",
+          "BT2-059",
+          "BT3-061",
+          "BT3-106",
+          "BT5-059",
+          "BT5-063",
+          "BT5-067",
+          "BT5-085",
+          "BT5-090",
+          "BT5-104",
+          "BT5-105",
+          "BT6-104",
+          "BT8-059",
+          "BT11-068",
+          "BT16-005",
+          "BT17-053",
+          "BT17-055",
+          "BT17-059",
+          "BT17-060",
+          "BT17-100",
+          "BT22-053",
+          "BT22-057",
+          "BT22-059",
+          "BT22-064",
+          "BT22-082",
+          "BT22-091",
+          "BT23-091",
+          "BT24-052",
+          "BT24-064",
+          "BT24-065",
+          "BT24-086",
+          "EX1-044",
+          "EX1-046",
+          "EX1-065",
+          "EX6-036",
+          "EX6-039",
+          "EX6-041",
+          "EX6-043",
+          "EX10-023",
+          "P-016",
+          "P-045",
+          "P-114",
+          "ST15-14"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 6,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 1,
+          "unmeasured": 152,
+          "total": 159,
+          "adjudicated": 7,
+          "open": 151,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 35,
+          "total": 35,
+          "adjudicated": 0,
+          "open": 35,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 247,
+        "adjudicated": 0,
+        "open": 241,
+        "planned_unavailable": 6
+      },
+      "units": {
+        "implement": 44,
+        "clauses": 151,
+        "interactions": 241,
+        "total": 436,
+        "first_list": 155,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT5": 7,
+          "BT22": 6,
+          "BT17": 5,
+          "BT24": 4,
+          "EX6": 4,
+          "BT2": 3,
+          "EX1": 3,
+          "P": 3,
+          "BT3": 2,
+          "BT6": 1,
+          "BT8": 1,
+          "BT11": 1,
+          "BT16": 1,
+          "BT23": 1,
+          "EX10": 1,
+          "ST15": 1
+        },
+        "n_sets": 16,
+        "top2": [
+          "BT5",
+          "BT22"
+        ],
+        "top2_share": 0.29545454545454547
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Diaboromon\"",
+      "rationale": "18 top cuts in 45 lists (weight 9.1); 44 card(s) to implement over 16 sets (30% in BT5+BT22); 151 clause + 241 interaction exams; first decklist ready after ~155 units",
+      "rank": 38
+    },
+    {
+      "archetype": "Milleniummon",
+      "tier": "C",
+      "score": 3.1683,
+      "closeness": 0.3754,
+      "meta": {
+        "weight": 8.4404,
+        "times_played": 18,
+        "top_cuts": 7,
+        "newest_event": "2026-09-04",
+        "undated_lists": 0
+      },
+      "lists": 18,
+      "pool": 57,
+      "core": 15,
+      "core_threshold": 13,
+      "cards": {
+        "with_yaml": 36,
+        "without_yaml": 21,
+        "blocked_status": [],
+        "unknown_ids": [
+          "P-243"
+        ],
+        "no_dcgo_script": [
+          "BT3-068",
+          "BT3-077"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 21,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT3-068",
+          "BT3-098",
+          "BT16-006",
+          "BT21-064",
+          "BT21-068",
+          "EX2-037",
+          "EX8-009",
+          "EX8-012",
+          "EX8-056",
+          "EX9-003",
+          "EX9-016",
+          "EX9-023",
+          "EX9-031",
+          "EX9-034",
+          "EX9-049",
+          "EX9-052",
+          "EX9-059",
+          "EX9-069",
+          "P-143",
+          "P-177",
+          "P-243"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 11,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 168,
+          "total": 179,
+          "adjudicated": 11,
+          "open": 166,
+          "planned_unavailable": 2,
+          "open_image_required": 1
+        },
+        "core": {
+          "confirmed": 7,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 57,
+          "total": 64,
+          "adjudicated": 7,
+          "open": 57,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 232,
+        "adjudicated": 0,
+        "open": 229,
+        "planned_unavailable": 3
+      },
+      "units": {
+        "implement": 21,
+        "clauses": 166,
+        "interactions": 229,
+        "total": 416,
+        "first_list": 158,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX9": 9,
+          "EX8": 3,
+          "P": 3,
+          "BT3": 2,
+          "BT21": 2,
+          "BT16": 1,
+          "EX2": 1
+        },
+        "n_sets": 7,
+        "top2": [
+          "EX9",
+          "EX8"
+        ],
+        "top2_share": 0.5714285714285714
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Milleniummon\"",
+      "rationale": "7 top cuts in 18 lists (weight 8.4); 21 card(s) to implement over 7 sets (57% in EX9+EX8); 166 clause + 229 interaction exams (incl. 1 image-required security slot(s)); first decklist ready after ~158 units",
+      "rank": 39
+    },
+    {
+      "archetype": "Virus Busters",
+      "tier": "A",
+      "score": 3.1449,
+      "closeness": 0.463,
+      "meta": {
+        "weight": 6.7929,
+        "times_played": 19,
+        "top_cuts": 4,
+        "newest_event": "2026-09-06",
+        "undated_lists": 0
+      },
+      "lists": 19,
+      "pool": 29,
+      "core": 17,
+      "core_threshold": 14,
+      "cards": {
+        "with_yaml": 28,
+        "without_yaml": 1,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 1,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT21-090"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 6,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 135,
+          "total": 141,
+          "adjudicated": 6,
+          "open": 135,
+          "planned_unavailable": 0,
+          "open_image_required": 20
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 83,
+          "total": 83,
+          "adjudicated": 0,
+          "open": 83,
+          "planned_unavailable": 0,
+          "open_image_required": 17
+        }
+      },
+      "interactions": {
+        "total": 154,
+        "adjudicated": 0,
+        "open": 154,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 1,
+        "clauses": 135,
+        "interactions": 154,
+        "total": 290,
+        "first_list": 174,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT21": 1
+        },
+        "n_sets": 1,
+        "top2": [
+          "BT21"
+        ],
+        "top2_share": 1.0
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Virus Busters\"",
+      "rationale": "4 top cuts in 19 lists (weight 6.8); 1 straggler card(s) to implement, none in the core; 135 clause + 154 interaction exams (incl. 20 image-required security slot(s)); first decklist ready after ~174 units",
+      "rank": 40
+    },
+    {
+      "archetype": "Red Hybrid (AncientGreymon)",
+      "tier": "C",
+      "score": 2.9475,
+      "closeness": 0.2051,
+      "meta": {
+        "weight": 14.372,
+        "times_played": 49,
+        "top_cuts": 21,
+        "newest_event": "2026-09-07",
+        "undated_lists": 1
+      },
+      "lists": 49,
+      "pool": 95,
+      "core": 7,
+      "core_threshold": 35,
+      "cards": {
+        "with_yaml": 35,
+        "without_yaml": 60,
+        "blocked_status": [
+          "AD1-002"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT14-009",
+          "ST12-03"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 61,
+        "core_needs_impl": 3,
+        "needs_impl_ids": [
+          "AD1-002",
+          "AD1-020",
+          "BT4-009",
+          "BT4-113",
+          "BT5-086",
+          "BT6-010",
+          "BT6-022",
+          "BT7-008",
+          "BT7-011",
+          "BT7-014",
+          "BT7-016",
+          "BT7-080",
+          "BT7-081",
+          "BT7-085",
+          "BT7-093",
+          "BT7-112",
+          "BT8-088",
+          "BT11-001",
+          "BT12-009",
+          "BT12-012",
+          "BT12-013",
+          "BT12-015",
+          "BT12-017",
+          "BT12-088",
+          "BT15-008",
+          "BT15-014",
+          "BT16-013",
+          "BT17-011",
+          "BT17-012",
+          "BT17-014",
+          "BT17-017",
+          "BT17-020",
+          "BT17-079",
+          "BT17-094",
+          "BT18-001",
+          "BT18-009",
+          "BT18-010",
+          "BT18-011",
+          "BT18-014",
+          "BT18-018",
+          "BT18-022",
+          "BT18-025",
+          "BT18-026",
+          "BT18-037",
+          "BT18-048",
+          "BT18-049",
+          "BT18-053",
+          "BT18-054",
+          "BT18-067",
+          "BT18-076",
+          "BT18-088",
+          "BT18-089",
+          "BT18-090",
+          "BT18-095",
+          "BT18-096",
+          "BT21-012",
+          "BT21-014",
+          "BT21-020",
+          "EX7-014",
+          "P-029",
+          "P-185"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 27,
+          "diverged": 0,
+          "unreachable": 1,
+          "unavailable": 0,
+          "unmeasured": 298,
+          "total": 326,
+          "adjudicated": 28,
+          "open": 296,
+          "planned_unavailable": 2,
+          "open_image_required": 2
+        },
+        "core": {
+          "confirmed": 3,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 17,
+          "total": 20,
+          "adjudicated": 3,
+          "open": 17,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 618,
+        "adjudicated": 0,
+        "open": 612,
+        "planned_unavailable": 6
+      },
+      "units": {
+        "implement": 61,
+        "clauses": 296,
+        "interactions": 612,
+        "total": 969,
+        "first_list": 305,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT18": 21,
+          "BT7": 9,
+          "BT17": 7,
+          "BT12": 6,
+          "BT21": 3,
+          "AD1": 2,
+          "BT4": 2,
+          "BT6": 2,
+          "BT15": 2,
+          "P": 2,
+          "BT5": 1,
+          "BT8": 1,
+          "BT11": 1,
+          "BT16": 1,
+          "EX7": 1
+        },
+        "n_sets": 15,
+        "top2": [
+          "BT18",
+          "BT7"
+        ],
+        "top2_share": 0.4918032786885246
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Red Hybrid (AncientGreymon)\"",
+      "rationale": "21 top cuts in 49 lists (weight 14.4); 61 card(s) to implement over 15 sets (49% in BT18+BT7); 296 clause + 612 interaction exams (incl. 2 image-required security slot(s)); first decklist ready after ~305 units",
+      "rank": 41
+    },
+    {
+      "archetype": "TS Ceresmon",
+      "tier": "C",
+      "score": 2.9472,
+      "closeness": 0.3053,
+      "meta": {
+        "weight": 9.655,
+        "times_played": 19,
+        "top_cuts": 8,
+        "newest_event": "2026-09-08",
+        "undated_lists": 0
+      },
+      "lists": 19,
+      "pool": 73,
+      "core": 5,
+      "core_threshold": 14,
+      "cards": {
+        "with_yaml": 57,
+        "without_yaml": 16,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT9-047"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 16,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT3-054",
+          "BT8-054",
+          "BT9-047",
+          "BT10-046",
+          "BT10-048",
+          "BT10-053",
+          "BT10-057",
+          "BT13-049",
+          "BT13-050",
+          "BT13-100",
+          "BT14-044",
+          "BT14-046",
+          "BT14-085",
+          "EX3-045",
+          "EX4-002",
+          "P-038"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 63,
+          "diverged": 7,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 181,
+          "total": 251,
+          "adjudicated": 63,
+          "open": 187,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 17,
+          "total": 17,
+          "adjudicated": 0,
+          "open": 17,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 370,
+        "adjudicated": 0,
+        "open": 366,
+        "planned_unavailable": 4
+      },
+      "units": {
+        "implement": 16,
+        "clauses": 187,
+        "interactions": 366,
+        "total": 569,
+        "first_list": 229,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT10": 4,
+          "BT13": 3,
+          "BT14": 3,
+          "BT3": 1,
+          "BT8": 1,
+          "BT9": 1,
+          "EX3": 1,
+          "EX4": 1,
+          "P": 1
+        },
+        "n_sets": 9,
+        "top2": [
+          "BT10",
+          "BT13"
+        ],
+        "top2_share": 0.4375
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"TS Ceresmon\"",
+      "rationale": "8 top cuts in 19 lists (weight 9.7); 16 card(s) to implement over 9 sets (44% in BT10+BT13); 187 clause + 366 interaction exams; first decklist ready after ~229 units",
+      "rank": 42
+    },
+    {
+      "archetype": "Purple Hybrid",
+      "tier": "C",
+      "score": 2.9438,
+      "closeness": 0.298,
+      "meta": {
+        "weight": 9.8793,
+        "times_played": 55,
+        "top_cuts": 21,
+        "newest_event": "2026-08-01",
+        "undated_lists": 0
+      },
+      "lists": 55,
+      "pool": 81,
+      "core": 20,
+      "core_threshold": 39,
+      "cards": {
+        "with_yaml": 42,
+        "without_yaml": 39,
+        "blocked_status": [
+          "BT13-102",
+          "BT19-093"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT3-077",
+          "BT14-009"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 41,
+        "core_needs_impl": 8,
+        "needs_impl_ids": [
+          "AD1-015",
+          "AD1-023",
+          "BT4-078",
+          "BT6-075",
+          "BT6-108",
+          "BT7-077",
+          "BT7-081",
+          "BT7-091",
+          "BT10-072",
+          "BT12-073",
+          "BT13-102",
+          "BT14-100",
+          "BT15-008",
+          "BT15-069",
+          "BT16-006",
+          "BT16-068",
+          "BT17-001",
+          "BT17-048",
+          "BT17-091",
+          "BT17-094",
+          "BT18-009",
+          "BT18-076",
+          "BT18-077",
+          "BT18-078",
+          "BT18-079",
+          "BT18-081",
+          "BT18-094",
+          "BT19-067",
+          "BT19-093",
+          "EX2-071",
+          "EX4-064",
+          "EX6-052",
+          "EX8-056",
+          "EX10-037",
+          "LM-050",
+          "P-040",
+          "P-177",
+          "ST14-11",
+          "ST14-12",
+          "ST16-03",
+          "ST16-15"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 39,
+          "diverged": 0,
+          "unreachable": 2,
+          "unavailable": 0,
+          "unmeasured": 195,
+          "total": 236,
+          "adjudicated": 41,
+          "open": 193,
+          "planned_unavailable": 2,
+          "open_image_required": 2
+        },
+        "core": {
+          "confirmed": 8,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 47,
+          "total": 55,
+          "adjudicated": 8,
+          "open": 46,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 359,
+        "adjudicated": 0,
+        "open": 355,
+        "planned_unavailable": 4
+      },
+      "units": {
+        "implement": 41,
+        "clauses": 193,
+        "interactions": 355,
+        "total": 589,
+        "first_list": 184,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT18": 7,
+          "BT17": 4,
+          "BT7": 3,
+          "AD1": 2,
+          "BT6": 2,
+          "BT15": 2,
+          "BT16": 2,
+          "BT19": 2,
+          "P": 2,
+          "ST14": 2,
+          "ST16": 2,
+          "BT4": 1,
+          "BT10": 1,
+          "BT12": 1,
+          "BT13": 1,
+          "BT14": 1,
+          "EX2": 1,
+          "EX4": 1,
+          "EX6": 1,
+          "EX8": 1,
+          "EX10": 1,
+          "LM": 1
+        },
+        "n_sets": 22,
+        "top2": [
+          "BT18",
+          "BT17"
+        ],
+        "top2_share": 0.2682926829268293
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Purple Hybrid\"",
+      "rationale": "21 top cuts in 55 lists (weight 9.9); 41 card(s) to implement over 22 sets (27% in BT18+BT17); 193 clause + 355 interaction exams (incl. 2 image-required security slot(s)); first decklist ready after ~184 units",
+      "rank": 43
+    },
+    {
+      "archetype": "Beelze",
+      "tier": "C",
+      "score": 2.9145,
+      "closeness": 0.4252,
+      "meta": {
+        "weight": 6.855,
+        "times_played": 25,
+        "top_cuts": 21,
+        "newest_event": "2026-04-26",
+        "undated_lists": 0
+      },
+      "lists": 25,
+      "pool": 48,
+      "core": 19,
+      "core_threshold": 18,
+      "cards": {
+        "with_yaml": 11,
+        "without_yaml": 37,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 37,
+        "core_needs_impl": 18,
+        "needs_impl_ids": [
+          "BT2-068",
+          "BT6-068",
+          "BT6-075",
+          "BT9-109",
+          "BT12-073",
+          "BT12-078",
+          "BT12-082",
+          "BT12-085",
+          "BT12-110",
+          "BT14-099",
+          "BT19-036",
+          "BT19-067",
+          "BT19-074",
+          "BT19-088",
+          "BT19-097",
+          "EX2-039",
+          "EX2-044",
+          "EX2-065",
+          "EX2-071",
+          "EX4-071",
+          "EX6-056",
+          "EX10-037",
+          "EX10-041",
+          "EX10-050",
+          "EX10-074",
+          "P-040",
+          "P-077",
+          "ST10-15",
+          "ST14-01",
+          "ST14-02",
+          "ST14-06",
+          "ST14-07",
+          "ST14-08",
+          "ST14-09",
+          "ST14-10",
+          "ST14-11",
+          "ST14-12"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 16,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 126,
+          "total": 142,
+          "adjudicated": 16,
+          "open": 126,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 3,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 53,
+          "total": 56,
+          "adjudicated": 3,
+          "open": 53,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 175,
+        "adjudicated": 0,
+        "open": 175,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 37,
+        "clauses": 126,
+        "interactions": 175,
+        "total": 338,
+        "first_list": 170,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "ST14": 9,
+          "BT12": 5,
+          "BT19": 5,
+          "EX2": 4,
+          "EX10": 4,
+          "BT6": 2,
+          "P": 2,
+          "BT2": 1,
+          "BT9": 1,
+          "BT14": 1,
+          "EX4": 1,
+          "EX6": 1,
+          "ST10": 1
+        },
+        "n_sets": 13,
+        "top2": [
+          "ST14",
+          "BT12"
+        ],
+        "top2_share": 0.3783783783783784
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Beelze\"",
+      "rationale": "21 top cuts in 25 lists (weight 6.9); 37 card(s) to implement over 13 sets (38% in ST14+BT12); 126 clause + 175 interaction exams; first decklist ready after ~170 units",
+      "rank": 44
+    },
+    {
+      "archetype": "Creepymon",
+      "tier": "C",
+      "score": 2.8806,
+      "closeness": 0.387,
+      "meta": {
+        "weight": 7.4434,
+        "times_played": 23,
+        "top_cuts": 12,
+        "newest_event": "2026-08-11",
+        "undated_lists": 0
+      },
+      "lists": 23,
+      "pool": 59,
+      "core": 13,
+      "core_threshold": 17,
+      "cards": {
+        "with_yaml": 17,
+        "without_yaml": 42,
+        "blocked_status": [
+          "BT24-068"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 43,
+        "core_needs_impl": 10,
+        "needs_impl_ids": [
+          "BT2-068",
+          "BT4-084",
+          "BT6-068",
+          "BT8-074",
+          "BT8-111",
+          "BT12-073",
+          "BT12-085",
+          "BT14-077",
+          "BT14-080",
+          "BT15-070",
+          "BT16-071",
+          "BT17-061",
+          "BT19-067",
+          "BT19-074",
+          "BT19-097",
+          "BT24-068",
+          "BT24-069",
+          "BT24-073",
+          "BT24-078",
+          "BT24-096",
+          "EX2-044",
+          "EX2-071",
+          "EX5-056",
+          "EX6-049",
+          "EX8-059",
+          "EX10-005",
+          "EX10-009",
+          "EX10-037",
+          "EX10-046",
+          "EX10-049",
+          "EX10-074",
+          "LM-038",
+          "LM-043",
+          "P-017",
+          "P-040",
+          "P-077",
+          "P-219",
+          "ST10-04",
+          "ST14-02",
+          "ST14-11",
+          "ST14-12",
+          "ST16-03",
+          "ST22-14"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 20,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 152,
+          "total": 172,
+          "adjudicated": 20,
+          "open": 152,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 6,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 30,
+          "total": 36,
+          "adjudicated": 6,
+          "open": 30,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 201,
+        "adjudicated": 0,
+        "open": 201,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 43,
+        "clauses": 152,
+        "interactions": 201,
+        "total": 396,
+        "first_list": 122,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX10": 6,
+          "BT24": 5,
+          "P": 4,
+          "BT19": 3,
+          "ST14": 3,
+          "BT8": 2,
+          "BT12": 2,
+          "BT14": 2,
+          "EX2": 2,
+          "LM": 2,
+          "BT2": 1,
+          "BT4": 1,
+          "BT6": 1,
+          "BT15": 1,
+          "BT16": 1,
+          "BT17": 1,
+          "EX5": 1,
+          "EX6": 1,
+          "EX8": 1,
+          "ST10": 1,
+          "ST16": 1,
+          "ST22": 1
+        },
+        "n_sets": 22,
+        "top2": [
+          "EX10",
+          "BT24"
+        ],
+        "top2_share": 0.2558139534883721
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Creepymon\"",
+      "rationale": "12 top cuts in 23 lists (weight 7.4); 43 card(s) to implement over 22 sets (26% in EX10+BT24); 152 clause + 201 interaction exams; first decklist ready after ~122 units",
+      "rank": 45
+    },
+    {
+      "archetype": "Dukemon",
+      "tier": "C",
+      "score": 2.8787,
+      "closeness": 0.2415,
+      "meta": {
+        "weight": 11.918,
+        "times_played": 53,
+        "top_cuts": 40,
+        "newest_event": "2026-06-26",
+        "undated_lists": 0
+      },
+      "lists": 53,
+      "pool": 96,
+      "core": 9,
+      "core_threshold": 38,
+      "cards": {
+        "with_yaml": 41,
+        "without_yaml": 55,
+        "blocked_status": [
+          "BT20-013"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT14-009"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 55,
+        "core_needs_impl": 4,
+        "needs_impl_ids": [
+          "AD1-003",
+          "AD1-008",
+          "BT2-001",
+          "BT5-071",
+          "BT6-075",
+          "BT7-077",
+          "BT9-109",
+          "BT10-112",
+          "BT12-001",
+          "BT12-007",
+          "BT12-010",
+          "BT12-089",
+          "BT16-011",
+          "BT16-015",
+          "BT17-001",
+          "BT17-008",
+          "BT17-010",
+          "BT17-013",
+          "BT17-080",
+          "BT18-009",
+          "BT19-007",
+          "BT19-009",
+          "BT19-011",
+          "BT19-080",
+          "BT19-091",
+          "BT20-008",
+          "BT20-013",
+          "BT20-018",
+          "BT20-057",
+          "BT21-057",
+          "BT21-064",
+          "BT21-066",
+          "BT21-068",
+          "BT21-076",
+          "BT21-079",
+          "BT21-089",
+          "BT21-100",
+          "EX2-001",
+          "EX2-008",
+          "EX2-056",
+          "EX3-056",
+          "EX3-062",
+          "EX5-063",
+          "EX5-070",
+          "EX8-009",
+          "EX8-012",
+          "EX8-015",
+          "LM-038",
+          "LM-050",
+          "P-040",
+          "P-177",
+          "ST7-01",
+          "ST7-03",
+          "ST7-05",
+          "ST14-12"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 26,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 274,
+          "total": 300,
+          "adjudicated": 26,
+          "open": 273,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 32,
+          "total": 32,
+          "adjudicated": 0,
+          "open": 32,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 459,
+        "adjudicated": 0,
+        "open": 457,
+        "planned_unavailable": 2
+      },
+      "units": {
+        "implement": 55,
+        "clauses": 273,
+        "interactions": 457,
+        "total": 785,
+        "first_list": 213,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT21": 8,
+          "BT17": 5,
+          "BT19": 5,
+          "BT12": 4,
+          "BT20": 4,
+          "EX2": 3,
+          "EX8": 3,
+          "ST7": 3,
+          "AD1": 2,
+          "BT16": 2,
+          "EX3": 2,
+          "EX5": 2,
+          "LM": 2,
+          "P": 2,
+          "BT2": 1,
+          "BT5": 1,
+          "BT6": 1,
+          "BT7": 1,
+          "BT9": 1,
+          "BT10": 1,
+          "BT18": 1,
+          "ST14": 1
+        },
+        "n_sets": 22,
+        "top2": [
+          "BT21",
+          "BT17"
+        ],
+        "top2_share": 0.23636363636363636
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Dukemon\"",
+      "rationale": "40 top cuts in 53 lists (weight 11.9); 55 card(s) to implement over 22 sets (24% in BT21+BT17); 273 clause + 457 interaction exams; first decklist ready after ~213 units",
+      "rank": 46
+    },
+    {
+      "archetype": "Galaxy",
+      "tier": "C",
+      "score": 2.7067,
+      "closeness": 0.2402,
+      "meta": {
+        "weight": 11.2705,
+        "times_played": 65,
+        "top_cuts": 30,
+        "newest_event": "2026-04-09",
+        "undated_lists": 0
+      },
+      "lists": 65,
+      "pool": 83,
+      "core": 14,
+      "core_threshold": 46,
+      "cards": {
+        "with_yaml": 43,
+        "without_yaml": 40,
+        "blocked_status": [
+          "BT11-033"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT6-021",
+          "BT14-009",
+          "ST12-03"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 41,
+        "core_needs_impl": 12,
+        "needs_impl_ids": [
+          "BT3-097",
+          "BT5-086",
+          "BT6-021",
+          "BT9-109",
+          "BT10-086",
+          "BT11-033",
+          "BT13-033",
+          "BT13-096",
+          "BT14-026",
+          "BT16-020",
+          "BT17-028",
+          "BT20-026",
+          "BT22-069",
+          "BT22-072",
+          "BT22-073",
+          "BT22-077",
+          "BT22-102",
+          "BT23-076",
+          "BT23-091",
+          "BT24-050",
+          "EX4-019",
+          "EX5-001",
+          "EX5-007",
+          "EX5-008",
+          "EX5-012",
+          "EX5-014",
+          "EX5-016",
+          "EX5-017",
+          "EX5-020",
+          "EX5-025",
+          "EX5-064",
+          "EX5-065",
+          "EX5-067",
+          "EX5-073",
+          "EX6-014",
+          "EX6-062",
+          "EX7-015",
+          "LM-022",
+          "P-030",
+          "P-191",
+          "ST21-02"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 30,
+          "diverged": 2,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 282,
+          "total": 314,
+          "adjudicated": 30,
+          "open": 281,
+          "planned_unavailable": 3,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 48,
+          "total": 48,
+          "adjudicated": 0,
+          "open": 48,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 477,
+        "adjudicated": 0,
+        "open": 469,
+        "planned_unavailable": 8
+      },
+      "units": {
+        "implement": 41,
+        "clauses": 281,
+        "interactions": 469,
+        "total": 791,
+        "first_list": 205,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX5": 13,
+          "BT22": 5,
+          "BT13": 2,
+          "BT23": 2,
+          "EX6": 2,
+          "P": 2,
+          "BT3": 1,
+          "BT5": 1,
+          "BT6": 1,
+          "BT9": 1,
+          "BT10": 1,
+          "BT11": 1,
+          "BT14": 1,
+          "BT16": 1,
+          "BT17": 1,
+          "BT20": 1,
+          "BT24": 1,
+          "EX4": 1,
+          "EX7": 1,
+          "LM": 1,
+          "ST21": 1
+        },
+        "n_sets": 21,
+        "top2": [
+          "EX5",
+          "BT22"
+        ],
+        "top2_share": 0.43902439024390244
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Galaxy\"",
+      "rationale": "30 top cuts in 65 lists (weight 11.3); 41 card(s) to implement over 21 sets (44% in EX5+BT22); 281 clause + 469 interaction exams; first decklist ready after ~205 units",
+      "rank": 47
+    },
+    {
+      "archetype": "ShineGreymon",
+      "tier": "C",
+      "score": 2.5931,
+      "closeness": 0.2723,
+      "meta": {
+        "weight": 9.5219,
+        "times_played": 30,
+        "top_cuts": 11,
+        "newest_event": "2026-09-08",
+        "undated_lists": 1
+      },
+      "lists": 30,
+      "pool": 81,
+      "core": 13,
+      "core_threshold": 21,
+      "cards": {
+        "with_yaml": 56,
+        "without_yaml": 25,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 25,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT4-092",
+          "BT4-105",
+          "BT5-001",
+          "BT5-010",
+          "BT5-086",
+          "BT6-089",
+          "BT6-100",
+          "BT9-008",
+          "BT9-084",
+          "BT9-099",
+          "BT10-101",
+          "BT12-003",
+          "BT12-042",
+          "BT12-104",
+          "BT13-034",
+          "BT17-037",
+          "BT17-041",
+          "BT21-045",
+          "BT21-096",
+          "EX2-020",
+          "EX2-059",
+          "EX4-007",
+          "EX4-009",
+          "ST7-02",
+          "ST7-06"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 13,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 243,
+          "total": 256,
+          "adjudicated": 13,
+          "open": 243,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 3,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 51,
+          "total": 54,
+          "adjudicated": 3,
+          "open": 51,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 400,
+        "adjudicated": 0,
+        "open": 400,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 25,
+        "clauses": 243,
+        "interactions": 400,
+        "total": 668,
+        "first_list": 207,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT5": 3,
+          "BT9": 3,
+          "BT12": 3,
+          "BT4": 2,
+          "BT6": 2,
+          "BT17": 2,
+          "BT21": 2,
+          "EX2": 2,
+          "EX4": 2,
+          "ST7": 2,
+          "BT10": 1,
+          "BT13": 1
+        },
+        "n_sets": 12,
+        "top2": [
+          "BT5",
+          "BT9"
+        ],
+        "top2_share": 0.24
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"ShineGreymon\"",
+      "rationale": "11 top cuts in 30 lists (weight 9.5); 25 card(s) to implement over 12 sets (24% in BT5+BT9); 243 clause + 400 interaction exams; first decklist ready after ~207 units",
+      "rank": 48
+    },
+    {
+      "archetype": "Gammamon",
+      "tier": "C",
+      "score": 2.4902,
+      "closeness": 0.3213,
+      "meta": {
+        "weight": 7.7496,
+        "times_played": 36,
+        "top_cuts": 5,
+        "newest_event": "2026-09-05",
+        "undated_lists": 0
+      },
+      "lists": 36,
+      "pool": 54,
+      "core": 12,
+      "core_threshold": 26,
+      "cards": {
+        "with_yaml": 18,
+        "without_yaml": 36,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "RB1-001"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 36,
+        "core_needs_impl": 12,
+        "needs_impl_ids": [
+          "AD1-007",
+          "BT8-008",
+          "BT8-086",
+          "BT9-023",
+          "BT10-011",
+          "BT15-039",
+          "BT16-062",
+          "BT21-002",
+          "BT21-010",
+          "BT21-019",
+          "BT21-022",
+          "BT21-028",
+          "BT21-069",
+          "BT21-077",
+          "BT21-080",
+          "BT21-090",
+          "BT22-020",
+          "BT22-045",
+          "EX10-042",
+          "EX10-053",
+          "LM-001",
+          "LM-016",
+          "LM-017",
+          "LM-019",
+          "LM-026",
+          "P-029",
+          "P-062",
+          "RB1-001",
+          "RB1-005",
+          "RB1-009",
+          "RB1-021",
+          "RB1-029",
+          "RB1-030",
+          "RB1-031",
+          "RB1-032",
+          "RB1-036"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 3,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 203,
+          "total": 206,
+          "adjudicated": 3,
+          "open": 202,
+          "planned_unavailable": 1,
+          "open_image_required": 6
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 39,
+          "total": 39,
+          "adjudicated": 0,
+          "open": 38,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 291,
+        "adjudicated": 0,
+        "open": 290,
+        "planned_unavailable": 1
+      },
+      "units": {
+        "implement": 36,
+        "clauses": 202,
+        "interactions": 290,
+        "total": 528,
+        "first_list": 216,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT21": 9,
+          "RB1": 9,
+          "LM": 5,
+          "BT8": 2,
+          "BT22": 2,
+          "EX10": 2,
+          "P": 2,
+          "AD1": 1,
+          "BT9": 1,
+          "BT10": 1,
+          "BT15": 1,
+          "BT16": 1
+        },
+        "n_sets": 12,
+        "top2": [
+          "BT21",
+          "RB1"
+        ],
+        "top2_share": 0.5
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Gammamon\"",
+      "rationale": "5 top cuts in 36 lists (weight 7.7); 36 card(s) to implement over 12 sets (50% in BT21+RB1); 202 clause + 290 interaction exams (incl. 6 image-required security slot(s)); first decklist ready after ~216 units",
+      "rank": 49
+    },
+    {
+      "archetype": "Xros",
+      "tier": "B",
+      "score": 2.472,
+      "closeness": 0.3041,
+      "meta": {
+        "weight": 8.1279,
+        "times_played": 22,
+        "top_cuts": 5,
+        "newest_event": "2026-09-06",
+        "undated_lists": 0
+      },
+      "lists": 22,
+      "pool": 56,
+      "core": 16,
+      "core_threshold": 16,
+      "cards": {
+        "with_yaml": 36,
+        "without_yaml": 20,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 20,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT10-060",
+          "BT11-015",
+          "BT12-006",
+          "BT12-048",
+          "BT12-063",
+          "BT12-064",
+          "BT12-074",
+          "BT12-075",
+          "BT12-077",
+          "BT12-083",
+          "BT12-086",
+          "BT12-087",
+          "BT12-094",
+          "BT12-096",
+          "BT12-098",
+          "BT19-076",
+          "BT21-063",
+          "BT21-066",
+          "BT21-088",
+          "BT21-099"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 9,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 225,
+          "total": 234,
+          "adjudicated": 9,
+          "open": 225,
+          "planned_unavailable": 0,
+          "open_image_required": 1
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 67,
+          "total": 67,
+          "adjudicated": 0,
+          "open": 67,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 327,
+        "adjudicated": 0,
+        "open": 327,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 20,
+        "clauses": 225,
+        "interactions": 327,
+        "total": 572,
+        "first_list": 191,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT12": 13,
+          "BT21": 4,
+          "BT10": 1,
+          "BT11": 1,
+          "BT19": 1
+        },
+        "n_sets": 5,
+        "top2": [
+          "BT12",
+          "BT21"
+        ],
+        "top2_share": 0.85
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Xros\"",
+      "rationale": "5 top cuts in 22 lists (weight 8.1); 20 card(s) to implement over 5 sets (85% in BT12+BT21); 225 clause + 327 interaction exams (incl. 1 image-required security slot(s)); first decklist ready after ~191 units",
+      "rank": 50
+    },
+    {
+      "archetype": "TS Toolbox",
+      "tier": "A",
+      "score": 2.4401,
+      "closeness": 0.2657,
+      "meta": {
+        "weight": 9.1847,
+        "times_played": 19,
+        "top_cuts": 8,
+        "newest_event": "2026-09-08",
+        "undated_lists": 0
+      },
+      "lists": 19,
+      "pool": 83,
+      "core": 9,
+      "core_threshold": 14,
+      "cards": {
+        "with_yaml": 80,
+        "without_yaml": 3,
+        "blocked_status": [
+          "BT25-097"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 3,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT16-012",
+          "BT16-030",
+          "BT25-097"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 105,
+          "diverged": 9,
+          "unreachable": 1,
+          "unavailable": 0,
+          "unmeasured": 210,
+          "total": 325,
+          "adjudicated": 106,
+          "open": 219,
+          "planned_unavailable": 0,
+          "open_image_required": 1
+        },
+        "core": {
+          "confirmed": 9,
+          "diverged": 5,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 17,
+          "total": 31,
+          "adjudicated": 9,
+          "open": 22,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 469,
+        "adjudicated": 0,
+        "open": 469,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 3,
+        "clauses": 219,
+        "interactions": 469,
+        "total": 691,
+        "first_list": 176,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT16": 2,
+          "BT25": 1
+        },
+        "n_sets": 2,
+        "top2": [
+          "BT16",
+          "BT25"
+        ],
+        "top2_share": 1.0
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"TS Toolbox\"",
+      "rationale": "8 top cuts in 19 lists (weight 9.2); 3 straggler card(s) to implement, none in the core; 219 clause + 469 interaction exams (incl. 1 image-required security slot(s)); first decklist ready after ~176 units",
+      "rank": 51
+    },
+    {
+      "archetype": "Blue Green Imperialdramon",
+      "tier": "B",
+      "score": 2.2977,
+      "closeness": 0.4085,
+      "meta": {
+        "weight": 5.6247,
+        "times_played": 14,
+        "top_cuts": 4,
+        "newest_event": "2026-09-05",
+        "undated_lists": 0
+      },
+      "lists": 14,
+      "pool": 46,
+      "core": 17,
+      "core_threshold": 10,
+      "cards": {
+        "with_yaml": 40,
+        "without_yaml": 6,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 6,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT7-002",
+          "BT9-098",
+          "BT12-055",
+          "BT16-092",
+          "BT21-032",
+          "ST17-13"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 13,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 136,
+          "total": 149,
+          "adjudicated": 13,
+          "open": 136,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 48,
+          "total": 48,
+          "adjudicated": 0,
+          "open": 48,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 220,
+        "adjudicated": 0,
+        "open": 220,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 6,
+        "clauses": 136,
+        "interactions": 220,
+        "total": 362,
+        "first_list": 137,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT7": 1,
+          "BT9": 1,
+          "BT12": 1,
+          "BT16": 1,
+          "BT21": 1,
+          "ST17": 1
+        },
+        "n_sets": 6,
+        "top2": [
+          "BT7",
+          "BT9"
+        ],
+        "top2_share": 0.3333333333333333
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Blue Green Imperialdramon\"",
+      "rationale": "4 top cuts in 14 lists (weight 5.6); 6 card(s) to implement over 6 sets (33% in BT7+BT9); 136 clause + 220 interaction exams; first decklist ready after ~137 units",
+      "rank": 52
+    },
+    {
+      "archetype": "GraceNovamon",
+      "tier": "B",
+      "score": 2.2468,
+      "closeness": 0.4,
+      "meta": {
+        "weight": 5.6171,
+        "times_played": 10,
+        "top_cuts": 9,
+        "newest_event": "2026-06-21",
+        "undated_lists": 0
+      },
+      "lists": 10,
+      "pool": 47,
+      "core": 14,
+      "core_threshold": 7,
+      "cards": {
+        "with_yaml": 27,
+        "without_yaml": 20,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "RB1-001"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 20,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT16-020",
+          "BT22-069",
+          "BT22-072",
+          "BT22-073",
+          "BT22-077",
+          "BT22-102",
+          "EX5-001",
+          "EX5-007",
+          "EX5-008",
+          "EX5-012",
+          "EX5-014",
+          "EX5-016",
+          "EX5-017",
+          "EX5-020",
+          "EX5-025",
+          "EX5-064",
+          "EX5-065",
+          "EX5-073",
+          "P-191",
+          "RB1-001"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 38,
+          "diverged": 6,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 126,
+          "total": 170,
+          "adjudicated": 38,
+          "open": 131,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 16,
+          "diverged": 2,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 37,
+          "total": 55,
+          "adjudicated": 16,
+          "open": 39,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 225,
+        "adjudicated": 0,
+        "open": 224,
+        "planned_unavailable": 1
+      },
+      "units": {
+        "implement": 20,
+        "clauses": 131,
+        "interactions": 224,
+        "total": 375,
+        "first_list": 112,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX5": 12,
+          "BT22": 5,
+          "BT16": 1,
+          "P": 1,
+          "RB1": 1
+        },
+        "n_sets": 5,
+        "top2": [
+          "EX5",
+          "BT22"
+        ],
+        "top2_share": 0.85
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"GraceNovamon\"",
+      "rationale": "9 top cuts in 10 lists (weight 5.6); 20 card(s) to implement over 5 sets (85% in EX5+BT22); 131 clause + 224 interaction exams; first decklist ready after ~112 units",
+      "rank": 53
+    },
+    {
+      "archetype": "Lucemon",
+      "tier": "C",
+      "score": 2.2255,
+      "closeness": 0.3571,
+      "meta": {
+        "weight": 6.2314,
+        "times_played": 19,
+        "top_cuts": 9,
+        "newest_event": "2026-07-26",
+        "undated_lists": 0
+      },
+      "lists": 19,
+      "pool": 47,
+      "core": 14,
+      "core_threshold": 14,
+      "cards": {
+        "with_yaml": 17,
+        "without_yaml": 30,
+        "blocked_status": [
+          "BT23-102"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 31,
+        "core_needs_impl": 14,
+        "needs_impl_ids": [
+          "BT3-090",
+          "BT4-105",
+          "BT4-115",
+          "BT5-107",
+          "BT7-109",
+          "BT7-111",
+          "BT10-071",
+          "BT15-081",
+          "BT18-034",
+          "BT18-082",
+          "BT18-086",
+          "BT18-100",
+          "BT18-101",
+          "BT19-043",
+          "BT19-094",
+          "BT23-102",
+          "EX4-030",
+          "EX5-063",
+          "EX5-069",
+          "EX6-018",
+          "EX6-054",
+          "EX6-058",
+          "EX6-061",
+          "EX10-004",
+          "EX10-013",
+          "EX10-052",
+          "EX10-060",
+          "EX10-071",
+          "EX10-074",
+          "EX11-067",
+          "ST21-15"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 10,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 142,
+          "total": 152,
+          "adjudicated": 10,
+          "open": 142,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 43,
+          "total": 43,
+          "adjudicated": 0,
+          "open": 43,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 277,
+        "adjudicated": 0,
+        "open": 277,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 31,
+        "clauses": 142,
+        "interactions": 277,
+        "total": 450,
+        "first_list": 175,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX10": 6,
+          "BT18": 5,
+          "EX6": 4,
+          "BT4": 2,
+          "BT7": 2,
+          "BT19": 2,
+          "EX5": 2,
+          "BT3": 1,
+          "BT5": 1,
+          "BT10": 1,
+          "BT15": 1,
+          "BT23": 1,
+          "EX4": 1,
+          "EX11": 1,
+          "ST21": 1
+        },
+        "n_sets": 15,
+        "top2": [
+          "EX10",
+          "BT18"
+        ],
+        "top2_share": 0.3548387096774194
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Lucemon\"",
+      "rationale": "9 top cuts in 19 lists (weight 6.2); 31 card(s) to implement over 15 sets (35% in EX10+BT18); 142 clause + 277 interaction exams; first decklist ready after ~175 units",
+      "rank": 54
+    },
+    {
+      "archetype": "TS Merukimon",
+      "tier": "B",
+      "score": 2.0972,
+      "closeness": 0.2955,
+      "meta": {
+        "weight": 7.0968,
+        "times_played": 13,
+        "top_cuts": 13,
+        "newest_event": "2026-06-19",
+        "undated_lists": 0
+      },
+      "lists": 13,
+      "pool": 75,
+      "core": 8,
+      "core_threshold": 10,
+      "cards": {
+        "with_yaml": 67,
+        "without_yaml": 8,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 8,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT3-098",
+          "BT16-012",
+          "BT19-091",
+          "BT24-002",
+          "BT24-024",
+          "BT24-029",
+          "BT24-050",
+          "BT24-092"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 61,
+          "diverged": 7,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 211,
+          "total": 279,
+          "adjudicated": 61,
+          "open": 218,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 10,
+          "diverged": 3,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 16,
+          "total": 29,
+          "adjudicated": 10,
+          "open": 19,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 370,
+        "adjudicated": 0,
+        "open": 370,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 8,
+        "clauses": 218,
+        "interactions": 370,
+        "total": 596,
+        "first_list": 112,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT24": 5,
+          "BT3": 1,
+          "BT16": 1,
+          "BT19": 1
+        },
+        "n_sets": 4,
+        "top2": [
+          "BT24",
+          "BT3"
+        ],
+        "top2_share": 0.75
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"TS Merukimon\"",
+      "rationale": "13 top cuts in 13 lists (weight 7.1); 8 card(s) to implement over 4 sets (75% in BT24+BT3); 218 clause + 370 interaction exams; first decklist ready after ~112 units",
+      "rank": 55
+    },
+    {
+      "archetype": "Xros Heart",
+      "tier": "C",
+      "score": 2.0166,
+      "closeness": 0.2834,
+      "meta": {
+        "weight": 7.1147,
+        "times_played": 36,
+        "top_cuts": 12,
+        "newest_event": "2026-03-07",
+        "undated_lists": 5
+      },
+      "lists": 36,
+      "pool": 60,
+      "core": 12,
+      "core_threshold": 26,
+      "cards": {
+        "with_yaml": 44,
+        "without_yaml": 16,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 16,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT9-083",
+          "BT10-034",
+          "BT10-089",
+          "BT10-090",
+          "BT11-012",
+          "BT11-076",
+          "BT11-086",
+          "BT17-041",
+          "BT19-010",
+          "BT19-013",
+          "BT19-076",
+          "BT19-087",
+          "BT19-102",
+          "EX5-070",
+          "LM-045",
+          "P-152"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 4,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 239,
+          "total": 243,
+          "adjudicated": 4,
+          "open": 239,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 53,
+          "total": 53,
+          "adjudicated": 0,
+          "open": 53,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 377,
+        "adjudicated": 0,
+        "open": 377,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 16,
+        "clauses": 239,
+        "interactions": 377,
+        "total": 632,
+        "first_list": 191,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT19": 5,
+          "BT10": 3,
+          "BT11": 3,
+          "BT9": 1,
+          "BT17": 1,
+          "EX5": 1,
+          "LM": 1,
+          "P": 1
+        },
+        "n_sets": 8,
+        "top2": [
+          "BT19",
+          "BT10"
+        ],
+        "top2_share": 0.5
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Xros Heart\"",
+      "rationale": "12 top cuts in 36 lists (weight 7.1); 16 card(s) to implement over 8 sets (50% in BT19+BT10); 239 clause + 377 interaction exams; first decklist ready after ~191 units",
+      "rank": 56
+    },
+    {
+      "archetype": "Titamon",
+      "tier": "C",
+      "score": 1.8422,
+      "closeness": 0.3071,
+      "meta": {
+        "weight": 5.9982,
+        "times_played": 12,
+        "top_cuts": 12,
+        "newest_event": "2026-06-19",
+        "undated_lists": 0
+      },
+      "lists": 12,
+      "pool": 66,
+      "core": 9,
+      "core_threshold": 9,
+      "cards": {
+        "with_yaml": 33,
+        "without_yaml": 33,
+        "blocked_status": [],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 33,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT6-006",
+          "BT6-081",
+          "BT6-108",
+          "BT7-076",
+          "BT7-077",
+          "BT10-080",
+          "BT14-070",
+          "BT14-073",
+          "BT16-075",
+          "BT24-070",
+          "BT24-073",
+          "BT24-074",
+          "EX5-057",
+          "EX5-059",
+          "EX5-061",
+          "EX5-062",
+          "EX5-070",
+          "EX8-062",
+          "EX9-004",
+          "EX9-014",
+          "EX9-016",
+          "EX9-018",
+          "EX9-028",
+          "EX9-035",
+          "EX9-038",
+          "EX9-051",
+          "EX9-062",
+          "EX9-063",
+          "EX9-064",
+          "EX9-065",
+          "EX9-069",
+          "EX9-070",
+          "P-040"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 27,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 205,
+          "total": 232,
+          "adjudicated": 27,
+          "open": 205,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 6,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 28,
+          "total": 34,
+          "adjudicated": 6,
+          "open": 28,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 326,
+        "adjudicated": 0,
+        "open": 326,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 33,
+        "clauses": 205,
+        "interactions": 326,
+        "total": 564,
+        "first_list": 142,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX9": 14,
+          "EX5": 5,
+          "BT6": 3,
+          "BT24": 3,
+          "BT7": 2,
+          "BT14": 2,
+          "BT10": 1,
+          "BT16": 1,
+          "EX8": 1,
+          "P": 1
+        },
+        "n_sets": 10,
+        "top2": [
+          "EX9",
+          "EX5"
+        ],
+        "top2_share": 0.5757575757575758
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Titamon\"",
+      "rationale": "12 top cuts in 12 lists (weight 6.0); 33 card(s) to implement over 10 sets (58% in EX9+EX5); 205 clause + 326 interaction exams; first decklist ready after ~142 units",
+      "rank": 57
+    },
+    {
+      "archetype": "Eaters",
+      "tier": "C",
+      "score": 1.7558,
+      "closeness": 0.1716,
+      "meta": {
+        "weight": 10.2327,
+        "times_played": 47,
+        "top_cuts": 17,
+        "newest_event": "2026-08-22",
+        "undated_lists": 0
+      },
+      "lists": 47,
+      "pool": 139,
+      "core": 0,
+      "core_threshold": 33,
+      "cards": {
+        "with_yaml": 106,
+        "without_yaml": 33,
+        "blocked_status": [
+          "BT20-056"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 34,
+        "core_needs_impl": 0,
+        "needs_impl_ids": [
+          "BT6-081",
+          "BT20-056",
+          "BT22-007",
+          "BT22-079",
+          "BT22-080",
+          "BT22-081",
+          "BT22-082",
+          "BT22-083",
+          "BT22-091",
+          "BT22-095",
+          "BT22-100",
+          "BT23-025",
+          "BT23-073",
+          "BT23-074",
+          "BT23-075",
+          "BT23-084",
+          "BT23-091",
+          "BT23-092",
+          "BT23-095",
+          "BT23-100",
+          "BT24-002",
+          "BT24-019",
+          "BT24-022",
+          "BT24-024",
+          "BT24-025",
+          "BT24-027",
+          "BT24-028",
+          "BT24-029",
+          "BT24-050",
+          "BT24-074",
+          "BT24-092",
+          "EX1-059",
+          "P-036",
+          "P-040"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 62,
+          "diverged": 6,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 454,
+          "total": 522,
+          "adjudicated": 62,
+          "open": 460,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 0,
+          "total": 0,
+          "adjudicated": 0,
+          "open": 0,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 713,
+        "adjudicated": 0,
+        "open": 713,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 34,
+        "clauses": 460,
+        "interactions": 713,
+        "total": 1207,
+        "first_list": 295,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "BT24": 11,
+          "BT22": 9,
+          "BT23": 9,
+          "P": 2,
+          "BT6": 1,
+          "BT20": 1,
+          "EX1": 1
+        },
+        "n_sets": 7,
+        "top2": [
+          "BT24",
+          "BT22"
+        ],
+        "top2_share": 0.5882352941176471
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Eaters\"",
+      "rationale": "17 top cuts in 47 lists (weight 10.2); 34 card(s) to implement over 7 sets (59% in BT24+BT22); 460 clause + 713 interaction exams; first decklist ready after ~295 units",
+      "rank": 58
+    },
+    {
+      "archetype": "Leviamon",
+      "tier": "C",
+      "score": 1.5568,
+      "closeness": 0.1962,
+      "meta": {
+        "weight": 7.9334,
+        "times_played": 57,
+        "top_cuts": 20,
+        "newest_event": "2026-03-01",
+        "undated_lists": 0
+      },
+      "lists": 57,
+      "pool": 120,
+      "core": 2,
+      "core_threshold": 40,
+      "cards": {
+        "with_yaml": 35,
+        "without_yaml": 85,
+        "blocked_status": [
+          "BT23-102"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [
+          "BT3-077"
+        ],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 86,
+        "core_needs_impl": 1,
+        "needs_impl_ids": [
+          "BT2-090",
+          "BT4-115",
+          "BT5-071",
+          "BT6-006",
+          "BT6-075",
+          "BT6-100",
+          "BT7-077",
+          "BT7-109",
+          "BT7-111",
+          "BT9-109",
+          "BT11-076",
+          "BT11-086",
+          "BT12-085",
+          "BT12-110",
+          "BT14-070",
+          "BT15-074",
+          "BT15-078",
+          "BT15-081",
+          "BT15-100",
+          "BT16-006",
+          "BT16-066",
+          "BT16-067",
+          "BT16-068",
+          "BT16-069",
+          "BT16-075",
+          "BT18-034",
+          "BT18-071",
+          "BT18-082",
+          "BT18-086",
+          "BT18-100",
+          "BT18-101",
+          "BT19-043",
+          "BT19-074",
+          "BT19-094",
+          "BT21-064",
+          "BT21-068",
+          "BT21-076",
+          "BT21-079",
+          "BT21-100",
+          "BT23-102",
+          "EX3-056",
+          "EX3-062",
+          "EX5-006",
+          "EX5-018",
+          "EX5-056",
+          "EX5-057",
+          "EX5-058",
+          "EX5-059",
+          "EX5-061",
+          "EX5-062",
+          "EX5-063",
+          "EX5-069",
+          "EX5-070",
+          "EX6-006",
+          "EX6-018",
+          "EX6-028",
+          "EX6-052",
+          "EX6-054",
+          "EX6-056",
+          "EX6-058",
+          "EX6-060",
+          "EX6-061",
+          "EX6-069",
+          "EX6-073",
+          "EX8-009",
+          "EX8-012",
+          "EX8-015",
+          "EX10-004",
+          "EX10-013",
+          "EX10-052",
+          "EX10-060",
+          "EX10-071",
+          "EX10-074",
+          "EX11-067",
+          "LM-038",
+          "LM-043",
+          "LM-050",
+          "P-040",
+          "P-177",
+          "P-192",
+          "ST10-15",
+          "ST14-11",
+          "ST14-12",
+          "ST16-03",
+          "ST16-08",
+          "ST21-15"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 23,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 382,
+          "total": 405,
+          "adjudicated": 23,
+          "open": 381,
+          "planned_unavailable": 1,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 3,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 3,
+          "total": 6,
+          "adjudicated": 3,
+          "open": 3,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 559,
+        "adjudicated": 0,
+        "open": 557,
+        "planned_unavailable": 2
+      },
+      "units": {
+        "implement": 86,
+        "clauses": 381,
+        "interactions": 557,
+        "total": 1024,
+        "first_list": 249,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX5": 11,
+          "EX6": 11,
+          "BT16": 6,
+          "BT18": 6,
+          "EX10": 6,
+          "BT21": 5,
+          "BT15": 4,
+          "BT6": 3,
+          "BT7": 3,
+          "BT19": 3,
+          "EX8": 3,
+          "LM": 3,
+          "P": 3,
+          "BT11": 2,
+          "BT12": 2,
+          "EX3": 2,
+          "ST14": 2,
+          "ST16": 2,
+          "BT2": 1,
+          "BT4": 1,
+          "BT5": 1,
+          "BT9": 1,
+          "BT14": 1,
+          "BT23": 1,
+          "EX11": 1,
+          "ST10": 1,
+          "ST21": 1
+        },
+        "n_sets": 27,
+        "top2": [
+          "EX5",
+          "EX6"
+        ],
+        "top2_share": 0.2558139534883721
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Leviamon\"",
+      "rationale": "20 top cuts in 57 lists (weight 7.9); 86 card(s) to implement over 27 sets (26% in EX5+EX6); 381 clause + 557 interaction exams; first decklist ready after ~249 units",
+      "rank": 59
+    },
+    {
+      "archetype": "Machinedramon",
+      "tier": "C",
+      "score": 1.2198,
+      "closeness": 0.2119,
+      "meta": {
+        "weight": 5.7573,
+        "times_played": 30,
+        "top_cuts": 12,
+        "newest_event": "2026-02-28",
+        "undated_lists": 0
+      },
+      "lists": 30,
+      "pool": 101,
+      "core": 6,
+      "core_threshold": 21,
+      "cards": {
+        "with_yaml": 25,
+        "without_yaml": 76,
+        "blocked_status": [
+          "ST17-07"
+        ],
+        "unknown_ids": [],
+        "no_dcgo_script": [],
+        "no_dcgo_script_vanilla": 0,
+        "needs_impl": 77,
+        "core_needs_impl": 6,
+        "needs_impl_ids": [
+          "BT2-070",
+          "BT6-005",
+          "BT7-013",
+          "BT8-067",
+          "BT9-102",
+          "BT11-067",
+          "BT11-072",
+          "BT11-092",
+          "BT12-072",
+          "BT13-078",
+          "BT15-064",
+          "BT16-026",
+          "BT18-026",
+          "BT18-052",
+          "BT18-053",
+          "BT19-011",
+          "BT19-025",
+          "BT19-050",
+          "BT19-064",
+          "BT19-084",
+          "BT20-052",
+          "BT21-051",
+          "BT21-076",
+          "BT22-012",
+          "BT22-049",
+          "BT22-060",
+          "BT22-061",
+          "BT23-049",
+          "EX1-045",
+          "EX1-069",
+          "EX1-073",
+          "EX3-013",
+          "EX4-019",
+          "EX7-064",
+          "EX8-015",
+          "EX8-043",
+          "EX8-056",
+          "EX9-002",
+          "EX9-004",
+          "EX9-006",
+          "EX9-010",
+          "EX9-011",
+          "EX9-014",
+          "EX9-015",
+          "EX9-016",
+          "EX9-017",
+          "EX9-018",
+          "EX9-022",
+          "EX9-026",
+          "EX9-028",
+          "EX9-030",
+          "EX9-035",
+          "EX9-037",
+          "EX9-038",
+          "EX9-039",
+          "EX9-041",
+          "EX9-043",
+          "EX9-051",
+          "EX9-052",
+          "EX9-063",
+          "EX9-064",
+          "EX9-065",
+          "EX9-068",
+          "EX9-069",
+          "EX9-070",
+          "EX9-071",
+          "EX9-072",
+          "EX9-073",
+          "EX11-041",
+          "LM-025",
+          "P-026",
+          "P-157",
+          "P-179",
+          "P-203",
+          "ST12-09",
+          "ST15-02",
+          "ST17-07"
+        ]
+      },
+      "clauses": {
+        "pool": {
+          "confirmed": 4,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 382,
+          "total": 386,
+          "adjudicated": 4,
+          "open": 382,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        },
+        "core": {
+          "confirmed": 0,
+          "diverged": 0,
+          "unreachable": 0,
+          "unavailable": 0,
+          "unmeasured": 25,
+          "total": 25,
+          "adjudicated": 0,
+          "open": 25,
+          "planned_unavailable": 0,
+          "open_image_required": 0
+        }
+      },
+      "interactions": {
+        "total": 471,
+        "adjudicated": 0,
+        "open": 471,
+        "planned_unavailable": 0
+      },
+      "units": {
+        "implement": 77,
+        "clauses": 382,
+        "interactions": 471,
+        "total": 930,
+        "first_list": 270,
+        "lists_ready_now": 0
+      },
+      "era": {
+        "sets": {
+          "EX9": 31,
+          "BT19": 5,
+          "BT22": 4,
+          "P": 4,
+          "BT11": 3,
+          "BT18": 3,
+          "EX1": 3,
+          "EX8": 3,
+          "BT21": 2,
+          "BT2": 1,
+          "BT6": 1,
+          "BT7": 1,
+          "BT8": 1,
+          "BT9": 1,
+          "BT12": 1,
+          "BT13": 1,
+          "BT15": 1,
+          "BT16": 1,
+          "BT20": 1,
+          "BT23": 1,
+          "EX3": 1,
+          "EX4": 1,
+          "EX7": 1,
+          "EX11": 1,
+          "LM": 1,
+          "ST12": 1,
+          "ST15": 1,
+          "ST17": 1
+        },
+        "n_sets": 28,
+        "top2": [
+          "EX9",
+          "BT19"
+        ],
+        "top2_share": 0.4675324675324675
+      },
+      "plan_command": "python -m tools.card_loop plan --archetype \"Machinedramon\"",
+      "rationale": "12 top cuts in 30 lists (weight 5.8); 77 card(s) to implement over 28 sets (47% in EX9+BT19); 382 clause + 471 interaction exams; first decklist ready after ~270 units",
+      "rank": 60
+    }
+  ]
+}

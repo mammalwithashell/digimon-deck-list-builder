@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T18:07:33.346345200+00:00",
+  "clauses": {
+    "ST23-13#effect#0": {
+      "clause_id": "ST23-13#effect#0",
+      "card_id": "ST23-13",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "908aba9658cb19bfbdb39b7ba13ba7e86f3593cde2ff5614af3478748498892f",
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-13-effect0.yaml",
+      "recorded_at": "2026-10-05T18:07:31.930959500+00:00"
+    },
+    "ST23-13#effect#1": {
+      "clause_id": "ST23-13#effect#1",
+      "card_id": "ST23-13",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "8e2bea5b8b8f4023dee8d180c87d879255a664bd8ada26b750241d6576f7ea8a",
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-13-effect1.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 8 of 22 ours / 11 dcgo steps (6 sim-only row(s) with no DCGO prompt + 3 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T18:07:32.707379800+00:00"
+    },
+    "ST23-13#security#0": {
+      "clause_id": "ST23-13#security#0",
+      "card_id": "ST23-13",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-13-effect2.yaml",
+      "recorded_at": "2026-10-05T18:07:33.346345200+00:00"
+    }
+  }
+}

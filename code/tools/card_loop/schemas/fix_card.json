@@ -1,0 +1,40 @@
+{
+  "title": "card-loop fix_card result v1",
+  "description": "Stage `fix_card` (design D4 TRIAGE ours_wrong -> FIX; D13 fix gate). The worker changed a card's YAML spec / card data in its worktree to remove a divergence triaged `ours_wrong`. The fix gate (driver) requires: `citation` (general_rule.pdf section, official ruling `qa:<Q-number>`, or DCGO `file:line`), `tests` that fail at the pinned base and pass with the fix (the gate re-runs them both ways), and a green scoped `cards_behavioral`. `test_result_lines` are verbatim runner summary lines (honesty contract). `gaps`: substrate the fix turned out to need (non-empty => park instead of fixing). Strict-mode compatible.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["files", "tests", "test_result_lines", "gaps", "citation", "notes"],
+  "properties": {
+    "files": {"type": "array", "items": {"type": "string"}, "description": "Repo-relative paths changed."},
+    "tests": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Regression tests that fail before the fix and pass after it."
+    },
+    "test_result_lines": {"type": "array", "items": {"type": "string"}},
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "id", "summary"],
+        "properties": {
+          "kind": {"type": "string", "enum": ["dsl", "engine"]},
+          "id": {"type": "string"},
+          "summary": {"type": "string"}
+        }
+      }
+    },
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "description": "Why the old behaviour was wrong: rule = general_rule.pdf section (e.g. `16-36`), ruling = `qa:<Q-number>`, dcgo = `<path>.cs:<line>`.",
+      "properties": {
+        "kind": {"type": "string", "enum": ["rule", "ruling", "dcgo"]},
+        "ref": {"type": "string"}
+      }
+    },
+    "notes": {"type": "string"}
+  }
+}

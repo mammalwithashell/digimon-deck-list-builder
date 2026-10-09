@@ -1,0 +1,12 @@
+{
+  "title": "card-loop author_interaction result v1",
+  "description": "Stage `author_interaction` (design D6/D8: adversarial multi-clause / multi-card exam for one gating interaction — `qa:<Q-number>` ruling or `probe:<clause-id>:<family>[:neg]` — authored by the family that did NOT implement the card). The scenario files carry the D8 `interaction: {id, source, kind}` block (and `expect_ruling:` for Q&A interactions); a negative probe asserts the clause does NOT fire. `scenario_paths`: repo-relative files written and validated with `exam_validate`. `covers`: every clause id the scenarios exercise. `notes`: empty string if none; if no legal line reaches the interaction, `scenario_paths` is empty and `notes` says why (the driver measures before calling it unreachable). Strict-mode compatible.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scenario_paths", "covers", "notes"],
+  "properties": {
+    "scenario_paths": {"type": "array", "items": {"type": "string"}},
+    "covers": {"type": "array", "items": {"type": "string"}},
+    "notes": {"type": "string"}
+  }
+}

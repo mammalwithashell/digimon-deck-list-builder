@@ -2,12 +2,13 @@
 
 Detect candidate new keywords in a release set and triage each one:
 
-    covered        -> already a Rust Keyword variant (skip)
+    covered        -> the engine runs it: a Rust Keyword variant, or DSL vocabulary
+                      (the manifest's ``dsl_lowered_keywords``, e.g. <Delay>)
     trait          -> a trait reference (positional "[X] trait" rule, or lexicon)
-    name_ref       -> a known card name
+    name_ref       -> a known card name (or a name stem: "[Sistermon Noir]")
     timing/grammar -> known non-keyword bracket token (ignored)
-    auto_ingest    -> absent from Rust, present in the DCGO manifest -> port from C#
-    flag_for_human -> absent from BOTH Rust and DCGO -> halt, request direction
+    auto_ingest    -> absent from the engine, present in the DCGO manifest -> port from C#
+    flag_for_human -> absent from BOTH the engine and DCGO -> halt, request direction
 
 The detector is a set-subtraction; the positional "[X] trait" rule is what
 catches trait display-names (``[Aqua]``, ``[Sovereign]``) that are absent from
@@ -22,6 +23,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 
 from .dcgo_manifest import normalize_keyword
+from .lexicons import name_stems
 
 # Bracket tokens that are timings, not keywords (square-bracket clause leads).
 KNOWN_TIMINGS = {
@@ -32,12 +34,20 @@ KNOWN_TIMINGS = {
     "start of all turns", "end of all turns", "inherited effect", "inherited",
     "when moving", "our turn", "start of your main phase", "rule", "when linking",
 }
+# "[Start of Opponent's Turn]" / "[Start of Opponent's Main Phase]" (EX5-065,
+# LM-020, EX3-024, BT26-027) and every other start/end-of-turn/phase lead.
+_TIMING_RE = re.compile(
+    r"^(?:start|end)\s+of\s+(?:your|opponent's|all|the)?\s*(?:turns?|main\s+phase)$"
+)
 
 # Bracket tokens that are grammar/markers, not keywords.
 GRAMMAR = {
-    "once per turn", "digivolve", "free", "trash", "hand", "breeding",
+    "once per turn", "twice per turn", "digivolve", "free", "trash", "hand", "breeding",
     "hybrid", "x antibody", "ace", "de-digivolve", "dna digivolve",
 }
+
+# "[EX2-039 Impmon]": a name qualified by its card number.
+_CARD_ID_PREFIX_RE = re.compile(r"^[a-z]+\d*-\d+\s+(.+)$")
 
 # Printed keyword spellings whose Rust `Keyword` variant is named differently.
 # `_strip_param` has already dropped the numeric param ("Draw 2" -> "draw",
@@ -89,12 +99,34 @@ class KeywordGateReport:
         )
 
 
+def _fold(token: str) -> str:
+    """Lowercase, trim, and fold the curly apostrophe the printed text mixes in."""
+    return token.strip().lower().replace("’", "'")
+
+
 def _strip_param(token: str) -> str:
-    """``App Fusion -4`` -> ``app fusion`` ; ``Recovery +1 (Deck)`` -> ``recovery``."""
-    s = token.strip().lower()
-    s = re.sub(r"\s*\(.*?\)\s*$", "", s)          # trailing parenthetical
-    s = re.sub(r"\s*[+\-]?\d+\s*$", "", s)        # trailing numeric param
+    """``App Fusion -4`` -> ``app fusion`` ; ``Recovery +1 (Deck)`` -> ``recovery`` ;
+    ``Digi-Burst up to 4`` -> ``digi-burst``."""
+    s = _fold(token)
+    s = re.sub(r"\s*\(.*?\)\s*$", "", s)                  # trailing parenthetical
+    s = re.sub(r"\s*(?:up\s+to\s+)?[+\-]?\d+\s*$", "", s)  # trailing (up to) numeric param
     return s.strip()
+
+
+def _lexicon_forms(raw: str) -> list[str]:
+    """Lexicon keys for a bracket token, most literal first.
+
+    A name or trait can END in what looks like a keyword parameter —
+    ``[King Drasil_7D6]``, ``[Shoutmon EX6]``, ``[Ver.3]``,
+    ``[Belphemon (X Antibody)]`` — so the unstripped token is looked up before
+    the param-stripped one. ``[EX2-039 Impmon]`` also tries the bare name.
+    """
+    forms = [_fold(raw)]
+    m = _CARD_ID_PREFIX_RE.match(forms[0])
+    if m:
+        forms.append(m.group(1).strip())
+    forms.append(_strip_param(raw))
+    return list(dict.fromkeys(f for f in forms if f))
 
 
 # Bracket classes. Digimon text mixes ASCII square brackets `[Trait]`/`[Timing]`
@@ -117,9 +149,11 @@ _TOKEN_RE = re.compile(rf"＜([^＞]+)＞|[\[<]({_INNER})[\]>]")
 # "[Social]/[Tool]/[Game] trait" or "[Huckmon] or [Sistermon] in its text".
 # Consecutive brackets joined only by bare whitespace are NOT a list (e.g.
 # "[Link] [Appmon] trait" = the Link keyword + an [Appmon] trait clause).
-_IN_ITS = r"in\s+(?:any\s+of\s+)?(?:its|their)\s+"
+# Printed variants: "in one of their traits" (BT10-056), "w/[X] in name"
+# (BT26-060), and the bare "[Chronomon] text" (BT26-078).
+_IN_ITS = r"in\s+(?:(?:any|one)\s+of\s+)?(?:(?:its|their)\s+)?"
 _TRAIT_SUFFIX = rf"(?:traits?|{_IN_ITS}traits?)\b"
-_NAME_SUFFIX = rf"(?:{_IN_ITS}(?:names?|texts?)|tokens?)\b"
+_NAME_SUFFIX = rf"(?:{_IN_ITS}(?:names?|texts?)|tokens?|texts?)\b"
 _LIST_SEP = r"(?:,\s*other\s+than|[/,]|\bor\b|\band\b)"
 
 
@@ -174,6 +208,7 @@ def triage_set(
     rust_keywords: set[str],
     dcgo_available: set[str],
     subsystem_keywords: set[str] | None = None,
+    dsl_keywords: set[str] | None = None,
     set_prefix: str = "",
 ) -> KeywordGateReport:
     """Scan a set's effect texts and triage every bracket token.
@@ -185,8 +220,13 @@ def triage_set(
         dcgo_available: normalized DCGO registry ∪ core-modeled allowlist.
         subsystem_keywords: normalized DCGO keywords that are Link-style subsystems
             (route to ``auto_ingest_subsystem`` — assess before porting).
+        dsl_keywords: normalized keywords the engine runs through DSL vocabulary
+            rather than a ``Keyword`` variant (the manifest's
+            ``dsl_lowered_keywords``) — covered, whatever DCGO's class.
     """
     subsystem_keywords = subsystem_keywords or set()
+    engine_keywords = set(rust_keywords) | set(dsl_keywords or ()) | DSL_STEP_KEYWORDS
+    stems = name_stems(card_names)
     rep = KeywordGateReport(set_prefix=set_prefix)
     effect_texts = list(effect_texts)
     # A token is named in the set's own text ("play 1 [X] Token"); its other
@@ -212,26 +252,36 @@ def triage_set(
                 rep.name_hits[base] += 1
                 continue
             # 2. known non-keyword bracket tokens.
-            if base in KNOWN_TIMINGS or base in GRAMMAR:
+            if base in KNOWN_TIMINGS or base in GRAMMAR or _TIMING_RE.match(base):
                 rep.ignored[base] += 1
                 continue
-            # 3. known card / token name, or trait, by lexicon.
-            if base in card_names or base in token_names:
-                rep.name_hits[base] += 1
+            # 3. known card / token name, or trait, by lexicon — the literal
+            #    token first, so a param-shaped tail is not stripped off a name.
+            forms = _lexicon_forms(raw)
+            name = next((f for f in forms if f in card_names or f in token_names), None)
+            if name is not None:
+                rep.name_hits[name] += 1
                 continue
-            if base in traits:
-                rep.trait_hits[base] += 1
+            trait = next((f for f in forms if f in traits), None)
+            if trait is not None:
+                rep.trait_hits[trait] += 1
                 continue
-            # 4. keyword triage against Rust enum, then DCGO manifest.
+            # 4. keyword triage against the engine (enum + DSL), then DCGO.
             norm = normalize_keyword(base)
             norm = PRINTED_KEYWORD_ALIASES.get(norm, norm)
-            if norm in rust_keywords or norm in DSL_STEP_KEYWORDS:
+            if norm in engine_keywords:
                 rep.covered[base] += 1
             elif norm in dcgo_available:
                 if norm in subsystem_keywords:
                     rep.auto_ingest_subsystem[base] += 1
                 else:
                     rep.auto_ingest[base] += 1
+            # 5. last resort before flagging: a card-family name stem
+            #    ("[Sistermon Noir]" when the DB holds "Sistermon Noir
+            #    (Awakened)"). After keyword triage, so a stem can never hide a
+            #    keyword the engine or DCGO knows.
+            elif any(f in stems for f in forms):
+                rep.name_hits[next(f for f in forms if f in stems)] += 1
             else:
                 rep.flag_for_human[base] += 1
     return rep
@@ -259,5 +309,6 @@ def triage_set_from_artifacts(
         rust_keywords=set(m["rust_enum_keywords"]),
         dcgo_available=set(m["dcgo_available_keywords"]),
         subsystem_keywords=set(m.get("subsystem_keywords", [])),
+        dsl_keywords=set(m.get("dsl_lowered_keywords", {})),
         set_prefix=set_prefix,
     )

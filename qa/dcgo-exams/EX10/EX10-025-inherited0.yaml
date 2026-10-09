@@ -1,0 +1,120 @@
+# Exam scenario: EX10-025 Sunarizamon, clause EX10-025#inherited#0 --
+# "When effects trash this card from a [Mineral] or [Rock] trait Digimon's
+#  digivolution cards, delete 1 of your opponent's Digimon with a play cost of
+#  4 or less."
+#
+# THE LINE: Tumblemon (EX10-003, Rock) -> Sunarizamon (EX10-025, cost 0) ->
+# Landramon (EX10-028, Lv.4, cost 2). Landramon's [When Digivolving] trashes
+# 1 [Mineral]/[Rock] digivolution card; we point it at EX10-025 (Mineral via
+# its (Rule) trait grant), which fires the inherited clause: delete p1's
+# BT21-055 Sunarizamon (play cost 3).
+card: EX10-025
+clause: EX10-025#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the two cards under the line + inert Lv.3 filler
+      - EX10-025
+      - EX10-028
+      - BT16-082
+      - BT16-082
+      - BT16-082
+      # security (5-9): never checked
+      - EX10-032
+      - EX10-032
+      - EX10-032
+      - EX10-032
+      - BT16-082
+      # (10) p0's T3 draw
+      - EX10-033
+    rest: rocks-exam
+  p1:
+    stack:
+      # hand (0-4)
+      - BT21-055
+      - BT16-082
+      - BT16-082
+      - BT16-082
+      - BT16-082
+      # security (5-9)
+      - EX10-032
+      - EX10-032
+      - EX10-032
+      - EX10-032
+      - EX10-033
+      # (10) p1's T2 draw
+      - EX10-033
+    rest: rocks-exam
+steps:
+  # T1 (p0): hatch Tumblemon, end turn.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): play BT21-055 (cost 3 -> memory 0), end turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT21-055, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): Lv.2 cannot promote, and a breeding-area digivolve is a
+  # main-phase action (the breeding phase is over), so digivolve in breeding
+  # (Sunarizamon, cost 0) and pass.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX10-025 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0): promote Sunarizamon, digivolve onto Landramon (cost 2).
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX10-028 } }
+    expect: { prompt: main_phase }
+  # Landramon [When Digivolving] optional gate: yes.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Source pick (DCGO: SelectPermanentEffect on the carrier, then SelectCardEffect on
+  # its digivolution cards; ours: one SourceMulti pick naming the source).
+  - actor: 0
+    do: { select: { cards: [EX10-028], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [EX10-025], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # PROMPT ORDER (round-trip 1 measured): after the source trash, DCGO asks
+  # Landramon's own "1 of your Digimon gains ..." pick FIRST (SelectPermanentEffect,
+  # candidates [EX10-028]); OUR engine runs the stacked inherited trigger first and
+  # asks that pick LAST. The two rows below are split into a DCGO-only and a
+  # sim-only copy so the line can run to completion and the END STATE is compared.
+  - actor: 0
+    do: { select: { cards: [EX10-028], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: the inherited delete -- p1 BT21-055 (play cost 3).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.0], sim_only: true } }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }

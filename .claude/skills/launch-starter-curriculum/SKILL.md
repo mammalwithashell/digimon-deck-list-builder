@@ -91,11 +91,13 @@ SSH="ssh -i $KEY -o StrictHostKeyChecking=accept-new root@$IP"
 SCP="scp -i $KEY -o StrictHostKeyChecking=accept-new -q"
 $SSH "curl -fsSL https://get.docker.com | sh >/dev/null 2>&1; mkdir -p ~/digimon-training/{data,configs,qa/qa-reports,champions,models,runs}"
 
-# data (incl. deck_library for the generalist pool), the WHOLE configs/ tree,
-# the qa DSL ledger, the driver, and the champions RENAMED to distinct files
-# (both are pilot_ppo_starter_decks_generalist_v1.zip).
+# data (incl. deck_library for the generalist pool, and oracle_readiness.json --
+# the always-on oracle readiness gate refuses to train without it), the WHOLE
+# configs/ tree, the qa DSL ledger, the driver, and the champions RENAMED to
+# distinct files (both are pilot_ppo_starter_decks_generalist_v1.zip).
 $SCP data/cards.json data/tested_cards.json data/deck_formats.json data/deck_library.json \
-     data/archetype_aliases.json data/card_overrides.json root@$IP:~/digimon-training/data/
+     data/archetype_aliases.json data/card_overrides.json data/oracle_readiness.json \
+     root@$IP:~/digimon-training/data/
 $SCP -r configs/* root@$IP:~/digimon-training/configs/
 $SCP qa/qa-reports/validated_cards_dsl.json root@$IP:~/digimon-training/qa/qa-reports/
 $SCP code/tools/train_starter_curriculum.py root@$IP:~/digimon-training/

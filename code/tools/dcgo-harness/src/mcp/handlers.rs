@@ -62,6 +62,71 @@ fn load_clause_book(path: &Path, store: &mut VerdictStore) -> Result<ClauseTextB
     Ok(book)
 }
 
+/// The repo's `code/` directory, ABSOLUTE, for `PYTHONPATH` when this server
+/// shells out to a Python tool: `DIGIMON_REPO_ROOT`, else the working
+/// directory. A bare relative `code` resolved against whatever directory the
+/// MCP client happened to start the server in.
+fn python_code_dir() -> PathBuf {
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let base = std::env::var("DIGIMON_REPO_ROOT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| cwd.clone());
+    let base = if base.is_absolute() { base } else { cwd.join(base) };
+    base.join("code")
+}
+
+/// Extract and merge any requested card the clause-text book has never seen,
+/// so plan/status never report "0 outstanding" for an unknown card (a card
+/// absent from the book has no clause ids, hence an empty denominator).
+///
+/// SIDE EFFECT: this rewrites `book_path` -- by default the committed
+/// `qa/exam-clause-text.json` -- through `python -m tools.clause_coverage.book
+/// add`, a read-modify-write with no lock. Two servers extracting into the same
+/// checkout at once can lose one card's clauses; commit the book with the
+/// verdicts it backs.
+///
+/// Returns the ids extracted this call. An unreadable book is NOT handled here
+/// -- the caller's `load_clause_book` reports it, and extracting into a book
+/// that cannot be read would create one the caller never asked for.
+fn ensure_cards_in_book(book_path: &Path, cards: &[String]) -> Result<Vec<String>, String> {
+    let Ok(book) = ClauseTextBook::load(book_path) else {
+        return Ok(vec![]);
+    };
+    let mut missing: Vec<String> = Vec::new();
+    for c in cards {
+        if !book.has_card(c) && !missing.contains(c) {
+            missing.push(c.clone());
+        }
+    }
+    if missing.is_empty() {
+        return Ok(vec![]);
+    }
+    if let Some(bad) = missing.iter().find(|c| c.starts_with('-')) {
+        return Err(format!("{bad:?} is not a card id"));
+    }
+    let mut args = vec![
+        "-m".to_string(),
+        "tools.clause_coverage.book".to_string(),
+        "add".to_string(),
+        "--book".to_string(),
+        book_path.display().to_string(),
+        "--card-ids".to_string(),
+    ];
+    args.extend(missing.iter().cloned());
+    let out = std::process::Command::new("python")
+        .args(&args)
+        .env("PYTHONPATH", python_code_dir())
+        .output()
+        .map_err(|e| format!("running clause extraction for {missing:?}: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "clause extraction failed for {missing:?}: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    Ok(missing)
+}
+
 /// The card id a clause id belongs to: the part before the first `#`.
 fn clause_card_id(clause_id: &str) -> &str {
     clause_id.split('#').next().unwrap_or(clause_id)
@@ -121,6 +186,7 @@ pub fn exam_status(
     let cards = requested_cards(params)?;
     let mut store = VerdictStore::load_dir(&verdicts_dir(root))?;
     let book_path = clause_text_json_path(params);
+    let extracted = ensure_cards_in_book(&book_path, &cards)?;
 
     match load_clause_book(&book_path, &mut store) {
         Ok(book) => {
@@ -147,6 +213,7 @@ pub fn exam_status(
                 // CURRENT text (see `exam::verdict`'s module docs on drift).
                 "invalidated_by_text_drift": sum.invalidated,
                 "denominator_source": format!("clause-text book: {}", book_path.display()),
+                "extracted_now": extracted,
             }))
         }
         Err(reason) => {
@@ -193,6 +260,7 @@ pub fn exam_plan(
     let limit = tools::usize_arg(params, "limit", DEFAULT_LIMIT);
     let mut store = VerdictStore::load_dir(&verdicts_dir(root))?;
     let book_path = clause_text_json_path(params);
+    let extracted = ensure_cards_in_book(&book_path, &cards)?;
 
     let (outstanding, total_outstanding, denominator_source) =
         match load_clause_book(&book_path, &mut store) {
@@ -282,6 +350,7 @@ pub fn exam_plan(
         "outstanding_total": total_outstanding,
         "elided": total_outstanding.saturating_sub(returned),
         "denominator_source": denominator_source,
+        "extracted_now": extracted,
     }))
 }
 
@@ -317,14 +386,74 @@ pub fn exam_validate(params: &serde_json::Value) -> Result<serde_json::Value, St
             ),
         ),
     };
-    let findings = crate::exam::validate::validate_yaml(&yaml, known_ids.as_deref());
+    let (interaction_book, interaction_note) = load_interaction_book(params);
+    let mut findings = crate::exam::validate::validate_scenario(
+        &yaml,
+        known_ids.as_deref(),
+        interaction_denominator(&interaction_book),
+    );
+    findings.extend(deck_budget_findings(params, &yaml));
     Ok(serde_json::json!({
         "clean": findings.is_empty(),
         "findings": findings.iter().map(|f| serde_json::json!({
             "rule": f.rule, "message": f.message, "guide_topic": f.guide_topic
         })).collect::<Vec<_>>(),
-        "note": note,
+        "note": format!("{note}; {interaction_note}"),
     }))
+}
+
+/// The `deck-budget` lint for YAML text: against the `decks` argument, else the
+/// pool under `qa/dcgo-exams/` that names the scenario's `rest:` decks, else
+/// the default pool. Nothing when the text does not parse (its own finding)
+/// or no book loads.
+fn deck_budget_findings(params: &serde_json::Value, yaml: &str) -> Vec<crate::exam::validate::Finding> {
+    use crate::exam::run::{resolve_default, DEFAULT_CARDS_JSON, DEFAULT_DECK_POOL};
+    let decks = match tools::opt_str_arg(params, "decks") {
+        Some(d) => PathBuf::from(d),
+        None => {
+            let Ok(s) = crate::exam::scenario::Scenario::from_yaml(yaml) else {
+                return Vec::new();
+            };
+            let exams = resolve_default("qa/dcgo-exams");
+            crate::exam::deckbook::book_for(
+                &exams.join("_"),
+                &[s.decks.p0.rest.as_str(), s.decks.p1.rest.as_str()],
+                &exams,
+            )
+            .unwrap_or_else(|| resolve_default(DEFAULT_DECK_POOL))
+        }
+    };
+    match crate::exam::deckbook::DeckBook::load(Some(&decks), &resolve_default(DEFAULT_CARDS_JSON)) {
+        Ok(book) => crate::exam::validate::deck_budget(yaml, &book),
+        Err(_) => Vec::new(),
+    }
+}
+
+/// The interaction denominator for this call (`interaction_denominator`
+/// argument, else `data/interaction_denominator.json`), and a note saying
+/// which. An unreadable denominator is not an error HERE -- a legacy clause
+/// scenario never needs it -- but an interaction scenario is refused against it.
+fn load_interaction_book(
+    params: &serde_json::Value,
+) -> (Result<crate::exam::verdict::InteractionBook, String>, String) {
+    let path = tools::opt_str_arg(params, "interaction_denominator")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(crate::exam::verdict::DEFAULT_INTERACTION_DENOMINATOR));
+    let book = crate::exam::verdict::InteractionBook::load(&path);
+    let note = match &book {
+        Ok(_) => format!("interaction ids are checked against {}", path.display()),
+        Err(e) => format!("interaction scenarios are refused: {e}"),
+    };
+    (book, note)
+}
+
+fn interaction_denominator(
+    book: &Result<crate::exam::verdict::InteractionBook, String>,
+) -> crate::exam::validate::InteractionDenominator<'_> {
+    match book {
+        Ok(b) => crate::exam::validate::InteractionDenominator::Loaded(b),
+        Err(e) => crate::exam::validate::InteractionDenominator::Missing(e.as_str()),
+    }
 }
 
 /// Where the generated guide lives.
@@ -415,6 +544,67 @@ const SIM_ONLY_NOTE: &str = "sim-only ran our engine alone: it proves the line i
     and cannot see DCGO's prompt sequence, which is where lines actually break. It cannot \
     find a new divergence -- only an oracle pass moves a clause to confirmed.";
 
+/// The DCGO harness root an oracle call uses: the `harness_root` argument,
+/// else `DCGO_HARNESS_ROOT` / the player's default root. NEVER the server's
+/// `--root`, which relocates the verdict and claim stores -- a different
+/// directory, and checking it as a harness root reported NO-GO everywhere.
+fn harness_root(params: &serde_json::Value) -> Result<PathBuf, String> {
+    tools::opt_str_arg(params, "harness_root")
+        .map(PathBuf::from)
+        .or_else(crate::node::default_harness_root)
+        .ok_or_else(|| {
+            "no harness root: pass `harness_root`, or set DCGO_HARNESS_ROOT (the MCP's \
+             --root relocates the verdict and claim stores, so it is not a substitute)"
+                .to_string()
+        })
+}
+
+/// Run `scenario` through the one-call oracle loop. `record` files the verdict
+/// in the store under the server's `--root` (a committed scenario); a probe's
+/// scratch file records nothing. Preflights before any side effect.
+fn oracle_run(
+    params: &serde_json::Value,
+    root: Option<&Path>,
+    scenario: &Path,
+    record: bool,
+) -> Result<crate::exam::oracle::OracleExamResult, String> {
+    let harness = harness_root(params)?;
+    let build = tools::opt_str_arg(params, "build").map(PathBuf::from);
+    crate::exam::oracle::preflight(&harness, build.as_deref())?;
+
+    let text = std::fs::read_to_string(scenario)
+        .map_err(|e| format!("reading {}: {e}", scenario.display()))?;
+    let s = crate::exam::scenario::Scenario::from_yaml(&text)?;
+    let decks = match tools::opt_str_arg(params, "decks") {
+        Some(d) => PathBuf::from(d),
+        None => crate::exam::run::deck_book_for(scenario, &s),
+    };
+    let book_path = clause_text_json_path(params);
+    if record {
+        // Never refuse a verdict as an orphan just because the card was never
+        // extracted (see `ensure_cards_in_book` for the side effect).
+        ensure_cards_in_book(&book_path, std::slice::from_ref(&s.card))?;
+    }
+    let cards_json = crate::exam::run::resolve_default(crate::exam::run::DEFAULT_CARDS_JSON);
+    let denominator = tools::opt_str_arg(params, "interaction_denominator")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(crate::exam::verdict::DEFAULT_INTERACTION_DENOMINATOR));
+    let store = verdicts_dir(root);
+    let opts = crate::exam::oracle::OracleExamOptions {
+        root: &harness,
+        build: build.as_deref(),
+        cards_json: &cards_json,
+        decks: Some(&decks),
+        verdicts_dir: record.then_some(store.as_path()),
+        clause_text_json: record.then_some(book_path.as_path()),
+        interaction_denominator: &denominator,
+        backfill: true,
+        timeout: std::time::Duration::from_secs(tools::usize_arg(params, "timeout_seconds", 300) as u64),
+        poll: std::time::Duration::from_secs(1),
+    };
+    crate::exam::oracle::run_oracle_exam(scenario, &opts)
+}
+
 pub fn run_scenario(
     params: &serde_json::Value,
     root: Option<&Path>,
@@ -425,13 +615,32 @@ pub fn run_scenario(
     if !p.exists() {
         return Err(format!("no scenario at {path}"));
     }
-    let report = crate::exam::run_one(p, sim_only, root)?;
+    if !sim_only {
+        let result = oracle_run(params, root, p, true)?;
+        let mut value = serde_json::to_value(&result)
+            .map_err(|e| format!("serializing the oracle result: {e}"))?;
+        value["stage"] = serde_json::json!("oracle");
+        return Ok(value);
+    }
+    let decks = tools::opt_str_arg(params, "decks").map(PathBuf::from);
+    let report = crate::exam::run_one(p, decks.as_deref())?;
     let mut value = serde_json::to_value(&report)
         .map_err(|e| format!("serializing the diff report: {e}"))?;
-    if sim_only {
-        value["note"] = serde_json::json!(SIM_ONLY_NOTE);
-    }
+    value["note"] = serde_json::json!(SIM_ONLY_NOTE);
     Ok(value)
+}
+
+/// A scratch file of the probe's own: content hash plus process id plus a
+/// per-process counter. Keyed by content alone, two probes of the same YAML
+/// (parallel tests, two servers) truncated and deleted each other's file.
+fn probe_scratch_path(yaml: &str) -> PathBuf {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    std::env::temp_dir().join(format!(
+        "exam-probe-{}-{}-{n}.yaml",
+        &crate::exam::verdict::sha256_hex(yaml)[..16],
+        std::process::id()
+    ))
 }
 
 pub fn exam_probe(
@@ -448,7 +657,13 @@ pub fn exam_probe(
     // below, whose own notion of clean (`DiffReport::is_clean` -- every row
     // compared AND no divergence) is a completely different question. Naming
     // both `clean` would let one answer be read as the other.
-    let findings = crate::exam::validate::validate_yaml(&yaml, None);
+    let (interaction_book, _) = load_interaction_book(params);
+    let mut findings = crate::exam::validate::validate_scenario(
+        &yaml,
+        None,
+        interaction_denominator(&interaction_book),
+    );
+    findings.extend(deck_budget_findings(params, &yaml));
     if !findings.is_empty() {
         return Ok(serde_json::json!({
             "lint_clean": false,
@@ -460,16 +675,48 @@ pub fn exam_probe(
     }
 
     // Scratch file: a probe never commits a scenario.
-    let scratch = std::env::temp_dir().join(format!(
-        "exam-probe-{}.yaml",
-        crate::exam::verdict::sha256_hex(&yaml)[..16].to_string()
-    ));
+    let scratch = probe_scratch_path(&yaml);
     std::fs::write(&scratch, &yaml)
         .map_err(|e| format!("writing the probe scratch file: {e}"))?;
 
-    let report = crate::exam::run_one(&scratch, sim_only, root);
+    if !sim_only {
+        // A probe is not a committed scenario: it records no verdict. A
+        // confirmed probe returns its backfilled text, ready to commit and
+        // `run_scenario` to record.
+        let result = oracle_run(params, root, &scratch, false);
+        let backfilled_yaml = std::fs::read_to_string(&scratch).ok();
+        let _ = std::fs::remove_file(&scratch);
+        let result = result?;
+        let mut value = serde_json::to_value(&result)
+            .map_err(|e| format!("serializing the oracle result: {e}"))?;
+        value["stage"] = serde_json::json!("oracle");
+        if result.backfilled {
+            value["backfilled_yaml"] = serde_json::json!(backfilled_yaml);
+        }
+        value["note"] = serde_json::json!(
+            "a probe records no verdict: commit the scenario and run_scenario it to record one"
+        );
+        return Ok(value);
+    }
+    let decks = tools::opt_str_arg(params, "decks").map(PathBuf::from);
+    let inspect = tools::opt_usize_arg(params, "inspect_step")
+        .map(|n| crate::exam::run::inspect_one(&scratch, decks.as_deref(), n));
+    let report = crate::exam::run_one(&scratch, decks.as_deref());
     let _ = std::fs::remove_file(&scratch);
-    let report = report?;
+    let report = match (report, &inspect) {
+        (Ok(r), _) => r,
+        // Introspection exists for exactly the line that does not pass: return
+        // the failure beside the inspected prompt instead of dropping both.
+        (Err(e), Some(i)) => {
+            let mut value = serde_json::json!({ "stage": "sim", "error": e, "note": SIM_ONLY_NOTE });
+            match i {
+                Ok(v) => value["inspect"] = v.clone(),
+                Err(ie) => value["inspect_error"] = serde_json::json!(ie),
+            }
+            return Ok(value);
+        }
+        (Err(e), None) => return Err(e),
+    };
 
     // No `clean` stamp here: `DiffReport::is_clean()` is false whenever
     // `dcgo_steps != compared_steps`, which is ALWAYS in sim-only (nothing
@@ -481,9 +728,12 @@ pub fn exam_probe(
     // label this handler fabricated.
     let mut value = serde_json::to_value(&report)
         .map_err(|e| format!("serializing the diff report: {e}"))?;
-    value["stage"] = serde_json::json!(if sim_only { "sim" } else { "oracle" });
-    if sim_only {
-        value["note"] = serde_json::json!(SIM_ONLY_NOTE);
+    value["stage"] = serde_json::json!("sim");
+    value["note"] = serde_json::json!(SIM_ONLY_NOTE);
+    match inspect {
+        Some(Ok(v)) => value["inspect"] = v,
+        Some(Err(e)) => value["inspect_error"] = serde_json::json!(e),
+        None => {}
     }
     Ok(value)
 }
@@ -545,14 +795,14 @@ pub fn node_health(
     params: &serde_json::Value,
     root: Option<&Path>,
 ) -> Result<serde_json::Value, String> {
-    let root = root
-        .map(|r| r.to_path_buf())
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let _ = root; // the store root: never a harness root (see `harness_root`)
+    let root_buf = harness_root(params)?;
+    let root = root_buf.as_path();
     let build = tools::opt_str_arg(params, "build").map(std::path::PathBuf::from);
 
     // node::health never fails -- a node that cannot answer must produce a
     // readable report, not an error string.
-    let h = crate::node::health(&root, build.as_deref());
+    let h = crate::node::health(root, build.as_deref());
     Ok(serde_json::json!({
         "go": h.go,
         "checks": h.checks.iter().map(|c| serde_json::json!({
@@ -609,6 +859,8 @@ mod tests {
                 reason: None,
                 dcgo_build: None,
                 job_id: None,
+                triage: None,
+                citation: None,
                 recorded_at: "2026-08-27T00:00:00+00:00".to_string(),
             });
         }
@@ -895,6 +1147,8 @@ mod tests {
             reason: None,
             dcgo_build: None,
             job_id: None,
+            triage: None,
+            citation: None,
             recorded_at: "2026-08-20T00:00:00+00:00".to_string(),
         });
         store.save_dir(&dir.join("exam-verdicts")).unwrap();
@@ -1000,6 +1254,122 @@ steps:
     do: { pass: {} }
 "#;
 
+
+    fn repo_root() -> std::path::PathBuf {
+        let root = std::env::var("DIGIMON_REPO_ROOT")
+            .unwrap_or_else(|_| concat!(env!("CARGO_MANIFEST_DIR"), "/../../..").to_string());
+        std::env::set_var("DIGIMON_REPO_ROOT", &root);
+        std::path::PathBuf::from(root)
+    }
+
+    /// A harness root with queue dirs but NO enable marker: node_health NO-GO.
+    fn no_go_root(tag: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("mcp_no_go_{tag}"));
+        let _ = std::fs::remove_dir_all(&dir);
+        for d in ["jobs", "claimed", "done", "failed"] {
+            std::fs::create_dir_all(dir.join(d)).unwrap();
+        }
+        dir
+    }
+
+    #[test]
+    fn node_health_reads_the_harness_root_argument_never_the_store_root() {
+        // The MCP's --root relocates the verdict and claim stores; it is not a
+        // DCGO harness root, and checking it reported NO-GO on every node.
+        let harness = no_go_root("health_arg");
+        let store = std::env::temp_dir().join("mcp_store_not_a_harness");
+        let out = node_health(
+            &json!({"arguments": {"harness_root": harness.display().to_string()}}),
+            Some(&store),
+        )
+        .unwrap();
+        let text = out.to_string().replace("\\\\", "/");
+        let harness_s = harness.display().to_string().replace('\\', "/");
+        let store_s = store.display().to_string().replace('\\', "/");
+        assert!(text.contains(&harness_s), "checks must name the harness root: {text}");
+        assert!(!text.contains(&store_s), "the store root is not a harness root: {text}");
+    }
+
+    #[test]
+    fn run_scenario_finds_the_deck_book_the_scenario_needs() {
+        // A Glowing Dawn scenario names decks only ST23/glowing_dawn_pool.json
+        // holds; the fixed EX12 default could never resolve them.
+        let root = repo_root();
+        let path = root.join("qa/dcgo-exams/ST23/ST23-06-effect0.yaml");
+        let v = run_scenario(&json!({"arguments": {"path": path.display().to_string()}}), None)
+            .expect("sim-only run of a committed GD scenario");
+        assert!(v["note"].as_str().unwrap_or("").contains("sim-only"), "{v}");
+    }
+
+    #[test]
+    fn run_scenario_in_oracle_mode_refuses_a_no_go_node_before_anything_else() {
+        let root = repo_root();
+        let harness = no_go_root("run_scenario");
+        let path = root.join("qa/dcgo-exams/ST23/ST23-06-effect0.yaml");
+        let err = run_scenario(
+            &json!({"arguments": {"path": path.display().to_string(), "sim_only": false,
+                                  "harness_root": harness.display().to_string()}}),
+            None,
+        )
+        .unwrap_err();
+        assert!(err.contains("NO-GO"), "{err}");
+        assert_eq!(std::fs::read_dir(harness.join("jobs")).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn exam_probe_in_oracle_mode_refuses_a_no_go_node_and_records_nothing() {
+        repo_root();
+        let harness = no_go_root("probe");
+        let store = std::env::temp_dir().join("mcp_probe_store");
+        let _ = std::fs::remove_dir_all(&store);
+        let err = exam_probe(
+            &json!({"arguments": {"yaml": GOOD_YAML, "sim_only": false,
+                                  "harness_root": harness.display().to_string()}}),
+            Some(&store),
+        )
+        .unwrap_err();
+        assert!(err.contains("NO-GO"), "{err}");
+        assert!(!store.join("exam-verdicts").exists(), "a probe never writes the verdict store");
+    }
+
+    #[test]
+    fn exam_probe_inspect_step_returns_the_live_prompt_and_board() {
+        repo_root();
+        let v = exam_probe(&json!({"arguments": {"yaml": GOOD_YAML, "inspect_step": 0}}), None)
+            .expect("probe with inspect");
+        assert_eq!(v["inspect"]["snapshot"]["step"], json!(0), "{v}");
+        assert!(v["inspect"]["projection"].is_object(), "{v}");
+        let v = exam_probe(&json!({"arguments": {"yaml": GOOD_YAML, "inspect_step": 9}}), None)
+            .expect("an out-of-range step is reported, not fatal");
+        assert!(v["inspect_error"].as_str().unwrap_or("").contains("out of range"), "{v}");
+    }
+
+    #[test]
+    fn exam_validate_checks_the_deck_budget_against_the_given_book() {
+        let root = repo_root();
+        let yaml = "card: EX10-025\nclause: EX10-025#effect#0\nseed: 1\ndecks:\n  p0: { stack: [EX10-025, EX10-025, EX10-025, EX10-025, EX10-025], rest: rocks-exam }\n  p1: { stack: [], rest: rocks-exam }\nsteps:\n  - actor: 0\n    do: { pass: {} }\n";
+        let v = exam_validate(&json!({"arguments": {"yaml": yaml,
+            "decks": root.join("qa/dcgo-exams/EX10/rocks_pool.json").display().to_string()}}))
+            .unwrap();
+        let rules: Vec<&str> = v["findings"].as_array().unwrap().iter()
+            .filter_map(|f| f["rule"].as_str()).collect();
+        assert!(rules.contains(&"deck-budget"), "{v}");
+    }
+
+    #[test]
+    fn each_probe_gets_its_own_scratch_file() {
+        // Keyed by content alone, two probes of the same YAML (parallel tests,
+        // two servers) truncated and deleted each other's file.
+        assert_ne!(probe_scratch_path(GOOD_YAML), probe_scratch_path(GOOD_YAML));
+    }
+
+    #[test]
+    fn the_clause_extractor_runs_with_an_absolute_code_path() {
+        let dir = python_code_dir();
+        assert!(dir.is_absolute(), "{}", dir.display());
+        assert!(dir.ends_with("code"), "{}", dir.display());
+    }
+
     #[test]
     fn claim_reports_who_holds_a_contended_card() {
         let dir = std::env::temp_dir().join("mcp_claim_contended");
@@ -1032,8 +1402,9 @@ steps:
     fn node_health_reports_go_and_every_check() {
         let dir = std::env::temp_dir().join("mcp_node_health");
         let _ = std::fs::remove_dir_all(&dir);
-        let params = json!({"arguments": {"build": "does/not/exist"}});
-        let out = node_health(&params, Some(&dir)).expect("health never errors");
+        let params = json!({"arguments": {"build": "does/not/exist",
+                                          "harness_root": dir.display().to_string()}});
+        let out = node_health(&params, None).expect("health never errors");
 
         assert_eq!(out["go"], json!(false));
         let checks = out["checks"].as_array().expect("checks array");

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T16:35:13.748097200+00:00",
+  "clauses": {
+    "BT24-102#effect#0": {
+      "clause_id": "BT24-102#effect#0",
+      "card_id": "BT24-102",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "67ae303dbd0b4f9bff0b55fb1882bf5a50db3ea76baa14d20ae55169cbd57c24",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-102-effect0.yaml",
+      "recorded_at": "2026-10-05T16:35:12.538980500+00:00"
+    },
+    "BT24-102#effect#1": {
+      "clause_id": "BT24-102#effect#1",
+      "card_id": "BT24-102",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "9c24c776d55334d5b7075006da9575a0a36aa56832ba331536684fe67e0b7150",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-102-effect1.yaml",
+      "reason": "DIVERGED at step 10 (compared 10 of 11 ours / 11 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T16:35:13.147456300+00:00"
+    },
+    "BT24-102#security#0": {
+      "clause_id": "BT24-102#security#0",
+      "card_id": "BT24-102",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-102-effect2.yaml",
+      "recorded_at": "2026-10-05T16:35:13.748097200+00:00"
+    }
+  }
+}

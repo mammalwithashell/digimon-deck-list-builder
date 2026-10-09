@@ -10,7 +10,6 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use serde::Serialize;
 
 use dcgo_harness::job::{JobLimits, DIR_CLAIMED, DIR_DONE, DIR_FAILED, DIR_JOBS};
 
@@ -121,6 +120,12 @@ enum Command {
         /// is REFUSED for any clause id absent from this file.
         #[arg(long)]
         clause_text_json: Option<PathBuf>,
+        /// The interaction denominator (`python -m tools.card_loop interactions
+        /// build`). Read only when --verdicts records an INTERACTION scenario;
+        /// its verdict is REFUSED for an id absent from it, or when it was
+        /// never generated.
+        #[arg(long, default_value = dcgo_harness::exam::verdict::DEFAULT_INTERACTION_DENOMINATOR)]
+        interaction_denominator: PathBuf,
         /// Also write one DCGO scripted-job JSON per lowered scenario into
         /// this directory (sim-only: in oracle mode the decks come from the
         /// recording, not the deck book).
@@ -133,6 +138,33 @@ enum Command {
         /// diverged from that count instead of reading them.
         #[arg(long, alias = "verbose")]
         all_diffs: bool,
+        /// Print, per scenario, which card raised each select step's prompt
+        /// (and our engine's prompt kind/text) -- the card whose DCGO script
+        /// decides the prompt's shape on the oracle side.
+        #[arg(long)]
+        explain_selects: bool,
+        /// Print our live prompt (kind, optional, candidates by card) and the
+        /// board BEFORE step N of each scenario, as JSON. Sim-only.
+        #[arg(long, requires = "sim_only")]
+        inspect: Option<usize>,
+        /// On a CLEAN oracle diff, write the confirmed state into the scenario's
+        /// `assert:` block (rows marked `_backfilled`). Oracle mode only.
+        #[arg(long)]
+        backfill: bool,
+        /// One call per scenario: preflight the node, submit the scenario's
+        /// job, wait for THAT job's result, diff its sidecar, record the
+        /// verdict (with --verdicts) and backfill (with --backfill). Prints one
+        /// JSON line per scenario. Needs --root, or DCGO_HARNESS_ROOT / the
+        /// player's default LocalLow root.
+        #[arg(long, conflicts_with_all = ["sim_only", "sidecar", "emit_job"])]
+        oracle: bool,
+        /// The oracle player's build directory: checked by the preflight
+        /// (action-space gate) and stamped on recorded verdicts.
+        #[arg(long, requires = "oracle")]
+        build: Option<PathBuf>,
+        /// Seconds to wait for each oracle job's result.
+        #[arg(long, default_value_t = 300, requires = "oracle")]
+        oracle_timeout: u64,
     },
     /// Build a standalone DCGO player and stamp its manifest.
     Build {
@@ -190,6 +222,46 @@ enum Command {
         /// Destination directory for per-card files.
         #[arg(long, default_value = "qa/qa-reports/exam-verdicts")]
         to: PathBuf,
+    },
+    /// Classify a diverged exam verdict: whose bug is it?
+    VerdictTriage {
+        #[arg(long)]
+        clause: String,
+        /// ours_wrong | dcgo_quirk | undetermined
+        #[arg(long)]
+        triage: String,
+        #[arg(long)]
+        citation: Option<String>,
+        #[arg(long, default_value = "qa/qa-reports/exam-verdicts")]
+        verdicts: PathBuf,
+    },
+    /// Record an ending the exam cannot produce: an `unreachable` /
+    /// `unavailable` clause or interaction with its reason, optionally with
+    /// a triage. Exactly one of --clause / --interaction.
+    VerdictSet {
+        #[arg(long, conflicts_with = "interaction", required_unless_present = "interaction")]
+        clause: Option<String>,
+        #[arg(long)]
+        interaction: Option<String>,
+        /// Cards a `combo:` interaction is filed under (others come from the denominator).
+        #[arg(long)]
+        card: Vec<String>,
+        /// confirmed | diverged | unreachable | unavailable
+        #[arg(long)]
+        verdict: String,
+        #[arg(long)]
+        reason: Option<String>,
+        /// ours_wrong | dcgo_quirk | undetermined (with --citation for the first two)
+        #[arg(long)]
+        triage: Option<String>,
+        #[arg(long)]
+        citation: Option<String>,
+        #[arg(long, default_value = "qa/exam-clause-text.json")]
+        clause_text_json: PathBuf,
+        #[arg(long, default_value = dcgo_harness::exam::verdict::DEFAULT_INTERACTION_DENOMINATOR)]
+        interaction_denominator: PathBuf,
+        #[arg(long, default_value = "qa/qa-reports/exam-verdicts")]
+        verdicts: PathBuf,
     },
     /// Serve the exam's agent surface over stdio (MCP, JSON-RPC 2.0).
     Mcp,
@@ -269,7 +341,11 @@ impl Args {
 fn needs_root(command: &Command) -> bool {
     !matches!(
         command,
-        Command::Exam { .. } | Command::MigrateVerdicts { .. } | Command::Mcp
+        Command::Exam { .. }
+            | Command::MigrateVerdicts { .. }
+            | Command::VerdictTriage { .. }
+            | Command::VerdictSet { .. }
+            | Command::Mcp
     )
 }
 
@@ -440,8 +516,42 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             decks,
             verdicts,
             clause_text_json,
+            interaction_denominator,
             emit_job,
             all_diffs,
+            explain_selects,
+            backfill,
+            oracle,
+            build,
+            oracle_timeout,
+            ..
+        } if *oracle => run_oracle(
+            args.root.as_deref(),
+            scenario,
+            build.as_deref(),
+            cards_json,
+            decks.as_deref(),
+            verdicts.as_deref(),
+            clause_text_json.as_deref(),
+            interaction_denominator,
+            *backfill,
+            std::time::Duration::from_secs(*oracle_timeout),
+        ),
+        Command::Exam {
+            scenario,
+            sim_only,
+            sidecar,
+            cards_json,
+            decks,
+            verdicts,
+            clause_text_json,
+            interaction_denominator,
+            emit_job,
+            all_diffs,
+            explain_selects,
+            inspect,
+            backfill,
+            ..
         } => run_exam(
             scenario,
             *sim_only,
@@ -450,8 +560,12 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             decks.as_deref(),
             verdicts.as_deref(),
             clause_text_json.as_deref(),
+            interaction_denominator,
             emit_job.as_deref(),
             *all_diffs,
+            *explain_selects,
+            *inspect,
+            *backfill,
         ),
         Command::Build {
             unity,
@@ -554,6 +668,64 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             );
             Ok(ExitCode::SUCCESS)
         }
+        Command::VerdictTriage { clause, triage, citation, verdicts } => {
+            use dcgo_harness::exam::verdict::{Triage, VerdictStore};
+            let class = match triage.as_str() {
+                "ours_wrong" => Triage::OursWrong,
+                "dcgo_quirk" => Triage::DcgoQuirk,
+                "undetermined" => Triage::Undetermined,
+                other => return Err(format!(
+                    "--triage must be ours_wrong | dcgo_quirk | undetermined, got `{other}`"
+                )),
+            };
+            let mut store = VerdictStore::load_dir(verdicts)?;
+            store.set_triage(clause, class, citation.clone())?;
+            store.save_dir(verdicts)?;
+            println!("verdict-triage: {clause} -> {triage}");
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::VerdictSet {
+            clause, interaction, card, verdict, reason, triage, citation,
+            clause_text_json, interaction_denominator, verdicts,
+        } => {
+            use dcgo_harness::exam::verdict::{
+                set_clause_verdict, set_interaction_verdict, ClauseTextBook, InteractionBook,
+                Triage, Verdict, VerdictStore,
+            };
+            let v = match verdict.as_str() {
+                "confirmed" => Verdict::Confirmed,
+                "diverged" => Verdict::Diverged,
+                "unreachable" => Verdict::Unreachable,
+                "unavailable" => Verdict::Unavailable,
+                other => return Err(format!(
+                    "--verdict must be confirmed | diverged | unreachable | unavailable, got `{other}`"
+                )),
+            };
+            let t = match triage.as_deref() {
+                None => None,
+                Some("ours_wrong") => Some((Triage::OursWrong, citation.clone())),
+                Some("dcgo_quirk") => Some((Triage::DcgoQuirk, citation.clone())),
+                Some("undetermined") => Some((Triage::Undetermined, citation.clone())),
+                Some(other) => return Err(format!(
+                    "--triage must be ours_wrong | dcgo_quirk | undetermined, got `{other}`"
+                )),
+            };
+            let now = chrono::Utc::now().to_rfc3339();
+            let mut store = VerdictStore::load_dir(verdicts)?;
+            let target = if let Some(id) = clause {
+                let book = ClauseTextBook::load(clause_text_json)?;
+                set_clause_verdict(&mut store, &book, id, v, reason.clone(), t, now)?;
+                id.clone()
+            } else {
+                let id = interaction.as_deref().expect("clap requires one of --clause/--interaction");
+                let book = InteractionBook::load(interaction_denominator)?;
+                set_interaction_verdict(&mut store, &book, id, card, v, reason.clone(), t, now)?;
+                id.to_string()
+            };
+            store.save_dir(verdicts)?;
+            println!("verdict-set: {target} -> {verdict}{}", triage.as_ref().map(|t| format!(" ({t})")).unwrap_or_default());
+            Ok(ExitCode::SUCCESS)
+        }
         Command::Mcp => {
             dcgo_harness::mcp::serve(args.root.clone())?;
             Ok(ExitCode::SUCCESS)
@@ -597,13 +769,95 @@ enum ExamOutcome {
     CheckFailed,
 }
 
-/// What one oracle-mode scenario run established about its clause, before the
-/// verdict store gets involved.
-struct VerdictEvent {
-    clause_id: String,
-    verdict: dcgo_harness::exam::verdict::Verdict,
-    reason: Option<String>,
-    scenario_path: String,
+/// `exam --oracle`: one call per scenario -- see `exam::oracle`. Prints one
+/// JSON line per scenario on stdout and the denominator on stderr; exits 0
+/// only when every scenario came back `confirmed`.
+#[allow(clippy::too_many_arguments)]
+fn run_oracle(
+    root: Option<&Path>,
+    scenario: &Path,
+    build: Option<&Path>,
+    cards_json: &Path,
+    decks: Option<&Path>,
+    verdicts: Option<&Path>,
+    clause_text_json: Option<&Path>,
+    interaction_denominator: &Path,
+    backfill: bool,
+    timeout: std::time::Duration,
+) -> Result<ExitCode, String> {
+    use dcgo_harness::exam::oracle::{preflight, run_oracle_exam_loaded, OracleExamOptions};
+
+    let root = root
+        .map(Path::to_path_buf)
+        .or_else(dcgo_harness::node::default_harness_root)
+        .ok_or("--oracle needs --root <harness root>, or DCGO_HARNESS_ROOT")?;
+    if verdicts.is_some() && clause_text_json.is_none() {
+        return Err("--verdicts needs --clause-text-json <extract output>: the scenario \
+                    file only names a clause id, and the verdict must carry the clause's \
+                    label and text sha256 from the clause_coverage denominator."
+            .to_string());
+    }
+    let paths = collect_scenario_paths(scenario)?;
+    if paths.is_empty() {
+        eprintln!(
+            "exam --oracle: NOTHING MEASURED -- no *.yaml scenarios under {}.",
+            scenario.display()
+        );
+        return Ok(ExitCode::SUCCESS);
+    }
+    // Refuse before any submission when the node cannot answer.
+    preflight(&root, build)?;
+    let card_data = dcgo_replay::load_card_data_at(cards_json)
+        .map_err(|e| format!("loading {}: {}", cards_json.display(), e))?;
+    let book = DeckBook::load(decks, cards_json)?;
+    let opts = OracleExamOptions {
+        root: &root,
+        build,
+        cards_json,
+        decks,
+        verdicts_dir: verdicts,
+        clause_text_json,
+        interaction_denominator,
+        backfill,
+        timeout,
+        poll: std::time::Duration::from_secs(1),
+    };
+
+    let (mut confirmed, mut diverged, mut unmeasured, mut refused, mut errors) =
+        (0usize, 0usize, 0usize, 0usize, 0usize);
+    for (i, path) in paths.iter().enumerate() {
+        // A player that died mid-batch stops the batch here, instead of every
+        // remaining scenario timing out one by one.
+        if let Err(e) = preflight(&root, build) {
+            errors += paths.len() - i;
+            eprintln!("exam --oracle: stopping with {} scenario(s) unsubmitted: {e}", paths.len() - i);
+            break;
+        }
+        match run_oracle_exam_loaded(path, &opts, &card_data, &book) {
+            Ok(r) => {
+                match r.verdict.as_str() {
+                    _ if !r.refused.is_empty() => refused += 1,
+                    "confirmed" => confirmed += 1,
+                    "diverged" => diverged += 1,
+                    _ => unmeasured += 1,
+                }
+                println!("{}", serde_json::to_string(&r).map_err(|e| e.to_string())?);
+            }
+            Err(e) => {
+                errors += 1;
+                println!(
+                    "{}",
+                    serde_json::json!({ "scenario": path.display().to_string(), "error": e })
+                );
+            }
+        }
+    }
+    eprintln!(
+        "exam --oracle: scenarios {} / confirmed {confirmed} / diverged {diverged} / \
+         unmeasured {unmeasured} / refused {refused} / errors {errors}",
+        paths.len()
+    );
+    Ok(if confirmed == paths.len() { ExitCode::SUCCESS } else { ExitCode::from(1) })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -615,10 +869,14 @@ fn run_exam(
     decks: Option<&Path>,
     verdicts: Option<&Path>,
     clause_text_json: Option<&Path>,
+    interaction_denominator: &Path,
     emit_job: Option<&Path>,
     all_diffs: bool,
+    explain_selects: bool,
+    inspect: Option<usize>,
+    backfill: bool,
 ) -> Result<ExitCode, String> {
-    use dcgo_harness::exam::verdict::{ClauseTextBook, VerdictStore};
+    use dcgo_harness::exam::oracle::VerdictRecorder;
 
     if !sim_only && sidecar.is_none() {
         return Err(
@@ -627,6 +885,9 @@ fn run_exam(
              to an assertion-only run would report oracle agreement nobody measured."
                 .to_string(),
         );
+    }
+    if backfill && sim_only {
+        return Err("--backfill needs an oracle run (--sidecar); sim-only confirms nothing".into());
     }
     if emit_job.is_some() && !sim_only {
         return Err(
@@ -639,7 +900,7 @@ fn run_exam(
 
     // Resolve the verdict store up front so a bad path or missing clause-text
     // file fails before any scenario runs.
-    let mut verdict_ctx: Option<(PathBuf, ClauseTextBook, VerdictStore)> = match verdicts {
+    let mut verdict_ctx: Option<(PathBuf, VerdictRecorder)> = match verdicts {
         Some(path) if sim_only => {
             println!(
                 "exam: --verdicts ignored under --sim-only -- sim-only cannot confirm \
@@ -655,9 +916,8 @@ fn run_exam(
                  label and text sha256 from the clause_coverage denominator."
                     .to_string()
             })?;
-            let book = ClauseTextBook::load(ctj)?;
-            let store = VerdictStore::load_dir(path)?;
-            Some((path.to_path_buf(), book, store))
+            let recorder = VerdictRecorder::load(path, ctj, interaction_denominator)?;
+            Some((path.to_path_buf(), recorder))
         }
         None => None,
     };
@@ -688,7 +948,7 @@ fn run_exam(
     let mut ran = 0u32;
     let mut diffed = 0u32;
     let mut outcomes: Vec<ExamOutcome> = Vec::new();
-    let mut events: Vec<VerdictEvent> = Vec::new();
+    let mut events: Vec<dcgo_harness::exam::oracle::VerdictEvent> = Vec::new();
 
     for path in &paths {
         seen += 1;
@@ -702,6 +962,9 @@ fn run_exam(
             &book,
             emit_job,
             all_diffs,
+            explain_selects,
+            inspect,
+            backfill,
             &mut lowered,
             &mut ran,
             &mut diffed,
@@ -722,42 +985,24 @@ fn run_exam(
     // AND fails the run: a scenario keyed outside the denominator is a
     // scenario that covers nothing, whatever its diff said.
     let mut verdicts_refused = 0usize;
-    if let Some((store_path, book, store)) = verdict_ctx.as_mut() {
+    if let Some((store_path, recorder)) = verdict_ctx.as_mut() {
         let recorded_at = chrono::Utc::now().to_rfc3339();
         for ev in &events {
-            match dcgo_harness::exam::verdict::record_scenario_verdict(
-                store,
-                book,
-                &ev.clause_id,
-                ev.verdict,
-                Some(ev.scenario_path.clone()),
-                ev.reason.clone(),
-                recorded_at.clone(),
-            ) {
-                Ok(()) => println!(
-                    "exam: verdict {} recorded for {} ({})",
-                    ev.verdict, ev.clause_id, ev.scenario_path
-                ),
-                Err(e) => {
-                    println!("exam: VERDICT NOT RECORDED: {e}");
-                    verdicts_refused += 1;
+            for result in recorder.record(ev, &recorded_at) {
+                match result {
+                    Ok(id) => println!(
+                        "exam: verdict {} recorded for {} ({})",
+                        ev.verdict, id, ev.scenario_path
+                    ),
+                    Err(e) => {
+                        println!("exam: VERDICT NOT RECORDED: {e}");
+                        verdicts_refused += 1;
+                    }
                 }
             }
         }
-        // Tell the store what every clause's text hashes to right now, so
-        // stale verdicts from before a text change report as invalidated.
-        let all_ids = book.clause_ids();
-        for id in &all_ids {
-            if let Some(ct) = book.get(id) {
-                store.set_current_text_sha(id, &dcgo_harness::exam::verdict::sha256_hex(&ct.text));
-            }
-        }
-        store.save_dir(store_path)?;
-        println!(
-            "exam: verdict store {} -- {}",
-            store_path.display(),
-            store.summary(&all_ids).describe()
-        );
+        let summary = recorder.save(store_path)?;
+        println!("exam: verdict store {} -- {}", store_path.display(), summary);
     }
 
     let lower_failed = outcomes
@@ -792,7 +1037,8 @@ fn run_exam(
     if verdicts_refused > 0 {
         println!(
             "exam: {verdicts_refused} verdict(s) refused (clause id outside the \
-             clause-text denominator) -- failing the run."
+             clause-text denominator, or interaction id outside the interaction \
+             denominator) -- failing the run."
         );
     }
 
@@ -813,14 +1059,13 @@ fn exam_one(
     book: &DeckBook,
     emit_job: Option<&Path>,
     all_diffs: bool,
+    explain_selects: bool,
+    inspect: Option<usize>,
+    backfill: bool,
     lowered: &mut u32,
     ran: &mut u32,
     diffed: &mut u32,
-) -> Result<(ExamOutcome, Option<VerdictEvent>), String> {
-    use dcgo_harness::exam::differ::diff_paired;
-    use dcgo_harness::exam::projection::{
-        align_to_scenario_origin, pair_by_wire_rows_with_ownership, parse_sidecar,
-    };
+) -> Result<(ExamOutcome, Option<dcgo_harness::exam::oracle::VerdictEvent>), String> {
     use dcgo_harness::exam::run::lower_and_run;
     use dcgo_harness::exam::scenario::Scenario;
 
@@ -834,20 +1079,7 @@ fn exam_one(
         None
     } else {
         let sp = resolve_sidecar(sidecar.expect("checked by run_exam"), path, scenario_count)?;
-        let rp = {
-            let s = sp.to_string_lossy();
-            std::path::PathBuf::from(
-                s.strip_suffix(".state.jsonl")
-                    .map(|stem| format!("{stem}.jsonl"))
-                    .unwrap_or_else(|| s.to_string()),
-            )
-        };
-        let rt = std::fs::read_to_string(&rp).map_err(|e| {
-            format!(
-                "reading the recording beside the sidecar ({}): {e}. It is required both                  to align the oracle trace to the scenario's origin and to take DCGO's                  post-shuffle deck order.",
-                rp.display()
-            )
-        })?;
+        let rt = dcgo_harness::exam::oracle_diff::recording_beside(&sp)?;
         Some((sp, rt))
     };
 
@@ -867,7 +1099,7 @@ fn exam_one(
     // definition lives in DCGO -- exactly the kind of mirrored table the job
     // spec avoids by sending card IDs instead of deck codes.
     let (deck_p0, deck_p1) = match &oracle {
-        Some((_, rt)) => decks_from_recording(rt)?,
+        Some((_, rt)) => dcgo_harness::exam::oracle_diff::decks_from_recording(rt)?,
         None => (
             ordered_deck(&s.decks.p0, book)?,
             ordered_deck(&s.decks.p1, book)?,
@@ -887,6 +1119,27 @@ fn exam_one(
         s.steps.len(),
         run.lowered_steps
     );
+    if explain_selects {
+        for src in &run.select_sources {
+            println!(
+                "  select step {}: source {} ({}) -- {}",
+                src.step,
+                src.card_id.as_deref().unwrap_or("?"),
+                src.kind,
+                src.prompt
+            );
+        }
+    }
+
+    if let Some(n) = inspect {
+        match dcgo_harness::exam::run::inspect_payload(&run, n) {
+            Ok(v) => println!(
+                "{}",
+                serde_json::to_string_pretty(&v).map_err(|e| e.to_string())?
+            ),
+            Err(e) => println!("  inspect: {e}"),
+        }
+    }
 
     // Sim-only path (checked in run_exam): the line lowered cleanly, so emit
     // the DCGO scripted job that runs the same line against the oracle.
@@ -951,8 +1204,11 @@ fn exam_one(
                  Run the oracle pass and backfill before trusting it in CI."
             );
         }
+        // A Q&A exam's third leg: does OUR engine agree with the publisher?
+        // Contradicting a ruling fails the run like a failed assert would.
+        let ruling_ok = ruling_leg(&s, &projections);
         return Ok((
-            if failures.is_empty() {
+            if failures.is_empty() && ruling_ok != Some(false) {
                 ExamOutcome::Passed
             } else {
                 ExamOutcome::CheckFailed
@@ -963,38 +1219,15 @@ fn exam_one(
     }
 
     let (sidecar_path, recording_text) = oracle.expect("built above when !sim_only");
-    let sidecar_text = std::fs::read_to_string(&sidecar_path)
-        .map_err(|e| format!("reading sidecar {}: {e}", sidecar_path.display()))?;
-    let dcgo = parse_sidecar(&sidecar_text)?;
-
-    // Align the oracle trace to the scenario's origin: DCGO records the
-    // mulligan as action rows and dumps state at them, while our line begins
-    // after it. Left alone the traces sit two steps apart and every scenario
-    // reports a spurious divergence at step 0.
-    let dcgo = align_to_scenario_origin(dcgo, &recording_text)?;
-    // Compare "state at each decision point" on both sides. Ours holds one
-    // projection BEFORE each step plus a trailing one AFTER the last, while
-    // StateDumper writes one before each decision and stops. Dropping our
-    // trailing entry aligns the two ends; keeping it made the differ report
-    // TRUNCATED (correctly -- it refuses to call an unequal comparison clean)
-    // on a run that had no divergence at all.
-    //
-    // `projections` itself keeps the trailing state, because an `assert:` block
-    // legitimately wants to talk about the position AFTER the final step.
-    let ours_for_diff: Vec<_> = projections
-        .iter()
-        .take(s.steps.len())
-        .cloned()
-        .collect();
-    // ...and pair the two by LOWERED STEP rather than 1:1, because a step can
-    // consume one, two, or ZERO DCGO decision rows (an OptionalSkill+pick fold
-    // writes two; a sim-only phase exit writes none). A positional pairing
-    // slides apart from the first multi-row step onward and manufactures
-    // divergences out of the offset -- measured on EX12-011#effect#0, where our
-    // post-battle row was compared against DCGO's pre-battle mid-fold row.
-    let pairing =
-        pair_by_wire_rows_with_ownership(&wire_rows_per_step, &ours_present_per_step, dcgo.len());
-    let report = diff_paired(&ours_for_diff, &dcgo, &pairing);
+    let od = dcgo_harness::exam::oracle_diff::diff_lowered(
+        projections,
+        s.steps.len(),
+        &wire_rows_per_step,
+        &ours_present_per_step,
+        &sidecar_path,
+        &recording_text,
+    )?;
+    let report = od.report;
     *diffed += 1;
     if all_diffs {
         for line in report.render_verbose().lines() {
@@ -1004,39 +1237,103 @@ fn exam_one(
         println!("  {report}");
     }
 
+    if backfill && report.is_clean() {
+        // Our rows equal DCGO's on every compared field when the diff is clean.
+        // Backfill writes exactly the rows the pairing compared: never the
+        // trailing post-final-step row, never a sim-only or dcgo-only step.
+        //
+        // A refusal is reported, never propagated: the oracle verdict below is
+        // independent of whether the scenario file could be updated.
+        // The sim-only replay CI will run: the same line over the deck book.
+        let sim = ordered_deck(&s.decks.p0, book)
+            .and_then(|p0| Ok((p0, ordered_deck(&s.decks.p1, book)?)))
+            .and_then(|(p0, p1)| lower_and_run(&s, p0, p1, card_data))
+            .and_then(|r| {
+                if r.complete {
+                    Ok(r.projections)
+                } else {
+                    Err(format!("it stalls after {} of {} steps", r.steps_run, r.steps_total))
+                }
+            });
+        println!(
+            "  {}",
+            match sim {
+                Ok(sim) => try_backfill(path, &text, &od.projections, &od.dcgo, &od.pairing, &report, &sim),
+                Err(e) => format!("backfill skipped: the sim-only replay could not run ({e})"),
+            }
+        );
+    }
+
     // What this run established about the clause, for the verdict store: a
     // CLEAN oracle diff confirms, anything else (divergence or truncation)
-    // is a finding to triage.
-    let event = if report.is_clean() {
-        VerdictEvent {
-            clause_id: s.clause.clone(),
-            verdict: dcgo_harness::exam::verdict::Verdict::Confirmed,
-            reason: None,
-            scenario_path: path.display().to_string(),
-        }
-    } else {
-        VerdictEvent {
-            clause_id: s.clause.clone(),
-            verdict: dcgo_harness::exam::verdict::Verdict::Diverged,
-            reason: Some(
-                format!("{report}")
-                    .lines()
-                    .next()
-                    .unwrap_or_default()
-                    .to_string(),
-            ),
-            scenario_path: path.display().to_string(),
-        }
-    };
+    // is a finding to triage. A Q&A exam additionally needs our engine to
+    // agree with the ruling (design D7: ours = DCGO but not the ruling is
+    // `ours_wrong`, never `confirmed`).
+    let ruling_ok = ruling_leg(&s, &od.projections);
+    let event = dcgo_harness::exam::oracle::VerdictEvent::from_diff(
+        &s,
+        &report,
+        ruling_ok,
+        path.display().to_string(),
+    );
+    let clean = event.verdict == dcgo_harness::exam::verdict::Verdict::Confirmed;
 
     Ok((
-        if report.is_clean() {
+        if clean {
             ExamOutcome::Passed
         } else {
             ExamOutcome::CheckFailed
         },
         Some(event),
     ))
+}
+
+/// Evaluate a Q&A scenario's `expect_ruling:` against OUR projected trace and
+/// print the leg. `None` when the scenario carries no ruling.
+fn ruling_leg(
+    s: &dcgo_harness::exam::scenario::Scenario,
+    projections: &[dcgo_harness::exam::projection::StateProjection],
+) -> Option<bool> {
+    let (checked, failures) = dcgo_harness::exam::check_ruling(s, projections)?;
+    let q = s.expect_ruling.as_ref().map(|r| r.q_id.as_str()).unwrap_or_default();
+    for f in &failures {
+        println!("  RULING qa:{q} CONTRADICTED: {f}");
+    }
+    // Zero checks is a vacuous ruling, which must not read as agreement.
+    let agrees = failures.is_empty() && checked > 0;
+    println!(
+        "  ruling qa:{q}: ours {} ({checked} check(s), {} failed)",
+        if agrees { "agrees" } else if checked == 0 { "is UNCHECKED (vacuous ruling)" } else { "CONTRADICTS the ruling" },
+        failures.len()
+    );
+    Some(agrees)
+}
+
+/// Write a clean oracle run's confirmed state into the scenario at `path`.
+/// Returns the line to print. Never fails the caller: a refused or failed
+/// backfill is `backfill skipped: <reason>` and the file is left untouched.
+fn try_backfill(
+    path: &Path,
+    text: &str,
+    rows: &[dcgo_harness::exam::projection::StateProjection],
+    dcgo: &[dcgo_harness::exam::projection::StateProjection],
+    pairing: &dcgo_harness::exam::projection::StepPairing,
+    report: &dcgo_harness::exam::differ::DiffReport,
+    sim: &[dcgo_harness::exam::projection::StateProjection],
+) -> String {
+    match dcgo_harness::exam::backfill::backfill_from_diff(text, rows, dcgo, pairing, report, sim) {
+        Ok(b) => match std::fs::write(path, &b.text) {
+            Ok(()) => format!(
+                "backfill: {}",
+                dcgo_harness::exam::oracle::backfill_message(path, &b.dropped)
+            ),
+            Err(e) => format!(
+                "backfill skipped: writing backfilled scenario {}: {e}",
+                path.display()
+            ),
+        },
+        Err(reason) => format!("backfill skipped: {reason}"),
+    }
 }
 
 fn fail(message: String) -> ExamOutcome {
@@ -1078,56 +1375,6 @@ fn collect_scenario_paths(root: &Path) -> Result<Vec<PathBuf>, String> {
 /// Which `.state.jsonl` belongs to this scenario.
 ///
 
-/// Both seats' decks in DCGO's own post-shuffle order, taken from a recording's
-/// `game_start` row.
-///
-/// The row is written from one seat's perspective (`my_player_id`), so the two
-/// lists have to be assigned by that id rather than positionally. Egg cards are
-/// appended: `Game::new_inner` splits them out by card kind, and the scenario's
-/// deck argument is one flat list per seat.
-fn decks_from_recording(text: &str) -> Result<(Vec<String>, Vec<String>), String> {
-    let first = text
-        .lines()
-        .map(str::trim)
-        .find(|l| !l.is_empty())
-        .ok_or_else(|| "recording is empty".to_string())?;
-    let row: serde_json::Value =
-        serde_json::from_str(first).map_err(|e| format!("malformed game_start row: {e}"))?;
-    if row.get("type").and_then(|v| v.as_str()) != Some("game_start") {
-        return Err("first recording row is not game_start".to_string());
-    }
-
-    let arr = |k: &str| -> Result<Vec<String>, String> {
-        row.get(k)
-            .and_then(|v| v.as_array())
-            .ok_or_else(|| format!("game_start has no array `{k}`"))
-            .map(|a| {
-                a.iter()
-                    .filter_map(|v| v.as_str().map(str::to_string))
-                    .collect()
-            })
-    };
-
-    let my_id = row
-        .get("my_player_id")
-        .and_then(|v| v.as_u64())
-        .ok_or_else(|| "game_start has no my_player_id".to_string())?;
-
-    // REVERSED: the two engines number a deck from opposite ends. DCGO records
-    // top-first (`my_deck_post_shuffle[..5]` is exactly its `initial_hand`),
-    // while our `Player::draw` pops from the BACK of the vector. Feeding the
-    // recorded order straight through dealt our seats the deck's LAST five
-    // cards -- verified precisely: our p0 hand equalled
-    // `my_deck_post_shuffle[45..]`, card for card, and p1 the same on its own
-    // list. Reversing makes the top of the deck the back of the vector, so both
-    // engines deal the same opening hand from the same recorded shuffle.
-    let mut mine: Vec<String> = arr("my_deck_post_shuffle")?.into_iter().rev().collect();
-    mine.extend(arr("my_egg_deck").unwrap_or_default());
-    let mut theirs: Vec<String> = arr("opp_deck_post_shuffle")?.into_iter().rev().collect();
-    theirs.extend(arr("opp_egg_deck").unwrap_or_default());
-
-    Ok(if my_id == 0 { (mine, theirs) } else { (theirs, mine) })
-}
 
 /// A single sidecar file paired with a whole directory of scenarios is an
 /// error, not a fallback: diffing every scenario against one trace would
@@ -1158,1007 +1405,8 @@ fn resolve_sidecar(
 // `dcgo_harness::exam` (2026-08-28, MCP task 6) so the CLI and the MCP's
 // `run_scenario` / `exam_probe` share one definition of both -- see
 // `exam::assertions` and `exam::deckbook` for the code and the rationale.
-use dcgo_harness::exam::{check_assertions, DeckBook, DeckEntry, ordered_deck};
-
-// --- scripted-job emission (`--emit-job`) -----------------------------------
-
-/// A DCGO scripted harness job, field-for-field the shape the modded client's
-/// scripted driver reads (see `qa/dcgo-harness/golden-scripted-job.json`).
-/// Same core fields as `dcgo_harness::job::JobSpec` plus the scripted-only
-/// `deck_order` / `inputs`; phase-1 readers tolerate the extras.
-#[derive(Debug, Serialize)]
-struct ExamJobSpec {
-    job_id: String,
-    policy: String,
-    decks: dcgo_harness::job::JobDecks,
-    deck_order: ExamDeckOrder,
-    inputs: Vec<ScriptedInput>,
-    first_player: u8,
-    seed: u64,
-    limits: JobLimits,
-}
-
-/// The scenario's stack per seat, in DCGO's TOP-FIRST convention — the order
-/// the author wrote it in.
-#[derive(Debug, Serialize)]
-struct ExamDeckOrder {
-    p0: Vec<String>,
-    p1: Vec<String>,
-}
-
-/// One scripted answer: which seat, which lowered action id, and which prompt
-/// it expects to be answering (asserted BEFORE answering — see the exam doc).
-/// Our prompt vocabulary maps 1:1 onto DCGO's, so the name passes through.
-///
-/// A `select:` step carries no action id — it answers a selection RPC, not a
-/// main-phase/breeding prompt — and instead fills the `select_*` fields, whose
-/// names are the C# `HarnessJobStep` contract verbatim (`select_card_ids` /
-/// `select_value` / `select_has_bool` + `select_bool` / `select_cancel`; the
-/// C# side treats an absent `select_value` as `int.MinValue` via its field
-/// initializer, so absence is expressed by OMITTING the key). The values are
-/// the scenario's SYMBOLIC identities (card ids, counts, bools), never engine
-/// action ids: DCGO resolves them against its own candidate lists.
-#[derive(Debug, Default, Serialize)]
-struct ScriptedInput {
-    actor: u8,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    action_id: Option<u16>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    expect_prompt: Option<String>,
-    /// Expected number of picks. The C# initializer is `-1` = "do not
-    /// assert", so absence is expressed by OMITTING the key.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    expect_count: Option<u16>,
-    /// Expected candidate card ids, order-insensitive. Empty = "do not
-    /// assert". On a `MultipleSkills` row these are the stacked triggers'
-    /// SOURCE-CARD ids, which is the cheapest way to catch "DCGO did not stack
-    /// what we stacked".
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    expect_candidates: Vec<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    select_card_ids: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    select_value: Option<i32>,
-    /// Which of the SAME identity's candidates to take, 0-based — DCGO's
-    /// `select_ordinal`. Deliberately NOT `select_value` reused: that field
-    /// stays the raw DCGO-index fallback, and one field meaning "an index into
-    /// DCGO's list" in one step and "an index within one card's own triggers"
-    /// in the next is the value-space confusion the payload exists to end.
-    /// Same `int.MinValue` absent sentinel, so absence OMITS the key.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    select_ordinal: Option<i32>,
-    /// Which of ONE card's simultaneous triggers to resolve, named by its
-    /// KEYWORD -- the semantic sibling of `select_ordinal`, and the preferred
-    /// one. Carries the NORMALIZED name (lowercased, `<`/`>`/whitespace
-    /// stripped) so our `<Armor Purge>` and DCGO's `"Armor Purge"` compare
-    /// equal; DCGO normalizes its own `ICardEffect.EffectName` the same way.
-    ///
-    /// Emitted even though no DCGO build reads it yet, and that is deliberate.
-    /// Without it a `trigger:` scenario passes `--sim-only` and then aborts on
-    /// the oracle: DCGO refuses an ambiguous same-identity stack by telling the
-    /// author to "Add select_ordinal" (SelectionAnswer.cs:175-181) -- exactly
-    /// the key our own parser refuses to accept alongside `trigger:`. A green
-    /// sim gate that hands the author advice they are forbidden to follow is
-    /// worse than no key at all.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    select_trigger: Option<String>,
-    /// The branch to EXCLUDE, for a wanted branch with no keyword of its
-    /// own -- the complement of `select_trigger`, normalized identically.
-    ///
-    /// EX12-047 Amaterasumon is the case: its deletion stack is
-    /// [Ascension, the printed On Deletion] and only the first is nameable
-    /// by keyword. Neither engine can answer "which branch is not a
-    /// keyword" without a registry of what counts as one, and DCGO has
-    /// none -- no IsKeywordEffect flag, no keyword enum, and Decode's
-    /// effect name is parameterized. Both sides CAN drop a named branch
-    /// and check that exactly one survives.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    select_trigger_not: Option<String>,
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
-    select_has_bool: bool,
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
-    select_bool: bool,
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
-    select_cancel: bool,
-    /// The two materials of a DNA digivolution, as their permanents' TOP-CARD
-    /// ids in declaration order. Only set on a `main_phase` row whose
-    /// `action_id` is in the DNA_DIGIVOLVE range.
-    ///
-    /// Deliberately NOT `select_card_ids`: DCGO's `HarnessJobStep.IsSelection`
-    /// is true whenever that field is non-empty, and a step that reads as a
-    /// selection answer arriving at an action-id prompt aborts the job as a
-    /// prompt mismatch (`InputDriver.TryAnswer`) -- correctly, for every other
-    /// row. A DNA digivolution is ONE action carrying both materials on that
-    /// side (`PlayCardAction.JogressEvoRootsFrameIDs`) while our engine asks
-    /// for them as two `Material` prompts, so the pair needs a channel of its
-    /// own. `HarnessJob.cs`'s `dna_materials` is that channel.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    dna_materials: Vec<String>,
-}
-
-/// One seat's flat job deck in DCGO's top-first convention: full main deck
-/// (stack first, then the remainder), with the egg deck appended.
-///
-/// This inverts `decks_from_recording`'s reversal: our engine's deck vector is
-/// draw-from-back (`ordered_deck` builds `remainder + stack.rev()`), while a
-/// DCGO job lists the deck top-first. Reversing the main portion gives
-/// `stack + remainder.rev()` — `stack[0]` on top, exactly what `deck_order`
-/// then re-imposes after DCGO's own seeded shuffle.
-fn job_deck_top_first(
-    seat: &dcgo_harness::exam::scenario::ScenarioSeat,
-    entry: &DeckEntry,
-    deck_name: &str,
-) -> Result<Vec<String>, String> {
-    let mut remainder = entry.main.clone();
-    for id in &seat.stack {
-        match remainder.iter().position(|c| c == id) {
-            Some(i) => {
-                remainder.remove(i);
-            }
-            None => {
-                return Err(format!(
-                    "stacked card {id} is not in the main deck of `{deck_name}` -- \
-                     the job would claim a deck the scenario does not use"
-                ))
-            }
-        }
-    }
-    let mut out: Vec<String> = seat.stack.clone();
-    out.extend(remainder.into_iter().rev());
-    out.extend(entry.eggs.iter().cloned());
-    Ok(out)
-}
-
-/// Build the DCGO scripted job for a lowered scenario.
-///
-/// Refuses a seat whose deck resolves with no egg cards: `Game::new` would
-/// play on regardless, but DCGO's breeding phase would be answering over a
-/// different game than the one the line was lowered against — the job must
-/// say so instead of silently emitting.
-fn build_exam_job(
-    stem: &str,
-    s: &dcgo_harness::exam::scenario::Scenario,
-    entry_p0: &DeckEntry,
-    entry_p1: &DeckEntry,
-    lowered: &[dcgo_harness::exam::adapter::LoweredStep],
-    owners: &[usize],
-) -> Result<ExamJobSpec, String> {
-    // Rows are paired to scenario steps through `owners`, not positionally: a
-    // step whose declaration our engine splits into several decisions
-    // (`materials:`, `dna:`) contributes several lowered entries, and a
-    // positional zip would silently shift every later row onto the wrong step.
-    if owners.len() != lowered.len() {
-        return Err(format!(
-            "lowered {} row(s) but {} owner(s) -- refusing to emit a \
-             desynchronized job",
-            lowered.len(),
-            owners.len()
-        ));
-    }
-    if let Some(bad) = owners.iter().find(|o| **o >= s.steps.len()) {
-        return Err(format!(
-            "lowered row claims scenario step {bad}, but the line has {} step(s)",
-            s.steps.len()
-        ));
-    }
-    if owners.windows(2).any(|w| w[1] < w[0]) {
-        return Err("lowered rows are not in scenario order -- refusing to emit a \
-                    desynchronized job"
-            .to_string());
-    }
-    if owners.first().copied().unwrap_or(0) != 0 || owners.last().copied().map(|o| o + 1) != Some(s.steps.len())
-    {
-        // Every step must have produced at least one row up to the last one;
-        // a gap means a step lowered to nothing and the wire is short.
-        return Err(format!(
-            "lowered rows cover scenario steps {:?}..={:?} of {} -- refusing to \
-             emit a desynchronized job",
-            owners.first(),
-            owners.last(),
-            s.steps.len()
-        ));
-    }
-    for (seat_name, seat, entry) in [
-        ("p0", &s.decks.p0, entry_p0),
-        ("p1", &s.decks.p1, entry_p1),
-    ] {
-        if entry.eggs.is_empty() {
-            return Err(format!(
-                "deck `{}` ({seat_name}) has no egg cards resolvable from the deck \
-                 book -- refusing to emit a job with no eggs, which would run a \
-                 different game than the scenario lowered against",
-                seat.rest
-            ));
-        }
-    }
-
-    let inputs = lowered
-        .iter()
-        .zip(owners)
-        .enumerate()
-        .flat_map(|(row, (l, owner))| {
-            use dcgo_harness::exam::adapter::{EotAttackTarget, LoweredStep};
-            let step = &s.steps[*owner];
-            // `expect:` describes the step's FIRST decision. On a step the
-            // adapter split into several rows the later ones are follow-on
-            // picks with prompts of their own, so asserting the authored
-            // `expect` against them would fail on a line that is correct.
-            let first_of_step = row == 0 || owners[row - 1] != *owner;
-            let expect_prompt = if first_of_step {
-                step.expect.as_ref().and_then(|e| e.prompt.clone())
-            } else {
-                None
-            };
-            // `expect.count` / `expect.candidates` describe the PICK, so on a
-            // step the emitter splits they ride the pick row, never the
-            // OptionalSkill gate that precedes it.
-            let expect_count = if first_of_step {
-                step.expect.as_ref().and_then(|e| e.count)
-            } else {
-                None
-            };
-            let expect_candidates = if first_of_step {
-                step.expect
-                    .as_ref()
-                    .map(|e| e.candidates.clone())
-                    .unwrap_or_default()
-            } else {
-                Vec::new()
-            };
-            match l {
-                LoweredStep::Action(id) => vec![ScriptedInput {
-                    actor: step.actor,
-                    action_id: Some(*id),
-                    expect_prompt,
-                    expect_count,
-                    expect_candidates,
-                    ..ScriptedInput::default()
-                }],
-                // A DNA digivolution is ONE `main_phase` row on DCGO's side --
-                // a single `PlayCardAction` carrying `JogressEvoRootsFrameIDs`
-                // -- so the action id rides it together with both materials'
-                // identities, which `InputDriver.BuildMainPhaseAction` resolves
-                // against the actor's live field. Our own two material prompts
-                // ride the following `SimOnlySelect` row (zero wire rows).
-                LoweredStep::DnaDeclaration {
-                    action_id,
-                    material_ids,
-                } => vec![ScriptedInput {
-                    actor: step.actor,
-                    action_id: Some(*action_id),
-                    expect_prompt,
-                    expect_count,
-                    expect_candidates,
-                    dna_materials: material_ids.clone(),
-                    ..ScriptedInput::default()
-                }],
-                // task_69f10a66 (ruling item 5) — the OptionalSkill+pick
-                // FOLD: DCGO gates some optional keyword windows (<Raid>,
-                // …) behind an OptionalSkill yes/no BEFORE the pick, while
-                // our engine surfaces one declinable pick. A folded row
-                // (authored `expect: {prompt: OptionalSkill}` over the live
-                // pick) splits on the wire:
-                //   picks   -> OptionalSkill(yes) + the pick row
-                //   decline -> OptionalSkill(no) only (DCGO never opens the
-                //              pick after a declined gate).
-                LoweredStep::Select(w) if w.optional_gate_fold => {
-                    if w.cancel {
-                        vec![ScriptedInput {
-                            actor: step.actor,
-                            action_id: None,
-                            expect_prompt: Some("OptionalSkill".to_string()),
-                            select_has_bool: true,
-                            select_bool: !w.cancel,
-                            ..ScriptedInput::default()
-                        }]
-                    } else {
-                        vec![
-                            ScriptedInput {
-                                actor: step.actor,
-                                action_id: None,
-                                expect_prompt: Some("OptionalSkill".to_string()),
-                                select_has_bool: true,
-                                select_bool: true,
-                                ..ScriptedInput::default()
-                            },
-                            ScriptedInput {
-                                actor: step.actor,
-                                action_id: None,
-                                // The pick's own DCGO prompt class varies
-                                // (SelectPermanentEffect / SelectHandEffect /
-                                // SelectCardEffect …) — leave it unasserted
-                                // rather than guess wrong.
-                                expect_prompt: None,
-                                expect_count,
-                                expect_candidates,
-                                select_card_ids: w.card_ids.clone(),
-                                select_value: w.value,
-                                select_ordinal: w.ordinal,
-                                select_trigger: w.trigger.clone(),
-                                select_trigger_not: w.trigger_not.clone(),
-                                ..ScriptedInput::default()
-                            },
-                        ]
-                    }
-                }
-                // A DCGO-ONLY row emits exactly like a plain select — DCGO
-                // cannot tell the difference, and must not: it resolves the
-                // identities against its own candidate list as usual. The
-                // asymmetry is entirely on our side, where the step consumes
-                // no live prompt.
-                LoweredStep::Select(w) | LoweredStep::DcgoOnlySelect(w) => vec![ScriptedInput {
-                    actor: step.actor,
-                    action_id: None,
-                    expect_prompt,
-                    expect_count,
-                    expect_candidates,
-                    select_card_ids: w.card_ids.clone(),
-                    select_value: w.value,
-                    select_ordinal: w.ordinal,
-                    select_trigger: w.trigger.clone(),
-                    select_trigger_not: w.trigger_not.clone(),
-                    select_has_bool: w.bool_answer.is_some(),
-                    select_bool: w.bool_answer.unwrap_or(false),
-                    select_cancel: w.cancel,
-                    dna_materials: Vec::new(),
-                }],
-                // task_69f10a66 Family 1 surface mapping: our EndOfTurnAction
-                // phase park (the §16-37-3 "may attack at end of turn" for
-                // printed/granted <Execute>, <Engage>, Vortex, MayAttack) is
-                // DCGO's OptionalSkill gate (+ SelectAttackEffect on yes).
-                //   PASS   -> one row: OptionalSkill answered "no".
-                //   attack -> two rows: OptionalSkill "yes", then the
-                //             SelectAttackEffect target pick (permanent
-                //             targets by top-card id, the player as
-                //             select_value -1 — the SelectAttackEffect.cs
-                //             harness contract).
-                // A sim-side-only action (e.g. the PASS that exits our
-                // EndOfTurnAction park after the last gate was spent) —
-                // DCGO has no prompt for it, so it contributes NO wire row.
-                LoweredStep::SimOnlyAction(_) => Vec::new(),
-                // A follow-on material pick: ours only. The FIRST pick's row
-                // already carries every declared id for DCGO.
-                LoweredStep::SimOnlySelect => vec![],
-                LoweredStep::EndOfTurnGate { attack, .. } => {
-                    let gate_prompt =
-                        Some(expect_prompt.unwrap_or_else(|| "OptionalSkill".to_string()));
-                    match attack {
-                        None => vec![ScriptedInput {
-                            actor: step.actor,
-                            action_id: None,
-                            expect_prompt: gate_prompt,
-                            select_has_bool: true,
-                            ..ScriptedInput::default()
-                        }],
-                        Some(target) => {
-                            let (ids, value) = match target {
-                                EotAttackTarget::Player => (Vec::new(), Some(-1)),
-                                EotAttackTarget::Permanent { top_card_id } => {
-                                    (vec![top_card_id.clone()], None)
-                                }
-                            };
-                            vec![
-                                ScriptedInput {
-                                    actor: step.actor,
-                                    action_id: None,
-                                    expect_prompt: gate_prompt,
-                                    select_has_bool: true,
-                                    select_bool: true,
-                                    ..ScriptedInput::default()
-                                },
-                                ScriptedInput {
-                                    actor: step.actor,
-                                    action_id: None,
-                                    expect_prompt: Some("SelectAttackEffect".to_string()),
-                                    expect_count,
-                                    expect_candidates,
-                                    select_card_ids: ids,
-                                    select_value: value,
-                                    ..ScriptedInput::default()
-                                },
-                            ]
-                        }
-                    }
-                }
-            }
-        })
-        .collect();
-
-    Ok(ExamJobSpec {
-        job_id: format!("exam-{stem}"),
-        policy: "scripted".to_string(),
-        decks: dcgo_harness::job::JobDecks {
-            p0: job_deck_top_first(&s.decks.p0, entry_p0, &s.decks.p0.rest)?,
-            p1: job_deck_top_first(&s.decks.p1, entry_p1, &s.decks.p1.rest)?,
-        },
-        deck_order: ExamDeckOrder {
-            p0: s.decks.p0.stack.clone(),
-            p1: s.decks.p1.stack.clone(),
-        },
-        inputs,
-        // The adapter lowers every scenario with seat 0 acting first
-        // (`SCENARIO_FIRST_PLAYER`), and DCGO honours the job's first_player.
-        first_player: 0,
-        seed: s.seed,
-        limits: JobLimits {
-            max_turns: 40,
-            timeout_seconds: 180,
-        },
-    })
-}
-
-#[cfg(test)]
-mod emit_job_tests {
-    use super::*;
-    use dcgo_harness::exam::adapter::{EotAttackTarget, LoweredStep, SelectWire};
-    use dcgo_harness::exam::scenario::Scenario;
-
-    /// Shorthand: a lowered line of plain action ids.
-    fn actions(ids: &[u16]) -> Vec<LoweredStep> {
-        ids.iter().map(|id| LoweredStep::Action(*id)).collect()
-    }
-
-    const LINE: &str = r#"
-card: ST1-12
-clause: ST1-12#effect#0
-seed: 424242
-decks:
-  p0: { stack: [B, D], rest: tiny }
-  p1: { stack: [], rest: tiny }
-steps:
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: breeding_action }
-  - actor: 0
-    do: { pass: {} }
-    expect: { prompt: main_phase }
-  - actor: 1
-    do: { pass: {} }
-"#;
-
-    fn entry() -> DeckEntry {
-        DeckEntry {
-            main: vec!["A", "B", "C", "D"].into_iter().map(String::from).collect(),
-            eggs: vec!["E1".to_string()],
-        }
-    }
-
-    /// `build_exam_job` for the ordinary 1-row-per-step case: owners are the
-    /// identity mapping. The expanding steps (`materials:`, `dna:`) are the
-    /// exception and carry their own owner vectors.
-    fn build_job_1to1(
-        stem: &str,
-        s: &dcgo_harness::exam::scenario::Scenario,
-        e0: &DeckEntry,
-        e1: &DeckEntry,
-        lowered: &[dcgo_harness::exam::adapter::LoweredStep],
-    ) -> Result<ExamJobSpec, String> {
-        let owners: Vec<usize> = (0..lowered.len()).collect();
-        build_exam_job(stem, s, e0, e1, lowered, &owners)
-    }
-
-    #[test]
-    fn deck_is_reversed_back_to_top_first_with_eggs_appended() {
-        // Our draw-from-back vector for this seat would be
-        // [A, C, D, B] (remainder [A, C] + stack [B, D] reversed), so the
-        // top-first job deck must be [B, D, C, A] -- stack first, remainder
-        // reversed -- with the egg deck appended after the main deck.
-        let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
-        assert_eq!(job.decks.p0, vec!["B", "D", "C", "A", "E1"]);
-        // No stack: the whole main deck reversed, then eggs.
-        assert_eq!(job.decks.p1, vec!["D", "C", "B", "A", "E1"]);
-        assert_eq!(job.deck_order.p0, vec!["B", "D"]);
-        assert!(job.deck_order.p1.is_empty());
-    }
-
-    #[test]
-    fn inputs_carry_actor_action_id_and_expect_prompt() {
-        let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 63, 64])).unwrap();
-        assert_eq!(job.inputs.len(), 3);
-        assert_eq!(job.inputs[0].actor, 0);
-        assert_eq!(job.inputs[0].action_id, Some(62));
-        assert_eq!(job.inputs[0].expect_prompt.as_deref(), Some("breeding_action"));
-        assert_eq!(job.inputs[1].expect_prompt.as_deref(), Some("main_phase"));
-        assert_eq!(job.inputs[2].actor, 1);
-        assert_eq!(job.inputs[2].expect_prompt, None);
-    }
-
-    #[test]
-    fn job_identity_fields_come_from_the_scenario() {
-        let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
-        assert_eq!(job.job_id, "exam-ST1-12");
-        assert_eq!(job.policy, "scripted");
-        assert_eq!(job.seed, 424242);
-        assert_eq!(job.first_player, 0);
-    }
-
-    #[test]
-    fn a_deck_with_no_resolvable_eggs_is_refused() {
-        let s = Scenario::from_yaml(LINE).unwrap();
-        let eggless = DeckEntry {
-            main: entry().main,
-            eggs: vec![],
-        };
-        let err = build_job_1to1("ST1-12", &s, &eggless, &entry(), &actions(&[62, 62, 62])).unwrap_err();
-        assert!(err.contains("no egg cards"), "got: {err}");
-        assert!(err.contains("tiny"), "must name the deck: {err}");
-    }
-
-    #[test]
-    fn a_desynchronized_lowering_is_refused() {
-        // 3 steps but only 2 lowered ids: emitting would hand DCGO a line that
-        // answers the wrong prompts from the first mismatch onward.
-        let s = Scenario::from_yaml(LINE).unwrap();
-        let err = build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62])).unwrap_err();
-        assert!(err.contains("desynchronized"), "got: {err}");
-    }
-
-    #[test]
-    fn serialized_job_matches_the_golden_field_names() {
-        // The DCGO reader is the consumer; these exact key names are the
-        // contract (see qa/dcgo-harness/golden-scripted-job.json).
-        let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
-        let v: serde_json::Value =
-            serde_json::from_str(&serde_json::to_string(&job).unwrap()).unwrap();
-        for key in [
-            "job_id",
-            "policy",
-            "decks",
-            "deck_order",
-            "inputs",
-            "first_player",
-            "seed",
-            "limits",
-        ] {
-            assert!(v.get(key).is_some(), "missing top-level key {key}");
-        }
-        assert_eq!(v["inputs"][0]["expect_prompt"], "breeding_action");
-        assert_eq!(v["inputs"][0]["action_id"], 62);
-        assert_eq!(v["limits"]["max_turns"], 40);
-        // A step without `expect:` must OMIT the key, not write null -- the
-        // driver treats presence as "assert this prompt".
-        assert!(v["inputs"][2].get("expect_prompt").is_none());
-        // A non-select step must not wear ANY selection field: on the C# side
-        // `IsSelection` keys off their presence, and a stray one would turn an
-        // action step into a selection answer.
-        for key in [
-            "select_card_ids",
-            "select_value",
-            "select_has_bool",
-            "select_bool",
-            "select_cancel",
-        ] {
-            assert!(
-                v["inputs"][0].get(key).is_none(),
-                "action step must omit {key}"
-            );
-        }
-    }
-
-    // ── select steps on the wire ────────────────────────────────────────
-    //
-    // The field names below are the C# `HarnessJobStep` contract verbatim
-    // (read from `Assets/Scripts/Script/Harness/HarnessJob.cs`, DCGO
-    // 9bbc7e5f3): `select_card_ids` / `select_value` (absent = int.MinValue
-    // via the field initializer) / `select_has_bool` + `select_bool` /
-    // `select_cancel`. The values are symbolic identities from the scenario,
-    // never engine action ids.
-
-    /// LINE with its final pass replaced by a select step carrying `args`.
-    fn select_line(args: &str) -> Scenario {
-        let text = LINE.replace(
-            "  - actor: 1\n    do: { pass: {} }",
-            &format!("  - actor: 1\n    do: {{ select: {args} }}"),
-        );
-        Scenario::from_yaml(&text).expect("select line parses")
-    }
-
-    fn job_json(s: &Scenario, lowered: &[LoweredStep]) -> serde_json::Value {
-        let job = build_job_1to1("ST1-12", s, &entry(), &entry(), lowered).unwrap();
-        serde_json::from_str(&serde_json::to_string(&job).unwrap()).unwrap()
-    }
-
-    #[test]
-    fn select_card_ids_ride_the_wire_and_action_id_is_omitted() {
-        let s = select_line("{ cards: [ST1-03, ST1-03] }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            card_ids: vec!["ST1-03".to_string(), "ST1-03".to_string()],
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert_eq!(
-            v["inputs"][2]["select_card_ids"],
-            serde_json::json!(["ST1-03", "ST1-03"])
-        );
-        // A selection step answers a selection RPC, not a 2192-space prompt;
-        // an action id here would be an engine-internal leak.
-        assert!(v["inputs"][2].get("action_id").is_none());
-        assert_eq!(v["inputs"][2]["actor"], 1);
-    }
-
-    #[test]
-    fn select_value_and_bool_and_cancel_use_the_csharp_field_names() {
-        let s = select_line("{ value: 3 }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            value: Some(3),
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"][2]["select_value"], 3);
-        assert!(v["inputs"][2].get("select_card_ids").is_none());
-        assert!(v["inputs"][2].get("select_has_bool").is_none());
-
-        let s = select_line("{ yes: true }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            bool_answer: Some(true),
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"][2]["select_has_bool"], true);
-        assert_eq!(v["inputs"][2]["select_bool"], true);
-        // Absent select_value must be OMITTED (the C# initializer, not 0, is
-        // the absent sentinel -- writing 0 would claim a count answer of 0).
-        assert!(v["inputs"][2].get("select_value").is_none());
-
-        let s = select_line("{ decline: true }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            cancel: true,
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"][2]["select_cancel"], true);
-        assert!(v["inputs"][2].get("select_bool").is_none());
-    }
-
-    // ── select_ordinal + the expect_* assertions on the wire ────────────
-
-    #[test]
-    fn select_ordinal_rides_the_wire_under_the_csharp_field_name() {
-        let s = select_line("{ cards: [EX12-047], ordinal: 1 }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            card_ids: vec!["EX12-047".to_string()],
-            ordinal: Some(1),
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"][2]["select_card_ids"], serde_json::json!(["EX12-047"]));
-        assert_eq!(v["inputs"][2]["select_ordinal"], 1);
-        // `select_value` stays the raw DCGO-index fallback and must NOT be
-        // written: the C# hook aborts on value+card_ids by design.
-        assert!(v["inputs"][2].get("select_value").is_none());
-    }
-
-    /// The whole point of `trigger:` is that it survives the trip to DCGO. It
-    /// did NOT at first: `SelectWire::trigger` existed and `--sim-only` went
-    /// green, but `ScriptedInput` had no `select_trigger`, so the key was
-    /// dropped at the job boundary and the scenario aborted on the oracle --
-    /// DCGO refuses an ambiguous same-identity stack with "Add select_ordinal"
-    /// (SelectionAnswer.cs:175-181), the one key our parser forbids next to
-    /// `trigger:`. A sim gate that passes and then strands the author on the
-    /// oracle is worse than no key, so pin the serialization itself.
-    #[test]
-    fn select_trigger_rides_the_wire_under_the_csharp_field_name() {
-        let s = select_line("{ cards: [EX12-065], trigger: fortitude }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            card_ids: vec!["EX12-065".to_string()],
-            trigger: Some("fortitude".to_string()),
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"][2]["select_card_ids"], serde_json::json!(["EX12-065"]));
-        assert_eq!(v["inputs"][2]["select_trigger"], "fortitude");
-        // `trigger:` and `ordinal:` are mutually exclusive by construction, so
-        // a trigger row must never also carry the positional disambiguator.
-        assert!(v["inputs"][2].get("select_ordinal").is_none());
-    }
-
-    /// An absent trigger OMITS the key -- the C# reads absence as "not given",
-    /// so writing `null` would be a different statement.
-    #[test]
-    fn an_absent_trigger_is_omitted_from_the_wire() {
-        let s = select_line("{ cards: [EX12-047] }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            card_ids: vec!["EX12-047".to_string()],
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert!(v["inputs"][2].get("select_trigger").is_none());
-    }
-
-    #[test]
-    fn ordinal_zero_is_written_and_an_absent_ordinal_is_omitted() {
-        // 0 is a real answer ("the FIRST of that card's triggers"), and the
-        // C# absent sentinel is int.MinValue -- so 0 must serialize while
-        // absent must omit the key entirely.
-        let s = select_line("{ cards: [EX12-047], ordinal: 0 }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            card_ids: vec!["EX12-047".to_string()],
-            ordinal: Some(0),
-            ..SelectWire::default()
-        }));
-        assert_eq!(job_json(&s, &lowered)["inputs"][2]["select_ordinal"], 0);
-
-        let s = select_line("{ cards: [EX12-047] }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            card_ids: vec!["EX12-047".to_string()],
-            ..SelectWire::default()
-        }));
-        assert!(job_json(&s, &lowered)["inputs"][2]
-            .get("select_ordinal")
-            .is_none());
-    }
-
-    #[test]
-    fn an_action_step_wears_no_ordinal() {
-        // On the C# side `IsSelection` keys off the selection fields'
-        // presence, and `select_ordinal` is one of them -- a stray one would
-        // turn an action step into a selection answer.
-        let s = Scenario::from_yaml(LINE).unwrap();
-        let v: serde_json::Value = serde_json::from_str(
-            &serde_json::to_string(
-                &build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap(),
-            )
-            .unwrap(),
-        )
-        .unwrap();
-        assert!(v["inputs"][0].get("select_ordinal").is_none());
-    }
-
-    #[test]
-    fn expect_count_and_expect_candidates_ride_the_wire() {
-        // Previously parsed and then DROPPED. On a MultipleSkills row the
-        // candidate set is the stacked TRIGGERS' source-card ids, which is the
-        // cheapest available check that DCGO stacked what we stacked.
-        let text = LINE.replace(
-            "  - actor: 1\n    do: { pass: {} }",
-            "  - actor: 1\n    do: { select: { cards: [EX12-047], ordinal: 1 } }\n    expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-047, EX12-047] }",
-        );
-        let s = Scenario::from_yaml(&text).expect("parses");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            card_ids: vec!["EX12-047".to_string()],
-            ordinal: Some(1),
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"][2]["expect_prompt"], "MultipleSkills");
-        assert_eq!(v["inputs"][2]["expect_count"], 1);
-        assert_eq!(
-            v["inputs"][2]["expect_candidates"],
-            serde_json::json!(["EX12-047", "EX12-047"])
-        );
-    }
-
-    #[test]
-    fn absent_expectations_omit_their_keys() {
-        // The C# initializers (`expect_count = -1`, `expect_candidates =
-        // new string[0]`) ARE the "do not assert" defaults, so writing 0 / []
-        // would turn "no opinion" into a live assertion.
-        let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_job_1to1("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
-        let v: serde_json::Value =
-            serde_json::from_str(&serde_json::to_string(&job).unwrap()).unwrap();
-        assert!(v["inputs"][0].get("expect_count").is_none());
-        assert!(v["inputs"][0].get("expect_candidates").is_none());
-    }
-
-    #[test]
-    fn a_folded_pick_carries_the_expectations_on_the_pick_row_not_the_gate() {
-        // `expect.count` / `expect.candidates` describe the PICK. Putting them
-        // on the OptionalSkill gate would assert a candidate list against a
-        // yes/no prompt that has none.
-        let text = LINE.replace(
-            "  - actor: 1\n    do: { pass: {} }",
-            "  - actor: 1\n    do: { select: { targets: [opp.field.0] } }\n    expect: { prompt: OptionalSkill, count: 1, candidates: [ST1-07] }",
-        );
-        let s = Scenario::from_yaml(&text).expect("parses");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            card_ids: vec!["ST1-07".to_string()],
-            optional_gate_fold: true,
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"].as_array().unwrap().len(), 4);
-        assert_eq!(v["inputs"][2]["expect_prompt"], "OptionalSkill");
-        assert!(v["inputs"][2].get("expect_count").is_none(), "gate row must not assert the pick");
-        assert!(v["inputs"][2].get("expect_candidates").is_none());
-        assert_eq!(v["inputs"][3]["expect_count"], 1);
-        assert_eq!(v["inputs"][3]["expect_candidates"], serde_json::json!(["ST1-07"]));
-    }
-
-    // ── task_69f10a66 surface mappings on the wire ──────────────────────
-
-    /// The end-of-turn attack-keyword gate (our `EndOfTurnAction` park; DCGO
-    /// OptionalSkill + SelectAttackEffect). PASS = one OptionalSkill "no"
-    /// row; an attack = OptionalSkill "yes" + the SelectAttackEffect answer
-    /// (permanent by top-card id / the player as select_value -1); a
-    /// sim-only phase-exit pass = NO wire row at all.
-    #[test]
-    fn end_of_turn_gate_maps_to_optional_skill_rows() {
-        // Decline: one OptionalSkill(no) row.
-        let s = select_line("{ cards: [ST1-03] }"); // 3-step line; payloads below drive the shape
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::EndOfTurnGate {
-            action_id: 62,
-            attack: None,
-        });
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"][2]["expect_prompt"], "OptionalSkill");
-        assert_eq!(v["inputs"][2]["select_has_bool"], true);
-        assert!(v["inputs"][2].get("select_bool").is_none()); // false is skip-serialized
-        assert!(v["inputs"][2].get("action_id").is_none());
-
-        // Accept + attack a permanent: OptionalSkill(yes) then the pick.
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::EndOfTurnGate {
-            action_id: 100,
-            attack: Some(EotAttackTarget::Permanent {
-                top_card_id: "ST1-07".to_string(),
-            }),
-        });
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"].as_array().unwrap().len(), 4, "one step -> two rows");
-        assert_eq!(v["inputs"][2]["expect_prompt"], "OptionalSkill");
-        assert_eq!(v["inputs"][2]["select_bool"], true);
-        assert_eq!(v["inputs"][3]["expect_prompt"], "SelectAttackEffect");
-        assert_eq!(v["inputs"][3]["select_card_ids"], serde_json::json!(["ST1-07"]));
-
-        // Accept + attack the player: select_value -1 on the pick row.
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::EndOfTurnGate {
-            action_id: 113,
-            attack: Some(EotAttackTarget::Player),
-        });
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"][3]["select_value"], -1);
-
-        // Sim-only phase exit: contributes NOTHING to the wire.
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::SimOnlyAction(62));
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"].as_array().unwrap().len(), 2, "no third row");
-    }
-
-    /// The differ pairs the two traces by LOWERED STEP, using
-    /// `LoweredStep::dcgo_wire_rows()` to know how many rows each step
-    /// consumes. That number is only trustworthy if it agrees with what this
-    /// emitter actually writes -- if they ever drift, the pairing slides and
-    /// manufactures divergences out of an offset, which is precisely the bug
-    /// the pairing exists to fix. So: pin them against each other, per
-    /// variant, over the real emitter.
-    #[test]
-    fn wire_row_counts_match_dcgo_wire_rows() {
-        let s = select_line("{ cards: [ST1-03] }");
-        let variants: Vec<LoweredStep> = vec![
-            LoweredStep::Action(62),
-            // A `link:` step is a plain main-phase action on the wire: the
-            // FIELD_EFFECT link sub-slot (slot 0 -> 1003). Its host pick is
-            // the NEXT scenario step's own row, never folded into this one,
-            // so it must count exactly like any other Action.
-            LoweredStep::Action(
-                digimon_engine::action::space::FIELD_EFFECT_START
-                    + digimon_engine::action::space::FIELD_EFFECT_SLOT_FOR_LINK,
-            ),
-            LoweredStep::SimOnlyAction(62),
-            // A `dna:` step: ONE main_phase row carrying the DNA_DIGIVOLVE
-            // action id AND both materials' identities (DCGO takes them in the
-            // same `PlayCardAction`), never a second row for the material
-            // picks -- those are ours alone and ride a `SimOnlySelect`.
-            LoweredStep::DnaDeclaration {
-                action_id: digimon_engine::action::space::DNA_DIGIVOLVE_START,
-                material_ids: vec!["ST1-03".to_string(), "ST1-07".to_string()],
-            },
-            // The mirror of SimOnlyAction: one wire row, no sim-side row.
-            LoweredStep::DcgoOnlySelect(SelectWire {
-                card_ids: vec!["ST1-03".to_string()],
-                ordinal: Some(1),
-                ..SelectWire::default()
-            }),
-            LoweredStep::Select(SelectWire {
-                card_ids: vec!["ST1-03".to_string()],
-                ..SelectWire::default()
-            }),
-            LoweredStep::Select(SelectWire {
-                value: Some(3),
-                ..SelectWire::default()
-            }),
-            LoweredStep::Select(SelectWire {
-                bool_answer: Some(true),
-                ..SelectWire::default()
-            }),
-            LoweredStep::Select(SelectWire {
-                cancel: true,
-                ..SelectWire::default()
-            }),
-            LoweredStep::Select(SelectWire {
-                card_ids: vec!["ST1-03".to_string()],
-                optional_gate_fold: true,
-                ..SelectWire::default()
-            }),
-            LoweredStep::Select(SelectWire {
-                cancel: true,
-                optional_gate_fold: true,
-                ..SelectWire::default()
-            }),
-            LoweredStep::EndOfTurnGate {
-                action_id: 62,
-                attack: None,
-            },
-            LoweredStep::EndOfTurnGate {
-                action_id: 100,
-                attack: Some(EotAttackTarget::Player),
-            },
-            LoweredStep::EndOfTurnGate {
-                action_id: 100,
-                attack: Some(EotAttackTarget::Permanent {
-                    top_card_id: "ST1-07".to_string(),
-                }),
-            },
-        ];
-        for v in variants {
-            // Two known-1-row steps plus the variant under test, so the
-            // baseline is fixed and the delta is the variant's own count.
-            let mut lowered = actions(&[62, 62]);
-            lowered.push(v.clone());
-            let job = build_job_1to1("ST1-12", &s, &entry(), &entry(), &lowered).unwrap();
-            assert_eq!(
-                job.inputs.len() - 2,
-                v.dcgo_wire_rows(),
-                "{v:?} claims {} wire row(s) but the emitter wrote {}",
-                v.dcgo_wire_rows(),
-                job.inputs.len() - 2
-            );
-        }
-    }
-
-    /// The OptionalSkill+pick FOLD (ruling item 5, `<Raid>`-family): a
-    /// folded pick splits into OptionalSkill(yes) + the pick row; a folded
-    /// decline emits ONLY OptionalSkill(no).
-    #[test]
-    fn optional_gate_fold_splits_the_wire_rows() {
-        let s = select_line("{ targets: [opp.field.0] }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            card_ids: vec!["ST1-07".to_string()],
-            optional_gate_fold: true,
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"].as_array().unwrap().len(), 4, "one step -> two rows");
-        assert_eq!(v["inputs"][2]["expect_prompt"], "OptionalSkill");
-        assert_eq!(v["inputs"][2]["select_bool"], true);
-        assert!(v["inputs"][3].get("expect_prompt").is_none());
-        assert_eq!(v["inputs"][3]["select_card_ids"], serde_json::json!(["ST1-07"]));
-
-        let s = select_line("{ decline: true }");
-        let mut lowered = actions(&[62, 62]);
-        lowered.push(LoweredStep::Select(SelectWire {
-            cancel: true,
-            optional_gate_fold: true,
-            ..SelectWire::default()
-        }));
-        let v = job_json(&s, &lowered);
-        assert_eq!(v["inputs"].as_array().unwrap().len(), 3, "decline folds to one row");
-        assert_eq!(v["inputs"][2]["expect_prompt"], "OptionalSkill");
-        assert_eq!(v["inputs"][2]["select_has_bool"], true);
-        assert!(v["inputs"][2].get("select_bool").is_none()); // "no" skip-serializes
-        assert!(v["inputs"][2].get("select_cancel").is_none());
-    }
-}
+use dcgo_harness::exam::{check_assertions, DeckBook, ordered_deck};
+use dcgo_harness::exam::job_spec::build_exam_job;
 
 #[cfg(test)]
 mod migrate_verdicts_guard_tests {
@@ -2217,6 +1465,8 @@ mod migrate_verdicts_guard_tests {
             reason: None,
             dcgo_build: None,
             job_id: None,
+            triage: None,
+            citation: None,
             recorded_at: "2026-01-01T00:00:00Z".to_string(),
         });
         let from = tmp.join("dcgo_exam_verdicts.json");
@@ -2242,5 +1492,133 @@ mod migrate_verdicts_guard_tests {
         // survives untouched.
         assert!(to.join("BT8-084.json").exists());
         assert!(!to.join("EX12-035.json").exists());
+    }
+}
+
+#[cfg(test)]
+mod try_backfill_tests {
+    use super::*;
+    use dcgo_harness::exam::differ::DiffReport;
+    use dcgo_harness::exam::projection::{StateProjection, StepPairing};
+
+    fn pairs(p: &[(usize, usize)]) -> StepPairing {
+        StepPairing { pairs: p.to_vec(), ours_unpairable: 0, dcgo_unpairable: 0 }
+    }
+
+    const SCENARIO: &str = "card: EX12-035\nclause: EX12-035#effect#0\nseed: 1\ndecks:\n  p0: { stack: [ST1-02], rest: st1 }\n  p1: { stack: [], rest: st1 }\nsteps:\n  - actor: 0\n    do: { pass: {} }\n";
+
+    fn row(step: u32) -> StateProjection {
+        StateProjection::from_sidecar_line(&format!(
+            r#"{{"step":{step},"turn":1,"phase":"Main","memory":0,
+               "p0":{{"security":5,"hand":[],"trash":[],"field":[]}},
+               "p1":{{"security":5,"hand":[],"trash":[],"field":[]}}}}"#
+        ))
+        .unwrap()
+    }
+
+    fn report(ours_unpairable: u32) -> DiffReport {
+        DiffReport {
+            compared_steps: 1,
+            ours_steps: 1 + ours_unpairable,
+            dcgo_steps: 1,
+            ours_unpairable,
+            dcgo_unpairable: 0,
+            divergences: vec![],
+        }
+    }
+
+    #[test]
+    fn a_refused_backfill_is_reported_not_propagated_and_leaves_the_file_alone() {
+        let path = std::env::temp_dir().join("try_backfill_refused.yaml");
+        std::fs::write(&path, SCENARIO).unwrap();
+        let r = report(0);
+        assert!(r.is_clean(), "the verdict inputs are a CLEAN diff");
+
+        // A pairing naming a row the caller never supplied is refused.
+        let line = try_backfill(&path, SCENARIO, &[row(0)], &[row(0)], &pairs(&[(3, 0)]), &r, &[row(0)]);
+        assert!(line.starts_with("backfill skipped: "), "got: {line}");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), SCENARIO);
+        // The clean report is untouched, so the caller still builds Confirmed.
+        assert!(r.is_clean());
+    }
+
+    #[test]
+    fn an_accepted_backfill_writes_the_file() {
+        let path = std::env::temp_dir().join("try_backfill_accepted.yaml");
+        std::fs::write(&path, SCENARIO).unwrap();
+        let line = try_backfill(&path, SCENARIO, &[row(0)], &[row(0)], &pairs(&[(0, 0)]), &report(0), &[row(0)]);
+        assert!(
+            line.starts_with("backfill: wrote confirmed state into"),
+            "got: {line}"
+        );
+        let written = std::fs::read_to_string(&path).unwrap();
+        assert!(written.starts_with(SCENARIO) && written.contains("_backfilled"));
+    }
+}
+
+#[cfg(test)]
+mod oracle_cli_tests {
+    use super::*;
+
+    fn parse(extra: &[&str]) -> Result<Args, clap::Error> {
+        let mut argv = vec!["dcgo-harness", "exam", "--scenario", "x.yaml", "--cards-json", "c.json"];
+        argv.extend_from_slice(extra);
+        Args::try_parse_from(argv)
+    }
+
+    #[test]
+    fn oracle_refuses_the_flags_of_the_other_two_routes() {
+        assert!(parse(&["--oracle"]).is_ok());
+        for other in [&["--sim-only"][..], &["--sidecar", "s"], &["--emit-job", "d"]] {
+            let mut a = vec!["--oracle"];
+            a.extend_from_slice(other);
+            assert!(parse(&a).is_err(), "--oracle with {other:?} must be refused");
+        }
+        assert!(parse(&["--build", "b"]).is_err(), "--build is an --oracle flag");
+    }
+
+    #[test]
+    fn verdict_set_takes_exactly_one_of_clause_or_interaction() {
+        let p = |extra: &[&str]| {
+            let mut argv = vec!["dcgo-harness", "verdict-set", "--verdict", "unreachable", "--reason", "r"];
+            argv.extend_from_slice(extra);
+            Args::try_parse_from(argv)
+        };
+        assert!(p(&["--clause", "BT7-056#effect#0"]).is_ok());
+        assert!(p(&["--interaction", "qa:Q1"]).is_ok());
+        assert!(p(&[]).is_err(), "one target is required");
+        assert!(p(&["--clause", "x", "--interaction", "y"]).is_err(), "not both");
+    }
+
+    #[test]
+    fn inspect_is_a_sim_only_flag() {
+        assert!(parse(&["--sim-only", "--inspect", "3"]).is_ok());
+        assert!(parse(&["--inspect", "3"]).is_err(), "--inspect needs --sim-only");
+    }
+
+    #[test]
+    fn oracle_on_a_node_with_no_player_refuses_before_submitting() {
+        let root = tempfile::tempdir().unwrap();
+        for d in ["jobs", "claimed", "done", "failed"] {
+            std::fs::create_dir_all(root.path().join(d)).unwrap();
+        }
+        std::fs::write(root.path().join("harness.enabled"), "x").unwrap();
+        let scenario = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/oracle/ST23-06-effect0.yaml");
+        let err = run_oracle(
+            Some(root.path()),
+            &scenario,
+            None,
+            Path::new("data/cards.json"),
+            None,
+            None,
+            None,
+            Path::new("none.json"),
+            false,
+            std::time::Duration::from_secs(1),
+        )
+        .unwrap_err();
+        assert!(err.contains("no live player"), "{err}");
+        assert_eq!(std::fs::read_dir(root.path().join("jobs")).unwrap().count(), 0);
     }
 }

@@ -1,0 +1,87 @@
+# Exam scenario: Close (EX8-067), clause EX8-067#effect#0 --
+# "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+#
+# THE LINE: P0 needs Close on the field and memory <= 2 at the START of its own
+# turn. A plain pass hands the opponent's counter 3, so P1 must OVERSPEND.
+#   T1 (P0, memory 0): play Close (cost 4 -> -4); the turn ends, P1 holds 4.
+#   T2 (P1, memory 4): play Ukkomon (BT16-082, cost 3 -> 1) then a second Ukkomon
+#            (3 -> -2); the turn ends, P0 holds exactly 2 -- the BOUNDARY value
+#            ("2 or less" must fire at 2).
+#   T3 (P0, memory 2): THE CLAUSE fires at the start of the turn -> memory 3.
+# DCGO's SetMemoryTo3TamerEffect is non-optional (isOptional false), so no prompt
+# is expected in either engine; the first prompt of T3 is the breeding decision.
+card: EX8-067
+clause: EX8-067#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX8-067
+      - EX10-032
+      - EX10-032
+      - EX10-032
+      - EX10-032
+      # security (5-9): never checked
+      - EX10-033
+      - EX10-033
+      - EX10-033
+      - EX10-036
+      - EX10-036
+      # (10) T3 turn draw
+      - EX10-036
+    rest: rocks-exam
+  p1:
+    stack:
+      # hand (0-4)
+      - BT16-082
+      - BT16-082
+      - EX10-032
+      - EX10-032
+      - EX10-032
+      # security (5-9): never checked
+      - EX10-033
+      - EX10-033
+      - EX10-033
+      - EX10-036
+      - EX10-036
+      # (10) T2 turn draw
+      - EX10-036
+    rest: rocks-exam
+steps:
+  # T1 (P0, memory 0): no hatch; play Close (-> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX8-067, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 4): two Ukkomon -> -2, so P0 starts T3 on exactly 2.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT16-082, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: BT16-082, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T3 (P0): the clause has already resolved at the start of the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Trailing step: the Main phase with memory already reset to 3.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Backfilled from the DCGO oracle (job exam-EX8-067-effect0, CLEAN 7 of 7):
+  # P0 began T3 on 2 memory and the clause lifted it to 3; Close untouched.
+  - at: 6
+    that:
+      turn: 3
+      p0.memory: 3
+      p0.hand: [EX10-032, EX10-032, EX10-032, EX10-032, EX10-036]
+      p0.trash: []
+      p0.field:
+        - { card_id: EX8-067, dp: -1, suspended: false, sources: [] }

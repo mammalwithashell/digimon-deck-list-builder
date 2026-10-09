@@ -1,5 +1,5 @@
 # Exam scenario: Kyo Sawashiro (BT26-089, yellow Tamer), clause
-# BT26-089#effect#2 -- "[Security] Play this card without paying the cost."
+# BT26-089#security#0 -- "[Security] Play this card without paying the cost."
 #
 # BT26-089 is pinned as P0's TOP security card (stack[9]) and flipped by a P1
 # Agumon (ST1-03) security attack. Witness: BT26-089 lands on P0's field
@@ -42,7 +42,7 @@
 # PROMPT SHAPE (cards/bt26/BT26-089.yaml DCGO crosscheck):
 #   PlaySelfTamerSecurityEffect -- no selection prompt on either side.
 card: BT26-089
-clause: BT26-089#effect#2
+clause: BT26-089#security#0
 seed: 424242
 decks:
   p0:

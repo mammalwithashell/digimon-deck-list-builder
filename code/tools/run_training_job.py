@@ -34,15 +34,23 @@ def _load_deck_from_file(path: str) -> List[str]:
 
 
 def _load_deck_from_library(deck_id: str) -> List[str]:
-    """Fetch a specific deck by ID from deck_library.json."""
+    """Fetch a specific deck by ID from deck_library.json.
+
+    A library deck is subject to the oracle readiness gate exactly like the
+    gauntlet pool (`NotOracleReadyDeckError` otherwise); a `file` deck is the
+    operator's explicit choice and is not gated.
+    """
     from data_paths import DECK_LIBRARY
     with open(DECK_LIBRARY, encoding="utf-8") as f:
         library = json.load(f)
     from digimon_engine import parse_tts
+    from digimon_gym.agents.gauntlet import validate_oracle_ready_deck
     for arch_data in library.get("archetypes", {}).values():
         for deck in arch_data.get("decklists", []):
             if deck.get("deck_id") == deck_id:
-                return parse_tts(deck["decklist"])
+                card_ids = parse_tts(deck["decklist"])
+                validate_oracle_ready_deck(card_ids, label=f"library deck {deck_id}")
+                return card_ids
     raise ValueError(f"deck_id {deck_id!r} not found in deck_library.json")
 
 

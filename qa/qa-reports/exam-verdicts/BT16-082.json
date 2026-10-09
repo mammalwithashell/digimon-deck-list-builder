@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T16:35:55.159234+00:00",
+  "clauses": {
+    "BT16-082#effect#0": {
+      "clause_id": "BT16-082#effect#0",
+      "card_id": "BT16-082",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "4ef6f4635125ea9108b49f24a925ce01ab141ade03f8aeb0dc410cd62a5cf38f",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-082-effect0.yaml",
+      "recorded_at": "2026-10-05T16:35:55.159234+00:00"
+    }
+  }
+}

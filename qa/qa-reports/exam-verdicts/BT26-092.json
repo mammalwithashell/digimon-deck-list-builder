@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T16:35:45.984879800+00:00",
+  "clauses": {
+    "BT26-092#effect#0": {
+      "clause_id": "BT26-092#effect#0",
+      "card_id": "BT26-092",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "52ced2226f8353994e0cd6953d4c5864c806fc2e55ed65e00a4c72744c4743af",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-092-effect0.yaml",
+      "recorded_at": "2026-10-05T16:35:44.757706600+00:00"
+    },
+    "BT26-092#effect#1": {
+      "clause_id": "BT26-092#effect#1",
+      "card_id": "BT26-092",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "f6d89359d9d03676b6282e700f8c18a7fd08a23e56808b9465f222d6201d289e",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-092-effect1.yaml",
+      "recorded_at": "2026-10-05T16:35:45.382387300+00:00"
+    },
+    "BT26-092#security#0": {
+      "clause_id": "BT26-092#security#0",
+      "card_id": "BT26-092",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-092-effect2.yaml",
+      "recorded_at": "2026-10-05T16:35:45.984879800+00:00"
+    }
+  }
+}

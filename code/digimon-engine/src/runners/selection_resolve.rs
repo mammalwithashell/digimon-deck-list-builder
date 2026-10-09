@@ -450,6 +450,53 @@ fn zone_card_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, Strin
     (!pairs.is_empty()).then_some(pairs)
 }
 
+/// A UnionZone prompt that includes `UnionZoneSet::MATERIAL` offers each of the
+/// owner's Digimon's NON-top digivolution cards as
+/// `encode_source_select(field_index, source_index)` — mirror of the installer
+/// in `effect_context/selections.rs`. Match by card identity; `carrier` (a
+/// battle-area index from the row's `targets:`) disambiguates two carriers
+/// holding the same card. Equivalent copies under ONE carrier are the same
+/// pick (first match wins); ambiguity is reported only across distinct
+/// carriers. Breeding-area carriers (`encode_breeding_source_select`) are not
+/// matched.
+fn union_zone_source_pick(
+    game: &Game,
+    owner: crate::PlayerId,
+    want: &str,
+    valid: &[u16],
+    carrier: Option<usize>,
+) -> Result<Option<u16>, String> {
+    use crate::action::space::encode_source_select;
+    let mut hits: Vec<u16> = Vec::new();
+    for (pi, perm) in game.player(owner).battle_area.iter().enumerate() {
+        if carrier.is_some_and(|c| c != pi) {
+            continue;
+        }
+        let candidates = perm.card_sources.len().saturating_sub(1);
+        for (si, src) in perm.card_sources.iter().take(candidates).enumerate() {
+            if src.card_id(&game.card_data) != want {
+                continue;
+            }
+            if let Some(id) = encode_source_select(pi as u16, si as u16) {
+                if valid.contains(&id) {
+                    // Equivalent copies under this carrier: keep the first.
+                    hits.push(id);
+                    break;
+                }
+            }
+        }
+    }
+    match hits.as_slice() {
+        [] => Ok(None),
+        [one] => Ok(Some(*one)),
+        many => Err(format!(
+            "source pick '{want}' is ambiguous -- {} carriers hold it ({many:?}); \
+             name the carrier with `targets: [own.field.<i>]`",
+            many.len()
+        )),
+    }
+}
+
 /// Number of picks this payload carries (before any trailing PASS).
 pub fn payload_pick_count(payload: &SelectionRow) -> usize {
     if let Some(t) = &payload.targets {
@@ -514,7 +561,18 @@ pub fn resolve_next(
         // is the SAME prompt
         // awaiting its stop (DCGO `canEndNotMax: true` recorded as one row
         // with fewer than max targets — BT8-084's "up to 4" picking 1).
+        //
+        // Kinds that carry their own `picked` counter (`SourceMulti`,
+        // `CountCappedMultiSelect`) are excluded: the kind-specific check below
+        // is authoritative for them. A fresh `CountCappedMultiSelect { picked: 0 }`
+        // also installs a `MultiPickStep` frame, so the frame test alone would
+        // misread it as this row's still-open prompt and spend a PASS that
+        // declines it (Close EX8-067's "up to 2" trash pick).
         let open_field_multi_pick = picks_done > 0
+            && !matches!(
+                pending.kind,
+                SelectionKind::SourceMulti { .. } | SelectionKind::CountCappedMultiSelect { .. }
+            )
             && game.pending_selection_resume.as_ref().is_some_and(|stack| {
                 stack.frames.iter().rev().any(|f| {
                     matches!(
@@ -546,13 +604,14 @@ pub fn resolve_next(
                 // Same rule for every multi-pick kind that counts its own
                 // picks: one with ZERO picks is a FRESH prompt the row's last
                 // pick caused (it cannot be this row's prompt, which just took
-                // `picks_done > 0` picks). Driver: BT26-081 Mervamon played via
+                // `picks_done > 0` picks). Drivers: BT26-081 Mervamon played via
                 // [Assembly] — the 1-card material pick completes the play, the
                 // played Digimon's [On Play] parks its optional
                 // `PlayCostBudget { picked: 0 }` free-play pick, and the
                 // trailing PASS declined it, reading as "the engine skipped
                 // the pick" (G-ENGINE-ASSEMBLY-PLAY-SKIPS-ON-PLAY-PICK —
-                // retracted to this resolver).
+                // retracted to this resolver); and Close EX8-067, whose OwnField
+                // gate pick installs the "up to 2" count-capped trash pick.
                 SelectionKind::CountCappedMultiSelect { picked, .. }
                 | SelectionKind::DpBudget { picked, .. }
                 | SelectionKind::PlayCostBudget { picked, .. } => picked > 0,
@@ -595,7 +654,22 @@ pub fn resolve_next(
     let accepts = |id: u16| valid.contains(&id);
 
     // ── Field-permanent picks ────────────────────────────────────────────
-    if let Some(targets) = &payload.targets {
+    //
+    // Exception: a row carrying BOTH `cards:` and `targets:` on a UnionZone
+    // prompt that offers digivolution sources names the SOURCE by identity and
+    // its CARRIER by battle-area slot; the card-identity branch below reads the
+    // target as that carrier hint, so this branch must not consume it.
+    let union_source_with_carrier = payload.card_ids.is_some()
+        && matches!(
+            pending.kind,
+            SelectionKind::UnionZone { zones }
+                if zones.contains(crate::selection::UnionZoneSet::MATERIAL)
+        );
+    if let Some(targets) = payload
+        .targets
+        .as_ref()
+        .filter(|_| !union_source_with_carrier)
+    {
         let t = targets[picks_done];
         // DCGO's `SelectAttackEffect.SetAttackTarget` (the attack-target
         // prompt's chokepoint) uses `SecurityIndex = -1` as a sentinel for
@@ -687,7 +761,7 @@ pub fn resolve_next(
             }
         }
         let hit = match pending.kind {
-            SelectionKind::Hand | SelectionKind::UnionZone { .. } => find_id(
+            SelectionKind::Hand => find_id(
                 &zone_card_ids(&game.player(zone_owner).hand),
                 PLAY_HAND_START,
             )
@@ -697,6 +771,41 @@ pub fn resolve_next(
                     TRASH_EFFECT_START,
                 )
             }),
+            SelectionKind::UnionZone { zones } => {
+                // A row that names a CARRIER (`targets:` + `cards:`) is naming a
+                // digivolution source under that Digimon, so resolve ONLY
+                // through the carrier — a hand/trash copy of the same id must
+                // not shadow it. Rows without `targets:` keep the historical
+                // order: hand, trash, then sources.
+                let named_carrier = payload
+                    .targets
+                    .as_ref()
+                    .filter(|t| !t.is_empty())
+                    .map(|t| t.get(picks_done).or_else(|| t.first()))
+                    .and_then(|t| t.and_then(|t| usize::try_from(t.frame).ok()));
+                let material = zones.contains(crate::selection::UnionZoneSet::MATERIAL);
+                if material && named_carrier.is_some() {
+                    union_zone_source_pick(game, zone_owner, want, valid, named_carrier)?
+                } else {
+                    let in_hand_or_trash = find_id(
+                        &zone_card_ids(&game.player(zone_owner).hand),
+                        PLAY_HAND_START,
+                    )
+                    .or_else(|| {
+                        find_id(
+                            &zone_card_ids(&game.player(zone_owner).trash),
+                            TRASH_EFFECT_START,
+                        )
+                    });
+                    match in_hand_or_trash {
+                        Some(id) => Some(id),
+                        None if material => {
+                            union_zone_source_pick(game, zone_owner, want, valid, None)?
+                        }
+                        None => None,
+                    }
+                }
+            }
             SelectionKind::Trash => find_id(
                 &zone_card_ids(&game.player(zone_owner).trash),
                 TRASH_EFFECT_START,
@@ -1024,6 +1133,250 @@ mod tests {
             on_decline: None,
             zone_owner: None,
         });
+    }
+
+    fn park_count_capped(game: &mut Game, picked: u8) {
+        game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::CountCappedMultiSelect {
+                min: 0,
+                max: 2,
+                picked,
+                distinct: true,
+            },
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: vec![TRASH_EFFECT_START, PASS],
+            is_optional: true,
+            prompt: "Choose up to 2 cards".to_string(),
+            effect_choices: None,
+            source_card: CardHandle(0),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            zone_owner: None,
+        });
+    }
+
+    fn one_card_row(card_id: &str) -> SelectionRow {
+        SelectionRow {
+            step: 0,
+            actor: 0,
+            prompt: "SelectPermanentEffect".to_string(),
+            phase: String::new(),
+            targets: None,
+            card_ids: Some(vec![card_id.to_string()]),
+            indexes: None,
+            count: None,
+            candidates: None,
+            int_value: None,
+            bool_value: None,
+            cancel: None,
+            board_p0: None,
+            board_p1: None,
+            memory: None,
+            mechanic: None,
+            zone: None,
+        }
+    }
+
+    fn park_union_zone_material(game: &mut Game, valid_action_ids: Vec<u16>) {
+        game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::UnionZone {
+                zones: crate::selection::UnionZoneSet::MATERIAL,
+            },
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids,
+            is_optional: false,
+            prompt: "Trash 1 card from your Digimon's digivolution cards".to_string(),
+            effect_choices: None,
+            source_card: CardHandle(0),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            zone_owner: None,
+        });
+    }
+
+    #[test]
+    fn union_zone_resolves_a_digivolution_source_by_identity() {
+        use crate::action::space::encode_source_select;
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("SRC-A", "SRC-A"))
+            .add_card(make_test_card("SRC-B", "SRC-B"))
+            .add_card(make_test_card("TOP", "TOP"))
+            .memory(0)
+            .start();
+        // place_stack is bottom -> top; the top card is never a candidate.
+        runner.place_stack(0, &["SRC-A", "SRC-B", "TOP"]);
+        let a = encode_source_select(0, 0).unwrap();
+        let b = encode_source_select(0, 1).unwrap();
+        park_union_zone_material(&mut runner.game, vec![a, b]);
+        assert_eq!(resolve_next(&runner.game, &one_card_row("SRC-B"), 0), Ok(Some(b)));
+    }
+
+    #[test]
+    fn union_zone_source_pick_is_ambiguous_across_two_carriers() {
+        use crate::action::space::encode_source_select;
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("SRC", "SRC"))
+            .add_card(make_test_card("TOP1", "TOP1"))
+            .add_card(make_test_card("TOP2", "TOP2"))
+            .memory(0)
+            .start();
+        runner.place_stack(0, &["SRC", "TOP1"]);
+        runner.place_stack(0, &["SRC", "TOP2"]);
+        let x = encode_source_select(0, 0).unwrap();
+        let y = encode_source_select(1, 0).unwrap();
+        park_union_zone_material(&mut runner.game, vec![x, y]);
+        let err = resolve_next(&runner.game, &one_card_row("SRC"), 0).unwrap_err();
+        assert!(err.contains("ambiguous"), "got: {err}");
+    }
+
+    #[test]
+    fn union_zone_source_pick_honours_a_targets_carrier() {
+        use crate::action::space::encode_source_select;
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("SRC", "SRC"))
+            .add_card(make_test_card("TOP1", "TOP1"))
+            .add_card(make_test_card("TOP2", "TOP2"))
+            .memory(0)
+            .start();
+        runner.place_stack(0, &["SRC", "TOP1"]);
+        runner.place_stack(0, &["SRC", "TOP2"]);
+        let x = encode_source_select(0, 0).unwrap();
+        let y = encode_source_select(1, 0).unwrap();
+        park_union_zone_material(&mut runner.game, vec![x, y]);
+        let mut row = one_card_row("SRC");
+        row.targets = Some(vec![FrameTarget {
+            player: 0,
+            frame: 1,
+        }]);
+        assert_eq!(resolve_next(&runner.game, &row, 0), Ok(Some(y)));
+    }
+
+    /// Park a HAND|MATERIAL union prompt (EX8-067-effect1's `UnionZoneSet(5)`).
+    fn park_union_zone_hand_material(game: &mut Game, valid_action_ids: Vec<u16>) {
+        park_union_zone_material(game, valid_action_ids);
+        if let Some(p) = game.pending_selection.as_mut() {
+            p.kind = SelectionKind::UnionZone {
+                zones: crate::selection::UnionZoneSet::HAND
+                    | crate::selection::UnionZoneSet::MATERIAL,
+            };
+        }
+    }
+
+    #[test]
+    fn union_zone_named_carrier_wins_over_a_hand_copy() {
+        use crate::action::space::encode_source_select;
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("X", "X"))
+            .add_card(make_test_card("TOP1", "TOP1"))
+            .add_card(make_test_card("TOP2", "TOP2"))
+            .memory(0)
+            .start();
+        runner.add_to_hand(0, "X");
+        runner.place_stack(0, &["X", "TOP1"]);
+        runner.place_stack(0, &["X", "TOP2"]);
+        let hand = PLAY_HAND_START;
+        let x = encode_source_select(0, 0).unwrap();
+        let y = encode_source_select(1, 0).unwrap();
+        park_union_zone_hand_material(&mut runner.game, vec![hand, x, y]);
+        let mut row = one_card_row("X");
+        row.targets = Some(vec![FrameTarget {
+            player: 0,
+            frame: 1,
+        }]);
+        assert_eq!(resolve_next(&runner.game, &row, 0), Ok(Some(y)));
+    }
+
+    #[test]
+    fn union_zone_without_a_carrier_still_prefers_the_hand_copy() {
+        use crate::action::space::encode_source_select;
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("X", "X"))
+            .add_card(make_test_card("TOP1", "TOP1"))
+            .memory(0)
+            .start();
+        runner.add_to_hand(0, "X");
+        runner.place_stack(0, &["X", "TOP1"]);
+        let hand = PLAY_HAND_START;
+        let x = encode_source_select(0, 0).unwrap();
+        park_union_zone_hand_material(&mut runner.game, vec![hand, x]);
+        assert_eq!(
+            resolve_next(&runner.game, &one_card_row("X"), 0),
+            Ok(Some(hand))
+        );
+    }
+
+    #[test]
+    fn union_zone_duplicate_copies_on_one_carrier_are_not_ambiguous() {
+        use crate::action::space::encode_source_select;
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("SRC", "SRC"))
+            .add_card(make_test_card("TOP", "TOP"))
+            .memory(0)
+            .start();
+        runner.place_stack(0, &["SRC", "SRC", "TOP"]);
+        let first = encode_source_select(0, 0).unwrap();
+        let second = encode_source_select(0, 1).unwrap();
+        park_union_zone_material(&mut runner.game, vec![first, second]);
+        assert_eq!(
+            resolve_next(&runner.game, &one_card_row("SRC"), 0),
+            Ok(Some(first))
+        );
+    }
+
+    #[test]
+    fn trailing_pass_does_not_decline_a_fresh_count_capped_prompt() {
+        // The row's one pick went to the PREVIOUS prompt (Close EX8-067's OwnField
+        // gate); resolving it installed a fresh "up to 2" trash pick with nothing
+        // picked yet. Sending PASS here would decline that unrelated prompt.
+        let mut runner = DebugRunner::new();
+        park_count_capped(&mut runner.game, 0);
+        let payload = one_card_row("EX8-047");
+        assert_eq!(resolve_next(&runner.game, &payload, 1), Ok(None));
+    }
+
+    #[test]
+    fn trailing_pass_still_closes_an_open_count_capped_prompt() {
+        // Same prompt after >= 1 accepted pick: this IS the row's own prompt
+        // awaiting its stop, so PASS is still the right answer.
+        let mut runner = DebugRunner::new();
+        park_count_capped(&mut runner.game, 1);
+        let payload = one_card_row("EX8-047");
+        assert_eq!(resolve_next(&runner.game, &payload, 1), Ok(Some(PASS)));
+    }
+
+    #[test]
+    fn trailing_pass_does_not_decline_a_fresh_count_capped_prompt_under_multipick_frame() {
+        // Close EX8-067's real shape: the fresh "up to 2" trash pick installs a
+        // `MultiPickStep` frame, so the frame-based open-field heuristic is true
+        // (picks_done = 1) — but the kind's own `picked: 0` is authoritative.
+        let mut runner = DebugRunner::new();
+        park_count_capped(&mut runner.game, 0);
+        runner.game.pending_selection_resume = Some(ResumeStack {
+            frames: vec![multipick_frame(0, 0, CountCappedZone::Trash, TRASH_EFFECT_START, vec![0])],
+        });
+        assert_eq!(
+            resolve_next(&runner.game, &one_card_row("EX8-047"), 1),
+            Ok(None)
+        );
+    }
+
+    #[test]
+    fn trailing_pass_still_closes_an_open_count_capped_prompt_under_multipick_frame() {
+        let mut runner = DebugRunner::new();
+        park_count_capped(&mut runner.game, 1);
+        runner.game.pending_selection_resume = Some(ResumeStack {
+            frames: vec![multipick_frame(0, 0, CountCappedZone::Trash, TRASH_EFFECT_START, vec![0])],
+        });
+        assert_eq!(
+            resolve_next(&runner.game, &one_card_row("EX8-047"), 1),
+            Ok(Some(PASS))
+        );
     }
 
     #[test]
@@ -2078,6 +2431,18 @@ mod tests {
             Ok(Some(TRASH_EFFECT_START)),
             "pick 0 resolves by identity"
         );
+        // After the engine applies pick 0 it re-parks the prompt with `picked`
+        // bumped (`accum.len()`); model that post-pick state. (A static
+        // `picked: 0` here is the FRESH-prompt shape the trailing-PASS guard
+        // deliberately leaves alone.)
+        if let Some(SelectionKind::CountCappedMultiSelect { picked, .. }) = runner
+            .game
+            .pending_selection
+            .as_mut()
+            .map(|p| &mut p.kind)
+        {
+            *picked = 1;
+        }
         assert_eq!(
             resolve_next(&runner.game, &row, 1),
             Ok(Some(PASS)),

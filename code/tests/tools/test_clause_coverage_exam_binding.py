@@ -334,3 +334,68 @@ def test_load_verdict_store_still_reads_a_single_file(tmp_path):
         encoding="utf-8",
     )
     assert set(load_verdict_store(p)) == {"EX12-073#effect#0"}
+
+def test_bind_passes_triage_and_citation_through(tmp_path):
+    import json
+    from tools.clause_coverage.exam_binding import bind
+
+    verdicts = tmp_path / "exam-verdicts"
+    verdicts.mkdir()
+    (verdicts / "EX10-025.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "last_updated": "x",
+                "clauses": {
+                    "EX10-025#inherited#0": {
+                        "clause_id": "EX10-025#inherited#0",
+                        "card_id": "EX10-025",
+                        "verdict": "diverged",
+                        "label": "Inherited Effect",
+                        "recorded_at": "x",
+                        "triage": "ours_wrong",
+                        "citation": "general_rule.pdf 15-8-3-2",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = bind(["EX10-025"], None, verdicts)
+    row = next(
+        c for c in result["cards"]["EX10-025"]["clauses"]
+        if c["clause_id"] == "EX10-025#inherited#0"
+    )
+    assert row["verdict"] == "diverged"
+    assert row["triage"] == "ours_wrong"
+    assert row["citation"] == "general_rule.pdf 15-8-3-2"
+
+
+def test_bind_drops_triage_when_the_verdict_is_downgraded_by_text_drift(tmp_path):
+    # A stored diverged+dcgo_quirk adjudication belongs to the clause text it was
+    # recorded against. Once text drift downgrades the row to `unmeasured` it must
+    # not carry that stale triage/citation (Plan 2 consumes this contract).
+    clause = _first_clause("EX12-073")
+    verdicts_path = tmp_path / "verdicts.json"
+    _write_verdicts(
+        verdicts_path,
+        [
+            {
+                "clause_id": clause["id"],
+                "card_id": "EX12-073",
+                "verdict": "diverged",
+                "text_sha256": "stale-sha-from-different-text",
+                "recorded_at": "2026-08-21T00:00:00Z",
+                "triage": "dcgo_quirk",
+                "citation": "general_rule.pdf 15-1-2; some-gap",
+            }
+        ],
+    )
+    result = bind(["EX12-073"], None, verdicts_path)
+    row = next(
+        c for c in result["cards"]["EX12-073"]["clauses"] if c["clause_id"] == clause["id"]
+    )
+    assert row["verdict"] == "unmeasured"
+    assert row["invalidated"] is True
+    assert row["triage"] is None
+    assert row["citation"] is None

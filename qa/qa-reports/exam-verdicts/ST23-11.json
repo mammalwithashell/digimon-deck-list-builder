@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T18:07:30.692386800+00:00",
+  "clauses": {
+    "ST23-11#effect#0": {
+      "clause_id": "ST23-11#effect#0",
+      "card_id": "ST23-11",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "877731aa0d6e85e4d6cfc00284dda7d4e8e7f7a79b71b564d5da0d8d7c6f2419",
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-11-effect0.yaml",
+      "recorded_at": "2026-10-05T16:37:01.578267700+00:00"
+    },
+    "ST23-11#effect#1": {
+      "clause_id": "ST23-11#effect#1",
+      "card_id": "ST23-11",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-11-effect1.yaml",
+      "recorded_at": "2026-10-05T16:37:02.214111400+00:00"
+    },
+    "ST23-11#effect#2": {
+      "clause_id": "ST23-11#effect#2",
+      "card_id": "ST23-11",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "9022368f95a8dc4934abf1dba223dc7c57f0547880c348dc7ffbe15f4de851de",
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-11-effect2.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 13 of 25 ours / 15 dcgo steps (7 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T18:07:30.692386800+00:00"
+    },
+    "ST23-11#inherited#0": {
+      "clause_id": "ST23-11#inherited#0",
+      "card_id": "ST23-11",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "da37b3513c253581acd58fb279b5a7fd68f5a7e2b7187af928bad07c0006b995",
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-11-inherited0.yaml",
+      "recorded_at": "2026-10-05T16:37:03.574351900+00:00"
+    }
+  }
+}

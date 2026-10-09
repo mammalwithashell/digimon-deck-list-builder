@@ -211,6 +211,33 @@ pub enum LoweredStep {
         /// The two materials' TOP-CARD ids, in declaration order.
         material_ids: Vec<String>,
     },
+    /// A main-phase action that names a BATTLE-AREA permanent -- an attack
+    /// (attacker, and the defender when it is not security), a `[Main]` /
+    /// link activation on a permanent, or a digivolve onto one.
+    ///
+    /// The two engines order the battle area differently: ours is play order,
+    /// DCGO's compact field is FRAME order, and permanents migrate between
+    /// frames at runtime (`ActionEncoder.BattleAreaCardIds` documents the same
+    /// gap for the recording direction). A raw slot in the action id can
+    /// therefore name a different permanent on the DCGO side -- the oracle pass
+    /// of 2026-10-05 attacked with different Digimon on the two sides
+    /// (add-card-authoring-loop task 10.1). The row carries the action id AND
+    /// the named permanents' TOP-CARD identities, resolved against our live
+    /// board at lowering time; `InputDriver.BuildMainPhaseAction` resolves them
+    /// against DCGO's own field, as it already does for DNA materials.
+    FieldAction { action_id: u16, refs: FieldRefs },
+}
+
+/// The battle-area permanents a [`LoweredStep::FieldAction`] names, as TOP-CARD
+/// ids. Each is `None` when the action does not name that role (a security
+/// attack has no defender; only a digivolve has a digivolve target).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct FieldRefs {
+    pub attacker: Option<String>,
+    pub attack_target: Option<String>,
+    /// The permanent whose `[Main]` / link effect is activated.
+    pub permanent: Option<String>,
+    pub digivolve_target: Option<String>,
 }
 
 impl LoweredStep {
@@ -237,6 +264,9 @@ impl LoweredStep {
             // `ActivatePermanentAction`). The host pick both engines then
             // park is the NEXT scenario step's row, not this one's.
             LoweredStep::Action(_) => 1,
+            // The same one `main_phase` row, with the named permanents'
+            // identities riding beside the action id.
+            LoweredStep::FieldAction { .. } => 1,
             // One `main_phase` row carrying the action id AND both material
             // identities; DCGO asks no material prompt.
             LoweredStep::DnaDeclaration { .. } => 1,
@@ -258,12 +288,28 @@ impl LoweredStep {
     }
 }
 
+/// Which card raised a select step's prompt, captured at lowering time while
+/// the prompt is live. Introspection for authors: the card named here is the
+/// one whose DCGO script decides the prompt's shape on the oracle side.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelectSource {
+    /// Scenario step index.
+    pub step: usize,
+    /// Top-level card id of the effect's source, when the handle resolves.
+    pub card_id: Option<String>,
+    /// Our engine's `SelectionKind`, debug-formatted.
+    pub kind: String,
+    /// Our engine's prompt text.
+    pub prompt: String,
+}
+
 #[derive(Debug)]
 pub struct ScenarioAdapter {
     steps: Vec<StepSpec>,
     spec_owner: Vec<usize>,
     lowered: Vec<LoweredStep>,
     lowered_owner: Vec<usize>,
+    select_sources: Vec<SelectSource>,
     deck_p0: Vec<String>,
     deck_p1: Vec<String>,
     seed: u64,
@@ -297,6 +343,7 @@ impl ScenarioAdapter {
         // line then stalled one spec short of its own last step).
         let mut spec_owner: Vec<usize> = Vec::with_capacity(s.steps.len());
         let mut lowered = Vec::with_capacity(s.steps.len());
+        let mut select_sources: Vec<SelectSource> = Vec::new();
         // Which SCENARIO step each lowered entry came from. Usually 1:1, but a
         // step whose declaration our engine splits into several decisions
         // contributes several entries (`materials:`, `dna:`), so the job
@@ -379,6 +426,7 @@ impl ScenarioAdapter {
                 // decision as DCGO-only, and skipping it here would leave that
                 // prompt unanswered and desync every later step.
                 StepAction::Select(payload) => {
+                    select_sources.extend(select_source(&game, i));
                     let (row, wire) =
                         build_selection_row(&game, i, actor, payload, step.expect.as_ref())?;
                     check_select_expectations(&game, i, payload, step.expect.as_ref())?;
@@ -424,6 +472,7 @@ impl ScenarioAdapter {
                             "step {i}: `sim_only: true` but OUR engine has NO live prompt                              here. A sim-only row answers a decision only WE ask; with                              nothing parked it answers nothing, so drop the step (or, if                              DCGO is the side asking, use `dcgo_only: true`)."
                         ));
                     }
+                    select_sources.extend(select_source(&game, i));
                     let (row, wire) =
                         build_selection_row(&game, i, actor, payload, step.expect.as_ref())?;
                     let _ = wire;
@@ -465,7 +514,8 @@ impl ScenarioAdapter {
                         LowerError::Ambiguous { intent, matches } => format!(
                             "step {i}: {intent} is ambiguous -- {matches:?} all match. \
                              Narrow the step; picking arbitrarily would silently answer \
-                             a different question than the scenario asks."
+                             a different question than the scenario asks.{}",
+                            hand_slot_hint(&matches)
                         ),
                     })?;
 
@@ -565,7 +615,8 @@ impl ScenarioAdapter {
                         LowerError::Ambiguous { intent, matches } => format!(
                             "step {i}: {intent} is ambiguous -- {matches:?} all match. \
                              Narrow the step; picking arbitrarily would silently answer \
-                             a different question than the scenario asks."
+                             a different question than the scenario asks.{}",
+                            hand_slot_hint(&matches)
                         ),
                     })?;
 
@@ -660,6 +711,7 @@ impl ScenarioAdapter {
             seed: s.seed,
             first_player,
             card_data: card_data.clone(),
+            select_sources,
         })
     }
 
@@ -671,6 +723,7 @@ impl ScenarioAdapter {
             .iter()
             .filter_map(|l| match l {
                 LoweredStep::Action(id) => Some(*id),
+                LoweredStep::FieldAction { action_id, .. } => Some(*action_id),
                 LoweredStep::DnaDeclaration { action_id, .. } => Some(*action_id),
                 LoweredStep::EndOfTurnGate { action_id, .. } => Some(*action_id),
                 LoweredStep::SimOnlyAction(id) => Some(*id),
@@ -713,6 +766,11 @@ impl ScenarioAdapter {
     /// scenario step.
     pub fn lowered_owners(&self) -> &[usize] {
         &self.lowered_owner
+    }
+
+    /// The card that raised each select step's prompt (see [`SelectSource`]).
+    pub fn select_sources(&self) -> &[SelectSource] {
+        &self.select_sources
     }
 
     pub fn lowered_steps(&self) -> &[LoweredStep] {
@@ -1332,12 +1390,12 @@ fn classify_lowered_action(
 ) -> Result<LoweredStep, String> {
     use digimon_engine::action::explain::{explain_action, ActionKind, ActionZone};
     if game.current_phase != digimon_engine::enums::GamePhase::EndOfTurnAction {
-        return Ok(LoweredStep::Action(action_id));
+        return field_or_plain_action(game, actor, action_id);
     }
     // The park belongs to the turn player; a step someone else answers at
     // this phase is not the gate.
     if actor != game.turn_player() {
-        return Ok(LoweredStep::Action(action_id));
+        return field_or_plain_action(game, actor, action_id);
     }
     let e = explain_action(game, actor, action_id);
     match e.kind {
@@ -1394,8 +1452,60 @@ fn classify_lowered_action(
         // raw id — extending the wire mapping for those surfaces is future
         // work, and passing the id through is at worst the pre-mapping
         // behavior, not a regression.
-        _ => Ok(LoweredStep::Action(action_id)),
+        _ => field_or_plain_action(game, actor, action_id),
     }
+}
+
+/// `FieldAction` when `action_id` names a BATTLE-AREA permanent (attacker /
+/// defender, `[Main]` or link carrier, digivolve target), else `Action`.
+///
+/// Identities are the permanents' TOP-CARD ids on our live board -- the same
+/// convention `targets:` picks and DNA materials use -- because DCGO resolves
+/// the row against its own frame-ordered field, where the raw slot can name a
+/// different permanent (see [`LoweredStep::FieldAction`]). Breeding-area and
+/// security targets are not slots, so they need no identity.
+fn field_or_plain_action(game: &Game, actor: PlayerId, action_id: u16) -> Result<LoweredStep, String> {
+    use digimon_engine::action::explain::{explain_action, ActionKind, ActionZone};
+    let e = explain_action(game, actor, action_id);
+    let top = |player: PlayerId, slot: Option<u16>, role: &str| -> Result<String, String> {
+        let slot = slot.ok_or_else(|| {
+            format!("action {action_id} ({}) names a battle-area {role} with no slot", e.label)
+        })?;
+        game.player(player)
+            .battle_area
+            .get(slot as usize)
+            .map(|p| p.top_card().card_id(&game.card_data).to_string())
+            .ok_or_else(|| {
+                format!(
+                    "action {action_id} ({}) names player {player}'s battle slot {slot} as its \
+                     {role}, but that player has {} permanent(s)",
+                    e.label,
+                    game.player(player).battle_area.len()
+                )
+            })
+    };
+    let battle = |zone: Option<ActionZone>| zone == Some(ActionZone::Battle);
+    let refs = match e.kind {
+        ActionKind::Attack if battle(e.source_zone) => FieldRefs {
+            attacker: Some(top(actor, e.source_index, "attacker")?),
+            attack_target: if battle(e.target_zone) {
+                Some(top(1 - actor, e.target_index, "attack target")?)
+            } else {
+                None
+            },
+            ..FieldRefs::default()
+        },
+        ActionKind::FieldEffect if battle(e.source_zone) => FieldRefs {
+            permanent: Some(top(actor, e.source_index, "effect carrier")?),
+            ..FieldRefs::default()
+        },
+        ActionKind::Digivolve if battle(e.target_zone) => FieldRefs {
+            digivolve_target: Some(top(actor, e.target_index, "digivolve target")?),
+            ..FieldRefs::default()
+        },
+        _ => return Ok(LoweredStep::Action(action_id)),
+    };
+    Ok(LoweredStep::FieldAction { action_id, refs })
 }
 
 /// Resolve one authored `select: { cards: [ID], ordinal|trigger }` answer
@@ -1772,6 +1882,32 @@ fn build_dcgo_only_wire(payload: &SelectPayload) -> Result<SelectWire, String> {
     Ok(wire)
 }
 
+/// The live prompt's source, if one is parked (see [`SelectSource`]).
+/// When every ambiguous match is a play from hand, name the `hand.<i>` slots
+/// that pin one (`from: hand.<i>`); empty otherwise.
+fn hand_slot_hint(matches: &[u16]) -> String {
+    use digimon_engine::action::space::{PLAY_HAND_END, PLAY_HAND_START};
+    let slots: Vec<String> = matches
+        .iter()
+        .filter(|id| (PLAY_HAND_START..PLAY_HAND_END).contains(*id))
+        .map(|id| format!("hand.{}", id - PLAY_HAND_START))
+        .collect();
+    if slots.is_empty() || slots.len() != matches.len() {
+        return String::new();
+    }
+    format!(" Pin one with `from: hand.<i>`: {}.", slots.join(", "))
+}
+
+fn select_source(game: &Game, step: usize) -> Option<SelectSource> {
+    let p = game.pending_selection.as_ref()?;
+    Some(SelectSource {
+        step,
+        card_id: game.card_data_for_handle(p.source_card).map(|d| d.card_id.clone()),
+        kind: format!("{:?}", p.kind),
+        prompt: p.prompt.clone(),
+    })
+}
+
 fn build_selection_row(
     game: &Game,
     i: usize,
@@ -2046,6 +2182,15 @@ fn build_selection_row(
     Ok((row, wire))
 }
 
+/// Guard that detects when the driver (harness) sent a trailing PASS to close a
+/// prompt, as opposed to a decline or the engine auto-resolving.
+///
+/// Returns false for a row's own scripted decline (payload_pick_count == 0),
+/// which emits PASS as the decline itself, not a trailing close.
+fn is_driver_trailing_pass(action_id: u16, picks_done: usize, n_picks: usize) -> bool {
+    action_id == digimon_engine::action::space::PASS && n_picks > 0 && picks_done >= n_picks
+}
+
 /// Advance the lowering game through one selection row with the SAME resolver
 /// the replay driver uses (`resolve_next` + `decode_action` until `Ok(None)`),
 /// so later steps lower against the post-selection state. Reused, not
@@ -2071,6 +2216,14 @@ fn advance_through_selection(
         match resolve_next(game, row, picks_done) {
             Ok(None) => return Ok(()),
             Ok(Some(id)) => {
+                if is_driver_trailing_pass(id, picks_done, payload_pick_count(row)) {
+                    let kind = game.pending_selection.as_ref().map(|p| p.kind);
+                    println!(
+                        "  note: step {i} the DRIVER sent a trailing PASS to close {kind:?} \
+                         after the row's {} pick(s) -- not the engine",
+                        payload_pick_count(row)
+                    );
+                }
                 game.decode_action(id, actor);
                 picks_done += 1;
                 // Same safety valve as the replay driver: a payload cannot
@@ -2376,6 +2529,22 @@ steps:
             "ST1-08", // p1's turn-2 draw — NOT a second ST1-03
         ]);
         (p0, p1)
+    }
+
+    /// Which card raised each select step's prompt, captured while it is live
+    /// -- the introspection an author (or the card loop's author stage) needs to
+    /// know which card's DCGO script to read for the prompt shape.
+    #[test]
+    fn each_select_step_records_the_card_that_raised_its_prompt() {
+        let card_data = test_support::load_card_data();
+        let (p0, p1) = select_line_decks();
+        let s = Scenario::from_yaml(SELECT_LINE).unwrap();
+        let a = ScenarioAdapter::from_scenario(&s, p0, p1, &card_data).expect("lowers");
+        let sources = a.select_sources();
+        assert_eq!(sources.len(), 1, "{sources:?}");
+        assert_eq!(sources[0].step, 5);
+        assert_eq!(sources[0].card_id.as_deref(), Some("ST1-15"));
+        assert!(!sources[0].kind.is_empty());
     }
 
     #[test]
@@ -2971,6 +3140,128 @@ steps:
         assert_eq!(fold_wire_rows_by_owner(&lowered, &owners, 3), vec![1, 1, 1]);
     }
 
+    /// Battle-area slot addressing (add-card-authoring-loop task 10.1). DCGO
+    /// decodes a raw attack / `[Main]` / digivolve id against its FRAME-ordered
+    /// compact field; ours is play order. After P1 plays Agumon then Biyomon,
+    /// our `field.1` is Biyomon while DCGO's compact slot 1 can be Agumon -- the
+    /// oracle pass of 2026-10-05 attacked with different Digimon on the two
+    /// sides (BT26-103-effect1 and five more). So a main-phase action that names
+    /// a battle-area permanent must carry that permanent's IDENTITY, resolved
+    /// against our live board at lowering time, exactly as `targets:` picks and
+    /// DNA materials already do.
+    const TWO_DIGIMON_LINE: &str = r#"
+card: ST1-03
+clause: ST1-03#effect#0
+seed: 7
+decks:
+  p0: { stack: [], rest: simple }
+  p1: { stack: [ST1-02, ST1-03, ST1-05], rest: simple }
+steps:
+  - actor: 0
+    do: { pass: {} }
+  - actor: 0
+    do: { pass: {} }
+  - actor: 1
+    do: { pass: {} }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+  - actor: 0
+    do: { pass: {} }
+  - actor: 0
+    do: { pass: {} }
+  - actor: 1
+    do: { pass: {} }
+"#;
+
+    fn two_digimon_line(last: &str) -> ScenarioAdapter {
+        let card_data = test_support::load_card_data();
+        let text = format!("{TWO_DIGIMON_LINE}  - actor: 1\n    do: {last}\n");
+        let s = Scenario::from_yaml(&text).unwrap();
+        // `from_scenario` takes ORDERED decks: stack P1's opening hand so
+        // Agumon, Biyomon and the ST1-05 digivolution are all in it.
+        let p0 = st1_deck_stacked(&[]);
+        let p1 = st1_deck_stacked(&["ST1-02", "ST1-03", "ST1-05", "ST1-06", "ST1-07"]);
+        ScenarioAdapter::from_scenario(&s, p0, p1, &card_data).expect("line lowers")
+    }
+
+    #[test]
+    fn an_ambiguous_hand_play_suggests_pinning_a_hand_slot() {
+        // Two Koromon-line Agumon copies in hand: `play: {card: ST1-03}`
+        // matches both, and the refusal should say how to pick one.
+        let card_data = test_support::load_card_data();
+        let text = r#"
+card: ST1-03
+clause: ST1-03#effect#0
+seed: 7
+decks:
+  p0: { stack: [], rest: simple }
+  p1: { stack: [ST1-03, ST1-03, ST1-05, ST1-06, ST1-07], rest: simple }
+steps:
+  - actor: 0
+    do: { pass: {} }
+  - actor: 0
+    do: { pass: {} }
+  - actor: 1
+    do: { pass: {} }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+"#;
+        let s = Scenario::from_yaml(text).unwrap();
+        let p0 = st1_deck_stacked(&[]);
+        let p1 = st1_deck_stacked(&["ST1-03", "ST1-03", "ST1-05", "ST1-06", "ST1-07"]);
+        let err = ScenarioAdapter::from_scenario(&s, p0, p1, &card_data).err().expect("ambiguous");
+        assert!(err.contains("is ambiguous"), "{err}");
+        assert!(err.contains("Pin one with `from: hand.<i>`"), "{err}");
+        assert_eq!(err.matches("hand.").count() - 1, 2, "one hint per matching copy: {err}");
+    }
+
+    #[test]
+    fn an_attack_carries_the_attackers_identity_not_just_its_slot() {
+        let a = two_digimon_line("{ attack: { attacker: field.1, target: security } }");
+        match a.lowered_steps().last().unwrap() {
+            LoweredStep::FieldAction { refs, .. } => {
+                assert_eq!(refs.attacker.as_deref(), Some("ST1-03"), "field.1 is the 2nd-played Digimon");
+                assert_eq!(refs.attack_target, None, "a security attack names no defender");
+                assert_eq!(refs.permanent, None);
+                assert_eq!(refs.digivolve_target, None);
+            }
+            other => panic!("expected a FieldAction, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_digivolve_carries_the_targets_identity_not_just_its_slot() {
+        let a = two_digimon_line("{ digivolve: { from: field.1, using: ST1-05 } }");
+        match a.lowered_steps().last().unwrap() {
+            LoweredStep::FieldAction { refs, .. } => {
+                assert_eq!(refs.digivolve_target.as_deref(), Some("ST1-03"));
+                assert_eq!(refs.attacker, None);
+            }
+            other => panic!("expected a FieldAction, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn actions_that_name_no_battle_permanent_stay_plain() {
+        let a = two_digimon_line("{ pass: {} }");
+        let steps = a.lowered_steps();
+        // pass, pass, pass, play, play, pass, pass, pass, pass
+        assert!(matches!(steps[3], LoweredStep::Action(_)), "play-from-hand: {:?}", steps[3]);
+        assert!(matches!(steps[4], LoweredStep::Action(_)), "play-from-hand: {:?}", steps[4]);
+        assert!(steps.iter().all(|s| !matches!(s, LoweredStep::FieldAction { .. })), "{steps:?}");
+    }
+
+    #[test]
+    fn a_field_action_writes_one_wire_row_and_keeps_its_action_id() {
+        let a = two_digimon_line("{ attack: { attacker: field.1, target: security } }");
+        let last = a.lowered_steps().last().unwrap().clone();
+        assert_eq!(last.dcgo_wire_rows(), 1);
+        let LoweredStep::FieldAction { action_id, .. } = last else { unreachable!() };
+        assert_eq!(a.lowered_action_ids().last().copied(), Some(action_id));
+    }
+
     #[test]
     fn an_illegal_line_fails_to_build_not_at_run_time() {
         // The whole point of lowering up front: a malformed scenario must fail
@@ -2985,5 +3276,22 @@ steps:
         let err =
             ScenarioAdapter::from_scenario(&s, deck.clone(), deck, &card_data).unwrap_err();
         assert!(err.contains("ZZ99-999"), "got: {err}");
+    }
+
+    #[test]
+    fn is_driver_trailing_pass_guards_against_scripted_decline() {
+        use digimon_engine::action::space::PASS;
+
+        // False for scripted decline: (PASS, 0, 0) — the row's own decline.
+        assert!(!is_driver_trailing_pass(PASS, 0, 0));
+
+        // True for trailing PASS after the row's one pick: (PASS, 1, 1).
+        assert!(is_driver_trailing_pass(PASS, 1, 1));
+
+        // False for non-PASS action even after picks: (some_id, 1, 1).
+        assert!(!is_driver_trailing_pass(99, 1, 1));
+
+        // False for PASS as the row's own first answer: (PASS, 0, 1).
+        assert!(!is_driver_trailing_pass(PASS, 0, 1));
     }
 }

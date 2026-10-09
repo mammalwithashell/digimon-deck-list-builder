@@ -1,4 +1,4 @@
-# Exam scenario: e-Pulse (ST23-15), clause ST23-15#effect#3 --
+# Exam scenario: e-Pulse (ST23-15), clause ST23-15#security#0 --
 # "[Security] Activate this card's [Main] effects."
 #
 # PROVISIONAL: the assert block is OUR engine's result, not backfilled from
@@ -27,7 +27,7 @@
 # PROMPT SHAPE (ST23-15.yaml DCGO crosscheck): SecuritySkill
 # AddActivateMainOptionSecurityEffect -> the [Main] body.
 card: ST23-15
-clause: ST23-15#effect#3
+clause: ST23-15#security#0
 seed: 424242
 decks:
   p0:

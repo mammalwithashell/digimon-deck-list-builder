@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-05T18:07:26.738482400+00:00",
+  "clauses": {
+    "ST23-01#inherited#0": {
+      "clause_id": "ST23-01#inherited#0",
+      "card_id": "ST23-01",
+      "verdict": "diverged",
+      "label": "Inherited Effect",
+      "text_sha256": "04087126c76dff75c72a5327a79ee8ff6d6ee337bf3ccf190a110feeb9d34a7c",
+      "scenario_path": "qa/dcgo-exams/ST23/ST23-01-inherited0.yaml",
+      "reason": "TRUNCATED, no divergence found (compared 8 of 15 ours / 11 dcgo steps (4 sim-only row(s) with no DCGO prompt + 3 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-10-05T18:07:26.738482400+00:00"
+    }
+  }
+}

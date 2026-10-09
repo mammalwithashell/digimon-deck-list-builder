@@ -75,12 +75,22 @@ def _lists(entry: dict) -> list[list[str]]:
     return out
 
 
-def card_frequency(entry: dict) -> dict[str, int]:
-    """``card_id -> how many LISTS contain it`` (copies within a list count once)."""
+def decklists(entry: dict) -> list[list[str]]:
+    """Public form of `_lists`: every decklist of an archetype entry."""
+    return _lists(entry)
+
+
+def list_frequency(lists: list[list[str]]) -> dict[str, int]:
+    """``card_id -> how many of ``lists`` contain it`` (copies count once)."""
     counts: Counter[str] = Counter()
-    for cards in _lists(entry):
+    for cards in lists:
         counts.update(set(cards))
     return dict(counts)
+
+
+def card_frequency(entry: dict) -> dict[str, int]:
+    """``card_id -> how many LISTS contain it`` (copies within a list count once)."""
+    return list_frequency(_lists(entry))
 
 
 def pool(entry: dict) -> list[str]:
@@ -96,10 +106,19 @@ def core(entry: dict, fraction: float = DEFAULT_CORE_FRACTION) -> dict:
     recompute them -- which is how a report ends up quoting a fraction it did
     not actually apply. The threshold is ``ceil(list_count * fraction)``.
     """
-    lists = _lists(entry)
+    return core_of_lists(_lists(entry), fraction)
+
+
+def core_of_lists(lists: list[list[str]], fraction: float = DEFAULT_CORE_FRACTION) -> dict:
+    """`core` over any decklists, not only a deck-library entry's.
+
+    The single implementation of the core rule: `core(entry)` delegates here,
+    and the card loop (`tools.card_loop.workset`) calls it for `--decklists`
+    files, so the threshold can never be computed two different ways.
+    """
     list_count = len(lists)
     threshold = ceil(list_count * fraction) if list_count else 0
-    freq = card_frequency(entry)
+    freq = list_frequency(lists)
     return {
         "cards": sorted(c for c, n in freq.items() if n >= threshold) if list_count else [],
         "threshold": threshold,

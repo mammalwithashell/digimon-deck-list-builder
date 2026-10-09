@@ -1,0 +1,110 @@
+# Exam scenario: EX10-028 Landramon, clause EX10-028#effect#0 --
+# "[On Play] [When Digivolving] By trashing any 1 card with the [Mineral] or [Rock]
+#  trait from your Digimon's digivolution cards, 1 of your Digimon with the [Mineral]
+#  or [Rock] trait gains <Reboot>, <Blocker> and +3000 DP until your opponent's turn
+#  ends."
+#
+# THE LINE (the [When Digivolving] timing): Tumblemon (EX10-003, Rock egg) ->
+# Sunarizamon (EX10-025, cost 0) -> Landramon (EX10-028, Lv.4, cost 2). Landramon's
+# optional "by trashing" cost is paid with Tumblemon (Rock, and -- unlike every
+# Sunarizamon -- it carries NO "when effects trash this card" trigger, so the line
+# measures Landramon's own clause and not the known source-trash-trigger ordering
+# finding G-ENGINE-SOURCE-TRASH-TRIGGER-RESOLVES-MID-EFFECT). Landramon itself is
+# the only [Mineral]/[Rock] Digimon on top, so the grant target is Landramon.
+# The [On Play] timing is NOT exercised by this line.
+card: EX10-028
+clause: EX10-028#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the two cards under the line + inert Lv.3 filler
+      - EX10-025
+      - EX10-028
+      - BT16-082
+      - BT16-082
+      - BT16-082
+      # security (5-9): never checked
+      - EX10-032
+      - EX10-032
+      - EX10-032
+      - EX10-032
+      - BT16-082
+      # (10) p0's T3 draw
+      - EX10-033
+    rest: rocks-exam-tumble
+  p1:
+    stack:
+      # hand (0-4)
+      - BT16-082
+      - BT16-082
+      - BT16-082
+      - BT16-082
+      - EX10-033
+      # security (5-9)
+      - EX10-032
+      - EX10-032
+      - EX10-032
+      - EX10-032
+      - EX10-033
+      # (10) p1's T2 draw
+      - EX10-033
+    rest: rocks-exam-tumble
+steps:
+  # T1 (p0): hatch Tumblemon, end turn.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): digivolve in breeding (Sunarizamon, cost 0) and pass.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX10-025 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0): promote Sunarizamon, digivolve onto Landramon (cost 2).
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX10-028 } }
+    expect: { prompt: main_phase }
+  # Landramon [When Digivolving] optional gate: yes.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # THE COST: trash Tumblemon from the sources. DCGO: SelectPermanentEffect on the
+  # carrier, then SelectCardEffect on its digivolution cards; ours: one SourceMulti
+  # pick naming the source.
+  - actor: 0
+    do: { select: { cards: [EX10-028], dcgo_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { cards: [EX10-003], sim_only: true } }
+  - actor: 0
+    do: { select: { cards: [EX10-003], dcgo_only: true } }
+    expect: { prompt: SelectCardEffect }
+  # THE GRANT: pick the Digimon that gains Reboot / Blocker / +3000 (Landramon).
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }

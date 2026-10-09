@@ -60,16 +60,23 @@ pub fn list() -> Vec<serde_json::Value> {
             "description": "Lint a draft scenario BEFORE running it. Catches unknown clause ids \
                 (when a clause-text book is available — see `clause_text_json`), verbs outside \
                 the vocabulary, prompt kinds outside the 13, a stack: missing a card the line \
-                names, and asserts over security contents. Milliseconds; cheaper than sim-only \
-                and far cheaper than Unity.",
+                names, asserts over security contents, and (deck-budget) a stack: holding more \
+                copies than the rest: deck's main deck, or an unknown rest: deck. Milliseconds; \
+                cheaper than sim-only and far cheaper than Unity.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
+                    "decks": {"type": "string", "description": "Deck-book JSON for the deck-budget rule; default: the pool naming the scenario's decks"},
                     "yaml": {"type": "string", "description": "Scenario YAML text"},
                     "clause_text_json": {"type": "string",
                         "description": "Path to a `clause_coverage extract` output; defaults to \
                             the repo's tracked extract (see exam_status). Without one, the \
-                            unknown-clause-id check degrades to a card-prefix check only."}
+                            unknown-clause-id check degrades to a card-prefix check only."},
+                    "interaction_denominator": {"type": "string",
+                        "description": "Path to the interaction denominator; defaults to \
+                            data/interaction_denominator.json. An `interaction:` id absent from \
+                            it is an orphan; with no denominator at all, interaction scenarios \
+                            are refused (legacy clause scenarios are unaffected)."}
                 },
                 "required": ["yaml"]
             }
@@ -97,30 +104,46 @@ pub fn list() -> Vec<serde_json::Value> {
         }),
         json!({
             "name": "run_scenario",
-            "description": "Run one scenario file and return the structured diff report. \
-                sim_only=true runs our engine alone (milliseconds, no Unity) and CANNOT find a \
-                new divergence — it only re-checks what an oracle previously confirmed. Only an \
-                oracle pass moves a clause to confirmed. sim_only=false does NOT reach the \
-                oracle today — it is refused with a clear error (same refusal as `exam_probe`; \
-                there is no DCGO state sidecar behind a bare scenario path).",
+            "description": "Run one committed scenario file. sim_only=true (default) runs our \
+                engine alone (milliseconds, no Unity) and CANNOT find a new divergence -- it only \
+                re-checks what an oracle previously confirmed. sim_only=false submits the \
+                scenario to the oracle node, waits for THIS job's own result, diffs, records the \
+                verdict and backfills asserts -- one call, ~15-60 s; it preflights node health \
+                first and refuses on NO-GO or when no player is live. Returns the verdict \
+                (confirmed / diverged / unmeasured), first divergence, compared-row counts, job \
+                id and sidecar. The deck book is found beside the scenario (or anywhere under \
+                qa/dcgo-exams) unless `decks` names one.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "path": {"type": "string"},
-                    "sim_only": {"type": "boolean", "description": "Default true"}
+                    "sim_only": {"type": "boolean", "description": "Default true"},
+                    "decks": {"type": "string", "description": "Deck-book JSON overriding the auto-found one"},
+                    "harness_root": {"type": "string", "description": "Oracle harness root; default DCGO_HARNESS_ROOT / the player's root"},
+                    "build": {"type": "string", "description": "Player build dir (preflight action-space gate, verdict stamp)"},
+                    "timeout_seconds": {"type": "integer", "description": "Oracle wait, default 300"}
                 },
                 "required": ["path"]
             }
         }),
         json!({
             "name": "exam_probe",
-            "description": "Try a line WITHOUT committing a scenario file. sim_only \n                (the DEFAULT, and today the ONLY working mode) lowers it in our engine \n                alone and CANNOT see DCGO's prompt sequence -- which is where lines \n                actually break, so a clean result here is NOT confirmation. sim_only=false \n                returns a clear error until an oracle node can be queued: to get a real \n                oracle answer today, submit the scenario through the harness queue and \n                diff against the sidecar it writes.",
+            "description": "Try a line WITHOUT committing a scenario file. sim_only (the \
+                default) lowers it in our engine alone and CANNOT see DCGO's prompt sequence -- \
+                where lines actually break -- so a clean result is NOT confirmation. \
+                sim_only=false submits it to the oracle node, waits for this job's own result \
+                and diffs (one call, ~15-60 s; preflights node health first). A probe records no \
+                verdict; a confirmed probe returns `backfilled_yaml` to commit and run_scenario.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "yaml": {"type": "string", "description": "Scenario YAML text"},
-                    "sim_only": {"type": "boolean", "description": "Default true; false returns \
-                        an error today (no oracle wiring yet) -- see the description above"}
+                    "sim_only": {"type": "boolean", "description": "Default true"},
+                    "inspect_step": {"type": "integer", "description": "Sim-only: also return our live prompt (kind, optional, candidates by card) and the board BEFORE this step -- works on a line that stalls or fails its asserts"},
+                    "decks": {"type": "string", "description": "Deck-book JSON overriding the auto-found one"},
+                    "harness_root": {"type": "string", "description": "Oracle harness root; default DCGO_HARNESS_ROOT / the player's root"},
+                    "build": {"type": "string", "description": "Player build dir (preflight action-space gate)"},
+                    "timeout_seconds": {"type": "integer", "description": "Oracle wait, default 300"}
                 },
                 "required": ["yaml"]
             }
@@ -163,7 +186,8 @@ pub fn list() -> Vec<serde_json::Value> {
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "build": {"type": "string", "description": "Player build directory"}
+                    "build": {"type": "string", "description": "Player build directory"},
+                    "harness_root": {"type": "string", "description": "Harness root; default DCGO_HARNESS_ROOT / the player's root (never the server's --root)"}
                 }
             }
         }),
@@ -214,6 +238,11 @@ pub fn bool_arg(params: &serde_json::Value, key: &str, default: bool) -> bool {
 }
 
 /// An optional integer with an explicit default.
+/// An optional non-negative integer argument.
+pub fn opt_usize_arg(params: &serde_json::Value, key: &str) -> Option<usize> {
+    arguments(params).get(key).and_then(|v| v.as_u64()).map(|n| n as usize)
+}
+
 pub fn usize_arg(params: &serde_json::Value, key: &str, default: usize) -> usize {
     arguments(params)
         .get(key)

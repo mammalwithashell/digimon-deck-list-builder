@@ -233,10 +233,13 @@ ssh -i "$SSH_KEY" -p $POD_PORT root@$POD_IP \
   "mkdir -p /workspace/{runs,models,data,jobs}"
 
 # Card data — only the JSONs the engine reads at runtime. deck_library.json
-# is the big one (~5 MB). Skip if not staging gauntlet/generalist mode.
+# is the big one (~5 MB). oracle_readiness.json is REQUIRED whenever the
+# gauntlet/generalist pool or a pool snapshot loads: training refuses to start
+# without it (the oracle readiness gate, TRAINING_RUNBOOK.md). The pod has no
+# qa/, so copy the committed file rather than regenerating it there.
 scp -i "$SSH_KEY" -P $POD_PORT \
   data/cards.json data/deck_library.json data/archetype_aliases.json \
-  data/card_overrides.json data/tested_cards.json \
+  data/card_overrides.json data/tested_cards.json data/oracle_readiness.json \
   root@$POD_IP:/workspace/data/
 
 # Job configs — cloud-side job_name and output.name SHOULD be prefixed
