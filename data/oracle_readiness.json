@@ -8269,25 +8269,22 @@
     "BT13-060": {
       "blocking": [
         "BT13-060#effect#0",
-        "BT13-060#effect#1",
         "BT13-060#effect#2",
-        "probe:BT13-060#effect#1:scope:neg",
-        "probe:BT13-060#effect#2:scope:neg",
         "qa:Q2304",
         "qa:Q2305"
       ],
       "by_interaction_verdict": {
-        "confirmed": 0,
-        "diverged": 0,
+        "confirmed": 2,
+        "diverged": 1,
         "unavailable": 0,
-        "unmeasured": 4,
+        "unmeasured": 1,
         "unreachable": 0
       },
       "by_verdict": {
-        "confirmed": 0,
-        "diverged": 0,
+        "confirmed": 1,
+        "diverged": 1,
         "unavailable": 0,
-        "unmeasured": 3,
+        "unmeasured": 1,
         "unreachable": 0
       },
       "status": "not_ready",
@@ -14928,18 +14925,15 @@
     },
     "BT16-082": {
       "blocking": [
-        "probe:BT16-082#effect#0:optional_decline",
-        "probe:BT16-082#effect#0:scope:neg",
-        "qa:Q2668",
         "qa:Q2669",
         "qa:Q2670",
         "qa:Q2671"
       ],
       "by_interaction_verdict": {
-        "confirmed": 0,
-        "diverged": 0,
+        "confirmed": 3,
+        "diverged": 1,
         "unavailable": 0,
-        "unmeasured": 6,
+        "unmeasured": 2,
         "unreachable": 0
       },
       "by_verdict": {
@@ -40942,24 +40936,21 @@
     },
     "BT26-005": {
       "blocking": [
-        "BT26-005#inherited#0",
         "probe:BT26-005#inherited#0:leave_play",
-        "probe:BT26-005#inherited#0:optional_decline",
-        "probe:BT26-005#inherited#0:scope:neg",
-        "qa:Q6958"
+        "probe:BT26-005#inherited#0:optional_decline"
       ],
       "by_interaction_verdict": {
-        "confirmed": 0,
-        "diverged": 0,
+        "confirmed": 2,
+        "diverged": 2,
         "unavailable": 0,
-        "unmeasured": 4,
+        "unmeasured": 0,
         "unreachable": 0
       },
       "by_verdict": {
-        "confirmed": 0,
+        "confirmed": 1,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 1,
+        "unmeasured": 0,
         "unreachable": 0
       },
       "status": "not_ready",
@@ -41702,28 +41693,22 @@
       "total_interactions": 9
     },
     "BT26-036": {
-      "blocking": [
-        "BT26-036#effect#0",
-        "BT26-036#effect#1",
-        "BT26-036#inherited#0",
-        "probe:BT26-036#inherited#0:optional_decline",
-        "probe:BT26-036#inherited#0:scope:neg"
-      ],
+      "blocking": [],
       "by_interaction_verdict": {
-        "confirmed": 0,
+        "confirmed": 2,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 2,
+        "unmeasured": 0,
         "unreachable": 0
       },
       "by_verdict": {
-        "confirmed": 1,
+        "confirmed": 4,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 3,
+        "unmeasured": 0,
         "unreachable": 0
       },
-      "status": "not_ready",
+      "status": "ready",
       "total_clauses": 4,
       "total_interactions": 2
     },
@@ -41998,26 +41983,21 @@
     },
     "BT26-049": {
       "blocking": [
-        "BT26-049#effect#0",
-        "BT26-049#effect#1",
-        "BT26-049#effect#2",
         "BT26-049#inherited#0",
-        "probe:BT26-049#effect#1:scope:neg",
-        "probe:BT26-049#effect#2:optional_decline",
-        "probe:BT26-049#effect#2:scope:neg"
+        "probe:BT26-049#effect#2:optional_decline"
       ],
       "by_interaction_verdict": {
-        "confirmed": 0,
+        "confirmed": 2,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 3,
+        "unmeasured": 1,
         "unreachable": 0
       },
       "by_verdict": {
-        "confirmed": 0,
+        "confirmed": 3,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 4,
+        "unmeasured": 1,
         "unreachable": 0
       },
       "status": "not_ready",
@@ -42026,12 +42006,8 @@
     },
     "BT26-050": {
       "blocking": [
-        "BT26-050#effect#0",
-        "BT26-050#effect#1",
         "BT26-050#effect#2",
-        "BT26-050#effect#3",
         "BT26-050#effect#4",
-        "BT26-050#effect#5",
         "BT26-050#effect#6",
         "probe:BT26-050#effect#2:optional_decline",
         "probe:BT26-050#effect#2:scope:neg",
@@ -42051,10 +42027,10 @@
         "unreachable": 0
       },
       "by_verdict": {
-        "confirmed": 0,
-        "diverged": 0,
+        "confirmed": 4,
+        "diverged": 1,
         "unavailable": 0,
-        "unmeasured": 7,
+        "unmeasured": 2,
         "unreachable": 0
       },
       "status": "not_ready",
@@ -42336,28 +42312,22 @@
       "total_interactions": 4
     },
     "BT26-065": {
-      "blocking": [
-        "BT26-065#effect#0",
-        "BT26-065#effect#1",
-        "BT26-065#inherited#0",
-        "BT26-065#inherited#1",
-        "qa:Q7088"
-      ],
+      "blocking": [],
       "by_interaction_verdict": {
-        "confirmed": 0,
+        "confirmed": 1,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 1,
+        "unmeasured": 0,
         "unreachable": 0
       },
       "by_verdict": {
-        "confirmed": 0,
+        "confirmed": 3,
         "diverged": 1,
         "unavailable": 0,
-        "unmeasured": 3,
+        "unmeasured": 0,
         "unreachable": 0
       },
-      "status": "not_ready",
+      "status": "ready",
       "total_clauses": 4,
       "total_interactions": 1
     },
@@ -42472,12 +42442,6 @@
     },
     "BT26-072": {
       "blocking": [
-        "BT26-072#effect#0",
-        "BT26-072#effect#1",
-        "BT26-072#inherited#0",
-        "probe:BT26-072#effect#1:optional_decline",
-        "probe:BT26-072#effect#2:optional_decline",
-        "probe:BT26-072#effect#2:scope:neg",
         "probe:BT26-072#inherited#0:leave_play",
         "qa:Q7094",
         "qa:Q7095",
@@ -42485,17 +42449,17 @@
         "qa:Q7097"
       ],
       "by_interaction_verdict": {
-        "confirmed": 0,
+        "confirmed": 3,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 8,
+        "unmeasured": 5,
         "unreachable": 0
       },
       "by_verdict": {
-        "confirmed": 1,
+        "confirmed": 4,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 3,
+        "unmeasured": 0,
         "unreachable": 0
       },
       "status": "not_ready",
@@ -42592,7 +42556,6 @@
     },
     "BT26-076": {
       "blocking": [
-        "BT26-076#effect#0",
         "BT26-076#effect#1",
         "BT26-076#effect#2",
         "BT26-076#inherited#0",
@@ -42612,10 +42575,10 @@
         "unreachable": 0
       },
       "by_verdict": {
-        "confirmed": 0,
-        "diverged": 0,
+        "confirmed": 1,
+        "diverged": 1,
         "unavailable": 0,
-        "unmeasured": 4,
+        "unmeasured": 2,
         "unreachable": 0
       },
       "status": "not_ready",
@@ -42768,35 +42731,28 @@
     },
     "BT26-082": {
       "blocking": [
-        "BT26-082#effect#0",
         "BT26-082#effect#1",
-        "BT26-082#effect#2",
-        "BT26-082#effect#3",
         "BT26-082#inherited#0",
-        "probe:BT26-082#effect#2:optional_decline",
-        "probe:BT26-082#effect#2:scope:neg",
         "probe:BT26-082#effect#3:leave_play",
-        "probe:BT26-082#effect#3:optional_decline",
         "qa:Q7117",
         "qa:Q7118",
-        "qa:Q7119",
         "qa:Q7120",
         "qa:Q7121",
         "qa:Q7122",
         "qa:Q7123"
       ],
       "by_interaction_verdict": {
-        "confirmed": 0,
-        "diverged": 0,
+        "confirmed": 4,
+        "diverged": 3,
         "unavailable": 0,
-        "unmeasured": 11,
+        "unmeasured": 4,
         "unreachable": 0
       },
       "by_verdict": {
-        "confirmed": 0,
+        "confirmed": 3,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 5,
+        "unmeasured": 2,
         "unreachable": 0
       },
       "status": "not_ready",
@@ -43049,12 +43005,6 @@
     },
     "BT26-091": {
       "blocking": [
-        "BT26-091#effect#0",
-        "BT26-091#effect#1",
-        "BT26-091#security#0",
-        "probe:BT26-091#effect#0:optional_decline",
-        "probe:BT26-091#effect#1:optional_decline",
-        "probe:BT26-091#effect#1:scope:neg",
         "qa:Q7144",
         "qa:Q7145",
         "qa:Q7146",
@@ -43062,17 +43012,17 @@
         "qa:Q7148"
       ],
       "by_interaction_verdict": {
-        "confirmed": 0,
-        "diverged": 0,
+        "confirmed": 3,
+        "diverged": 1,
         "unavailable": 0,
-        "unmeasured": 8,
+        "unmeasured": 4,
         "unreachable": 0
       },
       "by_verdict": {
-        "confirmed": 0,
+        "confirmed": 3,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 3,
+        "unmeasured": 0,
         "unreachable": 0
       },
       "status": "not_ready",
@@ -43140,29 +43090,23 @@
     },
     "BT26-094": {
       "blocking": [
-        "BT26-094#effect#1",
-        "BT26-094#security#0",
-        "probe:BT26-094#effect#0:optional_decline",
-        "probe:BT26-094#effect#1:granted_keyword",
-        "probe:BT26-094#effect#1:optional_decline",
-        "probe:BT26-094#effect#1:scope:neg",
         "qa:Q7156",
         "qa:Q7157",
         "qa:Q7158",
         "qa:Q7159"
       ],
       "by_interaction_verdict": {
-        "confirmed": 0,
+        "confirmed": 4,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 8,
+        "unmeasured": 4,
         "unreachable": 0
       },
       "by_verdict": {
-        "confirmed": 1,
+        "confirmed": 3,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 2,
+        "unmeasured": 0,
         "unreachable": 0
       },
       "status": "not_ready",
@@ -78840,7 +78784,6 @@
         "P-235#effect#0",
         "P-235#effect#1",
         "P-235#effect#2",
-        "P-235#security#0",
         "probe:P-235#effect#2:optional_decline"
       ],
       "by_interaction_verdict": {
@@ -78851,10 +78794,10 @@
         "unreachable": 0
       },
       "by_verdict": {
-        "confirmed": 0,
+        "confirmed": 1,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 4,
+        "unmeasured": 3,
         "unreachable": 0
       },
       "status": "not_ready",
@@ -86805,17 +86748,17 @@
   ],
   "interactions": {
     "by_verdict": {
-      "confirmed": 0,
-      "diverged": 0,
+      "confirmed": 26,
+      "diverged": 8,
       "unavailable": 0,
-      "unmeasured": 13612,
+      "unmeasured": 13578,
       "unreachable": 0
     },
     "gating_total": 13612
   },
   "summary": {
-    "not_ready": 3006,
-    "ready": 39
+    "not_ready": 3004,
+    "ready": 41
   },
   "version": 2
 }
