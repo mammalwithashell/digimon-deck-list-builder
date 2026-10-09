@@ -7895,6 +7895,7 @@
       "predicates": [
         "all_of",
         "any_of",
+        "binding_exists",
         "count_gte",
         "effect_text_contains",
         "kind",
@@ -7913,6 +7914,7 @@
       "verbs": [
         "activation_cost",
         "draw",
+        "if",
         "play_from_security",
         "play_from_trash_free",
         "select_hand",
@@ -27256,6 +27258,7 @@
       "AD1-024",
       "BT13-103",
       "BT21-021",
+      "BT24-088",
       "EX11-016",
       "EX9-021",
       "LM-027",
@@ -38459,6 +38462,7 @@
       "BT24-059",
       "BT24-067",
       "BT24-082",
+      "BT24-088",
       "BT24-091",
       "BT24-098",
       "BT24-099",
