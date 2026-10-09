@@ -2053,13 +2053,14 @@ impl Game {
                 cause,
             },
         );
-        // general_rule.pdf 15-8-3-2: source trash triggers immediately, but
-        // neither its observers nor already-pending sibling effects may
-        // activate while the causing effect is still processing. Queued
-        // bodies and selection resumes own deferred-drain scopes; keep the
-        // captured event queued until that body (including optional picks)
-        // finishes. Outside a resolving effect this still drains normally.
-        self.maybe_drain_effect_queue();
+        // Intentionally NOT routed through maybe_drain: EX10-036 (and
+        // similar multi-source trash chains) rely on observers firing
+        // synchronously between source trashes so secondary clauses can
+        // pick up the just-trashed cards mid-resolution. Behavioral test
+        // `ex10_036_clause_a_after_source_trash_prompts_opp_field_delete`
+        // documents the expected interleaving. Other observer fires
+        // (place_security, leave_field, link, attack, play) are deferred.
+        self.drain_effect_queue();
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
     }

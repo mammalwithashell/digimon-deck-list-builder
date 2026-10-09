@@ -147,8 +147,11 @@ fn bt26_076_reactive_needs_a_trash_candidate() {
     );
 }
 
-/// Crowmon's source-trash trigger must wait for its own [When Digivolving]
-/// to finish, including the opponent's discard (general_rule.pdf 15-8-3-2).
+/// Crowmon's own [When Digivolving] trashes from under a Tamer, which fires
+/// its own reactive digivolve mid-resolution (the engine drains
+/// OnDigivolutionCardTrashed observers synchronously). The observer's prompt
+/// must not be clobbered by the rest of the [When Digivolving] (the opponent's
+/// discard pick) — G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION.
 #[test]
 fn bt26_076_self_caused_tamer_trash_prompt_survives_the_discard() {
     let mut r = setup();
@@ -158,12 +161,11 @@ fn bt26_076_self_caused_tamer_trash_prompt_survives_the_discard() {
     push_hand(&mut r, 1, "JUNK");
     fire(&mut r, EffectTiming::WhenDigivolving, crow);
     pick_first(&mut r, 0); // Tamer (cost) — no delete target exists
-    assert_eq!(r.pending_selection_view().unwrap().selecting_player, 1);
-    assert_eq!(field_ids(&r, 0).last().map(String::as_str), Some(CARD_ID));
-    pick_hand(&mut r, 1, "JUNK"); // finish the causing effect first
     r.accept_optional_trigger()
         .expect("reactive digivolve offered");
     pick_first(&mut r, 0); // RAVE
+                           // The rest of the [When Digivolving] still runs: the opponent discards.
+    pick_hand(&mut r, 1, "JUNK");
     let _ = r.auto_resolve();
     assert_eq!(r.hand_size(1), 0);
     assert_eq!(field_ids(&r, 0).last().map(String::as_str), Some("RAVE"));

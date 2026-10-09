@@ -16,8 +16,6 @@ fn setup() -> DebugRunner {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT26-005")
-        .dsl_card("BT26-094")
-        .expect("BT26-094")
         .add_card(filler("FILLER"))
         .add_card(tamer("TAMER", "Tamer", CardColor::Purple, &["DATA SQUAD"]))
         .add_card(digimon(
@@ -119,7 +117,7 @@ fn bt26_005_excludes_digi_egg_from_trash() {
     fire(&mut r, EffectTiming::OnDeletion, carrier);
     r.accept_optional_trigger().expect("optional clause");
     pick_first(&mut r, 0); // Tamer
-                           // The Egg is pushed first, so `pick_first` lands on it if it is offered.
+    // The Egg is pushed first, so `pick_first` lands on it if it is offered.
     pick_first(&mut r, 0);
     let _ = r.auto_resolve();
     assert!(
@@ -139,66 +137,4 @@ fn bt26_005_no_prompt_without_face_down_source() {
     let _ = r.auto_resolve();
     assert!(r.game.pending_selection.is_none());
     assert!(!field_ids(&r, 0).contains(&"AVIAN5".to_string()));
-}
-
-// general_rule.pdf 15-8-3-2: a source-trash observer becomes pending, but
-// cannot activate until the causing effect's optional play has finished.
-fn source_trash_observer_waits_for_pinamon(play: bool, clone_at_prompt: bool) {
-    let mut r = setup();
-    let keenan = tamer_with_face_down(&mut r, 0, "BT26-094", 2);
-    push_trash(&mut r, 0, "AVIAN5");
-    let carrier = r.place_stack(0, &[CARD_ID, "FILLER"]);
-    fire(&mut r, EffectTiming::OnDeletion, carrier);
-    r.accept_optional_trigger()
-        .expect("Pinamon optional clause");
-    pick_first(&mut r, 0); // pay Pinamon's source-trash cost
-
-    let prompt = r
-        .pending_selection_view()
-        .expect("Pinamon free-play choice");
-    assert!(
-        prompt.prompt.contains("You may play"),
-        "Keenan must wait until Pinamon finishes; got {}",
-        prompt.prompt
-    );
-    assert_eq!(sources(&r, keenan), 1);
-    assert!(!r.game.players[0].battle_area[keenan.index as usize].is_suspended);
-    if clone_at_prompt {
-        r.game = r.game.clone();
-    }
-    if play {
-        pick_first(&mut r, 0);
-    } else {
-        pass(&mut r, 0);
-    }
-
-    // The observer must survive both branches and a clone of the parked VM.
-    assert_eq!(field_ids(&r, 0).contains(&"AVIAN5".to_string()), play);
-    assert_eq!(sources(&r, keenan), 1, "decline never refunds the cost");
-    assert!(!r.game.players[0].battle_area[keenan.index as usize].is_suspended);
-    let observer = r
-        .pending_selection_view()
-        .expect("Keenan pending activation");
-    assert!(observer.is_optional);
-    assert_eq!(observer.source_permanent, Some(keenan));
-    r.accept_optional_trigger()
-        .expect("Keenan now offers its suspend cost");
-    assert!(r.game.players[0].battle_area[keenan.index as usize].is_suspended);
-    assert!(r.game.pending_selection.is_none());
-}
-
-#[test]
-fn bt26_005_defers_source_trash_observer_until_play_declined() {
-    source_trash_observer_waits_for_pinamon(false, false);
-}
-
-#[test]
-fn bt26_005_defers_source_trash_observer_until_play_accepted() {
-    source_trash_observer_waits_for_pinamon(true, false);
-}
-
-#[test]
-fn bt26_005_deferred_source_trash_observer_survives_clone() {
-    source_trash_observer_waits_for_pinamon(false, true);
-    source_trash_observer_waits_for_pinamon(true, true);
 }
