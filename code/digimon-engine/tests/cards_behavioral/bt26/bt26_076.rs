@@ -147,10 +147,11 @@ fn bt26_076_reactive_needs_a_trash_candidate() {
     );
 }
 
-/// Crowmon's source-trash trigger must wait for its own [When Digivolving]
-/// to finish, including the opponent's discard (general_rule.pdf 15-8-3-2).
+/// general_rule.pdf 15-8-3-2: source-trash reactions wait for the causing
+/// effect to finish, including the opponent's discard selection.
+/// DCGO BT26/Purple/BT26_076.cs:109-127 performs these steps in that order.
 #[test]
-fn bt26_076_self_caused_tamer_trash_prompt_survives_the_discard() {
+fn bt26_076_self_caused_tamer_trash_waits_for_opponent_discard() {
     let mut r = setup();
     tamer_with_face_down(&mut r, 0, "TAMER", 1);
     let crow = r.place_on_field(0, CARD_ID, Some(0));
@@ -158,9 +159,15 @@ fn bt26_076_self_caused_tamer_trash_prompt_survives_the_discard() {
     push_hand(&mut r, 1, "JUNK");
     fire(&mut r, EffectTiming::WhenDigivolving, crow);
     pick_first(&mut r, 0); // Tamer (cost) — no delete target exists
-    assert_eq!(r.pending_selection_view().unwrap().selecting_player, 1);
+    assert_eq!(
+        r.game.pending_selection.as_ref().unwrap().selecting_player,
+        1,
+        "finish Crowmon's effect before activating source-trash reactions"
+    );
     assert_eq!(field_ids(&r, 0).last().map(String::as_str), Some(CARD_ID));
-    pick_hand(&mut r, 1, "JUNK"); // finish the causing effect first
+    // The deferred queue and parked VM must survive cloning for search.
+    r.game = r.game.clone();
+    pick_hand(&mut r, 1, "JUNK");
     r.accept_optional_trigger()
         .expect("reactive digivolve offered");
     pick_first(&mut r, 0); // RAVE

@@ -1,3 +1,4 @@
+# produced_by: 20261007T022039659515Z-pilot-data-squad-7485c5
 # Exam scenario: Crowmon (BT26-076), clause BT26-076#effect#1 -- [When Digivolving]
 # "Delete 1 of your opponent's level 4 or lower Digimon. Then, by trashing the
 # bottom face-down card from under any of your Tamers, they trash 1 card in
@@ -11,9 +12,9 @@
 # purple Lv4 circle (cost 3). Crowmon's [When Digivolving] (BT26_076.cs): a
 # mandatory delete pick (P1's lone Lv<=4 Digimon, Agumon), then the Tamer pick
 # (canNoSelect:true; only Keenan has a face-down source), the bottom face-down
-# card is trashed, and the opponent picks 1 hand card to trash. The line stops
-# there; reactive triggers (Keenan Execute, Crowmon's own digivolve) are
-# out of scope for this clause.
+# card is trashed, and the opponent picks 1 hand card to trash. Only afterward
+# does the line resolve reactive triggers (Keenan Execute, Crowmon's own
+# digivolve), which are outside this clause's processing.
 card: BT26-076
 clause: BT26-076#effect#1
 seed: 424242
@@ -101,6 +102,10 @@ steps:
   - actor: 0
     do: {select: {targets: [own.field.0]}}
     expect: {prompt: SelectPermanentEffect, count: 1}
+  # Finish the causing effect before reactive effects activate (15-8-3-2).
+  - actor: 1
+    do: {select: {cards: [ST1-08]}}
+    expect: {prompt: SelectHandEffect}
   # Two reactive triggers stack on the Tamer trash (Keenan's Execute gate and
   # Crowmon's own once-per-turn digivolve); resolve Crowmon's, decline it.
   - actor: 0
@@ -108,10 +113,6 @@ steps:
     expect: {prompt: MultipleSkills, count: 2, candidates: [BT26-094, BT26-076]}
   - actor: 0
     do: {select: {decline: true}}
-  # The opponent trashes 1 card from hand.
-  - actor: 1
-    do: {select: {cards: [ST1-08]}}
-    expect: {prompt: SelectHandEffect}
   # Keenan's reactive Execute grant (Tamer-trash event): our TriggerOrder(1) is
   # sim-only; DCGO asks an OptionalSkill gate, then the Digimon pick. Accepting
   # it suspends Keenan, so the hand-trash event's second Keenan trigger below
