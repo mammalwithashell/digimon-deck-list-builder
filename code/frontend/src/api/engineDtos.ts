@@ -20,6 +20,14 @@ export interface InheritedEffectDto {
   text: string;
 }
 
+export interface LinkEffectDto {
+  /** Index into `linked_card_ids`. */
+  link_index: number;
+  card_id: string;
+  card_name: string;
+  text: string;
+}
+
 export interface PermanentModifierDto {
   type: string;
   value: number;
@@ -71,6 +79,8 @@ export interface PermanentDto {
   linked_card_ids?: string[];
   main_effect_text?: string;
   inherited_effects?: InheritedEffectDto[];
+  /** Link effects of the linked cards. Absent on older engine builds. */
+  link_effects?: LinkEffectDto[];
   modifiers?: PermanentModifierDto[];
   dp_breakdown?: DpBreakdownDto;
 }

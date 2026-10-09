@@ -17,23 +17,31 @@
   ],
   "type_eng": [
     "Global (App Name)",
-    "Hero"
+    "Hero",
+    "Global"
   ],
   "form_eng": [
-    "Ult."
+    "Ult.",
+    "Appmon"
   ],
   "attribute_eng": [
     "Social"
   ],
   "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, delete 1 of your opponent’s Digimon with as much or less DP as this Digimon.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 3 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
       "card_color": 0,
       "level": 4,
       "memory_cost": 4
+    },
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
     }
   ],
-  "xros_req": "[App Fusion] [DoGatchmon] & [Timemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+  "xros_req": "[App Fusion] [DoGatchmon] & [Timemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+  "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon."
 }

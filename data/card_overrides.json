@@ -895,7 +895,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Suspend 1 of your opponent's Digimon or Tamers."
   },
   "BT25-054": {
     "evo_costs": [
@@ -931,7 +932,8 @@
     "form_eng": [
       "Ult.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Return 1 of your opponent's suspended Digimon to the bottom of the deck."
   },
   "BT25-058": {
     "evo_costs": [
@@ -1006,7 +1008,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends."
   },
   "BT25-072": {
     "evo_costs": [
@@ -1028,7 +1031,8 @@
     "form_eng": [
       "Ult.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends."
   },
   "BT25-077": {
     "evo_costs": [
@@ -1946,7 +1950,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] This Digimon may attack."
   },
   "BT21-023": {
     "evo_costs": [
@@ -1969,7 +1974,8 @@
     "form_eng": [
       "Ult.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon."
   },
   "BT21-073": {
     "evo_costs": [
@@ -2708,7 +2714,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Return 1 of your opponent's 5000 DP or lower Digimon to the bottom of the deck."
   },
   "BT11-042": {
     "evo_costs": [
@@ -3118,7 +3125,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
   },
   "BT21-024": {
     "type_eng": [
@@ -3134,7 +3142,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.)"
   },
   "BT21-071": {
     "type_eng": [
@@ -3144,7 +3153,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] ＜Draw 2＞ and trash 2 cards in your hand."
   },
   "BT24-067": {
     "type_eng": [
@@ -3154,7 +3164,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
   },
   "BT25-007": {
     "type_eng": [
@@ -3164,7 +3175,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with 3000 DP or less."
   },
   "BT25-045": {
     "type_eng": [
@@ -3174,7 +3186,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Suspend 1 of your opponent's Digimon."
   },
   "BT25-061": {
     "type_eng": [
@@ -3184,7 +3197,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon can't unsuspend until their turn ends."
   },
   "BT21-101": {
     "type_eng": [
@@ -3215,7 +3229,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon gets -2000 DP until their turn ends."
   },
   "BT21-059": {
     "type_eng": [
@@ -3225,7 +3240,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
   },
   "BT21-070": {
     "type_eng": [
@@ -3235,7 +3251,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] You may return 1 Digimon card with the [Appmon] trait from your trash to the hand."
   },
   "BT22-009": {
     "type_eng": [
@@ -3245,7 +3262,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with 4000 DP or less."
   },
   "BT25-036": {
     "type_eng": [
@@ -3255,7 +3273,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] By trashing 1 [Appmon] trait card from your hand, ＜Draw 2＞."
   },
   "BT25-055": {
     "type_eng": [
@@ -3325,7 +3344,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[Your Turn] All of your opponent's Security Digimon get -3000 DP."
   },
   "BT21-053": {
     "type_eng": [
@@ -3335,7 +3355,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Until your opponent's turn ends, 1 of their Digimon can't attack players."
   },
   "BT21-054": {
     "type_eng": [
@@ -3345,7 +3366,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with a play cost of 3 or less."
   },
   "BT21-074": {
     "type_eng": [
@@ -3367,7 +3389,8 @@
         "level": 4,
         "memory_cost": 4
       }
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's level 4 or lower Digimon."
   },
   "BT22-003": {
     "type_eng": [
@@ -3383,7 +3406,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Trash any 1 digivolution card of 1 of your opponent's Digimon."
   },
   "BT22-030": {
     "type_eng": [
@@ -3437,7 +3461,8 @@
         "level": 4,
         "memory_cost": 4
       }
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] To 1 of your opponent's Digimon, give -4000 DP for the turn for each of your Digimon with the [Appmon] trait."
   },
   "BT22-039": {
     "type_eng": [
@@ -3457,7 +3482,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Suspend 1 of your opponent's Digimon."
   },
   "BT22-055": {
     "type_eng": [
@@ -3467,7 +3493,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
   },
   "BT22-058": {
     "type_eng": [
@@ -3477,7 +3504,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
   },
   "BT22-075": {
     "type_eng": [
@@ -3499,7 +3527,8 @@
         "level": 4,
         "memory_cost": 4
       }
-    ]
+    ],
+    "link_effect_description_eng": "＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, it isn't deleted.)"
   },
   "BT23-001": {
     "type_eng": [
@@ -3516,7 +3545,8 @@
       "Stnd.",
       "Appmon"
     ],
-    "dp": 1000
+    "dp": 1000,
+    "link_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.)"
   },
   "BT23-009": {
     "type_eng": [
@@ -3527,7 +3557,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[End of Your Turn] [Once Per Turn] This Digimon may attack a player."
   },
   "BT23-016": {
     "type_eng": [
@@ -3537,7 +3568,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] ＜Draw 1＞ (Draw 1 card from your deck.)"
   },
   "BT23-021": {
     "type_eng": [
@@ -3559,7 +3591,8 @@
         "level": 3,
         "memory_cost": 3
       }
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] This Digimon can't be deleted in battle until your opponent's turn ends."
   },
   "BT23-022": {
     "type_eng": [
@@ -3581,7 +3614,8 @@
         "level": 4,
         "memory_cost": 4
       }
-    ]
+    ],
+    "link_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
   },
   "BT23-024": {
     "type_eng": [
@@ -3613,7 +3647,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects."
   },
   "BT23-033": {
     "type_eng": [
@@ -3635,7 +3670,8 @@
         "level": 4,
         "memory_cost": 4
       }
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Until your opponent's turn ends, their effects can't return this Digimon to hands or decks or affect it with ＜De-Digivolve＞ effects."
   },
   "BT23-039": {
     "type_eng": [
@@ -3645,7 +3681,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] You may suspend 1 of your opponent's Digimon."
   },
   "BT23-052": {
     "type_eng": [
@@ -3655,7 +3692,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] This Digimon gains ＜Reboot＞ and ＜Blocker＞ until your opponent's turn ends."
   },
   "BT24-006": {
     "type_eng": [
@@ -3672,7 +3710,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon gets -2000 DP for the turn."
   },
   "BT24-036": {
     "type_eng": [
@@ -3682,7 +3721,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[On Deletion] 1 of your opponent's Digimon gets -5000 DP for the turn."
   },
   "BT24-038": {
     "type_eng": [
@@ -3704,7 +3744,8 @@
         "level": 4,
         "memory_cost": 4
       }
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon gets -7000 DP for the turn."
   },
   "BT24-053": {
     "type_eng": [
@@ -3714,7 +3755,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
   },
   "BT24-056": {
     "type_eng": [
@@ -3725,7 +3767,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's play cost 5 or lower Digimon."
   },
   "BT24-057": {
     "type_eng": [
@@ -3735,7 +3778,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[On Deletion] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
   },
   "BT24-071": {
     "type_eng": [
@@ -3757,7 +3801,8 @@
         "level": 3,
         "memory_cost": 3
       }
-    ]
+    ],
+    "link_effect_description_eng": "[On Deletion] You may play 1 level 3 [Appmon] trait Digimon card from your trash without paying the cost."
   },
   "BT24-077": {
     "type_eng": [
@@ -3779,7 +3824,8 @@
         "level": 4,
         "memory_cost": 4
       }
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with the lowest DP."
   },
   "BT24-079": {
     "type_eng": [
@@ -3842,7 +3888,8 @@
         "level": 3,
         "memory_cost": 3
       }
-    ]
+    ],
+    "link_effect_description_eng": "[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, ＜Draw 1＞ and gain 1 memory."
   },
   "EX10-019": {
     "type_eng": [
@@ -3875,7 +3922,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
   },
   "EX10-029": {
     "type_eng": [
@@ -3885,7 +3933,8 @@
     "form_eng": [
       "Sup.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] By trashing 1 of this Digimon's link cards, ＜De-Digivolve＞ effects don't affect 1 of your Digimon until your opponent's turn ends."
   },
   "EX10-030": {
     "type_eng": [
@@ -3958,7 +4007,8 @@
     "form_eng": [
       "Stnd.",
       "Appmon"
-    ]
+    ],
+    "link_effect_description_eng": "[When Linking] ＜Draw 1＞"
   },
   "BT12-043": {
     "evo_costs": [
@@ -16417,7 +16467,7 @@
       "Stnd.",
       "Appmon"
     ],
-    "inherited_effect_description_eng": "＜Progress＞\r\n＜Piercing＞"
+    "link_effect_description_eng": "＜Progress＞ ＜Piercing＞"
   },
   "BT26-018": {
     "type_eng": [
@@ -16437,7 +16487,7 @@
       "Stnd.",
       "Appmon"
     ],
-    "inherited_effect_description_eng": "[When Linking] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends."
+    "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends."
   },
   "BT26-028": {
     "type_eng": [
@@ -16449,7 +16499,7 @@
       "Sup.",
       "Appmon"
     ],
-    "inherited_effect_description_eng": "[When Linking] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -3000 DP."
+    "link_effect_description_eng": "[When Linking] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -3000 DP."
   },
   "BT26-029": {
     "type_eng": [
@@ -16548,7 +16598,7 @@
       "Sup.",
       "Appmon"
     ],
-    "inherited_effect_description_eng": "[When Linking] This Digimon may battle 1 of your opponent's Digimon."
+    "link_effect_description_eng": "[When Linking] This Digimon may battle 1 of your opponent's Digimon."
   },
   "BT26-046": {
     "type_eng": [
@@ -16581,7 +16631,7 @@
       "Stnd.",
       "Appmon"
     ],
-    "inherited_effect_description_eng": "[When Linking] ＜De-Digivolve 2＞ 1 of your opponent's Digimon."
+    "link_effect_description_eng": "[When Linking] ＜De-Digivolve 2＞ 1 of your opponent's Digimon."
   },
   "BT26-056": {
     "type_eng": [
@@ -16658,7 +16708,7 @@
       "Stnd.",
       "Appmon"
     ],
-    "inherited_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with the lowest level."
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with the lowest level."
   },
   "_note_BT26-073": "BT26-073 Aegiochusmon: Dark prints a Special Play Condition, \"Assembly -2: Lv.4 or lower Digimon card w/[Chronomon] in text or w/[TS] trait\" (official Bandai DB, data/card_official.json), which the digimoncard.io API drops from xros_req (still missing on 2026-10-03). Restored in the API's own Assembly line format after the [Digivolve] line the API does carry; apply_overrides re-derives digixros_costs from it.",
   "BT26-073": {
@@ -16700,7 +16750,7 @@
       "Stnd.",
       "Appmon"
     ],
-    "inherited_effect_description_eng": "[When Linking] You may link 1 non-white level 4 or lower [System] or [Seven Code] trait card from your trash to this Digimon without paying the cost."
+    "link_effect_description_eng": "[When Linking] You may link 1 non-white level 4 or lower [System] or [Seven Code] trait card from your trash to this Digimon without paying the cost."
   },
   "BT26-086": {
     "type_eng": [
@@ -18497,4 +18547,20 @@
   "BT8-060": {
     "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [X Antibody] trait and 1 [Yuji Musya] among them to your hand. Place the remaining cards at the bottom of your deck in any order."
   }
+  "BT25-100": {
+    "link_effect_description_eng": "＜Collision＞ ＜Piercing＞"
+  },
+  "BT25-101": {
+    "link_effect_description_eng": "＜Security A. +1＞ ＜Reboot＞ [All Turns] When this [Vulcanusmon] would leave the battle area, by trashing 1 of its link cards, it doesn't leave."
+  },
+  "ST22-08": {
+    "link_effect_description_eng": "[End of Your Turn] [Once Per Turn] This Digimon may attack."
+  },
+  "ST22-09": {
+    "link_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+  },
+  "ST22-11": {
+    "link_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+  },
+  "_note_link_box_2026_10": "2026-10-05: a link card's link effect lives in `link_effect_description_eng`, not in the inherited text where the API's `source_effect` puts it (ingest_cards.normalize_link_box moves it; code/tools/archive/move_link_box_2026_10.py). The link-effect overrides restore the printed text (official Bandai DB; EX10-016 from the card image) where the API drops its timing, keywords or the whole effect."
 }

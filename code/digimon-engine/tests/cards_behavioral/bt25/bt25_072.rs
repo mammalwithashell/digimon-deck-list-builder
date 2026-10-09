@@ -215,8 +215,8 @@ fn bt25_072_yaml_printed_metadata() {
         );
     }
     assert_eq!(
-        card.attribute.as_deref(),
-        Some("Tool"),
+        card.attribute,
+        ["Tool"],
         "printed Attribute: Tool (was mis-authored Virus)"
     );
 }

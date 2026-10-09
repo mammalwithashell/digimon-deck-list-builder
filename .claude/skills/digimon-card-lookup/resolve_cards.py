@@ -85,6 +85,7 @@ TEXT_FIELDS = {
     "effect": "effect_description_eng",
     "inherited": "inherited_effect_description_eng",
     "security": "security_effect_description_eng",
+    "link": "link_effect_description_eng",
 }
 
 
@@ -266,6 +267,8 @@ def print_human(results: list[dict]) -> None:
                 print(f"    inherited : {t['inherited']}")
             if t.get("security"):
                 print(f"    security  : {t['security']}")
+            if t.get("link"):
+                print(f"    link      : {t['link']}")
             if t.get("_overrides"):
                 print(f"    overrides : {t['_overrides']}")
             bundle = bundle_dir / f"{c['id']}.md"

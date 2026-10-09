@@ -153,11 +153,7 @@ fn bt25_056_yaml_printed_metadata() {
             "trait line must include {t:?}"
         );
     }
-    assert_eq!(
-        card.attribute.as_deref(),
-        Some("Tool"),
-        "printed Attribute: Tool"
-    );
+    assert_eq!(card.attribute, ["Tool"], "printed Attribute: Tool");
 }
 
 #[test]

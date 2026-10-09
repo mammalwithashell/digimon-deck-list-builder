@@ -16,16 +16,18 @@
   ],
   "type_eng": [
     "Warning (App Name)",
-    "Leviathan"
+    "Leviathan",
+    "Warning"
   ],
   "form_eng": [
-    "Stnd."
+    "Stnd.",
+    "Appmon"
   ],
   "attribute_eng": [
     "System"
   ],
   "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [System] or [Transmutation (App Name)] trait among them to the hand. Return the rest to the bottom of the deck.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
@@ -34,5 +36,6 @@
       "memory_cost": 0
     }
   ],
-  "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+  "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+  "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon gets -2000 DP for the turn."
 }

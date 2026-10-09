@@ -21,6 +21,7 @@ fn digimon(id: &str, level: u8, dna_costs: Vec<DnaCost>, evo_costs: Vec<EvoCost>
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        link_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: id.replace('-', "_"),
@@ -99,6 +100,61 @@ effects:
 
     assert_eq!(runner.game.memory, before + 5);
     assert_eq!(runner.game.player(0).battle_area.len(), 1);
+}
+
+/// An optional [When Digivolving] waits on its accept/decline prompt while
+/// the DNA digivolve's triggers drain; once accepted, it must still see that
+/// it was a DNA digivolve (BT16-077: "If DNA digivolving, you may play ...").
+#[test]
+fn optional_when_digivolving_accepted_after_dna_still_sees_dna_origin() {
+    let yaml = r#"
+card: DNA-RESULT
+name: DNA Result
+kind: digimon
+level: 4
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: when_digivolving
+    optional: true
+    process:
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - gain_memory: 3
+"#;
+
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon("SRC-A", 3, Vec::new(), Vec::new()))
+        .add_card(digimon("SRC-B", 3, Vec::new(), Vec::new()))
+        .add_card(digimon("DNA-RESULT", 4, vec![dna_cost()], Vec::new()))
+        .hand(0, &["DNA-RESULT"])
+        .memory(5)
+        .start();
+    register_dsl(&mut runner, yaml);
+
+    let a = runner.place_on_field(0, "SRC-A", None);
+    let b = runner.place_on_field(0, "SRC-B", None);
+    let hand_card = runner.game.player(0).hand[0].handle();
+
+    let before = runner.game.memory;
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card, None, 0);
+        assert!(ctx
+            .effect_initiated_dna_digivolve(a, b, hand_card, 0, true)
+            .is_some());
+    }
+    runner
+        .accept_optional_trigger()
+        .expect("accept the optional [When Digivolving]");
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.game.memory,
+        before + 3,
+        "the DNA-only branch runs after the prompt is accepted"
+    );
 }
 
 #[test]

@@ -101,7 +101,7 @@ fn bt25_004_yaml_printed_metadata() {
     // Official trait line "Appmon | Tool | Tap" (form / attribute / type):
     // production folds all three into `traits`, so Tapmon IS a [Tool] card.
     assert_eq!(card.traits, vec!["Appmon", "Tool", "Tap"]);
-    assert_eq!(card.attribute.as_deref(), Some("Tool"));
+    assert_eq!(card.attribute, ["Tool"]);
 }
 
 #[test]

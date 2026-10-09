@@ -59,7 +59,7 @@ impl Game {
 
     /// The card-source half of [`Game::has_keyword`]: `keyword` reaches
     /// `handle` from PRINTED text (own face keywords, a below-top source's
-    /// inherited keywords, a link card's inherited keywords) or from a
+    /// inherited keywords, a link card's link keywords) or from a
     /// declarative `grant_keyword` clause that advertises itself with
     /// `Effect::granted_keyword` (a SELF-aura / `scope: inherited` grant).
     /// The modifier registry is deliberately NOT consulted.
@@ -150,9 +150,9 @@ impl Game {
         // grant reaches its HOST. The `card_sources` walk above never scans
         // `linked_cards`, so a linked Option's `<Piercing>` (BT25-100) or any
         // other link-card keyword grant would not register at query time.
-        // Fold in every link card, treating it as an inherited-style source:
-        // both its PRINTED inherited keywords (`inherited_text`) and its
-        // `.inherited()` / `.linked()` `grant_keyword` clauses count. A single
+        // Fold in every link card: both its PRINTED link keywords
+        // (`link_text`, 4-2-6) and its `.inherited()` / `.linked()`
+        // `grant_keyword` clauses count. A single
         // clause is `.inherited()` XOR `.linked()` (scope-driven), so accepting
         // either cannot double-fire. (Materializing `grant_keyword` clauses also
         // reach `modifiers.has_keyword` via `tick_declarative_effects`, checked
@@ -164,7 +164,7 @@ impl Game {
             .map(|c| (c.data_index, c.handle()))
             .collect();
         for (data_index, linked_handle) in linked_ids {
-            if inherited_keywords(&self.card_data[data_index]).contains(&keyword) {
+            if link_keywords(&self.card_data[data_index]).contains(&keyword) {
                 return true;
             }
             let linked_id = self.card_data[data_index].card_id.clone();

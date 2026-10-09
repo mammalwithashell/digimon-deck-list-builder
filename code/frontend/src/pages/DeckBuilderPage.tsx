@@ -626,6 +626,7 @@ export function DeckBuilderWorkbench({
                   </div>
                   <div className="bld-preview-effect"><h6>MAIN EFFECT</h6><p>{formatEffect(previewCard.maineffect || 'No main effect text loaded.')}</p></div>
                   {previewCard.soureeffect && <div className="bld-preview-effect"><h6 className="opp">INHERITED EFFECT</h6><p>{formatEffect(previewCard.soureeffect)}</p></div>}
+                  {previewCard.linkeffect && <div className="bld-preview-effect"><h6 className="opp">LINK EFFECT</h6><p>{formatEffect(previewCard.linkeffect)}</p></div>}
                 </>
               ) : (
                 <div className="bld-empty">SEARCH OR SELECT A CARD</div>

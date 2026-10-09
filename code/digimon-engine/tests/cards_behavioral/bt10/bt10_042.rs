@@ -46,7 +46,7 @@ fn bt10_042_has_printed_metadata_and_security_attack_change_auras() {
     assert_eq!(compiled.color, vec![CompiledColor::Yellow]);
     assert_eq!(compiled.cost, Some(13));
     assert_eq!(compiled.dp, Some(12000));
-    assert_eq!(compiled.attribute.as_deref(), Some("Vaccine"));
+    assert_eq!(compiled.attribute, ["Vaccine"]);
     assert!(compiled.traits.iter().any(|t| t == "Shaman"));
     assert!(compiled.traits.iter().any(|t| t == "Olympos XII"));
 

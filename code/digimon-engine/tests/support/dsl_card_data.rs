@@ -12,6 +12,8 @@ pub fn compiled(card_id: &str) -> CompiledCard {
 
 pub fn card_data_from_compiled(card_id: &str) -> CardData {
     let card = compiled(card_id);
+    // Form + attribute + type, as DebugRunner and production build traits.
+    let traits = card.all_traits();
     CardData {
         card_id: card.card.clone(),
         card_name: card.name,
@@ -27,12 +29,13 @@ pub fn card_data_from_compiled(card_id: &str) -> CardData {
         dp: card.dp,
         play_cost: card.cost.unwrap_or(0) as u16,
         colors: card.color.iter().copied().map(compiled_color).collect(),
-        traits: card.traits,
+        traits,
         evo_costs: Vec::new(),
         dna_costs: Vec::new(),
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        link_text: String::new(),
         keywords: Vec::new(),
         dual: card.dual.as_ref().map(|dual| DualCardData {
             digimon: DualDigimonFace {

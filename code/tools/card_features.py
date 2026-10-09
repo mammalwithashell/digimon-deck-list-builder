@@ -195,7 +195,7 @@ class CardFeatureVectorizer:
         """Extract base keyword names from card text, collapsing parametric variants."""
         keywords = set()
         for field in ('effect_description_eng', 'inherited_effect_description_eng',
-                      'security_effect_description_eng'):
+                      'security_effect_description_eng', 'link_effect_description_eng'):
             text = card.get(field, '')
             for match in _KW_PATTERN.findall(text):
                 raw = match.strip()

@@ -412,7 +412,7 @@ python code/tools/resolve_deck.py --list-archetypes --min-share 0.01  # Filter b
 **Return types:**
 - `resolve_archetype()` → `ArchetypeManifest` (archetype stats + list of `CardEntry`)
 - `resolve_cards()` → `list[CardEntry]` (enriched cards without archetype context)
-- `CardEntry` fields: `card_id`, `card_name`, `card_kind`, `level`, `colors`, `traits`, `dp`, `play_cost`, `evo_costs`, `effect_text`, `inherited_text`, `security_text`, `script_status`, `script_path`, `csharp_path`, `deck_frequency`
+- `CardEntry` fields: `card_id`, `card_name`, `card_kind`, `level`, `colors`, `traits`, `dp`, `play_cost`, `evo_costs`, `effect_text`, `inherited_text`, `security_text`, `script_status`, `script_path`, `csharp_path`, `deck_frequency`, `link_text` (a link card's link effect)
 
 ---
 

@@ -41,6 +41,9 @@ export interface DigimonCardData {
   cardnumber: string;
   maineffect: string;
   soureeffect: string; // Note: API uses this misspelling
+  /** A link card's link effect (general_rule.pdf 2-3-12). The API returns it as
+   *  `source_effect`, its inherited-effect field; `mapApiCard` moves it here. */
+  linkeffect?: string;
   set_name: string;
   card_sets: string[];
   image_url: string;

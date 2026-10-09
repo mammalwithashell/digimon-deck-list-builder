@@ -16,16 +16,18 @@
   ],
   "type_eng": [
     "Training (App Name)",
-    "Leviathan"
+    "Leviathan",
+    "Training"
   ],
   "form_eng": [
-    "Sup."
+    "Sup.",
+    "Appmon"
   ],
   "attribute_eng": [
     "Game"
   ],
   "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, 1 of your Digimon gets +4000 DP for the turn.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
@@ -34,5 +36,6 @@
       "memory_cost": 2
     }
   ],
-  "xros_req": ""
+  "xros_req": "",
+  "link_effect_description_eng": "[End of Your Turn] [Once Per Turn] This Digimon may attack a player."
 }

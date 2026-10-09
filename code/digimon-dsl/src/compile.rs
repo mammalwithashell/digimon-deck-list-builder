@@ -48,7 +48,11 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
         dp: spec.dp,
         traits: spec.traits.clone(),
         form: spec.form.clone(),
-        attribute: spec.attribute.clone(),
+        attribute: spec
+            .attribute
+            .as_ref()
+            .map(|attribute| attribute.names().to_vec())
+            .unwrap_or_default(),
         ace_overflow: spec.ace_overflow,
         identity,
         digixros_aliases: spec.digixros_aliases.clone(),

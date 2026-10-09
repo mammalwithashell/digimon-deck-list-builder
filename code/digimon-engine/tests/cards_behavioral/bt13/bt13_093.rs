@@ -43,7 +43,7 @@ fn bt13_093_has_printed_metadata() {
     assert_eq!(card.color, vec![CompiledColor::White]);
     assert!(card.traits.iter().any(|name| name == "Puppet"));
     assert!(card.traits.iter().any(|name| name == "X Antibody"));
-    assert_eq!(card.attribute.as_deref(), Some("Data"));
+    assert_eq!(card.attribute, ["Data"]);
 }
 
 #[test]

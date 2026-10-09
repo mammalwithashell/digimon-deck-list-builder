@@ -180,11 +180,7 @@ fn ex7_020_compiles_with_printed_stats_and_lv3_blue_path() {
         Some("Champion"),
         "official Bandai DB prints Form: Champion (cards.json form_eng is empty — lossy ingest)"
     );
-    assert_eq!(
-        compiled.attribute.as_deref(),
-        Some("Data"),
-        "printed attribute is Data"
-    );
+    assert_eq!(compiled.attribute, ["Data"], "printed attribute is Data");
 
     assert!(
         compiled.alt_paths.iter().any(|path| {

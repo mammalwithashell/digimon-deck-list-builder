@@ -313,11 +313,12 @@ def build_card_metadata_records() -> list[tuple[str, str, dict]]:
         effect = card_data.get("effect_description_eng", "")
         inherited = card_data.get("inherited_effect_description_eng", "")
         security = card_data.get("security_effect_description_eng", "")
+        link = card_data.get("link_effect_description_eng", "")
         dp = card_data.get("dp")
         play_cost = card_data.get("play_cost")
 
         # Extract keywords from effect text
-        all_text = f"{effect} {inherited} {security}"
+        all_text = f"{effect} {inherited} {security} {link}"
         keywords = sorted(set(m.group() for m in KEYWORD_PATTERN.finditer(all_text)))
 
         # Build searchable text
@@ -330,6 +331,7 @@ def build_card_metadata_records() -> list[tuple[str, str, dict]]:
             f"Effect: {effect}" if effect else "",
             f"Inherited: {inherited}" if inherited else "",
             f"Security: {security}" if security else "",
+            f"Link: {link}" if link else "",
         ]
         card_text = "\n".join(p for p in text_parts if p)
 

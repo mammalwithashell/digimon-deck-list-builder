@@ -11,7 +11,7 @@ const CARD_ID: &str = "EX12-007";
 fn ex12_007_printed_metadata_and_digivolve_paths() {
     let card = compiled(CARD_ID);
 
-    assert_eq!(card.attribute.as_deref(), Some("Virus"));
+    assert_eq!(card.attribute, ["Virus"]);
     assert!(
         card.alt_paths.iter().any(|path| {
             path.kind == CompiledAltPathKind::Digivolve

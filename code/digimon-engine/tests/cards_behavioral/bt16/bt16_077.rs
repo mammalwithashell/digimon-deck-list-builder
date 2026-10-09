@@ -114,6 +114,82 @@ fn bt16_077_non_dna_digivolve_still_offers_rush_attack_but_not_trash_play() {
     );
 }
 
+/// [When Digivolving] "If DNA digivolving, you may play 1 level 5 or lower
+/// Digimon with the [Free] trait from your trash without paying the cost."
+/// [Free] is an attribute (Dinobeemon prints Ultimate | Free | Mutant), so the
+/// filter is `attribute_is: Free` — which matched nothing until 2026-10-05, so
+/// this play never happened in tests or in real games.
+#[test]
+fn bt16_077_dna_digivolve_plays_a_free_trait_digimon_from_trash() {
+    use digimon_engine::action::space::TRASH_EFFECT_START;
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::effect_context::EffectContext;
+    use digimon_engine::enums::CardColor;
+    use digimon_engine::selection::SelectionKind;
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT16-077")
+        .expect("BT16-077 loads")
+        .add_card(partition_source("PURPLE-4", CardColor::Purple, 4))
+        .add_card(partition_source("RED-4", CardColor::Red, 4))
+        .add_card(partition_source("PLAIN-5", CardColor::Purple, 5))
+        .hand(0, &["BT16-077"])
+        .memory(3)
+        .start();
+    let purple = r.place_on_field(0, "PURPLE-4", Some(0));
+    let red = r.place_on_field(0, "RED-4", Some(0));
+    // Trash: [0] another Dinobeemon (Lv.5 [Free]), [1] a Lv.5 Digimon without it.
+    for card_id in ["BT16-077", "PLAIN-5"] {
+        let data_idx = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == card_id)
+            .expect("card data");
+        let next = r.game.next_card_index();
+        r.game.players[0]
+            .trash
+            .push(CardSource::new(data_idx, 0, next));
+    }
+
+    let dinobeemon = r.game.player(0).hand[0].handle();
+    {
+        let mut ctx = EffectContext::new(&mut r.game, dinobeemon, None, 0);
+        ctx.effect_initiated_dna_digivolve(purple, red, dinobeemon, 0, true)
+            .expect("DNA digivolve into Dinobeemon");
+    }
+    r.game.drain_effect_queue();
+    r.accept_optional_trigger()
+        .expect("accept [When Digivolving]");
+
+    let view = r
+        .pending_selection_view()
+        .expect("DNA digivolving: the [Free] trash pick opens");
+    assert_eq!(view.kind, SelectionKind::Trash);
+    assert!(
+        view.valid_action_ids.contains(&TRASH_EFFECT_START),
+        "the Lv.5 [Free] Dinobeemon in the trash is offered"
+    );
+    assert!(
+        !view.valid_action_ids.contains(&(TRASH_EFFECT_START + 1)),
+        "a Lv.5 Digimon without the [Free] trait is not"
+    );
+
+    r.game
+        .resolve_selection(0, TRASH_EFFECT_START)
+        .expect("play the [Free] Digimon");
+    r.game.drain_effect_queue();
+    assert_eq!(
+        field_ids(&r, 0)
+            .iter()
+            .filter(|id| *id == "BT16-077")
+            .count(),
+        2,
+        "the DNA result and the Dinobeemon played from the trash"
+    );
+    assert_eq!(trash_ids(&r, 0), ["PLAIN-5"]);
+}
+
 /// "Then, 1 of your Digimon may gain <Rush> for the turn and attack a player."
 /// The attack is part of the effect's own processing -- an IMMEDIATE attack on
 /// the opponent player, not a deferred end-of-turn "may attack" grant.
@@ -211,6 +287,7 @@ fn partition_source(id: &str, color: digimon_engine::enums::CardColor, level: u8
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        link_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: id.replace('-', "_"),

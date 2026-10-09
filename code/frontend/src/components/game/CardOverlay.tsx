@@ -21,7 +21,8 @@ interface CardOverlayProps {
 /**
  * DCGO-style PermanentDetail panel — floating card detail overlay anchored
  * to the bottom-left. Shows a vertical scrollable card stack with
- * color-coded borders and inline inherited effect text.
+ * color-coded borders and inline inherited effect text, then the linked
+ * cards with their link effect text.
  */
 export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayProps) {
   const hoveredCard = useGameStore((s) => s.hoveredCard);
@@ -54,8 +55,10 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
 
   // Reverse sources so top card (last in array) comes first visually
   const stackSources = [...permanent.sources].reverse();
-  // Linked cards (from linkedCardIds)
+  // Linked cards (from linkedCardIds), each with its printed link effect —
+  // the text this Digimon gains from it (rules 4-2-6).
   const linkedIds = permanent.linkedCardIds;
+  const linkEffects = permanent.linkEffects ?? [];
   // Active modifiers, grouped (immunities / restrictions / stat changes / other)
   const modifierGroups = groupModifiers(permanent.modifiers ?? []);
 
@@ -185,22 +188,36 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
         {/* Linked cards */}
         {linkedIds.length > 0 && (
           <>
-            {linkedIds.map((cardId, i) => (
-              <div
-                key={`link-${cardId}-${i}`}
-                className="rounded-lg overflow-hidden border-l-3"
-                style={{ borderLeft: '3px solid #a855f7' }}
-              >
-                <div className="p-2 bg-purple-900/20">
-                  <div className="text-[9px] text-purple-400 font-bold uppercase mb-1">Linked</div>
-                  <Card
-                    cardId={cardId}
-                    size="md"
-                    onContextMenu={inspectOnRightClick(cardId)}
-                  />
+            {linkedIds.map((cardId, i) => {
+              const linkEffect = linkEffects.find((e) => e.linkIndex === i);
+              return (
+                <div
+                  key={`link-${cardId}-${i}`}
+                  data-testid="linked-card"
+                  className="rounded-lg overflow-hidden border-l-3"
+                  style={{ borderLeft: '3px solid #a855f7' }}
+                >
+                  <div className="p-2 bg-purple-900/20">
+                    <div className="text-[9px] text-purple-400 font-bold uppercase mb-1">Linked</div>
+                    <div className="flex items-start gap-2">
+                      <Card
+                        cardId={cardId}
+                        size="md"
+                        onContextMenu={inspectOnRightClick(cardId)}
+                      />
+                      {linkEffect && (
+                        <div className="flex-1 min-w-0 pt-1">
+                          <div className="text-[9px] text-purple-400 font-bold uppercase mb-0.5">
+                            Link Effect
+                          </div>
+                          <CardEffectText text={linkEffect.text} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </>
         )}
       </div>
