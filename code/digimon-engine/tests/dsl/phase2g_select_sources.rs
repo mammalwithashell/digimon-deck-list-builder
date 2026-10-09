@@ -230,6 +230,27 @@ effects:
         .execute_action(0, pick_b)
         .expect("second Digi-Burst source pick resolves");
 
+    // general_rule.pdf 15-8-3-2: each trashed source fires the observer, but
+    // neither firing may activate while Digi-Burst is still processing. The
+    // `then` body resolves first (+3), then both firings wait together and the
+    // turn player orders them.
+    assert_eq!(
+        runner.game.memory, 3,
+        "Digi-Burst's body resolves before the source-trash observers"
+    );
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::TriggerOrder));
+    while runner.pending_kind() == Some(SelectionKind::TriggerOrder) {
+        let first = *runner
+            .game
+            .pending_selection
+            .as_ref()
+            .and_then(|s| s.valid_action_ids.first())
+            .expect("trigger-order prompt offers a queued firing");
+        runner
+            .execute_action(0, first)
+            .expect("trigger-order pick resolves");
+    }
+
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(
         runner.game.players[0].battle_area[carrier.index as usize]
@@ -248,7 +269,7 @@ effects:
     assert_eq!(runner.game.players[0].trash.len(), 2);
     assert_eq!(
         runner.game.memory, 5,
-        "two source-trash observer firings (+2) should resolve before/alongside the nested body (+3)"
+        "the nested body (+3) and then both source-trash observer firings (+2)"
     );
 }
 
