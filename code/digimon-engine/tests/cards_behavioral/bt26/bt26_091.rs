@@ -27,6 +27,8 @@ fn setup() -> DebugRunner {
         .expect("Lalamon")
         .dsl_card("ST24-12")
         .expect("Falcomon")
+        .dsl_card("BT5-021")
+        .expect("Syakomon")
         .add_card(filler("FILLER"))
         .add_card(digimon(
             "DS-CARD",
@@ -192,4 +194,29 @@ fn bt26_091_not_on_opponents_turn() {
     let _ = r.auto_resolve();
     assert!(!r.game.players[0].battle_area[y.index as usize].is_suspended);
     assert_eq!(r.hand_size(0), 1);
+}
+
+/// Official Q&A Q7148: with Syakomon (BT5-021, "[Opponent's Turn] Your opponent
+/// can't reduce digivolution costs") in play, Yoshino's digivolve still
+/// happens but the "cost reduced by 1" is void, so the full cost is paid.
+#[test]
+fn bt26_091_digivolve_cost_not_reduced_under_syakomon() {
+    let mut r = setup();
+    let y = r.place_on_field(0, CARD_ID, Some(0));
+    push_hand(&mut r, 0, "FAIRY4");
+    r.place_on_field(1, "BT5-021", Some(1));
+    let base = lalamon_suspends_opponent(&mut r);
+    r.game.tick_declarative_effects();
+    r.accept_optional_trigger()
+        .expect("Yoshino triggers on the opponent suspend");
+    assert!(r.game.players[0].battle_area[y.index as usize].is_suspended);
+    pick_first(&mut r, 0);
+    pick_hand(&mut r, 0, "FAIRY4");
+    let _ = r.auto_resolve();
+    let top = r.game.players[0].battle_area[base.index as usize]
+        .top_card()
+        .card_id(&r.game.card_data)
+        .to_string();
+    assert_eq!(top, "FAIRY4", "the digivolve still happens");
+    assert_eq!(r.memory(), 3 - 3, "circle cost 3 paid in full under Syakomon");
 }

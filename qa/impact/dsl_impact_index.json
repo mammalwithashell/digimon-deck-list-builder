@@ -13279,6 +13279,14 @@
       "timings": [],
       "verbs": []
     },
+    "BT5-021": {
+      "path": "bt5/BT5-021.yaml",
+      "predicates": [
+        "opponents_turn"
+      ],
+      "timings": [],
+      "verbs": []
+    },
     "BT5-033": {
       "path": "bt5/BT5-033.yaml",
       "predicates": [
@@ -31919,6 +31927,7 @@
       "BT25-055",
       "BT26-092",
       "BT5-008",
+      "BT5-021",
       "BT5-033",
       "BT8-094",
       "EX10-003",
