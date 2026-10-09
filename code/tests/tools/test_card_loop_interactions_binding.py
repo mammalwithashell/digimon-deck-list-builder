@@ -260,3 +260,25 @@ def test_bind_interactions_reports_every_gating_interaction_with_drift(tmp_path)
 def test_bind_interactions_refuses_a_missing_denominator(tmp_path):
     with pytest.raises(FileNotFoundError, match="not generated"):
         bind_interactions(["EX12-073"], tmp_path / "missing.json", None)
+
+
+def test_bind_interactions_surfaces_triage_and_citation_of_a_diverged_row(tmp_path):
+    # Readiness (card-loop D9) applies the clause rule to interaction rows: a
+    # diverged interaction counts only as a cited dcgo_quirk, so the row must
+    # carry the store's `triage` / `citation` twins (verdict-set writes them flat).
+    den = _denominator(tmp_path / "d.json", {
+        "qa:Q7": QA_ROW,
+        "qa:Q8": {**QA_ROW, "q_id": "Q8"},
+    }, {"EX12-073": ["qa:Q7", "qa:Q8"]})
+    v = tmp_path / "v"
+    write_interaction_verdict(v, _iv("qa:Q7", ["EX12-073"], verdict="diverged", sha="ruling-sha",
+                                     triage="dcgo_quirk", citation="qa:Q7"))
+    write_interaction_verdict(v, _iv("qa:Q8", ["EX12-073"], sha="ruling-sha",
+                                     triage="dcgo_quirk", citation="stale"))
+    bound = bind_interactions(["EX12-073"], den, v)
+    rows = {x["interaction_id"]: x for x in bound["cards"]["EX12-073"]["interactions"]}
+    assert (rows["qa:Q7"]["verdict"], rows["qa:Q7"]["triage"], rows["qa:Q7"]["citation"]) == (
+        "diverged", "dcgo_quirk", "qa:Q7")
+    # not diverged: the twins are None even when the store carries stale text
+    assert (rows["qa:Q8"]["verdict"], rows["qa:Q8"]["triage"], rows["qa:Q8"]["citation"]) == (
+        "confirmed", None, None)

@@ -70,18 +70,22 @@ CLASSIFY_TASK = (
 
 ENCODE_AUTHOR_TASK = (
     "Encode the publisher's answer to ruling {q_id} as an `expect_ruling` block for the "
-    "scenario given: the observable state after a given step that the answer implies, "
-    "using only the listed projection keys. Encode exactly what the answer says -- no "
-    "more (do not assert incidental state the answer does not decide), no less. Quote "
-    "the answer words each observable encodes. Another model family will verify your "
-    "block blind."
+    "scenario given -- the line authored to exercise this ruling: the observable state "
+    "after the step at which the answer applies, using only the listed projection keys. "
+    "Encode exactly what the answer says -- no more (do not assert incidental state the "
+    "answer does not decide), no less. Quote the answer words each observable encodes. If "
+    "no step of the line reaches the situation the question describes, return "
+    "`expect_ruling` null with `line_exercises_ruling` false and say what is missing; the "
+    "line goes back to its author. Another model family will verify your block blind."
 )
 
 ENCODE_VERIFY_TASK = (
     "Another model encoded the publisher's answer to ruling {q_id} as the `expect_ruling` "
     "block given. Decide whether it encodes the answer -- no more, no less -- against the "
     "scenario's line. Set `agrees`, leave `expect_ruling` null, and quote the answer words "
-    "the block gets wrong if you disagree."
+    "the block gets wrong if you disagree. Set `line_exercises_ruling`: false when the line "
+    "never reaches the situation the question describes (then no block on it can encode "
+    "the answer), true when it does."
 )
 
 
@@ -158,13 +162,15 @@ def encode_ruling_inputs(
     scenario_yaml: str,
     mode: str = "author",
     candidate: Mapping | None = None,
+    feedback: str | None = None,
 ) -> PacketInputs:
     """Inputs for encoding (``author``) or verifying (``verify``) a ruling's
     `expect_ruling` block for the scenario at `scenario_path`.
 
     ``verify`` carries the candidate block ONLY -- never the author's
     reasoning or answer quote -- so the second family judges the encoding,
-    not the argument for it.
+    not the argument for it. `feedback` is an earlier rejection of an encoding
+    against this line (the verifier's objection), for the next author.
     """
     if mode not in ("author", "verify"):
         raise ValueError(f"mode must be author or verify, not {mode!r}")
@@ -180,6 +186,8 @@ def encode_ruling_inputs(
     }
     if mode == "verify":
         inputs["candidate"] = {"q_id": ruling["q_id"], "assert": candidate.get("assert")}
+    if feedback:
+        inputs["earlier_rejection"] = feedback
     task = (ENCODE_AUTHOR_TASK if mode == "author" else ENCODE_VERIFY_TASK).format(q_id=ruling["q_id"])
     return PacketInputs(
         stage="encode_ruling",

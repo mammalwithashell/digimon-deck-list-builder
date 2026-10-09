@@ -158,6 +158,7 @@ mod standalone_declaratives_exit;
 mod store_champs_predicate_formula_leaves;
 mod tamer_stash_substrate_integration;
 mod track_e_reveal_ordering;
+mod trait_line;
 mod trait_parity;
 mod trash_bottom_face_down_source_under_tamer;
 mod trash_link_card_of_own_digimon;

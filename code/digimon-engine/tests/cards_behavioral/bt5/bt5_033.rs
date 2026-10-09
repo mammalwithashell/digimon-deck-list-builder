@@ -87,7 +87,7 @@ fn bt5_033_has_metadata_normal_evolution_and_floodgate() {
     assert_eq!(compiled.dp, Some(3000));
     assert_eq!(compiled.color, vec![CompiledColor::Yellow]);
     assert_eq!(compiled.traits, vec!["Fairy"]);
-    assert_eq!(compiled.attribute.as_deref(), Some("Vaccine"));
+    assert_eq!(compiled.attribute, ["Vaccine"]);
 
     assert!(
         compiled.alt_paths.iter().any(|path| {

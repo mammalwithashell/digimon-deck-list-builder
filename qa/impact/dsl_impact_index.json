@@ -1525,9 +1525,10 @@
       ]
     },
     "BT13-060": {
-      "path": "_examples/BT13-060.yaml",
+      "path": "bt13/BT13-060.yaml",
       "predicates": [
         "any_of",
+        "is_suspended",
         "kind",
         "level_eq",
         "name_is",
@@ -1535,6 +1536,7 @@
         "zone"
       ],
       "timings": [
+        "when_attacking",
         "when_digivolving"
       ],
       "verbs": [
@@ -1543,6 +1545,7 @@
         "select_opponent_permanent",
         "select_own_permanent",
         "suspend",
+        "trash_top_security",
         "trash_top_source"
       ]
     },
@@ -10842,6 +10845,7 @@
         "any_permanent",
         "has_face_down_source",
         "kind",
+        "not",
         "owner",
         "play_cost_lte",
         "trait_contains",
@@ -24352,6 +24356,7 @@
       "path": "st24/ST24-12.yaml",
       "predicates": [
         "all_of",
+        "face_down_sources_under_tamers_gte",
         "kind",
         "level_eq",
         "trait_has"
@@ -29284,7 +29289,8 @@
       "BT26-098",
       "EX13-071",
       "ST24-06",
-      "ST24-10"
+      "ST24-10",
+      "ST24-12"
     ],
     "face_up_security_count_lte": [
       "BT24-090",
@@ -29480,6 +29486,7 @@
       "AD1-024",
       "BT12-031",
       "BT12-057",
+      "BT13-060",
       "BT16-027",
       "BT16-028",
       "BT16-101",
@@ -31851,6 +31858,7 @@
       "BT19-006",
       "BT25-077",
       "BT25-081",
+      "BT26-005",
       "BT26-026",
       "BT26-031",
       "BT26-055",
@@ -36120,6 +36128,7 @@
       "BT12-002",
       "BT12-011",
       "BT12-057",
+      "BT13-060",
       "BT13-111",
       "BT15-003",
       "BT15-020",
@@ -42106,6 +42115,7 @@
       "AD1-025",
       "BT12-057",
       "BT13-020",
+      "BT13-060",
       "BT15-003",
       "BT17-015",
       "BT17-018",

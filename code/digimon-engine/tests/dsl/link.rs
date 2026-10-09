@@ -161,3 +161,74 @@ effects:
         "linked-scope effect must fire through the host linked-card scan"
     );
 }
+
+// ── A `scope: linked` keyword grant applies to the host only (4-2-6) ──────
+//
+// A granted keyword with an auto-effect (here <Evade>'s optional replacement,
+// 16-21) is synthesized by `Game::build_effects_for_card`. It must reach the
+// Digimon the card is linked to, once, and never the card's own permanent.
+
+const LINKED_EVADE: &str = r#"
+card: TEST-LINK-EVADE
+name: Link Evade
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - scope: linked
+    kind: grant_keyword
+    keyword: Evade
+"#;
+
+fn linked_evade_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .from_dsl_yaml(LINKED_EVADE)
+        .expect("fixture compiles")
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .add_card(digimon_card("ALLY", CardColor::Red))
+        .start()
+}
+
+#[test]
+fn linked_scope_replacement_keyword_is_not_the_link_cards_own() {
+    use digimon_engine::replacement::ReplacementCause;
+    let mut r = linked_evade_runner();
+    let card = r.place_on_field(0, "TEST-LINK-EVADE", Some(0));
+    r.place_on_field(0, "ALLY", Some(0));
+
+    r.game.delete_permanent_with_cause(card, ReplacementCause::OpponentEffect);
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "the link card's own deletion offers no <Evade>: {:?}",
+        r.pending_kind()
+    );
+    assert_eq!(r.battle_area_size(0), 1, "the link card is deleted");
+}
+
+#[test]
+fn linked_scope_replacement_keyword_is_offered_to_the_host_once() {
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::replacement::ReplacementCause;
+    let mut r = linked_evade_runner();
+    let host = r.place_on_field(0, "HOST", Some(0));
+    r.place_on_field(0, "ALLY", Some(0));
+    r.push_linked_owned(host, "TEST-LINK-EVADE", 0);
+    r.game.tick_declarative_effects();
+
+    r.game.delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    assert!(
+        r.game.pending_selection.as_ref().is_some_and(|p| p.is_optional),
+        "the host may use the linked <Evade>"
+    );
+    r.game.resolve_selection(0, PASS).expect("decline <Evade>");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "<Evade> is offered once: {:?}",
+        r.pending_kind()
+    );
+    assert_eq!(r.battle_area_size(0), 1, "the host is deleted after the decline");
+}

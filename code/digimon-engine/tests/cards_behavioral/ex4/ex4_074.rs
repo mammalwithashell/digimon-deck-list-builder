@@ -56,7 +56,7 @@ fn ex4_074_metadata_alt_paths_and_supported_clause_match_printed_text() {
         vec![CompiledColor::Purple, CompiledColor::Yellow]
     );
     assert!(compiled.traits.iter().any(|name| name == "Light Dragon"));
-    assert_eq!(compiled.attribute.as_deref(), Some("Vaccine"));
+    assert_eq!(compiled.attribute, ["Vaccine"]);
 
     let digivolve_paths: Vec<_> = compiled
         .alt_paths

@@ -47,7 +47,7 @@ fn bt9_033_metadata_and_evolution_match_printed_card() {
     assert_eq!(card.cost, Some(3));
     assert_eq!(card.dp, Some(2000));
     assert_eq!(card.traits, vec!["Mammal"]);
-    assert_eq!(card.attribute.as_deref(), Some("Vaccine"));
+    assert_eq!(card.attribute, ["Vaccine"]);
     assert_eq!(card.alt_paths.len(), 1, "yellow Lv.2 digivolve path");
     assert_eq!(card.alt_paths[0].cost, Some(CompiledCost::Literal(0)));
 }

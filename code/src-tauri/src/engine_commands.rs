@@ -195,6 +195,9 @@ pub struct PermanentDto {
     /// Inherited effects conferred by non-top digivolution sources.
     #[serde(default)]
     pub inherited_effects: Vec<InheritedEffectDto>,
+    /// Link effects conferred by linked cards (general_rule.pdf 4-2-6).
+    #[serde(default)]
+    pub link_effects: Vec<LinkEffectDto>,
     /// Active modifiers on this permanent (DCGO PermanentDetail parity).
     #[serde(default)]
     pub modifiers: Vec<PermanentModifierDto>,
@@ -243,6 +246,17 @@ pub struct KeywordBreakdownDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InheritedEffectDto {
     pub source_index: usize,
+    pub card_id: String,
+    pub card_name: String,
+    pub text: String,
+}
+
+/// One link effect conferred by a linked card (mirrors
+/// `serialization::perm_data`'s `linkEffects`). `link_index` indexes
+/// `linked_card_ids`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LinkEffectDto {
+    pub link_index: usize,
     pub card_id: String,
     pub card_name: String,
     pub text: String,
@@ -478,6 +492,7 @@ fn card_dto(card: &digimon_engine::card_source::CardSource, data: &[CardData]) -
         effect_text: _,
         inherited_text: _,
         security_text: _,
+        link_text: _,
         effect_class_name: _,
         index: _,
         norm_id: _,
@@ -627,6 +642,25 @@ fn perm_dto(game: &Game, player: PlayerId, index: usize) -> PermanentDto {
         .map(|c| c.card_id(data).to_string())
         .collect();
 
+    // ── Link effects conferred by linked cards (general_rule.pdf 4-2-6) ──
+    let link_effects: Vec<LinkEffectDto> = perm
+        .linked_cards
+        .iter()
+        .enumerate()
+        .filter_map(|(i, cs)| {
+            let cd = &data[cs.data_index];
+            if cd.link_text.trim().is_empty() {
+                return None;
+            }
+            Some(LinkEffectDto {
+                link_index: i,
+                card_id: cs.card_id(data).to_string(),
+                card_name: cd.card_name.clone(),
+                text: cd.link_text.clone(),
+            })
+        })
+        .collect();
+
     PermanentDto {
         field_index: index as u8,
         top_card: card_dto(top, data),
@@ -641,6 +675,7 @@ fn perm_dto(game: &Game, player: PlayerId, index: usize) -> PermanentDto {
         linked_card_ids,
         main_effect_text: top_data.effect_text.clone(),
         inherited_effects,
+        link_effects,
         modifiers,
         dp_breakdown: DpBreakdownDto {
             base: Some(base_dp),
@@ -682,6 +717,7 @@ fn player_dto(game: &Game, id: PlayerId) -> PlayerDto {
                 .effect_text
                 .clone(),
             inherited_effects: Vec::new(),
+            link_effects: Vec::new(),
             modifiers: Vec::new(),
             dp_breakdown: DpBreakdownDto {
                 base: base_dp,
@@ -795,6 +831,7 @@ fn synth_card(id: &str, name: &str, kind: CardKind, dp: Option<i32>, cost: u16) 
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        link_text: String::new(),
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
@@ -2322,6 +2359,36 @@ mod tests {
             vec!["SRC-A", "SRC-B"],
             "non-top sources, bottom→top order matching encode_source_select; top card excluded"
         );
+    }
+
+    /// A link card's link effect reaches the stack inspector for the Digimon it
+    /// is linked to (general_rule.pdf 4-2-6), mirroring the browser wire's
+    /// `linkEffects`; a link card among the digivolution cards confers nothing
+    /// (4-2-4, 4-7-2), so it lists no inherited effect.
+    #[test]
+    fn perm_dto_lists_link_effects_for_link_cards_only() {
+        use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+
+        let mut linked = make_test_card("LNK", "LinkMon");
+        linked.link_text = "[When Linking] Gain 1 memory.".to_string();
+        let mut buried = make_test_card("LSRC", "BuriedLinkMon");
+        buried.link_text = "[Your Turn] This Digimon gets +1000 DP.".to_string();
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TOP", "TopMon"))
+            .add_card(linked)
+            .add_card(buried)
+            .start();
+        let handle = runner.place_stack(0, &["LSRC", "TOP"]);
+        runner.push_linked_owned(handle, "LNK", 0);
+
+        let dto = perm_dto(&runner.game, 0, 0);
+        assert_eq!(dto.link_effects.len(), 1, "{:?}", dto.link_effects);
+        let link = &dto.link_effects[0];
+        assert_eq!(link.link_index, 0);
+        assert_eq!(link.card_id, "LNK");
+        assert_eq!(link.card_name, "LinkMon");
+        assert_eq!(link.text, "[When Linking] Gain 1 memory.");
+        assert!(dto.inherited_effects.is_empty(), "{:?}", dto.inherited_effects);
     }
 
     /// The desktop DTO previously omitted per-permanent runtime data (keyword

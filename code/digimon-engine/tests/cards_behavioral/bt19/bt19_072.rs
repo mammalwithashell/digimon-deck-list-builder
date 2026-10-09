@@ -57,7 +57,7 @@ fn bt19_072_has_printed_metadata_and_route() {
         vec![CompiledColor::Purple, CompiledColor::White]
     );
     assert!(card.traits.iter().any(|name| name == "Royal Knight"));
-    assert_eq!(card.attribute.as_deref(), Some("Virus"));
+    assert_eq!(card.attribute, ["Virus"]);
     assert!(card.alt_paths.iter().any(|path| {
         path.kind == CompiledAltPathKind::Digivolve
             && path.cost == Some(CompiledCost::Literal(3))

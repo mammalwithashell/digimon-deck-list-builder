@@ -2,23 +2,19 @@
 
 Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`), discovered during archetype audits by `assess-rust-engine-archetype`. Distinct from [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md), which tracks Rust↔Python divergences in shared subsystems — this document catalogs **net-new primitives** the Rust scripting API needs before a given archetype can be implemented under the no-approximations policy (CLAUDE.md §17–18).
 
-> **Attribute-predicate matching unimplemented — OPEN (2026-06-20).** The DSL
-> predicate fields `attribute_is` / `form_is` are hard-coded to "no match"
-> (`dsl_cards/predicate.rs` returns `false` whenever they're set — "attribute
-> not yet tracked on CardData"). `CardData` *does* fold the attribute into its
-> merged `traits` list (`card_data.rs` extends `traits` with `attribute_eng`),
-> but there is no first-class attribute field nor a working attribute predicate.
-> Consequence surfaced by the `promote-official-bandai-card-source` change: cards
-> with a printed **`(Rule) Trait: Has [Free] attribute.`** grant (e.g. BT16-102
-> Magnamon X, BT17-077 Imperialdramon: Paladin Mode) now have the `Free`
-> attribute recovered into `attribute_eng` from the official Bandai DB, but any
-> requirement keyed on the `[Free]` attribute still won't match until
-> attribute-predicate matching is implemented. (Rule-granted *Type* traits are
-> fully fixed by that change — they route through `trait_has`, which already
-> matches `CardData.traits`.) Scope when picked up: add an attribute query
-> (a real `CardData.attribute` field, or an `attribute_is`/`attribute_in`
-> predicate that consults the trait list), keeping the RL mask and API in
-> lockstep.
+> **Attribute-predicate matching — RESOLVED (2026-10-05).** The DSL predicate
+> fields `attribute_is` / `form_is` were hard-coded to "no match", so BT16-077's
+> and EX3-008's "[Free] trait" filters (`attribute_is: Free`) never found a
+> target, in tests or in real games. They now match the trait line exactly like
+> `trait_has` (`ChangeTraits` overlays included): a form or an attribute is a
+> trait (general_rule.pdf 2-3-2-1), printed effects name either only as "the
+> [X] trait", and `CardData.traits` is the merged form + attribute + type line —
+> from cards.json in production, and, since the same change, from a DSL card's
+> `form:` + `attribute:` + `traits:` in DebugRunner (`CompiledCard::all_traits`;
+> it previously read `traits:` only). `attribute:` also takes a list for
+> rule-granted second attributes (`attribute: [Vaccine, Free]`). No separate
+> attribute field was added; the predicate shares `trait_has`'s evaluation, so
+> the RL mask and API stay in lockstep.
 
 > **Permanent-scoped `CannotSuspend` / `CannotUnsuspend` enforcement — RESOLVED 2026-06-13**
 > (Iceclad Liberator pool authoring: EX7-023, EX8-023, EX11-017). The
@@ -4514,6 +4510,22 @@ STANDING (unlinked) card granted its link effect to itself. The top/source pass 
 linked-card pass), and the DebugRunner's compiled-card native-keyword synthesis excludes
 `scope: linked` grants. Test `bt26_010_unlinked_has_no_progress`.
 
+## G-ENGINE-LINKED-GRANT-AUTO-EFFECT-SELF-APPLIED — RESOLVED (2026-10-05, BT24-067 Hackmon)
+
+Sibling of G-ENGINE-LINKED-ESS-SELF-APPLIED for keywords that carry an auto-effect (a trigger
+such as <Retaliation>, a replacement such as <Evade>). `Game::build_effects_for_card` synthesizes
+a `grant_keyword` clause's auto-effects but copied only `inherited` from the grant, never
+`linked`, so a `scope: linked` grant's auto-effect looked like the card's own face effect: the
+top-card trigger scan fired it for the link card itself (Hackmon on its own retaliated), and the
+linked-card trigger scan, which takes only `.linked()`/`.inherited()` effects, never fired it for
+the host (a Digimon linked with Hackmon did not retaliate). The synthesized auto-effect now
+carries the grant's `linked` flag; the replacement scan's own-permanent pass skips `.linked()`
+effects (the trigger scan already did), and the linked-card replacement pass skips a keyword the
+host's modifier registry already holds from the materialized grant, so it is offered once. Tests:
+`cards_behavioral -- bt24_067_linked_host_retaliates_when_deleted_in_battle
+bt24_067_on_its_own_does_not_retaliate link_box_production::fakemon_on_its_own_has_no_scapegoat`,
+`dsl -- link::linked_scope_replacement_keyword`.
+
 ## G-ENGINE-LINK-MAX-BASE — OPEN (2026-10-03, noted on BT26-086 Dantemon)
 
 `link_host_candidates` / `can_insert_plug_in_at` use a base link max of 5 (`5 +
@@ -4522,16 +4534,26 @@ the engine's base, a Digimon can hold up to 5 link cards without any `<Link +N>`
 `<Link +6>` yields 11 instead of 7. Verify against `general_rule.pdf` §10 before changing — the
 change affects every link card in the pool.
 
-## G-ENGINE-LINK-TEXT-IN-INHERITED-SLOT — OPEN (2026-10-03, BT26 Seven Code Appmon)
+## G-ENGINE-LINK-TEXT-IN-INHERITED-SLOT — RESOLVED (2026-10-05; opened 2026-10-03, BT26 Seven Code Appmon)
 
-`cards.json` / `card_overrides.json` store a Link Digimon's LINK EFFECT text in
+`cards.json` / `card_overrides.json` stored a Link Digimon's LINK EFFECT text in
 `inherited_effect_description_eng` (e.g. BT26-010 "<Progress> <Piercing>", BT21-009 "<Raid>").
 `CardData.inherited_text` feeds `inherited_keywords`, which `has_keyword_from_card_sources`
 applies from every BELOW-TOP digivolution source — so in production a Roleplaymon lying under
-another Digimon grants that Digimon <Progress>/<Piercing>, although the text only applies to a
-link host. (DebugRunner/DSL-pack card data has empty text, so behavioral tests don't see it.)
-Fix direction: a separate `link_text` slot on CardData (official DB labels the section "Link
-Effect"), with `inherited_keywords` reading only true inherited text.
+another Digimon granted that Digimon <Progress>/<Piercing>, although the text only applies to a
+link host (general_rule.pdf 4-2-4 / 4-2-6 / 4-7-2), and the DSL's `has_inherited` predicate
+matched all 77 link cards. (DebugRunner/DSL-pack card data has empty text, so behavioral tests
+didn't see it.)
+
+Resolved: cards.json carries the link effect in `link_effect_description_eng` (printed text with
+its timing, from the official DB; `code/tools/archive/move_link_box_2026_10.py`, and
+`ingest_cards.normalize_link_box` for re-ingests), loaded as `CardData.link_text`. Printed link
+keywords (`link_keywords`) reach a host only from its `linked_cards` (`has_keyword_from_card_sources`,
+`.linked()` auto-effects in `build_effects_for_card`, de-duped against an unconditional
+`scope: linked` grant); `inherited_keywords` reads only inherited text. The browser and desktop
+DTOs list `linkEffects` / `link_effects` for linked cards. Guards: `code/tests/test_link_box_data.py`
+(no link card's inherited field holds its link box; the link field matches the printed text) and
+`tests/cards_behavioral/link_box_production.rs` (production data).
 
 ## "Add N to this Digimon's DP deletion effects' maximums" has no engine primitive  [G-ENGINE-DP-DELETION-MAX-MODIFIER]
 

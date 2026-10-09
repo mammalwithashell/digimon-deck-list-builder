@@ -1,0 +1,74 @@
+# NEGATIVE scope probe for BT26-094#effect#1 (Keenan Crier):
+# "[Your Turn] When your opponent's hand is trashed from or effects trash cards
+#  from under this Tamer, by suspending this Tamer, 1 of your [DATA SQUAD] Digimon
+#  gains <Execute> for the turn."
+#
+# THE LINE: Keenan is in play. On T3 Peckmon (BT26-072) is played; its
+# [On Play] cost takes the "trash 1 card in your hand" branch, trashing OUR OWN
+# hand card (ST24-15). That is a hand-trash event, but it is the controller's
+# hand, not the opponent's, and nothing leaves from under Keenan, so the clause
+# must NOT fire: no OptionalSkill yes/no, Keenan stays unsuspended, no <Execute>.
+# BT26_094.cs gates OnDiscardHand on `cardSource.Owner == card.Owner.Enemy`.
+# Likely divergence: our engine treating any hand trash as the trigger.
+card: BT26-094
+clause: BT26-094#effect#1
+covers:
+  - BT26-094#effect#1
+  - BT26-072#effect#2
+interaction: {id: "probe:BT26-094#effect#1:scope:neg", source: probe, kind: negative}
+seed: 424242
+meta: {produced_by: 20261008T032659685613Z-pilot-data-squad-e6455b}
+decks:
+  p0:
+    stack: [BT26-094, BT26-072, ST24-15, ST24-04, BT26-082,
+            ST24-05, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-04, BT26-091, ST24-05, BT26-065, ST24-04]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-094, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Keenan's [Start of Your Main Phase]: place ST24-15 face down (draw 1, +1 memory).
+  - actor: 0
+    do: { select: { cards: [ST24-15] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: BT26-072, from: hand } }
+    expect: { prompt: main_phase }
+  # Pay-method modal: 1 = trash 1 hand card (our own hand).
+  - actor: 0
+    do: { select: { choice: "Trash", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { select: { cards: [ST24-04] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert: []

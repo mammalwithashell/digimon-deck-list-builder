@@ -28,8 +28,27 @@ class SimExecutor:
         books: dict[str, str] = {}
         notes: dict[str, list] = {}
         failures: dict[str, list] = {}
+        contradicted: dict[str, list] = {}
         if not paths:
             failures["(none)"] = ["no scenario was authored for this item"]
+        # A Q&A exam's `expect_ruling:` is the block BOTH families agreed (D5/D7);
+        # the orchestrator places it, so the line's author never touches the
+        # expected value. Written before the sim run checks it.
+        agreed = item.data.get("expect_ruling")
+        written = []
+        if agreed:
+            for path in paths:
+                fp = base.repo_path(ctx, path)
+                if not fp.is_file():
+                    continue
+                try:
+                    current = (base.load_yaml(fp) or {}).get("expect_ruling")
+                except Exception:   # an unparsable file fails below with the harness's message
+                    continue
+                if current != agreed:
+                    fp.write_text(set_top_level_block(fp.read_text(encoding="utf-8"), "expect_ruling", agreed),
+                                  encoding="utf-8")
+                    written.append(path)
         for path in paths:
             if not base.repo_path(ctx, path).is_file():
                 failures[path] = [f"scenario file {path} not found in the run tree"]
@@ -52,25 +71,18 @@ class SimExecutor:
                     raise base.StageDeferred(
                         f"dcgo-harness sim-only did not run for {path}: {report.failure_text()}",
                         StageOutcome(next_state=item.state, reason="harness unavailable"))
-                if report.passed:
+                if report.passed or (report.line_ok and report.ruling_contradicted):
+                    # A legal line on which OUR engine contradicts the publisher
+                    # is a finding for the oracle and triage, not the author's
+                    # failure (Q2304 burnt six attempts on one): it proceeds.
                     books[path] = book
                     notes[path] = report.notes
+                    if report.ruling_contradicted:
+                        contradicted[path] = report.ruling_lines()
                     break
                 first_failure = first_failure or report
             else:
                 failures[path] = list(first_failure.failures) or [first_failure.failure_text()]
-
-        # A Q&A exam's `expect_ruling:` is the value BOTH families agreed (D5/D7);
-        # the author must carry it verbatim, so an altered block is the author's error.
-        agreed = item.data.get("expect_ruling")
-        if agreed:
-            for path in paths:
-                if path in failures or not base.repo_path(ctx, path).is_file():
-                    continue
-                found = (base.load_yaml(base.repo_path(ctx, path)) or {}).get("expect_ruling")
-                if found != agreed:
-                    failures[path] = [f"the scenario's expect_ruling {found!r} is not the block both "
-                                      f"families agreed: {agreed!r}"]
 
         if failures:
             corrections = []
@@ -80,13 +92,48 @@ class SimExecutor:
                 corrections.append(corr.gate_fail(author, gate="sim",
                                                   stage=item.data.get("author_stage") or _author_stage(item),
                                                   item=item.item, detail=detail, ts=ctx.now()))
+            # `ruling_block_written` rides along so the driver commits the block
+            # even now: left uncommitted, it refused the re-author's merge
+            # ("manifest paths have uncommitted changes") three times running.
             return base.outcome("AUTHORING", item=item, corrections=corrections,
-                                data={"sim_failure": failures, "deck_books": books or None},
+                                data={"sim_failure": failures, "deck_books": books or None,
+                                      "ruling_block_written": written or None},
                                 reason=f"sim-only failed for {', '.join(failures)}")
+        reason = "sim-only clean; submitting to the oracle"
+        if contradicted:
+            reason = (f"sim-only legal, but our engine contradicts the ruling on {', '.join(contradicted)}; "
+                      f"submitting to the oracle for DCGO's answer")
         return base.outcome("ORACLE", item=item,
                             data={"deck_books": books, "sim_notes": notes, "sim_failure": None,
-                                  "oracle_retry_paths": None, "oracle_results": None},
-                            reason="sim-only clean; submitting to the oracle")
+                                  "oracle_retry_paths": None, "oracle_results": None,
+                                  "ruling_contradicted": contradicted or None,
+                                  "ruling_block_written": written or None},
+                            reason=reason)
+
+
+def set_top_level_block(text: str, key: str, mapping) -> str:
+    """`text` with its top-level `key:` block (if any) replaced by `mapping`,
+    dumped as YAML at the end; everything else -- comments included -- is kept
+    byte for byte. A top-level block ends at the next column-0 line."""
+    import yaml
+
+    lines = text.splitlines(keepends=True)
+    out, skipping = [], False
+    for ln in lines:
+        if skipping:
+            if ln.strip() and not ln[0].isspace():
+                skipping = False
+            else:
+                continue
+        if ln.startswith(f"{key}:"):
+            skipping = True
+            continue
+        out.append(ln)
+    body = "".join(out)
+    if body and not body.endswith("\n"):
+        body += "\n"
+    dumped = yaml.safe_dump(mapping, sort_keys=False, default_flow_style=None, allow_unicode=True)
+    return body + f"{key}:\n" + "".join(f"  {ln}\n" for ln in dumped.splitlines())
 
 
 def _author_stage(item: ItemRecord) -> str:

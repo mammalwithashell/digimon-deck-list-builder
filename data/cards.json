@@ -78852,7 +78852,7 @@
       "Social"
     ],
     "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Haru Shinkai] from your hand without paying the cost.",
-    "inherited_effect_description_eng": "＜Raid＞",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -78861,7 +78861,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon]/[Hero] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon]/[Hero] trait: Cost 0",
+    "link_effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
   },
   "BT21-010": {
     "index": 2202,
@@ -79204,7 +79205,7 @@
       "Social"
     ],
     "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it comes into play.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, it may attack.",
-    "inherited_effect_description_eng": "This Digimon may attack.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -79218,7 +79219,8 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] This Digimon may attack."
   },
   "BT21-019": {
     "index": 2211,
@@ -79400,7 +79402,7 @@
       "Social"
     ],
     "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, delete 1 of your opponent’s Digimon with as much or less DP as this Digimon.",
-    "inherited_effect_description_eng": "Delete 1 of your opponent's Digimon with as much or less DP as this Digimon.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -79414,7 +79416,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[App Fusion] [DoGatchmon] & [Timemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [DoGatchmon] & [Timemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon."
   },
   "BT21-024": {
     "index": 2216,
@@ -80114,7 +80117,7 @@
       "Tool"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.",
-    "inherited_effect_description_eng": "All of your opponent's Security Digimon get -3000 DP.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -80123,7 +80126,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[Your Turn] All of your opponent's Security Digimon get -3000 DP."
   },
   "BT21-042": {
     "index": 2234,
@@ -80194,7 +80198,7 @@
       "Social"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] 1 of your opponent's Digimon gets -2000 DP until their turn ends.",
-    "inherited_effect_description_eng": "1 of your opponent's Digimon gets -2000 DP until their turn ends.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -80203,7 +80207,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon gets -2000 DP until their turn ends."
   },
   "BT21-044": {
     "index": 2236,
@@ -80358,7 +80363,7 @@
       "Navi"
     ],
     "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [App Driver] trait among them to the hand. Return the rest to the bottom of the deck.",
-    "inherited_effect_description_eng": "＜Piercing＞",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -80367,7 +80372,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.)"
   },
   "BT21-048": {
     "index": 2240,
@@ -80597,7 +80603,7 @@
       "Tool"
     ],
     "effect_description_eng": "[On Play] Until your opponent's turn ends, 1 of their Digimon can't attack players.",
-    "inherited_effect_description_eng": "Until your opponent's turn ends, 1 of their Digimon can't attack players.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -80606,7 +80612,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] Until your opponent's turn ends, 1 of their Digimon can't attack players."
   },
   "BT21-054": {
     "index": 2246,
@@ -80636,7 +80643,7 @@
       "Game"
     ],
     "effect_description_eng": "[On Play] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from any of your Digimon's digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
-    "inherited_effect_description_eng": "Delete 1 of your opponent's Digimon with a play cost of 3 or less.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -80645,7 +80652,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Three Musketeers] in text or w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Three Musketeers] in text or w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with a play cost of 3 or less."
   },
   "BT21-055": {
     "index": 2247,
@@ -80820,7 +80828,7 @@
       "Tool"
     ],
     "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
-    "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -80829,7 +80837,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": "[App Fusion] [Watchmon] & [Savemon] & [Calendamon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Watchmon] & [Savemon] & [Calendamon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
   },
   "BT21-060": {
     "index": 2252,
@@ -81252,7 +81261,7 @@
       "Social"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] You may return 1 Digimon card with the [Appmon] trait from your trash to the hand.",
-    "inherited_effect_description_eng": "You may return 1 Digimon card with the [Appmon] trait from your trash to the hand.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -81261,7 +81270,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Linking] You may return 1 Digimon card with the [Appmon] trait from your trash to the hand."
   },
   "BT21-071": {
     "index": 2263,
@@ -81291,7 +81301,7 @@
       "Tool"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] By placing 1 card with the [Appmon] or [Three Musketeers] trait from your hand or trash as 1 of your Digimon's bottom digivolution card, gain 1 memory.",
-    "inherited_effect_description_eng": "Draw 2 and trash 2 cards in your hand.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -81300,7 +81310,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2"
+    "xros_req": "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2",
+    "link_effect_description_eng": "[When Linking] ＜Draw 2＞ and trash 2 cards in your hand."
   },
   "BT21-072": {
     "index": 2264,
@@ -81373,7 +81384,7 @@
       "Social"
     ],
     "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, give 1 of your opponent's Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends.",
-    "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of this Digimon's link cards, it doesn't leave.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -81387,7 +81398,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[App Fusion] [Sociamon] & [Gossipmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Sociamon] & [Gossipmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of this Digimon's link cards, it doesn't leave."
   },
   "BT21-074": {
     "index": 2266,
@@ -81418,7 +81430,7 @@
       "Navi"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] By placing 1 [Appmon] or [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card, until your opponent's turn ends, their effects can't return that Digimon to hands or decks or affect it with ＜De-Digivolve＞ effects.\r\n[When Digivolving] [When Attacking] [Once Per Turn] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your Digimon's digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
-    "inherited_effect_description_eng": "Delete 1 of your opponent's level 4 or lower Digimon.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -81432,7 +81444,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3"
+    "xros_req": "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3",
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's level 4 or lower Digimon."
   },
   "BT21-075": {
     "index": 2267,
@@ -82545,7 +82558,7 @@
       "Entertainment"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less.",
-    "inherited_effect_description_eng": "Delete 1 of your opponent's Digimon with 4000 DP or less.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -82554,7 +82567,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with 4000 DP or less."
   },
   "BT22-010": {
     "index": 2304,
@@ -82855,7 +82869,7 @@
       "Navi"
     ],
     "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [Entertainment] or [Awakening (App Name)] trait among them to the hand. Return the rest to the bottom of the deck.",
-    "inherited_effect_description_eng": "Trash any 1 digivolution card of 1 of your opponent's Digimon.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -82864,7 +82878,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] Trash any 1 digivolution card of 1 of your opponent's Digimon."
   },
   "BT22-017": {
     "index": 2311,
@@ -83376,7 +83391,7 @@
       "Entertainment"
     ],
     "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Torajiro Asuka] from your hand without paying the cost.",
-    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -83385,7 +83400,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn."
   },
   "BT22-031": {
     "index": 2325,
@@ -83494,7 +83510,7 @@
       "Entertainment"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -4000 DP for the turn.\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, you may play 1 level 3 Digimon card with the [Appmon] trait from your hand without paying the cost.",
-    "inherited_effect_description_eng": "[When Attacking] You may play 1 level 3 Digimon card with the [Appmon] trait from your hand without paying the cost.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -83508,7 +83524,8 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[App Fusion] [Musimon] & [Recomon] & [Mcmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Musimon] & [Recomon] & [Mcmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Attacking] You may play 1 level 3 Digimon card with the [Appmon] trait from your hand without paying the cost."
   },
   "BT22-034": {
     "index": 2328,
@@ -83575,7 +83592,7 @@
       "Entertainment"
     ],
     "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, you may play 1 play cost 4 or lower card with the [Appmon] trait from your hand without paying the cost.",
-    "inherited_effect_description_eng": "To 1 of your opponent's Digimon, give -4000 DP for the turn for each of your Digimon with the [Appmon] trait.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -83589,7 +83606,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[App Fusion] [Mediamon] & [Dreammon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Mediamon] & [Dreammon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] To 1 of your opponent's Digimon, give -4000 DP for the turn for each of your Digimon with the [Appmon] trait."
   },
   "BT22-036": {
     "index": 2330,
@@ -84153,7 +84171,7 @@
       "Tool"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon.",
-    "inherited_effect_description_eng": "Suspend 1 of your opponent's Digimon.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -84162,7 +84180,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Linking] Suspend 1 of your opponent's Digimon."
   },
   "BT22-051": {
     "index": 2345,
@@ -84343,7 +84362,7 @@
       "Tool"
     ],
     "effect_description_eng": "[On Play] By trashing 1 Digimon card with the [Appmon] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
-    "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -84352,7 +84371,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
   },
   "BT22-056": {
     "index": 2350,
@@ -84460,7 +84480,7 @@
       "Entertainment"
     ],
     "effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon gets linked, your opponent's effects can't return 1 of your Digimon to hands or decks until their turn ends.",
-    "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -84469,7 +84489,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Linking] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
   },
   "BT22-059": {
     "index": 2353,
@@ -85158,7 +85179,7 @@
       "Tool"
     ],
     "effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)\r\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area, you may play 1 of this Digimon's link cards without paying the cost.",
-    "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 3 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -85172,7 +85193,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[App Fusion] [Roamon] & [Effecmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Roamon] & [Effecmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, it isn't deleted.)"
   },
   "BT22-076": {
     "index": 2370,
@@ -86183,7 +86205,7 @@
       "Life"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.",
-    "inherited_effect_description_eng": "＜Piercing＞",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -86192,7 +86214,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.)"
   },
   "BT23-008": {
     "index": 2404,
@@ -86264,7 +86287,7 @@
       "Game"
     ],
     "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, 1 of your Digimon gets +4000 DP for the turn.",
-    "inherited_effect_description_eng": "[Once Per Turn] This Digimon may attack a player.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -86273,7 +86296,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[End of Your Turn] [Once Per Turn] This Digimon may attack a player."
   },
   "BT23-010": {
     "index": 2406,
@@ -86528,7 +86552,7 @@
       "Game"
     ],
     "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Eri Karan] from your hand without paying the cost.",
-    "inherited_effect_description_eng": "Draw 1",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -86537,7 +86561,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] ＜Draw 1＞ (Draw 1 card from your deck.)"
   },
   "BT23-017": {
     "index": 2413,
@@ -86731,7 +86756,7 @@
       "Game"
     ],
     "effect_description_eng": "[When Digivolving] [When Attacking] [Once Per Turn] You may link 1 level 3 Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, it can't be deleted in battle until your opponent's turn ends.",
-    "inherited_effect_description_eng": "This Digimon can't be deleted in battle until your opponent's turn ends.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -86745,7 +86770,8 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[App Fusion] [Dokamon] & [Perorimon] & [Musclemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Dokamon] & [Perorimon] & [Musclemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] This Digimon can't be deleted in battle until your opponent's turn ends."
   },
   "BT23-022": {
     "index": 2418,
@@ -86776,7 +86802,7 @@
       "Game"
     ],
     "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[All Turns] [Once Per Turn] When this Digimon gets linked, it may unsuspend.",
-    "inherited_effect_description_eng": "＜Security A. +1＞",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -86790,7 +86816,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[App Fusion] [Dosukomon] & [Coachmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Dosukomon] & [Coachmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
   },
   "BT23-023": {
     "index": 2419,
@@ -87028,7 +87055,7 @@
       "Entertainment"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn.",
-    "inherited_effect_description_eng": "Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -87037,7 +87064,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Linking] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects."
   },
   "BT23-029": {
     "index": 2425,
@@ -87260,7 +87288,7 @@
       "Life"
     ],
     "effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)\r\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 5 or fewer security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.) Then, to 1 of your opponent's Digimon, give -1000 DP until their turn ends for each of your security cards.",
-    "inherited_effect_description_eng": "Until your opponent's turn ends, their effects can't return this Digimon to hands or decks or affect it with effects.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -87274,7 +87302,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[App Fusion] [Coordemon] & [Consulmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Coordemon] & [Consulmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] Until your opponent's turn ends, their effects can't return this Digimon to hands or decks or affect it with ＜De-Digivolve＞ effects."
   },
   "BT23-034": {
     "index": 2430,
@@ -87514,7 +87543,7 @@
       "Entertainment"
     ],
     "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [Game] or [Invincible (App Name)] trait among them to the hand. Return the rest to the bottom of the deck.",
-    "inherited_effect_description_eng": "You may suspend 1 of your opponent's Digimon.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -87523,7 +87552,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] You may suspend 1 of your opponent's Digimon."
   },
   "BT23-040": {
     "index": 2436,
@@ -88076,7 +88106,7 @@
       "Life"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] 1 of your opponent's Digimon can't attack players until their turn ends.",
-    "inherited_effect_description_eng": "This Digimon gains and until your opponent's turn ends.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -88085,7 +88115,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Linking] This Digimon gains ＜Reboot＞ and ＜Blocker＞ until your opponent's turn ends."
   },
   "BT23-053": {
     "index": 2449,
@@ -90906,7 +90937,7 @@
       "System"
     ],
     "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [System] or [Transmutation (App Name)] trait among them to the hand. Return the rest to the bottom of the deck.",
-    "inherited_effect_description_eng": "1 of your opponent's Digimon gets -2000 DP for the turn.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -90915,7 +90946,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon gets -2000 DP for the turn."
   },
   "BT24-033": {
     "index": 2531,
@@ -91066,7 +91098,7 @@
       "Life"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.",
-    "inherited_effect_description_eng": "1 of your opponent's Digimon gets -5000 DP for the turn.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -91075,7 +91107,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[On Deletion] 1 of your opponent's Digimon gets -5000 DP for the turn."
   },
   "BT24-037": {
     "index": 2535,
@@ -91171,7 +91204,7 @@
       "Life"
     ],
     "effect_description_eng": "＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)\r\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[All Turns] [Once Per Turn] When this Digimon gets linked, 1 of your opponent's Digimon gets -7000 DP for the turn.",
-    "inherited_effect_description_eng": "1 of your opponent's Digimon gets -7000 DP for the turn.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -91185,7 +91218,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[App Fusion] [Docmon] & [Medicmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Docmon] & [Medicmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon gets -7000 DP for the turn."
   },
   "BT24-039": {
     "index": 2537,
@@ -91771,7 +91805,7 @@
       "System"
     ],
     "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
-    "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -91780,7 +91814,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
   },
   "BT24-054": {
     "index": 2552,
@@ -91899,7 +91934,7 @@
       "System"
     ],
     "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] Until your opponent's turn ends, their effects can't return 1 of your Digimon with the [System], [Life] or [Transmutation (App Name)] trait to hands or decks. with the [Appmon] trait from your trash without paying the cost.",
-    "inherited_effect_description_eng": "Delete 1 of your opponent's play cost 5 or lower Digimon.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -91908,7 +91943,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": "[App Fusion] [Hackmon] & [Protecmon] & [Pipomon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Hackmon] & [Protecmon] & [Pipomon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's play cost 5 or lower Digimon."
   },
   "BT24-057": {
     "index": 2555,
@@ -91938,7 +91974,7 @@
       "Life"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [On Deletion] Until your opponent's turn ends, 1 of their Digimon can't attack players.",
-    "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -91947,7 +91983,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[On Deletion] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
   },
   "BT24-058": {
     "index": 2556,
@@ -92335,7 +92372,7 @@
       "System"
     ],
     "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Rei Katsura] from your hand without paying the cost.",
-    "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -92344,7 +92381,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
   },
   "BT24-068": {
     "index": 2566,
@@ -92485,7 +92523,7 @@
       "System"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] 1 of your Digimon with the [System], [Life] or [Transmutation (App Name)] trait gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.) for the turn.\r\n[On Deletion] You may play 1 level 3 Digimon card with the [Appmon] trait from your trash without paying the cost.",
-    "inherited_effect_description_eng": "You may play 1 level 3 [Appmon] trait Digimon card from your trash without paying the cost.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -92499,7 +92537,8 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[App Fusion] [Hackmon] & [Protecmon] & [Pipomon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Hackmon] & [Protecmon] & [Pipomon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[On Deletion] You may play 1 level 3 [Appmon] trait Digimon card from your trash without paying the cost."
   },
   "BT24-072": {
     "index": 2570,
@@ -92721,7 +92760,7 @@
       "System"
     ],
     "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [On Deletion] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to 1 of your Digimon without paying the cost.\r\n[On Deletion] You may play 1 level 4 or lower [Appmon] trait Digimon card from your trash without paying the cost.",
-    "inherited_effect_description_eng": "Delete 1 of your opponent's Digimon with the lowest DP.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -92735,7 +92774,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[App Fusion] [Raidramon] & [Dezipmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Raidramon] & [Dezipmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with the lowest DP."
   },
   "BT24-078": {
     "index": 2576,
@@ -93197,10 +93237,11 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "While you have an [TS] trait Digimon or Tamer on the field, you can ignore this card's color requirements.\r\n[Security] Activate this card's [Main] effects.\r\n[Main] Return all of your opponent's lowest level Digimon to the hand. If this effect returned, 1 of your [TS] trait Digimon unsuspends. Then, you may link this card to 1 of your Digimon on the field without paying the cost.",
-    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Return 1 of your opponent's lowest level Digimon to the hand.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Attacking] [Once Per Turn] Return 1 of your opponent's lowest level Digimon to the hand."
   },
   "BT24-092": {
     "index": 2590,
@@ -93224,10 +93265,11 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "While you have an [TS] trait Digimon or Tamer on the field, you can ignore this card's color requirements.\r\n[Security] Activate this card's [Main] effects.\r\n[Main] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, you may link this card to 1 of your Digimon on the field without paying the cost.",
-    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -6000 DP for the turn.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -6000 DP for the turn."
   },
   "BT24-093": {
     "index": 2591,
@@ -93308,10 +93350,11 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "While you have an [TS] trait Digimon or Tamer on the field, you can ignore this card's color requirements.\r\n[Security] Activate this card's [Main] effects.\r\n[Main] Suspend 1 of your opponent's Digimon or Tamers. It can't unsuspend in their next unsuspend phase. Then, you may link this card to 1 of your Digimon on the field without paying the cost.",
-    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Return 1 of your opponent's suspended Digimon to the hand.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Attacking] [Once Per Turn] Return 1 of your opponent's suspended Digimon to the hand."
   },
   "BT24-096": {
     "index": 2594,
@@ -93362,10 +93405,11 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "While you have an [TS] trait Digimon or Tamer on the field, you can ignore this card's color requirements.\r\n[Security] Activate this card's [Main] effects.\r\n[Main] Delete 1 of your opponent's level 6 or higher Digimon. Then, you may link this card to 1 of your Digimon on the field without paying the cost.",
-    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Delete 1 of your opponent's level 5 or lower Digimon.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Attacking] [Once Per Turn] Delete 1 of your opponent's level 5 or lower Digimon."
   },
   "BT24-098": {
     "index": 2596,
@@ -93720,7 +93764,7 @@
       "Social"
     ],
     "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Appmon] trait card and 1 [Social], [Tool], [Reboot] or [Creation] trait card among them to the hand. Return the rest to the bottom of the deck.",
-    "inherited_effect_description_eng": "Delete 1 of your opponent's Digimon with 3000 DP or less.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -93729,7 +93773,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with 3000 DP or less."
   },
   "BT25-008": {
     "index": 4095,
@@ -94900,7 +94945,7 @@
       "Tool"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] Add your top security card to the hand. Then, ＜Recovery +1＞ (Place the top card of your deck as your top security card.)",
-    "inherited_effect_description_eng": "By trashing 1 [Appmon] trait card from your hand, Draw 2",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -94909,7 +94954,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": "[App Fusion] [Kabemon] & [Gomimon] & [Ecomon] & [Puzzlemon]: Cost 0 \r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Kabemon] & [Gomimon] & [Ecomon] & [Puzzlemon]: Cost 0 \r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] By trashing 1 [Appmon] trait card from your hand, ＜Draw 2＞."
   },
   "BT25-037": {
     "index": 4124,
@@ -95329,7 +95375,7 @@
       "Game"
     ],
     "effect_description_eng": "[Your Turn] [Once Per Turn] When a [Social], [Tool] or [Game] trait card would link to this Digimon, you may reduce the cost by 1.",
-    "inherited_effect_description_eng": "Suspend 1 of your opponent's Digimon.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -95338,7 +95384,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] Suspend 1 of your opponent's Digimon."
   },
   "BT25-046": {
     "index": 4132,
@@ -95603,7 +95650,7 @@
       "Social"
     ],
     "effect_description_eng": "[Main] [Once Per Turn] You may link 1 [Social], [Tool] or [Game] trait Digimon card from your hand or this Digimon's digivolution cards to this Digimon with the cost reduced by 1.\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Kazuki & Itsuki] from your hand without paying the cost.",
-    "inherited_effect_description_eng": "Suspend 1 of your opponent's Digimon or Tamers.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -95617,7 +95664,8 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[App Fusion] [Onmon] & [Gatchmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Onmon] & [Gatchmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] Suspend 1 of your opponent's Digimon or Tamers."
   },
   "BT25-053": {
     "index": 4139,
@@ -95773,7 +95821,7 @@
       "Tool"
     ],
     "effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)\r\n[On Play] [When Digivolving] [When Attacking] If it's your turn, you may link 1 [Social], [Tool] or [Game] trait Digimon card from your hand or this Digimon's digivolution cards to this Digimon with the cost reduced by 2.\r\n[All Turns] When this Digimon gets linked, suspend 1 of your opponent's Digimon or Tamers.",
-    "inherited_effect_description_eng": "Return 1 of your opponent's suspended Digimon to the bottom of the deck.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -95787,7 +95835,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[App Fusion] [Logimon] & [Craftmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Logimon] & [Craftmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] Return 1 of your opponent's suspended Digimon to the bottom of the deck."
   },
   "BT25-057": {
     "index": 4143,
@@ -96031,7 +96080,7 @@
       "Game"
     ],
     "effect_description_eng": "[Start of Your Main Phase] By trashing 1 card with the [Appmon] trait from your hand, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.",
-    "inherited_effect_description_eng": "1 of your opponent's Digimon can't unsuspend until their turn ends.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -96040,7 +96089,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon can't unsuspend until their turn ends."
   },
   "BT25-062": {
     "index": 4148,
@@ -96380,7 +96430,7 @@
       "Social"
     ],
     "effect_description_eng": "[Main] [Once Per Turn] You may link 1 [Social], [Tool] or [Game] trait Digimon card from your trash or this Digimon's digivolution cards to this Digimon with the cost reduced by 1.\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, delete 1 of your opponent's Digimon with a play cost of 4 or less.",
-    "inherited_effect_description_eng": "1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -96394,7 +96444,8 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[App Fusion] [Offmon] & [Hackmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Offmon] & [Hackmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends."
   },
   "BT25-071": {
     "index": 4157,
@@ -96462,7 +96513,7 @@
       "Tool"
     ],
     "effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)\r\n[On Play] [When Digivolving] [When Attacking] If it's your turn, you may link 1 [Social], [Tool] or [Game] trait Digimon card from your trash or this Digimon's digivolution cards to this Digimon with the cost reduced by 2.\r\n[All Turns] [Once Per Turn] When this Digimon gets linked, 1 of your opponent's Digimon or Tamers can't digivolve until their turn ends.",
-    "inherited_effect_description_eng": "2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -96476,7 +96527,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[App Fusion] [Logamon] & [Timemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Logamon] & [Timemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends."
   },
   "BT25-073": {
     "index": 4159,
@@ -97264,10 +97316,11 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "＜Use Req. ([TS] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Security] Activate this card's [Main] effects.\r\n[Main] Delete all of your opponent's Digimon with the lowest DP. If this effect didn't delete, trash 1 of your opponent's Option cards in the battle area. Then, you may link this card to 1 of your Digimon on the field without paying the cost.",
-    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with as much DP as this Digimon or less.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with as much DP as this Digimon or less."
   },
   "BT25-094": {
     "index": 4179,
@@ -97461,10 +97514,11 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "＜Use Req. ([TS] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Security] Activate this card's [Main] effects.\r\n[Main] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. (Trash up to 2 cards from the top. You can't trash past level 3 cards.) Then, you may link this card to 1 of your Digimon on the field without paying the cost.",
-    "inherited_effect_description_eng": "＜Piercing＞",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "＜Collision＞ ＜Piercing＞"
   },
   "BT25-101": {
     "index": 4185,
@@ -97488,10 +97542,11 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "＜Use Req. ([TS] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Security] Activate this card's [Main] effects.\r\n[Main] By trashing 1 [TS] trait card from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) After, you may link this card or 1 [TS] trait card from your trash to 1 of your Digimon on the field without paying the cost.",
-    "inherited_effect_description_eng": "＜Security A. +1＞\r\n\r\n[All Turns] When this would leave the battle area, by trashing 1 of its link cards, it doesn't leave.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "＜Security A. +1＞ ＜Reboot＞ [All Turns] When this [Vulcanusmon] would leave the battle area, by trashing 1 of its link cards, it doesn't leave."
   },
   "BT25-102": {
     "index": 4186,
@@ -122330,7 +122385,7 @@
       "Navi"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] Give 2 of your opponent's Digimon ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) until their turn ends.",
-    "inherited_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -122339,7 +122394,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn."
   },
   "EX10-015": {
     "index": 3936,
@@ -122434,7 +122490,7 @@
       "Tool"
     ],
     "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon.",
-    "inherited_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, suspend 2 of your opponent's Digimon.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -122443,7 +122499,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, suspend 2 of your opponent's Digimon."
   },
   "EX10-017": {
     "index": 3938,
@@ -122475,7 +122532,7 @@
       "System"
     ],
     "effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)\r\n＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 Tamer card with the [Leviathan] trait from your hand without paying the cost.",
-    "inherited_effect_description_eng": "[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, Draw 1 and gain 1 memory.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -122489,7 +122546,8 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[App Fusion] [Mirrormon] & [Kabemon] & [Copipemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Mirrormon] & [Kabemon] & [Copipemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, ＜Draw 1＞ and gain 1 memory."
   },
   "EX10-018": {
     "index": 3939,
@@ -122562,7 +122620,7 @@
       "System"
     ],
     "effect_description_eng": "＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)\r\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[All Turns] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon or Tamers. It can't unsuspend in their next unsuspend phase.",
-    "inherited_effect_description_eng": "[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, trash your opponent's top security card.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -122576,7 +122634,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[App Fusion] [Mienumon] & [Sakusimon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Mienumon] & [Sakusimon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, trash your opponent's top security card."
   },
   "EX10-020": {
     "index": 3941,
@@ -122756,7 +122815,7 @@
       "System"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.",
-    "inherited_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards,",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -122765,7 +122824,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
   },
   "EX10-025": {
     "index": 3946,
@@ -122954,7 +123014,7 @@
       "System"
     ],
     "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)",
-    "inherited_effect_description_eng": "By trashing 1 of this Digimon's link cards, effects don't affect 1 of your Digimon until your opponent's turn ends.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -122963,7 +123023,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Linking] By trashing 1 of this Digimon's link cards, ＜De-Digivolve＞ effects don't affect 1 of your Digimon until your opponent's turn ends."
   },
   "EX10-030": {
     "index": 3951,
@@ -122995,7 +123056,7 @@
       "Navi"
     ],
     "effect_description_eng": "＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.)\r\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[All Turns] [Once Per Turn] When effects trash any of this Digimon's link cards, 1 of your opponent's Digimon gets -8000 DP for the turn.",
-    "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -123009,7 +123070,8 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[App Fusion] [Warpmon] & [Weatherdramon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Warpmon] & [Weatherdramon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave."
   },
   "EX10-031": {
     "index": 3952,
@@ -123323,7 +123385,7 @@
       "System"
     ],
     "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [Leviathan] trait among them to the hand. Return the rest to the bottom of the deck.",
-    "inherited_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, you may return 1 [Appmon] trait Digimon card from your trash to the hand.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -123332,7 +123394,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, you may return 1 [Appmon] trait Digimon card from your trash to the hand."
   },
   "EX10-039": {
     "index": 3960,
@@ -123517,7 +123580,7 @@
       "Game"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] Delete 1 of your opponent's level 3 Digimon.\r\n[All Turns] [Once Per Turn] When effects trash any of this Digimon's link cards, gain 1 memory.",
-    "inherited_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, delete 1 of your opponent's level 4 or lower Digimon.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -123526,7 +123589,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, delete 1 of your opponent's level 4 or lower Digimon."
   },
   "EX10-044": {
     "index": 3965,
@@ -125699,7 +125763,7 @@
       "Data"
     ],
     "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Maquinamon] and 1 card with [Maquinamon] in its text among them to the hand. Return the rest to the bottom of the deck. Then, you may link this Digimon or 1 [Maquinamon] in your hand to 1 of your other Digimon without paying the cost.",
-    "inherited_effect_description_eng": "[All Turns] When this Digimon would leave the battle area, by placing 1 of its link cards as its bottom digivolution card, it doesn't leave.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -125713,7 +125777,8 @@
         "memory_cost": 1
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Maquinamon] in text: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Maquinamon] in text: Cost 0",
+    "link_effect_description_eng": "[All Turns] When this Digimon would leave the battle area, by placing 1 of its link cards as its bottom digivolution card, it doesn't leave."
   },
   "EX11-028": {
     "index": 3222,
@@ -136397,7 +136462,7 @@
       "Social"
     ],
     "effect_description_eng": "[On Play] ＜Draw 1＞ (Draw 1 card from your deck.)",
-    "inherited_effect_description_eng": "Draw 1",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -136406,7 +136471,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] ＜Draw 1＞"
   },
   "P-191": {
     "index": 3521,
@@ -150090,10 +150156,11 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "While you have a Tamer, you can ignore this card's color requirements.\r\n[Security] Delete 1 of your opponent's Digimon with the lowest DP. Then, add this card to the hand.\r\n[Main] You may link this card to 1 of your Digimon without paying the cost. Then, delete 1 of your opponent's Digimon with as much or less DP as 1 of your Digimon.",
-    "inherited_effect_description_eng": "[Once Per Turn] This Digimon may attack.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "[End of Your Turn] [Once Per Turn] This Digimon may attack."
   },
   "ST22-09": {
     "index": 3906,
@@ -150117,10 +150184,11 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "While you have a Tamer, you can ignore this card's color requirements.\r\n[Security] Until your turn ends, 1 of your opponent's Digimon or Tamers can't suspend. Then, add this card to the hand.\r\n[Main] You may link this card to 1 of your Digimon without paying the cost. Then, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.",
-    "inherited_effect_description_eng": "Link Requirements [Link] Lv.3 or higher: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
   },
   "ST22-10": {
     "index": 3907,
@@ -150171,10 +150239,11 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "While you have a Tamer, you can ignore this card's color requirements.\r\n[Security] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. (Trash up to 2 cards from the top. You can't trash past level 3 cards.) Then, add this card to the hand.\r\n[Main] You may link this card to 1 of your Digimon without paying the cost. Then, until your opponent's turn ends, 1 of your Digimon gains ＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.) and +3000 DP.",
-    "inherited_effect_description_eng": "Link Requirements [Link] Lv.3 or higher: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": ""
+    "xros_req": "",
+    "link_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
   },
   "ST22-12": {
     "index": 3909,
@@ -150205,7 +150274,7 @@
       "Social"
     ],
     "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n[When Attacking] [Once Per Turn] You may link 1 Digimon card with the [Social], [Navi] or [Tool] trait from your hand or this Digimon's digivolution cards to this Digimon with the link cost reduced by 2.",
-    "inherited_effect_description_eng": "Return 1 of your opponent's 5000 DP or lower Digimon to the bottom of the deck.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -150219,7 +150288,8 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] Return 1 of your opponent's 5000 DP or lower Digimon to the bottom of the deck."
   },
   "ST22-13": {
     "index": 3910,
@@ -154793,7 +154863,7 @@
       "Game"
     ],
     "effect_description_eng": "＜Detach ([Seven Code] trait)＞ (When this Digimon would leave the battle area other than by your effects, by trashing 1 of its specified link cards, it doesn't leave.)\r\n[When Attacking] By trashing 1 [Game], [Open] or [Seven Code] trait card from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
-    "inherited_effect_description_eng": "＜Progress＞\r\n＜Piercing＞",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -154802,7 +154872,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "＜Progress＞ ＜Piercing＞"
   },
   "BT26-011": {
     "index": 4231,
@@ -155167,7 +155238,7 @@
       "Social"
     ],
     "effect_description_eng": "＜Detach ([Seven Code] trait)＞ (When this Digimon would leave the battle area other than by your effects, by trashing 1 of its specified link cards, it doesn't leave.)\r\n[When Attacking] If your hand has 7 or fewer cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
-    "inherited_effect_description_eng": "[When Linking] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -155176,7 +155247,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends."
   },
   "BT26-020": {
     "index": 4240,
@@ -155524,7 +155596,7 @@
       "Life"
     ],
     "effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)\r\n＜Detach ([Seven Code] trait)＞ (When this Digimon would leave the battle area other than by your effects, by trashing 1 of its specified link cards, it doesn't leave.)\r\n[On Play] [When Digivolving] You may link 1 level 3 Digimon card with the [Life], [System] or [Seven Code] trait from this Digimon's digivolution cards to this Digimon without paying the cost.",
-    "inherited_effect_description_eng": "[When Linking] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -3000 DP.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -155533,7 +155605,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": "[App Fusion] [Aidmon] & [Supplemon] & [Spamon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Aidmon] & [Supplemon] & [Spamon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -3000 DP."
   },
   "BT26-029": {
     "index": 4249,
@@ -156025,7 +156098,7 @@
       "Navi"
     ],
     "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Detach ([Seven Code] trait)＞ (When this Digimon would leave the battle area other than by your effects, by trashing 1 of its specified link cards, it doesn't leave.)\r\n[On Play] [When Digivolving] You may link 1 level 3 Digimon card with the [Navi], [System] or [Seven Code] trait from this Digimon's digivolution cards to this Digimon without paying the cost.",
-    "inherited_effect_description_eng": "[When Linking] This Digimon may battle 1 of your opponent's Digimon.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -156034,7 +156107,8 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": "[App Fusion] [Weathermon] & [Rocketmon] & [Newsmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+    "xros_req": "[App Fusion] [Weathermon] & [Rocketmon] & [Newsmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+    "link_effect_description_eng": "[When Linking] This Digimon may battle 1 of your opponent's Digimon."
   },
   "BT26-038": {
     "index": 4258,
@@ -156598,7 +156672,7 @@
       "Tool"
     ],
     "effect_description_eng": "＜Detach ([Seven Code] trait)＞ (When this Digimon would leave the battle area other than by your effects, by trashing 1 of its specified link cards, it doesn't leave.)\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, 1 of your Digimon with the [Social], [Tool], [Open] or [Seven Code] trait gains ＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.) and +3000 DP for the turn.",
-    "inherited_effect_description_eng": "[When Linking] ＜De-Digivolve 2＞ 1 of your opponent's Digimon.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -156607,7 +156681,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] ＜De-Digivolve 2＞ 1 of your opponent's Digimon."
   },
   "BT26-052": {
     "index": 4272,
@@ -157173,7 +157248,7 @@
       "Entertainment"
     ],
     "effect_description_eng": "＜Detach ([Seven Code] trait)＞ (When this Digimon would leave the battle area other than by your effects, by trashing 1 of its specified link cards, it doesn't leave.)\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, reveal the top 3 cards of your deck. Add 1 card with the [Entertainment], [Open] or [Seven Code] trait among them to the hand. Return the rest to the top or bottom of the deck.",
-    "inherited_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with the lowest level.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -157182,7 +157257,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's Digimon with the lowest level."
   },
   "BT26-064": {
     "index": 4284,
@@ -158152,7 +158228,7 @@
       "System"
     ],
     "effect_description_eng": "＜Detach ([Seven Code] trait)＞ (When this Digimon would leave the battle area other than by your effects, by trashing 1 of its specified link cards, it doesn't leave.)\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, reveal the top 3 cards of your deck. You may play or use 1 [Seven Code] trait card among them with the cost reduced by 3. Return the rest to the top or bottom of the deck.",
-    "inherited_effect_description_eng": "[When Linking] You may link 1 non-white level 4 or lower [System] or [Seven Code] trait card from your trash to this Digimon without paying the cost.",
+    "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
       {
@@ -158161,7 +158237,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "link_effect_description_eng": "[When Linking] You may link 1 non-white level 4 or lower [System] or [Seven Code] trait card from your trash to this Digimon without paying the cost."
   },
   "BT26-085": {
     "index": 4305,

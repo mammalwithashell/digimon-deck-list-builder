@@ -107,7 +107,28 @@ describe('CardOverlay right-click inspect (DCGO CardInfo -> CardDetail)', () => 
     render(
       <CardOverlay permanent={makePerm({ sources: [makeSource()] })} onClose={vi.fn()} />,
     );
-    expect(screen.getByText('[Your Turn] This Digimon gets +1000 DP.')).toBeInTheDocument();
+    // CardEffectText renders the [Your Turn] timing as a badge of its own.
+    expect(screen.getByText(/This Digimon gets \+1000 DP\./)).toBeInTheDocument();
+  });
+
+  it('linked cards show their link effect text under a Link Effect label', () => {
+    const text = '＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your '
+      + "opponent's unsuspended Digimon with the highest DP.)";
+    render(
+      <CardOverlay
+        permanent={makePerm({
+          linkedCardIds: ['BT21-009', 'ST22-08'],
+          linkEffects: [{ linkIndex: 0, cardId: 'BT21-009', cardName: 'Gatchmon', text }],
+        })}
+        onClose={vi.fn()}
+      />,
+    );
+    const linked = screen.getAllByTestId('linked-card');
+    expect(linked).toHaveLength(2);
+    expect(within(linked[0]!).getByText('Link Effect')).toBeInTheDocument();
+    // CardEffectText splits keywords and timings into their own elements.
+    expect(linked[0]).toHaveTextContent(/change the attack target to 1 of your opponent's unsuspended/);
+    expect(within(linked[1]!).queryByText('Link Effect')).not.toBeInTheDocument();
   });
 });
 

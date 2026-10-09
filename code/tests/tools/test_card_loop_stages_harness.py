@@ -130,6 +130,54 @@ def test_sim_failure_lines_are_kept_verbatim():
     assert "p0.memory" in r.failure_text()
 
 
+SIM_RULING_FAIL = """exam: qa/dcgo-exams/BT13/BT13-060-qa-Q2304.yaml
+  lowered 18 step(s): [Action(62)]
+  assert: 0 check(s) over 0 assertion block(s), 0 failed
+  note: no `assert:` block, so this scenario checked NOTHING. Run the oracle pass and backfill before trusting it in CI.
+  RULING qa:Q2304 CONTRADICTED: at 15: p1.security expected 3 but our engine has 5
+  ruling qa:Q2304: ours CONTRADICTS the ruling (1 check(s), 1 failed)
+exam: scenarios seen 1 / lowered 1 / run 1 / diffed 0 / failed 1
+"""
+
+
+def test_a_contradicted_ruling_is_a_failure_line_the_author_sees():
+    # The first pilot re-authored Q2304 three times blind: the harness exits 0
+    # on a ruling contradiction and prints no FAILED line, so the feedback
+    # carried only the summary counts.
+    r = H.parse_sim_output(0, SIM_RULING_FAIL)
+    assert not r.passed
+    assert r.failures == ["RULING qa:Q2304 CONTRADICTED: at 15: p1.security expected 3 but our engine has 5",
+                          "ruling qa:Q2304: ours CONTRADICTS the ruling (1 check(s), 1 failed)"]
+    assert "p1.security expected 3" in r.failure_text()
+    # the LINE ran clean; only the ruling failed -- the oracle can still measure it
+    assert r.ruling_contradicted and r.line_ok
+    # the harness exits 1 on a contradiction (2 on a line failure): still the line is ok
+    r1 = H.parse_sim_output(1, SIM_RULING_FAIL)
+    assert r1.ruling_contradicted and r1.line_ok and not r1.passed
+    assert not H.parse_sim_output(2, SIM_RULING_FAIL).line_ok
+    assert not H.parse_sim_output(1, SIM_FAIL).line_ok and not H.parse_sim_output(1, SIM_FAIL).ruling_contradicted
+    assert H.parse_sim_output(0, SIM_PASS).line_ok
+
+
+def test_a_step_shape_mismatch_is_parsed_from_dcgos_message():
+    row = {"job_outcome": "failed",
+           "reason": "DCGO job failed: SelectHandEffect prompt needs select_card_ids or select_cancel, got: "
+                     "select_value=1 -- stopped before the line finished"}
+    m = H.step_shape_mismatch(row)
+    assert (m.prompt, m.needs, m.got) == ("SelectHandEffect", "select_card_ids or select_cancel", "select_value=1")
+    assert H.step_shape_mismatch({"job_outcome": "completed", "reason": row["reason"]}) is None
+
+
+def test_a_candidate_mismatch_is_parsed_from_dcgos_message():
+    row = {"job_outcome": "failed",
+           "reason": "DCGO job failed: SelectCardEffect: wanted card 'BT26-005' (pick 0 of [BT26-005]) is not "
+                     "among the offered candidates [ST24-05,ST24-12] -- stopped before the line finished"}
+    m = H.candidate_mismatch(row)
+    assert (m.prompt, m.wanted, m.offered) == ("SelectCardEffect", "BT26-005", ["ST24-05", "ST24-12"])
+    assert H.candidate_mismatch({"job_outcome": "completed", "reason": row["reason"]}) is None
+    assert H.candidate_mismatch({"job_outcome": "failed", "reason": "prompt mismatch: step 2 ..."}) is None
+
+
 def test_a_harness_that_did_not_start_is_a_failure():
     r = H.parse_sim_output(None, "", "dcgo-harness could not be started: [WinError 2]")
     assert not r.passed and "WinError 2" in r.failure_text()

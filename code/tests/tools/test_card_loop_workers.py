@@ -170,7 +170,7 @@ def test_quota_texts(text):
     "API Error: 529 {\"type\":\"overloaded_error\"}",
     "rate_limit_error: Number of request tokens has exceeded your per-minute rate limit",
     "HTTP 503 Service Unavailable",
-    "timeout: claude exceeded 3600s",
+    "Request timed out while waiting for the API",
     "stream disconnected before completion",
     "Request failed with status 500",
 ])
@@ -268,6 +268,15 @@ def test_auth_error_is_not_retried_and_disables_vendor(tmp_path):
     res = run_with_retry(w, make_packet(tmp_path), health=health, sleep=lambda s: pytest.fail("slept"))
     assert res.status == "error" and w.calls == 1
     assert health.reason("claude").startswith("auth:")
+
+
+def test_the_loops_own_wall_clock_kill_is_not_retried(tmp_path):
+    # Second pilot: hour-long fix workers hit the 3600 s cap, read as a
+    # transient "timeout", and were retried three times over.
+    assert classify_failure("wall-clock cap: codex exceeded 3600s and was killed") == "cap"
+    w = FakeWorker([err("wall-clock cap: codex exceeded 3600s and was killed")])
+    res = run_with_retry(w, make_packet(tmp_path), sleep=lambda s: pytest.fail("slept"))
+    assert res.status == "error" and w.calls == 1
 
 
 def test_permanent_error_is_not_retried(tmp_path):
@@ -430,6 +439,19 @@ def test_capture_artifacts_full_worktree_vs_base(tmp_path):
     assert (clean / "bin.dat").read_bytes() == bytes(reversed(range(256)))
     assert not (clean / "gone.txt").exists()
     assert not (clean / "ignored").exists()
+
+
+def test_capture_artifacts_records_the_lf_normalised_hash_too(tmp_path):
+    # A worker file with MIXED line endings matches no single-convention hash of
+    # the LF-normalised diff after apply; `sha256_lf` is what the merge compares.
+    repo = tmp_path / "repo"
+    base_sha = init_repo(repo)
+    mixed = b"a: 1\r\nb: 2\nc: 3\r\n"
+    (repo / "mixed.yaml").write_bytes(mixed)
+    out = capture_artifacts(repo, base_sha, tmp_path / "out")
+    by_path = {f["path"]: f for f in json.loads(Path(out["manifest"]).read_text())["files"]}
+    assert by_path["mixed.yaml"]["sha256"] == hashlib.sha256(mixed).hexdigest()
+    assert by_path["mixed.yaml"]["sha256_lf"] == hashlib.sha256(b"a: 1\nb: 2\nc: 3\n").hexdigest()
 
 
 def test_capture_artifacts_clean_worktree_is_empty(tmp_path):

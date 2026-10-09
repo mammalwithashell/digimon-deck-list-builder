@@ -129,10 +129,18 @@ def _tokens(text):
     return sorted({t.casefold() for t in re.findall(r"[\[{]([^\]}]+)[\]}]", text)})
 
 
-def _section_field(label, card):
+# The link requirement that leads a BT21 link box the official DB files as "Inherited Effect".
+_LINK_REQUIREMENT = re.compile(r"^\s*＜Link＞.*?\(Plug this card[^)]*\)\s*", re.S)
+
+
+def _section_field(label, card, text=""):
     if label == "Effect":
         return "effect_description_eng"
+    if label == "Link Effect":
+        return "link_effect_description_eng"
     if label == "Inherited Effect":
+        if _LINK_REQUIREMENT.match(text):
+            return "link_effect_description_eng"
         return "inherited_effect_description_eng"
     if label == "Security Effect":
         # cards.json files a Tamer's or Option's security text under the inherited key
@@ -179,13 +187,15 @@ def stats_violations(cards, official, ids, printed=None):
             if missing:
                 out.append(f"{cid}: {field} {card.get(field)} lacks official {missing}")
         for section in page.get("text_sections") or []:
-            field = _section_field(section["label"], card)
+            field = _section_field(section["label"], card, section["text"])
             if field is None:
                 continue
-            if _tokens(card.get(field)) != _tokens(section["text"]):
+            text = _LINK_REQUIREMENT.sub("", section["text"], count=1)
+            if _tokens(card.get(field)) != _tokens(text):
                 out.append(f"{cid}: {field} tokens {_tokens(card.get(field))} != official "
-                           f"{section['label']!r} tokens {_tokens(section['text'])}")
-        for field in ("effect_description_eng", "inherited_effect_description_eng", "security_effect_description_eng"):
+                           f"{section['label']!r} tokens {_tokens(text)}")
+        for field in ("effect_description_eng", "inherited_effect_description_eng", "security_effect_description_eng",
+                      "link_effect_description_eng"):
             if _RESIDUE.search(card.get(field) or ""):
                 out.append(f"{cid}: {field} holds ingest residue {card.get(field)!r}")
     return out
@@ -273,6 +283,21 @@ def test_zone_braces_case_and_rule_lines_are_not_drift():
     assert stats_violations(cards, official, ["X-1"]) == []
     cards["X-1"]["effect_description_eng"] = "[Main] Play this card.\r\n[Your Turn] [Once Per Turn] Draw."
     assert len(stats_violations(cards, official, ["X-1"])) == 1
+
+
+def test_a_link_box_is_compared_with_the_link_effect():
+    # The official DB files BT21's link boxes as an "Inherited Effect" section led by the link
+    # requirement, later sets' as "Link Condition" + "Link Effect"; cards.json keeps the effect
+    # in its own field (test_link_box_data.py).
+    effect = "[When Linking] Suspend 1 of your opponent's Digimon."
+    requirement = ("＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways "
+                   "into the specified Digimon in the battle area.) ")
+    for section in ({"label": "Link Effect", "text": effect},
+                    {"label": "Inherited Effect", "text": requirement + effect}):
+        cards, official = _synthetic({"link_effect_description_eng": effect}, {"text_sections": [section]})
+        assert stats_violations(cards, official, ["X-1"]) == [], section["label"]
+        cards["X-1"]["link_effect_description_eng"] = "Suspend 1 of your opponent's Digimon."
+        assert len(stats_violations(cards, official, ["X-1"])) == 1, section["label"]
 
 
 def test_stage_forms_are_not_required_but_trait_forms_are():

@@ -24,6 +24,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping, Sequence
@@ -163,6 +164,63 @@ def oracle_timeout(ctx) -> int:
     return int(getattr(getattr(ctx, "config", None), "oracle_timeout_s", None) or ORACLE_TIMEOUT_S)
 
 
+# --------------------------------------------------------------------------- the player
+
+NODE_TIMEOUT_S = 180.0
+
+
+def heartbeat_job(ctx) -> str | None:
+    """What the player's heartbeat names (`harness.heartbeat` under the harness
+    root): a job id, `idle`, or None without a readable heartbeat."""
+    root = getattr(getattr(ctx, "config", None), "harness_root", None)
+    if not root:
+        return None
+    try:
+        text = (Path(root) / "harness.heartbeat").read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return text or None
+
+
+def launch_detached(argv: Sequence[str], cwd: str, timeout: float) -> int | None:
+    """Run a launcher whose child must outlive it (`node up` spawns the Unity
+    player). No pipes: a captured stdout is inherited by the player (Rust's
+    spawn on Windows inherits every inheritable handle), the launcher's EOF
+    never comes, and the caller blocks until its timeout. Exit code, 124 on a
+    timeout, None when the launcher could not start."""
+    try:
+        return subprocess.run(list(argv), cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL, close_fds=True, timeout=timeout).returncode
+    except OSError:
+        return None
+    except subprocess.TimeoutExpired:
+        return 124
+
+
+def restart_player(ctx) -> str:
+    """`node down`, then `node up --build <player_dir>`, then `node status` to
+    confirm: the only cure for a player wedged on a job (DCGO enforces no job
+    timeout). Returns a note for the evidence; a failure is reported, never
+    raised. `node up` goes through `ctx.launch_detached` when the context has
+    one (tests), else `launch_detached`."""
+    build = getattr(getattr(ctx, "config", None), "player_dir", None)
+    if not build:
+        return "not restarted: no player_dir configured"
+    root = _root_args(ctx)
+    rc, out, err = run(ctx, [harness_bin(ctx), *root, "node", "down"], NODE_TIMEOUT_S)
+    if rc != 0:
+        return f"restart failed at `node down` (exit {rc}): {(err or out).strip()[-300:]}"
+    launcher = getattr(ctx, "launch_detached", None) or launch_detached
+    rc = launcher([harness_bin(ctx), *root, "node", "up", "--build", str(build)], str(ctx.repo), NODE_TIMEOUT_S)
+    if rc != 0:
+        return f"restart failed at `node up` (exit {rc})"
+    rc, out, err = run(ctx, [harness_bin(ctx), *root, "node", "status"], NODE_TIMEOUT_S)
+    status = next((l.strip() for l in (out or "").splitlines() if "player:" in l), "")
+    if "player: running" not in status:          # `[fail] player: not running` also says "running"
+        return f"restart: `node up` returned 0 but `node status` says {status or (err or out).strip()[-200:]!r}"
+    return f"restarted the player (`node down`, then `node up`; {status})"
+
+
 def verdict_triage_argv(ctx, clause_id: str, triage: str, citation: str) -> list[str]:
     return [harness_bin(ctx), "verdict-triage", "--clause", clause_id, "--triage", triage,
             "--citation", citation]
@@ -201,14 +259,19 @@ def run(ctx, argv: Sequence[str], timeout: float) -> tuple[int | None, str, str]
 class SimReport:
     passed: bool
     rc: int | None
-    failures: list = field(default_factory=list)      # FAILED / ASSERT FAILED / stall lines
+    failures: list = field(default_factory=list)      # FAILED / ASSERT FAILED / stall / CONTRADICT lines
     notes: list = field(default_factory=list)          # `note:` lines
     summary: str | None = None                         # `exam: scenarios seen ...`
     assert_line: str | None = None                     # `assert: N check(s) ... M failed`
+    line_ok: bool = False                              # the line lowered and ran clean (ruling aside)
+    ruling_contradicted: bool = False                  # `RULING <q> CONTRADICTED` -- our engine vs the publisher
 
     def failure_text(self) -> str:
         lines = list(self.failures) or ([self.summary] if self.summary else [])
         return "\n".join(lines) if lines else f"sim-only exited {self.rc} with no failure line"
+
+    def ruling_lines(self) -> list[str]:
+        return [l for l in self.failures if "CONTRADICT" in l]
 
 
 def parse_sim_output(rc: int | None, stdout: str, stderr: str = "") -> SimReport:
@@ -226,13 +289,21 @@ def parse_sim_output(rc: int | None, stdout: str, stderr: str = "") -> SimReport
             assert_line = line
         elif line.startswith("note:"):
             notes.append(line[len("note:"):].strip())
-        elif "FAILED" in line or "did not run to completion" in line or line.startswith("Error"):
+        elif ("FAILED" in line or "CONTRADICT" in line or "did not run to completion" in line
+              or line.startswith("Error")):
+            # `RULING <q> CONTRADICTED: at N: ...` is how the harness reports an
+            # `expect_ruling:` our engine does not meet -- exit 0, no FAILED
+            # line. Without it the author re-authors blind (first pilot, Q2304).
             failures.append(line)
     passed = rc == 0 and summary is not None and "/ failed 0" in summary
     if rc is None:
         failures.append((stderr or "").strip() or "harness did not start")
+    ruling = [l for l in failures if "CONTRADICT" in l]
+    # A ruling contradiction exits 1 (a line failure 2, a crash None): the
+    # line is fine when every failure line is a ruling line.
+    line_ok = rc in (0, 1) and summary is not None and len(ruling) == len(failures)
     return SimReport(passed=passed, rc=rc, failures=failures, notes=notes, summary=summary,
-                     assert_line=assert_line)
+                     assert_line=assert_line, line_ok=line_ok, ruling_contradicted=bool(ruling))
 
 
 def parse_inspect(stdout: str) -> dict | None:
@@ -297,6 +368,71 @@ def prompt_mismatch(result: Mapping) -> PromptMismatch | None:
     if not m:
         return None
     return PromptMismatch(row=int(m.group(1)), expected=m.group(2), asked=m.group(3))
+
+
+_ACTOR = re.compile(r"prompt mismatch: step (\d+) expected actor (\d) but DCGO asked actor (\d)")
+
+
+def actor_mismatch(result: Mapping) -> tuple[int, int] | None:
+    """`(expected actor, actor DCGO asked)` from a failed job's actor mismatch."""
+    if result.get("job_outcome") != "failed":
+        return None
+    m = _ACTOR.search(str(result.get("reason") or ""))
+    return (int(m.group(2)), int(m.group(3))) if m else None
+
+
+@dataclass(frozen=True)
+class StepShapeMismatch:
+    """DCGO asked the prompt the scenario expected, but the scripted answer has
+    the wrong SHAPE for it (`SelectHandEffect prompt needs select_card_ids or
+    select_cancel, got: select_value=1`): the line, not an engine, is wrong, and
+    the same job fails identically every time it is resubmitted."""
+    prompt: str
+    needs: str
+    got: str
+
+
+_NEEDS = re.compile(r"(\w+) prompt needs (.+?), got: (.+?)(?: -- |$)")
+
+
+def step_shape_mismatch(result: Mapping) -> StepShapeMismatch | None:
+    if result.get("job_outcome") != "failed":
+        return None
+    m = _NEEDS.search(str(result.get("reason") or ""))
+    if not m:
+        return None
+    return StepShapeMismatch(prompt=m.group(1), needs=m.group(2).strip(), got=m.group(3).strip())
+
+
+@dataclass(frozen=True)
+class CandidateMismatch:
+    """DCGO's prompt matched but offered other candidates than the pick the
+    scenario (sim-only clean in our engine) makes: the engines disagree on
+    what that selection offers."""
+    prompt: str
+    wanted: str
+    pick: int
+    wanted_list: list
+    offered: list
+
+
+# InputDriver.cs: `<Prompt>: wanted card 'X' (pick i of [..]) is not among the offered candidates [..]`
+_CANDIDATES = re.compile(r"(\w+): wanted card '([^']*)' \(pick (\d+) of \[([^\]]*)\]\) is not among the "
+                         r"offered candidates \[([^\]]*)\]")
+
+
+def candidate_mismatch(result: Mapping) -> CandidateMismatch | None:
+    if result.get("job_outcome") != "failed":
+        return None
+    m = _CANDIDATES.search(str(result.get("reason") or ""))
+    if not m:
+        return None
+
+    def split(s: str) -> list:
+        return [x.strip() for x in s.split(",") if x.strip()]
+
+    return CandidateMismatch(prompt=m.group(1), wanted=m.group(2), pick=int(m.group(3)),
+                             wanted_list=split(m.group(4)), offered=split(m.group(5)))
 
 
 # DCGO's closed prompt vocabulary (InputDriver.cs); these three take an action id

@@ -107,11 +107,7 @@ fn bt25_061_yaml_printed_metadata() {
             "trait line must include {t:?}"
         );
     }
-    assert_eq!(
-        card.attribute.as_deref(),
-        Some("Game"),
-        "printed Attribute: Game"
-    );
+    assert_eq!(card.attribute, ["Game"], "printed Attribute: Game");
 }
 
 #[test]

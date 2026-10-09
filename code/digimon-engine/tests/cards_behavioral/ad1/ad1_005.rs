@@ -191,8 +191,8 @@ fn ad1_005_metadata_matches_printed_text() {
         c.traits
     );
     assert_eq!(
-        c.attribute.as_deref(),
-        Some("God"),
+        c.attribute,
+        ["God"],
         "attribute must be God (image shows form 'God/Appmon', attribute 'God')"
     );
     // Dual-color identity — official bundle "Colors: Red White"; the card

@@ -1,0 +1,67 @@
+# Extends the oracle-confirmed BT26-094-effect1.yaml (NOTES-BT26-DATA-SQUAD.md).
+# Clause BT26-094#effect#1 -- "When ... effects trash cards from under this Tamer,
+# by suspending this Tamer, 1 of your [DATA SQUAD] Digimon gains <Execute>."
+#
+# DECLINE PROBE: the trigger genuinely fires (Falcomon ST24-12's [On Play] trashes
+# the face-down source from under Keenan), but the controller DECLINES the optional
+# "by suspending" cost at the OptionalSkill gate. Expected: Keenan stays unsuspended,
+# Falcomon gains no <Execute>, no DATA SQUAD target pick is parked, and the turn
+# resumes at main_phase. Likely-divergence points: a missing decline in our engine
+# (cost auto-paid), a target pick still parked after decline, or Keenan left suspended.
+# BT26_094.cs reactive grant is isOptional=true -> OptionalSkill (yes/no) with no
+# preceding pick; declining ends the effect (general_rule.pdf 15-9: "by" cost optional).
+card: BT26-094
+clause: BT26-094#effect#1
+covers:
+  - BT26-094#effect#1
+interaction: {id: "probe:BT26-094#effect#1:optional_decline", source: probe, kind: positive}
+seed: 424242
+meta: {produced_by: 20261008T032600969932Z-pilot-data-squad-59cee9}
+decks:
+  p0:
+    stack: [BT26-094, ST24-12, ST24-15, ST24-04, BT26-082,
+            ST24-05, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-04, BT26-091, ST24-05, BT26-065, ST24-04]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-094, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST24-15] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { play: { card: ST24-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE DECLINE: the clause fired; refuse the suspend cost.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # No target pick, no <Execute>; Keenan still unsuspended. Pass the main phase.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert: []

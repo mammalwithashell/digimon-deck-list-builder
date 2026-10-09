@@ -158,7 +158,7 @@ def test_parse_no_envelope_and_timeout():
     p = cw.parse_claude_envelope("", "Error: 529 overloaded", 1)
     assert p.status == "error" and "529 overloaded" in p.error
     p = cw.parse_claude_envelope("", "", None, timed_out=True, timeout_s=60)
-    assert p.status == "error" and p.error.startswith("timeout")
+    assert p.status == "error" and p.error.startswith("wall-clock cap") and "60" in p.error
     noisy = "warning: something\n" + fixture("claude_envelope_success_synth.json")
     assert cw.parse_claude_envelope(noisy).status == "ok"
 
@@ -317,9 +317,37 @@ def test_build_codex_argv_exact():
     argv = xw.build_codex_argv(exe="codex", worktree="W", schema_path="S.json", result_path="R.json",
                                writable_dirs=["T", "SC"], model="gpt-x", effort="high")
     assert argv == ["codex", "exec", "-C", "W", "-s", "workspace-write", "-c", 'approval_policy="never"',
+                    "-c", 'windows.sandbox="unelevated"',
+                    "-c", 'mcp_servers.dcgo-exam.default_tools_approval_mode="approve"',
                     "--add-dir", "T", "--add-dir", "SC", "--output-schema", "S.json", "-o", "R.json",
                     "--json", "--color", "never", "-m", "gpt-x", "-c", 'model_reasoning_effort="high"', "-"]
     assert "-m" not in xw.build_codex_argv(exe="c", worktree="W", schema_path="S", result_path="R")
+
+
+def test_codex_pre_approves_only_the_exam_mcp_tools():
+    # Codex 0.162 (Store 26.1002, 2026-10-07) gates MCP tool calls behind an
+    # approval that `approval_policy="never"` never gives: the first Data Squad
+    # call after the update had exam_validate / exam_probe / exam_authoring_guide
+    # refused and escalated a ruling as "no legal line". Only the loop's own exam
+    # server is pre-approved; the sandbox and approval policy are unchanged.
+    argv = xw.build_codex_argv(exe="c", worktree="W", schema_path="S", result_path="R")
+    approvals = [argv[i + 1] for i, a in enumerate(argv[:-1]) if a == "-c" and "approval_mode" in argv[i + 1]]
+    assert approvals == ['mcp_servers.dcgo-exam.default_tools_approval_mode="approve"']
+    assert argv[argv.index("-s") + 1] == "workspace-write"
+
+
+def test_codex_uses_the_unelevated_windows_sandbox():
+    # The elevated sandbox's setup refresh fails on this machine since the
+    # 26.1002 update (it cannot re-ACL a locked runtime exe), so every shell
+    # command a worker ran was rejected: "setup refresh had errors". The
+    # unelevated sandbox still confines writes to the workspace (checked by
+    # hand: a write to the user profile was denied). Still workspace-write.
+    argv = xw.build_codex_argv(exe="c", worktree="W", schema_path="S", result_path="R")
+    assert 'windows.sandbox="unelevated"' in argv
+    assert argv[argv.index('windows.sandbox="unelevated"') - 1] == "-c"
+    with pytest.raises(xw.SandboxPolicyError):
+        xw.build_codex_argv(exe="c", worktree="W", schema_path="S", result_path="R",
+                            extra_config=['windows.sandbox="elevated"'])
 
 
 @pytest.mark.parametrize("extra", [
@@ -330,6 +358,19 @@ def test_build_codex_argv_exact():
     dict(extra_config=["sandbox_mode=read-only"]),
     dict(extra_config=['approval_policy="on-request"']),
     dict(extra_args=["-s", "workspace-write"]),           # a second -s is ambiguous: refused
+    # Codex parses -c values as TOML, not as `key=value` text: any spelling that
+    # reaches a sandbox / approval / profile setting other than the adapter's own
+    # exact lines is refused (security review of 7b7b0bd0b).
+    dict(extra_config=['windows={sandbox="elevated"}']),
+    dict(extra_config=['windows.sandbox = "mxc"']),
+    dict(extra_config=['"windows".sandbox="elevated"']),
+    dict(extra_config=["sandbox_workspace_write.network_access=true"]),
+    dict(extra_config=['profiles.x.sandbox_mode="read-only"']),
+    dict(extra_config=['approvals_reviewer="auto"']),
+    dict(extra_args=["-p", "x"]),
+    dict(extra_args=["--profile=x"]),
+    dict(extra_args=["--enable", "elevated_windows_sandbox"]),
+    dict(extra_args=["--disable=x"]),
 ])
 def test_codex_refuses_anything_but_workspace_write(extra):
     with pytest.raises(xw.SandboxPolicyError):
@@ -384,7 +425,7 @@ def test_parse_codex_call_outcomes():
     nonfatal = '{"type":"error","message":"Reconnecting... 1/5"}\n' + fixture("codex_events_ok.jsonl")
     assert xw.parse_codex_call(nonfatal, "", 0, '{"ok": true}', prices=None).status == "ok"
     to = xw.parse_codex_call("", "", None, None, prices=None, timed_out=True, timeout_s=9)
-    assert to.status == "error" and to.error.startswith("timeout")
+    assert to.status == "error" and to.error.startswith("wall-clock cap") and "9" in to.error
 
 
 def test_codex_worker_run_end_to_end(repo, tmp_path):
@@ -404,12 +445,15 @@ def test_codex_worker_run_end_to_end(repo, tmp_path):
     assert argv[:8] == ["codex.exe", "exec", "-C", str(repo), "-s", "workspace-write", "-c",
                         'approval_policy="never"']
     assert argv[argv.index("--output-schema") + 1] == os.path.abspath(schema_path("review"))
-    assert ["--add-dir", target, "--add-dir", str(tmp_path / "sc")] == argv[8:12]
+    assert argv[8:12] == ["-c", 'windows.sandbox="unelevated"',
+                          "-c", 'mcp_servers.dcgo-exam.default_tools_approval_mode="approve"']
+    assert ["--add-dir", target, "--add-dir", str(tmp_path / "sc")] == argv[12:16]
     assert Path(target).is_dir()                                     # created so codex can grant it
     assert 'model_reasoning_effort="medium"' in argv and argv[-1] == "-"
     assert runner.calls[0]["env"]["CARGO_TARGET_DIR"] == target
     files = json.loads(Path(res.artifacts["manifest"]).read_text())["files"]
-    assert files == [{"path": "a.yaml", "status": "M", "sha256": files[0]["sha256"]}]
+    assert files == [{"path": "a.yaml", "status": "M", "sha256": files[0]["sha256"],
+                      "sha256_lf": files[0]["sha256_lf"]}]
     assert Path(res.transcript_path).name == "events.jsonl"
 
 

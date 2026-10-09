@@ -270,3 +270,8 @@ steps:
     do: {select: {targets: [own.field.1]}}
     expect: {prompt: SelectPermanentEffect}
 assert: []
+expect_ruling:
+  q_id: Q7122
+  assert:
+  - at: 53
+    that: {phase: GameOver, p0.security: 0}

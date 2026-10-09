@@ -17,23 +17,31 @@
   ],
   "type_eng": [
     "Super Search (App Name)",
-    "Hero"
+    "Hero",
+    "Super Search"
   ],
   "form_eng": [
-    "Sup."
+    "Sup.",
+    "Appmon"
   ],
   "attribute_eng": [
     "Social"
   ],
   "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it comes into play.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, it may attack.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
       "card_color": 0,
       "level": 3,
       "memory_cost": 3
+    },
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 3
     }
   ],
-  "xros_req": "[App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+  "xros_req": "[App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+  "link_effect_description_eng": "[When Linking] This Digimon may attack."
 }

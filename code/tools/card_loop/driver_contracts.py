@@ -62,19 +62,27 @@ _CARD_TRANSITIONS = {
 
 _EXAM_TRANSITIONS = {
     "PENDING": ("CLASSIFY", "AUTHORING", "UNAVAILABLE", "ESCALATED"),
+    # A behavioral ruling is AUTHORED first, then ENCODED against that line
+    # (ENCODE -> SIM); ENCODE -> AUTHORING sends back a line that never reaches
+    # the ruling's situation. CLASSIFY -> ENCODE and an agreed ENCODE ->
+    # AUTHORING are the earlier order, kept so in-flight items and old event
+    # logs replay (second pilot: 60% of encodings anchored on a library line
+    # that did not exercise the ruling escalated).
     "CLASSIFY": ("ENCODE", "AUTHORING", "TERMINATION_CHECK", "ESCALATED"),
-    "ENCODE": ("AUTHORING", "TERMINATION_CHECK", "ESCALATED"),
-    "AUTHORING": ("SIM", "ESCALATED"),
+    # ENCODE -> ENCODE: the verifier rejected the block (or the author's was
+    # malformed) and the ruling is encoded again, under the stage's attempt cap.
+    "ENCODE": ("ENCODE", "SIM", "AUTHORING", "TERMINATION_CHECK", "ESCALATED"),
+    "AUTHORING": ("SIM", "ENCODE", "ESCALATED"),
     "SIM": ("ORACLE", "AUTHORING", "ESCALATED"),
     # ORACLE -> ORACLE: an unmeasured round trip (timeout, quarantine) retried
     # within the attempt cap. ORACLE -> AUTHORING: both engines contradicted
     # the scenario's expected prompts (spec "Prompt-sequence failures").
     "ORACLE": ("CONFIRMED", "DIVERGED", "ORACLE", "AUTHORING", "ESCALATED"),
     "DIVERGED": ("TRIAGE", "ESCALATED"),
-    "TRIAGE": ("FIX", "TERMINATION_CHECK", "ESCALATED"),
+    "TRIAGE": ("FIX", "TERMINATION_CHECK", "AUTHORING", "ESCALATED"),   # AUTHORING: scenario_wrong
     "FIX": ("GATE", "ESCALATED"),
     "GATE": ("ORACLE", "FIX", "ESCALATED"),
-    "TERMINATION_CHECK": ("TERMINAL", "ESCALATED"),
+    "TERMINATION_CHECK": ("TERMINAL", "AUTHORING", "ESCALATED"),   # AUTHORING: the second opinion is scenario_wrong
     "CONFIRMED": (),
     "TERMINAL": (),
     "UNAVAILABLE": ("PENDING",),                                 # DCGO gained the script (resume)
@@ -262,6 +270,7 @@ class MergeResult:
     touched: list = field(default_factory=list)
     scope: dict = field(default_factory=dict)       # impact_scope output
     errors: list = field(default_factory=list)
+    skipped: list = field(default_factory=list)     # manifest paths dropped, not applied (scratch, trackers)
 
 
 @dataclass

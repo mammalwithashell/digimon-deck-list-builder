@@ -1,0 +1,57 @@
+# Interaction exam: qa:Q7157 -- Keenan Crier (BT26-094) face-down stack under a
+# Tamer: two [Start of Your Main Phase] placements (ST24-12 on T3, ST24-04 on T5)
+# build a 2-card face-down stack; the line stops once the second has resolved,
+# so the stack order the engine/DCGO produce is observable.
+meta: {produced_by: 20261008T035019072156Z-pilot-data-squad-7008c0}
+interaction: {id: "qa:Q7157", source: qa, kind: positive}
+covers: [BT26-094#effect#0]
+card: BT26-094
+clause: BT26-094#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-094, ST24-12, BT26-076, ST24-15, BT26-082,
+            ST24-05, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-04, BT26-091, ST24-05, BT26-065, ST24-04]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-094, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST24-12] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST24-04] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert: []

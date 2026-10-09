@@ -83,6 +83,9 @@ class CardEntry:
     script_path: Optional[str]
     csharp_path: Optional[str]
     deck_frequency: int
+    # A link card's link effect (rules 2-3-12), which cards.json keeps apart from
+    # the inherited text since 2026-10-05.
+    link_text: str = ""
 
 
 @dataclass
@@ -190,6 +193,9 @@ def _build_card_entry(
         effect_text = card.effect_text or ""
         inherited_text = card.inherited_text or ""
         security_text = card.security_text or ""
+        link_text = getattr(card, "link_text", None)
+        if link_text is None:  # bindings built before 2026-10-05
+            link_text = (_load_cards_json_raw().get(card_id) or {}).get("link_effect_description_eng", "")
     else:
         card_name = ""
         card_kind = "Digimon"
@@ -202,6 +208,7 @@ def _build_card_entry(
         effect_text = ""
         inherited_text = ""
         security_text = ""
+        link_text = ""
 
     status, script_path = _resolve_script_status(card_id, manifest)
     csharp_path = _find_csharp_path(card_id)
@@ -219,6 +226,7 @@ def _build_card_entry(
         effect_text=effect_text,
         inherited_text=inherited_text,
         security_text=security_text,
+        link_text=link_text,
         script_status=status,
         script_path=script_path,
         csharp_path=csharp_path,

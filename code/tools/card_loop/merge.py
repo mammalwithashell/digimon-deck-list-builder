@@ -42,6 +42,9 @@ stable name so its build stays warm across merges.
 """
 from __future__ import annotations
 
+import json
+import threading
+
 import os
 import re
 import subprocess
@@ -78,8 +81,12 @@ def engine_branch_name(run_id: str, gap_or_attempt: str) -> str:
 
 
 def git(repo: str | os.PathLike, *args: str, check: bool = False) -> subprocess.CompletedProcess:
-    cp = subprocess.run(["git", *args], cwd=str(repo), capture_output=True, text=True,
-                        encoding="utf-8", errors="replace")
+    from tools.git_retry import retry_on_index_lock
+
+    cp = retry_on_index_lock(
+        lambda: subprocess.run(["git", *args], cwd=str(repo), capture_output=True, text=True,
+                               encoding="utf-8", errors="replace"),
+        lambda r: r.stderr)
     if check and cp.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)} failed in {repo}: {cp.stderr.strip()}")
     return cp
@@ -148,6 +155,20 @@ def rev(repo: str | os.PathLike, ref: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
+def manifest_base(manifest_path) -> str | None:
+    """The `base_sha` a worker's manifest was captured against, or None."""
+    try:
+        with open(manifest_path, encoding="utf-8") as f:
+            v = json.load(f).get("base_sha")
+        return v if isinstance(v, str) and v else None
+    except (OSError, ValueError):
+        return None
+
+
+#: The run's single engine worktree is used by one engine merge at a time.
+_ENGINE_TREE_LOCK = threading.Lock()
+
+
 class LoopMerger:
     """`driver_contracts.Merger`. Merges are serialised by the driver (D13)."""
 
@@ -176,12 +197,11 @@ class LoopMerger:
             manifest, _ = mw.load_manifest(manifest_path)
         except (OSError, ValueError, mw.MergeWaveError) as e:
             return MergeResult(ok=False, errors=[f"manifest unreadable: {e}"])
-        paths = [f["path"] for f in manifest["files"]]
-        trackers = sorted(p for p in paths if p in TRACKER_PATHS)
-        if trackers:
-            return MergeResult(ok=False, errors=[
-                f"{', '.join(trackers)}: gap-tracker writes are orchestrator-only -- the worker "
-                f"must report gaps in its result's `gaps`, and the driver records them"])
+        # Gap-tracker writes are orchestrator-only: a worker's edit to one is
+        # dropped at apply (`skipped`), never refused -- refusing cost the second
+        # pilot a whole card fix (BT13-060#effect#2, `fix_card 2/2 spent`). The
+        # worker reports gaps in its result's `gaps`; the driver records them.
+        paths = [f["path"] for f in manifest["files"] if f["path"] not in TRACKER_PATHS]
         engine_paths = sorted(p for p in paths if is_engine_path(p))
         if engine_paths and not request.engine:
             return MergeResult(ok=False, errors=[
@@ -221,6 +241,12 @@ class LoopMerger:
     # ------------------------------------------------------------------ engine branch
 
     def _merge_engine(self, ctx, request, diff, manifest_path) -> MergeResult:
+        # One engine worktree per run (`scratch_name(ctx, "eng")`): serialized
+        # for the same reason as the gate worktree.
+        with _ENGINE_TREE_LOCK:
+            return self._merge_engine_locked(ctx, request, diff, manifest_path)
+
+    def _merge_engine_locked(self, ctx, request, diff, manifest_path) -> MergeResult:
         repo = str(ctx.repo)
         branch = self.engine_branch(ctx, request)
         run_head = rev(repo, "HEAD")
@@ -228,14 +254,15 @@ class LoopMerger:
         if git(repo, "check-ref-format", "--branch", branch).returncode != 0:
             return MergeResult(ok=False, errors=[f"{branch!r} is not a valid branch name"])
         wt = worktree_root(ctx, self.worktree_root) / scratch_name(ctx, "eng")
+        base = manifest_base(manifest_path) or ctx.base_sha
         try:
-            ensure_worktree(repo, wt, ctx.base_sha)
-            reset_worktree(wt, ctx.base_sha)
+            ensure_worktree(repo, wt, base)
+            reset_worktree(wt, base)
         except RuntimeError as e:
             return MergeResult(ok=False, branch=branch, errors=[f"engine worktree: {e}"])
         created = rev(repo, f"refs/heads/{branch}") is None
         if created:
-            cp = git(wt, "checkout", "-q", "-b", branch, ctx.base_sha)
+            cp = git(wt, "checkout", "-q", "-b", branch, base)
         else:
             cp = git(wt, "checkout", "-q", "--force", branch)
         if cp.returncode != 0:
@@ -248,7 +275,7 @@ class LoopMerger:
             res = self._apply_and_commit(ctx, request, str(wt), branch, diff, manifest_path)
         finally:
             git(wt, "checkout", "-q", "--force", "--detach")
-        if not res.ok and created and rev(repo, f"refs/heads/{branch}") in (ctx.base_sha, None):
+        if not res.ok and created and rev(repo, f"refs/heads/{branch}") in (base, None):
             git(repo, "branch", "-q", "-D", branch)
         if rev(repo, "HEAD") != run_head or current_branch(repo) != run_branch:
             res.ok = False
@@ -261,9 +288,13 @@ class LoopMerger:
 
     def _apply_and_commit(self, ctx, request, tree, branch, diff, manifest_path) -> MergeResult:
         runner = ctx.run_command
-        applied = mw.apply_manifest_diff(tree, diff, manifest_path, ctx.base_sha,
-                                         allowed_roots=self.allowed_roots)
-        result = MergeResult(ok=False, branch=branch, touched=applied.touched)
+        # The worker's own base: the run branch's HEAD when it was leased, which
+        # may be newer than the plan's base (re-authoring after an earlier
+        # merge). The apply checks that it is an ancestor of the target HEAD.
+        applied = mw.apply_manifest_diff(tree, diff, manifest_path,
+                                         manifest_base(manifest_path) or ctx.base_sha,
+                                         allowed_roots=self.allowed_roots, skip_paths=TRACKER_PATHS)
+        result = MergeResult(ok=False, branch=branch, touched=applied.touched, skipped=list(applied.skipped))
         if not applied.ok:
             result.errors = list(applied.errors)
             return result

@@ -222,3 +222,100 @@ def test_cargo_target_dir_and_env_helpers(tmp_path):
     env = worktree_env(tmp_path / "card-loop-3", "B", None, base_env={})
     assert env == {"CARGO_TARGET_DIR": os.path.join("B", "card-loop-3"), "CARGO_TARGET_DIR_PINNED": "1",
                    "CARGO_TARGET_BASE": "B"}
+
+
+def test_retarget_moves_the_base_every_later_lease_resets_to(repo, tmp_path):
+    # Workers must start from the run branch's HEAD, not the plan's base: a
+    # re-authored scenario diffed against the old base conflicts on merge.
+    pool = make_pool(repo, tmp_path, size=1)
+    first = pool.base_sha
+    root = repo[0] if isinstance(repo, tuple) else repo
+    (root / "later.txt").write_text("later\n", encoding="utf-8")
+    git(root, "add", "later.txt")
+    git(root, "commit", "-q", "-m", "later")
+    head = git(root, "rev-parse", "HEAD").strip()
+    assert head != first
+    pool.retarget(head)
+    with pool.lease() as wt:
+        assert git(wt.path, "rev-parse", "HEAD").strip() == head
+        assert (wt.path / "later.txt").exists()
+    pool.close()
+
+
+# --------------------------------------------------------------------------- a member another process holds
+#
+# Data Squad pilot, 2026-10-07 03:03Z: a reset of D:\cl-ds\card-loop-0 failed,
+# the pool deregistered and emptied it, but a process still had the directory
+# open (its working directory), so the strict rmtree before `git worktree add`
+# raised WinError 32 -- and every later lease re-picked the same name. 79 items
+# failed one after another and the run stopped "blocked".
+
+
+@pytest.mark.skipif(os.name != "nt", reason="a process's working directory pins it only on Windows")
+def test_an_emptied_member_directory_another_process_still_holds_is_reused(repo, tmp_path):
+    import sys
+    pool = make_pool(repo, tmp_path, size=1)
+    held = tmp_path / "wt" / "card-loop-0"
+    held.mkdir(parents=True)
+    holder = subprocess.Popen([sys.executable, "-c", "import time; print('up', flush=True); time.sleep(120)"],
+                              cwd=str(held), stdout=subprocess.PIPE, text=True)
+    try:
+        assert holder.stdout.readline().strip() == "up"                # its working directory is open now
+        with pytest.raises(PermissionError):
+            os.rmdir(held)                                             # really pinned
+        wt = pool.acquire()
+        assert wt.path == held and (held / "a.txt").read_bytes() == b"base\n"
+        assert os.path.normcase(os.path.abspath(held)) in registered(repo[0])
+    finally:
+        holder.kill()
+        holder.wait()
+        pool.close()
+
+
+def test_a_member_that_cannot_be_made_is_set_aside_for_a_fresh_name(repo, tmp_path):
+    pool = make_pool(repo, tmp_path, size=1)
+    real_add = pool._add
+
+    def add(path):
+        if path.name == "card-loop-0":
+            raise PermissionError(32, "being used by another process", str(path))
+        real_add(path)
+
+    pool._add = add
+    try:
+        wt = pool.acquire()
+        assert wt.name == "card-loop-1"
+        assert len(pool.worktrees()) == 1                              # the size bound holds
+        assert any("card-loop-0" in i and "another process" in i for i in pool.incidents)
+        pool.release(wt)
+        assert pool.acquire().name == "card-loop-1"                    # the set-aside name stays aside
+    finally:
+        pool.close()
+
+
+def test_a_failed_reset_is_recorded_as_an_incident(repo, tmp_path):
+    pool = make_pool(repo, tmp_path, size=1)
+    try:
+        wt = pool.acquire()
+        Path(git(wt.path, "rev-parse", "--path-format=absolute", "--git-path", "index.lock").strip()).write_text("")
+        pool.release(wt)
+        wt = pool.acquire()                                            # recreated, as before
+        assert any(i.startswith("card-loop-0: reset failed") and "index.lock" in i
+                   for i in pool.incidents), pool.incidents
+    finally:
+        pool.close()
+
+
+def test_acquire_gives_up_naming_every_reason_when_no_member_can_be_made(repo, tmp_path):
+    pool = make_pool(repo, tmp_path, size=1)
+
+    def add(path):
+        raise OSError(f"cannot create {path.name}")
+
+    pool._add = add
+    try:
+        with pytest.raises(PoolError, match=r"card-loop-0.*card-loop-1.*card-loop-2"):
+            pool.acquire()
+        assert pool.worktrees() == []
+    finally:
+        pool.close()

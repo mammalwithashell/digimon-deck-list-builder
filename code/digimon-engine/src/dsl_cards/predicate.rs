@@ -2726,11 +2726,12 @@ fn any_effective_name_matches(
 ///   alias** (`digixros_aliases`) — DCGO scans only `CardName_ENG`, but our
 ///   engine records the extra printed identities the API drops, so scanning
 ///   them is a faithful superset.
-/// - **traits** (`traits`) — the Type line, INCLUDING the Rule-granted traits
-///   the digimoncard.io ingest drops (e.g. the [Three Musketeers] trait on
-///   BT6-017 / BT6-065 / ST14-09, which do NOT carry the literal string in
-///   their effect text; DCGO scans `Type_ENG` for exactly this reason). This
-///   is the load-bearing difference from `effect_text_contains`.
+/// - **traits** (`traits`) — the whole trait line (form, attribute and type;
+///   DCGO scans `Attribute_ENG` and `Type_ENG`), INCLUDING the Rule-granted
+///   traits the digimoncard.io ingest drops (e.g. the [Three Musketeers] trait
+///   on BT6-017 / BT6-065 / ST14-09, which do NOT carry the literal string in
+///   their effect text). This is the load-bearing difference from
+///   `effect_text_contains`.
 /// - **all printed text**: effect / inherited / security, and — for a Dual —
 ///   both faces (`text_for_search_all_faces`). The structured requirement
 ///   strings the official ruling enumerates (digivolution / DNA / DigiXros /
@@ -2738,13 +2739,10 @@ fn any_effective_name_matches(
 ///   printed effect/inherited/security text on our CardData model — they are
 ///   NOT separate free-text fields — so scanning the printed text covers them.
 ///
-/// What is NOT separately scanned (documented for the tracker): the `attribute`
-/// line (DCGO adds `Attribute_ENG`) — our CardData has no attribute field yet
-/// (`attribute_is` is a no-op stub), so there is nothing to scan; and the
-/// numeric `evo_costs` / `dna_costs` structs, which carry integers, not the
-/// free-text requirement wording (that wording lives in the printed text, which
-/// IS scanned). If a future CardData gains a dedicated attribute field or
-/// free-text requirement strings, fold them in here.
+/// What is NOT scanned (documented for the tracker): the numeric `evo_costs` /
+/// `dna_costs` structs, which carry integers, not the free-text requirement
+/// wording (that wording lives in the printed text, which IS scanned). If a
+/// future CardData gains free-text requirement strings, fold them in here.
 fn card_in_text_contains(data: &crate::card_data::CardData, needle: &str) -> bool {
     let needle = needle.to_lowercase();
     if needle.is_empty() {
@@ -2940,14 +2938,13 @@ fn eval_card_fields(
             return false;
         }
     }
-    if pred.form_is.is_some() {
-        // CardData has no `form` field yet; engine doesn't track form.
-        // Phase 1c: treat as always-false when set (mirrors "no card matches").
-        return false;
-    }
-    if pred.attribute_is.is_some() {
-        // Same as form — attribute not yet tracked on CardData.
-        return false;
+    // A form or an attribute is a trait (general_rule.pdf 2-3-2-1), printed
+    // text names either only as "the [X] trait", and `traits` is the whole
+    // trait line (form + attribute + type) — so these match like `trait_has`.
+    for want in [&pred.form_is, &pred.attribute_is].into_iter().flatten() {
+        if !data.traits.iter().any(|x| x.eq_ignore_ascii_case(want)) {
+            return false;
+        }
     }
     // `name_is` / `name_contains` / `name_in` all match against the printed
     // name, an optional reveal-overlay name, and static "also treated as"
@@ -3654,6 +3651,19 @@ fn eval_permanent_fields(
             .iter()
             .any(|x| x.to_lowercase().contains(&needle))
     });
+    // `form_is` / `attribute_is` match the trait line like `trait_has`.
+    let form_overlay_match = pred.form_is.as_ref().is_some_and(|t| {
+        synth_identity
+            .traits
+            .iter()
+            .any(|x| x.eq_ignore_ascii_case(t))
+    });
+    let attribute_overlay_match = pred.attribute_is.as_ref().is_some_and(|t| {
+        synth_identity
+            .traits
+            .iter()
+            .any(|x| x.eq_ignore_ascii_case(t))
+    });
     // G-DSL-IN-TEXT-CONTAINS honors Track C overlays (`ChangeTraits` /
     // `ChangeBaseCardName`) the same way `trait_has` / `name_*` do: a
     // ChangeTraits-granted trait or a name overlay must be visible to the
@@ -3745,6 +3755,8 @@ fn eval_permanent_fields(
         || level_eq_dna_match
         || trait_overlay_match
         || trait_contains_overlay_match
+        || form_overlay_match
+        || attribute_overlay_match
         || in_text_contains_overlay_match
         || name_is_overlay_match
         || name_contains_overlay_match
@@ -3768,6 +3780,12 @@ fn eval_permanent_fields(
         }
         if trait_contains_overlay_match {
             p.trait_contains = None;
+        }
+        if form_overlay_match {
+            p.form_is = None;
+        }
+        if attribute_overlay_match {
+            p.attribute_is = None;
         }
         if in_text_contains_overlay_match {
             p.in_text_contains = None;
