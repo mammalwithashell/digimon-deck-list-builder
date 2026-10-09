@@ -1,3 +1,4 @@
+# produced_by: 20261006T193616031955Z-pilot-data-squad-6eadf2
 # Adversarial extension of BT26-005-inherited0.yaml: PAY the source-trash
 # cost, then DECLINE the free play despite valid ST24-12/Pinamon candidates.
 # Keenan has two distinguishable face-down sources. Declining revival must
@@ -5,10 +6,9 @@
 # not play any card. Keenan's source-trash trigger still exists: accept it
 # even with no surviving DATA SQUAD Digimon, so its suspend cost is observable.
 #
-# Timing trap: our source-trash observer resolves inline; DCGO queues Keenan
-# until Pinamon finishes. The shared revival-decline boundary can therefore
-# expose Keenan already suspended in our engine but still unsuspended in DCGO.
-# The separate observer answers preserve that difference rather than hiding it.
+# Rule 15-8-3-2: Keenan's source-trash observer waits until Pinamon finishes.
+# The shared revival-decline boundary must still show Keenan unsuspended;
+# only the following shared observer acceptance pays its suspension cost.
 # BT26_005.cs: Tamer pick canNoSelect, then PlayByEffect(Root.Trash).
 # BT26_094.cs: CanActivate requires payable suspension, not an Execute target.
 # See docs/digimon-rules/digest.md sections 15-7-5 and 15-9-2.
@@ -82,16 +82,13 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
-  # Our Keenan observer is inline. Accept suspension even without a target.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
   # THE PROBE: decline the independently optional result AFTER payment.
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectCardEffect }
-  # DCGO resolves the same Keenan trigger after Pinamon has finished.
+  # Both engines now resolve Keenan only after Pinamon has finished.
   - actor: 0
-    do: { select: { yes: true, dcgo_only: true } }
+    do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
   # A real main-phase action proves the decline closes Pinamon's resolution.
   - actor: 0
