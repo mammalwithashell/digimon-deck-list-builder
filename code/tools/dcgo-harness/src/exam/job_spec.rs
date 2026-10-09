@@ -465,7 +465,12 @@ pub fn build_exam_job(
         seed: s.seed,
         limits: JobLimits {
             max_turns: 40,
-            timeout_seconds: 180,
+            // The player fails a job at this limit itself (DCGO fork,
+            // 2026-10-09), so it has to clear every healthy exam: of 355
+            // completed since 2026-10-01 the slowest took 209 s, and 240 s is
+            // what the host already tolerated (the old 180 s plus its stall
+            // grace). A line wedged on a prompt fails in ~10 s regardless.
+            timeout_seconds: 240,
         },
     })
 }
