@@ -110,7 +110,11 @@ def render_report(*, run_id: str, counts: Mapping, by_state: Mapping, stop: Mapp
                   attempts: Iterable = (), escalations: Iterable[tuple[str, str]] = (),
                   blocked: Mapping[str, str] | None = None, failed: Mapping[str, str] | None = None,
                   problems: Iterable[str] = (), missing_components: Mapping[str, str] | None = None,
-                  generated_at: str | None = None) -> str:
+                  generated_at: str | None = None, landing: Mapping[str, str] | None = None) -> str:
+    """`landing` = `{"tree", "branch"}` of a managed run tree: when the run
+    adjudicated anything, the report ends with how those verdicts reach
+    training (merge the run branch, regenerate the readiness artifact --
+    CLAUDE.md rule 34). Omitted for drivers without a run tree."""
     attempts = list(attempts)
     lines = [first_line(run_id, counts, stop), "", f"# card-loop run `{run_id}`", ""]
     if generated_at:
@@ -146,6 +150,21 @@ def render_report(*, run_id: str, counts: Mapping, by_state: Mapping, stop: Mapp
     else:
         lines.append("None.")
     lines.append("")
+
+    adjudicated = int((counts.get("total") or {}).get("adjudicated", 0) or 0)
+    if landing and adjudicated:
+        branch = landing.get("branch") or "<run branch>"
+        lines += [
+            "## Landing the verdicts", "",
+            f"This run adjudicated {adjudicated} item(s) into the run tree `{landing.get('tree', '?')}` "
+            f"on branch `{branch}`. They count for training only once that branch is merged and the "
+            "readiness artifact is regenerated (CLAUDE.md rule 34):", "",
+            "```bash",
+            f"git merge {branch}                                   # or open its PR",
+            "PYTHONPATH=code python -m tools.clause_coverage.readiness            # regenerate data/oracle_readiness.json",
+            "PYTHONPATH=code python -m tools.clause_coverage.readiness --plan --limit 20   # what to examine next",
+            "```", "",
+        ]
 
     if missing_components:
         lines += ["## Components not built", ""]

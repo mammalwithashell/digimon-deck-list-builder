@@ -815,6 +815,10 @@ def bind_interactions(
             "verdict": verdict,
             "invalidated": invalidated,
             "reason": reason,
+            # The clause row's twins (`verdict-set --triage/--citation` writes
+            # them flat on the interaction record); readiness' D9 rule reads them.
+            "triage": entry.get("triage") if verdict == "diverged" else None,
+            "citation": entry.get("citation") if verdict == "diverged" else None,
             "scenario_path": entry.get("scenario_path"),
         }
         return classified[iid]

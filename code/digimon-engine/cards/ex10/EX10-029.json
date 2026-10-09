@@ -15,16 +15,18 @@
     5
   ],
   "type_eng": [
-    "Transmission (App Name)"
+    "Transmission (App Name)",
+    "Transmission"
   ],
   "form_eng": [
-    "Sup."
+    "Sup.",
+    "Appmon"
   ],
   "attribute_eng": [
     "System"
   ],
   "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
@@ -33,5 +35,6 @@
       "memory_cost": 2
     }
   ],
-  "xros_req": ""
+  "xros_req": "",
+  "link_effect_description_eng": "[When Linking] By trashing 1 of this Digimon's link cards, ＜De-Digivolve＞ effects don't affect 1 of your Digimon until your opponent's turn ends."
 }

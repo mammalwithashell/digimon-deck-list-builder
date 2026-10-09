@@ -47,6 +47,7 @@ fn synthetic_card(case: &TextScopeCase<'_>) -> CardData {
         effect_text: case.effect_text.to_string(),
         inherited_text: case.inherited_text.to_string(),
         security_text: case.security_text.to_string(),
+        link_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: case.card_id.replace('-', "_"),

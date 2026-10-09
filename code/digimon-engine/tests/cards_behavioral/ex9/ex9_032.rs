@@ -48,7 +48,7 @@ fn ex9_032_metadata_and_digivolution_paths_match_printed_text() {
     assert_eq!(compiled.level, Some(5));
     assert_eq!(compiled.cost, Some(7));
     assert_eq!(compiled.dp, Some(7000));
-    assert_eq!(compiled.attribute.as_deref(), Some("Data"));
+    assert_eq!(compiled.attribute, ["Data"]);
     assert!(compiled.color.contains(&CompiledColor::Yellow));
     assert!(compiled.color.contains(&CompiledColor::Purple));
     assert!(compiled

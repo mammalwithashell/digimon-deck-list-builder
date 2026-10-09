@@ -30,9 +30,10 @@ pub struct CardSpec {
     /// Form from `form_eng`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub form: Option<String>,
-    /// Attribute from `attribute_eng`.
+    /// Attribute from `attribute_eng` — `attribute: Vaccine`, or a list when
+    /// a rule box grants another (`attribute: [Vaccine, Free]`, BT16-102).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub attribute: Option<String>,
+    pub attribute: Option<AttributeSpec>,
     /// Ace `<-N>` — negative integer; lowered to on-leave-field hook.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ace_overflow: Option<i32>,
@@ -64,6 +65,23 @@ pub struct CardSpec {
     /// DSL file-format version; reserved for §9 open question #7.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spec_version: Option<u32>,
+}
+
+/// A card's printed attribute, or attributes when a rule box adds one.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(untagged)]
+pub enum AttributeSpec {
+    One(String),
+    Many(Vec<String>),
+}
+
+impl AttributeSpec {
+    pub fn names(&self) -> &[String] {
+        match self {
+            AttributeSpec::One(name) => std::slice::from_ref(name),
+            AttributeSpec::Many(names) => names,
+        }
+    }
 }
 
 #[derive(

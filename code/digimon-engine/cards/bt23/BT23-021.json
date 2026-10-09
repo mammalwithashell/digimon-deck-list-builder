@@ -16,23 +16,31 @@
     3
   ],
   "type_eng": [
-    "Fighting (App Name)"
+    "Fighting (App Name)",
+    "Fighting"
   ],
   "form_eng": [
-    "Sup."
+    "Sup.",
+    "Appmon"
   ],
   "attribute_eng": [
     "Game"
   ],
   "effect_description_eng": "[When Digivolving] [When Attacking] [Once Per Turn] You may link 1 level 3 Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, it can't be deleted in battle until your opponent's turn ends.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
       "card_color": 1,
       "level": 3,
       "memory_cost": 3
+    },
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 3
     }
   ],
-  "xros_req": "[App Fusion] [Dokamon] & [Perorimon] & [Musclemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+  "xros_req": "[App Fusion] [Dokamon] & [Perorimon] & [Musclemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+  "link_effect_description_eng": "[When Linking] This Digimon can't be deleted in battle until your opponent's turn ends."
 }

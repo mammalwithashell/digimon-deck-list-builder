@@ -206,7 +206,7 @@ fn st2_vanilla_cards_have_printed_metadata_and_no_effects() {
         assert_eq!(card.dp, Some(dp));
         assert_eq!(card.color, vec![CompiledColor::Blue]);
         assert_eq!(card.form.as_deref(), Some(form));
-        assert_eq!(card.attribute.as_deref(), Some(attr));
+        assert_eq!(card.attribute, [attr]);
         assert!(card.traits.iter().any(|t| t == trait_name));
         assert!(card.effects.is_empty(), "{id} must not fake no-op effects");
 

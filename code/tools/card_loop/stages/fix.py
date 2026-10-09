@@ -8,7 +8,10 @@ card / YAML fix. A `fix_card` result that reports gaps turns into a
 `fix_engine` call in the same step (the card cannot be fixed without the
 substrate, and the exam state machine has no PARKED).
 
-    ok, cited, no remaining gaps -> GATE with MergeRequest(engine=data["engine_fix"])
+    ok, cited, no remaining gaps -> GATE with MergeRequest(engine=data["engine_fix"]); a
+                                    `fix_card` whose diff touches engine code is routed
+                                    as an engine fix regardless (D13: the merger would
+                                    otherwise refuse it)
     no citation                  -> ESCALATED (spec: a logged finding, not a fix)
     fix_engine still has gaps    -> ESCALATED naming them
     call failed                  -> StageDeferred
@@ -61,6 +64,27 @@ def _previous(item: ItemRecord) -> str:
 
 def _gaps_text(gaps) -> str:
     return ", ".join(f"`{g.get('id')}` ({g.get('kind')}: {g.get('summary')})" for g in gaps or []) or "(none)"
+
+
+def _manifest_paths(artifacts) -> list[str]:
+    """The paths a worker's manifest lists (capture_artifacts), or [] without one."""
+    import json
+    from pathlib import Path
+
+    path = (artifacts or {}).get("manifest")
+    if not path:
+        return []
+    try:
+        files = json.loads(Path(path).read_text(encoding="utf-8")).get("files") or []
+    except (OSError, ValueError, AttributeError):
+        return []
+    return [f.get("path") for f in files if isinstance(f, dict) and f.get("path")]
+
+
+def _is_engine_path(path: str) -> bool:
+    from ..merge import is_engine_path
+
+    return is_engine_path(path)
 
 
 class FixExecutor:
@@ -126,9 +150,21 @@ class FixExecutor:
         citation = base.format_citation(result.get("citation"))
         parent = self._parent(item)
         tail = calls_all[prior_calls:]
+        gap_id = (gaps or list(known_gaps) or [{}])[0].get("id")
+        if not engine_fix:
+            # A card fix whose diff reaches into the engine IS an engine fix,
+            # whatever the worker declared: it lands on the engine branch for
+            # human review (D13) instead of being refused by the merger -- which
+            # cost Q4578 its second and last fix attempt in the second pilot.
+            engine_paths = [p for p in _manifest_paths(call.result.artifacts) if _is_engine_path(p)]
+            if engine_paths:
+                engine_fix = True
+                why = (f"fix_card changed engine code ({', '.join(engine_paths[:3])}"
+                       f"{', ...' if len(engine_paths) > 3 else ''}); routed to the engine branch (D13)")
+                gap_id = gap_id or "fix-" + re.sub(r"[^A-Za-z0-9]+", "-", item.ident).strip("-")
         data = {"engine_fix": engine_fix, "engine_fix_reason": why, "fix_attempt": call.attempt_id,
                 "fix_family": call.family, "fix_stage": call.stage, "fix_result": result,
-                "fix_citation": citation, "gap_id": (gaps or list(known_gaps) or [{}])[0].get("id")}
+                "fix_citation": citation, "gap_id": gap_id}
         problem = None
         if not citation:
             problem = (f"{call.stage} by {call.family} has no citation (rule, ruling or DCGO source): "

@@ -258,6 +258,11 @@ def test_parse_test_name():
     {"kind": "dcgo", "ref": "BT21_029.cs:45"},
     {"kind": "dcgo", "ref": "Assets/Scripts/CardEffect/BT21/Red/BT21_029.cs:120-131"},
     {"kind": "dcgo", "ref": "Assets\\Scripts\\CardEffect\\BT21\\Red\\BT21_029.cs"},
+    # the absolute base-repo path the triage/fix prompts hand the worker (a landed
+    # card fix failed the gate on it in the second pilot)
+    {"kind": "dcgo", "ref": "C:\\Users\\james\\Documents\\digimon-deck-list-builder-1\\DCGO\\Assets\\Scripts"
+                            "\\CardEffect\\BT13\\Green\\BT13_060.cs:218"},
+    {"kind": "dcgo", "ref": "/mnt/base/DCGO/Assets/Scripts/CardEffect/BT13/Green/BT13_060.cs:218"},
 ])
 def test_well_formed_citations(citation):
     assert citation_problem(citation) is None
@@ -396,3 +401,19 @@ def test_fix_result_lookup():
     assert fix_result(ItemRecord(item="clause:X#effect#0", state="GATE", data={"fix_result": f})) == f
     assert fix_result(ItemRecord(item="clause:X#effect#0", state="GATE", data=dict(f))) == f
     assert fix_result(ItemRecord(item="clause:X#effect#0", state="GATE", data={})) is None
+
+
+def test_the_gate_runs_under_the_shared_worktree_lock(monkeypatch):
+    # Two gates at once reset the run's single gate worktree under each other
+    # (second pilot: an index.lock collision cost a landed fix); `check` holds
+    # the module lock for the whole run.
+    import tools.card_loop.gates as G
+    seen = {}
+
+    def fake_check(self, ctx, item, merge):
+        seen["locked"] = G._GATE_TREE_LOCK.locked()
+        return "result"
+
+    monkeypatch.setattr(G.FixGate, "_check", fake_check)
+    assert G.FixGate().check(None, None, None) == "result"
+    assert seen["locked"] is True and not G._GATE_TREE_LOCK.locked()

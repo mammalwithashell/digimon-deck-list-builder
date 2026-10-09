@@ -199,6 +199,43 @@ def test_forced_author_unavailable_defers_never_falls_back_to_the_implementer(re
     assert ctx.workers["claude"].calls == 0
 
 
+def test_qa_interaction_without_an_encoding_is_authored_then_encoded(repo):
+    # The line comes first, so the encoding can anchor on steps that exercise
+    # the ruling (second pilot: 60% of encodings against library lines escalated).
+    workers = _workers(claude=[ok(dict(INT_OK, scenario_paths=["qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"]))])
+    item = _item("AUTHORING", item="interaction:qa:Q77")
+    out = AuthoringExecutor().run(_ctx(repo, workers, sources=_isrc()), item)
+    _check(item, out)
+    assert out.next_state == "ENCODE"
+    pkt = workers["claude"].received[0]
+    assert "only affects Digimon" in pkt.prompt
+    assert "expect_ruling" in pkt.prompt and "Do not write" in pkt.prompt
+    assert out.merge_request is not None
+
+
+def test_a_reused_library_line_for_a_qa_item_is_encoded_before_the_sim(repo):
+    # A withdrawn escalation re-enters with its data cleared; the line it
+    # authored is in the tree and is reused -- but the ruling must still be
+    # encoded against it (ENCODE), not run with whatever block the file holds.
+    rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
+    _write_scenario(repo, rel, QA_SCENARIO)
+    workers = _workers()
+    item = _item("AUTHORING", item="interaction:qa:Q77")
+    out = AuthoringExecutor().run(_ctx(repo, workers, sources=_isrc()), item)
+    _check(item, out)
+    assert out.next_state == "ENCODE" and out.data["scenario_paths"] == [rel]
+    assert not out.attempts and workers["claude"].calls == 0
+    # with an agreed block already in hand the reused line goes straight to the sim
+    item2 = _item("AUTHORING", item="interaction:qa:Q77", expect_ruling={"q_id": "Q77", "assert": []})
+    assert AuthoringExecutor().run(_ctx(repo, _workers(), sources=_isrc()), item2).next_state == "SIM"
+    # feedback from a rejected exam means the line is NOT reused as is
+    item3 = _item("AUTHORING", item="interaction:qa:Q77", triage_feedback="wrong pick")
+    workers3 = _workers(claude=[ok(dict(INT_OK, scenario_paths=[rel]))])
+    out3 = AuthoringExecutor().run(_ctx(repo, workers3, sources=_isrc()), item3)
+    assert workers3["claude"].calls == 1 and "wrong pick" in workers3["claude"].received[0].prompt
+    assert out3.next_state == "ENCODE"
+
+
 def test_qa_interaction_author_gets_the_ruling_and_the_agreed_block(repo):
     workers = _workers(claude=[ok(dict(INT_OK, scenario_paths=["qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"]))])
     block = {"q_id": "Q77", "assert": [{"at": 3, "that": {"p1.field": []}}]}
@@ -261,18 +298,47 @@ AGREED = {"q_id": "Q77", "assert": [{"at": 1, "that": {"p1.field": []}}]}
 QA_SCENARIO = SCENARIO.replace("seed: 1\n", 'interaction: {id: "qa:Q77", source: qa, kind: positive}\nseed: 1\n')
 
 
-def test_sim_refuses_a_scenario_that_altered_the_agreed_ruling_block(repo):
+def test_sim_writes_the_agreed_ruling_block_into_the_scenario(repo):
+    # The block both families agreed is the orchestrator's to place: the file's
+    # stale or missing block is replaced, the rest of the file (comments
+    # included) is kept, and the write is reported for the tree commit.
     rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
-    _write_scenario(repo, rel, QA_SCENARIO + "expect_ruling:\n  q_id: Q77\n  assert:\n"
-                                              "    - at: 1\n      that: {p1.field: [ST1-02]}\n")
+    _write_scenario(repo, rel, "# the line\n" + QA_SCENARIO + "expect_ruling:\n  q_id: Q77\n  assert:\n"
+                                                              "    - at: 1\n      that: {p1.field: [ST1-02]}\n")
     cmds = FakeCommands().on("--sim-only", 0, SIM_PASS)
     item = _item("SIM", item="interaction:qa:Q77", scenario_paths=[rel], expect_ruling=AGREED,
                  author_attempt="att-a", author_stage="author_interaction")
     out = SimExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
+    assert out.next_state == "ORACLE" and not out.corrections
+    text = (repo / rel).read_text(encoding="utf-8")
+    assert text.startswith("# the line\n") and "ST1-02" not in text
+    import yaml
+    assert yaml.safe_load(text)["expect_ruling"] == AGREED
+    assert out.data["ruling_block_written"] == [rel]
+
+
+def test_a_block_written_before_a_failing_sim_is_still_reported_for_the_commit(repo):
+    # Left uncommitted, the written block made the re-author's merge refuse
+    # ("manifest paths have uncommitted changes") three times (Q4577/Q4578/Q4585).
+    rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
+    _write_scenario(repo, rel, QA_SCENARIO)
+    cmds = FakeCommands().on("--sim-only", 1, SIM_FAIL)
+    item = _item("SIM", item="interaction:qa:Q77", scenario_paths=[rel], expect_ruling=AGREED,
+                 author_attempt="att-a", author_stage="author_interaction")
+    out = SimExecutor().run(_ctx(repo, cmds=cmds), item)
     assert out.next_state == "AUTHORING"
-    assert "expect_ruling" in out.data["sim_failure"][rel][0]
-    assert out.corrections[0].stage == "author_interaction"
+    assert out.data["ruling_block_written"] == [rel]
+
+
+def test_a_ruling_contradiction_exiting_one_still_goes_to_the_oracle(repo):
+    rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
+    _write_scenario(repo, rel, QA_SCENARIO + "expect_ruling:\n  q_id: Q77\n  assert:\n"
+                                              "    - at: 1\n      that: {p1.field: []}\n")
+    cmds = FakeCommands().on("--sim-only", 1, SIM_RULING_CONTRADICTED)
+    out = SimExecutor().run(_ctx(repo, cmds=cmds), _item("SIM", item="interaction:qa:Q77", scenario_paths=[rel],
+                                                         expect_ruling=AGREED))
+    assert out.next_state == "ORACLE"
 
 
 def test_sim_accepts_the_agreed_ruling_block_verbatim(repo):
@@ -281,7 +347,31 @@ def test_sim_accepts_the_agreed_ruling_block_verbatim(repo):
                                               "    - at: 1\n      that: {p1.field: []}\n")
     cmds = FakeCommands().on("--sim-only", 0, SIM_PASS)
     item = _item("SIM", item="interaction:qa:Q77", scenario_paths=[rel], expect_ruling=AGREED)
-    assert SimExecutor().run(_ctx(repo, cmds=cmds), item).next_state == "ORACLE"
+    out = SimExecutor().run(_ctx(repo, cmds=cmds), item)
+    assert out.next_state == "ORACLE" and not out.data.get("ruling_block_written")
+
+
+SIM_RULING_CONTRADICTED = ("exam: x\n  lowered 4 step(s): []\n  assert: 0 check(s) over 0 assertion block(s), 0 failed\n"
+                           "  RULING qa:Q77 CONTRADICTED: at 3: p1.field expected [] but our engine has [ST1-02]\n"
+                           "  ruling qa:Q77: ours CONTRADICTS the ruling (1 check(s), 1 failed)\n"
+                           "exam: scenarios seen 1 / lowered 1 / run 1 / diffed 0 / failed 1\n")
+
+
+def test_a_ruling_contradiction_on_a_complete_line_goes_to_the_oracle(repo):
+    # Our engine disagreeing with the publisher is a finding for triage (after
+    # DCGO's answer is in), not the author's failure: Q2304 burnt six authoring
+    # attempts across two resumes on an assertion the engine fix targets.
+    rel = "qa/dcgo-exams/ST23/ST23-04-qa-Q77.yaml"
+    _write_scenario(repo, rel, QA_SCENARIO + "expect_ruling:\n  q_id: Q77\n  assert:\n"
+                                              "    - at: 1\n      that: {p1.field: []}\n")
+    cmds = FakeCommands().on("--sim-only", 0, SIM_RULING_CONTRADICTED)
+    item = _item("SIM", item="interaction:qa:Q77", scenario_paths=[rel], expect_ruling=AGREED,
+                 author_attempt="att-a", author_stage="author_interaction")
+    out = SimExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "ORACLE" and not out.corrections
+    assert "CONTRADICTED" in out.data["ruling_contradicted"][rel][0]
+    assert "contradicts" in out.reason
 
 
 def test_a_missing_scenario_file_is_an_authoring_failure(repo):
@@ -430,6 +520,153 @@ def test_both_engines_contradicting_the_scenario_goes_back_to_authoring(repo):
     assert (c.kind, c.corrected_attempt, c.by_gate) == ("gate_fail", "att-a", "oracle_scenario")
 
 
+STALL = {"job_id": "exam-ST23-04-effect0", "claimed_for_s": 412, "limit_s": 180, "heartbeat_names_it": True,
+         "newest_recording": "C:/rec/x.jsonl",
+         "last_row": '{"kind":"selection","step":25,"actor":0,"prompt":"OptionalSkill","bool_value":true}'}
+STALL_REASON = ("player stalled on exam-ST23-04-effect0: claimed 412s ago (its own limit is 180s) and the "
+                "heartbeat still names it")
+
+
+def _stall_ctx(repo, cmds, heartbeat, launches=None):
+    from tools.card_loop.config import LoopConfig
+    hroot = repo / "hroot"
+    hroot.mkdir(exist_ok=True)
+    (hroot / "harness.heartbeat").write_text(heartbeat + "\n", encoding="utf-8")
+    cfg = LoopConfig(exploration_share=0.0, harness_root=str(hroot), player_dir="P:/player")
+    extra = {}
+    if launches is not None:
+        extra["launch_detached"] = lambda argv, cwd, timeout: (launches.append(list(argv)), 0)[1]
+    return _ctx(repo, cmds=cmds, config=cfg, **extra)
+
+
+def test_a_stalled_player_goes_to_triage_and_the_player_is_restarted(repo):
+    # The pilots wedged on one DCGO job for 15 minutes: the scripted answer to a
+    # SelectCardEffect never completed it, and DCGO enforces no job timeout.
+    # The harness now reports the stall; the stage routes it to triage as
+    # `undetermined` (a model reads both sides) and restarts the player, since
+    # the heartbeat still names the stalled job. `node up` runs detached (the
+    # player would inherit a captured pipe and the call would block).
+    _write_scenario(repo)
+    cmds = (FakeCommands()
+            .on("--oracle", 1, _row(verdict="unmeasured", job_outcome=None, reason=STALL_REASON, stall=STALL) + "\n")
+            .on(("node", "down"), 0, "stopped pid 1")
+            .on(("node", "status"), 0, "GO\n  [ok] player: running (pid 2, heartbeat Healthy)\n"))
+    launches = []
+    item = _oracle_item()
+    out = OracleExecutor().run(_stall_ctx(repo, cmds, "exam-ST23-04-effect0", launches), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED"
+    assert out.data["prompt_route"] == "undetermined"
+    ev = out.data["prompt_evidence"]
+    assert ev["stall"] == STALL and "stalled" in ev["explanation"] and "OptionalSkill" in ev["explanation"]
+    assert "stalled" in out.reason
+    node_calls = [c["argv"] for c in cmds.calls if "node" in c["argv"]]
+    assert [c[c.index("node") + 1] for c in node_calls] == ["down", "status"]
+    (up,) = launches
+    assert up[up.index("node") + 1] == "up" and "--build" in up and "P:/player" in up
+    assert ev["player_restart"].startswith("restarted") and "pid 2" in ev["player_restart"]
+    assert not cmds.argvs("--inspect"), "nothing to inspect: DCGO asked no prompt the line could not answer"
+
+
+def test_a_player_that_did_not_come_back_is_reported_not_claimed(repo):
+    _write_scenario(repo)
+    cmds = (FakeCommands()
+            .on("--oracle", 1, _row(verdict="unmeasured", job_outcome=None, reason=STALL_REASON, stall=STALL) + "\n")
+            .on(("node", "down"), 0, "stopped pid 1")
+            .on(("node", "status"), 0, "NO-GO\n  [fail] player: not running\n"))
+    out = OracleExecutor().run(_stall_ctx(repo, cmds, "exam-ST23-04-effect0", []), _oracle_item())
+    note = out.data["prompt_evidence"]["player_restart"]
+    assert not note.startswith("restarted") and "not running" in note
+
+
+def test_a_stall_the_player_already_left_behind_does_not_restart_it(repo):
+    # The other pilot's oracle call restarted the player first (the heartbeat
+    # now reads `idle`): a second restart would kill a healthy player mid-job.
+    _write_scenario(repo)
+    cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome=None,
+                                                 reason=STALL_REASON, stall=STALL) + "\n")
+    out = OracleExecutor().run(_stall_ctx(repo, cmds, "idle"), _oracle_item())
+    assert out.next_state == "DIVERGED"
+    assert not [c for c in cmds.calls if "node" in c["argv"]]
+    assert "idle" in out.data["prompt_evidence"]["player_restart"]
+
+
+ACTOR = ("DCGO job failed: prompt mismatch: step 27 expected actor 0 but DCGO asked actor 1 -- stopped before the "
+         "line finished, with no divergence before it")
+
+
+def test_an_actor_mismatch_names_who_acts_for_triage(repo):
+    # EX7-070#effect#0:optional_decline: DCGO handed the turn to actor 1 where the
+    # scenario (sim-only clean) has actor 0 act. The row went to triage labelled
+    # by the differ's "TRUNCATED, no divergence found" with null prompts, and the
+    # triage model answered "there is no divergence to classify".
+    _write_scenario(repo)
+    row = _row(verdict="unmeasured", job_outcome="failed", reason=ACTOR,
+               first_divergence="TRUNCATED, no divergence found (compared 22 of 34 ours / 27 dcgo steps)",
+               mismatch={"row": 27, "step": 3, "expected": None, "asked": None})
+    cmds = FakeCommands().on("--oracle", 1, row + "\n")
+    item = _oracle_item()
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED"
+    assert out.data["prompt_route"] == "engines_disagree"
+    ev = out.data["prompt_evidence"]
+    assert (ev["scenario_step"], ev["expected"], ev["dcgo_asked"]) == (3, "actor 0", "actor 1")
+    assert "actor 1" in ev["explanation"] and "step 3" in ev["explanation"]
+    assert "TRUNCATED" not in out.reason and "actor 1" in out.reason
+
+
+CANDIDATES = ("DCGO job failed: SelectCardEffect: wanted card 'BT26-005' (pick 0 of [BT26-005]) is not among the "
+              "offered candidates [ST24-05,ST24-12] -- stopped before the line finished, with no divergence before it")
+
+
+def test_dcgo_offering_other_candidates_is_an_engine_disagreement_for_triage(repo):
+    # BT26-005#inherited#0: DCGO offered [ST24-05, ST24-12] where our engine
+    # (sim-only clean) offered BT26-005. The message is not a prompt mismatch,
+    # so it was retried three times as "unmeasured" and escalated.
+    _write_scenario(repo)
+    cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=CANDIDATES) + "\n")
+    item = _oracle_item()
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED"
+    assert out.data["prompt_route"] == "engines_disagree"
+    ev = out.data["prompt_evidence"]
+    assert ev["dcgo_asked"] == "SelectCardEffect" and "ST24-05" in ev["explanation"] and "BT26-005" in ev["explanation"]
+    assert not cmds.argvs("--inspect")
+
+
+SHAPE = ("DCGO job failed: SelectHandEffect prompt needs select_card_ids or select_cancel, got: select_value=1 -- "
+         "stopped before the line finished, with no divergence before it")
+
+
+def test_a_scripted_answer_of_the_wrong_shape_goes_back_to_the_author_not_to_a_retry(repo):
+    # Q6391 resubmitted the same job three times ("unmeasured") and escalated
+    # on the oracle_retry cap: the step's shape was wrong for DCGO's prompt.
+    _write_scenario(repo)
+    cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=SHAPE) + "\n")
+    item = _oracle_item()
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "AUTHORING"
+    assert out.data["prompt_route"] == "scenario_wrong"
+    assert "select_card_ids" in out.data["prompt_evidence"]["explanation"]
+    (c,) = out.corrections
+    assert (c.kind, c.corrected_attempt, c.by_gate) == ("gate_fail", "att-a", "oracle_scenario")
+    assert not cmds.argvs("--inspect")
+
+
+def test_a_dcgo_stop_the_loop_cannot_parse_goes_to_triage_not_to_a_retry(repo):
+    _write_scenario(repo)
+    reason = "DCGO job failed: deck codes rejected by the lobby -- stopped before the line finished"
+    cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=reason) + "\n")
+    item = _oracle_item()
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED" and out.data["prompt_route"] == "undetermined"
+    assert "deck codes rejected" in out.data["prompt_evidence"]["explanation"]
+
+
 def test_a_divergence_before_the_mismatch_is_a_plain_divergence(repo):
     _write_scenario(repo)
     row = _row(verdict="diverged", job_outcome="failed", reason="memory differs; " + MISMATCH,
@@ -488,6 +725,42 @@ def test_triage_quirk_goes_to_the_termination_check(repo):
     assert out.data["triage_first"]["citation"] == {"kind": "rule", "ref": "7-3-1"}
 
 
+TRI_SCENARIO = {"classification": "scenario_wrong", "citation": {"kind": "ruling", "ref": "qa:Q77"},
+                "reasoning": "the expect_ruling asserts a DP the answer does not decide; drop it"}
+
+
+def test_triage_scenario_wrong_goes_back_to_authoring_with_the_objection(repo):
+    # Second pilot: triage found the exam wrong (a non-discriminating block, a
+    # pick of the wrong card) and could only answer `undetermined`, escalating.
+    workers = _workers(claude=[ok(TRI_SCENARIO)])
+    item = _triage_item(item="interaction:qa:Q77", author_attempt="att-a", author_stage="author_interaction",
+                        expect_ruling={"q_id": "Q77", "assert": []}, encode_feedback="old")
+    out = TriageExecutor().run(_ctx(repo, workers, sources=_isrc()), item)
+    _check(item, out)
+    assert out.next_state == "AUTHORING"
+    assert "does not decide" in out.data["triage_feedback"]
+    assert out.data["expect_ruling"] is None and out.data["encode_feedback"] is None
+    (c,) = out.corrections
+    assert (c.kind, c.corrected_attempt, c.by_gate, c.stage) == ("gate_fail", "att-a", "triage_scenario",
+                                                                 "author_interaction")
+    assert [a.outcome for a in out.attempts] == ["accepted"] and out.escalation is None
+
+
+def test_a_third_scenario_wrong_in_a_row_escalates_instead_of_another_round(repo):
+    # Q4577: author -> encode -> oracle -> triage "scenario_wrong" three times in
+    # thirty minutes, each round costing the full chain, until the author cap.
+    workers = _workers(claude=[ok(TRI_SCENARIO)])
+    item = _triage_item(item="interaction:qa:Q77", author_attempt="att-a", scenario_wrong_rounds=2)
+    out = TriageExecutor().run(_ctx(repo, workers, sources=_isrc()), item)
+    _check(item, out)
+    assert out.next_state == "ESCALATED" and "without converging" in out.escalation.reason
+    assert out.data["scenario_wrong_rounds"] == 3
+    # the first and second rounds still go back to the author
+    item2 = _triage_item(item="interaction:qa:Q77", author_attempt="att-a", scenario_wrong_rounds=1)
+    out2 = TriageExecutor().run(_ctx(repo, _workers(claude=[ok(TRI_SCENARIO)]), sources=_isrc()), item2)
+    assert out2.next_state == "AUTHORING" and out2.data["scenario_wrong_rounds"] == 2
+
+
 def test_triage_undetermined_escalates(repo):
     _write_scenario(repo)
     res = {"classification": "undetermined", "citation": None, "reasoning": "the sources do not decide it"}
@@ -540,6 +813,20 @@ def test_disagreement_escalates_with_both_arguments(repo):
     assert all(c.kind == "family_disagreement" for c in out.corrections)
     assert out.attempts[0].outcome == "escalated"
     assert "att-t1" in out.escalation.history
+
+
+def test_a_second_opinion_of_scenario_wrong_sends_the_exam_back_instead_of_escalating(repo):
+    # Q5677: claude said dcgo_quirk, codex said the exam itself was wrong; the
+    # two were escalated as "families disagree". A wrong exam ends nothing.
+    workers = _workers(codex=[ok(TRI_SCENARIO)])
+    item = _term_item()
+    out = TerminationCheckExecutor().run(_ctx(repo, workers), item)
+    _check(item, out)
+    assert out.next_state == "AUTHORING" and out.escalation is None
+    assert "does not decide" in out.data["triage_feedback"] and "dcgo_quirk" in out.data["triage_feedback"]
+    assert out.data["expect_ruling"] is None
+    assert all(c.kind == "family_disagreement" for c in out.corrections) and out.corrections
+    assert out.attempts[0].outcome == "accepted"
 
 
 def test_agreement_without_a_citation_escalates(repo):
@@ -676,6 +963,25 @@ def test_a_card_fix_that_finds_a_gap_becomes_an_engine_fix_in_the_same_step(repo
     assert "G-DSL-EACH-TAMER" in workers["codex"].received[0].prompt
 
 
+def test_a_card_fix_whose_diff_touches_engine_code_lands_on_the_engine_branch(repo, tmp_path):
+    # Q4578: the card-fix worker edited game_actions/mod.rs without declaring a
+    # gap; the merger refused ("engine fixes land on their own branch") and the
+    # fix_card cap escalated the item. The diff is an engine fix: route it so.
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({"base_sha": "x", "files": [
+        {"path": "code/digimon-engine/src/game_actions/mod.rs", "status": "M", "sha256": "0" * 64},
+        {"path": "code/digimon-engine/cards/st23/ST23-04.yaml", "status": "M", "sha256": "0" * 64}]}),
+        encoding="utf-8")
+    workers = _workers(claude=[ok(FIX_OK, artifacts={"diff": str(tmp_path / "d.diff"), "manifest": str(manifest)})])
+    item = _fix_item()
+    out = FixExecutor().run(_ctx(repo, workers), item)
+    _check(item, out)
+    assert out.next_state == "GATE"
+    assert out.merge_request.engine is True and out.merge_request.gap_id == "fix-ST23-04-effect-0"
+    assert out.data["engine_fix"] is True and "game_actions/mod.rs" in out.data["engine_fix_reason"]
+    assert [a.stage for a in out.attempts] == ["fix_card"], "no second worker call: the diff itself decides"
+
+
 def test_a_fix_without_a_citation_escalates_as_a_finding(repo):
     workers = _workers(claude=[ok(dict(FIX_OK, citation={"kind": "rule", "ref": " "}))])
     item = _fix_item()
@@ -690,3 +996,55 @@ def test_an_engine_fix_still_missing_substrate_escalates(repo):
     workers = _workers(codex=[ok(dict(FIX_OK, gaps=[gap]))])
     out = FixExecutor().run(_ctx(repo, workers), _fix_item(engine_fix=True))
     assert out.next_state == "ESCALATED" and "G-ENG-X" in out.escalation.reason
+
+
+def test_authoring_keeps_only_scenario_yaml_in_scenario_paths(repo):
+    # A worker that adds a deck-pool JSON lists it beside the scenario; the
+    # sim and oracle steps must not try to run the pool as a scenario.
+    res = {"scenario_paths": [SC, "qa/dcgo-exams/ST23/my_pool.json"], "covers": [CLAUSE], "notes": ""}
+    workers = _workers(claude=[ok(res, artifacts={"diff": "d", "manifest": "m"})])
+    out = AuthoringExecutor().run(_ctx(repo, workers), _item("AUTHORING"))
+    assert out.next_state == "SIM"
+    assert out.data["scenario_paths"] == [SC]
+    assert out.data["pool_files"] == ["qa/dcgo-exams/ST23/my_pool.json"]
+
+
+# ================================================================ ORACLE: three-way legs (D7, follow-up 9.8)
+
+
+def test_structured_legs_attach_the_three_way_outcome(repo):
+    # `exam --oracle` prints the two legs as fields; the stage turns them into
+    # the D7 outcome so triage and the fork-candidate export never parse `reason`.
+    _write_scenario(repo)
+    item = _oracle_item(item="interaction:qa:Q1601")
+    row = _row(verdict="diverged", ids=["qa:Q1601"], recorded=[],
+               reason="ours contradicts ruling qa:Q1601 (ours vs DCGO: agree); clean diff",
+               ours_vs_dcgo=True, ours_vs_ruling=False, ruling_q_id="Q1601")
+    cmds = FakeCommands().on("--oracle", 1, row + "\n")
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED"
+    tw = out.data["three_way"]
+    assert tw["verdict_hint"] == "ours_wrong" and tw["dcgo_fork_candidate"] is True
+    assert tw["dcgo_matches_ruling"] is False and tw["q_id"] == "Q1601"
+    assert (tw["ours_vs_dcgo"], tw["ours_vs_ruling"]) == (True, False)
+
+
+def test_confirmed_with_both_legs_records_a_confirmed_three_way(repo):
+    _write_scenario(repo)
+    item = _oracle_item(item="interaction:qa:Q1601")
+    row = _row(ids=["qa:Q1601"], recorded=["qa:Q1601"], ours_vs_dcgo=True, ours_vs_ruling=True,
+               ruling_q_id="Q1601")
+    cmds = FakeCommands().on("--oracle", 0, row + "\n")
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    assert out.next_state == "CONFIRMED"
+    assert out.data["three_way"]["verdict_hint"] == "confirmed"
+    assert out.data["three_way"]["dcgo_fork_candidate"] is False
+
+
+def test_a_result_without_legs_carries_no_three_way(repo):
+    # A clause exam, or an unmeasured ruling leg: the outcome is not decided.
+    _write_scenario(repo)
+    cmds = FakeCommands().on("--oracle", 0, _row() + "\n")
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), _oracle_item())
+    assert out.next_state == "CONFIRMED" and out.data.get("three_way") is None

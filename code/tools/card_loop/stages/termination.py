@@ -118,6 +118,26 @@ class TerminationCheckExecutor:
         second = base.argument(call, call_value=out.get("classification"), citation=out.get("citation"),
                                reasoning=out.get("reasoning", ""))
         cites = [base.format_citation(first.get("citation")), base.format_citation(second["citation"])]
+        from .triage import SCENARIO_WRONG_ROUNDS
+        rounds = int(item.data.get("scenario_wrong_rounds") or 0) + 1
+        if (second["call"] == "scenario_wrong" and first.get("call") != "scenario_wrong"
+                and rounds <= SCENARIO_WRONG_ROUNDS):
+            # The second family finds the exam itself wrong. That is not a
+            # disagreement to escalate: a wrong exam ends nothing, so it goes
+            # back to its author with both arguments (Q5677 escalated here as
+            # "claude dcgo_quirk vs codex scenario_wrong").
+            why = (f"{family} (termination check): {second.get('reasoning', '')} | the first opinion was "
+                   f"{first.get('family')} {first.get('call')}: {first.get('reasoning', '')}")
+            corrections = corr.family_disagreement(
+                (first.get("attempt_id"), first.get("call")), (call.attempt_id, second["call"]),
+                stage=STAGE, item=item.item, ts=ctx.now()) if first.get("attempt_id") else []
+            return base.outcome("AUTHORING", item=item, corrections=corrections,
+                                attempts=[call.attempt(ctx, outcome="accepted", parent=first.get("attempt_id"))],
+                                data={"triage_second": second, "triage_feedback": why, "expect_ruling": None,
+                                      "encode_feedback": None, "sim_failure": None, "prompt_evidence": None,
+                                      "prompt_route": None, "scenario_wrong_rounds": rounds},
+                                reason=f"{family}: scenario_wrong against {first.get('family')}'s {first.get('call')} "
+                                       f"-- {second.get('reasoning', '')[:160]}")
         problems = []
         if second["call"] != first.get("call"):
             problems.append(f"families disagree: {first.get('family')} {first.get('call')} vs "

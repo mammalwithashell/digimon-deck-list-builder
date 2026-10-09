@@ -56,27 +56,38 @@ records the plan without the gate.
 ## 4. Run, resume, status
 
 ```bash
+export PYTHONPATH=code                        # the CLI imports `tools.*` from code/
 python -m tools.card_loop run --plan runs/card-loop/<run-id>/plan.json --config my-loop.toml \
     --worktree-root D:/cl                     # short path: worker pool + run tree live here
 python -m tools.card_loop status --run <run-id>
-python -m tools.card_loop resume --run <run-id>
+python -m tools.card_loop resume --run <run-id> --config my-loop.toml --worktree-root D:/cl
 ```
 
 A real run checks out the run branch `card-loop/<run-id>/run` from the plan's
-base sha in its own tree (`--run-tree`), extends the clause-text book for the
-pool, and commits every tree write (scenarios, backfilled asserts, verdicts,
-ledgers) with `Loop-Attempt:` / `Loop-Model:` / `Loop-Run:` trailers. Engine
+base sha in its own tree (`--run-tree`), **builds `dcgo-harness` from that tree**
+(`cargo build -p dcgo-harness --target-dir <cargo_target_base>/<tree>`, at
+session start and again after any merge that touches `code/digimon-engine/`,
+`code/digimon-dsl/`, `code/tools/dcgo-harness/` or the Cargo files, or when an
+engine branch lands) so SIM and ORACLE judge the engine the loop's fixes land
+in -- never a binary some other checkout built -- extends the clause-text book
+for the pool, and commits every tree write (scenarios, backfilled asserts,
+verdicts, ledgers) with `Loop-Attempt:` / `Loop-Model:` / `Loop-Run:` trailers.
+A failed harness build holds every SIM / ORACLE item with the compiler's last
+lines (set `harness_bin` in the config only to bypass this on purpose). Engine
 fixes land on `card-loop/<run-id>/engine-<gap>` branches for human merge. The
 loop never pushes and never touches `main`. `--budget-usd` overrides the
 config's cap; `--max-attempts N` stops after N worker calls; `--serial` runs
 one task at a time; `--fake <canned.json>` replays canned worker results (no
 model, ledgers under `<run-dir>/fake/`) — the way to smoke a plan for nothing.
+**A real run with no cap at all is refused**: give it `budget_usd` or
+`wall_clock_hours` in the config, `--budget-usd`, or `--max-attempts`, or say
+`--no-cap` to run uncapped on purpose (`--fake` is never billed and is exempt).
 
 ### What a run does to each item
 
 ```
 card:        PENDING → IMPLEMENTING → REVIEW → IMPLEMENTED   (or PARKED on a gap)
-clause/int:  PENDING → [CLASSIFY → ENCODE] → AUTHORING → SIM → ORACLE → CONFIRMED
+clause/int:  PENDING → [CLASSIFY] → AUTHORING → [ENCODE] → SIM → ORACLE → CONFIRMED
                                          └── DIVERGED → TRIAGE → ours_wrong → FIX → GATE → ORACLE
                                                                → dcgo_quirk | unreachable → TERMINATION_CHECK → TERMINAL
                                                                → undetermined → ESCALATED
@@ -95,22 +106,64 @@ clause/int:  PENDING → [CLASSIFY → ENCODE] → AUTHORING → SIM → ORACLE 
 - **A prompt mismatch** on the oracle is routed by who disagreed: both engines
   contradict the scenario → back to AUTHORING; ours matches the scenario and
   DCGO does not → TRIAGE (a missing decline looks exactly like this).
+- **A stalled player** (DCGO enforces no job timeout: a scripted selection
+  that cannot complete its prompt holds the player forever, heartbeat fresh)
+  is reported by the harness once the claim outlives the job's own
+  `timeout_seconds` + 60 s while the heartbeat still names it, with the newest
+  recording's last row as evidence. The item goes to TRIAGE as `undetermined`
+  and the stage restarts the player (`node down` / `node up`) — only while
+  the heartbeat still names that job, so two runs sharing a player do not
+  restart it twice. A retry whose identical job is still on the player waits
+  for it; a claim the heartbeat no longer names is set aside under `aside/`.
+- **Triage** classifies an oracle divergence `ours_wrong` (→ FIX), `dcgo_quirk`
+  / `unreachable` (→ the two-family termination check), `scenario_wrong` (→
+  back to AUTHORING with the objection: the exam picks the wrong card, asserts
+  at the wrong step, or its `expect_ruling:` claims something the answer does
+  not decide) or `undetermined` (→ ESCALATED). A ruling's `expect_ruling:`
+  entries claim only the keys they name: `{card_id, sources}` matches a
+  projected permanent that also carries `dp`, and a bare card id matches the
+  entry with that `card_id`.
+- **An interaction waits** (`waits for <clause> (FIX)` in the blocked report)
+  while any clause of its card is DIVERGED / TRIAGE / FIX / GATE: the engine
+  under the exam is about to change, and an exam authored now fails the very
+  assertion the fix targets.
 - **Interactions** start from the gating denominator
   (`data/interaction_denominator.json`): official rulings `qa:<Q>` and
   generated probes `probe:<clause>:<family>[:neg]`. A ruling is first
-  classified (behavioral / textual / not_examinable), then its publisher
-  answer is encoded as `expect_ruling:` by one family and verified by the
-  other, then authored by a family other than the card's implementer.
+  classified (behavioral / textual / not_examinable), then a line that
+  exercises it is authored by a family other than the card's implementer, then
+  its publisher answer is encoded as `expect_ruling:` against that line by one
+  family and verified blind by the other; the sim step writes the agreed block
+  into the scenario. A line that never reaches the ruling's situation goes
+  back to its author with the objection. A legal line on which our engine
+  contradicts the ruling goes on to the oracle and triage (the engine's
+  finding), not back to the author.
 
 ### Stopping
 
 The USD cap, the wall-clock cap, per-stage attempt caps (`attempt_caps` in the
 config: author 3, fix 2, one triage per family …), a plateau of
-`plateau_attempts` worker calls with no new adjudication, or every vendor
-exhausted. Every stop writes `state.json` and `report.md`; the report's first
+`plateau_attempts` worker calls with no new adjudication, every vendor
+exhausted, or **`error`**: the same executor error on `executor_error_streak`
+(default 5) items in a row is an infrastructure fault, not the items, so the
+run stops and names it instead of failing the rest of the queue one by one.
+A `blocked` stop means no open item is runnable; read the report's "Items that
+failed" and "Waiting items" before treating it as finished work. Worker-pool
+recoveries (failed resets, a held worktree directory, a member set aside) are
+listed under "Problems". Every stop writes `state.json` and `report.md`; the report's first
 line names the **unmeasured, escalated and unavailable** counts before the
 confirmed count. `resume` rebuilds from the committed ledgers first and the
 run's `events.jsonl` second, so a crashed run re-does only outstanding work.
+
+To stop a running driver early, create `runs/card-loop/<run-id>/STOP`: no
+new task starts, in-flight worker calls and oracle round trips finish and are
+ledgered, `state.json` and `report.md` are written (stop reason `operator`).
+Remove the file before `resume`, or the resume stops at once. Do not kill the
+process tree: work in flight is lost (its cost is real but unledgered) and a
+`git` operation killed midway leaves the run tree's `index.lock` behind — the
+driver sweeps a lock older than five minutes at start and retries collisions,
+but the attempts lost in between stay lost. Run the CLI with
+`PYTHONPATH=code` (`pyproject.toml` sets that path for pytest only).
 
 ## 5. What lands where
 
@@ -123,6 +176,7 @@ run's `events.jsonl` second, so a crashed run re-does only outstanding work.
 | `qa/card-loop/escalations/<item>.md` + `index.jsonl` | the human queue: both families' arguments, citations, attempt history |
 | `qa/qa-reports/exam-verdicts/<card>.json` | per-clause and per-interaction verdicts (v2), written by the harness |
 | `qa/dcgo-exams/<SET>/` | the scenarios the loop authored, backfilled with oracle-confirmed asserts |
+| `qa/card-loop/dcgo_fork_candidates.json` (run tree, at the end of a run) | design D7's DCGO fork backlog: every Q&A exam where DCGO disagreed with the publisher's ruling (from the oracle's structured three-way legs) and every agreed interaction `dcgo_quirk`, each with its citation and scenario |
 | `qa/dsl-vocab-gaps.md`, `docs/RUST_ENGINE_GAPS.md` | gap records a parked card raised (orchestrator-only writes) |
 
 ## 6. Handling escalations
@@ -137,6 +191,18 @@ DCGO's C#, then the card data), then either
   verdict-set --clause|--interaction <id> --verdict unreachable|unavailable
   --reason "…"`) and delete the escalation file, or
 - fix the card / scenario and delete the file; `resume` re-enters the item.
+
+Deleting the file alone withdraws the escalation: `resume` puts the item back
+at its ledger state (a ledger `diverged` re-measures from PENDING — it is a
+finding, not an adjudication) with its attempt counters and stage data
+reset. Do that for escalations
+the tooling caused (an `oracle_retry 3/3` behind a stalled player, a merge the
+transport refused) rather than re-planning the run. The files live in the run
+tree (`<run tree>/qa/card-loop/escalations/`) and are committed there.
+
+A worker's edit to a gap tracker (`qa/dsl-vocab-gaps.md`,
+`docs/RUST_ENGINE_GAPS.md`) is dropped at merge, not refused — the rest of
+its diff lands, and the drop is listed in the merge result's `skipped`.
 
 Resolving against a worker's call is a late correction the scorecard counts.
 
@@ -163,24 +229,44 @@ scorecard.
 python -m tools.clause_coverage.readiness --out data/oracle_readiness.json   # regenerate (deterministic)
 python -m tools.clause_coverage.readiness --check                             # CI drift check
 python -m tools.clause_coverage.readiness --plan --limit 20                   # cards that unblock the most decklists
+python -m tools.clause_coverage.readiness --clause-only --out /tmp/view.json  # report view without the interaction gate
 python -m tools.card_loop interactions --check                                # the gating denominator has not drifted
 ```
 
-Training admits only decklists whose every card is `ready` (rule 34). Today
-readiness is clause-level; the interaction join (change task 7.x) will add
-"every gating interaction adjudicated". Adding a probe family is a promotion
+Training admits only decklists whose every card is `ready` (rule 34): every
+printed clause AND every gating interaction of the card adjudicated
+(confirmed; unreachable / unavailable with a reason; or a cited `dcgo_quirk`).
+An escalation is not a verdict and blocks. The gating interactions are the
+committed denominator's (`data/interaction_denominator.json`): the card's
+official Q&A rulings plus the probes of PROMOTED families; a shared ruling is
+adjudicated once and counts for every card that prints it; a card the
+denominator never saw blocks with `<id>#denominator#missing` (regenerate the
+denominator, don't read it as clear). `--clause-only` writes the pre-join view
+for comparison and is refused by `--check`: the committed artifact is always
+the full gate. At switch-on (2026-10-06) the pool went from 131 to 0
+oracle-ready library decklists; 511 interactions across 94 clause-ready cards
+restore it (change task 7.3). Adding a probe family is a promotion
 (`code/tools/card_loop/interactions/promotion.json`), never an edit: a new
 family gates only once promoted, because promotion drops cards from readiness.
+Run verdicts reach the artifact only when a run's tree is merged and the
+artifact regenerated (`report` prints the regenerate command).
 
 ## 9. Known limits
 
 - One oracle node, at most two players; the oracle is the throughput ceiling
   (~15–60 s per scenario).
+- DCGO itself enforces no per-job timeout (`HarnessJobLimits.timeout_seconds`
+  is read by nobody in Unity): a wedged job is detected and cured from this
+  side (stall report + player restart, above), at the cost of the job's
+  limit + 60 s per stall. Teaching the DCGO mod to abort a selection its
+  script cannot complete is the proper fix (base-repo DCGO work, rule 29).
 - A card whose official-mirror entry is a failed lookup (no `colors`) is not
   `ready` until the mirror covers it; EX12 is the known hole.
 - `exam_probe` (MCP) never records a verdict; only a committed scenario's run
   does.
 - Engine fixes wait for a human to merge their branch; the item sits in GATE
   with `engine_wait` until that branch is an ancestor of the run tree.
-- Group 7 (interaction readiness) and the first pilot's cost measurement
-  (change task 8.2) are still open.
+- Codex reports tokens but no price, so its share of a run is unpriced until
+  `[prices.codex]` is set. The first two pilots' costs and scorecard are in
+  `qa/card-loop/pilot-costs-2026-10-06.md` (marginal ≈ $1 per adjudication on
+  Sonnet, all-in ≈ $2.5 including work that did not adjudicate).

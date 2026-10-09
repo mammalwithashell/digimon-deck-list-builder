@@ -162,8 +162,11 @@ def path_problem(path: str, allowed_roots: Sequence[str] | None = ALLOWED_ROOTS)
             return f"segment {seg!r} ends in '.' or space"
     if allowed_roots is not None and not any(
             path.startswith(r) if r.endswith("/") else path == r for r in allowed_roots):
-        return "outside the allowed roots (merge_wave.ALLOWED_ROOTS)"
+        return _OUTSIDE_ROOTS
     return None
+
+
+_OUTSIDE_ROOTS = "outside the allowed roots (merge_wave.ALLOWED_ROOTS)"
 
 
 def _is_link(p: Path) -> bool:
@@ -213,8 +216,15 @@ def special_mode_problems(diff_bytes: bytes) -> list[str]:
 
 def _git(repo: str | os.PathLike, *args: str, check: bool = True, stdin: bytes | None = None,
          text: bool = True) -> subprocess.CompletedProcess:
-    cp = subprocess.run(["git", *args], cwd=str(repo), capture_output=True, input=stdin,
-                        text=False)
+    from tools.git_retry import retry_on_index_lock
+
+    # Several writers share the run tree's index lock (the loop's merger and
+    # driver, worker CLIs refreshing the index); git fails at once on a
+    # collision instead of waiting, so the retry lives here.
+    cp = retry_on_index_lock(
+        lambda: subprocess.run(["git", *args], cwd=str(repo), capture_output=True, input=stdin,
+                               text=False),
+        lambda r: r.stderr)
     if text:
         cp = subprocess.CompletedProcess(cp.args, cp.returncode,
                                          cp.stdout.decode("utf-8", "replace"),
@@ -254,7 +264,8 @@ def load_manifest(path: str | os.PathLike) -> tuple[dict, list[str]]:
             problems.append(f"{entry['path']}: unsupported status {status!r} (only A/M/D)")
         if status != "D" and not (isinstance(sha, str) and _SHA256.match(sha)):
             problems.append(f"{entry['path']}: manifest entry has no valid sha256")
-        files.append({"path": entry["path"], "status": status, "sha256": sha})
+        files.append({"path": entry["path"], "status": status, "sha256": sha,
+                      "sha256_lf": entry.get("sha256_lf")})
     out = dict(raw)
     out["files"] = files
     return out, problems
@@ -325,6 +336,18 @@ def content_hashes(data: bytes) -> set[str]:
     return {hashlib.sha256(v).hexdigest() for v in (data, lf, crlf)}
 
 
+def content_matches(entry: Mapping, data: bytes) -> bool:
+    """Are the applied bytes the worker's file? Its raw `sha256` under any one
+    line-ending convention, or its `sha256_lf` (capture_artifacts since the
+    second pilot) against the LF-normalised applied bytes -- the only hash a
+    worker file with MIXED endings can match, since `git diff` under
+    core.autocrlf normalises what the manifest hashed raw."""
+    if entry.get("sha256") in content_hashes(data):
+        return True
+    lf = entry.get("sha256_lf")
+    return bool(lf) and lf == hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()
+
+
 def is_registration_file(path: str) -> bool:
     return path.startswith(ENGINE_TESTS_PREFIX) and path.rsplit("/", 1)[-1] in ("mod.rs", "main.rs")
 
@@ -354,6 +377,8 @@ class AppliedDiff:
     applied: list = field(default_factory=list)          # written by this call (3-way apply)
     already_applied: list = field(default_factory=list)  # already in the target state (no-op)
     registered: list = field(default_factory=list)       # registration files merged as a mod-line union
+    skipped: list = field(default_factory=list)          # manifest paths outside the allowed roots:
+                                                         # reported, never applied (a worker's scratch)
     out_of_manifest: list = field(default_factory=list)  # in the diff, not in the manifest: never applied
     disallowed: list = field(default_factory=list)       # "path: reason" for out-of-manifest paths
                                                          # that also break the path policy
@@ -452,10 +477,12 @@ def _union_mod_lines(repo: Path, path: str, lines: Sequence[str]) -> bool:
 
 def apply_manifest_diff(repo: str | os.PathLike, diff_path: str | os.PathLike,
                         manifest_path: str | os.PathLike, base_sha: str, *,
-                        allowed_roots: Sequence[str] = ALLOWED_ROOTS) -> AppliedDiff:
+                        allowed_roots: Sequence[str] = ALLOWED_ROOTS,
+                        skip_paths: Sequence[str] = ()) -> AppliedDiff:
     """Apply a worker diff 3-way onto `repo`'s working tree and index, filtered
     to the manifest's paths. Never raises for a bad diff: problems land in
-    `errors`, and anything written is rolled back.
+    `errors`, and anything written is rolled back. `skip_paths` are manifest
+    paths dropped like scratch (`skipped`, never applied) rather than refused.
 
     Refused before anything is written: a manifest path that is not canonical
     or not under `allowed_roots` (`path_problem`), a manifest entry with no
@@ -475,8 +502,21 @@ def apply_manifest_diff(repo: str | os.PathLike, diff_path: str | os.PathLike,
     res.errors.extend(problems)
     files = {f["path"]: f for f in manifest["files"]}
     for p in sorted(files):
+        if p in skip_paths:
+            # A file only the orchestrator writes (the gap trackers): the
+            # worker's edit is dropped, reported, and costs the rest nothing.
+            res.skipped.append(p)
+            del files[p]
+            continue
         why = path_problem(p, allowed_roots)
-        if why:
+        if why == _OUTSIDE_ROOTS and path_problem(p, None) is None:
+            # Structurally safe but not a path a worker may deliver: a scratch
+            # file, or a file only the orchestrator writes. Dropping it must
+            # not cost the rest of the diff (the first pilot lost every
+            # authored scenario that way); it is reported and never applied.
+            res.skipped.append(p)
+            del files[p]
+        elif why:
             res.errors.append(f"{p}: {why}")
         elif _GLOB_META.search(p):
             res.errors.append(f"{p}: glob metacharacters in a path cannot be filtered with "
@@ -507,13 +547,17 @@ def apply_manifest_diff(repo: str | os.PathLike, diff_path: str | os.PathLike,
     try:
         in_diff = diff_paths(root, diff_path)
     except MergeWaveError as e:
-        res.errors.append(f"diff unreadable: {e}")
+        if "No valid patches" in str(e):
+            # `git apply --numstat` on an empty diff: the worker changed nothing.
+            res.errors.append("the diff is empty: the worker changed no file, so there is nothing to merge")
+        else:
+            res.errors.append(f"diff unreadable: {e}")
         return res
     for p in in_diff:
         why = path_problem(p, None)
         if why:
             res.errors.append(f"{p}: the diff carries an unsafe path ({why})")
-    res.out_of_manifest = sorted(set(in_diff) - set(files))
+    res.out_of_manifest = sorted(set(in_diff) - set(files) - set(res.skipped))
     res.disallowed = [f"{p}: {path_problem(p, allowed_roots)}" for p in res.out_of_manifest
                       if path_problem(p, allowed_roots)]
     for p in sorted(set(files) - set(in_diff)):
@@ -581,7 +625,7 @@ def apply_manifest_diff(repo: str | os.PathLike, diff_path: str | os.PathLike,
                     res.errors.append(f"{p}: still present after applying its deletion")
             elif not fp.is_file():
                 res.errors.append(f"{p}: missing after apply")
-            elif sha not in content_hashes(fp.read_bytes()):
+            elif not content_matches(files[p], fp.read_bytes()):
                 res.errors.append(f"{p}: content after apply does not match the manifest sha256 "
                                   f"{str(sha)[:12]} (transport mismatch)")
         for p, lines in unions.items():

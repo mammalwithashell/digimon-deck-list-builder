@@ -123,6 +123,8 @@ pub struct CardInspection {
     pub effect_text: String,
     pub inherited_text: String,
     pub security_text: String,
+    /// A link card's link effect (`CardData::link_text`).
+    pub link_text: String,
     /// Whether this card has a registered Rust `CardEffect` impl. v1
     /// returns `true` for any card in the engine's effect registry
     /// (i.e. the same set `load_implemented_card_ids` returns).
@@ -146,6 +148,8 @@ pub struct DeckCardEntry {
     pub effect_text: String,
     pub inherited_text: String,
     pub security_text: String,
+    /// A link card's link effect (`CardData::link_text`).
+    pub link_text: String,
     pub has_rust_effect: bool,
 }
 
@@ -619,6 +623,7 @@ impl LiveGame {
             effect_text: cd.effect_text.clone(),
             inherited_text: cd.inherited_text.clone(),
             security_text: cd.security_text.clone(),
+            link_text: cd.link_text.clone(),
             has_rust_effect,
         })
     }
@@ -670,6 +675,7 @@ impl LiveGame {
                     effect_text: cd.effect_text.clone(),
                     inherited_text: cd.inherited_text.clone(),
                     security_text: cd.security_text.clone(),
+                    link_text: cd.link_text.clone(),
                     has_rust_effect: self.game.effect_registry.get(&cd.card_id).is_some(),
                 })
             })

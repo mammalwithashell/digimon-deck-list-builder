@@ -17,7 +17,7 @@ fn dsl_card_effect_with_no_clauses_emits_no_effects() {
         dp: Some(1000),
         traits: vec![],
         form: None,
-        attribute: None,
+        attribute: Vec::new(),
         ace_overflow: None,
         identity: None,
         digixros_aliases: Vec::new(),

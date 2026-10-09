@@ -237,7 +237,7 @@ fn bt25_044_compiled_colors_are_yellow_purple_virus() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
     assert_eq!(card.color, vec![CompiledColor::Yellow, CompiledColor::Purple]);
-    assert_eq!(card.attribute.as_deref(), Some("Virus"));
+    assert_eq!(card.attribute, ["Virus"]);
 }
 
 // ─── Section 4 — DCGO-faithful OP/WD shape (BT25_044.cs "Shared OP / WD") ────

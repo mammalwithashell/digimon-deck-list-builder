@@ -63,8 +63,8 @@ fn bt6_084_has_printed_metadata() {
     assert_eq!(card.color, vec![CompiledColor::White]);
     assert!(card.traits.iter().any(|trait_name| trait_name == "Puppet"));
     assert_eq!(
-        card.attribute.as_deref(),
-        Some("Data"),
+        card.attribute,
+        ["Data"],
         "BT6-084 is a Data attribute Digimon"
     );
 }

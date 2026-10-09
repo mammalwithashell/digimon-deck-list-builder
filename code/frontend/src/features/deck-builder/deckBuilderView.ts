@@ -198,6 +198,7 @@ export function filterBuilderCards(
         card.cardnumber,
         card.maineffect,
         card.soureeffect,
+        card.linkeffect ?? '',
         card.digi_type,
         card.attribute,
         card.set_name,

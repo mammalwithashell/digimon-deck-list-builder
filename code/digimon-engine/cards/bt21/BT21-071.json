@@ -15,16 +15,18 @@
     6
   ],
   "type_eng": [
-    "Monitoring (App Name)"
+    "Monitoring (App Name)",
+    "Monitoring"
   ],
   "form_eng": [
-    "Sup."
+    "Sup.",
+    "Appmon"
   ],
   "attribute_eng": [
     "Tool"
   ],
   "effect_description_eng": "[On Play] [When Digivolving] By placing 1 card with the [Appmon] or [Three Musketeers] trait from your hand or trash as 1 of your Digimon's bottom digivolution card, gain 1 memory.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
@@ -33,5 +35,6 @@
       "memory_cost": 2
     }
   ],
-  "xros_req": "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2"
+  "xros_req": "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2",
+  "link_effect_description_eng": "[When Linking] ＜Draw 2＞ and trash 2 cards in your hand."
 }

@@ -301,6 +301,56 @@ fn bt24_067_linked_retaliation_reaches_host() {
     );
 }
 
+/// The linked <Retaliation> works in battle: the host (4000 + 2000 link DP)
+/// attacks an 8000 DP Digimon, loses, and the Digimon it battled is deleted
+/// (general_rule.pdf 16-12, 4-2-6).
+#[test]
+fn bt24_067_linked_host_retaliates_when_deleted_in_battle() {
+    let mut r = base()
+        .add_card(make_digimon("BIG", 6, 8000, 6, &[]))
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(5)
+        .start();
+    let host = r.place_on_field(0, "APPMON-HOST", Some(0));
+    r.push_linked_owned(host, CARD_ID, 0);
+    r.game.tick_declarative_effects();
+    let big = r.place_on_field(1, "BIG", Some(0));
+    r.game.players[1].battle_area[big.index as usize].is_suspended = true;
+
+    r.attack_digimon(host, big, false);
+    let _ = r.auto_resolve();
+
+    assert!(r.game.players[0].battle_area.is_empty(), "the host lost the battle");
+    assert!(
+        r.game.players[1].battle_area.is_empty(),
+        "the linked <Retaliation> deletes the Digimon the host battled"
+    );
+}
+
+/// <Retaliation> is in Hackmon's link box only. Hackmon on the field by itself
+/// (no link) loses a battle without deleting the Digimon it battled.
+#[test]
+fn bt24_067_on_its_own_does_not_retaliate() {
+    let mut r = base()
+        .add_card(make_digimon("BIG", 6, 8000, 6, &[]))
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(5)
+        .start();
+    let hackmon = r.place_on_field(0, CARD_ID, Some(0));
+    let big = r.place_on_field(1, "BIG", Some(0));
+    r.game.players[1].battle_area[big.index as usize].is_suspended = true;
+
+    r.attack_digimon(hackmon, big, false);
+    let _ = r.auto_resolve();
+
+    assert!(r.game.players[0].battle_area.is_empty(), "Hackmon lost the battle");
+    assert_eq!(
+        r.game.players[1].battle_area.len(),
+        1,
+        "a link-box <Retaliation> doesn't apply to the link card itself"
+    );
+}
+
 // ── Section 3: condition gating ───────────────────────────────────────────────
 
 /// Positive: 0 Tamers — when-linked trigger fires and offers Rei Katsura.

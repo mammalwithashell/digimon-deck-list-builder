@@ -25,6 +25,15 @@ in the shared ref store (the reset detaches; it never deletes refs).
 Keep the pool root SHORT on Windows: the constructor refuses a root whose members
 cannot hold the base commit's longest tracked path under MAX_PATH (a scratchpad
 under %TEMP% already fails for this repo), unless core.longpaths is enabled.
+
+A member that cannot be made ready is set aside, not retried by name. The Data
+Squad pilot (2026-10-07) lost a member whose directory another process still
+held open: the pool emptied and deregistered it, the strict delete before
+`git worktree add` raised WinError 32, and every later lease re-picked the same
+name until 79 items had failed. Now an emptied-but-held directory is reused
+(git adds a worktree into an existing empty directory), a member that still
+cannot be made is set aside for a fresh name, and both -- and every failed
+reset -- are recorded in `incidents` for the run report.
 """
 from __future__ import annotations
 
@@ -85,7 +94,20 @@ def _norm(p: str | os.PathLike) -> str:
     return os.path.normcase(os.path.abspath(str(p)))
 
 
+def _one_line(e: BaseException, limit: int = 900) -> str:
+    """One line; a long message keeps both ends. Generous on purpose: git's
+    error names two long paths before the cause, then appends a long hint."""
+    s = " ".join(str(e).split()) or type(e).__name__
+    if len(s) <= limit:
+        return s
+    half = (limit - 5) // 2
+    return f"{s[:half]} ... {s[-half:]}"
+
+
 class WorktreePool:
+    #: Members `acquire` tries to make ready (each failure set aside) before it gives up.
+    MAX_MAKE_ATTEMPTS = 3
+
     def __init__(
         self,
         repo: str | os.PathLike,
@@ -116,14 +138,38 @@ class WorktreePool:
         self._admin = threading.Lock()  # serialises git worktree add/remove/prune
         self._idle: list[PooledWorktree] = []
         self._busy: dict[str, PooledWorktree] = {}
+        self._set_aside: dict[str, Path] = {}   # members that could not be made ready
         self._closed = False
+        #: What went wrong and was recovered from (failed resets, held
+        #: directories, set-aside members): the driver puts these in the run report.
+        self.incidents: list[str] = []
         self._adopt_existing()
 
     # ------------------------------------------------------------------ public
 
     def acquire(self, timeout: float | None = None) -> PooledWorktree:
         """A worktree reset to `base_sha`. Blocks while all `size` are busy;
-        raises `PoolExhausted` if `timeout` elapses first."""
+        raises `PoolExhausted` if `timeout` elapses first. A member that cannot
+        be made ready is set aside and the next one tried, up to
+        `MAX_MAKE_ATTEMPTS`; then `PoolError` names every reason."""
+        reasons: list[str] = []
+        for _ in range(self.MAX_MAKE_ATTEMPTS):
+            wt = self._reserve(timeout)
+            try:
+                self._add(wt.path)
+                self.reset(wt)
+            except Exception as e:  # noqa: BLE001 -- any failure sets this member aside
+                with self._cond:
+                    self._busy.pop(wt.name, None)
+                    self._set_aside[wt.name] = wt.path
+                    self._cond.notify()
+                reasons.append(f"{wt.name}: {_one_line(e)}")
+                self.incidents.append(f"{reasons[-1]}; set aside")
+                continue
+            return wt
+        raise PoolError("no worktree could be made ready: " + "; ".join(reasons))
+
+    def _reserve(self, timeout: float | None) -> PooledWorktree:
         with self._cond:
             while True:
                 if self._closed:
@@ -138,15 +184,7 @@ class WorktreePool:
                 if not self._cond.wait(timeout):
                     raise PoolExhausted(f"no worktree free within {timeout}s (size {self.size})")
             self._busy[wt.name] = wt
-        try:
-            self._add(wt.path)
-            self.reset(wt)
-        except Exception:
-            with self._cond:
-                self._busy.pop(wt.name, None)
-                self._cond.notify()
-            raise
-        return wt
+            return wt
 
     def release(self, wt: PooledWorktree) -> None:
         with self._cond:
@@ -163,12 +201,21 @@ class WorktreePool:
         finally:
             self.release(wt)
 
+    def retarget(self, base_sha: str) -> None:
+        """Move the base every later lease resets to -- the run branch's HEAD
+        once it has advanced past the plan's base, so a worker re-authoring a
+        file starts from the merged version and its diff applies cleanly."""
+        sha = self._git(["rev-parse", "--verify", f"{base_sha}^{{commit}}"], self.repo).strip()
+        with self._cond:
+            self.base_sha = sha
+
     def reset(self, wt: PooledWorktree) -> None:
         """Force `wt` back to `base_sha`: detached HEAD, no edits, no untracked or
         ignored files except `keep`. Recreates the worktree if git cannot."""
         try:
             self._reset(wt.path)
-        except (PoolError, OSError):
+        except (PoolError, OSError) as e:
+            self.incidents.append(f"{wt.name}: reset failed ({_one_line(e)}); recreating")
             self._remove(wt.path)
             self._add(wt.path)
             self._reset(wt.path)
@@ -185,13 +232,14 @@ class WorktreePool:
         every member and prune. `remove=False` leaves them warm for the next run."""
         with self._cond:
             self._closed = True
-            members = [*self._idle, *self._busy.values()]
+            members = [wt.path for wt in (*self._idle, *self._busy.values())]
+            members += list(self._set_aside.values())
             self._idle.clear()
             self._busy.clear()
             self._cond.notify_all()
         if remove:
-            for wt in members:
-                self._remove(wt.path)
+            for path in members:
+                self._remove(path)
 
     def __enter__(self) -> "WorktreePool":
         return self
@@ -228,7 +276,7 @@ class WorktreePool:
         return path.name if m and _norm(path.parent) == _norm(self.root) else None
 
     def _next_name(self) -> str:
-        used = {w.name for w in (*self._idle, *self._busy.values())}
+        used = {w.name for w in (*self._idle, *self._busy.values())} | set(self._set_aside)
         i = 0
         while f"{self.prefix}-{i}" in used:
             i += 1
@@ -259,9 +307,32 @@ class WorktreePool:
                 return
             if self._member_name(path) is None:  # never delete outside our own members
                 raise PoolError(f"refusing to replace non-pool directory {path}")
-            shutil.rmtree(path)
+            self._clear_member_dir(path)
         self._git(["worktree", "prune"], self.repo, check=False)
         self._git(["worktree", "add", "--detach", str(path), self.base_sha], self.repo)
+
+    def _clear_member_dir(self, path: Path) -> None:
+        """Delete a leftover member directory, or -- when another process still
+        holds the directory itself open (on Windows, as its working directory)
+        -- empty it: `git worktree add` accepts an existing empty directory."""
+        try:
+            shutil.rmtree(path)
+            return
+        except OSError as e:
+            first = e
+        for child in list(path.iterdir()) if path.is_dir() else []:
+            if child.is_dir() and not child.is_symlink():
+                shutil.rmtree(child, ignore_errors=True)
+            else:
+                try:
+                    child.unlink()
+                except OSError:
+                    pass
+        if path.is_dir() and not any(path.iterdir()):
+            self.incidents.append(f"{path.name}: the directory is still held by another process "
+                                  f"({_one_line(first)}); reusing it empty")
+            return
+        raise PoolError(f"cannot clear leftover member {path}: {_one_line(first)}") from first
 
     def _remove(self, path: Path) -> None:
         with self._admin:

@@ -23,7 +23,7 @@ pub struct CompiledCard {
     pub dp: Option<i32>,
     pub traits: Vec<String>,
     pub form: Option<String>,
-    pub attribute: Option<String>,
+    pub attribute: Vec<String>,
     pub ace_overflow: Option<i32>,
     pub identity: Option<CompiledIdentity>,
     pub digixros_aliases: Vec<String>,
@@ -34,6 +34,24 @@ pub struct CompiledCard {
     pub use_requirement: Option<CompiledPredicate>,
     pub alt_paths: Vec<CompiledAltPath>,
     pub effects: Vec<CompiledClause>,
+}
+
+impl CompiledCard {
+    /// The card's whole trait line: its form, then its attribute(s), then its
+    /// `traits:` (type) entries — "multiple traits including form,
+    /// attribute, and type" (general_rule.pdf 2-3-2-1). Production builds
+    /// `CardData.traits` the same way from cards.json
+    /// (`form_eng + attribute_eng + type_eng`), so a trait predicate such as
+    /// `trait_has: Vaccine` sees a DSL card in DebugRunner as it does in a
+    /// real game.
+    pub fn all_traits(&self) -> Vec<String> {
+        self.form
+            .iter()
+            .chain(&self.attribute)
+            .chain(&self.traits)
+            .cloned()
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -3145,7 +3163,7 @@ mod tests {
             dp: None,
             traits: vec![],
             form: None,
-            attribute: None,
+            attribute: Vec::new(),
             ace_overflow: None,
             identity: None,
             digixros_aliases: vec![],
@@ -3205,7 +3223,7 @@ mod tests {
             dp: Some(12000),
             traits: vec![],
             form: None,
-            attribute: None,
+            attribute: Vec::new(),
             ace_overflow: None,
             identity: None,
             digixros_aliases: vec![],

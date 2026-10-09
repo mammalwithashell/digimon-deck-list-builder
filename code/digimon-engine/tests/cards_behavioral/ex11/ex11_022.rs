@@ -106,7 +106,7 @@ fn ex11_022_has_printed_metadata_and_evolution_paths() {
         .traits
         .iter()
         .any(|trait_name| trait_name == "LIBERATOR"));
-    assert_eq!(compiled.attribute.as_deref(), Some("Data"));
+    assert_eq!(compiled.attribute, ["Data"]);
 
     assert!(
         compiled.alt_paths.iter().any(|path| {

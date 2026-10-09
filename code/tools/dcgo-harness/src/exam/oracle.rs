@@ -30,43 +30,230 @@ pub struct OracleRun {
     pub sidecar_path: Option<PathBuf>,
 }
 
+/// Grace past a job's own `limits.timeout_seconds` before a claim the heartbeat
+/// still names counts as a stall. DCGO enforces no job timeout (`JobLimits`
+/// documents the CLI as the enforcer): a scripted selection that cannot
+/// complete its prompt holds the player forever, heartbeat fresh, claim ageing.
+pub const STALL_GRACE_SECS: u64 = 60;
+
+/// `limits.timeout_seconds` when a job's JSON does not carry one.
+const DEFAULT_LIMIT_SECS: u64 = 180;
+
+/// A player wedged on one job: its claim outlived the job's own limit while the
+/// heartbeat kept naming it. Two pilots sat on one such job for 15 minutes.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct Stall {
+    pub job_id: String,
+    pub claimed_for_s: u64,
+    pub limit_s: u64,
+    /// `true`: the player is still on it -- restart the player. A claim this
+    /// old that the heartbeat no longer names is an orphan, set aside instead.
+    pub heartbeat_names_it: bool,
+    /// The newest recording under the sibling `dcgo_recordings/` and its last
+    /// row: where the stalled line stopped, as far as DCGO flushed it.
+    pub newest_recording: Option<String>,
+    pub last_row: Option<String>,
+}
+
+/// Why [`submit_and_wait`] returned no result. `stall` is set when the player
+/// is wedged -- on this job, or on another job that kept ours unclaimed.
+#[derive(Debug)]
+pub struct WaitError {
+    pub message: String,
+    pub stall: Option<Stall>,
+}
+
+impl std::fmt::Display for WaitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl From<String> for WaitError {
+    fn from(message: String) -> Self {
+        WaitError { message, stall: None }
+    }
+}
+
+fn job_limit_secs(job_json: &str) -> u64 {
+    serde_json::from_str::<serde_json::Value>(job_json)
+        .ok()
+        .and_then(|v| v.get("limits")?.get("timeout_seconds")?.as_u64())
+        .unwrap_or(DEFAULT_LIMIT_SECS)
+}
+
+/// What the player's heartbeat names: a job id, `idle`, or nothing readable.
+fn heartbeat_job(root: &Path) -> Option<String> {
+    let text = std::fs::read_to_string(root.join(crate::daemon::HEARTBEAT_FILE)).ok()?;
+    let s = text.trim();
+    (!s.is_empty()).then(|| s.to_string())
+}
+
+fn claim_age_secs(claim: &Path) -> Option<u64> {
+    let modified = std::fs::metadata(claim).ok()?.modified().ok()?;
+    Some(modified.elapsed().map(|d| d.as_secs()).unwrap_or(0))
+}
+
+/// The newest `*.jsonl` recording (not a `.state.jsonl` sidecar) under the
+/// sibling `dcgo_recordings/`, with its last non-empty row, truncated.
+fn newest_recording(root: &Path) -> (Option<String>, Option<String>) {
+    let Some(parent) = root.parent() else { return (None, None) };
+    let Ok(rd) = std::fs::read_dir(parent.join("dcgo_recordings")) else { return (None, None) };
+    let mut newest: Option<(std::time::SystemTime, PathBuf)> = None;
+    for e in rd.filter_map(|e| e.ok()) {
+        let p = e.path();
+        let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if !name.ends_with(".jsonl") || name.ends_with(".state.jsonl") {
+            continue;
+        }
+        let Ok(m) = e.metadata().and_then(|m| m.modified()) else { continue };
+        if newest.as_ref().map(|(t, _)| m > *t).unwrap_or(true) {
+            newest = Some((m, p));
+        }
+    }
+    let Some((_, path)) = newest else { return (None, None) };
+    let last = std::fs::read_to_string(&path).ok().and_then(|t| {
+        t.lines().rev().map(str::trim).find(|l| !l.is_empty()).map(|l| {
+            if l.chars().count() > 400 {
+                format!("{}...", l.chars().take(400).collect::<String>())
+            } else {
+                l.to_string()
+            }
+        })
+    });
+    (Some(path.display().to_string()), last)
+}
+
+/// A claim that outlived its job's limit plus grace: a stall when the heartbeat
+/// still names it, an orphan (nobody will file it) when the player moved on.
+fn overdue_claim(root: &Path, claim: &Path, job_id: &str) -> Option<Stall> {
+    let age = claim_age_secs(claim)?;
+    let limit = std::fs::read_to_string(claim)
+        .map(|t| job_limit_secs(&t))
+        .unwrap_or(DEFAULT_LIMIT_SECS);
+    if age <= limit + STALL_GRACE_SECS {
+        return None;
+    }
+    let names_it = heartbeat_job(root).as_deref() == Some(job_id);
+    let (newest_recording, last_row) = if names_it { newest_recording(root) } else { (None, None) };
+    Some(Stall {
+        job_id: job_id.to_string(),
+        claimed_for_s: age,
+        limit_s: limit,
+        heartbeat_names_it: names_it,
+        newest_recording,
+        last_row,
+    })
+}
+
+fn stall_error(s: Stall) -> WaitError {
+    let mut message = format!(
+        "player stalled on {}: claimed {}s ago (its own limit is {}s) and the heartbeat still \
+         names it; the scripted line did not complete DCGO's prompt after the last recorded row \
+         -- restart the player (`node down`, then `node up --build <dir>`)",
+        s.job_id, s.claimed_for_s, s.limit_s
+    );
+    if let Some(r) = &s.newest_recording {
+        message.push_str(&format!("; newest recording {r}"));
+    }
+    if let Some(l) = &s.last_row {
+        message.push_str(&format!(", last row {l}"));
+    }
+    WaitError { message, stall: Some(s) }
+}
+
+/// Any claim in `claimed/` the player is wedged on, for a timeout report.
+fn any_stalled_claim(root: &Path) -> Option<Stall> {
+    let rd = std::fs::read_dir(root.join(crate::job::DIR_CLAIMED)).ok()?;
+    for e in rd.filter_map(|e| e.ok()) {
+        let p = e.path();
+        if p.extension().map(|x| x != "json").unwrap_or(true) {
+            continue;
+        }
+        let Some(stem) = p.file_stem().and_then(|s| s.to_str()) else { continue };
+        if let Some(s) = overdue_claim(root, &p, stem) {
+            if s.heartbeat_names_it {
+                return Some(s);
+            }
+        }
+    }
+    None
+}
+
+/// Move an orphaned claim to `aside/<job_id>.<unix secs>.json`: evidence of
+/// the run that never filed, out of the way of the resubmission.
+fn set_aside(root: &Path, claim: &Path, job_id: &str) -> Result<(), String> {
+    let dir = root.join("aside");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("creating {}: {e}", dir.display()))?;
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let dest = dir.join(format!("{job_id}.{secs}.json"));
+    std::fs::rename(claim, &dest)
+        .map_err(|e| format!("setting aside {} as {}: {e}", claim.display(), dest.display()))
+}
+
 /// Write `job_json` to `<root>/jobs/<job_id>.json` (temp file + rename), after
 /// removing any stale `done/<job_id>.json` / `done/<job_id>.result.json` /
 /// `failed/<job_id>.json`; poll for this job's own result until `timeout`.
 ///
+/// A `claimed/<job_id>.json` with the SAME spec is this run already on the
+/// player: it is adopted (waited on), not resubmitted and not refused -- a
+/// different spec is refused, since its result would be diffed against the
+/// new line. A claim older than the job's own limit is a stall when the
+/// heartbeat still names it (reported at once, with the evidence) and an
+/// orphan otherwise (set aside, then the job is submitted afresh). The stall
+/// check also runs while waiting, so a wedged player is reported before
+/// `timeout` rather than read as "is the player running?".
+///
 /// On a timeout the job is withdrawn from `jobs/` if no player claimed it, so
-/// a player started later does not run a job nobody is waiting for.
+/// a player started later does not run a job nobody is waiting for; when the
+/// player is wedged on another job, the report names that job.
 pub fn submit_and_wait(
     root: &Path,
     job_id: &str,
     job_json: &str,
     timeout: Duration,
     poll: Duration,
-) -> Result<OracleRun, String> {
+) -> Result<OracleRun, WaitError> {
     let claimed = root.join(crate::job::DIR_CLAIMED).join(format!("{job_id}.json"));
+    let mut adopted = false;
     if claimed.exists() {
-        return Err(format!(
-            "an earlier {job_id} is still running on a player ({} exists): submitting now \
-             would hand back THAT run's result. Wait for it to finish, or clear an orphaned \
-             claim with `dcgo-harness --root <root> status --sweep`.",
-            claimed.display()
-        ));
+        let existing = std::fs::read_to_string(&claimed)
+            .map_err(|e| format!("reading {}: {e}", claimed.display()))?;
+        if existing != job_json {
+            return Err(format!(
+                "an earlier {job_id} is still running on a player ({} exists) with a different \
+                 spec: submitting now would hand back THAT run's result. Wait for it to finish, \
+                 or clear an orphaned claim with `dcgo-harness --root <root> status --sweep`.",
+                claimed.display()
+            )
+            .into());
+        }
+        match overdue_claim(root, &claimed, job_id) {
+            Some(s) if s.heartbeat_names_it => return Err(stall_error(s)),
+            Some(_) => set_aside(root, &claimed, job_id)?,
+            None => adopted = true,
+        }
     }
     let done = root.join(DIR_DONE);
     let failed = root.join(DIR_FAILED).join(format!("{job_id}.json"));
     let result_path = done.join(format!("{job_id}.result.json"));
-    for stale in [done.join(format!("{job_id}.json")), result_path.clone(), failed.clone()] {
-        if stale.exists() {
-            std::fs::remove_file(&stale)
-                .map_err(|e| format!("removing stale {}: {e}", stale.display()))?;
-        }
-    }
     let jobs = root.join(DIR_JOBS);
-    std::fs::create_dir_all(&jobs).map_err(|e| format!("creating {}: {e}", jobs.display()))?;
-    let tmp = jobs.join(format!(".{job_id}.json.tmp"));
     let dest = jobs.join(format!("{job_id}.json"));
-    std::fs::write(&tmp, job_json).map_err(|e| format!("writing {}: {e}", tmp.display()))?;
-    std::fs::rename(&tmp, &dest).map_err(|e| format!("submitting {}: {e}", dest.display()))?;
+    if !adopted {
+        for stale in [done.join(format!("{job_id}.json")), result_path.clone(), failed.clone()] {
+            if stale.exists() {
+                std::fs::remove_file(&stale)
+                    .map_err(|e| format!("removing stale {}: {e}", stale.display()))?;
+            }
+        }
+        std::fs::create_dir_all(&jobs).map_err(|e| format!("creating {}: {e}", jobs.display()))?;
+        let tmp = jobs.join(format!(".{job_id}.json.tmp"));
+        std::fs::write(&tmp, job_json).map_err(|e| format!("writing {}: {e}", tmp.display()))?;
+        std::fs::rename(&tmp, &dest).map_err(|e| format!("submitting {}: {e}", dest.display()))?;
+    }
 
     let started = Instant::now();
     // DCGO writes the result with File.WriteAllText -- not atomic -- so a poll
@@ -87,7 +274,7 @@ pub fn submit_and_wait(
                 Err(e) => {
                     let since = *unreadable_since.get_or_insert_with(Instant::now);
                     if since.elapsed() >= UNREADABLE_FOR {
-                        return Err(e);
+                        return Err(e.into());
                     }
                     std::thread::sleep(poll);
                     continue;
@@ -112,15 +299,32 @@ pub fn submit_and_wait(
             return Err(format!(
                 "oracle job {job_id} was quarantined into failed/ (it timed out on the \
                  player repeatedly); no result was filed"
-            ));
+            )
+            .into());
+        }
+        if claimed.exists() {
+            if let Some(s) = overdue_claim(root, &claimed, job_id) {
+                if s.heartbeat_names_it {
+                    return Err(stall_error(s));
+                }
+            }
         }
         if started.elapsed() >= timeout {
             let withdrawn = dest.exists() && std::fs::remove_file(&dest).is_ok();
-            return Err(format!(
-                "oracle job {job_id} timed out after {}s{} (is the player running? `node status`)",
+            let other = if withdrawn { any_stalled_claim(root) } else { None };
+            let mut message = format!(
+                "oracle job {job_id} timed out after {}s{}",
                 timeout.as_secs_f64().round() as u64,
                 if withdrawn { "; no player claimed it, so it was withdrawn from jobs/" } else { "" }
-            ));
+            );
+            match &other {
+                Some(s) => message.push_str(&format!(
+                    "; the player is stalled on {} (claimed {}s ago, its limit is {}s) -- restart it",
+                    s.job_id, s.claimed_for_s, s.limit_s
+                )),
+                None => message.push_str(" (is the player running? `node status`)"),
+            }
+            return Err(WaitError { message, stall: other });
         }
         std::thread::sleep(poll);
     }
@@ -318,6 +522,21 @@ pub struct OracleExamResult {
     pub recorded: Vec<String>,
     /// The store's refusals (orphan ids), verbatim.
     pub refused: Vec<String>,
+    /// The player is wedged (on this job, or on another that kept this one
+    /// unclaimed): `reason` says so, this carries the evidence for triage.
+    pub stall: Option<Stall>,
+    /// The three-way legs of a measured run (card-loop design D7), as
+    /// structured fields so a driver never parses them out of `reason`:
+    /// `ours_vs_dcgo` = the differ was clean; `ours_vs_ruling` = our engine
+    /// meets the scenario's `expect_ruling:` (absent without one, or when the
+    /// block is vacuous); `ruling_q_id` = that block's Q-number. All absent
+    /// when the line was not measured.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ours_vs_dcgo: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ours_vs_ruling: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ruling_q_id: Option<String>,
 }
 
 pub struct OracleExamOptions<'a> {
@@ -551,12 +770,17 @@ pub fn run_oracle_exam_loaded(
         backfill_note: None,
         recorded: Vec::new(),
         refused: Vec::new(),
+        stall: None,
+        ours_vs_dcgo: None,
+        ours_vs_ruling: None,
+        ruling_q_id: None,
     };
 
     let run = match submit_and_wait(opts.root, &job.job_id, &json, opts.timeout, opts.poll) {
         Ok(run) => run,
         Err(e) => {
-            result.reason = Some(e);
+            result.reason = Some(e.message);
+            result.stall = e.stall;
             return Ok(result);
         }
     };
@@ -612,12 +836,14 @@ pub fn run_oracle_exam_loaded(
         return Ok(result);
     }
 
-    let mut event = VerdictEvent::from_diff(
-        &s,
-        &od.report,
-        ruling_agrees(&s, &od.projections),
-        scenario.display().to_string(),
-    );
+    let ruling_ok = ruling_agrees(&s, &od.projections);
+    let mut event = VerdictEvent::from_diff(&s, &od.report, ruling_ok, scenario.display().to_string());
+    // The legs, structured (design D7): the differ's verdict and the ruling's,
+    // so `ours = DCGO != ruling` (ours_wrong + DCGO fork candidate) and
+    // `ours = ruling != DCGO` (dcgo_quirk) are read, not parsed from `reason`.
+    result.ours_vs_dcgo = Some(od.report.is_clean());
+    result.ours_vs_ruling = ruling_ok;
+    result.ruling_q_id = s.expect_ruling.as_ref().map(|r| r.q_id.clone());
     if !completed {
         event.reason = Some(format!("{}; {dcgo_said}", event.reason.unwrap_or_default()));
     }
@@ -734,17 +960,134 @@ mod tests {
     }
 
     #[test]
-    fn a_previous_submission_still_claimed_is_refused_not_adopted() {
-        // A timed-out earlier run of the same stem still on the player would
-        // file ITS result first, and we would diff the new line against it.
+    fn a_previous_submission_still_claimed_with_a_different_spec_is_refused_not_adopted() {
+        // A timed-out earlier run of the same stem, from an OLDER version of the
+        // scenario, still on the player would file ITS result first, and we
+        // would diff the new line against it.
         let t = root();
-        std::fs::write(t.path().join("claimed/exam-X-effect0.json"), "{}").unwrap();
+        std::fs::write(t.path().join("claimed/exam-X-effect0.json"), "{\"older\": true}").unwrap();
         let started = std::time::Instant::now();
         let err = submit_and_wait(t.path(), "exam-X-effect0", "{}", Duration::from_secs(5),
-                                  Duration::from_millis(20)).unwrap_err();
+                                  Duration::from_millis(20)).unwrap_err().to_string();
         assert!(started.elapsed() < Duration::from_secs(1), "refused up front, not after waiting");
         assert!(err.contains("still running") && err.contains("exam-X-effect0.json"), "{err}");
         assert!(!t.path().join("jobs/exam-X-effect0.json").exists(), "nothing may be submitted");
+    }
+
+    #[test]
+    fn a_previous_submission_still_claimed_with_the_same_spec_is_adopted() {
+        // The pilots' retry after a 300 s timeout found its own job still on the
+        // player and was refused three times in a row, instantly: `oracle_retry
+        // 3/3 spent`. The same spec on the player IS this run; wait for it.
+        let t = root();
+        let rec = t.path().join("rec.jsonl");
+        std::fs::write(&rec, "").unwrap();
+        std::fs::write(t.path().join("claimed/exam-X-effect0.json"), "{}").unwrap();
+        let r = t.path().to_path_buf();
+        let rec2 = rec.clone();
+        let h = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(150));
+            write_result(&r, "exam-X-effect0", "completed", &rec2, "");
+        });
+        let run = submit_and_wait(t.path(), "exam-X-effect0", "{}", Duration::from_secs(5),
+                                  Duration::from_millis(20)).unwrap();
+        h.join().unwrap();
+        assert_eq!(run.outcome, JobOutcome::Completed);
+        assert!(!t.path().join("jobs/exam-X-effect0.json").exists(), "adopted, not resubmitted");
+    }
+
+    fn age(path: &std::path::Path, secs: u64) {
+        let past = std::time::SystemTime::now() - Duration::from_secs(secs);
+        std::fs::File::options().write(true).open(path).unwrap()
+            .set_times(std::fs::FileTimes::new().set_modified(past)).unwrap();
+    }
+
+    const LIMIT_1S: &str = "{\n  \"job_id\": \"exam-S-effect0\",\n  \"limits\": {\"max_turns\": 40, \"timeout_seconds\": 1}\n}\n";
+
+    #[test]
+    fn a_claim_past_its_limit_that_the_heartbeat_still_names_is_a_stall() {
+        // DCGO enforces no job timeout: a scripted selection that cannot
+        // complete its prompt holds the player forever, heartbeat fresh, the
+        // claim ageing. Two pilots wedged on one such job for 15 minutes.
+        let t = root();
+        let claim = t.path().join("claimed/exam-S-effect0.json");
+        std::fs::write(&claim, LIMIT_1S).unwrap();
+        age(&claim, 100);
+        std::fs::write(t.path().join("harness.heartbeat"), "exam-S-effect0\n").unwrap();
+        let started = std::time::Instant::now();
+        let err = submit_and_wait(t.path(), "exam-S-effect0", LIMIT_1S, Duration::from_secs(5),
+                                  Duration::from_millis(20)).unwrap_err();
+        assert!(started.elapsed() < Duration::from_secs(2), "a stall is reported, not waited out");
+        let msg = err.to_string();
+        let stall = err.stall.expect("structured stall evidence");
+        assert_eq!(stall.job_id, "exam-S-effect0");
+        assert!(stall.claimed_for_s >= 100 && stall.limit_s == 1 && stall.heartbeat_names_it, "{stall:?}");
+        assert!(msg.contains("stalled") && msg.contains("exam-S-effect0"), "{msg}");
+        assert!(claim.exists(), "the stalled claim is evidence; the player restart clears it");
+    }
+
+    #[test]
+    fn a_stall_is_also_caught_while_waiting_on_a_fresh_submission() {
+        let t = root();
+        let r = t.path().to_path_buf();
+        let h = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(80));
+            // The player claims the job and wedges: the claim ages past the
+            // limit (set its mtime into the past) while the heartbeat names it.
+            let claim = r.join("claimed/exam-S-effect0.json");
+            std::fs::rename(r.join("jobs/exam-S-effect0.json"), &claim).unwrap();
+            age(&claim, 100);
+            std::fs::write(r.join("harness.heartbeat"), "exam-S-effect0\n").unwrap();
+        });
+        let err = submit_and_wait(t.path(), "exam-S-effect0", LIMIT_1S, Duration::from_secs(10),
+                                  Duration::from_millis(20)).unwrap_err();
+        h.join().unwrap();
+        assert!(err.stall.is_some(), "{err}");
+    }
+
+    #[test]
+    fn an_orphaned_claim_is_set_aside_and_the_job_resubmitted() {
+        // The player was restarted under the earlier run: its claim lingers in
+        // claimed/ but the heartbeat reads `idle`. Nothing will ever file it.
+        let t = root();
+        let claim = t.path().join("claimed/exam-S-effect0.json");
+        std::fs::write(&claim, LIMIT_1S).unwrap();
+        age(&claim, 100);
+        std::fs::write(t.path().join("harness.heartbeat"), "idle\n").unwrap();
+        let rec = t.path().join("rec.jsonl");
+        let r = t.path().to_path_buf();
+        let rec2 = rec.clone();
+        let h = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(150));
+            assert!(r.join("jobs/exam-S-effect0.json").exists(), "resubmitted for the live player");
+            write_result(&r, "exam-S-effect0", "completed", &rec2, "");
+        });
+        let run = submit_and_wait(t.path(), "exam-S-effect0", LIMIT_1S, Duration::from_secs(5),
+                                  Duration::from_millis(20)).unwrap();
+        h.join().unwrap();
+        assert_eq!(run.outcome, JobOutcome::Completed);
+        assert!(!claim.exists(), "the orphan is out of claimed/");
+        let aside: Vec<_> = std::fs::read_dir(t.path().join("aside")).unwrap()
+            .filter_map(|e| e.ok()).map(|e| e.file_name().to_string_lossy().to_string()).collect();
+        assert!(aside.iter().any(|n| n.starts_with("exam-S-effect0")), "kept as evidence: {aside:?}");
+    }
+
+    #[test]
+    fn a_timeout_names_the_other_job_the_player_is_stalled_on() {
+        // Our job never got claimed because the player is wedged on ANOTHER
+        // run's job: say so, with the evidence, instead of "is the player running?".
+        let t = root();
+        let other = t.path().join("claimed/exam-OTHER-effect2.json");
+        std::fs::write(&other, LIMIT_1S.replace("exam-S-effect0", "exam-OTHER-effect2")).unwrap();
+        age(&other, 100);
+        std::fs::write(t.path().join("harness.heartbeat"), "exam-OTHER-effect2\n").unwrap();
+        let err = submit_and_wait(t.path(), "exam-W-effect0", "{}", Duration::from_millis(100),
+                                  Duration::from_millis(20)).unwrap_err();
+        let msg = err.to_string();
+        let stall = err.stall.expect("the other job's stall");
+        assert_eq!(stall.job_id, "exam-OTHER-effect2");
+        assert!(msg.contains("exam-OTHER-effect2"), "{msg}");
+        assert!(!t.path().join("jobs/exam-W-effect0.json").exists(), "withdrawn as before");
     }
 
     #[test]
@@ -775,7 +1118,7 @@ mod tests {
         // A leftover quarantine of the same id must not fail the new job either.
         std::fs::write(t.path().join("failed/exam-X-effect0.json"), "{}").unwrap();
         let err = submit_and_wait(t.path(), "exam-X-effect0", "{}", Duration::from_millis(200),
-                                  Duration::from_millis(20)).unwrap_err();
+                                  Duration::from_millis(20)).unwrap_err().to_string();
         assert!(err.contains("timed out"), "stale result must not be returned; got {err}");
     }
 
@@ -807,7 +1150,7 @@ mod tests {
             std::fs::write(r.join("failed/exam-Z-effect2.json"), "{}").unwrap();
         });
         let err = submit_and_wait(t.path(), "exam-Z-effect2", "{}", Duration::from_secs(5),
-                                  Duration::from_millis(20)).unwrap_err();
+                                  Duration::from_millis(20)).unwrap_err().to_string();
         h.join().unwrap();
         assert!(err.contains("exam-Z-effect2") && err.contains("quarantined"), "got {err}");
     }
@@ -816,7 +1159,7 @@ mod tests {
     fn a_timed_out_job_no_player_claimed_is_withdrawn() {
         let t = root();
         let err = submit_and_wait(t.path(), "exam-W-effect0", "{}", Duration::from_millis(100),
-                                  Duration::from_millis(20)).unwrap_err();
+                                  Duration::from_millis(20)).unwrap_err().to_string();
         assert!(err.contains("exam-W-effect0") && err.contains("timed out"), "got {err}");
         assert!(!t.path().join("jobs/exam-W-effect0.json").exists(),
                 "an unclaimed job must not linger for a later player to run");
@@ -924,8 +1267,30 @@ mod verdict_event_tests {
             backfilled: false,
             backfill_note: None,
             recorded: vec![],
+            stall: None,
             refused: refused.iter().map(|s| s.to_string()).collect(),
+            ours_vs_dcgo: None,
+            ours_vs_ruling: None,
+            ruling_q_id: None,
         }
+    }
+
+    #[test]
+    fn the_three_way_legs_serialize_only_when_measured() {
+        // The Python driver reads these keys (card-loop design D7 / follow-up
+        // 9.8); an unmeasured line must not print `null` legs that a reader
+        // could mistake for "disagree".
+        let bare = serde_json::to_value(result("unmeasured", &[])).unwrap();
+        assert!(bare.get("ours_vs_dcgo").is_none() && bare.get("ours_vs_ruling").is_none());
+        assert!(bare.get("ruling_q_id").is_none());
+        let mut r = result("diverged", &[]);
+        r.ours_vs_dcgo = Some(true);
+        r.ours_vs_ruling = Some(false);
+        r.ruling_q_id = Some("Q1601".into());
+        let v = serde_json::to_value(r).unwrap();
+        assert_eq!(v["ours_vs_dcgo"], serde_json::json!(true));
+        assert_eq!(v["ours_vs_ruling"], serde_json::json!(false));
+        assert_eq!(v["ruling_q_id"], serde_json::json!("Q1601"));
     }
 
     #[test]

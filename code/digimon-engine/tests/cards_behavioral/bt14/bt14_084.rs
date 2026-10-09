@@ -41,14 +41,11 @@
 //! printed "[Vaccine] trait" check is `CardTraits.Contains("Vaccine")`, which
 //! matches on the ATTRIBUTE field folded into the union. The Rust production
 //! loader (`CardData::load_from_str`, `card_data.rs`) mirrors this exactly:
-//! `traits = form_eng + attribute_eng + type_eng` (see the
-//! `production_card_data_traits_superset_of_dsl_traits` guard in
+//! `traits = form_eng + attribute_eng + type_eng`, and DebugRunner folds a DSL
+//! card's `form:` / `attribute:` the same way (`CompiledCard::all_traits`; see
+//! the `production_card_data_traits_superset_of_dsl_traits` guard in
 //! `tests/dsl/trait_parity.rs`). So the DSL predicate for "[Vaccine] trait"
-//! is `trait_has: Vaccine`, NOT `attribute_is` (a distinct DSL leaf that is
-//! currently unconditionally `false` for every card — see
-//! `code/digimon-engine/src/dsl_cards/predicate.rs` around line 2131,
-//! "attribute not yet tracked on CardData" — a real but orthogonal engine
-//! gap this card does not need to touch).
+//! is `trait_has: Vaccine`.
 //!
 //! # Patterns this test covers
 //! - B3 trigger-on-event tamer (on hatch/on play/on deletion family; here

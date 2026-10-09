@@ -1,4 +1,4 @@
-version: 1
+version: 4
 # Triage a divergence: {item_id}
 
 You are one stateless worker in the card-authoring loop. Read only: do not edit
@@ -24,15 +24,38 @@ Our engine and DCGO ran the same scripted line and disagreed.
 Replay our side with the exam MCP `exam_probe` (sim-only, `inspect_step: N`) to
 see our prompt and board at the divergent step.
 
+Two shapes of finding carry no field divergence and are still divergences:
+- A line DCGO STOPPED (its `reason` names a prompt, actor or candidate
+  mismatch; the prompt evidence above spells out who asked what): the engines
+  disagree about that prompt -- one asks it, the other does not, or they offer
+  different candidates. Decide who is right about asking it there. Do not
+  answer "nothing to classify": the stopped line is the finding.
+- A `reason` of `ours contradicts ruling qa:<Q>`: our engine against the
+  publisher's own answer, which outranks DCGO -- also when `ours vs DCGO:
+  agree` (both engines can be wrong against the publisher). `ours_wrong`
+  unless the `expect_ruling:` misreads the answer or asserts what it does not
+  decide: then `scenario_wrong`, naming the words. Never `dcgo_quirk` for a
+  line on which DCGO agreed with us.
+
 ## Classify
 - `ours_wrong`: our engine contradicts a correct rule, ruling or DCGO behaviour.
 - `dcgo_quirk`: our engine follows the rules or ruling and DCGO does not, or the
   two differ only in a rules-neutral way.
 - `unreachable`: no legal line reaches the clause the way the exam needs; state
   what you measured.
+- `scenario_wrong`: the exam itself misreads the card or the ruling -- it picks
+  the wrong card, asserts at the wrong step, or its `expect_ruling:` claims
+  something the answer does not decide -- so neither engine is being judged.
+  Say exactly what to change; the exam goes back to its author with your words.
 - `undetermined`: the sources do not decide it.
 A `dcgo_quirk` or `unreachable` call without a citation is not accepted.
 
 ## Result
 Return only JSON matching `triage`:
 `{"classification": "...", "citation": {"kind": "rule" or "ruling" or "dcgo", "ref": "16-36" or "qa:Q1601" or "<path>.cs:<line>"} or null, "reasoning": "..."}`
+
+## Worktree hygiene
+
+Keep scratch out of the worktree: write temporary files (notes, probes, helper
+scripts) under the system temp directory, never inside the repository. Only
+the files you deliver may be left behind; anything else is dropped at merge.

@@ -101,7 +101,7 @@ fn bt20_083_has_printed_metadata() {
     assert!(card.traits.iter().any(|name| name == "Puppet"));
     assert!(card.traits.iter().any(|name| name == "X Antibody"));
     assert!(card.traits.iter().any(|name| name == "LIBERATOR"));
-    assert_eq!(card.attribute.as_deref(), Some("Data"));
+    assert_eq!(card.attribute, ["Data"]);
 }
 
 #[test]

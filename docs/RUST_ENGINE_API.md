@@ -4475,6 +4475,15 @@ modifier-granted keywords). Closes parity §2.1b (native Rush) and §2.5f
 Parametric keywords (`Security A. ±N`, `De-Digivolve N`, `Draw N`) are
 parsed into their typed variants.
 
+`CardData::link_text: String` — a link card's printed link effect
+(cards.json `link_effect_description_eng`, general_rule.pdf 2-3-12). It is
+not part of `keywords`: its keywords (`game::link_keywords`) reach only the
+Digimon the card is linked to (4-2-6) — `has_keyword_from_card_sources` reads
+them from `linked_cards`, and `build_effects_for_card` synthesizes their
+auto-effects as `.linked()` — never a Digimon with the card among its
+digivolution cards (4-7-2). Until 2026-10-05 cards.json filed this text as the
+inherited effect.
+
 `CardData::digixros_aliases: Vec<String>` — populated from printed text of
 the form `This card is also treated as [Name] for DigiXros.`, the `for a
 DigiXros` wording, prefix-scoped clauses such as `When you would DigiXros,

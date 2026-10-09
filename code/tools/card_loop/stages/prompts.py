@@ -108,6 +108,11 @@ def fields(stage: str) -> tuple[str, ...]:
     return template(stage).fields
 
 
+def template_text(stage: str) -> str:
+    """The stage's template, verbatim (version header included)."""
+    return template_path(stage).read_text(encoding="utf-8")
+
+
 def render(stage: str, **values) -> str:
     """The rendered prompt for `stage` (header stripped). Strict both ways."""
     p = template_path(stage)

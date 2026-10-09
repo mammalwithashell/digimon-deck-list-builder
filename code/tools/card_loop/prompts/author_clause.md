@@ -1,4 +1,4 @@
-version: 1
+version: 2
 # Author an exam scenario for {clause_id}
 
 You are one stateless worker in the card-authoring loop. Do exactly this task in
@@ -31,3 +31,9 @@ fires the clause covers nothing.
 Return only JSON matching `author_clause`:
 `{"scenario_paths": ["{scenario_path}"], "covers": ["{clause_id}"], "notes": "..."}`
 If no legal line reaches the clause, return no paths and say why in `notes`.
+
+## Worktree hygiene
+
+Keep scratch out of the worktree: write temporary files (notes, probes, helper
+scripts) under the system temp directory, never inside the repository. Only
+the files you deliver may be left behind; anything else is dropped at merge.

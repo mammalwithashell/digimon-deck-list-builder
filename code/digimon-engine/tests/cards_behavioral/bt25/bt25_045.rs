@@ -137,7 +137,7 @@ fn bt25_045_yaml_printed_metadata() {
     assert_eq!(card.dp, Some(2000));
     assert_eq!(card.cost, Some(3));
     // Image + official DB: Attribute is Game (was mis-authored as Free).
-    assert_eq!(card.attribute.as_deref(), Some("Game"));
+    assert_eq!(card.attribute, ["Game"]);
 }
 
 /// Trait line from the card image: Stnd./Appmon | Game | Online — all

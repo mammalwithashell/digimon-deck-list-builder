@@ -29,7 +29,7 @@ fn whole_clause_raw_rust_dispatches_registered_function() {
         dp: Some(1000),
         traits: vec![],
         form: None,
-        attribute: None,
+        attribute: Vec::new(),
         ace_overflow: None,
         identity: None,
         digixros_aliases: Vec::new(),

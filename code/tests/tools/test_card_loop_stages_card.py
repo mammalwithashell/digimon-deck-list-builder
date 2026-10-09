@@ -52,7 +52,7 @@ def test_implement_goes_to_review_with_a_non_engine_merge_request(repo):
     assert out.data["implement_attempt"] == "att-0001"
     (a,) = out.attempts
     assert (a.stage, a.family, a.outcome, a.assignment, a.prompt_version) == (
-        "implement", "claude", "accepted", "routed", "1")
+        "implement", "claude", "accepted", "routed", "2")
     pkt = workers["claude"].received[0]
     assert "# produced_by: att-0001" in pkt.prompt
     assert "Dorumon (BT7-056)" in pkt.prompt
