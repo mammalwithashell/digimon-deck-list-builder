@@ -208,11 +208,18 @@ def test_engine_code_without_engine_flag_is_refused(repo, tmp_path):
     assert git(root, "status", "--porcelain") == ""
 
 
-def test_tracker_edits_in_a_worker_diff_are_refused(repo, tmp_path):
+def test_tracker_edits_in_a_worker_diff_are_dropped_not_refused(repo, tmp_path):
+    # Refusing the whole diff cost the second pilot a card fix (BT13-060#effect#2,
+    # `fix_card 2/2 spent`): the tracker edit is skipped, the rest lands.
     root, base = repo
+    scenario = "qa/dcgo-exams/BT21/BT21-029-effect0.yaml"
     res = merger(tmp_path).merge(ctx_for(root, base, tmp_path, FakeRunner()), request(
-        artifacts(root, base, tmp_path, "a", {"qa/dsl-vocab-gaps.md": b"# DSL\n## mine\n"})))
-    assert not res.ok and "orchestrator-only" in res.errors[0]
+        artifacts(root, base, tmp_path, "a", {"qa/dsl-vocab-gaps.md": b"# DSL\n## mine\n",
+                                              scenario: b"card: BT21-029\n"})))
+    assert res.ok, res.errors
+    assert res.skipped == ["qa/dsl-vocab-gaps.md"]
+    assert (root / "qa/dsl-vocab-gaps.md").read_bytes() == b"# DSL\n"
+    assert (root / scenario).exists()
 
 
 def test_run_tree_on_main_is_refused(tmp_path, gitenv):
@@ -310,3 +317,31 @@ def test_engine_branch_name_and_paths():
     assert is_engine_path(f"{ENG}/src/game.rs") and is_engine_path("code/digimon-dsl/src/x.rs")
     assert not is_engine_path(f"{ENG}/cards/bt21/BT21-001.yaml")
     assert not is_engine_path(f"{CB}/bt21/bt21_001.rs")
+
+
+def test_a_diff_against_the_run_heads_newer_base_merges(repo, tmp_path):
+    # Re-authoring: the second worker started from the run branch's HEAD (after
+    # the first merge), so its manifest base is newer than the plan's base.
+    root, base = repo
+    ctx = ctx_for(root, base, tmp_path, FakeRunner())
+    assert merger(tmp_path).merge(ctx, request(artifacts(root, base, tmp_path, "a", CARD_029))).ok
+    head = git(root, "rev-parse", "HEAD")
+    assert head != base
+    yaml = next(p for p in CARD_029 if p.endswith(".yaml"))
+    art = artifacts(root, head, tmp_path, "b", {yaml: CARD_029[yaml] + b"# re-authored\n"})
+    res = merger(tmp_path).merge(ctx, request(art, attempt="20261006T120001Z-run1-a2"))
+    assert res.ok, res.errors
+    assert (root / yaml).read_bytes().endswith(b"# re-authored\n")
+
+
+def test_engine_merges_run_under_the_shared_worktree_lock(monkeypatch, tmp_path):
+    import tools.card_loop.merge as M
+    seen = {}
+
+    def fake(self, ctx, request, diff, manifest_path):
+        seen["locked"] = M._ENGINE_TREE_LOCK.locked()
+        return "result"
+
+    monkeypatch.setattr(M.LoopMerger, "_merge_engine_locked", fake)
+    assert merger(tmp_path)._merge_engine(None, None, None, None) == "result"
+    assert seen["locked"] is True and not M._ENGINE_TREE_LOCK.locked()

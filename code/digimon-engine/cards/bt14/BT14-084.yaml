@@ -43,10 +43,10 @@
 #   - DCGO's `CardSource.CardTraits` (the "[Vaccine] trait" check) is a UNION
 #     of Form_ENG + Attribute_ENG + Type_ENG (CardSource.cs region "traits").
 #     The Rust production loader (`CardData::load_from_str`) mirrors this
-#     exactly: `traits = form_eng + attribute_eng + type_eng`. So "[Vaccine]
-#     trait" is `trait_has: Vaccine`, NOT the DSL's `attribute_is` leaf
-#     (which is currently unconditionally false for every card — orthogonal
-#     engine gap, not touched by this card).
+#     exactly: `traits = form_eng + attribute_eng + type_eng`, and DebugRunner
+#     folds a DSL card's `form:` / `attribute:` in the same way
+#     (`CompiledCard::all_traits`). So "[Vaccine] trait" is
+#     `trait_has: Vaccine`.
 #   - Placement is at the BOTTOM only (no top/bottom choice, unlike
 #     BT25-037) — `place_on_security { position: bottom }`. No printed
 #     face-up override, so `face_up: false` (default).

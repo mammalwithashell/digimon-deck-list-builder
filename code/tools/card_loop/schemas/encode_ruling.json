@@ -1,7 +1,7 @@
 {
-  "$id": "card-loop/encode_ruling@1",
+  "$id": "card-loop/encode_ruling@2",
   "title": "encode_ruling result",
-  "description": "Encode an official ruling's answer as the scenario's expect_ruling block (design D7), or verify another family's encoding. TERMINATING: the block is the expected value of a three-way comparison, so one family authors it (mode author) and the OTHER family, blind to the author's reasoning, must agree it encodes the answer (mode verify) -- design D5. Strict-mode compatible: every property is required, objects are closed, and the free-form `that:` map is carried as key/value_json pairs (tools.card_loop.interactions.packets.expect_ruling_block converts it to scenario YAML).",
+  "description": "Encode an official ruling's answer as the scenario's expect_ruling block (design D7), or verify another family's encoding. TERMINATING: the block is the expected value of a three-way comparison, so one family authors it (mode author) and the OTHER family, blind to the author's reasoning, must agree it encodes the answer (mode verify) -- design D5. The line is authored first and the block anchors on it (second pilot). Strict-mode compatible: every property is required, objects are closed, and the free-form `that:` map is carried as key/value_json pairs (tools.card_loop.interactions.packets.expect_ruling_block converts it to scenario YAML).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -9,6 +9,7 @@
     "mode",
     "expect_ruling",
     "agrees",
+    "line_exercises_ruling",
     "answer_quote",
     "reasoning"
   ],
@@ -104,6 +105,13 @@
         "null"
       ],
       "description": "verify: does the given block encode the publisher's answer -- no more, no less? author: null."
+    },
+    "line_exercises_ruling": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "Does the scenario's line reach the situation the question describes? author: false (with expect_ruling null) sends the line back to its author; verify: false means no block on this line can encode the answer. null when not judged."
     },
     "answer_quote": {
       "type": "string",

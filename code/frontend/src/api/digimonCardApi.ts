@@ -77,8 +77,15 @@ function isAltArtEntry(raw: Record<string, unknown>): boolean {
 }
 
 /** Map raw API response to our DigimonCardData shape.
- *  The API returns `id` but our components use `cardnumber`. */
-function mapApiCard(raw: Record<string, unknown>, isAltArt = false): DigimonCardData {
+ *  The API returns `id` but our components use `cardnumber`. A link card's
+ *  link effect comes back as `source_effect`, the inherited-effect field
+ *  (sometimes as a copy of the link requirement instead); the API marks link
+ *  cards with `link_requirements` / `link_dp` (as `ingest_cards.normalize_link_box`
+ *  reads it). */
+export function mapApiCard(raw: Record<string, unknown>, isAltArt = false): DigimonCardData {
+  const sourceEffect = (raw.source_effect as string) ?? '';
+  const isLinkCard = Boolean(raw.link_requirements || raw.link_dp);
+  const linkEffect = /^\s*Link Requirements\b/.test(sourceEffect) ? '' : sourceEffect;
   return {
     name: (raw.name as string) ?? '',
     type: (raw.type as string) ?? '',
@@ -94,7 +101,8 @@ function mapApiCard(raw: Record<string, unknown>, isAltArt = false): DigimonCard
     dp: raw.dp != null ? String(raw.dp) : '',
     cardnumber: (raw.id as string) ?? '',  // API uses 'id', we use 'cardnumber'
     maineffect: (raw.main_effect as string) ?? '',
-    soureeffect: (raw.source_effect as string) ?? '',
+    soureeffect: isLinkCard ? '' : sourceEffect,
+    ...(isLinkCard ? { linkeffect: linkEffect } : {}),
     set_name: Array.isArray(raw.set_name) ? (raw.set_name as string[]).join(', ') : (raw.set_name as string) ?? '',
     card_sets: Array.isArray(raw.set_name) ? (raw.set_name as string[]) : [],
     image_url: '',  // Not provided by API; CDN URL constructed from cardnumber

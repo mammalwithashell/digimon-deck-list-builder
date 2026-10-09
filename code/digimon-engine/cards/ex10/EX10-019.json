@@ -17,23 +17,31 @@
   ],
   "type_eng": [
     "Strategy (App Name)",
-    "Leviathan"
+    "Leviathan",
+    "Strategy"
   ],
   "form_eng": [
-    "Ult."
+    "Ult.",
+    "Appmon"
   ],
   "attribute_eng": [
     "System"
   ],
   "effect_description_eng": "＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)\r\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[All Turns] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon or Tamers. It can't unsuspend in their next unsuspend phase.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 3 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
       "card_color": 3,
       "level": 4,
       "memory_cost": 4
+    },
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
     }
   ],
-  "xros_req": "[App Fusion] [Mienumon] & [Sakusimon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+  "xros_req": "[App Fusion] [Mienumon] & [Sakusimon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+  "link_effect_description_eng": "[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, trash your opponent's top security card."
 }

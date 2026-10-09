@@ -27,7 +27,7 @@ fn fixture_replacement(trigger: &str, scope: CompiledScope) -> CompiledCard {
         dp: Some(6000),
         traits: vec![],
         form: None,
-        attribute: None,
+        attribute: Vec::new(),
         ace_overflow: None,
         identity: None,
         digixros_aliases: Vec::new(),

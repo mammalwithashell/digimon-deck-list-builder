@@ -96,3 +96,14 @@ def test_code_templates_point_at_the_dsl_test_api_and_no_approximations(stage):
 def test_author_interaction_frames_the_goal_as_finding_a_divergence():
     text = P.template_path("author_interaction").read_text(encoding="utf-8").lower()
     assert "divergence" in text and "find" in text
+
+
+def test_every_template_keeps_scratch_out_of_the_worktree():
+    # The first pilot's workers left scratch files (`scratch_q.py`, `.tmp_p.py`)
+    # in their worktree; the merge skips them now, but the rule belongs in the prompt.
+    from tools.card_loop.contracts import STAGES
+    from tools.card_loop.stages import prompts
+    for stage in STAGES:
+        text = prompts.template_text(stage).lower()
+        assert "scratch" in text and "temp" in text, stage
+        assert int(prompts.version(stage)) >= 2, stage

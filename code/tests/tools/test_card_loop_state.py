@@ -65,7 +65,8 @@ def ws(tmp_path):
     (verdicts / "BT7-056.json").write_text(json.dumps({
         "version": 1,
         "clauses": {"BT7-056#effect#0": _clause_row("BT7-056#effect#0", "diverged",
-                                                    triage="undetermined")},
+                                                    triage="undetermined",
+                                                    scenario_path="qa/dcgo-exams/BT7/BT7-056-effect0.yaml")},
     }), encoding="utf-8")
 
     denominator = tmp_path / "interaction_denominator.json"
@@ -133,7 +134,7 @@ def test_items_and_initial_states_come_from_the_plan_and_the_committed_ledgers(w
         "clause:BT8-084#effect#0": "CONFIRMED",
         "clause:BT8-084#effect#1": "TERMINAL",
         "clause:BT8-084#effect#2": "TERMINAL",
-        "clause:BT7-056#effect#0": "DIVERGED",
+        "clause:BT7-056#effect#0": "ORACLE",      # stored diverged, uncited: re-measure before triage
         "clause:BT7-056#inherited#0": "ESCALATED",
         "clause:EX12-004#inherited#0": "UNAVAILABLE",
         "interaction:qa:Q100": "PENDING",
@@ -232,6 +233,7 @@ def test_resume_replays_transitions_and_tolerates_a_torn_last_line(ws):
     s.transition("card:EX12-073", "IMPLEMENTING", reason="start")
     s.transition("card:EX12-073", "REVIEW", reason="diff merged", stage="implement",
                  attempt_id="A1", item_data={"spec": "ex12/EX12-073.yaml"}, count=("implement",))
+    s.transition("clause:BT7-056#effect#0", "DIVERGED", reason="the current engine diverged too")
     s.transition("clause:BT7-056#effect#0", "TRIAGE", reason="diverged")
     s.note("clause:BT7-056#effect#0", reason="merge failed", stage="triage", attempt_id="A2",
            item_data={"merge_error": ["conflict"]}, count=("triage",))
@@ -272,11 +274,47 @@ def test_deleting_an_escalation_file_withdraws_it_on_resume(ws):
     s = _open(ws)
     item = "clause:BT7-056#inherited#0"
     assert s.records[item].state == "ESCALATED"
+    # the escalated attempt's stage data must not steer the new attempt (a
+    # re-entered Q&A item kept its old expect_ruling in the second pilot)
+    s.note(item, reason="stage data from the escalated pass",
+           item_data={"expect_ruling": {"q_id": "Q1", "assert": []}, "scenario_paths": ["x.yaml"],
+                      "triage_feedback": "old", "history": ["att-1"]})
     esc_mod.escalation_path(ws["paths"].escalations_dir, item).unlink()   # human: retry it
     r = _open(ws)
     assert r.records[item].state == "PENDING"
     assert r.records[item].attempts == {}
     assert "escalation withdrawn" in [e for e in _events(ws) if e["item"] == item][-1]["reason"]
+    d = r.records[item].data
+    assert d.get("expect_ruling") is None and d.get("scenario_paths") is None and d.get("triage_feedback") is None
+    assert d.get("history") == ["att-1"], "the attempt history is kept"
+
+
+def test_a_stored_uncited_divergence_is_re_measured_at_the_oracle_not_triaged_cold(ws):
+    # The ledger's `diverged` is a finding, not an adjudication, and it was
+    # measured by an OLDER engine. Seeding it at DIVERGED sent triage a packet
+    # with no scenario and an empty oracle result (BT26-065#effect#1 escalated
+    # "the oracle result is empty ({})"); seed it at ORACLE with its scenario so
+    # the current engine measures it first.
+    s = _open(ws)
+    item = "clause:BT7-056#effect#0"
+    rec = s.records[item]
+    assert rec.state == "ORACLE"
+    assert rec.data["scenario_paths"] == ["qa/dcgo-exams/BT7/BT7-056-effect0.yaml"]
+    assert rec.data["triage"] == "undetermined" and rec.data["verdict"] == "diverged"
+    # a withdrawn escalation over it re-enters at the same re-measure point
+    s.transition(item, "ESCALATED", reason="triage undetermined")     # no escalation file is written here
+    r = _open(ws)
+    assert r.records[item].state == "ORACLE"
+    assert "escalation withdrawn" in [e for e in _events(ws) if e["item"] == item][-1]["reason"]
+
+
+def test_a_stored_divergence_without_a_scenario_path_starts_over():
+    o = st.exam_origin("diverged", {"triage": "undetermined", "reason": "step 3: p1.field"})
+    assert o.state == "PENDING" and o.data["verdict"] == "diverged" and "scenario_paths" not in o.data
+    o = st.exam_origin("diverged", {"triage": "ours_wrong", "citation": "16-36",
+                                    "scenario_path": "qa/dcgo-exams/X/x.yaml"})
+    assert o.state == "ORACLE" and o.data["scenario_paths"] == ["qa/dcgo-exams/X/x.yaml"]
+    assert not o.strong, "the run's own events outrank a stale stored divergence"
 
 
 def test_a_pending_card_whose_spec_appeared_is_implemented_on_resume(ws):

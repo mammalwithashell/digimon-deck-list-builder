@@ -33,6 +33,15 @@ def _previous(item: ItemRecord) -> str:
             f"- `{ev.get('scenario')}`: at step {ev.get('scenario_step')} the scenario expected "
             f"`{ev.get('expected')}`, DCGO asked `{ev.get('dcgo_asked')}`, our engine asked "
             f"`{ev.get('ours')}` ({ev.get('explanation')}). Fix the `expect:` and the line, not the engines.")
+    fb = item.data.get("encode_feedback")
+    if fb:
+        parts.append(f"- the publisher's ruling could not be encoded against your line: {fb}\n"
+                     "  Rework the line so the situation the question describes happens on it, and stop "
+                     "right after it resolves.")
+    tf = item.data.get("triage_feedback")
+    if tf:
+        parts.append(f"- triage of the oracle run judged the exam itself wrong: {tf}\n"
+                     "  Change what it names; do not touch the engines.")
     if not parts:
         return ""
     return ("\n## Your previous scenario did not hold\n" + "\n".join(parts)
@@ -118,8 +127,13 @@ class AuthoringExecutor:
         refs = [*(base.bundle_path(c) for c in cards), *(base.dcgo_script(ctx, c) for c in cards),
                 base_line, base.scenario_dir(primary), *notes, "qa/exam-authoring-guide.json",
                 "docs/digimon-rules/keyword-semantics.md"]
+        # A ruling not yet encoded is encoded against THIS line next (ENCODE ->
+        # SIM); a block agreed earlier rides along to the sim check directly.
+        next_state = "ENCODE" if iid.startswith("qa:") and not item.data.get("expect_ruling") else "SIM"
         return self._finish(ctx, item, "author_interaction", render, refs, implementer=implementer,
-                            subject=iid, extra={"base_scenario": base_line})
+                            subject=iid, extra={"base_scenario": base_line, "encode_feedback": None,
+                                                "triage_feedback": None},
+                            next_state=next_state)
 
     def _target(self, ctx, item, iid, entry, cards):
         if iid.startswith("qa:"):
@@ -131,8 +145,8 @@ class AuthoringExecutor:
             clause_ids = list(cls.get("examined_clauses") or []) or [
                 c["id"] for c in base.clauses_for(ctx, cards)]
             block = item.data.get("expect_ruling")
-            ruling_rule = ""
             if block:
+                # An item encoded under the earlier order (block before line).
                 ruling_rule = (
                     "- Copy this `expect_ruling:` block into the scenario verbatim. Two model families "
                     "agreed it encodes the publisher's answer: do not change its values. Its `at:` "
@@ -140,6 +154,13 @@ class AuthoringExecutor:
                     "`at:` unchanged.\n```yaml\nexpect_ruling:\n"
                     + "".join(f"  {ln}\n" for ln in yaml.safe_dump(block, sort_keys=False).splitlines())
                     + "```")
+            else:
+                ruling_rule = (
+                    "- Build the line so the situation the question describes actually happens -- the "
+                    "card, timing and choice the answer rules on -- and stop right after it resolves. "
+                    "Do not write an `expect_ruling:` block and leave `assert:` empty: once your line "
+                    "passes, another model family encodes the publisher's answer against its steps and "
+                    "a third checks that encoding blind.")
             return clause_ids, target, ruling_rule
         clause = entry.get("clause_id") or iid.split(":")[1]
         family = entry.get("family") or (iid.split(":")[2] if iid.count(":") >= 2 else "?")
@@ -150,22 +171,32 @@ class AuthoringExecutor:
     # ------------------------------------------------------------------ shared
 
     def _reuse(self, ctx, item: ItemRecord, found: list[str]) -> StageOutcome | None:
-        """A committed scenario and no failed attempt yet: examine it as is."""
-        tried = item.data.get("author_attempt") or item.data.get("sim_failure") or item.data.get("prompt_evidence")
+        """A committed scenario and no failed attempt yet: examine it as is. A
+        Q&A item without an agreed block has its ruling encoded against that
+        line first (ENCODE), as a freshly authored line would."""
+        tried = (item.data.get("author_attempt") or item.data.get("sim_failure") or item.data.get("prompt_evidence")
+                 or item.data.get("encode_feedback") or item.data.get("triage_feedback"))
         if not found or tried or item.data.get("scenario_paths"):
             return None
-        return base.outcome("SIM", item=item, data={"scenario_paths": found, "author_attempt": None,
-                                                    "author_family": None, "sim_failure": None,
-                                                    "prompt_evidence": None},
+        qa = item.kind == "interaction" and base.interaction_of(item).startswith("qa:")
+        next_state = "ENCODE" if qa and not item.data.get("expect_ruling") else "SIM"
+        return base.outcome(next_state, item=item, data={"scenario_paths": found, "author_attempt": None,
+                                                         "author_family": None, "sim_failure": None,
+                                                         "prompt_evidence": None},
                             reason=f"reusing library scenario(s) {', '.join(found)}")
 
-    def _finish(self, ctx, item, stage, render, refs, *, implementer, subject, extra=None) -> StageOutcome:
+    def _finish(self, ctx, item, stage, render, refs, *, implementer, subject, extra=None,
+                next_state: str = "SIM") -> StageOutcome:
         call, calls = base.routed_call(ctx, item, stage=stage, prompt=render, references=refs,
                                        implementer=implementer)
         if not call.ok:
             raise base.defer_failed(ctx, item, calls)
         result = call.output
-        paths = list(dict.fromkeys(base.posix(p) for p in result.get("scenario_paths") or [] if p))
+        listed = list(dict.fromkeys(base.posix(p) for p in result.get("scenario_paths") or [] if p))
+        # A deck-pool JSON a worker added rides along as a pool file; only the
+        # YAML lines are scenarios the sim and oracle steps run.
+        paths = [p for p in listed if p.lower().endswith((".yaml", ".yml"))]
+        pool_files = [p for p in listed if p not in paths]
         if not paths:
             attempts = [c.attempt(ctx) for c in calls[:-1]] + [call.attempt(ctx, outcome="escalated")]
             reason = f"{call.family} found no legal line for {subject}: {result.get('notes') or '(no reason)'}"
@@ -174,12 +205,12 @@ class AuthoringExecutor:
                                     call, call_value="no_legal_line", reasoning=result.get("notes", ""))],
                                     extra_history=[c.attempt_id for c in calls]))
         attempts = [c.attempt(ctx) for c in calls[:-1]] + [call.attempt(ctx, outcome="accepted")]
-        data = {"scenario_paths": paths, "covers": list(result.get("covers") or []),
+        data = {"scenario_paths": paths, "pool_files": pool_files, "covers": list(result.get("covers") or []),
                 "author_attempt": call.attempt_id, "author_family": call.family, "author_stage": stage,
                 "sim_failure": None, "prompt_evidence": None, "prompt_route": None,
                 "deck_books": None, "oracle_results": None, "oracle_retry_paths": None, **(extra or {})}
         merge = MergeRequest(attempt_id=call.attempt_id, family=call.family, model=call.packet.model,
                              artifacts=dict(call.result.artifacts or {}), engine=False,
                              subject=f"card-loop: exam scenario for {subject}")
-        return base.outcome("SIM", item=item, attempts=attempts, data=data, merge_request=merge,
+        return base.outcome(next_state, item=item, attempts=attempts, data=data, merge_request=merge,
                             reason=f"{stage} by {call.family} ({call.assignment})")

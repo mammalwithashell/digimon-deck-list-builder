@@ -15,8 +15,11 @@
 **Initial states** come from the committed ledgers: a stored `confirmed`
 verdict -> CONFIRMED; `diverged` triaged `dcgo_quirk` with a citation, or
 `unreachable` with a reason -> TERMINAL; a stored `unavailable` -> UNAVAILABLE;
-an open escalation file -> ESCALATED; any other `diverged` -> DIVERGED (its
-triage carried in `data`); otherwise PENDING. A card in the plan's
+an open escalation file -> ESCALATED; any other `diverged` -> ORACLE with its
+stored scenario (re-measured by the CURRENT engine before anyone triages it --
+a stored divergence is an older engine's finding, and triaging it cold handed
+the models an empty oracle result), or PENDING when no scenario path was
+stored; otherwise PENDING. A card in the plan's
 `dcgo.unavailable` makes its not-yet-adjudicated clause items -- and the
 interactions whose every pool card is unavailable -- UNAVAILABLE.
 
@@ -61,6 +64,14 @@ STATE_VERSION = 1
 DRIVER_KEY = "_driver"
 EVENTS_NAME = "events.jsonl"
 SNAPSHOT_NAME = "state.json"
+#: Item data that belongs to one pass through the exam stages and is cleared
+#: when a withdrawn escalation re-enters the item (resume reconciliation).
+EXAM_SCOPED_DATA = ("scenario_paths", "pool_files", "author_attempt", "author_family", "author_stage",
+                    "expect_ruling", "encode_feedback", "triage_feedback", "encode_attempts", "base_scenario",
+                    "sim_failure", "sim_notes", "deck_books", "ruling_contradicted", "ruling_block_written",
+                    "prompt_evidence", "prompt_route", "oracle", "oracle_results", "oracle_retry_paths",
+                    "triage_packet", "triage_first", "termination", "escalation", "escalation_reason",
+                    "scenario_wrong_rounds")
 KIND_ORDER = {"card": 0, "clause": 1, "interaction": 2}
 COUNT_KEYS = ("confirmed", "terminal", "unavailable", "escalated", "unmeasured",
               "implemented", "parked")
@@ -173,7 +184,15 @@ def exam_origin(verdict: str, stored: Mapping | None, *, escalation: Path | None
                       {**data, "unavailable_source": "plan",
                        "unavailable_reason": "DCGO has no script (plan.dcgo.unavailable)"})
     if data.get("verdict") == "diverged":
-        return Origin("DIVERGED", "ledger: diverged, not adjudicated", data)
+        # A stored, uncited divergence is an OLDER engine's finding. Triaging it
+        # cold handed the models an empty oracle result and no line (the Data
+        # Squad pilot escalated BT26-065#effect#1 that way); re-measure it with
+        # the current engine first, on its stored scenario.
+        path = data.get("scenario_path")
+        if path:
+            return Origin("ORACLE", "ledger: diverged, not adjudicated -- re-measured by the current "
+                                    "engine before triage", {**data, "scenario_paths": [path]})
+        return Origin("PENDING", "ledger: diverged, not adjudicated, no stored scenario -- re-author", data)
     return Origin("PENDING", f"ledger: {verdict or 'unmeasured'}", data)
 
 
@@ -496,8 +515,17 @@ class RunState:
             if origin is None:
                 continue
             if rec.state == "ESCALATED" and item not in escalated:
-                target = origin.state if origin.state != "ESCALATED" else "PENDING"
-                self._force(item, target, item_data=origin.data, reset_attempts=True,
+                # A ledger `diverged` is a finding, not an adjudication, and it
+                # may be stale (the second pilot's first findings were checker
+                # artifacts): re-measure from PENDING instead of re-triaging it.
+                target = origin.state if origin.state not in ("ESCALATED", "DIVERGED") else "PENDING"
+                # The item starts its exam over: the stage-scoped data of the
+                # escalated attempt (an agreed block, feedback, oracle rows) must
+                # not steer the new attempt. A re-entered Q&A item kept its old
+                # `expect_ruling` in the second pilot and its author was told to
+                # satisfy a block that no longer matched the line.
+                cleared = {k: None for k in EXAM_SCOPED_DATA}
+                self._force(item, target, item_data={**cleared, **dict(origin.data)}, reset_attempts=True,
                             reason="resume: escalation withdrawn (its file was deleted); "
                                    f"back to the ledger state {target}")
             elif origin.strong and rec.state != origin.state and not is_adjudicated(rec.kind, rec.state):

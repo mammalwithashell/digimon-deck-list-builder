@@ -17,23 +17,31 @@
   ],
   "type_eng": [
     "Stealth (App Name)",
-    "Leviathan"
+    "Leviathan",
+    "Stealth"
   ],
   "form_eng": [
-    "Sup."
+    "Sup.",
+    "Appmon"
   ],
   "attribute_eng": [
     "System"
   ],
   "effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)\r\n＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 Tamer card with the [Leviathan] trait from your hand without paying the cost.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
       "card_color": 3,
       "level": 3,
       "memory_cost": 3
+    },
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
     }
   ],
-  "xros_req": "[App Fusion] [Mirrormon] & [Kabemon] & [Copipemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+  "xros_req": "[App Fusion] [Mirrormon] & [Kabemon] & [Copipemon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+  "link_effect_description_eng": "[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, ＜Draw 1＞ and gain 1 memory."
 }

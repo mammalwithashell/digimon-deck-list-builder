@@ -6,7 +6,7 @@ color: [yellow]
 cost: 4
 dp: 4000
 traits: [Beast, Xros Heart]
-attribute: Data
+attribute: Virus
 
 alt_paths:
   - kind: digivolve

@@ -42,7 +42,7 @@ fn bt22_036_structural_metadata_and_yellow_lv4_evo_match_printed_card() {
     assert_eq!(compiled.color, vec![CompiledColor::Yellow]);
     assert_eq!(compiled.cost, Some(7));
     assert_eq!(compiled.dp, Some(7000));
-    assert_eq!(compiled.attribute.as_deref(), Some("Virus"));
+    assert_eq!(compiled.attribute, ["Virus"]);
     assert!(compiled
         .traits
         .iter()

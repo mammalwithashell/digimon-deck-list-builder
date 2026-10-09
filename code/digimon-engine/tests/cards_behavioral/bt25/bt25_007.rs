@@ -97,7 +97,7 @@ fn bt25_007_yaml_printed_metadata() {
     assert_eq!(card.dp, Some(2000));
     assert_eq!(card.cost, Some(3));
     // Image + official DB: Attribute is Social (was mis-authored as Data).
-    assert_eq!(card.attribute.as_deref(), Some("Social"));
+    assert_eq!(card.attribute, ["Social"]);
 }
 
 /// Trait line from the card image: Stnd./Appmon | Social | Search — all

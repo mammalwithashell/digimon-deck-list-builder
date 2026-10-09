@@ -247,6 +247,32 @@ def test_pending_and_diverged_route_by_kind_without_executors(tmp_path):
     assert "no executor for AUTHORING" in report
 
 
+P1 = "interaction:probe:BT1-001#effect#0:scope"
+
+
+def test_an_interaction_waits_while_one_of_its_cards_clauses_is_being_fixed(tmp_path):
+    # Data Squad pilot: BT13-060#effect#2 was DIVERGED -> FIX (our engine skips
+    # the security check) while Q2304, an interaction on the same clause, burnt
+    # its three authoring attempts failing the very assertion the fix targets.
+    author = author_ok()
+    h = Harness(tmp_path, [seed(C1, "FIX"), seed(P1, "AUTHORING", source="probe")], [author])
+    result = h.run()
+    assert author.calls == [], "the interaction must not be authored under an engine about to change"
+    assert h.states()[P1] == "AUTHORING"
+    assert result.stop.reason == "blocked"
+    assert f"waits for {C1} (FIX)" in result.blocked[P1]
+
+
+@pytest.mark.parametrize("clause_state", ["ESCALATED", "TERMINAL", "CONFIRMED"])
+def test_an_interaction_runs_once_the_clause_is_no_longer_under_fix(tmp_path, clause_state):
+    author = author_ok()
+    h = Harness(tmp_path, [seed(C1, clause_state), seed(P1, "AUTHORING", source="probe")],
+                [author, sim_ok(), oracle_confirms()])
+    h.run()
+    assert author.calls == [P1]
+    assert h.states()[P1] == "CONFIRMED"
+
+
 def test_an_illegal_next_state_is_refused_and_the_spend_still_ledgered(tmp_path):
     bad = Exec("AUTHORING", lambda ctx, it: StageOutcome(
         "CONFIRMED", attempts=[attempt(ctx, it, "author_clause")]))
@@ -667,7 +693,9 @@ def test_worker_stages_run_concurrently_and_the_oracle_strictly_alone(tmp_path):
 
     items = [f"clause:BT1-001#effect#{i}" for i in range(6)]
     h = Harness(tmp_path, [seed(i, "AUTHORING") for i in items],
-                [tracked("AUTHORING", "SIM", "w", "author_clause"), tracked("SIM", "ORACLE", "w", pause=0.01),
+                # A 0.4 s window: three worker tasks must overlap even on a loaded
+                # machine (the 50 ms default saw w_max == 2 beside two live pilots).
+                [tracked("AUTHORING", "SIM", "w", "author_clause", pause=0.4), tracked("SIM", "ORACLE", "w", pause=0.01),
                  tracked("ORACLE", "CONFIRMED", "o", pause=0.02)],
                 serial=False, config=cfg(tmp_path, concurrency=3))
     result = h.run()
@@ -1115,6 +1143,232 @@ def test_cli_resume_refuses_fake_workers_on_a_real_run(cli_ws, capsys):
 
 
 def test_cli_run_refuses_a_no_go_plan_without_fake(cli_ws, capsys):
-    rc = drv.cli_run(["--plan", str(cli_ws["plan"])])
+    rc = drv.cli_run(["--plan", str(cli_ws["plan"]), "--budget-usd", "1"])
     assert rc == 1 and "NO-GO" in capsys.readouterr().err
     assert not (cli_ws["run_dir"] / "events.jsonl").exists()
+
+
+# --------------------------------------------------------------------------- the operator's STOP file
+
+
+def test_a_stop_file_present_at_start_stops_before_any_work(tmp_path):
+    author = author_ok()
+    h = Harness(tmp_path, [seed(C1, "AUTHORING")], [author, sim_ok(), oracle_confirms()])
+    h.run_dir.mkdir(parents=True, exist_ok=True)
+    (h.run_dir / drv.STOP_FILE).write_text("", encoding="utf-8")
+    result = h.run()
+    assert result.stop.reason == "operator" and "STOP" in result.stop.detail
+    assert author.calls == [] and h.states() == {C1: "AUTHORING"}
+    assert (h.run_dir / "state.json").exists() and (h.run_dir / "report.md").exists()
+
+
+def test_a_stop_file_written_mid_run_drains_in_flight_work_and_starts_nothing_new(tmp_path):
+    # The second pilot was stopped twice with `taskkill /T /F`: in-flight
+    # attempts were lost and a stale index.lock blocked every later merge.
+    holder = {}
+
+    def author_then_stop(ctx, it):
+        (holder["run_dir"] / drv.STOP_FILE).write_text("", encoding="utf-8")
+        return StageOutcome("SIM", reason="authored", attempts=[attempt(ctx, it, "author_clause")])
+
+    author = Exec("AUTHORING", author_then_stop)
+    sim = sim_ok()
+    h = Harness(tmp_path, [seed(C1, "AUTHORING"), seed(C2, "AUTHORING")], [author, sim, oracle_confirms()])
+    holder["run_dir"] = h.run_dir
+    result = h.run()
+    assert result.stop.reason == "operator"
+    assert author.calls == [C1], "the first task completed; no new task started"
+    assert h.states()[C1] == "SIM" and h.states()[C2] == "AUTHORING"
+    assert sim.calls == [], "SIM was not started after the stop"
+
+
+def test_report_tells_how_to_land_the_verdicts_into_readiness():
+    # Rule 34: the readiness artifact is regenerated after any verdict change,
+    # and a run's verdicts only count once its tree is merged. The report says so,
+    # with the exact commands, whenever the run adjudicated anything.
+    total = {"items": 3, "confirmed": 2, "terminal": 0, "unavailable": 0, "implemented": 0,
+             "adjudicated": 2, "escalated": 0, "unmeasured": 1, "parked": 0}
+    counts = {"total": total, "clause": dict(total)}
+    stop = {"reason": "complete", "spent_usd": 1.0}
+    text = report_mod.render_report(run_id="r", counts=counts, by_state={}, stop=stop,
+                                    landing={"tree": "D:/cl-x/run", "branch": "card-loop/r/run"})
+    assert "## Landing the verdicts" in text
+    assert "card-loop/r/run" in text and "D:/cl-x/run" in text
+    assert "python -m tools.clause_coverage.readiness" in text
+    assert "--plan" in text
+    # nothing adjudicated: nothing to land, no section
+    none = {"total": dict(total, adjudicated=0, confirmed=0)}
+    assert "## Landing the verdicts" not in report_mod.render_report(
+        run_id="r", counts=none, by_state={}, stop=stop,
+        landing={"tree": "D:/cl-x/run", "branch": "card-loop/r/run"})
+    # a driver that does not manage a run tree (tests, fakes) has nothing to merge
+    assert "## Landing the verdicts" not in report_mod.render_report(
+        run_id="r", counts=counts, by_state={}, stop=stop)
+
+
+def test_cli_run_refuses_an_uncapped_real_run(cli_ws, capsys):
+    # Design D13 / open question "default budget": an unattended run must carry
+    # a cap. No budget_usd, no wall_clock_hours, no --max-attempts -> refused
+    # before any other check; --no-cap says "uncapped on purpose".
+    rc = drv.cli_run(["--plan", str(cli_ws["plan"])])
+    err = capsys.readouterr().err
+    assert rc == 2 and "cap" in err and "--no-cap" in err
+    assert not (cli_ws["run_dir"] / "events.jsonl").exists()
+    # any one cap gets past the guard to the next check (this plan is NO-GO)
+    for extra in (["--budget-usd", "5"], ["--max-attempts", "3"], ["--no-cap"]):
+        rc = drv.cli_run(["--plan", str(cli_ws["plan"]), *extra])
+        assert rc == 1 and "NO-GO" in capsys.readouterr().err, extra
+    # --fake runs are tests, never billed: exempt
+    rc = drv.cli_run(["--plan", str(cli_ws["plan"]), "--fake", str(cli_ws["canned"]), "--serial"])
+    assert rc == 0, capsys.readouterr()
+
+
+def test_the_run_exports_dcgo_fork_candidates_from_the_three_way_legs(tmp_path):
+    # Design D7: every row where DCGO is shown to disagree with the publisher's
+    # ruling is a candidate patch to our DCGO fork. The driver writes the list
+    # into the run tree at the end of the run and commits it.
+    cmds = _tree_cmds().on(("status", "dcgo_fork_candidates"), 0, "?? qa/card-loop/dcgo_fork_candidates.json\n")
+    I1 = "interaction:qa:Q1601"
+    I2 = "interaction:qa:Q1602"
+
+    def oracle(ctx, it):
+        legs = {I1: (True, False), I2: (True, True)}[it.item]
+        tw = {"verdict_hint": "ours_wrong" if not legs[1] else "confirmed", "citation_kind": "qa",
+              "dcgo_fork_candidate": not legs[1], "terminating": False,
+              "dcgo_matches_ruling": legs[1], "ours_vs_dcgo": legs[0], "ours_vs_ruling": legs[1],
+              "q_id": it.ident.split(":")[1]}
+        oracle_row = {"scenario": f"qa/dcgo-exams/BT1/{it.ident[3:]}.yaml", "verdict": "confirmed" if legs[1] else "diverged",
+                      "first_divergence": None if legs[1] else "ours contradicts ruling qa:Q1601 (ours vs DCGO: agree)"}
+        if legs[1]:
+            return StageOutcome("CONFIRMED", adjudicated=True, data={"three_way": tw, "oracle": oracle_row})
+        return StageOutcome("DIVERGED", data={"three_way": tw, "oracle": oracle_row})
+
+    tree = tmp_path / "tree"
+    h = Harness(tmp_path, [seed(I1, "ORACLE"), seed(I2, "ORACLE")], [Exec("ORACLE", oracle)],
+                run_command=cmds, repo=tree, manage_tree=True)
+    result = h.run()
+    assert h.states() == {I1: "TRIAGE", I2: "CONFIRMED"}      # DIVERGED -> TRIAGE; no triage executor: blocked
+    out = tree / "qa" / "card-loop" / "dcgo_fork_candidates.json"
+    assert out.exists(), result.problems
+    rows = json.loads(out.read_text(encoding="utf-8"))["candidates"]
+    assert [r["interaction_id"] for r in rows] == ["qa:Q1601"]
+    assert rows[0]["outcome"] == "ours_wrong" and rows[0]["citation"] == "qa:Q1601"
+    assert rows[0]["card_ids"] == ["BT1-001"] and rows[0]["scenario_path"].endswith("Q1601.yaml")
+    commits = cmds.argvs("git", "commit")
+    assert any("DCGO fork candidates" in c[c.index("-m") + 1] for c in commits), commits
+
+
+# --------------------------------------------------------------------------- the run-tree harness
+
+
+def _rust_tree(tmp_path):
+    tree = tmp_path / "tree"
+    tree.mkdir()
+    (tree / "Cargo.toml").write_text("[workspace]\n", encoding="utf-8")
+    return tree
+
+
+def test_the_driver_builds_and_pins_a_harness_from_the_run_tree(tmp_path):
+    # SIM and ORACLE must judge the RUN TREE's engine (where the loop's card
+    # fixes land). The first Data Squad pilot's harness lookup fell through to
+    # the developer checkout's binary, so a landed fix never reached the oracle
+    # and every fixed card diverged again.
+    import os
+    from tools.card_loop.stages import harness as hz
+    cmds = _tree_cmds().on(("cargo", "build"), 0)
+    tree = _rust_tree(tmp_path)
+    h = Harness(tmp_path, [seed(C1, "ORACLE")], [oracle_confirms()], run_command=cmds, repo=tree,
+                manage_tree=True)
+    result = h.run()
+    assert h.states() == {C1: "CONFIRMED"} and result.stop.reason == "complete"
+    builds = [c for c in cmds.calls if c["argv"][:2] == ["cargo", "build"]]
+    assert len(builds) == 1, "one build per session when nothing engine-side changed"
+    target = os.path.join(h.config.cargo_target_base, "tree")
+    assert builds[0]["argv"][2:] == ["-p", "dcgo-harness", "--target-dir", target]
+    assert builds[0]["cwd"] == str(tree)
+    assert h.driver.ctx.harness_bin == os.path.join(target, "debug", hz._exe("dcgo-harness"))
+    # the build ran before the first harness call
+    first_harness = next(i for i, c in enumerate(cmds.calls) if c["argv"][:2] == ["cargo", "build"])
+    oracle_calls = [i for i, c in enumerate(cmds.calls) if "--oracle" in c["argv"]]
+    assert all(first_harness < i for i in oracle_calls)
+
+
+def test_a_failed_harness_build_holds_every_sim_and_oracle_item(tmp_path):
+    cmds = _tree_cmds().on(("cargo", "build"), 101, "", "error[E0308]: mismatched types")
+    tree = _rust_tree(tmp_path)
+    oracle = oracle_confirms()
+    h = Harness(tmp_path, [seed(C1, "ORACLE")], [oracle], run_command=cmds, repo=tree, manage_tree=True)
+    result = h.run()
+    assert oracle.calls == [] and h.states() == {C1: "ORACLE"}
+    assert result.stop.reason == "blocked"
+    assert "harness" in result.blocked[C1] and "E0308" in result.blocked[C1]
+
+
+def test_a_merge_touching_the_engine_rebuilds_the_harness(tmp_path):
+    cmds = _tree_cmds().on(("cargo", "build"), 0)
+    tree = _rust_tree(tmp_path)
+    card = "card:BT1-001"
+    merger = FakeMerger(lambda: None)         # touched: code/digimon-engine/cards/x.yaml
+    h = Harness(tmp_path, [seed(card, "IMPLEMENTING")], [_impl_with_merge()], merger=merger,
+                run_command=cmds, repo=tree, manage_tree=True)
+    h.run()
+    assert merger.calls, "the implementer merged"
+    builds = [c for c in cmds.calls if c["argv"][:2] == ["cargo", "build"]]
+    assert len(builds) == 2, "session start + after the merge that changed a card spec"
+
+
+def test_a_tree_without_cargo_metadata_is_not_built():
+    # fakes / tests run the driver against a bare directory: nothing to build,
+    # the lookup stays as it was
+    assert drv.harness_inputs_touched(["qa/dcgo-exams/BT1/x.yaml", "qa/card-loop/attempts.jsonl"]) is False
+    assert drv.harness_inputs_touched(["code/digimon-engine/cards/bt26/BT26-005.yaml"]) is True
+    assert drv.harness_inputs_touched(["code/digimon-dsl/src/lower.rs"]) is True
+    assert drv.harness_inputs_touched(["code/tools/dcgo-harness/src/exam/oracle.rs", "docs/x.md"]) is True
+    assert drv.harness_inputs_touched(["Cargo.lock"]) is True
+
+
+# --------------------------------------------------------------------------- a systemic executor error
+
+
+def test_the_same_executor_error_on_item_after_item_stops_the_run(tmp_path):
+    # Data Squad pilot 2026-10-07: one worker-pool fault failed 79 items one by
+    # one ("WinError 32 ... card-loop-0") and the run then reported "blocked",
+    # which reads like finished work. The same error on item after item is the
+    # infrastructure, not the items: stop and say so.
+    items = [f"clause:BT1-001#effect#{i}" for i in range(8)]
+
+    def boom(ctx, it):
+        raise PermissionError("[WinError 32] being used by another process: 'D:\\cl-ds\\card-loop-0'")
+
+    h = Harness(tmp_path, [seed(i, "AUTHORING") for i in items], [Exec("AUTHORING", boom)])
+    result = h.run()
+    assert result.stop.reason == "error"
+    assert "5 items in a row" in result.stop.detail and "WinError 32" in result.stop.detail
+    assert len(result.failed) == 5, "the run stops instead of failing the rest"
+
+
+def test_a_success_between_identical_errors_resets_the_streak(tmp_path):
+    items = [f"clause:BT1-001#effect#{i}" for i in range(9)]
+
+    def mixed(ctx, it):
+        if it.item.endswith("#4"):
+            return StageOutcome("SIM", attempts=[attempt(ctx, it, "author_clause")])
+        raise RuntimeError("same failure")
+
+    h = Harness(tmp_path, [seed(i, "AUTHORING") for i in items],
+                [Exec("AUTHORING", mixed), sim_ok(), oracle_confirms()])
+    result = h.run()
+    assert result.stop.reason != "error"
+    assert len(result.failed) == 8
+
+
+def test_worker_pool_incidents_reach_the_report(tmp_path):
+    class Pool:
+        incidents = ["card-loop-0: reset failed (index.lock exists); recreating"]
+
+        def close(self, **kw):
+            pass
+
+    h = Harness(tmp_path, [seed(C1, "ORACLE")], [oracle_confirms()], pool=Pool())
+    result = h.run()
+    assert any(p.startswith("worker pool: card-loop-0: reset failed") for p in result.problems)

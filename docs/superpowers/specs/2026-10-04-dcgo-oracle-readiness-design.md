@@ -185,6 +185,12 @@ are `ours_wrong` (§15-8-3-2).
   `unmeasured` and blocks.
 - `not_ready` — otherwise, with counts by verdict class and the blocking clause ids.
 - Vanilla cards (no effect, inherited, or security text) are `ready` by construction.
+- **Extended 2026-10-06 (artifact `version: 2`, card-loop change D9):** `ready` also
+  requires every *gating interaction* of the card (`data/interaction_denominator.json`:
+  official Q&A rulings + promoted probe families) to be adjudicated under the same
+  rule; `blocking` then also names interaction ids, and a card absent from the
+  denominator blocks with `<id>#denominator#missing`. `--clause-only` writes the
+  pre-extension view for reports and is refused by `--check`.
 
 A card's verdicts are invalidated by the existing `text_sha256` drift rule, so a text
 change drops it back to `not_ready` automatically.

@@ -123,6 +123,16 @@ describe('deck builder view helpers', () => {
     expect(filterBuilderCards([target], filters({ type: 'all', level: 'all', rarity: 'all' }))).toEqual([target]);
   });
 
+  it('searches a link card by its link effect, which is not an inherited effect', () => {
+    const gatchmon = card({
+      name: 'Gatchmon',
+      cardnumber: 'BT21-009',
+      linkeffect: '＜Raid＞ (When this Digimon attacks, you may change the attack target.)',
+    });
+    expect(filterBuilderCards([gatchmon], filters({ search: 'attack target' }))).toEqual([gatchmon]);
+    expect(filterBuilderCards([gatchmon], filters({ inheritedOnly: true }))).toEqual([]);
+  });
+
   it('matches the intersection (AND) of selected colors across primary and secondary', () => {
     const monoGreen = card({ cardnumber: 'BT1-100', name: 'Mono Green', color: 'Green' });
     const monoBlue = card({ cardnumber: 'BT1-101', name: 'Mono Blue', color: 'Blue' });

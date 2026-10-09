@@ -96,8 +96,16 @@ pub struct PredicateSpec {
     /// G-DSL-TRAIT-CONTAINS-SUBSTRING. Driver: EX3-014 Dorbickmon.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trait_contains: Option<String>,
+    /// The subject has this trait, named for the Form line it is printed on.
+    /// A form is a trait (general_rule.pdf 2-3-2-1) and printed text names
+    /// one only as "the [X] trait", so this matches exactly like `trait_has`
+    /// (`ChangeTraits` overlays included).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub form_is: Option<String>,
+    /// The subject has this trait, named for the Attribute line it is printed
+    /// on ("[Free] trait"). Matches exactly like `trait_has` (`ChangeTraits`
+    /// overlays included): an attribute is a trait (general_rule.pdf
+    /// 2-3-2-1). Driver: BT16-077 / EX3-008.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attribute_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

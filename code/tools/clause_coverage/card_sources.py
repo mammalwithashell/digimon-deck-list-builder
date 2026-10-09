@@ -414,6 +414,12 @@ def extract_card_clauses(
         if option_text.strip():
             add("effect", "dual.option.effect_text", option_text, "cards_json")
 
+    # A link card's link box: face text like the bundle path's "Link Effect"
+    # section, which `_LABEL_TO_ZONE` zones as "effect" too.
+    link_text = record.get("link_effect_description_eng") or ""
+    if link_text.strip():
+        add("effect", "link_effect_description_eng", link_text, source_for("link_effect_description_eng"))
+
     if kind in _KINDS_WITH_INHERITED_ZONE:
         inherited_text = record.get("inherited_effect_description_eng") or ""
         if inherited_text.strip():

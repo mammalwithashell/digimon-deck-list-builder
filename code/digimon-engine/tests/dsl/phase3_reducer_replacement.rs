@@ -75,7 +75,7 @@ fn compiled_replacement_card(
         dp: Some(1000),
         traits: vec![],
         form: None,
-        attribute: None,
+        attribute: Vec::new(),
         ace_overflow: None,
         identity: None,
         digixros_aliases: Vec::new(),

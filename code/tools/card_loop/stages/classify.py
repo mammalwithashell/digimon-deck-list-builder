@@ -4,7 +4,8 @@ the same packet (`interactions.packets.independent_pair`), decided by
 `packets.agree_classification`.
 
     probe:<...>                         -> AUTHORING (probes need no classification)
-    behavioral from either family       -> ENCODE (examining is not terminating)
+    behavioral from either family       -> AUTHORING (examining is not terminating); the
+                                           ruling is encoded against the authored line
     both textual / both not_examinable,
       each citing qa:<Q>                -> TERMINATION_CHECK, the agreement recorded in
                                            data["termination"] (TERMINATION_CHECK finalises
@@ -83,9 +84,9 @@ class ClassifyExecutor:
         classification = {"q_id": q, "calls": {c.family: c.output.get("classification") for c in calls},
                           "examined_clauses": examined, "agreed": agreement.agreed}
         if agreement.value == "behavioral":
-            return base.outcome("ENCODE", item=item, attempts=attempts, corrections=corrections,
+            return base.outcome("AUTHORING", item=item, attempts=attempts, corrections=corrections,
                                 data={"classification": classification},
-                                reason="behavioral: encode the ruling, then examine it")
+                                reason="behavioral: author the line, then encode the ruling against it")
         cites = [a.get("citation"), b.get("citation")]
         termination = {"agreed": True, "stage": STAGE, "terminal": agreement.value, "citation": cites[0],
                        "citations": cites, "arguments": args}

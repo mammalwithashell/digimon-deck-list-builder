@@ -1,20 +1,28 @@
 {
+  "index": 4185,
+  "norm_id": 0.20925,
   "card_id": "BT25-101",
+  "card_index": 101,
   "card_name_eng": "Divine Arms Version Ω",
-  "card_kind": 2,
-  "level": null,
-  "dp": null,
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT25_101",
   "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
   "card_colors": [
     5
   ],
   "type_eng": [
     "TS"
   ],
-  "evo_costs": [],
-  "dna_costs": null,
+  "form_eng": [],
   "attribute_eng": [],
   "effect_description_eng": "＜Use Req. ([TS] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Security] Activate this card's [Main] effects.\r\n[Main] By trashing 1 [TS] trait card from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) After, you may link this card or 1 [TS] trait card from your trash to 1 of your Digimon on the field without paying the cost.",
-  "inherited_effect_description_eng": "＜Security A. +1＞\r\n\r\n[All Turns] When this would leave the battle area, by trashing 1 of its link cards, it doesn't leave.",
-  "security_effect_description_eng": ""
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "",
+  "link_effect_description_eng": "＜Security A. +1＞ ＜Reboot＞ [All Turns] When this [Vulcanusmon] would leave the battle area, by trashing 1 of its link cards, it doesn't leave."
 }

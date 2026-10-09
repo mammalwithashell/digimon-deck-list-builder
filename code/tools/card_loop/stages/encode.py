@@ -5,18 +5,24 @@ the other (the verifier sees the candidate block, never the author's quote or
 reasoning), decided by `packets.agree_encoding`.
 
     probe:<...>                     -> AUTHORING (nothing to encode)
-    verifier agrees                 -> AUTHORING, data["expect_ruling"] (scenario-ready)
-                                       and data["base_scenario"] (the line its `at:` counts on)
-    verifier disagrees              -> ESCALATED with both arguments
+    verifier agrees                 -> SIM, data["expect_ruling"] (the sim step writes it into
+                                       the line) and data["base_scenario"] (the line its `at:`
+                                       counts on); AUTHORING for an item with no line yet
+    the line misses the ruling      -> AUTHORING with the objection (data["encode_feedback"]):
+      (encoder or verifier says so)    the author reworks the line
+    verifier rejects the block      -> ENCODE again with the objection; the stage cap bounds it
+    verifier disagrees, no line     -> ESCALATED with both arguments (the earlier order)
     a family unavailable            -> ESCALATED (single family, D5)
-    the author's block is malformed -> StageDeferred, `gate_fail` (encode_validate)
+    the author's block is malformed -> ENCODE again, `gate_fail` (encode_validate);
+                                       the `encode_ruling` attempt cap bounds the retries
     a call failed                   -> StageDeferred
 
-The block's `at:` steps index a scenario line, and the contract puts ENCODE
-before AUTHORING, so the encoding is anchored on a BASE line: an explicit
+The block's `at:` steps index the AUTHORED line (`data["scenario_paths"]`):
+the second pilot encoded against library lines that never reached the
+ruling's situation and 60% of those encodings escalated. An item from before
+that reorder (no line yet) still anchors on a BASE line: an explicit
 `data["base_scenario"]`, else the library scenario of a clause the ruling is
-about (the interaction author extends it, D7/spec "where possible ... extend an
-oracle-confirmed clause line"), else the interaction's planned path, empty.
+about, else the interaction's planned path, empty.
 """
 from __future__ import annotations
 
@@ -62,26 +68,45 @@ class EncodeExecutor:
         qa = base.card_qa(ctx)
         cards = base.interaction_cards(ctx, iid)
         clauses = base.clauses_for(ctx, cards)
-        path, text, how = base_line(ctx, item, iid, cards)
+        # The authored line, when the item has one: the block anchors on steps
+        # that exercise the ruling. Items from the earlier order (block before
+        # line) still anchor on a library line.
+        authored = next((p for p in (item.data.get("scenario_paths") or []) if base.repo_path(ctx, p).is_file()), None)
+        if authored:
+            path, text, how = authored, base.repo_path(ctx, authored).read_text(encoding="utf-8"), "authored"
+        else:
+            path, text, how = base_line(ctx, item, iid, cards)
         version = prompts.version(STAGE)
+        feedback = item.data.get("encode_feedback")
 
         author_family, assignment = base.routed_family(ctx, STAGE, item)
-        pa = packets.encode_ruling_inputs(q, qa, clauses, scenario_path=path, scenario_yaml=text, mode="author")
+        pa = packets.encode_ruling_inputs(q, qa, clauses, scenario_path=path, scenario_yaml=text, mode="author",
+                                          feedback=feedback)
         ca = base.run_packet(ctx, item, self._packet(ctx, pa, author_family, version), assignment=assignment)
         if ca.result.status == "quota_exhausted":
             return single_family(item, STAGE, [author_family], [ca.attempt(ctx)])
         if not ca.ok:
             raise base.defer_failed(ctx, item, [ca])
+        if how == "authored" and ca.output.get("line_exercises_ruling") is False and not ca.output.get("expect_ruling"):
+            # The encoder read the line and found no step at which the ruling's
+            # situation happens: the line's fault, not an encoding failure.
+            why = f"{author_family} (encoder): {ca.output.get('reasoning', '')}"
+            return base.outcome("AUTHORING", item=item, attempts=[ca.attempt(ctx, outcome="accepted")],
+                                data={"expect_ruling": None, "encode_feedback": why, "base_scenario": path,
+                                      "history": base.history(item, ca.attempt_id)},
+                                reason=f"the line does not exercise {q}: {ca.output.get('reasoning', '')[:200]}")
         problems = packets.validate_encode_result(ca.output, "author")
         if problems:
+            # The author's correction, not infrastructure: the item stays in
+            # ENCODE for another call (the stage cap bounds it). Deferring here
+            # escalated Q2671 after one malformed reply in the second pilot.
             detail = "; ".join(problems)
-            outcome = StageOutcome(
+            return StageOutcome(
                 next_state=item.state, reason=f"malformed expect_ruling block: {detail}",
                 attempts=[ca.attempt(ctx, outcome="gate_failed")],
                 corrections=[corr.gate_fail(ca.attempt_id, gate="encode_validate", stage=STAGE,
                                             item=item.item, detail=detail[:2000], ts=ctx.now())],
                 data={"history": base.history(item, ca.attempt_id)})
-            raise base.StageDeferred(outcome.reason, outcome)
 
         verifier = other_family(author_family)
         pv = packets.encode_ruling_inputs(q, qa, clauses, scenario_path=path, scenario_yaml=text, mode="verify",
@@ -103,17 +128,33 @@ class EncodeExecutor:
             reason = "; ".join(agreement.reasons) or "the encoding was not agreed"
             corrections = corr.family_disagreement((ca.attempt_id, "encoded"), (cv.attempt_id, "not_encoded"),
                                                    stage=STAGE, item=item.item, ts=ctx.now())
+            if how == "authored":
+                # With a real line the disagreement is actionable: the line never
+                # reaches the ruling (back to its author with the objection) or
+                # the block misses (re-encode, under the stage cap). Escalation
+                # is the cap's, not the first disagreement's.
+                why = (f"{verifier} (verifier): {cv.output.get('reasoning', '')} | quote: "
+                       f"{cv.output.get('answer_quote', '')}")
+                attempts = [ca.attempt(ctx, outcome="gate_failed"),
+                            cv.attempt(ctx, outcome="accepted", parent=ca.attempt_id)]
+                data = {"expect_ruling": None, "encode_feedback": why, "base_scenario": path,
+                        "history": base.history(item, ca.attempt_id, cv.attempt_id)}
+                if cv.output.get("line_exercises_ruling") is False:
+                    return base.outcome("AUTHORING", item=item, attempts=attempts, corrections=corrections, data=data,
+                                        reason=f"the line does not exercise {q}: {cv.output.get('reasoning', '')[:200]}")
+                return base.outcome("ENCODE", item=item, attempts=attempts, corrections=corrections, data=data,
+                                    reason=f"{verifier} rejected the encoding of {q}; re-encoding against the line")
             return base.outcome("ESCALATED", item=item, reason=reason, corrections=corrections,
                                 attempts=[ca.attempt(ctx, outcome="escalated"),
                                           cv.attempt(ctx, outcome="escalated", parent=ca.attempt_id)],
                                 escalation=base.escalation(item, reason, args,
                                                            extra_history=[ca.attempt_id, cv.attempt_id]))
         return base.outcome(
-            "AUTHORING", item=item,
+            "SIM" if how == "authored" else "AUTHORING", item=item,
             attempts=[ca.attempt(ctx, outcome="accepted"), cv.attempt(ctx, outcome="accepted", parent=ca.attempt_id)],
             data={"expect_ruling": packets.expect_ruling_block(ca.output),
                   "base_scenario": path if how != "planned" else None,
-                  "encode_attempts": [ca.attempt_id, cv.attempt_id]},
+                  "encode_attempts": [ca.attempt_id, cv.attempt_id], "encode_feedback": None},
             reason=f"{author_family} encoded {q}; {verifier} verified it blind")
 
     def _packet(self, ctx, p: packets.PacketInputs, family: str, version: str):

@@ -1,4 +1,4 @@
-version: 1
+version: 2
 # Implement {card_name} ({card_id}) as a YAML DSL card
 
 You are one stateless worker in the card-authoring loop. Do exactly this task in
@@ -35,3 +35,9 @@ skills and do not spawn sub-agents.
 ## Result
 Return only JSON matching the `implement` schema:
 `{"files": [repo-relative paths], "tests": [test names], "test_result_lines": [verbatim lines], "gaps": [{"kind": "dsl" or "engine", "id": "...", "summary": "..."}], "notes": "..."}`
+
+## Worktree hygiene
+
+Keep scratch out of the worktree: write temporary files (notes, probes, helper
+scripts) under the system temp directory, never inside the repository. Only
+the files you deliver may be left behind; anything else is dropped at merge.

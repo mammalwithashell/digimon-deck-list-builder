@@ -91,8 +91,9 @@ def test_failed_official_lookup_with_printed_text_is_not_ready(tmp_path):
     # LM-057's official-mirror entry is a failed-lookup skeleton (no colors, no
     # sections), so extraction yields zero clauses -- yet the card prints an
     # effect and a security effect. A true vanilla (ST1-02) stays ready.
+    den = _denominator(tmp_path / "d.json", {}, {"LM-057": [], "ST1-02": []})
     data = build_readiness(["LM-057", "ST1-02"], scenarios_dir=tmp_path / "none",
-                           verdicts_dir=tmp_path / "none")
+                           verdicts_dir=tmp_path / "none", denominator_path=den)
     assert data["cards"]["LM-057"]["status"] == "not_ready"
     assert data["cards"]["LM-057"]["blocking"] == ["LM-057#extraction#unresolved"]
     assert data["cards"]["ST1-02"]["status"] == "ready"
@@ -108,8 +109,9 @@ def test_build_readiness_is_deterministic_and_summarised(tmp_path):
         }
         return {"cards": {c: cards[c] for c in card_ids}}
 
+    den = _denominator(tmp_path / "d.json", {}, {"A": [], "B": []})
     data = build_readiness(["B", "A", "B"], scenarios_dir=tmp_path, verdicts_dir=tmp_path,
-                           bind_fn=fake_bind)
+                           bind_fn=fake_bind, denominator_path=den)
     assert list(data["cards"]) == ["A", "B"]
     assert data["summary"] == {"not_ready": 1, "ready": 1}
     assert render(data) == render(json.loads(render(data)))
@@ -147,7 +149,8 @@ def test_build_readiness_extracts_with_dcgo_disabled_and_restores_the_env(tmp_pa
         seen["env"] = os.environ.get("DIGIMON_DCGO_ROOT")
         return {"cards": {}}
 
-    build_readiness([], scenarios_dir=tmp_path, verdicts_dir=tmp_path, bind_fn=fake_bind)
+    build_readiness([], scenarios_dir=tmp_path, verdicts_dir=tmp_path, bind_fn=fake_bind,
+                    denominator_path=_denominator(tmp_path / "d.json", {}, {}))
     assert seen["env"] == ""
     assert os.environ["DIGIMON_DCGO_ROOT"] == "/some/dcgo"
 
@@ -174,12 +177,15 @@ def test_real_bind_admits_adjudicated_clauses_and_drops_a_text_drifted_card(tmp_
                                             encoding="utf-8")
         return store
 
+    den = _denominator(tmp_path / "d.json", {}, {card: []})
     ok = write_store(lambda c: clause_text_sha256(c["text"]))
-    data = build_readiness([card], scenarios_dir=tmp_path / "none", verdicts_dir=ok)
+    data = build_readiness([card], scenarios_dir=tmp_path / "none", verdicts_dir=ok,
+                           denominator_path=den)
     assert data["cards"][card]["status"] == "ready"
 
     drifted = write_store(lambda c: "0" * 64)
-    data = build_readiness([card], scenarios_dir=tmp_path / "none", verdicts_dir=drifted)
+    data = build_readiness([card], scenarios_dir=tmp_path / "none", verdicts_dir=drifted,
+                           denominator_path=den)
     assert data["cards"][card]["status"] == "not_ready"
     assert data["cards"][card]["blocking"] == sorted(c["id"] for c in clauses)
 
@@ -252,10 +258,11 @@ def _cli_inputs(tmp_path, cards):
     tested.write_text(json.dumps({"card_ids": cards}), encoding="utf-8")
     ledger = tmp_path / "ledger.json"
     ledger.write_text(json.dumps({"cards": {}}), encoding="utf-8")
+    den = _denominator(tmp_path / "den.json", {}, {c: [] for c in cards})
     return [
         "--library", str(lib), "--verdicts", str(tmp_path / "verdicts"),
         "--scenarios", str(tmp_path / "scenarios"), "--out", str(tmp_path / "out.json"),
-        "--tested", str(tested), "--ledger", str(ledger),
+        "--tested", str(tested), "--ledger", str(ledger), "--denominator", str(den),
     ]
 
 
@@ -284,3 +291,195 @@ def test_cli_plan_json_ranks_from_the_artifact(tmp_path, capsys):
     plan = json.loads(capsys.readouterr().out)
     assert plan["decklists_considered"] == 1
     assert [p["card_id"] for p in plan["picks"]] == ["EX10-025"]
+
+
+# --- group 7: every gating interaction must be adjudicated (design D9) ------------
+
+from tools.clause_coverage.exam_binding import write_interaction_verdict
+from tools.clause_coverage.readiness import interaction_is_adjudicated
+
+
+def _irow(iid, verdict, **extra):
+    row = {"interaction_id": iid, "source": "qa", "kind": "positive", "gating": True,
+           "verdict": verdict, "invalidated": False, "reason": None, "triage": None,
+           "citation": None, "scenario_path": None}
+    row.update(extra)
+    return row
+
+
+@pytest.mark.parametrize(
+    "row, expected",
+    [
+        (_irow("qa:Q1", "confirmed"), True),
+        (_irow("qa:Q1", "unreachable", reason="tournament procedure, no legal line"), True),
+        (_irow("qa:Q1", "unreachable"), False),
+        (_irow("qa:Q1", "unavailable", reason="textual: adjudicated from card data"), True),
+        (_irow("qa:Q1", "unavailable", reason="  "), False),
+        (_irow("qa:Q1", "diverged", triage="dcgo_quirk", citation="qa:Q1"), True),
+        (_irow("qa:Q1", "diverged", triage="dcgo_quirk"), False),
+        (_irow("qa:Q1", "diverged", triage="ours_wrong", citation="qa:Q1"), False),
+        # an escalated interaction has no ending in the store: unmeasured, or
+        # diverged with an undetermined triage -- neither counts
+        (_irow("qa:Q1", "diverged", triage="undetermined"), False),
+        (_irow("qa:Q1", "diverged"), False),
+        (_irow("qa:Q1", "unmeasured"), False),
+    ],
+)
+def test_interaction_rules_mirror_the_clause_rules(row, expected):
+    assert interaction_is_adjudicated(row) is expected
+
+
+def _denominator(path, interactions, cards):
+    path.write_text(json.dumps({"version": 1, "cards": cards, "interactions": interactions}),
+                    encoding="utf-8")
+    return path
+
+
+def _qa(cards, sha="r", gating=True):
+    return {"source": "qa", "card_ids": list(cards), "kind": "positive", "gating": gating,
+            "text_sha256": sha}
+
+
+def _iv(iid, cards, verdict="confirmed", sha="r", **kw):
+    return {"interaction_id": iid, "card_ids": list(cards), "source": iid.split(":")[0],
+            "kind": "positive", "verdict": verdict, "text_sha256": sha,
+            "recorded_at": "2026-10-06T00:00:00Z", **kw}
+
+
+def _confirmed_bind(clauses_by_card):
+    def fake_bind(card_ids, scenarios_dir, verdicts_path, *, source_desc=None):
+        return {"cards": {
+            c: {"card_id": c, "total_clauses": len(clauses_by_card.get(c, [])),
+                "by_verdict": {"confirmed": len(clauses_by_card.get(c, []))},
+                "clauses": [_clause(x, "confirmed") for x in clauses_by_card.get(c, [])]}
+            for c in card_ids}}
+    return fake_bind
+
+
+def _ready(tmp_path, cards, den, clauses_by_card, **kw):
+    return build_readiness(cards, scenarios_dir=tmp_path, verdicts_dir=tmp_path / "v",
+                           bind_fn=_confirmed_bind(clauses_by_card), denominator_path=den, **kw)
+
+
+def test_unexamined_ruling_blocks_a_card_whose_clauses_are_all_confirmed(tmp_path):
+    # spec "Unexamined ruling blocks readiness"
+    den = _denominator(tmp_path / "d.json", {"qa:Q7": _qa(["A"])}, {"A": ["qa:Q7"]})
+    data = _ready(tmp_path, ["A"], den, {"A": ["A#effect#0"]})
+    card = data["cards"]["A"]
+    assert card["status"] == "not_ready"
+    assert card["blocking"] == ["qa:Q7"]
+    assert card["total_interactions"] == 1
+    assert card["by_interaction_verdict"]["unmeasured"] == 1
+    assert data["interactions"] == {"gating_total": 1, "by_verdict": {
+        "confirmed": 0, "diverged": 0, "unavailable": 0, "unmeasured": 1, "unreachable": 0}}
+
+
+def test_shared_ruling_confirmed_once_counts_for_both_cards(tmp_path):
+    # spec "Shared ruling adjudicated once"
+    den = _denominator(tmp_path / "d.json", {"qa:Q7": _qa(["A", "B"])},
+                       {"A": ["qa:Q7"], "B": ["qa:Q7"]})
+    write_interaction_verdict(tmp_path / "v", _iv("qa:Q7", ["A", "B"]))
+    data = _ready(tmp_path, ["A", "B"], den, {"A": ["A#effect#0"], "B": ["B#effect#0"]})
+    assert {c: s["status"] for c, s in data["cards"].items()} == {"A": "ready", "B": "ready"}
+    assert data["interactions"]["gating_total"] == 1
+
+
+def test_escalated_interactions_do_not_count(tmp_path):
+    # An escalation writes no ending: qa:Q7 stays unmeasured; a diverged row
+    # triaged undetermined (the state an escalated divergence is left in) blocks too.
+    den = _denominator(tmp_path / "d.json", {"qa:Q7": _qa(["A"]), "qa:Q8": _qa(["A"])},
+                       {"A": ["qa:Q7", "qa:Q8"]})
+    write_interaction_verdict(tmp_path / "v", _iv("qa:Q8", ["A"], verdict="diverged",
+                                                  triage="undetermined"))
+    data = _ready(tmp_path, ["A"], den, {"A": ["A#effect#0"]})
+    assert data["cards"]["A"]["status"] == "not_ready"
+    assert data["cards"]["A"]["blocking"] == ["qa:Q7", "qa:Q8"]
+
+
+def test_cited_dcgo_quirk_and_reasoned_endings_adjudicate_interactions(tmp_path):
+    den = _denominator(tmp_path / "d.json",
+                       {"qa:Q7": _qa(["A"]), "qa:Q8": _qa(["A"]), "qa:Q9": _qa(["A"])},
+                       {"A": ["qa:Q7", "qa:Q8", "qa:Q9"]})
+    v = tmp_path / "v"
+    write_interaction_verdict(v, _iv("qa:Q7", ["A"], verdict="diverged", triage="dcgo_quirk",
+                                     citation="qa:Q7"))
+    write_interaction_verdict(v, _iv("qa:Q8", ["A"], verdict="unreachable", reason="procedure"))
+    write_interaction_verdict(v, _iv("qa:Q9", ["A"], verdict="unavailable", reason="textual"))
+    data = _ready(tmp_path, ["A"], den, {"A": ["A#effect#0"]})
+    assert data["cards"]["A"]["status"] == "ready"
+    assert data["cards"]["A"]["blocking"] == []
+
+
+def test_clause_blockers_come_before_interaction_blockers(tmp_path):
+    den = _denominator(tmp_path / "d.json", {"qa:Q7": _qa(["A"])}, {"A": ["qa:Q7"]})
+
+    def fake_bind(card_ids, scenarios_dir, verdicts_path, *, source_desc=None):
+        return {"cards": {"A": {"card_id": "A", "total_clauses": 1, "by_verdict": {"unmeasured": 1},
+                               "clauses": [_clause("A#effect#0", "unmeasured")]}}}
+
+    data = build_readiness(["A"], scenarios_dir=tmp_path, verdicts_dir=tmp_path / "v",
+                           bind_fn=fake_bind, denominator_path=den)
+    assert data["cards"]["A"]["blocking"] == ["A#effect#0", "qa:Q7"]
+
+
+def test_non_gating_probe_and_a_card_with_no_interactions_do_not_block(tmp_path):
+    den = _denominator(tmp_path / "d.json",
+                       {"probe:A#effect#0:timing_gate": {"source": "probe", "card_ids": ["A"],
+                                                         "kind": "negative", "gating": False,
+                                                         "text_sha256": "c"}},
+                       {"A": ["probe:A#effect#0:timing_gate"], "V": []})
+    data = _ready(tmp_path, ["A", "V"], den, {"A": ["A#effect#0"]}, vanilla_fn=lambda c: True)
+    assert {c: s["status"] for c, s in data["cards"].items()} == {"A": "ready", "V": "ready"}
+    assert data["cards"]["A"]["total_interactions"] == 0
+
+
+def test_a_card_missing_from_the_denominator_fails_closed(tmp_path):
+    # The denominator lists every card it considered (`[]` = none); a card it
+    # never saw is not "no interactions" but a stale denominator.
+    den = _denominator(tmp_path / "d.json", {}, {"A": []})
+    data = _ready(tmp_path, ["A", "Z"], den, {"A": ["A#effect#0"], "Z": ["Z#effect#0"]})
+    assert data["cards"]["A"]["status"] == "ready"
+    assert data["cards"]["Z"]["status"] == "not_ready"
+    assert data["cards"]["Z"]["blocking"] == ["Z#denominator#missing"]
+
+
+def test_a_text_drifted_interaction_verdict_blocks(tmp_path):
+    den = _denominator(tmp_path / "d.json", {"qa:Q7": _qa(["A"], sha="new")}, {"A": ["qa:Q7"]})
+    write_interaction_verdict(tmp_path / "v", _iv("qa:Q7", ["A"], sha="old"))
+    data = _ready(tmp_path, ["A"], den, {"A": ["A#effect#0"]})
+    assert data["cards"]["A"]["blocking"] == ["qa:Q7"]
+    assert data["cards"]["A"]["by_interaction_verdict"]["unmeasured"] == 1
+
+
+def test_a_missing_denominator_file_refuses_rather_than_reading_as_clear(tmp_path):
+    with pytest.raises(FileNotFoundError, match="not generated"):
+        _ready(tmp_path, ["A"], tmp_path / "missing.json", {"A": ["A#effect#0"]})
+
+
+def test_clause_only_view_is_marked_and_skips_the_join(tmp_path):
+    den = _denominator(tmp_path / "d.json", {"qa:Q7": _qa(["A"])}, {"A": ["qa:Q7"]})
+    full = _ready(tmp_path, ["A"], den, {"A": ["A#effect#0"]})
+    view = _ready(tmp_path, ["A"], den, {"A": ["A#effect#0"]}, clause_only=True)
+    assert full["gating"] == ["clauses", "interactions"]
+    assert full["cards"]["A"]["status"] == "not_ready"
+    assert view["gating"] == ["clauses"]
+    assert view["cards"]["A"]["status"] == "ready"
+    assert "interactions" not in view
+
+
+def test_cli_clause_only_is_a_report_view_never_the_checked_artifact(tmp_path, capsys):
+    args = _cli_inputs(tmp_path, ["EX10-025"])
+    den = _denominator(tmp_path / "den.json", {"qa:Q7": _qa(["EX10-025"])},
+                       {"EX10-025": ["qa:Q7"]})
+    args[args.index("--denominator") + 1] = str(den)
+    assert main(args) == 0
+    full = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
+    assert "qa:Q7" in full["cards"]["EX10-025"]["blocking"]
+    assert main(["--check", "--clause-only", *args]) == 2
+    assert "clause-only" in capsys.readouterr().err
+    view = tmp_path / "view.json"
+    view_args = [str(view) if a == str(tmp_path / "out.json") else a for a in args]
+    assert main(["--clause-only", *view_args]) == 0
+    data = json.loads(view.read_text(encoding="utf-8"))
+    assert data["gating"] == ["clauses"]
+    assert "qa:Q7" not in data["cards"]["EX10-025"]["blocking"]

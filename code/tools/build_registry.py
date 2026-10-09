@@ -27,6 +27,7 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 from data_paths import CARDS_JSON as _CARDS_JSON_PATH  # noqa: E402
+from tools.ingest_cards import normalize_link_box  # noqa: E402
 
 REGISTRY_CAPACITY = 20_000
 
@@ -152,7 +153,7 @@ def convert_card(api_card, index, norm_id):
 
     class_name = card_id.replace("-", "_")
 
-    return {
+    out = {
         "index": index,
         "norm_id": norm_id,
         "card_id": card_id,
@@ -175,6 +176,9 @@ def convert_card(api_card, index, norm_id):
         "evo_costs": parse_evo_costs(api_card),
         "xros_req": api_card.get("xros_req") or "",
     }
+    # A link card's `source_effect` is its link effect, not an inherited effect.
+    normalize_link_box(out, api_card)
+    return out
 
 
 def fetch_set(set_id):

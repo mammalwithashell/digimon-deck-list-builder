@@ -37,7 +37,7 @@ def _default_models() -> dict:
 def _default_attempt_caps() -> dict:
     return {"implement": 3, "author_clause": 3, "author_interaction": 3,
             "fix_card": 2, "fix_engine": 2, "triage": 1, "classify_qa": 1,
-            "encode_ruling": 1, "review": 1}
+            "encode_ruling": 2, "review": 1}
 
 
 def _default_prices() -> dict:
@@ -54,6 +54,9 @@ class LoopConfig:
     concurrency: int = 3
     worktree_pool_size: int = 3
     plateau_attempts: int = 10
+    # The same executor error on this many items in a row stops the run with
+    # reason "error": it is the infrastructure, not the items (0 = never).
+    executor_error_streak: int = 5
     routing_min_samples: int = 30
     late_correction_weight: float = 3.0
     seed: int = 0

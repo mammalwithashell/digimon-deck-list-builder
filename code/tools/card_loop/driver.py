@@ -133,8 +133,11 @@ CAP_RESETS = {
     "implement": ("review",),
     "fix_card": ("triage", ORACLE_RETRY_KEY),
     "fix_engine": ("triage", ORACLE_RETRY_KEY),
-    "author_clause": (ORACLE_RETRY_KEY,),
-    "author_interaction": (ORACLE_RETRY_KEY,),
+    # A re-authored line is a new exam: its encoding, oracle trips and triage
+    # start over (the second pilot's `scenario_wrong` round trips died on
+    # `triage 1/1` and `encode_ruling 2/2` caps spent by the earlier line).
+    "author_clause": ("triage", ORACLE_RETRY_KEY),
+    "author_interaction": ("triage", "encode_ruling", ORACLE_RETRY_KEY),
 }
 #: An item that takes this many consecutive executor steps with no worker
 #: attempt and no adjudication is set aside for the session (an executor loop
@@ -143,6 +146,9 @@ CAP_RESETS = {
 MAX_IDLE_STEPS = 25
 FAKE_DIR = "fake"
 REPORT_NAME = "report.md"
+#: Touch this file in the run dir to stop a running driver gracefully (in-flight
+#: work drains, state and report are written); `resume` refuses while it exists.
+STOP_FILE = "STOP"
 ALL_STATES = frozenset(s for states in STATES_BY_KIND.values() for s in states)
 
 # Run-tree management (`manage_tree=True`; the CLI turns it on for a run tree).
@@ -346,6 +352,24 @@ def default_run_command(argv, cwd, timeout):
     return p.returncode, p.stdout, p.stderr
 
 
+#: Run-tree paths whose change changes what `dcgo-harness` embeds (the engine
+#: and its compiled card specs) or the harness itself -- a merge touching one
+#: rebuilds the run tree's harness before the next SIM / ORACLE call.
+HARNESS_INPUT_PREFIXES = ("code/digimon-engine/", "code/digimon-dsl/", "code/tools/dcgo-harness/")
+HARNESS_INPUT_FILES = ("Cargo.toml", "Cargo.lock")
+#: Stages that run the harness binary against the run tree's engine.
+HARNESS_STATES = frozenset({"SIM", "ORACLE"})
+
+
+def harness_inputs_touched(paths) -> bool:
+    """Whether any of `paths` (repo-relative) changes the harness's embedded engine."""
+    for p in paths or ():
+        s = str(p).replace("\\", "/").lstrip("./")
+        if s in HARNESS_INPUT_FILES or s.startswith(HARNESS_INPUT_PREFIXES):
+            return True
+    return False
+
+
 @dataclass
 class DriverContext:
     """`driver_contracts.RunContext` as a concrete object."""
@@ -376,7 +400,7 @@ class DriverContext:
 @dataclass
 class Stop:
     # complete | blocked | budget | wall_clock | plateau | max_attempts |
-    # vendors_exhausted | interrupted | error
+    # vendors_exhausted | interrupted | error | operator (the STOP file)
     reason: str
     detail: str = ""
     spent_usd: float = 0.0
@@ -464,6 +488,7 @@ class Driver:
         # run the clause-text prelude, record parked gaps in the trackers.
         self.manage_tree = manage_tree
         self._prelude: str | None = None          # None = not run; "ok"; or the failure
+        self._harness_build: str | None = None    # the run-tree harness: None = not built; "ok"; or the failure
         self._branch_ok: bool | None = None
         self._engine_wait_problems: set[str] = set()
 
@@ -474,6 +499,7 @@ class Driver:
         self._plateau = 0
         self._session_attempts = 0
         self._failed: dict[str, str] = {}
+        self._error_streak: tuple[str | None, int] = (None, 0)   # (message, items in a row)
         self._idle_steps: dict[str, int] = {}
         self._last_merge: dict[str, MergeResult] = {}
         self._stop: Stop | None = None
@@ -536,7 +562,14 @@ class Driver:
         if self._stop is not None:
             return True
         cfg = self.config
-        if cfg.budget_usd is not None and self._spent >= cfg.budget_usd:
+        stop_file = self.run_dir / STOP_FILE
+        if stop_file.exists():
+            # The operator's switch: no new task starts, in-flight work drains
+            # (the loops wait on their futures once a stop is set), state and
+            # report are written. Killing the process instead lost in-flight
+            # attempts and left a stale index.lock in the second pilot.
+            self._stop = Stop("operator", f"{stop_file} is present; remove it to resume")
+        elif cfg.budget_usd is not None and self._spent >= cfg.budget_usd:
             self._stop = Stop("budget", f"spent ${self._spent:.2f} reached the ${cfg.budget_usd:.2f} cap")
         elif cfg.wall_clock_hours and self._elapsed() >= cfg.wall_clock_hours * 3600:
             self._stop = Stop("wall_clock", f"{self._elapsed() / 3600:.2f} h reached the "
@@ -563,6 +596,26 @@ class Driver:
 
     # ------------------------------------------------------------------ readiness
 
+    # A clause in one of these states has a fix in flight (or a divergence
+    # awaiting triage): the engine under its card is about to change, and an
+    # interaction exam authored now fails the very assertion the fix targets
+    # and burns its attempts (Data Squad pilot: Q2304 under BT13-060#effect#2).
+    CLAUSE_FIX_STATES = frozenset({"DIVERGED", "TRIAGE", "FIX", "GATE"})
+
+    def _clauses_under_fix(self, rec: ItemRecord) -> list[tuple[str, str]]:
+        meta = self.state.meta.get(rec.item)
+        cards = set(meta.cards) if meta is not None else set()
+        if not cards:
+            return []
+        out = []
+        for other in self.state.records.values():
+            if other.kind != "clause" or other.state not in self.CLAUSE_FIX_STATES:
+                continue
+            om = self.state.meta.get(other.item)
+            if om is not None and cards & set(om.cards):
+                out.append((other.item, other.state))
+        return sorted(out)
+
     def _why_not_runnable(self, rec: ItemRecord) -> str | None:
         st = rec.state
         if st == "PARKED":
@@ -570,12 +623,19 @@ class Driver:
         unmet = self.state.unmet_requirements(rec.item)
         if unmet:
             return "waits for " + ", ".join(f"{r} ({self.state.records[r].state})" for r in unmet)
+        if rec.kind == "interaction":
+            fixing = self._clauses_under_fix(rec)
+            if fixing:
+                return ("waits for " + ", ".join(f"{c} ({s})" for c, s in fixing)
+                        + " -- a clause of the same card is being fixed, so the engine under this exam is about to change")
         if st in BUILTIN_STATES and st not in self.components.executors:
             return None
         if st == "GATE" and rec.data.get("engine_wait"):
             ew = rec.data["engine_wait"]
             return (f"the fix gate passed; waits for a human to merge {ew.get('branch') or 'the engine branch'}"
                     f" ({(ew.get('sha') or '?')[:12]}) into the run branch")
+        if st in HARNESS_STATES and self.manage_tree and self._harness_build not in (None, "ok"):
+            return f"the run tree's dcgo-harness build failed: {self._harness_build}"
         if st in ORACLE_STATES and self.manage_tree and self._prelude not in (None, "ok"):
             return f"the clause-text book prelude failed: {self._prelude}"
         if st == "GATE":
@@ -624,6 +684,8 @@ class Driver:
                 continue
             if self._check_stop():
                 return
+            if st in HARNESS_STATES and self.manage_tree and self._harness_build not in (None, "ok"):
+                continue                      # the run tree's harness did not build; see _why_not_runnable
             if st in ORACLE_STATES and self.manage_tree and self._prelude is None and not self._run_prelude():
                 continue
             free[lane] -= 1
@@ -712,10 +774,18 @@ class Driver:
     # ------------------------------------------------------------------ the run tree
 
     def _git(self, *args: str, timeout: float = 300) -> tuple:
-        try:
-            return self.ctx.run_command(["git", *args], str(self.repo), timeout)
-        except Exception as e:
-            return None, "", f"{type(e).__name__}: {e}"
+        from tools.git_retry import retry_on_index_lock
+
+        def once():
+            try:
+                return self.ctx.run_command(["git", *args], str(self.repo), timeout)
+            except Exception as e:
+                return None, "", f"{type(e).__name__}: {e}"
+
+        # The merger, the worker CLIs (`claude -p` refreshes the index in the
+        # tree it starts in) and this driver all take the run tree's index
+        # lock; git never waits for it.
+        return retry_on_index_lock(once, lambda r: r[2])
 
     def _on_run_branch(self) -> bool:
         if self._branch_ok is None:
@@ -806,7 +876,12 @@ class Driver:
             if isinstance(row, Mapping) and row.get("backfilled") and row.get("scenario"):
                 paths.append(row["scenario"])
         paths.append(VERDICTS_DIR)
-        what = "oracle verdict and backfill" if src in ORACLE_STATES else f"{src.lower()} verdict"
+        if src in ORACLE_STATES:
+            what = "oracle verdict and backfill"
+        elif src == "SIM":
+            what = "agreed expect_ruling block"        # placed by the sim step (D7)
+        else:
+            what = f"{src.lower()} verdict"
         self._commit_paths(list(dict.fromkeys(paths)), f"card-loop: {what} for {rec.item}",
                            attempt_id=attempts[0].attempt_id if attempts else None)
 
@@ -821,6 +896,96 @@ class Driver:
         reason = self._stop.reason if self._stop else "stop"
         self._commit_paths(paths, f"card-loop: ledgers for run {self.run_id} ({reason})")
 
+    FORK_CANDIDATES_PATH = "qa/card-loop/dcgo_fork_candidates.json"
+
+    def _export_fork_candidates(self) -> None:
+        """Design D7: every Q&A exam where DCGO is shown to disagree with the
+        publisher's ruling (the structured three-way legs, `data["three_way"]`),
+        and every two-family-agreed `dcgo_quirk` interaction, is a candidate
+        patch to our DCGO fork. Written deterministically into the run tree and
+        committed with the ledgers; the mod work itself is separate (rule 29).
+        Clause-level quirks are not listed here -- they live in the verdict
+        store with their citation."""
+        from .interactions.outcome import fork_candidates, write_fork_candidates
+
+        rows = []
+        for rec in self.state.ordered():
+            if rec.kind != "interaction":
+                continue
+            meta = self.state.meta.get(rec.item)
+            cards = sorted(meta.cards) if meta is not None else []
+            oracle = rec.data.get("oracle") or {}
+            tw = rec.data.get("three_way")
+            if isinstance(tw, Mapping) and tw.get("dcgo_fork_candidate"):
+                rows.append({
+                    "interaction_id": rec.ident, "card_ids": cards,
+                    "ours_vs_dcgo_agree": tw.get("ours_vs_dcgo"),
+                    "ours_vs_ruling_agree": tw.get("ours_vs_ruling"),
+                    "dcgo_observed": oracle.get("first_divergence") or oracle.get("reason"),
+                    "expected": f"the publisher's answer to qa:{tw.get('q_id')}" if tw.get("q_id") else None,
+                    "scenario_path": oracle.get("scenario"),
+                })
+            elif rec.state == "TERMINAL" and rec.data.get("terminal") == "dcgo_quirk" and rec.data.get("citation"):
+                rows.append({
+                    "interaction_id": rec.ident, "card_ids": cards, "verdict_hint": "dcgo_quirk",
+                    "citation": rec.data.get("citation"),
+                    "dcgo_observed": oracle.get("first_divergence") or oracle.get("reason"),
+                    "expected": None, "scenario_path": oracle.get("scenario"),
+                })
+        if not rows:
+            return
+        try:
+            candidates = fork_candidates(rows)
+        except ValueError as e:
+            self.state.problems.append(f"DCGO fork-candidate export skipped: {e}")
+            return
+        write_fork_candidates(candidates, self.repo / self.FORK_CANDIDATES_PATH)
+        self._commit_paths([self.FORK_CANDIDATES_PATH],
+                           f"card-loop: DCGO fork candidates for run {self.run_id} ({len(candidates)})")
+
+    HARNESS_BUILD_TIMEOUT_S = 3600
+
+    def _ensure_run_harness(self, why: str) -> bool:
+        """Build `dcgo-harness` FROM THE RUN TREE and pin it on the context.
+
+        SIM and ORACLE must judge the run tree's engine -- the one the loop's
+        card fixes land in -- so the harness they run is built there, under the
+        tree's own `CARGO_TARGET_DIR` (rule 31). Without this the binary lookup
+        falls through to whichever checkout built one last: the first Data Squad
+        pilot ran its oracle on the developer's checkout, so a landed card fix
+        never reached the oracle's engine and every fixed card diverged again
+        (BT26-005#inherited#0: gate passed, oracle diverged, fix cap spent).
+
+        Called at session start, after a merge that touched an engine / DSL /
+        harness path, and when an engine branch lands. Skipped (lookup as
+        before) for a tree with no `Cargo.toml` (fakes, tests) or when the
+        config pins `harness_bin` explicitly. A failed build holds every SIM /
+        ORACLE item with the compiler's last lines, like a failed prelude.
+        """
+        if not self.manage_tree or getattr(self.config, "harness_bin", None):
+            return True
+        tree = Path(self.repo)
+        if not (tree / "Cargo.toml").is_file():
+            return True
+        from .stages.harness import _exe
+        from .workers.pool import cargo_target_dir
+
+        base = getattr(self.config, "cargo_target_base", None)
+        target = cargo_target_dir(tree, base) if base else str(tree / "target")
+        argv = ["cargo", "build", "-p", "dcgo-harness", "--target-dir", target]
+        try:
+            rc, out, err = self.ctx.run_command(argv, str(tree), self.HARNESS_BUILD_TIMEOUT_S)
+        except Exception as e:  # noqa: BLE001 -- a build that cannot start is a failed build
+            rc, out, err = None, "", f"{type(e).__name__}: {e}"
+        if rc != 0:
+            tail = " | ".join((err or out or "").strip().splitlines()[-4:])[-400:]
+            self._harness_build = f"`cargo build -p dcgo-harness` in {tree} exited {rc} ({why}): {tail}"
+            self.state.problems.append(f"run-tree harness: {self._harness_build}")
+            return False
+        self.ctx.harness_bin = os.path.join(target, "debug", _exe("dcgo-harness"))
+        self._harness_build = "ok"
+        return True
+
     def _release_engine_waits(self) -> None:
         """GATE items whose engine fix passed the gate wait for a human to merge
         the engine branch into the run branch (D13); once its sha is an
@@ -834,6 +999,7 @@ class Driver:
                 self.state.transition(rec.item, "ORACLE", reason=f"engine fix {ew.get('branch')} "
                                                                   "landed on the run branch",
                                       item_data={"engine_wait": None, "engine_landed": dict(ew)})
+                self._ensure_run_harness(f"engine fix {ew.get('branch')} landed")
             elif rc != 1 and rec.item not in self._engine_wait_problems:
                 self._engine_wait_problems.add(rec.item)
                 self.state.problems.append(f"{rec.item}: cannot tell whether {ew.get('branch')} landed "
@@ -854,6 +1020,7 @@ class Driver:
         return dcgo_script_presence(cards, root)
 
     def _on_start(self) -> None:
+        self._ensure_run_harness("session start")
         scripts = (self.plan.get("dcgo") or {}).get("scripts") or {}
         missing = [c for c, p in scripts.items() if p is None]
         if missing:
@@ -878,6 +1045,32 @@ class Driver:
         self._ran = True
         self._started = self.clock()
         try:
+            if self.manage_tree and Path(self.repo).is_dir():
+                # A driver killed mid-operation leaves the run tree's index.lock
+                # behind; every git call then fails until someone removes it
+                # (the second pilot lost nine items to one such lock). A fresh
+                # run has no tree yet; a sweep that cannot run never stops the run.
+                from tools.git_retry import sweep_stale_index_lock
+                trees = [Path(self.repo)]
+                merger = self.components.merger
+                if merger is not None and hasattr(merger, "worktree_root"):
+                    # the run's shared gate and engine worktrees (merge.py)
+                    from .merge import scratch_name, worktree_root
+                    try:
+                        base = worktree_root(self.ctx, merger.worktree_root)
+                        trees += [base / scratch_name(self.ctx, role) for role in ("gate", "eng")]
+                    except Exception:  # noqa: BLE001 -- best effort
+                        pass
+                for tree in trees:
+                    if not tree.is_dir():
+                        continue
+                    try:
+                        swept = sweep_stale_index_lock(tree)
+                    except Exception as e:  # noqa: BLE001 -- best effort
+                        swept = None
+                        self.state.problems.append(f"stale index.lock sweep skipped for {tree}: {e!r}")
+                    if swept is not None:
+                        self.state.problems.append(f"removed a stale {swept} left by an earlier process")
             self._on_start()
             if self.serial:
                 self._loop_serial()
@@ -950,6 +1143,8 @@ class Driver:
                                        "outcome dropped")
             return
         tag = result[0]
+        if tag != "error":
+            self._error_streak = (None, 0)        # an executor returned: the streak is broken
         if tag == "error":
             self._executor_failed(rec, task, result[1], result[2])
         elif tag == "deferred":
@@ -972,6 +1167,16 @@ class Driver:
         self._failed[rec.item] = msg
         self.state.note(rec.item, reason=f"executor error in {task.state}: {msg}", stage=task.stage,
                         event_data={"traceback": tb[-2000:]} if tb else None)
+        # The same error on item after item is the infrastructure (the first
+        # Data Squad pilot failed 79 items on one held worktree, then read
+        # "blocked"): stop and name it rather than burn through the queue.
+        last, n = self._error_streak
+        n = n + 1 if msg == last else 1
+        self._error_streak = (msg, n)
+        limit = getattr(self.config, "executor_error_streak", 0)
+        if limit and n >= limit and self._stop is None:
+            self._stop = Stop("error", f"{n} items in a row failed with the same executor error -- an "
+                                       f"infrastructure fault, not the items: {msg[:400]}")
 
     def _merge(self, request: MergeRequest) -> MergeResult:
         merger = self.components.merger
@@ -1056,6 +1261,10 @@ class Driver:
             item_data["merge"] = {"ok": True, "sha": res.sha, "branch": res.branch,
                                   "touched": list(res.touched), "scope": dict(res.scope),
                                   "attempt_id": req.attempt_id, "engine": req.engine}
+            if not req.engine and harness_inputs_touched(res.touched):
+                # A card fix changed what the engine embeds: SIM / ORACLE must
+                # judge the fixed engine, so rebuild the run tree's harness now.
+                self._ensure_run_harness(f"merge for {item} touched engine inputs")
 
         self._ledger(attempts, outcome.corrections)
         if dst == "ESCALATED":
@@ -1067,7 +1276,8 @@ class Driver:
                               event_data=outcome.events_data, count=count, reset_keys=reset)
         if dst == "PARKED":
             self._park(rec)
-        if self.manage_tree and src in TREE_WRITING_STATES:
+        if self.manage_tree and (src in TREE_WRITING_STATES
+                                 or (src == "SIM" and rec.data.get("ruling_block_written"))):
             self._commit_tree_writes(rec, src, attempts)
         newly = bool(outcome.adjudicated) or (is_adjudicated(kind, dst) and not is_adjudicated(kind, src))
         self._tick(attempts, adjudicated=newly)
@@ -1189,6 +1399,11 @@ class Driver:
                 self.state.problems.append(f"merger close() failed: {e!r}")
         if self.manage_tree:
             self._commit_ledgers()
+            self._export_fork_candidates()
+        for incident in getattr(self.ctx.pool, "incidents", None) or ():
+            line = f"worker pool: {incident}"
+            if line not in self.state.problems:
+                self.state.problems.append(line)
         blocked = self._scan_blocked()
         counts = self.state.counts()
         extra = {"stop": stop.to_dict(), "blocked": blocked, "failed": dict(self._failed),
@@ -1201,10 +1416,13 @@ class Driver:
                 why = rec.data.get("escalation_reason")
                 escalations.append((rec.item, f"{where}" + (f" -- {why}" if why else "")))
         attempts = sorted(self._attempt_index.values(), key=lambda a: a.attempt_id)
+        landing = ({"tree": str(self.repo), "branch": run_branch(self.run_id)}
+                   if self.manage_tree else None)
         text = render_report(run_id=self.run_id, counts=counts, by_state=self.state.by_state(),
                              stop=stop.to_dict(), attempts=attempts, escalations=escalations,
                              blocked=blocked, failed=self._failed, problems=self.state.problems,
-                             missing_components=self.components.missing, generated_at=self.now())
+                             missing_components=self.components.missing, generated_at=self.now(),
+                             landing=landing)
         report_path = write_report(self.run_dir / REPORT_NAME, text)
         return RunResult(stop=stop, counts=counts, blocked=blocked, failed=dict(self._failed),
                          problems=list(self.state.problems), report_path=report_path, state_path=state_path)
@@ -1232,6 +1450,13 @@ def _config_for(plan: Mapping, config_path: str | None, budget_usd: float | None
     return config
 
 
+def _capped(config: LoopConfig, args) -> bool:
+    """A real run has some stop other than 'the work ran out': a USD cap, a
+    wall-clock cap, a session attempt cap, or an explicit `--no-cap`."""
+    return (getattr(args, "no_cap", False) or config.budget_usd is not None
+            or config.wall_clock_hours is not None or getattr(args, "max_attempts", None) is not None)
+
+
 def _fake_config(config: LoopConfig, run_dir: Path) -> LoopConfig:
     """`--fake` never writes the committed ledgers: attempts, corrections and
     escalations go under `<run_dir>/fake/`."""
@@ -1254,6 +1479,9 @@ def _add_run_options(p: argparse.ArgumentParser) -> None:
                         "<run_dir>/fake/")
     p.add_argument("--max-attempts", type=int, default=None, help="stop after N worker attempts this session")
     p.add_argument("--budget-usd", type=float, default=None, help="USD cap for the run (overrides config)")
+    p.add_argument("--no-cap", action="store_true",
+                   help="run with no USD / wall-clock / attempt cap ON PURPOSE (a real run without any "
+                        "cap is otherwise refused)")
     p.add_argument("--serial", action="store_true", help="one task at a time (deterministic)")
     p.add_argument("--worktree-root", default=None,
                    help="root for the worker worktree pool, the engine-fix and gate scratch trees and "
@@ -1329,6 +1557,13 @@ def _execute(plan: dict, run_dir: Path, args, *, command: str) -> int:
     if fake:
         config = _fake_config(config, run_dir)
         (Path(run_dir) / FAKE_DIR).mkdir(parents=True, exist_ok=True)   # marks the run as fake
+    elif not _capped(config, args):
+        # Design D13: an unattended run always carries a cap. Checked before
+        # anything that could invoke a worker; `--fake` is never billed.
+        print(f"{command}: refusing an uncapped real run -- set `budget_usd` or `wall_clock_hours` in "
+              "the config, pass --budget-usd / --max-attempts, or pass --no-cap to run uncapped on "
+              "purpose", file=sys.stderr)
+        return 2
     elif (plan.get("preflight") or {}).get("go") is False:
         print(f"{command}: the plan's preflight is NO-GO; no worker may be invoked (fix the failing "
               "checks and re-plan, or exercise the loop with --fake)", file=sys.stderr)

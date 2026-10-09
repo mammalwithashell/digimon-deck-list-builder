@@ -133,7 +133,7 @@ def _set_texts(card_ids, cards) -> list[str]:
     return [
         " ".join(str(cards[c].get(k, "") or "") for k in
                  ("effect_description_eng", "inherited_effect_description_eng",
-                  "security_effect_description_eng"))
+                  "security_effect_description_eng", "link_effect_description_eng"))
         for c in card_ids
     ]
 

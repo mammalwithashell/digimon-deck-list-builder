@@ -206,7 +206,7 @@ def parse_claude_envelope(stdout: str, stderr: str = "", returncode: int | None 
     env = _find_envelope(stdout)
     usage = _usage_from_envelope(env) if env else Usage()
     if timed_out:
-        return ParsedCall("error", usage=usage, error=f"timeout: claude exceeded {timeout_s}s")
+        return ParsedCall("error", usage=usage, error=f"wall-clock cap: claude exceeded {timeout_s}s and was killed")
     if env is None:
         msg = tail(stderr) or tail(stdout) or f"claude exited {returncode} with no output"
         kind = classify_failure(msg)

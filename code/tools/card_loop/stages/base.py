@@ -95,6 +95,11 @@ def worktree(ctx) -> Iterator[str]:
     if pool is None:
         yield str(ctx.repo)
         return
+    if hasattr(pool, "retarget"):
+        from ..workers.base import git_head
+        head = git_head(ctx.repo)
+        if head:
+            pool.retarget(head)   # workers start from the run branch's HEAD, not the plan's base
     with pool.lease() as wt:
         yield str(getattr(wt, "path", wt))
 

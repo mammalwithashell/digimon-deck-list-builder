@@ -15,16 +15,19 @@
     5
   ],
   "type_eng": [
-    "Zip/Unzip (App Name)"
+    "Zip/Unzip (App Name)",
+    "Zip",
+    "Unzip"
   ],
   "form_eng": [
-    "Sup."
+    "Sup.",
+    "Appmon"
   ],
   "attribute_eng": [
     "System"
   ],
   "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] Until your opponent's turn ends, their effects can't return 1 of your Digimon with the [System], [Life] or [Transmutation (App Name)] trait to hands or decks. with the [Appmon] trait from your trash without paying the cost.",
-  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
   "evo_costs": [
     {
@@ -33,5 +36,6 @@
       "memory_cost": 2
     }
   ],
-  "xros_req": "[App Fusion] [Hackmon] & [Protecmon] & [Pipomon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+  "xros_req": "[App Fusion] [Hackmon] & [Protecmon] & [Pipomon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+  "link_effect_description_eng": "[When Linking] Delete 1 of your opponent's play cost 5 or lower Digimon."
 }

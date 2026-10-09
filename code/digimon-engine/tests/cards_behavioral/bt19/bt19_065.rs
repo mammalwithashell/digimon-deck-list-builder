@@ -165,7 +165,7 @@ fn bt19_065_has_printed_metadata() {
         card.color,
         vec![CompiledColor::Black, CompiledColor::Purple]
     );
-    assert_eq!(card.attribute.as_deref(), Some("Virus"));
+    assert_eq!(card.attribute, ["Virus"]);
     for trait_name in ["Machine", "Composite"] {
         assert!(
             card.traits.iter().any(|t| t == trait_name),
