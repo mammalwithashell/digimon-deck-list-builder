@@ -1,0 +1,80 @@
+# Exam scenario: Ravemon (BT26-082), clause BT26-082#effect#3 --
+# "[On Deletion] Your opponent trashes 1 card in their hand. Then, if their
+# hand has 7 or fewer cards, you may place this card face up as the bottom
+# security card."
+#
+# THE LINE: same prefix as BT26-082-effect1. P0 builds Crowmon (BT26-076) ->
+# Ravemon (alt cost 3); Ravemon's [When Digivolving] pays "Delete this
+# Digimon" (choice 1); the [On Deletion] makes P1 trash 1 hand card (ST1-04),
+# then P0 (hand <= 7) says yes to placing Ravemon face up as bottom security.
+# The line ends there: the placement is the clause's whole effect. Crowmon's
+# own [On Deletion] prompt belongs to BT26-076#inherited#0, not this clause.
+card: BT26-082
+clause: BT26-082#effect#3
+seed: 424242
+meta: {produced_by: 20261007T021847729011Z-pilot-data-squad-1e9a19}
+decks:
+  p0:
+    stack: [BT26-036, ST24-05, BT26-076, BT26-082, ST24-15,
+            ST24-04, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-12, ST24-04, BT26-072]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-036 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST24-05 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-076 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { select: { choice: "Delete this Digimon", sim_only: true } }
+  - actor: 0
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { select: { cards: [BT26-082] } }
+    expect: { prompt: MultipleSkills }
+  - actor: 1
+    do: { select: { cards: [ST1-04] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { yes: true } }
+assert: []

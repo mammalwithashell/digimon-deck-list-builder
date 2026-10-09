@@ -1,0 +1,83 @@
+# Negative scope exam extending BT13-060-effect2.yaml.
+# Remove the opposing Tamer: the digivolution suspends only Biyomon.
+# At attack declaration P1 has ONE suspended Digimon and TWO unsuspended
+# Digimon. P0's attacking Rosemon also suspends, but belongs to the wrong
+# player and cannot complete the pair. Its digivolution card is not another
+# permanent either. DCGO BT13_060.count() filters Enemy battle permanents by
+# IsSuspended && (IsDigimon || IsTamer), then performs integer division by 2.
+# Thus the security-trash clause must do nothing: floor(1 / 2) = 0.
+# Attack suspended Biyomon, not the player: no security check can conceal
+# erroneous trashing. Expected observation after step 13: P1 security is
+# still 5, Biyomon is deleted, the other two Digimon remain unsuspended,
+# and P0 Rosemon is suspended. The oracle must backfill these observations.
+# Wrong owner scope, missing suspended filter, or rounding up all lose security.
+# T4 spending: Biyomon 2 + Birdramon 4 + Garudamon 6 = 12;
+# P1 starts on 7 and hands P0 5. Digivolving costs 5, leaving 0 to attack.
+# Deck book: qa/dcgo-exams/BT13/tm_bt13_060_pool.json.
+card: BT13-060
+clause: BT13-060#effect#2
+covers: [BT13-060#effect#1, BT13-060#effect#2]
+interaction: {id: "probe:BT13-060#effect#2:scope:neg", source: probe, kind: negative}
+meta: {produced_by: 20261006T141212077393Z-pilot-data-squad-b28fba}
+seed: 424242
+decks:
+  p0:
+    # Pin the T3, T5, and digivolution draws as well as the opening hand.
+    stack: [ST4-12, BT13-060, ST4-02, ST4-02, ST4-02,
+            ST4-04, ST4-04, ST4-04, ST4-04, ST4-05,
+            ST4-02, ST4-05, ST4-05]
+    rest: tm-rosemon-bm
+  p1:
+    stack: [ST1-02, ST1-03, ST1-05, ST1-08, ST1-04,
+            BT1-009, BT1-009, BT1-009, ST1-04, BT1-009,
+            ST1-04, ST1-04]
+    rest: tm-rosemon-opponent
+steps:
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {play: {card: ST4-12, from: hand}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 1
+    do: {play: {card: ST1-02, from: hand}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {play: {card: ST1-05, from: hand}}
+    expect: {prompt: main_phase}
+  - actor: 1
+    do: {play: {card: ST1-08, from: hand}}
+    expect: {prompt: main_phase}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: breeding_action}
+  - actor: 0
+    do: {digivolve: {from: field.0, using: BT13-060}}
+    expect: {prompt: main_phase}
+  - actor: 0
+    do: {select: {targets: [opp.field.0]}}
+    expect: {prompt: SelectPermanentEffect}
+  # No Tamer exists, so no second selection. Only one opposing permanent
+  # counts; the attacking Rosemon must not count toward the required pair.
+  - actor: 0
+    do: {attack: {attacker: field.0, target: field.0}}
+    expect: {prompt: main_phase}
+  - actor: 0
+    do: {pass: {}}
+    expect: {prompt: main_phase}
+assert: []

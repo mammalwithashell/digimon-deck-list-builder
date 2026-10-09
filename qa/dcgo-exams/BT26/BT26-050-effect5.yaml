@@ -1,0 +1,40 @@
+# Book: qa/dcgo-exams/BT26/bt26_dats_pool.json. Clause: the Option face's [Main]
+# "Suspend 2 of your opponent's Digimon or Tamers. Then, until their turn ends,
+# none of their suspended Digimon or Tamers can digivolve or unsuspend."
+# Line: T3 plays Keenan Crier BT26-094 (DATA SQUAD Tamer, no on-play prompt; its
+# T5 start-of-main place-face-down prompt is answered with ST24-12, as in BT26-094-effect0) so the Green
+# Option is usable via <Use Req.>; p1 plays BT1-009 + BT3-007 on T4; T5 p0 plays
+# BT26-050 as an Option and selects both opposing Digimon to suspend (exactly 2
+# candidates). The digivolve/unsuspend locks then apply to those suspended
+# Digimon. Assertions left empty for oracle backfill.
+card: BT26-050
+clause: BT26-050#effect#5
+meta: {produced_by: 20261006T214649871205Z-pilot-data-squad-8a3520}
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-082, BT26-050, BT26-094, ST24-12, BT26-076,
+            ST24-04, BT26-072, BT26-091, ST24-10, ST24-05,
+            BT26-065, BT26-036, BT13-060]
+    rest: bt26-dats
+  p1:
+    stack: [BT1-009, BT3-007, ST1-03, ST1-10, ST1-02,
+            BT1-014, BT4-010, BT3-007, ST1-04, BT1-009,
+            ST1-04, BT4-014, BT1-014]
+    rest: tm-quiet-red
+steps:
+  - {actor: 0, do: {pass: {}}, expect: {prompt: breeding_action}}
+  - {actor: 0, do: {pass: {}}, expect: {prompt: main_phase}}
+  - {actor: 1, do: {pass: {}}, expect: {prompt: breeding_action}}
+  - {actor: 1, do: {pass: {}}, expect: {prompt: main_phase}}
+  - {actor: 0, do: {pass: {}}, expect: {prompt: breeding_action}}
+  - {actor: 0, do: {play: {card: BT26-094, from: hand}}, expect: {prompt: main_phase}}
+  - {actor: 0, do: {pass: {}}, expect: {prompt: main_phase}}
+  - {actor: 1, do: {pass: {}}, expect: {prompt: breeding_action}}
+  - {actor: 1, do: {play: {card: BT1-009, from: hand}}, expect: {prompt: main_phase}}
+  - {actor: 1, do: {play: {card: BT3-007, from: hand}}, expect: {prompt: main_phase}}
+  - {actor: 0, do: {pass: {}}, expect: {prompt: breeding_action}}
+  - {actor: 0, do: {select: {cards: [ST24-12]}}, expect: {prompt: SelectHandEffect}}
+  - {actor: 0, do: {play: {card: BT26-050, from: hand}}, expect: {prompt: main_phase}}
+  - {actor: 0, do: {select: {targets: [opp.field.0, opp.field.1]}}, expect: {prompt: SelectPermanentEffect}}
+assert: []

@@ -1717,6 +1717,29 @@ impl Game {
             ));
             return false;
         };
+        // An effect-granted "cost reduced by N" is still a cost REDUCTION: a
+        // flood-gate such as BT5-021 Syakomon's "[Opponent's Turn] your opponent
+        // can't reduce digivolution costs" voids it (Q&A Q7148: the digivolve
+        // still happens, at the unreduced cost). Mirrors the gates in
+        // `collect_before_pay_cost_reducers`.
+        let cost_delta = match cost_delta {
+            crate::enums::CostDelta::Reduce(n)
+                if n > 0
+                    && (self
+                        .modifiers
+                        .player_has(player_id, ModifierType::CannotReduceCost)
+                        || self
+                            .modifiers
+                            .player_has(player_id, ModifierType::CannotReduceDigivolveCost)
+                        || self.modifiers.any_other_player_has(
+                            player_id,
+                            ModifierType::OpponentCannotReduceDigivolveCost,
+                        )) =>
+            {
+                crate::enums::CostDelta::Reduce(0)
+            }
+            other => other,
+        };
         let base_cost = cost_delta.resolve(matching_memory_cost);
         // Pass the evolving card as the cost-target so target-aware
         // predicates can fire — G-BEFORE-PAY-COST-DIGIVOLVE-TARGET. The

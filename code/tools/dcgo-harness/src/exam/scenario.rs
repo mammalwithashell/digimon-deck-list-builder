@@ -2365,8 +2365,10 @@ mod interaction_tests {
         assert_eq!(back.expect_ruling, s.expect_ruling);
     }
 
-    /// Every committed scenario must still parse, unchanged, and still cover
-    /// exactly its own clause -- the schema extension is additive (design D8).
+    /// Every committed scenario must still parse, and every clause exam must
+    /// still cover exactly its own clause -- the schema extension is additive
+    /// (design D8). Interaction exams (an `interaction:` block) are the ones
+    /// allowed to use the new blocks.
     #[test]
     fn every_committed_scenario_still_parses() {
         let root = std::env::var("DIGIMON_REPO_ROOT")
@@ -2390,8 +2392,12 @@ mod interaction_tests {
         for f in &files {
             let text = std::fs::read_to_string(f).unwrap();
             match Scenario::from_yaml(&text) {
-                Ok(s) if s.interaction.is_none() && s.covered_clauses() == vec![s.clause.clone()] => {}
-                Ok(_) => failures.push(format!("{}: unexpectedly uses the new blocks", f.display())),
+                Ok(s) if s.interaction.is_some() => {}
+                Ok(s) if s.covered_clauses() == vec![s.clause.clone()] => {}
+                Ok(_) => failures.push(format!(
+                    "{}: a clause exam (no `interaction:`) covers more than its own clause",
+                    f.display()
+                )),
                 Err(e) => failures.push(format!("{}: {e}", f.display())),
             }
         }

@@ -1,0 +1,93 @@
+# Interaction exam (NEGATIVE probe, family `scope`): Rosemon: Burst Mode
+# (BT13-060), clause BT13-060#effect#1. The "don't unsuspend" rider holds the
+# suspended Biyomon ST1-02 and Tai Kamiya ST1-12 through P1's very next
+# unsuspend phase, but must NOT apply on P1's following turn (it expires at the
+# end of the opponent's turn); the unselected Birdramon ST1-05 is never touched.
+# Board/prompts follow the oracle-confirmed BT13-060-effect1 line (ST4-12 is
+# hard-playable on T3; a 12-cost Lv.6 on T1 breaks the -10 memory floor).
+card: BT13-060
+clause: BT13-060#effect#1
+covers: [BT13-060#effect#1]
+interaction: { id: "probe:BT13-060#effect#1:scope:neg", source: probe, kind: negative }
+seed: 424242
+meta: {produced_by: 20261006T153144955691Z-pilot-data-squad-6bbc1b}
+decks:
+  p0:
+    # [0..4] hand; [5..9] security (never touched); [10], [11] = the T3 / T5 draws.
+    stack: [ST4-12, BT13-060, ST4-02, ST4-02, ST4-02,
+            ST4-04, ST4-04, ST4-04, ST4-04, ST4-05,
+            ST4-02, ST4-05]
+    rest: tm-rosemon-bm
+  p1:
+    stack: [ST1-02, ST1-12, ST1-05, ST1-05, ST1-03,
+            BT1-009, BT1-009, BT1-009, ST1-04, BT1-009,
+            ST1-03, ST1-03]
+    rest: tm-rosemon-opponent
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): Rosemon ST4-12 (3 -> -7).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST4-12, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1): Biyomon, Tai Kamiya, Birdramon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: ST1-05, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T5 (P0): digivolve (5 -> 0); suspend Biyomon, then Tai.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT13-060 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # P1 turn: pair stays suspended (rider active).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # P0 turn: all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # P1's next turn: rider expired -> Biyomon and Tai unsuspend.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert: []

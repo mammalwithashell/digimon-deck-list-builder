@@ -1,0 +1,77 @@
+# Extends BT26-036-inherited0.yaml's breeding -> promote -> attack line.
+# Adversarial edge: declining a live target must not spend Lalamon's OPT.
+# T1: purple DATA SQUAD egg -> Lalamon -> Sunflowmon in breeding (0 -> -2).
+# T2: P1 hard-plays Phoenixmon (2 -> -8), leaving a legal unsuspended target.
+# T3: promote; normally digivolve into Paildramon (8 -> 4), then attack.
+# Choose Lalamon BEFORE Paildramon in the simultaneous When Attacking queue.
+# Decline the suspension despite Phoenixmon being eligible. Paildramon's
+# mandatory OPT then unsuspends the carrier; attack again in the SAME turn.
+# Lalamon must offer Phoenixmon again, and this time we select it.
+# DCGO BT26_036.cs: canNoSelect:true and RemoveUse() when no target selected.
+# No OptionalSkill gate: DCGO opens the cancellable permanent picker directly.
+# Probes lost declines, accidental target suspension, OPT spent on decline,
+# and stale trigger ordering after declining beside another pending trigger.
+# Paildramon is normally evolved, so its DNA-only removal cannot interfere.
+# Sunflowmon's inherited +1000 DP gives 9000; both pinned security checks survive.
+# Companion deck book: BT26-036-optional-decline-pool.json (50 main / 4 eggs).
+# Base bt26-dats with 3 GeoGreymon -> 3 Sunflowmon, 1 BT13-060 -> 1 ST9-05.
+# Sim-only is not oracle confirmation. Leave assert empty for oracle backfill.
+card: BT26-036
+clause: BT26-036#inherited#0
+interaction: {id: "probe:BT26-036#inherited#0:optional_decline", source: probe, kind: positive}
+covers: ["BT26-036#effect#0", "BT26-036#inherited#0", "ST24-09#inherited#0", "ST9-05#effect#2"]
+meta: {produced_by: 20261006T153306356075Z-pilot-data-squad-0f1d69}
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-036, ST24-09, BT26-072, BT26-076, ST9-05,
+            ST24-04, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-12, ST24-04, BT26-082, ST24-14]
+    rest: bt26-lalamon-decline-retry
+  p1:
+    stack: [ST1-10, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-036 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST24-09 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: ST9-05 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-036] } }
+    expect: { prompt: MultipleSkills }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert: []
+

@@ -47,10 +47,13 @@ def test_v1_and_v2_files_both_load(tmp_path):
     assert set(load_interaction_verdicts(d)) == {"qa:Q1"}
 
 
-def test_the_committed_v1_ledger_loads_with_no_interactions():
+def test_the_committed_ledger_loads_clauses_and_interactions():
+    # The loaders refuse unknown versions, disagreeing copies of a shared
+    # ruling, and interactions filed under a card they do not count for.
     d = ROOT / "qa" / "qa-reports" / "exam-verdicts"
     assert load_verdict_store(d)
-    assert load_interaction_verdicts(d) == {}
+    assert all(row.get("interaction_id") == iid
+               for iid, row in load_interaction_verdicts(d).items())
 
 
 @pytest.mark.parametrize("doc,match", [

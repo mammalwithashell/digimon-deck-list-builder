@@ -1,3 +1,4 @@
+# produced_by: 20261006T181841664024Z-pilot-data-squad-9db01f
 # BT26-005 Pinamon — Digi-Egg, Lv.2, Purple.
 # Traits: Bird, DATA SQUAD. Form: In-Training.
 #
@@ -49,5 +50,9 @@ effects:
                   - trait_contains: "Avian"
                   - trait_has: "DATA SQUAD"
               - play_cost_lte: 5
+              # DCGO `HasPlayCost` / `CanPlayAsNewPermanent`: a Digi-Egg has no
+              # printed play cost and can't be played (its cards.json cost 0 is
+              # a missing-value default), so it is never a candidate.
+              - not: { kind: digi_egg }
           prompt: "You may play 1 play cost 5 or lower [Avian]/[DATA SQUAD] card from your trash without paying the cost"
       - play_from_trash_free: { of: you, hand_index: revive }

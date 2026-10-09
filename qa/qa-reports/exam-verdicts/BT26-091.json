@@ -1,0 +1,98 @@
+{
+  "version": 2,
+  "last_updated": "2026-10-08T02:59:01.457578+00:00",
+  "clauses": {
+    "BT26-091#effect#0": {
+      "clause_id": "BT26-091#effect#0",
+      "card_id": "BT26-091",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "89b0800e9b30dee8af088628a56b82b981668d61916f3affc2990e6de6fefc89",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-091-effect0.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-091-effect0",
+      "recorded_at": "2026-10-07T02:15:24.223732200+00:00"
+    },
+    "BT26-091#effect#1": {
+      "clause_id": "BT26-091#effect#1",
+      "card_id": "BT26-091",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "9b7ffade484d26563cf2df5a2b1889992cf263a7c8a15146fea2c132bbfc1d38",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-091-effect1.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-091-effect1",
+      "recorded_at": "2026-10-07T03:17:06.786091400+00:00"
+    },
+    "BT26-091#security#0": {
+      "clause_id": "BT26-091#security#0",
+      "card_id": "BT26-091",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-091-security0.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-091-security0",
+      "recorded_at": "2026-10-07T02:34:03.373531600+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT26-091#effect#0:optional_decline": {
+      "interaction_id": "probe:BT26-091#effect#0:optional_decline",
+      "card_ids": [
+        "BT26-091"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "89b0800e9b30dee8af088628a56b82b981668d61916f3affc2990e6de6fefc89",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-091-effect0-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-091-effect0-optional-decline",
+      "recorded_at": "2026-10-07T03:10:15.704269500+00:00"
+    },
+    "probe:BT26-091#effect#1:optional_decline": {
+      "interaction_id": "probe:BT26-091#effect#1:optional_decline",
+      "card_ids": [
+        "BT26-091"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "9b7ffade484d26563cf2df5a2b1889992cf263a7c8a15146fea2c132bbfc1d38",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-091-effect1-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-091-effect1-optional-decline",
+      "recorded_at": "2026-10-08T01:16:38.433038800+00:00"
+    },
+    "probe:BT26-091#effect#1:scope:neg": {
+      "interaction_id": "probe:BT26-091#effect#1:scope:neg",
+      "card_ids": [
+        "BT26-091"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "9b7ffade484d26563cf2df5a2b1889992cf263a7c8a15146fea2c132bbfc1d38",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-091-effect1-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-091-effect1-scope-neg",
+      "recorded_at": "2026-10-08T01:16:57.458896600+00:00"
+    },
+    "qa:Q7148": {
+      "interaction_id": "qa:Q7148",
+      "card_ids": [
+        "BT26-091"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "f762699ae69fc9589c951b3cbd98edb77e5ba28fe0cfbee63fb2f2083f3ee958",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-091-qa-Q7148.yaml",
+      "reason": "ours contradicts ruling qa:Q7148 (ours vs DCGO: diverge); DIVERGED at step 14 (compared 12 of 15 ours / 13 dcgo steps (3 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-091-qa-Q7148",
+      "recorded_at": "2026-10-08T02:59:01.457578+00:00"
+    }
+  }
+}

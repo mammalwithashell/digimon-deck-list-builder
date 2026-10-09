@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-07T01:12:38.497228500+00:00",
+  "clauses": {
+    "BT26-076#effect#0": {
+      "clause_id": "BT26-076#effect#0",
+      "card_id": "BT26-076",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "66b04b6d4ee3d44f86deada4e232d1754e7739e6d35e7800460a1481af263534",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-076-effect0.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-076-effect0",
+      "recorded_at": "2026-10-07T01:02:46.450972500+00:00"
+    },
+    "BT26-076#effect#2": {
+      "clause_id": "BT26-076#effect#2",
+      "card_id": "BT26-076",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "7083412bda81105135f6ea04e916e0fda711946c76b8d8ac13273d1a7170f56a",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-076-effect2.yaml",
+      "reason": "DIVERGED at step 18 (compared 14 of 24 ours / 15 dcgo steps (8 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable); trace truncated); DCGO job failed: MultipleSkills: wanted card 'BT26-076' is AMBIGUOUS: it is offered 2 times by [BT26-076,BT26-094,BT26-076,BT26-094]. Add select_ordinal, the 0-based position among that card's own candidates (0..1). Candidates: [0:BT26-076 'Digivolve into [Ravemon]/[DATA SQUAD] from trash for 1 less' | 1:BT26-094 'By suspending this Tamer, 1 [DATA SQUAD] Digimon gains Execute' | 2:BT26-076 'Digivolve into [Ravemon]/[DATA SQUAD] from trash for 1 less' | 3:BT26-094 'By suspending this Tamer, 1 [DATA SQUAD] Digimon gains Execute']",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-076-effect2",
+      "recorded_at": "2026-10-07T01:12:38.497228500+00:00"
+    }
+  }
+}

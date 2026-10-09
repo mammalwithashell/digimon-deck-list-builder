@@ -1,0 +1,303 @@
+# Interaction exam: official ruling Q5678 (2025-12-25) on Asuna Shiroki (BT24-088).
+# "What cards can be played by this card's [Start of Your Turn] effect?
+#  A: 1 [Asuna Shiroki], 1 level 4 or lower Digimon card with the [TS] trait, or
+#     1 level 4 or lower Digimon card with [Three Musketeers] in its text."
+#
+# THE LINE (extends BT24-088-effect0.yaml, steps unchanged up to the ruling's `at: 9`).
+# Asuna #1's [On Play] trashes Asuna #2 (a [TS]-trait Tamer) and seeds the trash; on
+# T3 the [Start of Your Turn] clause fires (memory 3 <= 4), Asuna #1 returns to the
+# deck bottom and Asuna #2 -- the "[Asuna Shiroki]" name branch of the ruling -- is
+# chosen from the trash and played free. Asuna #2 is a Tamer, so it is legal ONLY by
+# the name branch (the level-4-or-lower clause covers Digimon cards): a scope that
+# restricts the pick to Digimon would not offer it. The revived Asuna's [On Play]
+# is PAID so both engines take the same, fully-specified branch (see
+# NOTES-BT24-088.md on the undeclined-cost draw finding).
+card: BT24-088
+clause: BT24-088#effect#0
+seed: 424242
+interaction: {id: "qa:Q5678", source: qa, kind: positive}
+covers: [BT24-088#effect#0]
+meta: {produced_by: 20261006T143732215447Z-pilot-three-musketeers-8c1264}
+expect_ruling:
+  q_id: Q5678
+  assert:
+  - at: 9
+    that:
+      p0.field:
+      - card_id: BT24-088
+        dp: -1
+        suspended: false
+        sources: []
+decks:
+  p0:
+    stack: [BT24-088, BT24-088, BT25-078, BT21-074, BT21-074,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-085,
+            BT25-083, BT25-083, BT25-083, BT25-092, BT25-092]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-03, ST1-04, BT1-009, BT3-007,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-014]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-088, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT24-088] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT24-088] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [BT25-078] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT21-074
+    - BT21-074
+    - BT24-088
+    - BT24-088
+    - BT25-078
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-02
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT21-074
+    - BT21-074
+    - BT24-088
+    - BT24-088
+    - BT25-078
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-02
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: BT24-088
+      dp: -1
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT21-074
+    - BT21-074
+    - BT24-088
+    - BT25-078
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-02
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    turn: 1
+- at: 3
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: BT24-088
+      dp: -1
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT21-074
+    - BT21-074
+    - BT25-078
+    - BT25-083
+    - BT25-083
+    p0.security: 5
+    p0.trash:
+    - BT24-088
+    p1.field: []
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 2
+- at: 4
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: BT24-088
+      dp: -1
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT21-074
+    - BT21-074
+    - BT25-078
+    - BT25-083
+    - BT25-083
+    p0.security: 5
+    p0.trash:
+    - BT24-088
+    p1.field: []
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 5
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT24-088
+      dp: -1
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT21-074
+    - BT21-074
+    - BT25-078
+    - BT25-083
+    - BT25-083
+    p0.security: 5
+    p0.trash:
+    - BT24-088
+    p1.field: []
+    p1.security: 5
+    p1.trash: []
+    turn: 3
+- at: 6
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - BT21-074
+    - BT21-074
+    - BT25-078
+    - BT25-083
+    - BT25-083
+    p0.security: 5
+    p0.trash:
+    - BT24-088
+    p1.field: []
+    p1.security: 5
+    p1.trash: []
+    turn: 3
+- at: 7
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT24-088
+      dp: -1
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT21-074
+    - BT21-074
+    - BT25-078
+    - BT25-083
+    - BT25-083
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.security: 5
+    p1.trash: []
+    turn: 3
+- at: 8
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT24-088
+      dp: -1
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT21-074
+    - BT21-074
+    - BT25-083
+    - BT25-083
+    - BT25-083
+    - BT25-092
+    - BT25-092
+    p0.security: 5
+    p0.trash:
+    - BT25-078
+    p1.field: []
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 3
+- at: 9
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT24-088
+      dp: -1
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT21-074
+    - BT21-074
+    - BT25-083
+    - BT25-083
+    - BT25-083
+    - BT25-092
+    - BT25-092
+    p0.security: 5
+    p0.trash:
+    - BT25-078
+    p1.field: []
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3

@@ -1,0 +1,54 @@
+# Falcomon (BT26-065) inherited [When Attacking][Once Per Turn] <Draw 1> and trash 1 card in hand.
+# Book: bt26_dats_pool.json (same as BT26-036-inherited0).
+# T1: hatch Pinamon, evolve Falcomon for 0, then ST24-05 (GeoGreymon, Lv.3 [DATA SQUAD] -> cost 2)
+# in breeding; Falcomon sits under it as an inherited-effect source.
+# T2: P1 plays Agumon ST1-03 and passes.
+# T3: P0 moves the carrier to the battle area and attacks security. Falcomon's inherited effect
+# draws 1, then DCGO's BT26_065.cs asks a SelectHandEffect (Discard, canNoSelect false,
+# maxCount 1) with NO preceding OptionalSkill gate (optional is false).
+# Hand at that point: stack[2..4] + T3 draw + the new draw; we discard BT26-072.
+card: BT26-065
+clause: BT26-065#inherited#0
+meta: {produced_by: 20261006T230707853209Z-pilot-data-squad-297e33}
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-065, ST24-05, BT26-072, BT26-076, ST24-15,
+            ST24-04, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-12, ST24-04, BT26-082]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT26-065 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST24-05 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # THE CLAUSE: attack triggers draw 1, then discard 1.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [BT26-072] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert: []

@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-09-18T07:55:23.435514800+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T20:58:11.671298600+00:00",
   "clauses": {
     "BT24-088#effect#0": {
       "clause_id": "BT24-088#effect#0",
@@ -28,6 +28,94 @@
       "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
       "scenario_path": "qa/dcgo-exams/BT24/BT24-088-effect2.yaml",
       "recorded_at": "2026-09-18T07:55:23.435514800+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT24-088#effect#0:optional_decline": {
+      "interaction_id": "probe:BT24-088#effect#0:optional_decline",
+      "card_ids": [
+        "BT24-088"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "60b061328c4d5ced012b8de13b8fde1da250cdf85f2dbc6844cc371ddc44aea0",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-088-effect0-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT24-088-effect0-optional-decline",
+      "recorded_at": "2026-10-06T15:32:59.569574+00:00"
+    },
+    "probe:BT24-088#effect#1:optional_decline": {
+      "interaction_id": "probe:BT24-088#effect#1:optional_decline",
+      "card_ids": [
+        "BT24-088"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "c24e0b9001a5a7ec666ec5ba14749bc4fb45afecb684dad9ab989475f84b4182",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-088-effect1-optional-decline.yaml",
+      "reason": "DIVERGED at step 3 (compared 4 of 4 ours / 4 dcgo steps)",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT24-088-effect1-optional-decline",
+      "recorded_at": "2026-10-06T15:34:04.361183100+00:00"
+    },
+    "qa:Q5676": {
+      "interaction_id": "qa:Q5676",
+      "card_ids": [
+        "BT24-088"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "ba5d6c1de4937e71b84496fb234ab13e9a1438a3ca781f979d884d7754bc731e",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-088-qa-Q5676.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT24-088-qa-Q5676",
+      "recorded_at": "2026-10-06T16:27:14.652728300+00:00"
+    },
+    "qa:Q5677": {
+      "interaction_id": "qa:Q5677",
+      "card_ids": [
+        "BT24-088"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "4bd30cc72724b8c5f86de0451f9afd3b8ad3b0d895a41abbd4aaaaf8d694c999",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-088-qa-Q5677.yaml",
+      "reason": "ours contradicts ruling qa:Q5677 (ours vs DCGO: diverge); DIVERGED at step 8 (compared 11 of 12 ours / 12 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT24-088-qa-Q5677",
+      "recorded_at": "2026-10-06T20:58:11.671298600+00:00"
+    },
+    "qa:Q5678": {
+      "interaction_id": "qa:Q5678",
+      "card_ids": [
+        "BT24-088"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "99b8fcd9cd5a5fcc54a2531296938f4b1ad8f3fa9503483b60aa82b0788ad6ca",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-088-qa-Q5678.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT24-088-qa-Q5678",
+      "recorded_at": "2026-10-06T15:34:36.346570500+00:00"
+    },
+    "qa:Q5679": {
+      "interaction_id": "qa:Q5679",
+      "card_ids": [
+        "BT24-088"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "6860ab8d91bb8454d446e997ebd217cc2d6ad04d7a757fc418c1b0e29efd14b3",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-088-qa-Q5679.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT24-088-qa-Q5679",
+      "recorded_at": "2026-10-06T15:36:53.180141800+00:00"
     }
   }
 }

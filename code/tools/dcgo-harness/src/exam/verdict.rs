@@ -1973,15 +1973,36 @@ mod interaction_store_tests {
         assert!(err.contains("ST1-12"), "{err}");
     }
 
+    /// The committed ledger loads whole (clause and interaction verdicts; the
+    /// loader refuses disagreeing copies and misfiled interactions), and its
+    /// clause-only (v1) files would still be written back as v1.
     #[test]
-    fn the_committed_v1_ledger_still_loads_and_would_be_written_back_as_v1() {
+    fn the_committed_ledger_loads_and_its_clause_only_files_stay_v1() {
         let root = std::env::var("DIGIMON_REPO_ROOT")
             .unwrap_or_else(|_| concat!(env!("CARGO_MANIFEST_DIR"), "/../../..").to_string());
         let dir = Path::new(&root).join("qa/qa-reports/exam-verdicts");
         let store = VerdictStore::load_dir(&dir).expect("committed ledger loads");
         assert!(!store.is_empty(), "expected committed verdicts under {}", dir.display());
-        assert_eq!(store.interaction_count(), 0);
-        let value: serde_json::Value = serde_json::from_str(&store.to_json().unwrap()).unwrap();
+
+        let v1 = tmp("committed-v1");
+        std::fs::create_dir_all(&v1).unwrap();
+        let mut copied = 0;
+        for e in std::fs::read_dir(&dir).unwrap() {
+            let p = e.unwrap().path();
+            if p.extension().and_then(|x| x.to_str()) != Some("json") {
+                continue;
+            }
+            let text = std::fs::read_to_string(&p).unwrap();
+            let value: serde_json::Value = serde_json::from_str(&text).unwrap();
+            if value["version"] == 1 {
+                std::fs::write(v1.join(p.file_name().unwrap()), text).unwrap();
+                copied += 1;
+            }
+        }
+        assert!(copied > 0, "expected clause-only (v1) files under {}", dir.display());
+        let clause_only = VerdictStore::load_dir(&v1).expect("clause-only files load");
+        assert_eq!(clause_only.interaction_count(), 0);
+        let value: serde_json::Value = serde_json::from_str(&clause_only.to_json().unwrap()).unwrap();
         assert_eq!(value["version"], 1, "a clause-only ledger must not be upgraded to v2");
     }
 

@@ -165,8 +165,10 @@ impl Game {
         self.player_mut(player_id).deck = deck;
     }
 
-    /// Shuffle `player_id`'s security stack without changing its contents.
+    /// Turn every card in `player_id`'s security stack face down, then shuffle
+    /// without changing its contents (qa:Q7121).
     pub fn shuffle_security(&mut self, player_id: PlayerId) {
+        self.player_mut(player_id).face_up_security.clear();
         let mut security = std::mem::take(&mut self.player_mut(player_id).security);
         security.shuffle(&mut self.rng);
         self.player_mut(player_id).security = security;

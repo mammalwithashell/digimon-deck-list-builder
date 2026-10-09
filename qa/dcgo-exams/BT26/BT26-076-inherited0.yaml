@@ -1,0 +1,110 @@
+# Exam scenario: Crowmon (BT26-076), clause BT26-076#inherited#0 --
+# "[On Deletion] You may play 1 play cost 5 or lower card with [Avian] or [Bird]
+# in any of its traits or the [DATA SQUAD] trait from your trash without paying
+# the cost."
+#
+# THE LINE (Crowmon rides as a digivolution SOURCE of the deleted Rosemon):
+#   T1 (P0): hard-play Falcomon ST24-12 (Avian/DATA SQUAD, cost 3).
+#   T2 (P1): Tai Kamiya ST1-12 (red source for Gaia Force).
+#   T3 (P0): Falcomon -> Peckmon (trash ST24-15 as its cost) -> Crowmon.
+#   T4 (P1): pass.
+#   T5 (P0): Crowmon -> Rosemon BT26-049 (alt cost 3). Rosemon's When
+#            Digivolving suspends the only target (Tai); its [All Turns] reactive
+#            play is declined.
+#   T6 (P1): Gaia Force deletes Rosemon. Falcomon and Peckmon go to the trash with
+#            it. Both Peckmon's inherited [On Deletion] (opp trashes a card) and
+#            Crowmon's inherited [On Deletion] trigger -> MultipleSkills; resolve
+#            Crowmon's first, then it offers trash candidates; replay Falcomon.
+# PROMPT SHAPE (BT26_076.cs): optional via skippable SelectCardEffect
+# (SetIsSkippable, no OptionalSkill gate), PlayByEffect root Trash, payCost false.
+card: BT26-076
+clause: BT26-076#inherited#0
+seed: 424242
+meta: {produced_by: 20261007T015313590092Z-pilot-data-squad-0eacf4}
+decks:
+  p0:
+    stack: [ST24-12, BT26-072, BT26-076, BT26-049, ST24-15,
+            ST24-05, ST24-10, ST24-04, BT26-082, BT26-050,
+            ST24-15, ST24-05, BT26-094, BT26-091, ST24-05]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-12, ST1-16, ST1-16, ST1-04, BT1-009,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            ST1-03, ST1-05, BT1-014, BT4-010, ST1-08]
+    rest: tm-quiet-red
+steps:
+  # T1
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST24-12, from: hand } }
+    expect: { prompt: main_phase }
+  # T2
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-072 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST24-15] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-076 } }
+    expect: { prompt: main_phase }
+  # T4
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5: Crowmon -> Rosemon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-049 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6: Gaia Force deletes Rosemon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE (after trigger ordering).
+  - actor: 0
+    do: { select: { cards: [BT26-076] } }
+    expect: { prompt: MultipleSkills, count: 2, candidates: [BT26-072, BT26-076] }
+  - actor: 0
+    do: { select: { cards: [ST24-12] } }
+    expect: { prompt: SelectCardEffect }
+  # Peckmon's inherited [On Deletion]: P1 trashes 1 card from hand.
+  - actor: 1
+    do: { select: { cards: [ST1-04] } }
+    expect: { prompt: SelectHandEffect }
+assert: []

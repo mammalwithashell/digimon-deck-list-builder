@@ -241,6 +241,25 @@ fn st24_12_no_activation_without_face_down_source() {
     assert_eq!(runner.hand_size(0), hand_before, "nothing returned");
 }
 
+/// DCGO ST24_12.cs:49-53 — `CanActivateCondition` requires an owned Tamer with a
+/// face-down source, so with none the optional On Play is never offered
+/// (no OptionalSkill prompt), not merely auto-declined.
+#[test]
+fn st24_12_on_play_not_offered_without_face_down_source() {
+    let mut runner = base();
+    runner.set_first_player(0);
+    runner.place_on_field(0, "TAMER", Some(0)); // Tamer, but no face-down source
+    seed_trash(&mut runner, 0, "DS-DIGI");
+    let arma = runner.place_on_field(0, CARD_ID, Some(0));
+
+    runner.fire_on_play(0, arma.index as usize);
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no Tamer with a face-down source ⇒ no optional-activation prompt is offered"
+    );
+}
+
 // ─── Section 3 — Inherited [When Attacking][OPT] delete 1 opp Lv.3 Digimon ────
 
 /// POSITIVE: a [When Attacking] deletes the opponent's Lv.3 Digimon.

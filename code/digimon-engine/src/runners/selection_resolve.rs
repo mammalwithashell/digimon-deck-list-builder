@@ -558,8 +558,8 @@ pub fn resolve_next(
         // prompt. The parked resume frame can: a live count-capped frame
         // (`CountCappedPermanentsStep` — the battle-area form — or
         // `MultiPickStep` / `NonDslCountCappedStep`) after >= 1 applied pick
-        // is the SAME prompt
-        // awaiting its stop (DCGO `canEndNotMax: true` recorded as one row
+        // with accumulated picks is the SAME prompt awaiting its stop
+        // (DCGO `canEndNotMax: true` recorded as one row
         // with fewer than max targets — BT8-084's "up to 4" picking 1).
         //
         // Kinds that carry their own `picked` counter (`SourceMulti`,
@@ -568,6 +568,10 @@ pub fn resolve_next(
         // also installs a `MultiPickStep` frame, so the frame test alone would
         // misread it as this row's still-open prompt and spend a PASS that
         // declines it (Close EX8-067's "up to 2" trash pick).
+        // Field frames likewise must have accepted a pick: Arts Digivolve
+        // can complete and immediately open a NEW CountCappedPermanentsStep
+        // for [When Digivolving]. A trailing PASS must not decline that new
+        // effect (DCGO BT26/Green/BT26_050.cs:78-123).
         let open_field_multi_pick = picks_done > 0
             && !matches!(
                 pending.kind,
@@ -575,12 +579,12 @@ pub fn resolve_next(
             )
             && game.pending_selection_resume.as_ref().is_some_and(|stack| {
                 stack.frames.iter().rev().any(|f| {
-                    matches!(
-                        f,
-                        crate::resume::ResumeFrame::MultiPickStep(_)
-                            | crate::resume::ResumeFrame::NonDslCountCappedStep(_)
-                            | crate::resume::ResumeFrame::CountCappedPermanentsStep(_)
-                    )
+                    match f {
+                        crate::resume::ResumeFrame::MultiPickStep(s) => !s.accum.is_empty(),
+                        crate::resume::ResumeFrame::NonDslCountCappedStep(s) => !s.accum.is_empty(),
+                        crate::resume::ResumeFrame::CountCappedPermanentsStep(s) => !s.accum.is_empty(),
+                        _ => false,
+                    }
                 })
             });
         let multiselectish = open_field_multi_pick
@@ -1377,6 +1381,81 @@ mod tests {
             resolve_next(&runner.game, &one_card_row("EX8-047"), 1),
             Ok(Some(PASS))
         );
+    }
+
+    #[test]
+    fn trailing_pass_requires_picks_in_the_active_field_multi_frame() {
+        use crate::permanent::PermanentHandle;
+        use crate::resume::CountCappedPermanentsState;
+
+        let mut runner = DebugRunner::new();
+        park_attack_target_selection(&mut runner.game, vec![ATTACK_START]);
+        let pending = runner.game.pending_selection.as_mut().unwrap();
+        pending.kind = SelectionKind::AnyField;
+        pending.is_optional = true;
+        let frames = vec![
+            multipick_frame(0, 0, CountCappedZone::Trash, TRASH_EFFECT_START, vec![0]),
+            non_dsl_frame(0, CountCappedZone::Trash, vec![TRASH_EFFECT_START]),
+            ResumeFrame::CountCappedPermanentsStep(CountCappedPermanentsState {
+                prov: test_provenance(),
+                selecting_player: 0,
+                previous_phase: GamePhase::Main,
+                field_kind: SelectionKind::AnyField,
+                min: 0,
+                max: 2,
+                optional_zero: true,
+                candidates: vec![(
+                    ATTACK_START,
+                    PermanentHandle {
+                        player: 0,
+                        index: 0,
+                    },
+                )],
+                accum: Vec::new(),
+                prompt: "Select up to two permanents".into(),
+                bind_as: None,
+                inner_tail: Arc::new(Vec::new()),
+                bindings: Bindings::new(),
+                runtime: StepRuntime::default(),
+                trigger_context: None,
+                outer_conts: Vec::new(),
+            }),
+        ];
+        let row = attack_target_row(0, 0);
+        for mut frame in frames {
+            runner.game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![frame.clone()],
+            });
+            assert_eq!(
+                resolve_next(&runner.game, &row, 1),
+                Ok(None),
+                "a new multi-pick has not accepted this row's pick"
+            );
+            match &mut frame {
+                ResumeFrame::MultiPickStep(s) => s.accum.push(CardHandle(0)),
+                ResumeFrame::NonDslCountCappedStep(s) => s.accum.push(CardHandle(0)),
+                ResumeFrame::CountCappedPermanentsStep(s) => {
+                    s.accum.push(PermanentHandle {
+                        player: 0,
+                        index: 0,
+                    });
+                }
+                _ => unreachable!(),
+            }
+            runner.game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![frame],
+            });
+            assert_eq!(
+                resolve_next(&runner.game, &row, 1),
+                Ok(Some(PASS)),
+                "an unfinished up-to-N pick still needs its explicit stop"
+            );
+            assert_eq!(
+                resolve_next(&runner.game, &row, 2),
+                Ok(None),
+                "emit the trailing PASS at most once"
+            );
+        }
     }
 
     #[test]

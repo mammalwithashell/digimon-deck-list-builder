@@ -1,0 +1,69 @@
+{
+  "version": 2,
+  "last_updated": "2026-10-06T15:54:19.673494900+00:00",
+  "clauses": {
+    "BT26-049#effect#0": {
+      "clause_id": "BT26-049#effect#0",
+      "card_id": "BT26-049",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "285e09c4d6cadc87157521f0a72e8dcd37f859671d45b2a53eca3811265fa980",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-049-effect0.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-049-effect0",
+      "recorded_at": "2026-10-06T15:44:55.005855700+00:00"
+    },
+    "BT26-049#effect#1": {
+      "clause_id": "BT26-049#effect#1",
+      "card_id": "BT26-049",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "09ed84555111c076186aaf176a599b9f69dd5ef62fc35bc77964f8cd2c070aa3",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-049-effect1.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-049-effect1",
+      "recorded_at": "2026-10-06T15:46:27.985584900+00:00"
+    },
+    "BT26-049#effect#2": {
+      "clause_id": "BT26-049#effect#2",
+      "card_id": "BT26-049",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "876284cf95d2a8016eb1c169de808a419eed6bdd6212ff0b804daa4637b97833",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-049-effect2.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-049-effect2",
+      "recorded_at": "2026-10-06T15:48:45.553983600+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT26-049#effect#1:scope:neg": {
+      "interaction_id": "probe:BT26-049#effect#1:scope:neg",
+      "card_ids": [
+        "BT26-049"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "09ed84555111c076186aaf176a599b9f69dd5ef62fc35bc77964f8cd2c070aa3",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-049-effect1-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-049-effect1-scope-neg",
+      "recorded_at": "2026-10-06T15:50:00.876700700+00:00"
+    },
+    "probe:BT26-049#effect#2:scope:neg": {
+      "interaction_id": "probe:BT26-049#effect#2:scope:neg",
+      "card_ids": [
+        "BT26-049"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "876284cf95d2a8016eb1c169de808a419eed6bdd6212ff0b804daa4637b97833",
+      "scenario_path": "qa/dcgo-exams/BT26/BT26-049-effect2-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT26-049-effect2-scope-neg",
+      "recorded_at": "2026-10-06T15:54:19.673494900+00:00"
+    }
+  }
+}

@@ -1,0 +1,886 @@
+# Probe leave_play on BT25-083#inherited#0: LadyDevimon's inherited [On Deletion]
+# must see a revive target that LEAVES PLAY IN THE SAME DELETION. Scopemon
+# BT21-071 (Lv.4, [Three Musketeers] in text) is a digivolution card UNDER
+# LadyDevimon, which is under BeelStarmon BT25-085. Deleting BeelStarmon trashes
+# the whole stack at once; the inherited effect must offer Scopemon from the
+# trash (post-trash timing, simultaneous with its own carrier).
+#   T3: play Scopemon.  T5: digivolve LadyDevimon onto it.
+#   T7: digivolve BeelStarmon onto LadyDevimon.  T9: attack into Phoenixmon
+#   (12000 tie) -> BeelStarmon deleted -> take the revive, pick Scopemon.
+# One own Digimon throughout: field.0 on both engines.
+card: BT25-083
+clause: BT25-083#inherited#0
+meta: {produced_by: 20261006T214319677752Z-pilot-three-musketeers-4f56fa}
+interaction: {id: "probe:BT25-083#inherited#0:leave_play", source: probe, kind: positive}
+covers: [BT25-083#inherited#0]
+seed: 424242
+decks:
+  p0:
+    stack: [BT21-071, BT25-083, BT24-088, BT24-088, BT24-088,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-058,
+            BT25-092, BT25-092, BT25-085, BT25-092, EX7-051,
+            BT24-081]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-03, ST1-03, ST1-03, ST1-03, ST1-04,
+            ST1-02, ST1-02, ST1-02, ST1-05, ST1-10,
+            BT1-009, BT1-009, BT1-009, BT1-009]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): Scopemon
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-071, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): LadyDevimon onto Scopemon
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-083 } }
+    expect: { prompt: main_phase }
+  # DCGO-ONLY: [When Digivolving] shared effect (BT25_083.cs) is gated on a
+  # [Three Musketeers] trait card in hand/trash, which P0 holds here, so DCGO
+  # asks the Hand/Trash/Don't-place menu (generic_int). Decline = 3.
+  - actor: 0
+    do: { select: { value: 3, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  # SIM-ONLY: vacuous [When Digivolving] prompts (NOTES-BT25-083.md finding).
+  - actor: 0
+    do: { select: { cards: [BT25-083], ordinal: 0, sim_only: true } }
+    expect: { prompt: MultipleSkills }
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): BeelStarmon onto LadyDevimon
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-085 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 4 } }
+    expect: { prompt: SelectCountEffect }
+  # memory 3 -> -1 ends the turn on its own.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0): attack, tie with Phoenixmon
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: BeelStarmon is deleted; Scopemon is under it, trashed in the
+  # same deletion. Take the revive.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT21-071] } }
+    expect: { prompt: SelectCardEffect }
+  # Revived Scopemon's [On Play] (candidates now exist in trash): decline.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT21-071
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-083
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT21-071
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-083
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - BT21-071
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-083
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 2
+- at: 3
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - BT21-071
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-083
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 4
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - BT21-071
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-083
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 3
+- at: 5
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - BT21-071
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-083
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 7
+  that:
+    _backfilled: true
+    memory: -1
+    p0.field:
+    - card_id: BT21-071
+      dp: 4000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-083
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 4
+- at: 8
+  that:
+    _backfilled: true
+    memory: -1
+    p0.field:
+    - card_id: BT21-071
+      dp: 4000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-083
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 4
+- at: 9
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT21-071
+      dp: 4000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-083
+    - BT25-092
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 5
+- at: 10
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT21-071
+      dp: 4000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-083
+    - BT25-092
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 5
+- at: 15
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field:
+    - card_id: BT25-083
+      dp: 7000
+      suspended: false
+      sources:
+      - BT21-071
+    p0.hand:
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-085
+    - BT25-092
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 5
+- at: 16
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: BT25-083
+      dp: 7000
+      suspended: false
+      sources:
+      - BT21-071
+    p0.hand:
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-085
+    - BT25-092
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 6
+- at: 17
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: BT25-083
+      dp: 7000
+      suspended: false
+      sources:
+      - BT21-071
+    p0.hand:
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-085
+    - BT25-092
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 6
+- at: 18
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT25-083
+      dp: 7000
+      suspended: false
+      sources:
+      - BT21-071
+    p0.hand:
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-085
+    - BT25-092
+    - BT25-092
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 7
+- at: 19
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT25-083
+      dp: 7000
+      suspended: false
+      sources:
+      - BT21-071
+    p0.hand:
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-085
+    - BT25-092
+    - BT25-092
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 7
+- at: 20
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT25-083
+      dp: 7000
+      suspended: false
+      sources:
+      - BT21-071
+    p0.hand:
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-085
+    - BT25-092
+    - BT25-092
+    - BT25-092
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    turn: 7
+- at: 21
+  that:
+    _backfilled: true
+    memory: -1
+    p0.field:
+    - card_id: BT25-085
+      dp: 12000
+      suspended: false
+      sources:
+      - BT21-071
+      - BT25-083
+    p0.hand:
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-092
+    - BT25-092
+    - BT25-092
+    - EX7-051
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 8
+- at: 22
+  that:
+    _backfilled: true
+    memory: -1
+    p0.field:
+    - card_id: BT25-085
+      dp: 12000
+      suspended: false
+      sources:
+      - BT21-071
+      - BT25-083
+    p0.hand:
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-092
+    - BT25-092
+    - BT25-092
+    - EX7-051
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 8
+- at: 23
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT25-085
+      dp: 12000
+      suspended: false
+      sources:
+      - BT21-071
+      - BT25-083
+    p0.hand:
+    - BT24-081
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-092
+    - BT25-092
+    - BT25-092
+    - EX7-051
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 9
+- at: 24
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT25-085
+      dp: 12000
+      suspended: false
+      sources:
+      - BT21-071
+      - BT25-083
+    p0.hand:
+    - BT24-081
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-092
+    - BT25-092
+    - BT25-092
+    - EX7-051
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 9
+- at: 25
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - BT24-081
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-092
+    - BT25-092
+    - BT25-092
+    - EX7-051
+    p0.security: 5
+    p0.trash:
+    - BT21-071
+    - BT25-083
+    - BT25-085
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 4
+    p1.trash: []
+    turn: 9
+- at: 26
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - BT24-081
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-092
+    - BT25-092
+    - BT25-092
+    - EX7-051
+    p0.security: 5
+    p0.trash:
+    - BT21-071
+    - BT25-083
+    - BT25-085
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 4
+    p1.trash: []
+    turn: 9
+- at: 27
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT21-071
+      dp: 4000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT24-081
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-092
+    - BT25-092
+    - BT25-092
+    - EX7-051
+    p0.security: 5
+    p0.trash:
+    - BT25-083
+    - BT25-085
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 4
+    p1.trash: []
+    turn: 9
+- at: 28
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT21-071
+      dp: 4000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT24-081
+    - BT24-088
+    - BT24-088
+    - BT24-088
+    - BT25-092
+    - BT25-092
+    - BT25-092
+    - EX7-051
+    p0.security: 5
+    p0.trash:
+    - BT25-083
+    - BT25-085
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    p1.security: 4
+    p1.trash:
+    - ST1-10
+    phase: Main
+    turn: 9

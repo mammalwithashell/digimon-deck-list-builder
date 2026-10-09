@@ -1,0 +1,103 @@
+# Exam scenario (NEGATIVE scope probe): Hurricane Screw Shot (EX7-071), clause
+# EX7-071#security#0 -- "Delete 1 of your opponent's level 3, 1 of their level 4, and
+# 1 of their level 5 Digimon."
+#
+# Extends EX7-071-effect2.yaml. P1 fields TWO level-3 Digimon (Biyomon ST1-02, Agumon
+# ST1-03) and Vermilimon (Lv.5), and NO level 4. The clause must (a) skip the level-4
+# pick entirely (DCGO guards each pick with HasMatchConditionPermanent), and (b) delete
+# only ONE of the two level-3 Digimon ("1 of"), leaving Agumon in play. The out-of-scope
+# permanent is the second Lv.3. Vermilimon (third entered = field.2 on both seats, see
+# EX7-071-effect2.yaml) attacks and is itself deleted, ending the attack.
+card: EX7-071
+clause: EX7-071#security#0
+seed: 424242
+meta: {produced_by: 20261006T141450901733Z-pilot-three-musketeers-f70f91}
+interaction: {id: "probe:EX7-071#security#0:scope:neg", source: probe, kind: negative}
+covers: [EX7-071#security#0]
+decks:
+  p0:
+    stack: [BT21-074, BT21-074, BT25-085, BT25-085, BT25-082,
+            BT25-082, BT25-082, BT25-082, BT25-083, EX7-071,
+            BT25-083, BT25-083, BT25-083]
+    rest: three-musketeers
+  p1:
+    stack: [ST1-02, ST1-03, BT4-014, ST1-04, BT1-014,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-009,
+            ST1-08, ST1-08, ST1-08, ST1-08]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): play Biyomon (ST1-02, Lv.3). Memory 3 -> 1.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): play Agumon (ST1-03, Lv.3). Memory 3 -> 0.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1): play Vermilimon (BT4-014, Lv.5). Memory 3 -> -2 ends the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T7 (P0): nothing.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1): Vermilimon attacks the player -- the clause flips Hurricane Screw Shot.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.2, target: security } }
+    expect: { prompt: main_phase }
+  # Level 3: two candidates (Biyomon, Agumon); pick Biyomon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # NO level 4 exists -> no pick row. Level 5: Vermilimon, the attacker itself.
+  - actor: 0
+    do: { select: { targets: [opp.field.2] } }
+    expect: { prompt: SelectPermanentEffect }
+  # One step past the clause: Agumon (out of scope) is still fielded.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert: []

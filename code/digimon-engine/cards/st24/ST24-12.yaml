@@ -50,8 +50,12 @@ effects:
   #     Digimon from trash to hand ─────────────────────────────────────────────
   # optional: true carries the DCGO Tamer-pick canNoSelect (decline the whole
   # effect rather than pay the cost).
+  # condition mirrors DCGO CanActivateCondition (ST24_12.cs:49-53): an owned
+  # Tamer with a face-down source must exist, else the effect is not offered.
   - when: on_play
     optional: true
+    condition:
+      face_down_sources_under_tamers_gte: 1
     summary: "[On Play] By trashing a bottom face-down card under a Tamer, you may return 1 [DATA SQUAD] Digimon from your trash to the hand"
     process:
       # "By trashing the bottom face-down card from under any of your Tamers" —

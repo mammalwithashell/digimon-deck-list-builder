@@ -1,0 +1,122 @@
+# Extends BT26-072-inherited0.yaml's Falcomon -> Peckmon -> Crowmon line.
+# Adversarial change: opponent-turn effect deletion after memory crosses zero,
+# with a second, exposed Peckmon still alive. The deleted carrier's inherited
+# effect must survive removal, make P1 (the turn player) discard exactly once,
+# and finish before P0's next turn. The exposed Peckmon must not duplicate it.
+# Then delete that exposed Peckmon: its own inherited text must NOT activate.
+# This also catches the already-trashed Peckmon observing an unrelated deletion.
+# DCGO BT26_072.cs: OnDestroyedAnyone / CanTriggerOnDeletion, inherited=true;
+# mandatory SelectHandEffect owned by card.Owner.Enemy, canNoSelect=false.
+# Rules: digest.md sections 4/6, general rules 15-3-1 and 15-8-3-8.
+# No oracle assertion is inferred from the sim; assert is backfilled later.
+card: BT26-072
+clause: BT26-072#inherited#0
+interaction: {id: "probe:BT26-072#inherited#0:leave_play", source: probe, kind: positive}
+covers:
+  - BT26-072#inherited#0
+  - BT26-072#effect#0
+  - BT26-072#effect#2
+  - BT26-076#effect#0
+  - BT26-076#effect#1
+  - ST24-12#effect#1
+  - ST1-16#effect#0
+seed: 424242
+meta: {produced_by: 20261007T004308142156Z-pilot-data-squad-f36d3d}
+decks:
+  p0:
+    stack: [ST24-12, BT26-072, BT26-076, ST24-15, ST24-05,
+            ST24-10, ST24-04, BT26-082, BT26-049, BT26-050,
+            ST24-15, ST24-05, BT26-094, BT26-072, BT26-091, ST24-05]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-12, ST1-16, ST1-16, ST1-04, BT1-009,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            ST1-03, ST1-05, BT1-014, BT4-010, ST1-08]
+    rest: tm-quiet-red
+steps:
+  # T1: Falcomon; no Tamer to pay its On Play cost.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST24-12, from: hand } }
+    expect: { prompt: main_phase }
+  # T2: Tai supplies red for both Gaia Forces and survives Crowmon's deletion.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-12, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3: establish the inherited Peckmon beneath Crowmon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-072 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [ST24-15] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-076 } }
+    expect: { prompt: main_phase }
+  # T4: pass back.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5: exposed Peckmon is a same-ID scope decoy; decline its On Play cost.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-072, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # T6: Gaia Force crosses memory from 1 to -7, then deletes the CARRIER.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Positive witness: the non-turn player's inherited effect makes the TURN
+  # PLAYER choose from their own hand before the pending turn change completes.
+  - actor: 1
+    do: { select: { cards: [ST1-04] } }
+    expect: { prompt: SelectHandEffect }
+  # T7 proves the mandatory discard completed and no duplicate is pending.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8: now delete exposed Peckmon; no inherited trigger exists on this host.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-16, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # DCGO SelectPermanentEffect.cs forced-selection branch (385-401) skips
+  # its widget when the sole legal target fills maxCount. Ours still asks.
+  - actor: 1
+    do: { select: { targets: [opp.field.0], sim_only: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # T9: no second discard, whether from the top card or the old trashed source.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert: []

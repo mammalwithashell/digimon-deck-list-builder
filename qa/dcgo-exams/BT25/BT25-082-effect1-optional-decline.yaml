@@ -1,0 +1,502 @@
+# Exam scenario: BlackGatomon (BT25-082), clause BT25-082#effect#1 --
+# "[On Play] [When Digivolving] If you have 1 or fewer Tamers, you may play 1
+#  Tamer card with [Three Musketeers] in its text from your hand without
+#  paying the cost."
+#
+# This file exercises the [When Digivolving] arm (DCGO registers both arms
+# through one ActivateClassesForSharedEffects call, onPlay + whenDigivolving,
+# sharing the body). P0 has ZERO Tamers when BlackGatomon digivolves, so the
+# "1 or fewer" gate is open, and the only "[Three Musketeers] in its text"
+# Tamer in hand is Asuna Shiroki (BT25-092) -- the other Asuna printing
+# (BT24-088) is deliberately kept out of the hand so the pick has one
+# candidate and so its own [On Play] draw never fires.
+#
+# PROMPT SHAPE (BT25_082.cs): `optional: false` on the shared class, body
+# `PlayByEffect(root: Hand)` = one SelectHandEffect with canNoSelect: true.
+# Our engine installs an outer accept/decline gate (kind `Replacement`) before
+# its Hand pick, so the gate row is SIM-ONLY and the pick is the shared row.
+# The witness is Asuna standing on P0's battle area with memory UNCHANGED by
+# her 4-cost -- memory reads 1, exactly what the cost-2 digivolve left.
+#
+# THE LINE is the shared Three Musketeers prefix; see BT25-082-effect2.yaml's
+# header for the turn-by-turn accounting.
+card: BT25-082
+clause: BT25-082#effect#1
+interaction: {id: "probe:BT25-082#effect#1:optional_decline", source: probe, kind: positive}
+covers: [BT25-082#effect#1]
+meta: {produced_by: 20261006T144926986859Z-pilot-three-musketeers-bcf330}
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws in order. EVERY digivolution draws a
+    # card, so the draw budget is: T3 turn draw, T3 Sparrowmon draw, T5 turn
+    # draw, T5 BlackGatomon draw, T5 BeelStarmon draw, T7 turn draw, ...
+    # BeelStarmon #2 sits at stack[14] -- drawn BY the grant digivolve -- so
+    # exactly one copy is in hand when `using: BT25-085` is lowered.
+    stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-073,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, BT25-083, BT25-085,
+            BT21-071, BT25-078, BT21-074, EX7-008, BT25-083]
+    rest: three-musketeers
+  p1:
+    # Security is five vanilla low-DP Digimon so every security check on the
+    # EX7-073 lines built on this prefix is a prompt-free battle the attacker
+    # wins. Draws are vanilla bodies that stay in hand.
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  # T1 (P0): hatch.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1): hatch, play Agumon (3 -> 0), pass.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): breeding-digivolve -> Sparrowmon. No breeding prompt this turn:
+  # Pagumon is a Lv.2 (cannot move) and the egg slot is occupied.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): Koromon is a Lv.2 in an occupied breeding area -- no breeding
+  # prompt -- so the turn is a single main-phase pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): promote Sparrowmon.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  # DCGO-ONLY: Sparrowmon's vacuous [Start of Your Main Phase] OptionalSkill
+  # (see the header). Declined; our engine has no prompt here.
+  # CORRECTION (2026-09-18, BT25-082#effect#2 triage): this row is SHARED, not
+  # DCGO-only. BeelStarmon (BT25-085) in hand is a DUAL card -- a [Three
+  # Musketeers] trait Option -- so the cost IS payable; our engine stayed silent
+  # only because data/cards.json carried BT25-085 as a plain Digimon (fixed).
+  # `expect: OptionalSkill` over our declinable cost pick is the fold marker;
+  # the wire row (OptionalSkill select_cancel) is unchanged.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Digivolve BlackGatomon onto Sparrowmon, paying the alt-circle cost of 2.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  # [When Digivolving], DECLINED. Our outer gate says no (sim-only); DCGO's
+  # non-optional effect shows the hand pick with canNoSelect and we cancel it.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: SelectHandEffect }
+  # Asuna stays in hand; memory still 1, so this pass is P0's.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT25-082
+    - BT25-085
+    - BT25-092
+    - EX7-051
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT25-082
+    - BT25-085
+    - BT25-092
+    - EX7-051
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - BT25-082
+    - BT25-085
+    - BT25-092
+    - EX7-051
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 2
+- at: 3
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - BT25-082
+    - BT25-085
+    - BT25-092
+    - EX7-051
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 4
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT25-082
+    - BT25-085
+    - BT25-092
+    - EX7-051
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 5
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - BT25-082
+    - BT25-083
+    - BT25-085
+    - BT25-092
+    - EX7-051
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 6
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - BT21-071
+    - BT25-082
+    - BT25-083
+    - BT25-085
+    - BT25-092
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 7
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - BT21-071
+    - BT25-082
+    - BT25-083
+    - BT25-085
+    - BT25-092
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 4
+- at: 8
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - BT21-071
+    - BT21-074
+    - BT25-082
+    - BT25-083
+    - BT25-085
+    - BT25-092
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 5
+- at: 9
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: EX7-051
+      dp: 1000
+      suspended: false
+      sources:
+      - ST6-01
+    p0.hand:
+    - BT21-071
+    - BT21-074
+    - BT25-082
+    - BT25-083
+    - BT25-085
+    - BT25-092
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    turn: 5
+- at: 10
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: EX7-051
+      dp: 1000
+      suspended: false
+      sources:
+      - ST6-01
+    p0.hand:
+    - BT21-071
+    - BT21-074
+    - BT25-082
+    - BT25-083
+    - BT25-085
+    - BT25-092
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 5
+- at: 11
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: EX7-051
+      dp: 1000
+      suspended: false
+      sources:
+      - ST6-01
+    p0.hand:
+    - BT21-071
+    - BT21-074
+    - BT25-082
+    - BT25-083
+    - BT25-085
+    - BT25-092
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    turn: 5
+- at: 14
+  that:
+    _backfilled: true
+    memory: 1
+    p0.field:
+    - card_id: BT25-082
+      dp: 6000
+      suspended: false
+      sources:
+      - EX7-051
+      - ST6-01
+    p0.hand:
+    - BT21-071
+    - BT21-074
+    - BT25-083
+    - BT25-083
+    - BT25-085
+    - BT25-092
+    - EX7-073
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 5

@@ -1,0 +1,95 @@
+# Exam scenario: Rosemon: Burst Mode (BT26-050), clause BT26-050#effect#1 --
+# "[Digivolve] Lv.6 w/[DATA SQUAD] trait: Cost 5 [Burst Digivolve] [Rosemon]:
+#  Cost 0 by returning 1 [Yoshino Fujieda] to the hand."
+#
+# THE LINE: reach Rosemon (BT26-049) on T5 exactly as BT26-049-effect0 does, then
+# on T7 play Yoshino Fujieda (BT26-091) and burst-digivolve Rosemon into
+# BT26-050 for cost 0 by returning Yoshino to hand. (BT26_050.cs:
+# BurstDigivolutionCondition, tamer "Yoshino Fujieda", digimon "Rosemon", cost 0.)
+# Stack: [10] ST24-04 (T3 draw), [11] BT26-091 (T5 draw), [12] BT26-050 (T7 draw).
+# BT26-050's [When Digivolving] is optional (canNoSelect true on the suspend
+# pick), declined here; P1 has no Digimon/Tamers and no other suspended Digimon
+# exists, so nothing else fires.
+card: BT26-050
+clause: BT26-050#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-072, ST24-12, BT26-076, BT26-049, ST24-15,
+            ST24-05, ST24-10, ST24-04, ST24-04, ST24-14,
+            ST24-04, BT26-091, BT26-050, ST24-05, BT26-094]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0)
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: ST24-12 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0)
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-072 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): Rosemon
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-076 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-049 } }
+    expect: { prompt: main_phase }
+  # T6 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): Yoshino, then the burst digivolve
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-091, from: hand } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: Rosemon -> Rosemon: Burst Mode, cost 0, Yoshino returned.
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-050 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+meta: {produced_by: 20261006T154903534860Z-pilot-data-squad-482d7f}
+assert: []

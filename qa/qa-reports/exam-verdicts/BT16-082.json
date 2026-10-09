@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-10-05T16:35:55.159234+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T21:38:47.111704900+00:00",
   "clauses": {
     "BT16-082#effect#0": {
       "clause_id": "BT16-082#effect#0",
@@ -10,6 +10,65 @@
       "text_sha256": "4ef6f4635125ea9108b49f24a925ce01ab141ade03f8aeb0dc410cd62a5cf38f",
       "scenario_path": "qa/dcgo-exams/BT16/BT16-082-effect0.yaml",
       "recorded_at": "2026-10-05T16:35:55.159234+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT16-082#effect#0:optional_decline": {
+      "interaction_id": "probe:BT16-082#effect#0:optional_decline",
+      "card_ids": [
+        "BT16-082"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "4ef6f4635125ea9108b49f24a925ce01ab141ade03f8aeb0dc410cd62a5cf38f",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-082-effect0-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT16-082-effect0-optional-decline",
+      "recorded_at": "2026-10-06T14:30:41.351011600+00:00"
+    },
+    "probe:BT16-082#effect#0:scope:neg": {
+      "interaction_id": "probe:BT16-082#effect#0:scope:neg",
+      "card_ids": [
+        "BT16-082"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "4ef6f4635125ea9108b49f24a925ce01ab141ade03f8aeb0dc410cd62a5cf38f",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-082-effect0-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT16-082-effect0-scope-neg",
+      "recorded_at": "2026-10-06T15:36:31.892076700+00:00"
+    },
+    "qa:Q2668": {
+      "interaction_id": "qa:Q2668",
+      "card_ids": [
+        "BT16-082"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "074ae702a67f2deba00e905e4c0cae23b07d2b546ed3e16abeb4bc87c4d281a3",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-082-qa-Q2668.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT16-082-qa-Q2668",
+      "recorded_at": "2026-10-06T15:32:46.355937500+00:00"
+    },
+    "qa:Q2669": {
+      "interaction_id": "qa:Q2669",
+      "card_ids": [
+        "BT16-082"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "3fc8fd047842a0420f1da428de2627d95eeca76cbf0fd2eea5c4e43dbd742641",
+      "scenario_path": "qa/dcgo-exams/BT16/BT16-082-qa-Q2669.yaml",
+      "reason": "ours contradicts ruling qa:Q2669 (ours vs DCGO: agree); CLEAN (compared 12 of 12 ours / 12 dcgo steps)",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT16-082-qa-Q2669",
+      "recorded_at": "2026-10-06T21:38:47.111704900+00:00"
     }
   }
 }

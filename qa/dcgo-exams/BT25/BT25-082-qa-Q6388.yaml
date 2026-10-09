@@ -1,0 +1,89 @@
+# Q6388: BlackGatomon in the BREEDING area, Asuna (a Tamer with [Three Musketeers] in text) on the field.
+meta: {produced_by: 20261006T163745972402Z-pilot-three-musketeers-93a263}
+interaction: {id: "qa:Q6388", source: qa, kind: positive}
+covers: [BT25-082#effect#2]
+card: BT25-082
+clause: BT25-082#effect#2
+seed: 424242
+decks:
+  p0:
+    # stack[0..4] = opening hand; stack[5..9] = security (never flipped: P1
+    # never attacks); stack[10..] = draws in order. EVERY digivolution draws a
+    # card, so the draw budget is: T3 turn draw, T3 Sparrowmon draw, T5 turn
+    # draw, T5 BlackGatomon draw, T5 BeelStarmon draw, T7 turn draw, ...
+    # BeelStarmon #2 sits at stack[14] -- drawn BY the grant digivolve -- so
+    # exactly one copy is in hand when `using: BT25-085` is lowered, and the
+    # drawn copy is what makes BeelStarmon's use-an-Option clause live.
+    stack: [EX7-051, BT25-082, BT25-092, BT25-085, EX7-073,
+            BT25-078, BT25-078, BT25-078, EX7-008, EX7-008,
+            BT25-083, BT21-071, BT21-074, BT25-083, BT25-082,
+            BT21-071, BT25-078, BT21-074, EX7-008, BT25-083]
+    rest: three-musketeers
+  p1:
+    # Security is five vanilla low-DP Digimon so every security check on the
+    # EX7-073 lines built on this prefix is a prompt-free battle the attacker
+    # wins. Draws are vanilla bodies that stay in hand.
+    stack: [ST1-03, ST1-04, ST1-04, BT1-009, BT1-009,
+            ST1-02, ST1-02, ST1-04, ST1-02, ST1-02,
+            BT1-009, BT1-009, BT3-007, BT3-007, BT3-007]
+    rest: quiet-opponent
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX7-051 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): keep Sparrowmon in the breeding area.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 2 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { play: { card: BT25-092, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0): BlackGatomon in breeding tries the grant into BeelStarmon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-085 } }
+    expect: { prompt: main_phase }
+expect_ruling:
+  q_id: Q6388
+  assert:
+  - at: 16
+    that:
+      p0.hand: [BT25-085, EX7-073, BT25-083, BT21-071, BT21-074, BT25-083, BT25-082]

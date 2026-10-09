@@ -1,0 +1,549 @@
+# Probe optional_decline for BT16-082#effect#0: same line as BT16-082-effect0.yaml
+# but the trailing "you may hatch" is DECLINED. Breeding stays empty, so T7
+# must open with a breeding_action prompt (hatch available) in both engines;
+# a wrongly-forced hatch would skip it.
+interaction: {id: "probe:BT16-082#effect#0:optional_decline", source: probe, kind: positive}
+meta: {produced_by: 20261006T142708094402Z-pilot-data-squad-f8d174}
+covers: [BT16-082#effect#0]
+card: BT16-082
+clause: BT16-082#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [BT16-082, ST23-13, ST23-09, ST23-06, ST23-15,
+            ST23-03, ST23-04, ST23-06, ST23-15, ST23-13,
+            ST23-03, ST23-09, BT25-043, BT25-090, ST23-12,
+            BT25-057, ST23-04]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, ST1-02, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT16-082 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [BT25-090] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [ST23-12, BT25-057] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { choice: "Don't hatch", sim_only: true } }
+  # DCGO: SetBoolSelection ("Hatch"/"Not hatch") -> generic_bool; "no" rides a dcgo_only row.
+  - actor: 0
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: generic_bool }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT16-082
+    - ST23-06
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-03
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT16-082
+    - ST23-06
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-03
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - BT16-082
+    - ST23-06
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 2
+- at: 3
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - BT16-082
+    - ST23-06
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 4
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - BT16-082
+    - ST23-03
+    - ST23-06
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 5
+  that:
+    _backfilled: true
+    memory: 2
+    p0.field: []
+    p0.hand:
+    - ST23-03
+    - ST23-06
+    - ST23-09
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 6
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - ST23-03
+    - ST23-06
+    - ST23-09
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 4
+- at: 7
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - ST23-03
+    - ST23-06
+    - ST23-09
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 4
+- at: 8
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field: []
+    p0.hand:
+    - BT25-043
+    - ST23-03
+    - ST23-06
+    - ST23-09
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 5
+- at: 9
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: false
+      sources:
+      - ST23-01
+    p0.hand:
+    - BT25-043
+    - ST23-03
+    - ST23-06
+    - ST23-09
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    turn: 5
+- at: 10
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: false
+      sources:
+      - ST23-01
+    p0.hand:
+    - BT25-043
+    - BT25-090
+    - ST23-03
+    - ST23-06
+    - ST23-09
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    turn: 5
+- at: 13
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: false
+      sources:
+      - ST23-01
+    p0.hand:
+    - BT25-043
+    - BT25-090
+    - ST23-03
+    - ST23-06
+    - ST23-09
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT3-007
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 5
+- at: 14
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: false
+      sources:
+      - ST23-01
+    p0.hand:
+    - BT25-043
+    - BT25-090
+    - ST23-03
+    - ST23-06
+    - ST23-09
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-014
+    - BT3-007
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 6
+- at: 15
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: false
+      sources:
+      - ST23-01
+    p0.hand:
+    - BT25-043
+    - BT25-090
+    - ST23-03
+    - ST23-06
+    - ST23-09
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-014
+    - BT3-007
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 6
+- at: 16
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: false
+      sources:
+      - ST23-01
+    p0.hand:
+    - BT25-043
+    - BT25-090
+    - ST23-03
+    - ST23-04
+    - ST23-06
+    - ST23-09
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-014
+    - BT3-007
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 7
+- at: 17
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT16-082
+      dp: 2000
+      suspended: false
+      sources:
+      - ST23-01
+    p0.hand:
+    - BT25-043
+    - BT25-090
+    - ST23-03
+    - ST23-04
+    - ST23-06
+    - ST23-09
+    - ST23-09
+    - ST23-13
+    - ST23-15
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-009
+    - BT1-014
+    - BT3-007
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-08
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 7

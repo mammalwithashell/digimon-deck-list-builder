@@ -1,0 +1,83 @@
+# Exam scenario: Peckmon (BT26-072), clause BT26-072#inherited#0 --
+# "[On Deletion] Your opponent trashes 1 card in their hand."
+#
+# THE LINE (Peckmon rides as a digivolution SOURCE of the deleted Digimon):
+#   T1 (P0): hard-play Falcomon ST24-12 (Lv3 [DATA SQUAD], no printed inherited
+#            effect, so no DP bonus); memory 0 -> -3. Its On Play has no Tamer to
+#            pay from, so nothing prompts.
+#   T2 (P1): pass, pass.                                       -> P0 at 3
+#   T3 (P0): digivolve Falcomon -> Peckmon (alt requirement, 3 -> 1); When
+#            Digivolving cost: trash ST24-15 (no opp Digimon, so no delete).
+#            Then digivolve Peckmon -> Crowmon BT26-076 (Lv5, 7000 DP, cost 3,
+#            1 -> -2); its When Digivolving has no target and no Tamer, so it
+#            asks nothing. Peckmon is now a source of Crowmon.
+#   T4 (P1): pass, pass.                                       -> P0 at 3
+#   T5 (P0): Crowmon attacks security; P1's top security is Vermilimon BT4-014
+#            (8000 DP): Crowmon loses and is deleted. Peckmon's inherited
+#            [On Deletion] fires: P1 trashes 1 card from hand.
+# PROMPT SHAPE (BT26_072.cs): not optional; one SelectHandEffect (Discard,
+# canNoSelect false) answered by P1 (selectPlayer: card.Owner.Enemy).
+card: BT26-072
+clause: BT26-072#inherited#0
+seed: 424242
+meta: {produced_by: 20261006T232656220501Z-pilot-data-squad-6f6494}
+decks:
+  p0:
+    stack: [ST24-12, BT26-072, BT26-076, ST24-15, ST24-05,
+            ST24-10, ST24-04, BT26-082, BT26-049, BT26-050,
+            ST24-15, ST24-05, BT26-094, ST24-04, BT26-091]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08, BT1-014, BT4-010, BT3-007, BT1-009, BT4-014, ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, ST1-02]
+    rest: tm-quiet-red
+steps:
+  # T1 (P0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST24-12, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-072 } }
+    expect: { prompt: main_phase }
+  # Peckmon When Digivolving cost: trash ST24-15.
+  - actor: 0
+    do: { select: { cards: [ST24-15] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT26-076 } }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0): attack into Vermilimon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # THE CLAUSE: P1 trashes 1 card from hand.
+  - actor: 1
+    do: { select: { cards: [ST1-04] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert: []

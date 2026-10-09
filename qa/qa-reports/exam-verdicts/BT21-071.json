@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-09-18T08:01:48.051247700+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T19:31:19.849043900+00:00",
   "clauses": {
     "BT21-071#effect#0": {
       "clause_id": "BT21-071#effect#0",
@@ -46,6 +46,66 @@
       "text_sha256": "c2597d0900d78673e6258b6da3959c05fa48c91442ff6625cd109326f1f32d6c",
       "scenario_path": "qa/dcgo-exams/BT21/BT21-071-inherited1.yaml",
       "recorded_at": "2026-09-18T08:00:45.571762600+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT21-071#effect#1:optional_decline": {
+      "interaction_id": "probe:BT21-071#effect#1:optional_decline",
+      "card_ids": [
+        "BT21-071"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "ffc67eb44dfce5aefc9e17c057fa6663f87009beb8996011160b4ba8fa0b4540",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-071-effect1-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT21-071-effect1-optional-decline",
+      "recorded_at": "2026-10-06T13:50:51.090401200+00:00"
+    },
+    "probe:BT21-071#effect#1:scope:neg": {
+      "interaction_id": "probe:BT21-071#effect#1:scope:neg",
+      "card_ids": [
+        "BT21-071"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "ffc67eb44dfce5aefc9e17c057fa6663f87009beb8996011160b4ba8fa0b4540",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-071-effect1-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT21-071-effect1-scope-neg",
+      "recorded_at": "2026-10-06T15:33:33.466101900+00:00"
+    },
+    "qa:Q4577": {
+      "interaction_id": "qa:Q4577",
+      "card_ids": [
+        "BT21-071"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "4bd30cc72724b8c5f86de0451f9afd3b8ad3b0d895a41abbd4aaaaf8d694c999",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-071-qa-Q4577.yaml",
+      "reason": "ours contradicts ruling qa:Q4577 (ours vs DCGO: agree); CLEAN (compared 12 of 13 ours / 13 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT21-071-qa-Q4577",
+      "recorded_at": "2026-10-06T19:31:19.849043900+00:00"
+    },
+    "qa:Q4578": {
+      "interaction_id": "qa:Q4578",
+      "card_ids": [
+        "BT21-071"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "1eda83f264afedef96f6fb8a5e1dc7d0e5fe78f5397f22e3d720f1850c440870",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-071-qa-Q4578.yaml",
+      "reason": "ours contradicts ruling qa:Q4578 (ours vs DCGO: diverge); DIVERGED at step 14 (compared 9 of 15 ours / 13 dcgo steps (6 sim-only row(s) with no DCGO prompt + 4 DCGO intermediate row(s) not comparable))",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT21-071-qa-Q4578",
+      "recorded_at": "2026-10-06T19:10:18.949811900+00:00"
     }
   }
 }

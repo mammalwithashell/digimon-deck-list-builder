@@ -1,0 +1,91 @@
+# Extends the oracle-confirmed BT26-094-effect0.yaml (NOTES-BT26-DATA-SQUAD.md).
+# Adversarial sequence: pay once, decline with an existing face-down source and
+# multiple legal hand candidates, then pay again at the next start of main.
+# This probes stale "stash" bindings, rewards escaping the cost guard, and a
+# cancellation incorrectly suppressing later start-of-main triggers.
+# BT26_094.cs: SelectHandEffect(canNoSelect: true); all placement/draw/memory
+# processing is inside selectedCard != null. No leading OptionalSkill prompt.
+# Expected rules outcome (oracle must backfill assertions):
+# T3 pay ST24-12: one source, draw BT26-091, memory 4.
+# T5 decline: source remains ST24-12, hand unchanged by effect, memory 3.
+# T7 pay BT26-091: second face-down source, draw ST24-04, memory 4.
+# Draw is mandatory only after payment (general_rule.pdf section 16-7);
+# "by" cost is optional (section 15-9). No reward may survive a decline.
+card: BT26-094
+clause: BT26-094#effect#0
+covers:
+  - BT26-094#effect#0
+interaction: {id: "probe:BT26-094#effect#0:optional_decline", source: probe, kind: positive}
+meta: {produced_by: 20261008T032017814385Z-pilot-data-squad-5208fe}
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-094, ST24-12, BT26-076, ST24-15, BT26-082,
+            ST24-05, ST24-10, BT26-049, BT26-050, ST24-14,
+            ST24-04, BT26-091, ST24-05, BT26-065, ST24-04]
+    rest: bt26-dats
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT1-009, ST1-02,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-05, ST1-08, BT4-014]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT26-094, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # T3: establish a successful payment before attempting cancellation.
+  - actor: 0
+    do: { select: { cards: [ST24-12] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # T5, step 10: decline despite multiple legal DATA SQUAD cards in hand.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # No draw, memory gain, new source, or extra selection should occur.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # T7: the candidate retained through cancellation can pay a fresh trigger.
+  - actor: 0
+    do: { select: { cards: [BT26-091] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert: []

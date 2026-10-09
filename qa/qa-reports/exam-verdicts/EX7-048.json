@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-09-19T15:15:39.061435400+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T23:05:54.401740900+00:00",
   "clauses": {
     "EX7-048#effect#0": {
       "clause_id": "EX7-048#effect#0",
@@ -37,6 +37,22 @@
       "text_sha256": "a8bfb9d9d1312abfe577a7a74e0c53f0ddb9ee8a7c40097c812e28f2a51bd764",
       "scenario_path": "qa/dcgo-exams/EX7/EX7-048-effect3.yaml",
       "recorded_at": "2026-09-19T15:15:39.061435400+00:00"
+    }
+  },
+  "interactions": {
+    "probe:EX7-048#effect#1:optional_decline": {
+      "interaction_id": "probe:EX7-048#effect#1:optional_decline",
+      "card_ids": [
+        "EX7-048"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/EX7/EX7-048-effect1-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-EX7-048-effect1-optional-decline",
+      "recorded_at": "2026-10-06T23:05:54.401740900+00:00"
     }
   }
 }
