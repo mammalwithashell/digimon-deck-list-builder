@@ -1,3 +1,4 @@
+# produced_by: 20261006T153452222176Z-pilot-three-musketeers-db06c9
 card: BT24-088
 name: Asuna Shiroki
 kind: tamer
@@ -51,7 +52,10 @@ effects:
               - effect_text_contains: "Three Musketeers"
           prompt: "Trash 1 TS or Three Musketeers-text card from your hand"
       - trash_from_hand_by_index: { of: you, hand_index: discard }
-      - draw: { of: you, count: 2 }
+      - if:
+          condition: { binding_exists: discard }
+          then:
+            - draw: { of: you, count: 2 }
 
   - when: on_security
     summary: "[Security] Play this card without paying the cost"

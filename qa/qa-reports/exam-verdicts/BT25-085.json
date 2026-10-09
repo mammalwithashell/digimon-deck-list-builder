@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-09-21T04:44:49.123002200+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T22:28:57.831809400+00:00",
   "clauses": {
     "BT25-085#effect#0": {
       "clause_id": "BT25-085#effect#0",
@@ -64,6 +64,149 @@
       "text_sha256": "f47d9bc85635eee2013e33028330c63f170fed1f2762dc0a1bddfe1be343ebe8",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect6.yaml",
       "recorded_at": "2026-09-21T04:44:49.123002200+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT25-085#effect#1:optional_decline": {
+      "interaction_id": "probe:BT25-085#effect#1:optional_decline",
+      "card_ids": [
+        "BT25-085"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect1-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-085-effect1-optional-decline",
+      "recorded_at": "2026-10-06T16:17:36.038029100+00:00"
+    },
+    "probe:BT25-085#effect#2:optional_decline": {
+      "interaction_id": "probe:BT25-085#effect#2:optional_decline",
+      "card_ids": [
+        "BT25-085"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "3ef0bab26915a520aa245f40c27bffeb7bb9fb2bfc396fac5197ad8784953c95",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect2-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-085-effect2-optional-decline",
+      "recorded_at": "2026-10-06T16:18:53.274237400+00:00"
+    },
+    "probe:BT25-085#effect#2:scope:neg": {
+      "interaction_id": "probe:BT25-085#effect#2:scope:neg",
+      "card_ids": [
+        "BT25-085"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "3ef0bab26915a520aa245f40c27bffeb7bb9fb2bfc396fac5197ad8784953c95",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect2-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-085-effect2-scope-neg",
+      "recorded_at": "2026-10-06T16:19:47.624610400+00:00"
+    },
+    "probe:BT25-085#effect#3:optional_decline": {
+      "interaction_id": "probe:BT25-085#effect#3:optional_decline",
+      "card_ids": [
+        "BT25-085"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "daf58d3c7c90190f0c48e1dd258ac9ae98e27ea25d43100a6ca5e85fa2d5a306",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect3-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-085-effect3-optional-decline",
+      "recorded_at": "2026-10-06T16:22:43.833865700+00:00"
+    },
+    "probe:BT25-085#effect#3:scope:neg": {
+      "interaction_id": "probe:BT25-085#effect#3:scope:neg",
+      "card_ids": [
+        "BT25-085"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "daf58d3c7c90190f0c48e1dd258ac9ae98e27ea25d43100a6ca5e85fa2d5a306",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect3-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-085-effect3-scope-neg",
+      "recorded_at": "2026-10-06T21:53:27.283978300+00:00"
+    },
+    "probe:BT25-085#effect#5:optional_decline": {
+      "interaction_id": "probe:BT25-085#effect#5:optional_decline",
+      "card_ids": [
+        "BT25-085"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "43b95e137a1a96b5fe79ced2e11ee7b720800d3b4f3b11425d8256005c5c70c4",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect5-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-085-effect5-optional-decline",
+      "recorded_at": "2026-10-06T21:56:08.956942+00:00"
+    },
+    "probe:BT25-085#effect#5:scope:neg": {
+      "interaction_id": "probe:BT25-085#effect#5:scope:neg",
+      "card_ids": [
+        "BT25-085"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "43b95e137a1a96b5fe79ced2e11ee7b720800d3b4f3b11425d8256005c5c70c4",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect5-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-085-effect5-scope-neg",
+      "recorded_at": "2026-10-06T16:45:11.542927700+00:00"
+    },
+    "probe:BT25-085#effect#6:optional_decline": {
+      "interaction_id": "probe:BT25-085#effect#6:optional_decline",
+      "card_ids": [
+        "BT25-085"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "f47d9bc85635eee2013e33028330c63f170fed1f2762dc0a1bddfe1be343ebe8",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-effect6-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-085-effect6-optional-decline",
+      "recorded_at": "2026-10-06T16:45:47.765635+00:00"
+    },
+    "qa:Q6402": {
+      "interaction_id": "qa:Q6402",
+      "card_ids": [
+        "BT25-085"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "4bd30cc72724b8c5f86de0451f9afd3b8ad3b0d895a41abbd4aaaaf8d694c999",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-qa-Q6402.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-085-qa-Q6402",
+      "recorded_at": "2026-10-06T22:19:04.882501900+00:00"
+    },
+    "qa:Q6404": {
+      "interaction_id": "qa:Q6404",
+      "card_ids": [
+        "BT25-085"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "99ec14623b353da1a72b1cbd4c6793cd8866c9e97424e15c11911b16765bc89b",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-085-qa-Q6404.yaml",
+      "reason": "ours contradicts ruling qa:Q6404 (ours vs DCGO: agree); CLEAN (compared 16 of 17 ours / 17 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-085-qa-Q6404",
+      "recorded_at": "2026-10-06T22:28:57.831809400+00:00"
     }
   }
 }

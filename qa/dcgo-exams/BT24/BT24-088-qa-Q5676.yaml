@@ -1,0 +1,92 @@
+# Extend BT24-088-effect0.yaml's paid-cost revival line to the OTHER seat
+# and the inclusive memory boundary. P1 starts T4 at 5 memory, then T6 at 4:
+# P0 spends 2 + 6 from 3 on T3, then 2 + 5 from 3 on T5.
+# At 5, Asuna and a legal revival target are already present. The line proceeds
+# directly to breeding, exposing a reversed comparison or a wrong-seat sign.
+# This targets a strict-inequality or player-perspective error in the gate.
+# Both Asuna On Play costs are paid to isolate the memory ruling.
+# The final breeding pass provides the first settled observation after revival.
+card: BT24-088
+clause: BT24-088#effect#0
+interaction: {id: "qa:Q5676", source: qa, kind: positive}
+covers:
+  - BT24-088#effect#0
+  - BT24-088#effect#1
+meta: {produced_by: 20261006T161528715453Z-pilot-three-musketeers-05e6fe}
+seed: 424242
+decks:
+  p0:
+    stack: [ST1-02, BT4-014, ST1-08, ST1-02, BT3-007,
+            ST1-05, ST1-05, ST1-05, ST1-05, BT1-014, ST1-03, ST1-04]
+    rest: quiet-opponent
+  p1:
+    # T2 draw at 10; first On Play draws 11..12; T4 draw at 13;
+    # revived On Play draws 14..15, then T6 normal draw at 16.
+    stack: [BT24-088, BT24-088, BT25-078, BT21-074, BT21-074,
+            BT25-082, BT25-082, BT25-082, BT25-082, BT25-085,
+            BT25-083, BT25-083, BT25-083, BT25-092, BT25-092, BT25-092, BT25-092]
+    rest: three-musketeers
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT24-088, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { cards: [BT24-088] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST1-02, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: ST1-08, from: hand } }
+    expect: { prompt: main_phase }
+  # T4: P1 has 5 memory. No activation before this breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT4-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T6: P1's memory is exactly 4; accept Asuna's return-to-bottom cost.
+  - actor: 1
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { select: { cards: [BT24-088] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 1
+    do: { select: { cards: [BT25-078] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert: []
+expect_ruling:
+  q_id: Q5676
+  assert:
+  - at: 16
+    that:
+      p1.trash: []

@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-09-18T08:01:47.626705800+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T19:13:40.395720300+00:00",
   "clauses": {
     "BT21-074#effect#0": {
       "clause_id": "BT21-074#effect#0",
@@ -46,6 +46,93 @@
       "text_sha256": "125f001008fc45e7367bd0b5eff98a3ba2587c7624933a1acbb92fa5101e4519",
       "scenario_path": "qa/dcgo-exams/BT21/BT21-074-inherited0.yaml",
       "recorded_at": "2026-09-18T08:00:46.508168800+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT21-074#effect#1:optional_decline": {
+      "interaction_id": "probe:BT21-074#effect#1:optional_decline",
+      "card_ids": [
+        "BT21-074"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "e1fddd50f09e5e7f999302ac25e4d6f58c1f54871d0ef7a75545e1f085719fee",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-074-effect1-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT21-074-effect1-optional-decline",
+      "recorded_at": "2026-10-06T14:20:02.868730300+00:00"
+    },
+    "probe:BT21-074#effect#1:scope:neg": {
+      "interaction_id": "probe:BT21-074#effect#1:scope:neg",
+      "card_ids": [
+        "BT21-074"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "e1fddd50f09e5e7f999302ac25e4d6f58c1f54871d0ef7a75545e1f085719fee",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-074-effect1-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT21-074-effect1-scope-neg",
+      "recorded_at": "2026-10-06T14:21:50.926463900+00:00"
+    },
+    "probe:BT21-074#effect#2:optional_decline": {
+      "interaction_id": "probe:BT21-074#effect#2:optional_decline",
+      "card_ids": [
+        "BT21-074"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "e76d35ee7244cf5a17563971aab695b13c8a1b1ebdda9ea28e06f905a7d552bf",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-074-effect2-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT21-074-effect2-optional-decline",
+      "recorded_at": "2026-10-06T14:33:03.001005400+00:00"
+    },
+    "probe:BT21-074#effect#2:scope:neg": {
+      "interaction_id": "probe:BT21-074#effect#2:scope:neg",
+      "card_ids": [
+        "BT21-074"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "e76d35ee7244cf5a17563971aab695b13c8a1b1ebdda9ea28e06f905a7d552bf",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-074-effect2-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT21-074-effect2-scope-neg",
+      "recorded_at": "2026-10-06T15:32:28.171086500+00:00"
+    },
+    "qa:Q4584": {
+      "interaction_id": "qa:Q4584",
+      "card_ids": [
+        "BT21-074"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "4bd30cc72724b8c5f86de0451f9afd3b8ad3b0d895a41abbd4aaaaf8d694c999",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-074-qa-Q4584.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT21-074-qa-Q4584",
+      "recorded_at": "2026-10-06T15:35:16.578828300+00:00"
+    },
+    "qa:Q4585": {
+      "interaction_id": "qa:Q4585",
+      "card_ids": [
+        "BT21-074"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "c8885e545995ff08e4b41b74c2e01da3fea04bee4c2fd4784038967f2c3d0eca",
+      "scenario_path": "qa/dcgo-exams/BT21/BT21-074-qa-Q4585.yaml",
+      "reason": "ours contradicts ruling qa:Q4585 (ours vs DCGO: diverge); DIVERGED at step 28 (compared 24 of 29 ours / 27 dcgo steps (5 sim-only row(s) with no DCGO prompt + 3 DCGO intermediate row(s) not comparable))",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT21-074-qa-Q4585",
+      "recorded_at": "2026-10-06T19:13:40.395720300+00:00"
     }
   }
 }

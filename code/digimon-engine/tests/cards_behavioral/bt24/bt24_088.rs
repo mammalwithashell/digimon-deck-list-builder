@@ -42,7 +42,7 @@ fn bt24_088_yaml_metadata_and_clauses_match_printed_card() {
         [
             CompiledStep::SelectHand { .. },
             CompiledStep::TrashFromHandByIndex { .. },
-            CompiledStep::Draw { count: 2, .. },
+            CompiledStep::If { .. },
         ]
     ));
 
@@ -174,6 +174,41 @@ fn bt24_088_on_play_trashes_matching_hand_card_and_draws_two() {
     assert!(hand_ids.contains(&"DRAW-B".to_string()));
     assert!(!hand_ids.contains(&"TS-DISCARD".to_string()));
     assert_eq!(runner.deck_size(0), 0);
+}
+
+#[test]
+fn bt24_088_on_play_declining_discard_does_not_draw() {
+    // DCGO BT24_088.cs:151,163-173: Draw 2 requires a selected discard.
+    let mut runner = asuna_runner()
+        .add_card(ts_digimon("TS-DISCARD", 3))
+        .add_card(non_matching_digimon("MISS", 3))
+        .add_card(filler("DRAW-A"))
+        .add_card(filler("DRAW-B"))
+        .hand(0, &[CARD_ID, "MISS", "TS-DISCARD"])
+        .deck(0, &["DRAW-B", "DRAW-A"])
+        .memory(10)
+        .start();
+
+    runner.play(0, 0).expect("play Asuna");
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    assert!(runner.pending_is_optional());
+    assert!(runner
+        .pending_selection()
+        .expect("discard selection")
+        .valid_action_ids
+        .contains(&hand_action_for_id(&runner, "TS-DISCARD")));
+
+    runner.execute_action(0, PASS).expect("decline discard");
+    runner.auto_resolve().expect("settle declined cost");
+
+    assert_eq!(
+        zone_ids(&runner.game.player(0).hand, &runner.game.card_data),
+        vec!["MISS", "TS-DISCARD"],
+        "declining the discard must not draw cards"
+    );
+    assert_eq!(runner.deck_size(0), 2);
+    assert!(runner.game.player(0).trash.is_empty());
+    assert!(runner.pending_selection().is_none());
 }
 
 fn asuna_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {

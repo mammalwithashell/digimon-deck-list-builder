@@ -1,6 +1,6 @@
 {
   "generated_at": "2026-09-13T07:58:14.783202+00:00",
-  "source": "--card-ids (38 explicit ids) + three-musketeers-1 (60 explicit ids, additive merge 2026-09-13); 24 'Security Effect' ids moved to the security zone (2026-10-03) + book add EX10-025, EX10-028, EX8-067 + book add BT13-060, BT16-082, BT26-005, BT26-036, BT26-049, BT26-050, BT26-065, BT26-072, BT26-076, BT26-082, BT26-091, BT26-094, P-235, ST24-04, ST24-05, ST24-10, ST24-12, ST24-14, ST24-15",
+  "source": "--card-ids (38 explicit ids) + three-musketeers-1 (60 explicit ids, additive merge 2026-09-13); 24 'Security Effect' ids moved to the security zone (2026-10-03) + book add EX10-025, EX10-028, EX8-067 + book add BT13-060, BT16-082, BT26-005, BT26-036, BT26-049, BT26-050, BT26-065, BT26-072, BT26-076, BT26-082, BT26-091, BT26-094, P-235, ST24-04, ST24-05, ST24-10, ST24-12, ST24-14, ST24-15 + book add BT26-078, BT26-083",
   "cards": [
     "BT11-089",
     "BT8-097",
@@ -121,7 +121,9 @@
     "ST24-10",
     "ST24-12",
     "ST24-14",
-    "ST24-15"
+    "ST24-15",
+    "BT26-078",
+    "BT26-083"
   ],
   "clauses": [
     {
@@ -6130,18 +6132,188 @@
       "text": "Activate this card's [Main] effects.",
       "source": "bundle",
       "image_path": null
+    },
+    {
+      "id": "BT26-078#effect#0",
+      "card_id": "BT26-078",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[TS] trait: Cost 5",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-078#effect#1",
+      "card_id": "BT26-078",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "{Trash}",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-078#effect#2",
+      "card_id": "BT26-078",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your [Chronomon] text or [Titan] trait Digimon are played, if your opponent has 5 or more memory, by returning this card to the bottom of the deck, 1 of them gains ＜Rush＞ and ＜Execute＞ for the turn.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-078#effect#3",
+      "card_id": "BT26-078",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By deleting this Digimon, you may play 1 play cost 12 or lower [Chronomon] text or [Titan] trait card from your trash without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-083#effect#0",
+      "card_id": "BT26-083",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.6 w/[TS] trait: Cost 4",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-083#effect#1",
+      "card_id": "BT26-083",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Rush",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-083#effect#2",
+      "card_id": "BT26-083",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-083#effect#3",
+      "card_id": "BT26-083",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Execute",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-083#effect#4",
+      "card_id": "BT26-083",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Decode",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-083#effect#5",
+      "card_id": "BT26-083",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Trash all of your security cards. For each card this effect trashed, delete 1 of your opponent's Digimon. Then, ＜Recovery +3＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-083#effect#6",
+      "card_id": "BT26-083",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "Give all of your opponent's Digimon ＜Security A. -1＞ until their turn ends.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-083#effect#7",
+      "card_id": "BT26-083",
+      "zone": "effect",
+      "label": "Special Play Condition",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "Assembly -4: [Junomon]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT26-083#inherited#0",
+      "card_id": "BT26-083",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "ー",
+      "source": "bundle",
+      "image_path": null
     }
   ],
   "denominator": {
-    "total_clauses": 437,
-    "total_cards": 120,
+    "total_clauses": 450,
+    "total_cards": 122,
     "by_zone": {
-      "effect": 346,
-      "inherited": 57,
+      "effect": 358,
+      "inherited": 58,
       "security": 34
     },
     "by_source": {
-      "bundle": 335,
+      "bundle": 348,
       "cards_json": 98,
       "image-required": 4
     },

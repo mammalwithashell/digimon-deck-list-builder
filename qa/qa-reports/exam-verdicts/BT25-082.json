@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-09-18T09:22:08.770469400+00:00",
+  "version": 2,
+  "last_updated": "2026-10-06T21:50:38.121993500+00:00",
   "clauses": {
     "BT25-082#effect#0": {
       "clause_id": "BT25-082#effect#0",
@@ -37,6 +37,134 @@
       "text_sha256": "aae3d133a53ff044123b9d74e486f600d87b71a31f57e2783ac631b48114bcc7",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-082-inherited0.yaml",
       "recorded_at": "2026-09-18T09:22:08.770469400+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT25-082#effect#1:optional_decline": {
+      "interaction_id": "probe:BT25-082#effect#1:optional_decline",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "78acb9f0ccc60ed8ca5af155579d4ac2d47cd77a95be9bdc321d9729c241d93f",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-effect1-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-effect1-optional-decline",
+      "recorded_at": "2026-10-06T15:50:47.938809400+00:00"
+    },
+    "probe:BT25-082#effect#2:scope:neg": {
+      "interaction_id": "probe:BT25-082#effect#2:scope:neg",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "24f57cec77994c9103c1afff66a55c8dc82c797fd7b50db55c1ccdf1309e7647",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-effect2-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-effect2-scope-neg",
+      "recorded_at": "2026-10-06T15:55:36.170358400+00:00"
+    },
+    "probe:BT25-082#inherited#0:optional_decline": {
+      "interaction_id": "probe:BT25-082#inherited#0:optional_decline",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "aae3d133a53ff044123b9d74e486f600d87b71a31f57e2783ac631b48114bcc7",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-inherited0-optional-decline.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-inherited0-optional-decline",
+      "recorded_at": "2026-10-06T15:57:33.335381800+00:00"
+    },
+    "probe:BT25-082#inherited#0:scope:neg": {
+      "interaction_id": "probe:BT25-082#inherited#0:scope:neg",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "aae3d133a53ff044123b9d74e486f600d87b71a31f57e2783ac631b48114bcc7",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-inherited0-scope-neg.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-inherited0-scope-neg",
+      "recorded_at": "2026-10-06T16:07:52.400631900+00:00"
+    },
+    "qa:Q6387": {
+      "interaction_id": "qa:Q6387",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "4bd30cc72724b8c5f86de0451f9afd3b8ad3b0d895a41abbd4aaaaf8d694c999",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-qa-Q6387.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-qa-Q6387",
+      "recorded_at": "2026-10-06T16:08:45.212062100+00:00"
+    },
+    "qa:Q6389": {
+      "interaction_id": "qa:Q6389",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "dfde81e1edbddc03318097700ea4775ad19a0aecbaee41d5fd4df74c71f75933",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-qa-Q6389.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-qa-Q6389",
+      "recorded_at": "2026-10-06T21:02:49.823411900+00:00"
+    },
+    "qa:Q6390": {
+      "interaction_id": "qa:Q6390",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "e8421d5d86944804b81d2139fb754d81604a526f8ea3f78e8235ef84ca8d6d20",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-qa-Q6390.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-qa-Q6390",
+      "recorded_at": "2026-10-06T21:42:15.427077200+00:00"
+    },
+    "qa:Q6391": {
+      "interaction_id": "qa:Q6391",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "677ce91514b46d960092958c1aa324e487c2ad8ca3bcfacfe9ced812aab6c56d",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-qa-Q6391.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-qa-Q6391",
+      "recorded_at": "2026-10-06T21:37:51.044367100+00:00"
+    },
+    "qa:Q6392": {
+      "interaction_id": "qa:Q6392",
+      "card_ids": [
+        "BT25-082"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "0707eda5def7511df3d894cbf6965118cc0f7391ee73dcc61ab2eb15f39d62cf",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-082-qa-Q6392.yaml",
+      "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
+      "job_id": "exam-BT25-082-qa-Q6392",
+      "recorded_at": "2026-10-06T21:50:38.121993500+00:00"
     }
   }
 }
