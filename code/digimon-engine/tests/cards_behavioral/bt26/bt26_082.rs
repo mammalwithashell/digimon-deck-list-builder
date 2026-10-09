@@ -158,3 +158,89 @@ fn bt26_082_face_down_security_does_nothing() {
     );
     assert_eq!(r.security_count(0), 2);
 }
+
+// qa:Q7121: shuffling security turns every card face down.
+#[test]
+fn shuffle_security_turns_all_cards_face_down_only_for_shuffled_player() {
+    for player in 0..2 {
+        let mut r = builder()
+            .security(0, &[CARD_ID, "FILLER", CARD_ID])
+            .security(1, &[CARD_ID, "FILLER", CARD_ID])
+            .start();
+        for p in &mut r.game.players {
+            for card in &p.security {
+                if card.card_id(&r.game.card_data) == CARD_ID {
+                    p.face_up_security.insert(card.card_index);
+                }
+            }
+        }
+        let other = 1 - player;
+        let other_faces = r.game.players[other].face_up_security.clone();
+        let before: Vec<_> = r
+            .game
+            .players
+            .iter()
+            .map(|p| p.security.iter().map(|c| c.card_index).collect::<Vec<_>>())
+            .collect();
+
+        r.game.shuffle_security(player as u8);
+
+        assert!(r.game.players[player].face_up_security.is_empty());
+        assert_eq!(r.game.players[other].face_up_security, other_faces);
+        let after: Vec<_> = r
+            .game
+            .players
+            .iter()
+            .map(|p| p.security.iter().map(|c| c.card_index).collect::<Vec<_>>())
+            .collect();
+        assert_eq!(after[other], before[other], "other stack is unchanged");
+        let mut expected = before[player].clone();
+        let mut actual = after[player].clone();
+        expected.sort_unstable();
+        actual.sort_unstable();
+        assert_eq!(actual, expected, "shuffle preserves every card instance");
+    }
+}
+
+#[test]
+fn bt26_082_q7121_tk_shuffle_prevents_security_revival() {
+    use digimon_engine::action::space::SEL_MY_SECURITY_START;
+
+    let mut r = builder()
+        .dsl_card("BT1-087")
+        .expect("T.K. Takaishi")
+        .security(
+            0,
+            &[CARD_ID, "JUNK", "FILLER", "FILLER", "FILLER", "FILLER"],
+        )
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .start();
+    r.set_first_player(0);
+    // State after Ravemon's On Deletion placement: five security plus Ravemon.
+    let ravemon = r.game.players[0].security[0].card_index;
+    r.game.players[0].face_up_security.insert(ravemon);
+    let tk = r.place_on_field(0, "BT1-087", Some(0));
+    let deck_before = r.game.players[0].deck.len();
+    fire(&mut r, EffectTiming::OnPlay, tk);
+    // Select a non-yellow card using the real DSL/VM security selection.
+    r.execute_action(0, SEL_MY_SECURITY_START + 1)
+        .expect("pick non-yellow JUNK");
+    assert!(r.game.pending_selection.is_none());
+    assert!(r.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "JUNK"));
+    assert_eq!(r.game.players[0].deck.len(), deck_before, "no recovery");
+    assert_eq!(r.security_count(0), 5);
+
+    r.end_turn();
+    r.end_turn();
+    assert_eq!(
+        r.security_count(0),
+        5,
+        "Q7121: shuffled Ravemon cannot play itself"
+    );
+    assert!(!field_ids(&r, 0).contains(&CARD_ID.to_string()));
+    assert!(r.game.players[0].face_up_security.is_empty());
+}
