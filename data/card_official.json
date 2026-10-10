@@ -1,5 +1,5 @@
 {
-  "count": 4402,
+  "count": 4416,
   "failed": [],
   "cards": {
     "AD1-001": {
@@ -115861,6 +115861,455 @@
         }
       ],
       "special_digivolution_condition": "[Digivolve] [Omnimon]: Cost 2"
+    },
+    "EX12-046": {
+      "card_id": "EX12-046",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Yellow Red",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Vaccine",
+      "type": "Holy Beast/Shambala/TB",
+      "qa": [
+        "[Security] effects take precedence for activation. Upon a check, a [Security] effect will immediately activate without pending activation. For other triggered effects, the turn player activates their effects first."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends. [Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -2: Lv.4 or lower [TB] trait card"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+    },
+    "EX12-062": {
+      "card_id": "EX12-062",
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Purple",
+      "play_cost": "4",
+      "dp": "5000",
+      "form": "Champion",
+      "attribute": "Data",
+      "type": "Puppet/Shambala/TB",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.3 w/[Puppet]/[Shambala] trait: Cost 2"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's level 4 or lower Digimon."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[When Attacking] [Once Per Turn] ＜Draw 1＞ and trash 1 card in your hand."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.3 w/[Puppet]/[Shambala] trait: Cost 2"
+    },
+    "EX12-070": {
+      "card_id": "EX12-070",
+      "digivolve_costs": [],
+      "colors": "Yellow Green Blue",
+      "play_cost": "3",
+      "type": "Shambala/TB",
+      "qa": [
+        "No, you can't. If you don't trash 1 [TB] trait card, you can't use the part after \"after\" in this card's [Main] effect to place this card in the battle area."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Use Req. ([TB] trait)＞ (Specified cards let you ignore color requirements.) [Main] By trashing 1 [TB] trait card from your hand, ＜Draw 2＞. After, place this card in the battle area. [All Turns] When any of your level 5 or higher [TB] trait Digimon would leave the battle area, ＜Delay＞. ・You may play 1 [Sanmyojin] trait Digimon card from your hand without paying the cost."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Activate this card's [Main] effects."
+        }
+      ]
+    },
+    "EX12-076": {
+      "card_id": "EX12-076",
+      "digivolve_costs": [],
+      "colors": "Yellow White Red",
+      "play_cost": "16",
+      "dp": "16000",
+      "form": "Mega",
+      "attribute": "Vaccine",
+      "type": "Shaman/Shambala/SW/TB/TS",
+      "qa": [
+        "No, you cannot. As this card has left the battle area, it doesn't have digivolution cards whose colors could be determined. Thus, the effect cannot be processed."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞ [On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards. [When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞. (Rule) Trait: Has [Hybrid] Form."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+    },
+    "EX12-036": {
+      "card_id": "EX12-036",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Blue Yellow",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Data",
+      "type": "Mollusk/Sanmyojin/Tentei Hachibushu/Shambala/TB",
+      "qa": [
+        "Yes, both have to be on XX. For example, if text reads \"level 4 or lower Digimon card with the [CS] trait or is yellow or black,\" it refers to a level 4 or lower Digimon card that has the [CS] trait or a level 4 or lower Digimon card that is yellow or black."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Aquatic]/[Shambala] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Barrier＞ ＜Evade＞ ＜Decode (Lv.5 or lower w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)＞ [On Play] [When Digivolving] [When Attacking] [Once Per Turn] By placing 1 level 6 or lower card with [Aqua] or [Sea Animal] in any of its traits or the [TB] trait from your hand as this Digimon's bottom digivolution card, 1 of your Digimon may unsuspend. [All Turns] [Once Per Turn] When any of your Digimon are played or digivolve, 1 of your opponent's Digimon can't activate [When Digivolving] effects or suspend until their turn ends. (Rule) Trait: Has [Aquatic] Type."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[Aquatic]/[Shambala] trait: Cost 3"
+    },
+    "EX12-061": {
+      "card_id": "EX12-061",
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 2,
+          "memory_cost": 0
+        },
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Purple",
+      "play_cost": "3",
+      "dp": "2000",
+      "form": "Rookie",
+      "attribute": "Data",
+      "type": "Puppet/Shambala/TB",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Shambala] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] By trashing 1 card with the [Puppet] or [TB] trait from your hand, ＜Draw 2＞."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[When Attacking] [Once Per Turn] ＜Draw 1＞ and trash 1 card in your hand."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Shambala] trait: Cost 0"
+    },
+    "EX12-026": {
+      "card_id": "EX12-026",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Blue",
+      "play_cost": "5",
+      "dp": "5000",
+      "form": "Champion",
+      "attribute": "Data",
+      "type": "Mollusk/Shambala/TB",
+      "qa": [
+        "No, it will not. This effect targets one of your opponent's Digimon with one or fewer digivolution cards and gives it a \"can't attack or block until their turn ends\" effect. After the effect is given, it remains on the Digimon even if its digivolution cards increase."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.3 w/[Shambala] trait: Cost 2"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞ [On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with 1 or fewer digivolution cards can't attack or block until their turn ends. (Rule) Trait: Has [Aquatic] Type."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[When Attacking] [Once Per Turn] If your hand has 7 or fewer cards, ＜Draw 1＞."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.3 w/[Shambala] trait: Cost 2"
+    },
+    "EX12-009": {
+      "card_id": "EX12-009",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Red",
+      "play_cost": "3",
+      "dp": "2000",
+      "form": "Rookie",
+      "attribute": "Vaccine",
+      "type": "Beast/Shambala/TB",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Shambala] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Shambala] trait and 1 card with the [TB] trait among them to the hand. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] This Digimon gets +2000 DP."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Shambala] trait: Cost 0"
+    },
+    "EX12-004": {
+      "card_id": "EX12-004",
+      "digivolve_costs": [],
+      "colors": "Purple",
+      "form": "In-Training",
+      "type": "Ghost/Shambala/TB",
+      "qa": [
+        "The player can resolve them in any order. However, if the Digimon is deleted by first, then the [End of Attack] effect can't be activated. Related Cards"
+      ],
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] This Digimon with the [TB] trait gains ＜Execute＞."
+        }
+      ]
+    },
+    "EX12-031": {
+      "card_id": "EX12-031",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Blue Yellow",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Data",
+      "type": "Mollusk/Shambala/TB",
+      "qa": [
+        "Yes, both have to be XX. For example, \"1 level 4 or lower Digimon card with the [CS] trait or that is yellow or black\" means either \"1 level 4 or lower Digimon card with the [CS] trait\" or \"1 level 4 or lower Digimon card that is yellow or black.\" In both cases, the card must be level 4 or lower."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.4 w/[Aquatic]/[Shambala] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Decode (Lv.4 or lower w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)＞ [On Play] [When Digivolving] By placing 1 level 6 or lower card with [Aqua] or [Sea Animal] in any of its traits or the [TB] trait from your hand as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon with 1 or fewer digivolution cards to the hand. (Rule) Trait: Has [Aquatic] Type."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -2: Lv.4 or lower card w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Decode (Lv.4 or lower w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card without paying the cost.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.4 w/[Aquatic]/[Shambala] trait: Cost 3"
+    },
+    "EX12-020": {
+      "card_id": "EX12-020",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Blue",
+      "play_cost": "3",
+      "dp": "2000",
+      "form": "Rookie",
+      "attribute": "Virus",
+      "type": "Mollusk/Shambala/TB",
+      "qa": [
+        "No, it does not. Effects do not trigger in the breeding area."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Shambala] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [TB] trait, reduce the cost by 1."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[When Attacking] [Once Per Turn] If your hand has 7 or fewer cards, ＜Draw 1＞."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Shambala] trait: Cost 0"
+    },
+    "EX12-063": {
+      "card_id": "EX12-063",
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 3,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Purple Green",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ultimate",
+      "attribute": "Data",
+      "type": "Puppet/Shambala/TB",
+      "qa": [
+        "Yes, it can."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends. [On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+    },
+    "EX12-047": {
+      "card_id": "EX12-047",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Yellow Red",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "Mega",
+      "attribute": "Vaccine",
+      "type": "Shaman/Sanmyojin/Tentei Hachibushu/Shambala/TB",
+      "qa": [
+        "The effects trigger simultaneously, so the player can choose the activation order. However, if you first activate and this card is removed from the trash, the other effects on this card that were pending activation can no longer activate."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Piercing＞ ＜Security A. +1＞ ＜Ascension＞ (When this Digimon is deleted, you may place this card as the top security card.) [On Play] [When Digivolving] Delete 1 of your opponent's lowest DP Digimon. Then, by returning 2 cards from their trash to the bottom of the deck, for the turn, this Digimon gets +6000 DP and, to 1 of their Digimon, give -5000 DP for each of those returned cards' colors. [On Deletion] You may return 1 [TB] trait card from your trash to the hand. Then, you may play 1 level 5 or lower [TB] trait Digimon card from your hand without paying the cost."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
+    },
+    "EX12-074": {
+      "card_id": "EX12-074",
+      "digivolve_costs": [],
+      "colors": "White",
+      "play_cost": "3",
+      "type": "Shambala/SW/TB",
+      "qa": [
+        "Yes, you can. In such cases, you can't add a card from your security stack to your hand, therefore you only place this card in your security stack."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Use Req. ([Shambala] trait)＞ (Specified cards let you ignore color requirements.) {Security} [Your Turn] [Once Per Turn] When one of your [Shambala] trait Digimon attacks, it may digivolve into a [Shambala] trait Digimon card in the hand with the cost reduced by 1. [Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 [Shambala] trait card from your hand with the cost reduced by 3."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] You may play 1 play cost 5 or lower [Shambala] trait card from your hand or trash without paying the cost."
+        }
+      ]
     }
   }
 }
