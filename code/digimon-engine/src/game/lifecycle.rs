@@ -77,7 +77,7 @@ impl Game {
             self.game_over = true;
             self.winner = Some(self.turn_order[0]);
             self.terminal_outcome_reason = Some(TerminalOutcomeReason::EngineDeclared);
-            self.current_phase = GamePhase::GameOver;
+            self.set_current_phase(GamePhase::GameOver);
             let seq = self.next_event_seq();
             self.events.push(crate::events::GameEvent::GameOver {
                 seq,
@@ -189,7 +189,7 @@ impl Game {
     pub fn request_play_order_selection(&mut self, loser_id: PlayerId) {
         self.pending_selection = None;
         let previous_phase = self.current_phase;
-        self.current_phase = GamePhase::SelectPlayOrder;
+        self.set_current_phase(GamePhase::SelectPlayOrder);
         self.pending_selection = Some(crate::selection::PendingSelection {
             zone_owner: None,
             kind: crate::selection::SelectionKind::PlayOrder,
@@ -258,7 +258,7 @@ impl Game {
         self.game_over = true;
         self.winner = Some(winner_id);
         self.terminal_outcome_reason = Some(reason);
-        self.current_phase = GamePhase::GameOver;
+        self.set_current_phase(GamePhase::GameOver);
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::GameOver {
             seq,

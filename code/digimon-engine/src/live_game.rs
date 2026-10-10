@@ -1106,7 +1106,7 @@ impl LiveGame {
             // pending with a single unfulfillable option, fizzle.
             if let Some((previous_phase, source_permanent)) = fizzle_candidate {
                 self.game.pending_selection = None;
-                self.game.current_phase = previous_phase;
+                self.game.set_current_phase(previous_phase);
                 let seq = self.game.next_event_seq();
                 self.game.events.push(GameEvent::EffectFizzled {
                     seq,

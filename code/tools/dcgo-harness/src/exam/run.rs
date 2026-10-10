@@ -385,6 +385,49 @@ mod snapshot_tests {
         assert!(err.contains("out of range"), "{err}");
     }
 
+    /// The BT16-082 Ukkomon exam line, lowered sim-only. Step 8 moves Ukkomon
+    /// out of the breeding area, so the board before step 9 has its reveal
+    /// pick open while the turn is in its Breeding phase -- the shape of
+    /// Q2669 ("It activates during the breeding phase").
+    fn bt16_082_run() -> (std::path::PathBuf, LoweredRun) {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+        let path = root.join("qa/dcgo-exams/BT16/BT16-082-effect0.yaml");
+        let s = Scenario::from_yaml(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        let book = crate::exam::deckbook::book_for(
+            &path,
+            &[s.decks.p0.rest.as_str(), s.decks.p1.rest.as_str()],
+            &root.join("qa/dcgo-exams"),
+        )
+        .expect("a deck book names both seats");
+        let book = DeckBook::load(Some(book.as_path()), root.join("data/cards.json").as_path()).unwrap();
+        let p0 = ordered_deck(&s.decks.p0, &book).unwrap();
+        let p1 = ordered_deck(&s.decks.p1, &book).unwrap();
+        let run = lower_and_run(&s, p0, p1, &crate::exam::test_support::load_card_data()).unwrap();
+        assert!(run.complete, "{:?}", run.stall_reasons);
+        (path, run)
+    }
+
+    #[test]
+    fn a_selection_open_in_the_breeding_phase_projects_breeding() {
+        let (_, run) = bt16_082_run();
+        assert!(run.snapshots[9].pending_kind.is_some(), "Ukkomon's reveal pick is open before step 9");
+        assert_eq!(run.projections[9].turn, 5);
+        assert_eq!(run.projections[9].phase, "Breeding");
+    }
+
+    #[test]
+    fn q2669_phase_breeding_holds_while_the_triggered_effect_resolves() {
+        let (path, run) = bt16_082_run();
+        let text = std::fs::read_to_string(&path).unwrap();
+        let s = Scenario::from_yaml(&format!(
+            "{text}\ninteraction: {{ id: \"qa:Q2669\", source: qa, kind: positive }}\n\
+             expect_ruling:\n  q_id: Q2669\n  assert:\n    - at: 9\n      that: {{ phase: breeding }}\n"
+        ))
+        .unwrap();
+        let (checked, failures) = crate::exam::assertions::check_ruling(&s, &run.projections).unwrap();
+        assert_eq!((checked, failures), (1, Vec::<String>::new()));
+    }
+
     #[test]
     fn a_live_prompts_candidates_name_the_cards_they_pick() {
         let (_, run) = ex10_run();

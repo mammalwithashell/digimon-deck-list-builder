@@ -1379,7 +1379,7 @@ impl Game {
             .handle();
 
         let previous_phase = self.current_phase;
-        self.current_phase = GamePhase::AllianceTiming;
+        self.set_current_phase(GamePhase::AllianceTiming);
 
         self.pending_selection = Some(PendingSelection {
             zone_owner: None,
@@ -1710,7 +1710,7 @@ impl Game {
             .top_card()
             .handle();
         let previous_phase = self.current_phase;
-        self.current_phase = GamePhase::CounterTiming;
+        self.set_current_phase(GamePhase::CounterTiming);
 
         self.pending_selection = Some(PendingSelection {
             zone_owner: None,
@@ -2272,7 +2272,7 @@ impl Game {
             .handle();
 
         let previous_phase = self.current_phase;
-        self.current_phase = GamePhase::BlockTiming;
+        self.set_current_phase(GamePhase::BlockTiming);
 
         self.pending_selection = Some(PendingSelection {
             zone_owner: None,

@@ -608,7 +608,13 @@ Unity is spent:
 Phase at a selection boundary is **representation**: our engine parks in a
 `Select*`/`EffectChoice` `GamePhase` while DCGO's `TurnPhase` stays on the
 interrupted phase, so the differ compares every state field but not `phase` on
-those steps (`Breeding`-vs-`Main` still diffs).
+those steps (`Breeding`-vs-`Main` still diffs). Our projection's `phase` is the
+**turn phase** (`Game::turn_phase()`: the phase the open selection interrupted),
+and the open prompt is named separately in `selection`, which DCGO rows never
+carry; a row with `selection` set is the step the differ leaves `phase` out of.
+So an `assert:` / `expect_ruling:` may check `phase` at such a step: Q2669's
+"activates during the breeding phase" is `phase: breeding` with Ukkomon's
+(BT16-082) reveal pick open.
 
 The same holds for the **end-of-turn window**, as a PAIR rather than a blanket
 suppression: `ours=EndOfTurnAction` against `dcgo=Main` is one window under two
@@ -975,8 +981,8 @@ Backfill asserts only what both engines can stand behind:
 - **Only the rows the differ paired.** A step that put nothing on the DCGO wire
   (a sim-only row) or that only DCGO decides was never observed by the oracle,
   so it gets no assertion; the steps around it still do.
-- **No `phase` the differ did not compare** (our selection phases, our
-  `EndOfTurnAction` against DCGO's `Main`).
+- **No `phase` the differ did not compare** (a step with a selection open on
+  our side, our `EndOfTurnAction` against DCGO's `Main`).
 - **Only values the sim-only replay reproduces.** A card drawn from beyond
   `stack:` comes from DCGO's own seeded shuffle in the oracle run but from the
   deck book's order in CI, so asserting it would fail the gate on a line that

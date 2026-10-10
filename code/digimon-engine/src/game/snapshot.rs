@@ -82,7 +82,7 @@ impl Game {
                 self.turn_count = turn as u16;
             }
             if let Some(phase) = state.get("phase").and_then(Value::as_str) {
-                self.current_phase = parse_scenario_phase(phase)?;
+                self.set_current_phase(parse_scenario_phase(phase)?);
             }
             if let Some(mem) = state.get("memory").and_then(Value::as_i64) {
                 self.set_memory(mem as i16);
