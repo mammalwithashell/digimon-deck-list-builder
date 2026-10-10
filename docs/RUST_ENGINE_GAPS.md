@@ -4472,6 +4472,16 @@ this is fixed. Fix direction: route source-trash observers through the normal pe
 oracle instead of the sim test, and drop the `G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION`
 park in `dsl_cards/step/mod.rs` once nothing drains inline.
 
+**DECIDED (2026-10-10, owner rulings checked against `general_rule.pdf`).** The worksheet is https://claude.ai/artifact/2FYAbbY92h16vaqy26b9Wr, and the full rules are on PR #726.
+1. A trigger without interruptive "when … would" timing waits until the effect or rule process that caused it finishes (15-8-3-2).
+2. Triggers that arise before one effect or process resolves are simultaneous, and the turn player orders them (15-4-3-2/4/5).
+3. A derived trigger activates before the ones still pending (15-4-5-2).
+4. One condition met by several cards at once triggers once (15-5-2).
+5. A different event meeting the condition again triggers it again (15-4-2-4). The trigger-order UI should name the event.
+6. An unpayable trigger cost isn't offered.
+
+#726 (`maybe_drain_effect_queue` in `fire_digivolution_card_trashed`) gets rules 1 and 2 right. It still needs fixes for rule 4 (it fires once per card), rule 5 (it fires Keenan Crier BT26-094 once for Crowmon BT26-076's two events), and e-Pulse ST23-15, whose own [Main] lands in a trigger-order prompt. The Glowing Dawn exams that script the old inline order then need re-scripting and an oracle re-run.
+
 ## G-ENGINE-SELF-TRASHED-FROM-HAND — RESOLVED (2026-10-03, BT26-069 Dobermon)
 
 "When this card is trashed from the hand, …" (DCGO `CanTriggerOnTrashSelfHand`) had no
