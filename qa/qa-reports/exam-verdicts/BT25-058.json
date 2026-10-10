@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-10T17:07:57.149127300+00:00",
+  "last_updated": "2026-10-10T17:09:26.805050+00:00",
   "clauses": {
     "BT25-058#effect#0": {
       "clause_id": "BT25-058#effect#0",
@@ -87,6 +87,20 @@
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-BT25-058-effect4-optional-decline",
       "recorded_at": "2026-10-10T17:01:52.547581200+00:00"
+    },
+    "probe:BT25-058#effect#4:scope:neg": {
+      "interaction_id": "probe:BT25-058#effect#4:scope:neg",
+      "card_ids": [
+        "BT25-058"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "515be15902c3c63abd76a891d1222d04364f376e42892cff1ee270eac9841cf1",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-058-effect4-scope-neg.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT25-058-effect4-scope-neg",
+      "recorded_at": "2026-10-10T17:09:26.805050+00:00"
     }
   }
 }
