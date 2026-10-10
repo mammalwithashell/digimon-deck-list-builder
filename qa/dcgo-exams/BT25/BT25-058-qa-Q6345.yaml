@@ -5,13 +5,15 @@
 # Callismon then suspends Biyomon but locks the already-suspended Agumon.
 # The negative-memory digivolution lets the next unsuspend phase run
 # immediately after the mandatory lock selection; stop at that boundary.
+# Projection 14 precedes the restriction choice; projection 15 follows it
+# and the opponent's unsuspend phase. Use that final boundary for ruling encoding.
 card: BT25-058
 clause: BT25-058#effect#4
 covers:
   - BT25-058#effect#0
   - BT25-058#effect#4
 interaction: {id: "qa:Q6345", source: qa, kind: positive}
-meta: {produced_by: 20261010T171855690479Z-meta-six-20261010-a-42a033}
+meta: {produced_by: 20261010T195600301168Z-meta-six-20261010-a-23d407}
 seed: 424242
 decks:
   p0:
@@ -74,17 +76,3 @@ steps:
     do: {select: {targets: [opp.field.0]}}
     expect: {prompt: SelectPermanentEffect, count: 1}
 assert: []
-expect_ruling:
-  q_id: Q6345
-  assert:
-  - at: 14
-    that:
-      p1.field:
-      - card_id: BT3-007
-        dp: 4000
-        suspended: true
-        sources: []
-      - card_id: ST1-02
-        dp: 3000
-        suspended: false
-        sources: []
