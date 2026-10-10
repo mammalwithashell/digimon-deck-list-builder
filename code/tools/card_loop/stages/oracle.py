@@ -22,6 +22,12 @@ Per scenario result:
             looks exactly like this.
         ours cannot be mapped onto DCGO's prompts    -> DIVERGED (undetermined),
             the evidence goes to triage
+    DCGO `failed`, "selection did not complete" (the scripted answer did not
+      end DCGO's prompt):
+        the prompt cannot end on that answer          -> DIVERGED (engines_disagree)
+        it sat open until the player's stall watch     -> DIVERGED (undetermined)
+    DCGO `failed`, "timeout after Ns" (the player's   -> DIVERGED (undetermined)
+      own limit, no prompt left open)
 
 Several scenarios: a refusal escalates; else any divergence (or engine
 disagreement) goes to DIVERGED; else any scenario_wrong to AUTHORING; else any
@@ -83,7 +89,8 @@ class OracleExecutor:
             else:
                 row = rows[0]
             if isinstance(row.get("stall"), Mapping):
-                # The player is wedged (DCGO enforces no job timeout). Restart it
+                # The player is wedged past its own limit (too hung to file a
+                # timeout, or a build that predates enforcing one). Restart it
                 # here, once per fresh report, so the lane is not dead for every
                 # later item -- but only while the heartbeat still names the
                 # stalled job: another run may have restarted it already.
@@ -116,6 +123,31 @@ class OracleExecutor:
                 "expected": None, "dcgo_asked": None, "ours": None, "route": "undetermined",
                 "explanation": explanation, "stall": dict(stall), "player_restart": row.get("player_restart")}
 
+    @staticmethod
+    def _incomplete_evidence(path: str, row: Mapping, inc: harness.IncompleteSelection) -> tuple[str, dict]:
+        """DCGO asked the prompt the scenario expected and the scripted answer did
+        not complete it. A prompt that cannot END on the answer is an engine
+        disagreement (ours took the answer sim-only); one that sat open until
+        the player's own stall watch fired is undetermined, like a host-side
+        stall -- but the player already freed itself, so nothing restarts."""
+        hm = row.get("mismatch") if isinstance(row.get("mismatch"), Mapping) else {}
+        step = hm.get("step") if isinstance(hm.get("step"), int) else None
+        at = f"scenario step {step} (DCGO row {inc.row})" if step is not None else f"DCGO row {inc.row}"
+        evidence = {"scenario": path, "dcgo_row": inc.row, "scenario_step": step,
+                    "step_mapping": "harness" if step is not None else None,
+                    "expected": inc.prompt, "dcgo_asked": inc.prompt, "ours": inc.prompt}
+        if inc.stalled:
+            explanation = (f"DCGO's {inc.prompt} at {at} sat open with no new prompt and no game progress until the "
+                           f"player failed the job ({inc.detail}); our engine ran the same line to completion "
+                           f"sim-only. Compare what each engine asks at that step: a selection DCGO needs more picks "
+                           f"(or a cancel) for than ours does, or one DCGO's AI never answered.")
+            return "undetermined", {**evidence, "route": "undetermined", "explanation": explanation}
+        wanted = f"[{', '.join(inc.wanted)}]" if inc.wanted else "the scripted answer"
+        explanation = (f"DCGO's {inc.prompt} at {at} cannot end on {wanted}: {inc.detail}. Our engine accepted that "
+                       f"answer sim-only, so the engines disagree on what the selection accepts -- ours ends it where "
+                       f"DCGO's panel would not, or the line should give the answer DCGO needs.")
+        return "engines_disagree", {**evidence, "route": "engines_disagree", "explanation": explanation}
+
     # ------------------------------------------------------------------ per scenario
 
     def _classify(self, ctx, item: ItemRecord, path: str, row: dict) -> tuple[str, dict | None]:
@@ -130,6 +162,11 @@ class OracleExecutor:
             # Wedged on THIS job: DCGO could not finish the line. (Wedged on
             # another run's job, ours was simply never claimed: unmeasured.)
             return "undetermined", self._stall_evidence(path, row, row["stall"])
+        inc = harness.incomplete_selection(row)
+        if inc is not None:
+            if verdict == "diverged":
+                return "diverged", None          # a real divergence happened before DCGO stopped
+            return self._incomplete_evidence(path, row, inc)
         pm = harness.prompt_mismatch(row)
         hm = row.get("mismatch") if isinstance(row.get("mismatch"), Mapping) else None
         if pm is None and hm is not None and isinstance(hm.get("row"), int):
@@ -177,6 +214,19 @@ class OracleExecutor:
         if pm is None:
             if verdict == "diverged":
                 return "diverged", None
+            limit = harness.job_timeout(row)
+            if limit is not None:
+                # The player ran out its own limits.timeout_seconds without its
+                # prompt stall watch firing: no prompt was left open, so either
+                # the line is slow or DCGO wedged where no prompt shows.
+                evidence = {"scenario": path, "dcgo_row": None, "scenario_step": None, "step_mapping": None,
+                            "expected": None, "dcgo_asked": None, "ours": None, "route": "undetermined",
+                            "timeout_s": limit,
+                            "explanation": (f"DCGO's player failed the job at its own {limit}s limit with no prompt "
+                                            f"left open (its prompt stall watch did not fire); our engine ran the "
+                                            f"line sim-only. Either the line runs slower than the limit, or DCGO "
+                                            f"wedged somewhere no prompt shows: {row.get('reason')}")}
+                return "undetermined", evidence
             if row.get("job_outcome") == "failed":
                 # DCGO stopped the line for a reason the loop cannot parse. The
                 # job is deterministic: another round trip gives the same stop.

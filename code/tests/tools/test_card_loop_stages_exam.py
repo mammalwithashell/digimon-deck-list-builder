@@ -667,6 +667,69 @@ def test_a_dcgo_stop_the_loop_cannot_parse_goes_to_triage_not_to_a_retry(repo):
     assert "deck codes rejected" in out.data["prompt_evidence"]["explanation"]
 
 
+INCOMPLETE = ("DCGO job failed: prompt mismatch: step 20 selection did not complete 'SelectCardEffect' "
+              "(wanted [BT25-085], prompt needs 2 picks or cancel) -- stopped before the line finished, "
+              "with no divergence before it")
+
+
+def test_a_selection_dcgo_cannot_end_on_is_an_engine_disagreement_for_triage(repo):
+    # EX7-073#effect#2 scope-neg: the step picks one card for DCGO's "2 cards or
+    # cancel". The player used to wedge on it for 15+ minutes; it now fails the
+    # job naming the step, and the loop must route that, not retry it.
+    _write_scenario(repo)
+    row = _row(verdict="unmeasured", job_outcome="failed", reason=INCOMPLETE,
+               mismatch={"row": 20, "step": 3, "expected": "SelectCardEffect", "asked": "SelectCardEffect"})
+    cmds = FakeCommands().on("--oracle", 1, row + "\n")
+    item = _oracle_item()
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED"
+    assert out.data["prompt_route"] == "engines_disagree"
+    ev = out.data["prompt_evidence"]
+    assert (ev["scenario_step"], ev["dcgo_row"], ev["dcgo_asked"]) == (3, 20, "SelectCardEffect")
+    assert "2 picks or cancel" in ev["explanation"] and "BT25-085" in ev["explanation"]
+    assert not cmds.argvs("--inspect") and not out.corrections
+    assert "stalled" not in out.reason
+
+
+def test_a_selection_the_player_saw_stall_goes_to_triage_without_a_restart(repo):
+    _write_scenario(repo)
+    reason = INCOMPLETE.replace("prompt needs 2 picks or cancel",
+                                "DCGO held a prompt open for 10s after step 19 with no new prompt and no "
+                                "game progress")
+    row = _row(verdict="unmeasured", job_outcome="failed", reason=reason,
+               mismatch={"row": 20, "step": 3, "expected": "SelectCardEffect", "asked": "SelectCardEffect"})
+    cmds = FakeCommands().on("--oracle", 1, row + "\n")
+    item = _oracle_item()
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED" and out.data["prompt_route"] == "undetermined"
+    ev = out.data["prompt_evidence"]
+    assert "sat open" in ev["explanation"] and "stall" not in ev
+    assert "player_restart" not in out.data["oracle"]
+
+
+def test_a_selection_mismatch_after_a_divergence_is_a_plain_divergence(repo):
+    _write_scenario(repo)
+    row = _row(verdict="diverged", job_outcome="failed", reason="memory differs; " + INCOMPLETE,
+               divergence={"step": 1, "field": "p0.memory", "ours": "1", "dcgo": "2"})
+    cmds = FakeCommands().on("--oracle", 1, row + "\n")
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), _oracle_item())
+    assert out.next_state == "DIVERGED" and out.data.get("prompt_route") is None
+
+
+def test_the_players_own_timeout_goes_to_triage_not_to_a_retry(repo):
+    _write_scenario(repo)
+    reason = "DCGO job failed: timeout after 240s -- stopped before the line finished, with no divergence before it"
+    cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=reason) + "\n")
+    item = _oracle_item()
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
+    _check(item, out)
+    assert out.next_state == "DIVERGED" and out.data["prompt_route"] == "undetermined"
+    ev = out.data["prompt_evidence"]
+    assert ev["timeout_s"] == 240 and "240s limit" in ev["explanation"]
+
+
 def test_a_divergence_before_the_mismatch_is_a_plain_divergence(repo):
     _write_scenario(repo)
     row = _row(verdict="diverged", job_outcome="failed", reason="memory differs; " + MISMATCH,
