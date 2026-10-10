@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-10T17:18:58.828004200+00:00",
+  "last_updated": "2026-10-10T19:44:53.514012500+00:00",
   "clauses": {
     "BT25-058#effect#0": {
       "clause_id": "BT25-058#effect#0",
@@ -143,6 +143,21 @@
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-BT25-058-effect5-scope-neg",
       "recorded_at": "2026-10-10T17:18:58.828004200+00:00"
+    },
+    "qa:Q6345": {
+      "interaction_id": "qa:Q6345",
+      "card_ids": [
+        "BT25-058"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "43438851af3b9304b9f6b33456ad4fc035f68c1264d38aa9732e6c9bf9f2ab0a",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-058-qa-Q6345.yaml",
+      "reason": "ours contradicts ruling qa:Q6345 (ours vs DCGO: agree); CLEAN (compared 15 of 15 ours / 15 dcgo steps)",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT25-058-qa-Q6345",
+      "recorded_at": "2026-10-10T19:44:53.514012500+00:00"
     }
   }
 }
