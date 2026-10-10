@@ -74,3 +74,17 @@ steps:
     do: {select: {targets: [opp.field.0]}}
     expect: {prompt: SelectPermanentEffect, count: 1}
 assert: []
+expect_ruling:
+  q_id: Q6345
+  assert:
+  - at: 14
+    that:
+      p1.field:
+      - card_id: BT3-007
+        dp: 4000
+        suspended: true
+        sources: []
+      - card_id: ST1-02
+        dp: 3000
+        suspended: false
+        sources: []
