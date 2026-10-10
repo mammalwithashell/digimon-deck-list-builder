@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-10T17:09:26.805050+00:00",
+  "last_updated": "2026-10-10T17:14:23.965102+00:00",
   "clauses": {
     "BT25-058#effect#0": {
       "clause_id": "BT25-058#effect#0",
@@ -58,6 +58,20 @@
     }
   },
   "interactions": {
+    "probe:BT25-058#effect#2:optional_decline": {
+      "interaction_id": "probe:BT25-058#effect#2:optional_decline",
+      "card_ids": [
+        "BT25-058"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-058-effect2-optional-decline.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT25-058-effect2-optional-decline",
+      "recorded_at": "2026-10-10T17:14:23.965102+00:00"
+    },
     "probe:BT25-058#effect#3:leave_play": {
       "interaction_id": "probe:BT25-058#effect#3:leave_play",
       "card_ids": [
