@@ -1,0 +1,123 @@
+# Adversarial probe: optional_decline on BT25-058#effect#4 (Callismon).
+# Same line as BT25-058-effect4.yaml, but the FIRST pick ("You may suspend")
+# is DECLINED (canNoSelect: true in BT25_058.cs; the shared effect itself is
+# registered optional: false, so there is no OptionalSkill gate). The second
+# pick (the can't-unsuspend lock, canNoSelect: false) is mandatory in DCGO and
+# is NOT gated on the first, so it must still be asked and taken. A divergence
+# shows if our engine skips the lock prompt after a decline, or skips the
+# whole effect. Biyomon (ST1-02) stays UNsuspended.
+#
+# Book: qa/dcgo-exams/BT25/tm_bt25_058_pool.json (--decks).
+card: BT25-058
+clause: BT25-058#effect#4
+interaction: {id: "probe:BT25-058#effect#4:optional_decline", source: probe, kind: positive}
+covers: [BT25-058#effect#4]
+meta: {produced_by: 20261010T170007293143Z-meta-six-20261010-a-bef371}
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Lv.5 to hard-play, the Callismon, inert filler
+      - BT24-014
+      - BT25-058
+      - ST1-04
+      - ST1-04
+      - BT1-009
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - ST1-02
+      # (10+): p0's turn draws, in order
+      - BT4-014
+      - BT4-014
+      - BT4-010
+      - BT4-010
+    rest: tm-callismon
+  p1:
+    stack:
+      # hand (0-4): the Biyomon that gets locked, inert filler
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      - BT3-007
+      # security (5-9): stack[9] is the TOP
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent-tm
+steps:
+  # T1 (p0, memory 0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): play Biyomon for 2 (3 -> 1), pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): hard-play Aegiochusmon for 8 (3 -> -5). No [On Play].
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT24-014, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1, memory 5): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): digivolve Callismon for 4 (3 -> -1) -- THE CLAUSE.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: BT25-058 } }
+    expect: { prompt: main_phase }
+  # First pick ("you may suspend"): DECLINED.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  # Second pick (mandatory lock): still asked after the decline.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T6 (p1): Biyomon was never suspended; the lock is the only effect applied.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 13
+    that:
+      turn: 6
+      p0.memory: -1
+      p1.field:
+        - card_id: ST1-02
+          dp: 3000
+          suspended: false
+          sources: []
+      p0.field:
+        - card_id: BT25-058
+          dp: 13000
+          suspended: false
+          sources: [BT24-014]
