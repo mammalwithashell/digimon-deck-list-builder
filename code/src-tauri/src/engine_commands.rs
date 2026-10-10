@@ -1839,7 +1839,7 @@ pub fn run_agent_steps(
         if agent_progress_probe(game) == before {
             if let Some((previous_phase, source_permanent)) = fizzle_candidate {
                 game.pending_selection = None;
-                game.current_phase = previous_phase;
+                game.set_current_phase(previous_phase);
                 let seq = game.next_event_seq();
                 game.events.push(GameEvent::EffectFizzled {
                     seq,

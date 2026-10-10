@@ -391,7 +391,15 @@ pub struct Game {
     /// that player begins a new turn, after prior end-of-turn observers have
     /// had a chance to inspect the ending turn's history.
     pub digimon_attacks_this_turn: [u32; 2],
+    /// What the game is waiting on: a turn phase, or — while a selection is
+    /// open — that selection's prompt kind (`SelectTarget`, `EffectChoice`,
+    /// …), which replaces the turn phase here. The action mask, tensor and
+    /// serialization read this. Write any non-selection phase through
+    /// [`Game::set_current_phase`] so [`Game::turn_phase`] stays right.
     pub current_phase: GamePhase,
+    /// The last non-selection phase `current_phase` held: the turn phase an
+    /// open selection interrupted. Read through [`Game::turn_phase`].
+    pub(crate) last_turn_phase: GamePhase,
     /// Memory seesaw value. Positive = favor of memory_pair.0, negative = favor of memory_pair.1.
     pub memory: i16,
     /// The active pair for the memory seesaw: (active_player, next_player).
@@ -2460,7 +2468,7 @@ impl Game {
             let opponents = self.opponents(player_id);
             self.winner = opponents.first().copied();
             self.terminal_outcome_reason = Some(TerminalOutcomeReason::DeckOut);
-            self.current_phase = GamePhase::GameOver;
+            self.set_current_phase(GamePhase::GameOver);
             let seq = self.next_event_seq();
             self.events.push(crate::events::GameEvent::GameOver {
                 seq,

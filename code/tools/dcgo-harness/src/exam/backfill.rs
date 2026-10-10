@@ -113,7 +113,7 @@ pub fn backfill_from_diff(
         };
         observed.push(Observed {
             row: o,
-            with_phase: phase_is_compared(&o.phase, &d.phase),
+            with_phase: phase_is_compared(o, d),
             sim: Some(sim.get(*oi)),
         });
     }
@@ -665,6 +665,32 @@ steps:
         let out = backfill_from_diff(LINE, &main, &main, &one_to_one(2), &report, &main).unwrap();
         let s = Scenario::from_yaml(&out.text).unwrap();
         assert!(generated(&s).iter().all(|a| a.that.contains_key("phase")));
+    }
+
+    /// `p` as our engine projects it while a selection is open: `phase` keeps
+    /// the turn phase and `selection` names the open prompt.
+    fn in_selection(p: StateProjection, selection: &str) -> StateProjection {
+        let mut v = serde_json::to_value(&p).unwrap();
+        v["selection"] = serde_json::json!(selection);
+        StateProjection::from_sidecar_line(&v.to_string()).unwrap()
+    }
+
+    #[test]
+    fn a_turn_phase_projected_under_an_open_selection_is_not_written() {
+        // The differ skips `phase` at a step with a selection open even though
+        // ours now reports the real turn phase there, so the oracle never
+        // confirmed it and backfill must not assert it.
+        let ours = vec![in_selection(row(0, 0), "SelectTarget"), row(1, -3)];
+        let dcgo = vec![row(0, 0), row(1, -3)];
+        let report = crate::exam::differ::diff_paired(&ours, &dcgo, &one_to_one(2));
+        assert!(report.is_clean(), "{report:?}");
+
+        let out = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &report, &ours).unwrap();
+        let s = Scenario::from_yaml(&out.text).unwrap();
+        let rows = generated(&s);
+        assert_eq!(rows.len(), 2);
+        assert!(!rows[0].that.contains_key("phase"), "step 0 had a selection open: {:?}", rows[0]);
+        assert!(rows[1].that.contains_key("phase"), "step 1 did not: {:?}", rows[1]);
     }
 
     #[test]

@@ -559,7 +559,7 @@ impl DebugRunner {
     /// caller should `skip_mulligan()` first so mulligan bookkeeping is
     /// finalized; setting the phase alone does not drain `mulligan_pending`.
     pub fn set_phase(&mut self, phase: GamePhase) {
-        self.game.current_phase = phase;
+        self.game.set_current_phase(phase);
     }
 
     /// Set the turn counter directly. Affects summoning-sickness checks
