@@ -10,7 +10,6 @@ interaction: {id: "probe:BT25-058#effect#2:optional_decline", source: probe, kin
 covers: [BT25-058#effect#2]
 meta: {produced_by: 20261010T170007292610Z-meta-six-20261010-a-2626da}
 card: BT25-058
-clause: BT25-058#effect#2
 seed: 424242
 decks:
   p0:
