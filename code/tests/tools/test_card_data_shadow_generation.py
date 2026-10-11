@@ -647,3 +647,17 @@ def test_reviewed_corrections_apply_before_compatibility_projection():
     )[card.card_id]
 
     assert row["card_name_eng"] == "Reviewed Habakirimon"
+
+
+def test_official_japanese_digimon_type_normalizes_without_dropping_printing():
+    observation = replace(_observation(SourceName.OFFICIAL, DIGEST), extracted={
+        "card_id": "EX4-019", "name": "Gaomon", "card_type": "\u30c7\u30b8\u30e2\u30f3",
+        "colors": ["Blue"], "level": 3, "dp": 2000, "play_cost": 3,
+        "faces": [{"face_id": "primary", "kind": "\u30c7\u30b8\u30e2\u30f3",
+                   "colors": ["Blue"], "level": 3, "dp": 2000, "play_cost": 3}],
+    })
+    card = normalize_card("EX4-019", (observation,))
+    assert card.fields["card_kind"] == "Digimon"
+    assert card.faces[0].kind is FaceKind.DIGIMON
+    assert card.printings
+    assert card.provenance["card_kind"].selected_observation_id == observation.observation_id

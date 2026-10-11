@@ -227,6 +227,8 @@ def _render_face_section(label: str, text: str) -> str:
 
 
 def _face_kind(value: Any, *, observation: SourceObservation, ordinal: int) -> FaceKind:
+    if observation.source is SourceName.OFFICIAL and value == "\u30c7\u30b8\u30e2\u30f3":
+        value = "Digimon"
     try:
         return FaceKind(str(value).lower().replace("-", "_").replace(" ", "_"))
     except ValueError as exc:
@@ -443,6 +445,8 @@ def _official_fields(extracted: Mapping[str, Any]) -> dict[str, Any]:
                 attributes.append(item)
 
     card_kind = str(extracted.get("card_type", "")).split("/", 1)[0].strip()
+    if card_kind == "\u30c7\u30b8\u30e2\u30f3":
+        card_kind = "Digimon"
     if card_kind.lower() == "digi-egg":
         card_kind = "Digi-Egg"
 
