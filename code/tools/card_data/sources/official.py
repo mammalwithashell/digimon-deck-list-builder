@@ -32,7 +32,7 @@ from ..serialization import content_digest, sha256_hex
 
 
 OFFICIAL_CATALOG_URL = "https://world.digimoncard.com/cards/"
-OFFICIAL_PARSER_VERSION = "official-html-v3"
+OFFICIAL_PARSER_VERSION = "official-html-v4"
 OFFICIAL_SOURCE_SCHEMA_VERSION = "world-card-list-html-v1"
 USER_AGENT = "digimon-deck-list-builder/card-data-v1"
 
@@ -49,11 +49,11 @@ _PRODUCT_CODE = re.compile(
     r"^(?P<letters>[A-Z]+)-?0*(?P<start>\d+)(?:-(?P<end>\d+))?$"
 )
 _RULE_TRAIT = re.compile(
-    r"(?:\(?\s*Rule\s*\)?\s*:?\s*)Trait\s*:\s*Has\s*\[([^\]]+)\]\s*Type\b",
+    r"(?<![\w\[(])(?:\[\s*Rule\s*\]|\(\s*Rule\s*\)|Rule)\s*:?\s*Trait\s*:\s*Has\s*\[([^\]]+)\]\s*Type\b",
     re.IGNORECASE,
 )
 _RULE_ATTRIBUTE = re.compile(
-    r"(?:\(?\s*Rule\s*\)?\s*:?\s*)Trait\s*:\s*Has\s*\[([^\]]+)\]\s*attribute\b",
+    r"(?<![\w\[(])(?:\[\s*Rule\s*\]|\(\s*Rule\s*\)|Rule)\s*:?\s*Trait\s*:\s*Has\s*\[([^\]]+)\]\s*attribute\b",
     re.IGNORECASE,
 )
 

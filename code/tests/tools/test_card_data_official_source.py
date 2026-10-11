@@ -163,6 +163,55 @@ def test_rule_grants_special_route_and_qa_are_preserved() -> None:
     assert promo.extracted["rule_grants"] == {"traits": [], "attributes": ["Free"]}
 
 
+
+def test_bracketed_p213_rule_grant_is_preserved() -> None:
+    (printing,) = parse_card_list(
+        _fixture("promo_bracketed_rule.html"),
+        source_url=_category_url("522901"),
+        category_id="522901",
+    )
+    assert printing.card_id == "P-213"
+    assert printing.extracted["rule_grants"] == {
+        "traits": ["Dragonkin"], "attributes": []
+    }
+    assert "[Rule] Trait: Has [Dragonkin] Type." in next(
+        section["text"] for section in printing.extracted["text_sections"]
+        if section["label"] == "Effect"
+    )
+    assert printing.extracted["special_evolution_routes"] == [
+        "[Digivolve] [Aegiomon]: Cost 3"
+    ]
+
+
+@pytest.mark.parametrize("marker", ["[Rule]", "(Rule)", "Rule:"])
+@pytest.mark.parametrize("suffix, target", [("Type", "traits"), ("attribute", "attributes")])
+def test_rule_grant_delimiters_preserve_traits_and_attributes(marker, suffix, target) -> None:
+    payload = _fixture("promo_bracketed_rule.html").decode("utf-8").replace(
+        "[Rule] Trait: Has [Dragonkin] Type.",
+        f"{marker} Trait: Has [Dragonkin] {suffix}.",
+    )
+    (printing,) = parse_card_list(payload, source_url=_category_url("522901"), category_id="522901")
+    expected = {"traits": [], "attributes": []}
+    expected[target] = ["Dragonkin"]
+    assert printing.extracted["rule_grants"] == expected
+
+
+@pytest.mark.parametrize("text", [
+    "[On Play] This Digimon gains the [Dragonkin] trait.",
+    "[Rule] Trait: Has [Dragonkin] in its text.",
+    "[Rule] Trait: Has Dragonkin Type.",
+    "SuperRule Trait: Has [Dragonkin] Type.",
+    "[Rule) Trait: Has [Dragonkin] Type.",
+    "(Rule] Trait: Has [Dragonkin] Type.",
+])
+def test_rule_grants_do_not_capture_non_grants_or_malformed_markers(text) -> None:
+    payload = _fixture("promo_bracketed_rule.html").decode("utf-8").replace(
+        "[Rule] Trait: Has [Dragonkin] Type.", text,
+    )
+    (printing,) = parse_card_list(payload, source_url=_category_url("522901"), category_id="522901")
+    assert printing.extracted["rule_grants"] == {"traits": [], "attributes": []}
+
+
 def test_known_dual_layout_retains_structural_faces() -> None:
     (printing,) = parse_card_list(
         _fixture("bt25_dual.html"),
