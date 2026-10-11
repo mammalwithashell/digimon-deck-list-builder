@@ -87,6 +87,17 @@ def diff_runtime_fields(
             if old_value == new_value:
                 continue
             provenance = canonical.provenance.get(field_path) if canonical else None
+            observation_ids = provenance.observation_ids if provenance else ()
+            if canonical is not None and field_path == "dual":
+                # project_canonical_card derives dual from structural faces,
+                # plus the Digimon face's canonical traits and evolution costs.
+                # Include nested reviewed corrections to those inputs only.
+                observation_ids = tuple(sorted({
+                    observation_id
+                    for path, source in canonical.provenance.items()
+                    if path.split(".", 1)[0] in {"faces", "type_eng", "evo_costs"}
+                    for observation_id in source.observation_ids
+                }))
             diffs.append(
                 RuntimeFieldDiff(
                     card_id=card_id,
@@ -95,9 +106,7 @@ def diff_runtime_fields(
                     new_value=new_value,
                     old_digest=content_digest(old_value),
                     new_digest=content_digest(new_value),
-                    provenance_observation_ids=(
-                        provenance.observation_ids if provenance is not None else ()
-                    ),
+                    provenance_observation_ids=observation_ids,
                 )
             )
     return tuple(diffs)

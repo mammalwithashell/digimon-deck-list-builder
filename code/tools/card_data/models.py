@@ -394,7 +394,13 @@ class MigrationAdjudication:
         ):
             _require_sha256(getattr(self, name), name)
         if self.field_path is not None:
-            validate_field_path(self.field_path)
+            # dual is a generated compatibility projection, not a canonical
+            # correction target. Only a whole-field runtime cutover may bind it.
+            if not (
+                self.kind is AdjudicationKind.RUNTIME_FIELD_CUTOVER
+                and self.field_path == "dual"
+            ):
+                validate_field_path(self.field_path)
         if self.kind in {
             AdjudicationKind.CANONICAL_FIELD_SELECTION,
             AdjudicationKind.RUNTIME_FIELD_CUTOVER,
