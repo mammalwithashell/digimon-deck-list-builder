@@ -17,6 +17,12 @@ from .serialization import content_digest, natural_card_id_key
 
 
 RUNTIME_FIELDS = (
+    "card_name_eng",
+    "dual",
+    "link_effect_description_eng",
+    "max_count_in_deck",
+    "dna_costs",
+    "digixros_costs",
     "card_colors",
     "card_kind",
     "play_cost",
