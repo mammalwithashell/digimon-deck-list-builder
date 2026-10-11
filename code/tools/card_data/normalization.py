@@ -130,6 +130,11 @@ _BRACED_TIMING_PATTERN = re.compile(
 def _normalize_printed_effect_text(text: str) -> str:
     """Project official icon placeholders into the printed timing-marker ABI."""
 
+    # Official empty effect boxes use a standalone dash (including Japanese
+    # prolonged-sound and fullwidth forms). Dashes within rules text remain.
+    if text.strip() in {"ー", "－", "—", "-"}:
+        return ""
+
     return _BRACED_TIMING_PATTERN.sub(
         lambda match: f"[{_BRACED_TIMING_MARKERS[match.group(1).lower()]}]",
         text,

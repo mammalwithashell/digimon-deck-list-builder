@@ -670,3 +670,23 @@ def test_explicit_shadow_order_requires_exact_card_universe(order):
         capacity=20000, padding_index=0, assignments={card.card_id: 23})
     with pytest.raises(ValidationError, match="each eligible card exactly once"):
         generate_cards_json({card.card_id: card}, registry, card_order=order)
+
+
+@pytest.mark.parametrize("marker", ["ー", "－", "—", "-"])
+def test_printed_empty_text_marker_is_not_an_inherited_ability(marker):
+    observation = replace(_observation(SourceName.OFFICIAL, DIGEST), extracted={
+        "card_id": "BT26-103", "name": "Jupitermon: Wrath Mode", "card_type": "Digimon",
+        "colors": ["Yellow"], "level": 7, "dp": 16000, "play_cost": 16,
+        "text_sections": [{"label": "Inherited Effect", "text": marker}],
+        "faces": [{"face_id": "primary", "kind": "digimon", "colors": ["Yellow"],
+                   "text_sections": [{"label": "Inherited Effect", "text": marker}]}],
+    })
+    card = normalize_card("BT26-103", (observation,))
+    assert card.fields["inherited_effect_description_eng"] == ""
+    assert card.faces[0].inherited_text == ""
+
+
+def test_empty_marker_normalization_preserves_negative_dp_and_hyphenated_text():
+    from tools.card_data.normalization import _normalize_printed_effect_text
+    text = "[All Turns] A face-up Digimon gets -15000 DP."
+    assert _normalize_printed_effect_text(text) == text
