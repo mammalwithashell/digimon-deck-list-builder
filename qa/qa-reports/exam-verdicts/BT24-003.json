@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-11T03:17:15.379957500+00:00",
+  "clauses": {
+    "BT24-003#inherited#0": {
+      "clause_id": "BT24-003#inherited#0",
+      "card_id": "BT24-003",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "cbb51a61e0e051addcb05d6f79b18da6f7cb92fb21bde8d9729ab9cc8f08e26b",
+      "scenario_path": "qa/dcgo-exams/BT24/BT24-003-inherited0.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT24-003-inherited0",
+      "recorded_at": "2026-10-11T03:17:15.379957500+00:00"
+    }
+  }
+}
