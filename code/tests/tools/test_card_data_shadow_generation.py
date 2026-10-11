@@ -407,7 +407,7 @@ def test_shadow_generator_matches_current_legacy_snapshot_semantically_and_by_by
     compatibility = bootstrap_legacy_compatibility_fields(legacy)
     require_valid_canonical_cards(canonical)
     generated = generate_cards_json(
-        canonical, registry, legacy_bootstrap=compatibility
+        canonical, registry, legacy_bootstrap=compatibility, card_order=legacy
     )
 
     assert generated == legacy
@@ -661,3 +661,12 @@ def test_official_japanese_digimon_type_normalizes_without_dropping_printing():
     assert card.faces[0].kind is FaceKind.DIGIMON
     assert card.printings
     assert card.provenance["card_kind"].selected_observation_id == observation.observation_id
+
+
+@pytest.mark.parametrize("order", [[], ["BT25-043", "BT25-043"], ["BT1-001"]])
+def test_explicit_shadow_order_requires_exact_card_universe(order):
+    card = _dual_card()
+    registry = StableCardRegistry(schema_version=1, registry_version=1,
+        capacity=20000, padding_index=0, assignments={card.card_id: 23})
+    with pytest.raises(ValidationError, match="each eligible card exactly once"):
+        generate_cards_json({card.card_id: card}, registry, card_order=order)

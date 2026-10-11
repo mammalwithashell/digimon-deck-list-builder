@@ -34,6 +34,8 @@ CORRECTABLE_FIELD_ROOTS = frozenset(
         "form_eng",
         "inherited_effect_description_eng",
         "level",
+        "link_effect_description_eng",
+        "max_count_in_deck",
         "play_cost",
         "printings",
         "security_effect_description_eng",

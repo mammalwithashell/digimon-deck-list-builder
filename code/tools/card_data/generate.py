@@ -113,6 +113,8 @@ DIGIXROS_COST_FIELD_ORDER = (
     "max_materials",
     "different_card_numbers",
     "different_names",
+    "different_levels",
+    "different_colors",
     "has_text",
     "source_zones",
 )
@@ -124,6 +126,11 @@ DIGIXROS_ELEMENT_FIELD_ORDER = (
     "count",
     "is_digimon_only",
     "color",
+    "level_exact",
+    "any_of",
+    "name_any",
+    "text_any",
+    "keyword",
 )
 
 COMPATIBILITY_PROJECTION_PATH = "data/card_compatibility_projection.json"
@@ -622,9 +629,12 @@ def project_canonical_card(
         level = digimon.level
         dp = digimon.dp
         kind = KIND_TO_LEGACY["dual"]
-        effect_text = _legacy_text(digimon.effect_text)
-        inherited_text = _legacy_text(digimon.inherited_text)
-        security_text = _legacy_text(digimon.security_text)
+        # Top-level canonical text and structural face text have independent
+        # provenance. In particular, the pre-cutover shadow adapter retains
+        # existing top-level compatibility strings while preserving both faces.
+        effect_text = _legacy_text(fields.get("effect_description_eng", digimon.effect_text))
+        inherited_text = _legacy_text(fields.get("inherited_effect_description_eng", digimon.inherited_text))
+        security_text = _legacy_text(fields.get("security_effect_description_eng", digimon.security_text))
 
     if play_cost is None:
         play_cost = 0
@@ -653,6 +663,9 @@ def project_canonical_card(
             row[optional] = _normalize_compatibility_field(
                 optional, legacy_bootstrap[optional], card_id=card.card_id
             )
+    for field_name in ("link_effect_description_eng", "max_count_in_deck"):
+        if field_name in fields:
+            row[field_name] = copy.deepcopy(fields[field_name])
     if dual is not None:
         digimon, option = dual
         row["dual"] = {
@@ -686,6 +699,7 @@ def generate_cards_json(
     corrections: Iterable[ReviewedCorrection] = (),
     observations: Mapping[str, SourceObservation] | None = None,
     legacy_bootstrap: Mapping[str, Mapping[str, Any]] | None = None,
+    card_order: Iterable[str] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Generate compatibility rows without writing the producer destination."""
 
@@ -729,8 +743,14 @@ def generate_cards_json(
             details={"card_ids": sorted(unknown_bootstrap_ids)},
         )
 
+    # A pre-cutover shadow may preserve the input file's append history.
+    # Normal canonical generation remains naturally ordered. Neither order
+    # affects the append-only registry assignments used by engine tensors.
+    ordered_ids = sorted(eligible, key=natural_card_id_key) if card_order is None else list(card_order)
+    if len(ordered_ids) != len(eligible) or set(ordered_ids) != set(eligible):
+        raise ValidationError("card_order must contain each eligible card exactly once")
     output: dict[str, dict[str, Any]] = {}
-    for card_id in sorted(eligible, key=natural_card_id_key):
+    for card_id in ordered_ids:
         card = eligible[card_id]
         if card.card_id != card_id:
             raise ValidationError(
@@ -803,6 +823,9 @@ def bootstrap_legacy_canonical_cards(
             ],
             "evo_costs": copy.deepcopy(row["evo_costs"]),
         }
+        for field_name in ("link_effect_description_eng", "max_count_in_deck"):
+            if field_name in row:
+                fields[field_name] = copy.deepcopy(row[field_name])
         observation_id = content_digest(
             {"source": "legacy-cards-json-bootstrap", "card_id": card_id, "row": row}
         )
@@ -891,7 +914,7 @@ def shadow_legacy_snapshot(
     canonical = bootstrap_legacy_canonical_cards(legacy_cards)
     compatibility = bootstrap_legacy_compatibility_fields(legacy_cards)
     generated = generate_cards_json(
-        canonical, registry, legacy_bootstrap=compatibility
+        canonical, registry, legacy_bootstrap=compatibility, card_order=legacy_cards
     )
     return generated, render_legacy_cards_json(generated)
 

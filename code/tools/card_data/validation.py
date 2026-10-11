@@ -20,6 +20,7 @@ _TEXT_FIELDS = frozenset(
         "effect_description_eng",
         "inherited_effect_description_eng",
         "security_effect_description_eng",
+        "link_effect_description_eng",
     }
 )
 
@@ -72,7 +73,7 @@ def validate_canonical_card(
                 field_path="card_colors",
             )
         )
-    for field_path in ("play_cost", "level", "dp"):
+    for field_path in ("play_cost", "level", "dp", "max_count_in_deck"):
         value = fields.get(field_path)
         if value is not None and (
             not isinstance(value, int) or isinstance(value, bool) or value < 0
