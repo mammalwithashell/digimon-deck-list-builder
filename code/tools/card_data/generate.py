@@ -12,20 +12,11 @@ being checked; it is never bootstrapped as a generation input.
 Structural Dual projection
 --------------------------
 
-The legacy ABI has no face array, so one Digimon face plus one Option face is
-flattened deterministically:
-
-* the row remains ``card_kind = Digimon``;
-* level, DP, main effect, and evolution routes use the Digimon
-  face/canonical Digimon fields;
-* ``play_cost`` uses the Option face's use cost;
-* colors are the ordered union of Digimon then Option colors;
-* the Option face's effect occupies ``inherited_effect_description_eng`` and
-  its security text occupies ``security_effect_description_eng``.
-
-This deliberately documents the existing lossy compatibility boundary.  The
-canonical record retains both faces; no card-ID-specific table participates in
-the projection.
+The current engine ABI uses ``card_kind = 4`` and independent ``dual``
+Digimon/Option objects. The top-level cost is the Option use cost; level, DP,
+main effect and evolution routes describe the Digimon. Option text must never
+be placed in the inherited-effect slot. Both faces expose Arts Digivolve as
+required by the existing engine structural-Dual contract.
 """
 
 from __future__ import annotations
@@ -96,8 +87,9 @@ KIND_TO_LEGACY = {
     "option": 2,
     "digi-egg": 3,
     "digi_egg": 3,
+    "dual": 4,
 }
-LEGACY_TO_KIND = {0: "Digimon", 1: "Tamer", 2: "Option", 3: "Digi-Egg"}
+LEGACY_TO_KIND = {0: "Digimon", 1: "Tamer", 2: "Option", 3: "Digi-Egg", 4: "Dual"}
 RARITY_TO_LEGACY = {"C": 0, "U": 1, "R": 2, "SR": 3, "SEC": 4, "P": 5}
 
 LEGACY_BOOTSTRAP_FIELDS = (
@@ -629,10 +621,10 @@ def project_canonical_card(
         play_cost = option.play_cost
         level = digimon.level
         dp = digimon.dp
-        kind = KIND_TO_LEGACY["digimon"]
+        kind = KIND_TO_LEGACY["dual"]
         effect_text = _legacy_text(digimon.effect_text)
-        inherited_text = _legacy_text(option.effect_text)
-        security_text = _legacy_text(option.security_text)
+        inherited_text = _legacy_text(digimon.inherited_text)
+        security_text = _legacy_text(digimon.security_text)
 
     if play_cost is None:
         play_cost = 0
@@ -661,6 +653,27 @@ def project_canonical_card(
             row[optional] = _normalize_compatibility_field(
                 optional, legacy_bootstrap[optional], card_id=card.card_id
             )
+    if dual is not None:
+        digimon, option = dual
+        row["dual"] = {
+            "digimon": {
+                "level": digimon.level,
+                "dp": digimon.dp,
+                "colors": list(digimon.colors),
+                "traits": list(fields.get("type_eng", ())),
+                "evo_costs": _legacy_evo_costs(fields.get("evo_costs", ())),
+                "effect_text": _legacy_text(digimon.effect_text),
+                "inherited_text": _legacy_text(digimon.inherited_text),
+                "keywords": ["ArtsDigivolve"],
+            },
+            "option": {
+                "use_cost": option.play_cost,
+                "colors": list(option.colors),
+                "effect_text": _legacy_text(option.effect_text),
+                "security_text": _legacy_text(option.security_text),
+                "keywords": ["ArtsDigivolve"],
+            },
+        }
     if "legacy_card_index" in legacy_bootstrap:
         row["legacy_card_index"] = legacy_bootstrap["legacy_card_index"]
     return row
@@ -751,7 +764,8 @@ def bootstrap_legacy_canonical_cards(
 
     This adapter exists only to prove shadow equivalence before a committed
     canonical snapshot covers the whole pool.  It does not infer structural
-    Dual faces from the already-flattened legacy rows.
+    Dual faces from flattened rows; explicit current-ABI Dual objects retain
+    their independently recorded face data.
     """
 
     result: dict[str, CanonicalCard] = {}
@@ -801,7 +815,7 @@ def bootstrap_legacy_canonical_cards(
             )
             for field_name in fields
         }
-        face_kind = FaceKind(kind_name.lower().replace("-", "_"))
+        face_kind = FaceKind.DIGIMON if kind_name == "Dual" else FaceKind(kind_name.lower().replace("-", "_"))
         face = CardFace(
             face_id="legacy-bootstrap",
             kind=face_kind,
@@ -813,6 +827,20 @@ def bootstrap_legacy_canonical_cards(
             inherited_text=row["inherited_effect_description_eng"],
             security_text=row["security_effect_description_eng"],
         )
+        faces = (face,)
+        if kind_name == "Dual":
+            payload = row.get("dual")
+            if not isinstance(payload, Mapping) or set(payload) != {"digimon", "option"}:
+                raise ValidationError("Dual bootstrap requires both explicit faces", card_id=card_id)
+            d, o = payload["digimon"], payload["option"]
+            faces = (
+                CardFace(face_id="digimon", kind=FaceKind.DIGIMON,
+                         colors=tuple(d["colors"]), level=d["level"], dp=d["dp"],
+                         effect_text=d["effect_text"], inherited_text=d["inherited_text"]),
+                CardFace(face_id="option", kind=FaceKind.OPTION,
+                         colors=tuple(o["colors"]), play_cost=o["use_cost"],
+                         effect_text=o["effect_text"], security_text=o["security_text"]),
+            )
         result[card_id] = CanonicalCard(
             schema_version=SCHEMA_VERSION,
             card_id=card_id,
@@ -825,7 +853,7 @@ def bootstrap_legacy_canonical_cards(
                     observation_ids=(observation_id,),
                 ),
             ),
-            faces=(face,),
+            faces=faces,
         )
     return result
 
