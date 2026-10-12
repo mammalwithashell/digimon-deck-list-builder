@@ -1,9 +1,9 @@
 ## 1. Measure scope and confirm the route
 
-- [ ] 1.1 Freeze exact deck, scenario, opponent, QA, YAML and consumer inputs; record branch differences and complete original membership.
-- [ ] 1.2 Compute E/Q through actual scenario/rest-deck resolution and bidirectional shared QA associations, with reason edges and unresolved dynamic references.
-- [ ] 1.3 Audit consumed fields, derived conversions and token/template needs across the actual harness/engine and proposed training entry points.
-- [ ] 1.4 Independently review the measured closure and read set, decide whether the isolated route is finite and practical, and record remaining source/implementation blockers without omissions.
+- [x] 1.1 Freeze exact deck, scenario, opponent, QA, YAML and consumer inputs; record branch differences and complete original membership.
+- [x] 1.2 Compute E/Q through actual scenario/rest-deck resolution and bidirectional shared QA associations, with reason edges and unresolved dynamic references.
+- [x] 1.3 Audit consumed fields, derived conversions and token/template needs across the actual harness/engine and proposed training entry points.
+- [x] 1.4 Independently review the measured closure and read set, decide whether the isolated route is finite and practical, and record remaining source/implementation blockers without omissions.
 - [ ] 1.5 Compare actual destination functions/specs, pin the producer branch and projection epoch, and add exact existing-capability deltas before any existing contract change.
 
 ## 2. Implement an offline source-derived snapshot
