@@ -240,3 +240,16 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/tools/clause_coverage/diagnostic_source_book.py -text
 /code/tests/tools/test_diagnostic_source_book.py -text
 /code/tests/tools/test_diagnostic_link_dual_dispatch.py -text
+
+# Preserve reviewed original observation-byte regression fixtures.
+/code/tests/fixtures/card_data/clean_dual_original_bytes/0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/association-proof.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/association-review.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/independent-review.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/pins.json -text
+/code/tests/tools/test_clean_dual_original_bytes.py -text
