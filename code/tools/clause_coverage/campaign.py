@@ -154,6 +154,7 @@ def build_plan_for_pool(
         "elided": exam_total - len(exam),
         "skipped": skipped,
         "denominator": binding.get("denominator", {}),
+        "current_source_clauses": binding.get("current_source_clauses", []),
     }
 
 

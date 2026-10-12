@@ -372,7 +372,9 @@ def collect_card_facts(card_ids: Iterable[str], paths: DataPaths, dcgo_root: Pat
             official_json_path=paths.official,
         )
     progress("binding gating interactions")
-    ibinding = bind_interactions(ids, paths.denominator, paths.verdicts)
+    ibinding = bind_interactions(ids, paths.denominator, paths.verdicts,
+                                 current_clauses=binding["current_source_clauses"],
+                                 card_qa_path=paths.cards_json.with_name("card_qa.json"))
     istore = load_interaction_verdicts(paths.verdicts)
 
     dcgo_available = dcgo_root is not None and _card_effect_dir(Path(dcgo_root)).is_dir()

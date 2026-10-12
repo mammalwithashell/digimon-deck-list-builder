@@ -54,6 +54,7 @@ pub mod oracle_diff;
 pub mod projection;
 pub mod run;
 pub mod scenario;
+pub mod semantic_fingerprint;
 pub mod validate;
 pub mod verdict;
 

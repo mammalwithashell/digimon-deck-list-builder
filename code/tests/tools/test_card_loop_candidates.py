@@ -161,6 +161,22 @@ def build_world(tmp_path: Path, *, partial: bool = True, dcgo: bool = True,
             "source": "probe", "card_ids": ["BT90-009"], "kind": "positive", "gating": True,
             "text_sha256": "sha-x"},
     }
+    from semantic_fixtures import interaction
+    from tools.clause_coverage.extract import run as fresh_extract
+    fresh = fresh_extract(list(TEXT), "fresh synthetic fixture", cards_json_path=cards_json,
+                          overrides_path=overrides, official_json_path=official)
+    by_id = {c["id"]: c for c in fresh["clauses"]}
+    from semantic_fixtures import write_current_qa
+    write_current_qa(cards_json.with_name("card_qa.json"), rows)
+    rows = {iid: interaction(iid, row, by_id) for iid, row in rows.items()}
+    for card, doc in files.items():
+        doc["version"] = 3
+        for cid, rec in doc["clauses"].items():
+            rec.update(semantic_fingerprint_version=1, semantic_sha256=by_id[cid]["semantic_sha256"])
+        for iid, rec in doc.get("interactions", {}).items():
+            rec.update(semantic_fingerprint_version=1,
+                       semantic_sha256=rows[iid]["semantic_sha256"] if rec["text_sha256"] != "STALE" else "0" * 64)
+        (verdicts / f"{card}.json").write_text(json.dumps(doc), encoding="utf-8")
     cards_map: dict[str, list[str]] = {c: [] for c in TEXT}
     for iid, row in rows.items():
         for c in row["card_ids"]:
@@ -496,3 +512,12 @@ def test_smoke_on_the_real_repo_data_within_a_time_budget(tmp_path, capsys):
     captured = capsys.readouterr()
     assert "binding clauses" in captured.err, "progress goes to stderr"
     assert "binding clauses" not in captured.out
+
+def test_current_qa_drift_blocks_candidate_despite_matching_old_denominator(tmp_path):
+    paths, dcgo_root = build_world(tmp_path)
+    source = paths.cards_json.with_name('card_qa.json')
+    qa = json.loads(source.read_text())
+    for row in qa['qa'].values(): row['answer'] = 'Changed current answer.'
+    source.write_text(json.dumps(qa))
+    facts, _ = cand.collect_card_facts(list(TEXT), paths, dcgo_root)
+    assert facts['BT90-002'].open_interactions

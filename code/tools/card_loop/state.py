@@ -266,7 +266,8 @@ def build_items(plan: Mapping, paths: LedgerPaths, *,
         clause_rows.append((e["card_id"], e["clause_id"],
                             "confirmed" if e.get("reason") == "confirmed" else "unavailable"))
     if implement:
-        bound = bind(implement, paths.scenarios_dir, paths.verdicts_dir)
+        bound = bind(implement, paths.scenarios_dir, paths.verdicts_dir,
+                     current_clauses=exam_plan["current_source_clauses"])
         for card in implement:
             for c in bound["cards"].get(card, {}).get("clauses", []):
                 clause_rows.append((card, c["clause_id"], c.get("verdict") or "unmeasured"))
@@ -281,7 +282,8 @@ def build_items(plan: Mapping, paths: LedgerPaths, *,
                         requires=(f"card:{card}",) if card in to_implement else ())
         seeds.append(ItemSeed(item, meta, origin, {"card_ids": [card]}))
 
-    bound_i = bind_interactions(pool, paths.denominator_path, paths.verdicts_dir, gating_only=True)
+    bound_i = bind_interactions(pool, paths.denominator_path, paths.verdicts_dir, gating_only=True,
+                                current_clauses=exam_plan["current_source_clauses"])
     raw_i = load_interaction_verdicts(paths.verdicts_dir)
     cards_of: dict[str, list[str]] = {}
     row_of: dict[str, dict] = {}

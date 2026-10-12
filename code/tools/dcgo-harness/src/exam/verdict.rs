@@ -19,7 +19,7 @@
 //!    clause silently re-points every later id at *different* text, and a
 //!    stale `confirmed` would then vouch for a clause nobody examined. Each
 //!    verdict therefore stores the `text_sha256` of the clause text it was
-//!    recorded against; [`VerdictStore::get_validated`] returns `None` on a
+//!    recorded against; [`VerdictStore::get_semantically_validated_v1`] returns `None` on a
 //!    mismatch, and [`VerdictStore::summary`] counts the mismatch as
 //!    `unmeasured` **and** bumps `invalidated`, so drift shows up in the
 //!    report instead of being absorbed by it.
@@ -42,6 +42,19 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+
+fn semantic_metadata(sha: &str) -> BTreeMap<String, serde_json::Value> {
+    BTreeMap::from([
+        ("semantic_fingerprint_version".into(), serde_json::json!(1)),
+        ("semantic_sha256".into(), serde_json::json!(sha)),
+    ])
+}
+
+fn semantic_matches(extra: &BTreeMap<String, serde_json::Value>, sha: &str) -> bool {
+    sha.len() == 64 && sha.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        && extra.get("semantic_fingerprint_version").and_then(|v| v.as_u64()) == Some(1)
+        && extra.get("semantic_sha256").and_then(|v| v.as_str()) == Some(sha)
+}
 
 /// The five exam classes. Every clause in the denominator lands in exactly one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -101,6 +114,9 @@ pub enum Triage {
 /// One clause's exam record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClauseVerdict {
+    /// Preserve binding and reconciliation metadata when historical rows round-trip.
+    #[serde(default, flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
     /// `{card_id}#{zone}#{idx}` — from `clause_coverage`, never invented here.
     pub clause_id: String,
     /// The card the clause belongs to (the part before the first `#`).
@@ -109,8 +125,8 @@ pub struct ClauseVerdict {
     pub verdict: Verdict,
     /// Human label for the clause, e.g. `[On Play]`.
     pub label: String,
-    /// SHA-256 of the clause text this verdict was recorded against. Drift in
-    /// this value invalidates the verdict — see the module docs.
+    /// Legacy body-only diagnostic; current validity uses versioned semantics.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub text_sha256: String,
     /// Repo-relative path of the scenario that produced the verdict, if any.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -155,6 +171,7 @@ pub struct InteractionVerdict {
     /// The denominator's drift fingerprint for this interaction (the ruling's
     /// question + answer, or the probed clause's text). A mismatch reports the
     /// verdict `unmeasured`, exactly like a clause.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub text_sha256: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scenario_path: Option<String>,
@@ -210,11 +227,11 @@ fn default_version() -> u32 {
 }
 
 /// The verdict-file versions this reader understands.
-pub const SUPPORTED_VERSIONS: &[u32] = &[1, 2];
+pub const SUPPORTED_VERSIONS: &[u32] = &[1, 2, 3];
 
 /// The durable per-clause verdict record.
 ///
-/// `current_text_shas` is scratch state, not part of the file: callers load
+/// `current_semantic_shas` is scratch state, not part of the file: callers load
 /// the store, tell it what each clause's text hashes to *right now*, and the
 /// summary then reports drifted verdicts as `unmeasured`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -228,8 +245,11 @@ pub struct VerdictStore {
     /// v2 only; omitted from a file that has none, which is then written as v1.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     interactions: BTreeMap<String, InteractionVerdict>,
+    /// Historical container rows remain unbound across v3 rewrites.
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    legacy_unbound: BTreeSet<String>,
     #[serde(skip)]
-    current_text_shas: BTreeMap<String, String>,
+    current_semantic_shas: BTreeMap<String, String>,
     /// Card ids whose rows changed since load; `save_dir` writes only these.
     #[serde(skip)]
     dirty: BTreeSet<String>,
@@ -242,7 +262,8 @@ impl Default for VerdictStore {
             last_updated: String::new(),
             clauses: BTreeMap::new(),
             interactions: BTreeMap::new(),
-            current_text_shas: BTreeMap::new(),
+            legacy_unbound: BTreeSet::new(),
+            current_semantic_shas: BTreeMap::new(),
             dirty: BTreeSet::new(),
         }
     }
@@ -353,7 +374,7 @@ impl VerdictStore {
                 // commit, so its copies must agree; two that differ mean a
                 // partial write or a bad merge, and picking one would hide it.
                 if let Some(existing) = merged.interactions.get(&id) {
-                    if *existing != iv {
+                    if *existing != iv || merged.legacy_unbound.contains(&id) != one.legacy_unbound.contains(&id) {
                         return Err(format!(
                             "interaction {id:?} has disagreeing copies in {} and {}; a shared \
                              verdict must be written identically into every listed card's file",
@@ -366,6 +387,7 @@ impl VerdictStore {
                 interaction_origin.insert(id.clone(), path.clone());
                 merged.interactions.insert(id, iv);
             }
+            merged.legacy_unbound.extend(one.legacy_unbound.iter().cloned());
             if one.last_updated > merged.last_updated {
                 merged.last_updated = one.last_updated;
             }
@@ -387,6 +409,7 @@ impl VerdictStore {
         for (clause_id, cv) in self.clauses.iter() {
             let per = by_card.entry(cv.card_id.clone()).or_default();
             per.clauses.insert(clause_id.clone(), cv.clone());
+            if self.legacy_unbound.contains(clause_id) { per.legacy_unbound.insert(clause_id.clone()); }
             if cv.recorded_at > per.last_updated {
                 per.last_updated = cv.recorded_at.clone();
             }
@@ -396,6 +419,7 @@ impl VerdictStore {
             for card_id in &iv.card_ids {
                 let per = by_card.entry(card_id.clone()).or_default();
                 per.interactions.insert(id.clone(), iv.clone());
+                if self.legacy_unbound.contains(id) { per.legacy_unbound.insert(id.clone()); }
                 if iv.recorded_at > per.last_updated {
                     per.last_updated = iv.recorded_at.clone();
                 }
@@ -441,14 +465,14 @@ impl VerdictStore {
     }
 
     /// Serialize to the `{version, last_updated, clauses[, interactions]}`
-    /// JSON shape: version 1 when there are no interaction verdicts (so a
-    /// clause-only file reads exactly as before), version 2 otherwise.
+    /// JSON shape: version 3 prevents old body-only readers accepting new rows.
+    /// Historical rows retain their original verdicts and metadata.
     pub fn to_json(&self) -> Result<String, String> {
         let mut snapshot = self.clone();
         if snapshot.last_updated.is_empty() {
             snapshot.last_updated = chrono::Utc::now().to_rfc3339();
         }
-        snapshot.version = if snapshot.interactions.is_empty() { 1 } else { 2 };
+        snapshot.version = 3;
         serde_json::to_string_pretty(&snapshot)
             .map_err(|e| format!("failed to serialize verdict store: {e}"))
     }
@@ -467,6 +491,10 @@ impl VerdictStore {
         if store.version == 1 && !store.interactions.is_empty() {
             return Err("a version-1 verdict store cannot carry `interactions` (that is v2)"
                 .to_string());
+        }
+        if store.version < 3 {
+            store.legacy_unbound.extend(store.clauses.keys().cloned());
+            store.legacy_unbound.extend(store.interactions.keys().cloned());
         }
         // The clause id is the map key; keep the embedded copy honest so a
         // hand-edited file cannot hand out a verdict labelled with someone
@@ -503,6 +531,7 @@ impl VerdictStore {
     pub fn record(&mut self, v: ClauseVerdict) {
         self.last_updated = v.recorded_at.clone();
         self.dirty.insert(v.card_id.clone());
+        self.legacy_unbound.remove(&v.clause_id);
         self.clauses.insert(v.clause_id.clone(), v);
     }
 
@@ -563,46 +592,48 @@ impl VerdictStore {
         Ok(())
     }
 
-    /// The stored verdict, drift or no drift. Use [`Self::get_validated`]
+    /// The stored verdict, drift or no drift. Use [`Self::get_semantically_validated_v1`]
     /// when the answer will be trusted.
     pub fn get(&self, clause_id: &str) -> Option<&ClauseVerdict> {
         self.clauses.get(clause_id)
     }
 
-    /// The stored verdict **only if** it was recorded against the same clause
-    /// text the caller is looking at now. `None` on drift.
-    pub fn get_validated(
+    /// The stored verdict only for an exact recognized v1 semantic binding.
+    /// The caller must obtain the hash from a verified complete source book.
+    pub fn get_semantically_validated_v1(
         &self,
         clause_id: &str,
-        current_text_sha256: &str,
+        current_semantic_sha256: &str,
     ) -> Option<&ClauseVerdict> {
+        if self.legacy_unbound.contains(clause_id) { return None; }
         self.clauses
             .get(clause_id)
-            .filter(|cv| cv.text_sha256 == current_text_sha256)
+            .filter(|cv| semantic_matches(&cv.extra, current_semantic_sha256))
     }
 
-    /// Tell the store what a clause's text hashes to right now, so
+    /// Seed a verified v1 semantic hash from the current complete source book, so
     /// [`Self::summary`] can spot drift.
-    pub fn set_current_text_sha(&mut self, clause_id: &str, sha: &str) {
-        self.current_text_shas
+    pub fn set_current_semantic_sha_v1(&mut self, clause_id: &str, sha: &str) {
+        self.current_semantic_shas
             .insert(clause_id.to_string(), sha.to_string());
     }
 
-    /// True when a stored verdict was recorded against different clause text
-    /// than the one most recently supplied via [`Self::set_current_text_sha`].
+    /// True when a stored verdict lacks recognized current semantic evidence
+    /// than the one most recently supplied via [`Self::set_current_semantic_sha_v1`].
     ///
     /// Also answers for interaction ids: the two id spaces cannot collide
     /// (`qa:` / `probe:` / `combo:` vs `card#zone#idx`), so one scratch map
     /// serves both.
     pub fn is_invalidated(&self, clause_id: &str) -> bool {
-        let Some(current) = self.current_text_shas.get(clause_id) else {
-            return false;
+        if self.legacy_unbound.contains(clause_id) { return true; }
+        let Some(current) = self.current_semantic_shas.get(clause_id) else {
+            return self.clauses.contains_key(clause_id) || self.interactions.contains_key(clause_id);
         };
         if let Some(cv) = self.clauses.get(clause_id) {
-            return &cv.text_sha256 != current;
+            return !semantic_matches(&cv.extra, current);
         }
         match self.interactions.get(clause_id) {
-            Some(iv) => &iv.text_sha256 != current,
+            Some(iv) => !semantic_matches(&iv.extra, current),
             None => false,
         }
     }
@@ -612,6 +643,7 @@ impl VerdictStore {
     pub fn record_interaction(&mut self, v: InteractionVerdict) {
         self.last_updated = v.recorded_at.clone();
         self.dirty.extend(v.card_ids.iter().cloned());
+        self.legacy_unbound.remove(&v.interaction_id);
         self.interactions.insert(v.interaction_id.clone(), v);
     }
 
@@ -750,6 +782,22 @@ pub struct ClauseText {
     pub label: String,
     #[serde(default)]
     pub text: String,
+    #[serde(default)]
+    pub card_id: String,
+    #[serde(default)]
+    pub zone: String,
+    #[serde(default)]
+    pub kind: String,
+    #[serde(default)]
+    pub timings: Option<Vec<String>>,
+    #[serde(default)]
+    pub keyword: Option<String>,
+    #[serde(default)]
+    pub semantic_fingerprint_version: Option<u64>,
+    #[serde(default)]
+    pub semantic_sha256: Option<String>,
+    #[serde(default)]
+    pub semantic_payload: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -794,7 +842,9 @@ impl ClauseTextBook {
             if let Some(card) = c.id.split('#').next() {
                 cards.insert(card.to_string());
             }
-            by_id.insert(c.id.clone(), c);
+            if by_id.insert(c.id.clone(), c).is_some() {
+                return Err(format!("duplicate clause identity in {source}"));
+            }
         }
         Ok(ClauseTextBook {
             by_id,
@@ -810,6 +860,45 @@ impl ClauseTextBook {
 
     pub fn get(&self, clause_id: &str) -> Option<&ClauseText> {
         self.by_id.get(clause_id)
+    }
+
+    /// Reconstruct from all loaded zone spans; never trust a claimant's hash.
+    pub fn semantic_sha(&self, clause_id: &str) -> Result<String, String> {
+        use super::semantic_fingerprint::{digest, normalize, VERSION};
+        let target = self.get(clause_id).ok_or("clause absent from source book")?;
+        if target.semantic_fingerprint_version != Some(VERSION) {
+            return Err(format!("{clause_id}: missing/unsupported semantic source binding; regenerate and validate book"));
+        }
+        let mut zone = Vec::new();
+        for row in self.by_id.values().filter(|row| row.card_id == target.card_id && row.zone == target.zone) {
+            let prefix = format!("{}#{}#", row.card_id, row.zone);
+            let index = row.id.strip_prefix(&prefix).and_then(|s| s.parse::<usize>().ok())
+                .ok_or("invalid positional clause identity")?;
+            if row.id != format!("{prefix}{index}") || row.card_id.is_empty()
+                || !["effect", "inherited", "security"].contains(&row.zone.as_str())
+                || !["timing", "keyword", "untimed"].contains(&row.kind.as_str()) {
+                return Err("invalid clause semantic identity".into());
+            }
+            let timings = row.timings.as_ref().ok_or("missing clause timings")?;
+            zone.push((index, row, serde_json::json!([row.kind, timings, row.keyword, row.text])));
+        }
+        zone.sort_by_key(|row| row.0);
+        let spans: Vec<_> = zone.iter().map(|row| row.2.clone()).collect();
+        let mut target_sha = None;
+        for (expected, (index, row, span)) in zone.iter().enumerate() {
+            if *index != expected { return Err("incomplete positional clause zone".into()); }
+            let payload = normalize(&serde_json::json!([
+                "digimon-clause-semantics", VERSION, row.card_id, row.zone, index, span, spans
+            ]))?;
+            let sha = digest(&payload)?;
+            if row.semantic_fingerprint_version != Some(VERSION)
+                || row.semantic_payload.as_ref() != Some(&payload)
+                || row.semantic_sha256.as_deref() != Some(sha.as_str()) {
+                return Err(format!("{}: semantic source payload/hash mismatch", row.id));
+            }
+            if row.id == clause_id { target_sha = Some(sha); }
+        }
+        target_sha.ok_or_else(|| "target missing from semantic zone".into())
     }
 
     /// Every clause id in the book, sorted — the denominator for
@@ -897,7 +986,9 @@ pub fn record_scenario_verdict(
         .next()
         .unwrap_or_default()
         .to_string();
+    let semantic_sha = book.semantic_sha(clause_id)?;
     store.record(ClauseVerdict {
+        extra: semantic_metadata(&semantic_sha),
         clause_id: clause_id.to_string(),
         card_id,
         verdict,
@@ -911,6 +1002,7 @@ pub fn record_scenario_verdict(
         citation: None,
         recorded_at,
     });
+    store.set_current_semantic_sha_v1(clause_id, &semantic_sha);
     Ok(())
 }
 
@@ -926,6 +1018,12 @@ pub const DEFAULT_INTERACTION_DENOMINATOR: &str = "data/interaction_denominator.
 /// One denominator row. Only the fields the exam needs; the file carries more.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct InteractionEntry {
+    #[serde(default)]
+    pub semantic_fingerprint_version: Option<u64>,
+    #[serde(default)]
+    pub semantic_sha256: Option<String>,
+    #[serde(default)]
+    pub semantic_payload: Option<serde_json::Value>,
     pub source: String,
     pub card_ids: Vec<String>,
     pub kind: String,
@@ -954,11 +1052,37 @@ struct InteractionFile {
 /// a verdict, for the same reason as an unknown clause id.
 #[derive(Debug, Clone)]
 pub struct InteractionBook {
+    paired_probe_sources: BTreeSet<String>,
     by_id: BTreeMap<String, InteractionEntry>,
     source: String,
 }
 
 impl InteractionBook {
+    /// Pair a probe with the exact complete clause snapshot before evaluation.
+    /// This capability is private to a loaded book and cannot come from JSON.
+    pub fn pair_clause_source(&mut self, id: &str, clauses: &ClauseTextBook) -> Result<(), String> {
+        if id.starts_with("combo:") { return Ok(()); }
+        self.paired_probe_sources.remove(id);
+        self.semantic_sha(id)?;
+        let row = self.get(id).ok_or("interaction absent from denominator")?;
+        if row.source == "probe" {
+            let clause = row.clause_id.as_deref().ok_or("probe source lacks clause identity")?;
+            let sha = clauses.semantic_sha(clause)?;
+            if row.semantic_payload.as_ref().and_then(|p| p.get(8)).and_then(|v| v.as_str()) != Some(sha.as_str()) {
+                return Err("probe denominator and clause book describe different source snapshots".into());
+            }
+            self.paired_probe_sources.insert(id.to_string());
+        }
+        Ok(())
+    }
+
+    pub(crate) fn recording_sha(&self, id: &str) -> Result<String, String> {
+        let sha = self.semantic_sha(id)?;
+        if self.get(id).is_some_and(|row| row.source == "probe") && !self.paired_probe_sources.contains(id) {
+            return Err("probe recording requires a verified current clause source pair".into());
+        }
+        Ok(sha)
+    }
     /// Load the denominator. A missing file is an error that says the
     /// denominator was never generated -- interaction scenarios are refused
     /// rather than examined against nothing; legacy clause scenarios never
@@ -984,6 +1108,7 @@ impl InteractionBook {
             ));
         }
         Ok(InteractionBook {
+            paired_probe_sources: BTreeSet::new(),
             by_id: file.interactions,
             source: source.to_string(),
         })
@@ -991,6 +1116,36 @@ impl InteractionBook {
 
     pub fn get(&self, interaction_id: &str) -> Option<&InteractionEntry> {
         self.by_id.get(interaction_id)
+    }
+
+    pub fn semantic_sha(&self, id: &str) -> Result<String, String> {
+        use super::semantic_fingerprint::{digest, VERSION};
+        let row = self.get(id).ok_or("interaction absent from denominator")?;
+        if row.semantic_fingerprint_version != Some(VERSION) {
+            return Err(format!("{id}: missing/unsupported semantic source binding"));
+        }
+        let payload = row.semantic_payload.as_ref().ok_or("missing interaction semantic payload")?;
+        let p = payload.as_array().ok_or("invalid interaction semantic payload")?;
+        let mut cards = row.card_ids.clone();
+        cards.sort();
+        cards.dedup();
+        let valid = match row.source.as_str() {
+            "probe" => p.len() == 9 && p[0] == "digimon-interaction-semantics"
+                && p[1] == VERSION && p[2] == id && p[3] == serde_json::json!(cards)
+                && p[4] == "probe" && p[5] == row.kind
+                && p[6] == serde_json::json!(row.family) && p[7] == serde_json::json!(row.family_version)
+                && p[8].as_str().is_some_and(|sha| sha.len() == 64),
+            "qa" => p.len() == 6 && p[0] == "digimon-qa-semantics"
+                && p[1] == VERSION && p[2] == serde_json::json!(row.q_id)
+                && id == format!("qa:{}", row.q_id.as_deref().unwrap_or(""))
+                && p[3] == serde_json::json!(cards) && p[4] == row.kind && p[5].is_string(),
+            _ => false,
+        };
+        let sha = digest(payload)?;
+        if !valid || row.semantic_sha256.as_deref() != Some(sha.as_str()) {
+            return Err(format!("{id}: interaction semantic payload/hash mismatch"));
+        }
+        Ok(sha)
     }
 
     /// Every interaction id, sorted.
@@ -1070,8 +1225,12 @@ pub fn record_interaction_verdict(
         dcgo_build: None,
         job_id: None,
         recorded_at,
-        extra: BTreeMap::new(),
+        extra: if interaction_id.starts_with("combo:") { BTreeMap::new() }
+            else { semantic_metadata(&book.recording_sha(interaction_id)?) },
     });
+    if !interaction_id.starts_with("combo:") {
+        store.set_current_semantic_sha_v1(interaction_id, &book.recording_sha(interaction_id)?);
+    }
     Ok(())
 }
 
@@ -1204,11 +1363,21 @@ pub fn write_interaction_to_card_files(
 }
 
 #[cfg(test)]
+fn fresh_clause_book(text: &str, source: &str) -> Result<ClauseTextBook, String> {
+    ClauseTextBook::from_json(&super::semantic_fingerprint::fresh_clause_json(text), source)
+}
+#[cfg(test)]
+fn fresh_interaction_book(text: &str, source: &str) -> Result<InteractionBook, String> {
+    InteractionBook::from_json(&super::semantic_fingerprint::fresh_interaction_json(text), source)
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
     fn v(clause: &str, verdict: Verdict, sha: &str) -> ClauseVerdict {
         ClauseVerdict {
+            extra: semantic_metadata(&sha256_hex(sha)),
             clause_id: clause.to_string(),
             card_id: clause.split('#').next().unwrap().to_string(),
             verdict,
@@ -1221,6 +1390,32 @@ mod tests {
             triage: None,
             citation: None,
             recorded_at: "2026-08-21T00:00:00Z".to_string(),
+        }
+    }
+
+    #[test]
+    fn legacy_container_stays_unbound_through_v3_and_per_card_writes() {
+        let id = "EX12-035#effect#0";
+        let other = "EX12-035#effect#1";
+        let sha = sha256_hex("abc");
+        for version in [1, 2] {
+            let row = v(id, Verdict::Confirmed, "abc");
+            let raw = serde_json::json!({"version":version,"clauses":{id:row,other:v(other,Verdict::Diverged,"abc")}});
+            let mut store = VerdictStore::from_json(&raw.to_string()).unwrap();
+            store.set_current_semantic_sha_v1(id, &sha);
+            assert!(store.is_invalidated(id));
+            assert!(store.get_semantically_validated_v1(id, &sha).is_none());
+            let encoded = store.to_json().unwrap();
+            assert_eq!(serde_json::from_str::<serde_json::Value>(&encoded).unwrap()["clauses"], raw["clauses"]);
+            let mut back = VerdictStore::from_json(&encoded).unwrap();
+            back.record(v(id, Verdict::Confirmed, "abc"));
+            assert!(back.get_semantically_validated_v1(id,&sha).is_some());
+            assert!(back.get_semantically_validated_v1(other,&sha).is_none());
+            let dir = tempfile::tempdir().unwrap();
+            back.save_dir(dir.path()).unwrap();
+            let reloaded = VerdictStore::load_dir(dir.path()).unwrap();
+            assert!(reloaded.get_semantically_validated_v1(id,&sha).is_some());
+            assert!(reloaded.get_semantically_validated_v1(other,&sha).is_none());
         }
     }
 
@@ -1258,6 +1453,7 @@ mod tests {
             .iter()
             .map(|s| s.to_string())
             .collect();
+        for id in &ids { s.set_current_semantic_sha_v1(id, &sha256_hex("x")); }
         let sum = s.summary(&ids);
         assert_eq!(
             (sum.confirmed, sum.diverged, sum.unavailable, sum.unmeasured),
@@ -1274,9 +1470,9 @@ mod tests {
         // nobody examined.
         let mut s = VerdictStore::default();
         s.record(v("EX12-035#effect#0", Verdict::Confirmed, "old-sha"));
-        assert!(s.get_validated("EX12-035#effect#0", "old-sha").is_some());
+        assert!(s.get_semantically_validated_v1("EX12-035#effect#0", &sha256_hex("old-sha")).is_some());
         assert!(
-            s.get_validated("EX12-035#effect#0", "new-sha").is_none(),
+            s.get_semantically_validated_v1("EX12-035#effect#0", &sha256_hex("new-sha")).is_none(),
             "text drift must invalidate the verdict"
         );
     }
@@ -1285,7 +1481,7 @@ mod tests {
     fn invalidated_verdicts_count_as_unmeasured_in_the_summary() {
         let mut s = VerdictStore::default();
         s.record(v("EX12-035#effect#0", Verdict::Confirmed, "old-sha"));
-        s.set_current_text_sha("EX12-035#effect#0", "new-sha");
+        s.set_current_semantic_sha_v1("EX12-035#effect#0", "new-sha");
         let sum = s.summary(&["EX12-035#effect#0".to_string()]);
         assert_eq!(sum.confirmed, 0);
         assert_eq!(sum.unmeasured, 1);
@@ -1340,7 +1536,7 @@ mod tests {
 
     #[test]
     fn clause_text_book_parses_the_extract_shape() {
-        let book = ClauseTextBook::from_json(EXTRACT_JSON, "test").unwrap();
+        let book = fresh_clause_book(EXTRACT_JSON, "test").unwrap();
         let ct = book.get("ST1-12#effect#0").expect("clause present");
         assert_eq!(ct.label, "[Your Turn]");
         assert!(ct.text.contains("+1000 DP"));
@@ -1352,7 +1548,7 @@ mod tests {
 
     #[test]
     fn book_knows_zero_clause_cards() {
-        let book = ClauseTextBook::from_json(
+        let book = fresh_clause_book(
             r#"{"cards":["BT1-009","ST1-07"],"clauses":[{"id":"ST1-07#inherited#0","label":"Inherited Effect","text":"x"}]}"#,
             "t",
         )
@@ -1364,14 +1560,14 @@ mod tests {
 
     #[test]
     fn book_without_a_cards_array_still_knows_the_cards_of_its_clauses() {
-        let book = ClauseTextBook::from_json(EXTRACT_JSON, "t").unwrap();
+        let book = fresh_clause_book(EXTRACT_JSON, "t").unwrap();
         assert!(book.has_card("ST1-12"));
         assert!(!book.has_card("ST1-13"));
     }
 
     #[test]
     fn recording_a_confirmed_verdict_hashes_the_book_text() {
-        let book = ClauseTextBook::from_json(EXTRACT_JSON, "test").unwrap();
+        let book = fresh_clause_book(EXTRACT_JSON, "test").unwrap();
         let mut store = VerdictStore::default();
         record_scenario_verdict(
             &mut store,
@@ -1395,13 +1591,13 @@ mod tests {
         );
         // And the round trip validates against the same text.
         assert!(store
-            .get_validated("ST1-12#effect#0", &cv.text_sha256.clone())
+            .get_semantically_validated_v1("ST1-12#effect#0", &book.semantic_sha("ST1-12#effect#0").unwrap())
             .is_some());
     }
 
     #[test]
     fn a_diverged_verdict_carries_its_reason() {
-        let book = ClauseTextBook::from_json(EXTRACT_JSON, "test").unwrap();
+        let book = fresh_clause_book(EXTRACT_JSON, "test").unwrap();
         let mut store = VerdictStore::default();
         record_scenario_verdict(
             &mut store,
@@ -1427,7 +1623,7 @@ mod tests {
         // The orphan-scenario rule: a clause id outside the extract denominator
         // must never grow a verdict -- it would count toward nothing while
         // looking like coverage.
-        let book = ClauseTextBook::from_json(EXTRACT_JSON, "test").unwrap();
+        let book = fresh_clause_book(EXTRACT_JSON, "test").unwrap();
         let mut store = VerdictStore::default();
         let err = record_scenario_verdict(
             &mut store,
@@ -1602,6 +1798,7 @@ mod tests {
 
         let mut store = VerdictStore::load_dir(&dir).unwrap();
         store.record(ClauseVerdict {
+            extra: Default::default(),
             clause_id: "BT1-001#effect#0".into(),
             card_id: "BT1-001".into(),
             verdict: Verdict::Diverged,
@@ -1650,6 +1847,7 @@ mod tests {
 
     fn diverged_row(card: &str) -> ClauseVerdict {
         ClauseVerdict {
+            extra: Default::default(),
             clause_id: format!("{card}#effect#0"),
             card_id: card.into(),
             verdict: Verdict::Diverged,
@@ -1718,13 +1916,13 @@ mod verdict_set_tests {
     use super::*;
 
     fn book() -> ClauseTextBook {
-        ClauseTextBook::from_json(
+        fresh_clause_book(
             r#"{"clauses":[{"id":"BT7-056#effect#0","label":"[On Play]","text":"t"}]}"#, "t",
         ).unwrap()
     }
 
     fn ibook() -> InteractionBook {
-        InteractionBook::from_json(
+        fresh_interaction_book(
             r#"{"version":1,"interactions":{"qa:Q1":{"source":"qa","card_ids":["BT7-056"],"kind":"positive","gating":true,"text_sha256":"abc"}}}"#,
             "t",
         ).unwrap()
@@ -1802,6 +2000,7 @@ mod interaction_store_tests {
 
     fn clause_row(clause: &str) -> ClauseVerdict {
         ClauseVerdict {
+            extra: Default::default(),
             clause_id: clause.to_string(),
             card_id: clause.split('#').next().unwrap().to_string(),
             verdict: Verdict::Confirmed,
@@ -1880,7 +2079,7 @@ mod interaction_store_tests {
         s.record(clause_row("BT7-056#effect#0"));
         let json = s.to_json().unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
-        assert_eq!(value["version"], 1);
+        assert_eq!(value["version"], 3);
         assert!(value.get("interactions").is_none(), "{json}");
     }
 
@@ -1891,7 +2090,7 @@ mod interaction_store_tests {
         s.record_interaction(iv("qa:Q1601", &["BT7-056"], Verdict::Confirmed));
         let json = s.to_json().unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
-        assert_eq!(value["version"], 2);
+        assert_eq!(value["version"], 3);
         let back = VerdictStore::from_json(&json).unwrap();
         assert_eq!(back.get_interaction("qa:Q1601").unwrap().verdict, Verdict::Confirmed);
         assert_eq!(back.get("BT7-056#effect#0").unwrap().verdict, Verdict::Confirmed);
@@ -1914,13 +2113,13 @@ mod interaction_store_tests {
 
     #[test]
     fn from_json_refuses_unknown_versions_and_v1_interactions_and_key_mismatches() {
-        let err = VerdictStore::from_json(r#"{"version": 3, "clauses": {}}"#).unwrap_err();
-        assert!(err.contains("version 3"), "{err}");
+        let err = VerdictStore::from_json(r#"{"version": 99, "clauses": {}}"#).unwrap_err();
+        assert!(err.contains("version 99"), "{err}");
 
         let mut s = VerdictStore::default();
         s.record_interaction(iv("qa:Q1601", &["BT7-056"], Verdict::Confirmed));
         let v2 = s.to_json().unwrap();
-        let v1 = v2.replace("\"version\": 2", "\"version\": 1");
+        let v1 = v2.replace("\"version\": 3", "\"version\": 1");
         assert!(VerdictStore::from_json(&v1).unwrap_err().contains("version-1"));
 
         let mismatched =
@@ -1939,7 +2138,7 @@ mod interaction_store_tests {
         for card in ["BT7-056", "EX4-030"] {
             let text = std::fs::read_to_string(dir.join(format!("{card}.json"))).unwrap();
             assert!(text.contains("qa:Q1601"), "{card} file lacks the shared ruling");
-            assert!(text.contains("\"version\": 2"));
+            assert!(text.contains("\"version\": 3"));
         }
         let back = VerdictStore::load_dir(&dir).unwrap();
         assert_eq!(back.interaction_count(), 1, "one interaction, two copies");
@@ -2003,7 +2202,7 @@ mod interaction_store_tests {
         let clause_only = VerdictStore::load_dir(&v1).expect("clause-only files load");
         assert_eq!(clause_only.interaction_count(), 0);
         let value: serde_json::Value = serde_json::from_str(&clause_only.to_json().unwrap()).unwrap();
-        assert_eq!(value["version"], 1, "a clause-only ledger must not be upgraded to v2");
+        assert_eq!(value["version"], 3, "new writers prevent old body-only readers accepting rows");
     }
 
     /// The Python writer (`exam_binding.write_interaction_verdict`, the one the
@@ -2027,13 +2226,30 @@ mod interaction_store_tests {
             let name = format!("{card}.json");
             let ours = std::fs::read_to_string(out.join(&name)).unwrap();
             let theirs = std::fs::read_to_string(fixture.join(&name)).unwrap().replace("\r\n", "\n");
-            assert_eq!(ours, theirs, "{name} differs between the Rust and Python writers");
+            let ours: serde_json::Value = serde_json::from_str(&ours).unwrap();
+            let theirs: serde_json::Value = serde_json::from_str(&theirs).unwrap();
+            assert_eq!(ours["version"], 3);
+            assert_eq!(ours["clauses"], theirs["clauses"], "historical clauses preserved");
+            assert_eq!(ours["interactions"], theirs["interactions"], "historical interactions preserved");
         }
     }
 
     #[test]
+    fn unpaired_probe_recording_is_refused_without_store_mutation() {
+        let book = fresh_interaction_book(BOOK, "test").unwrap();
+        let mut store = VerdictStore::default();
+        store.last_updated = "fixed".into();
+        let before = store.to_json().unwrap();
+        let result = record_interaction_verdict(&mut store, &book,
+            "probe:BT7-056#effect#0:scope:neg", &[], Verdict::Confirmed,
+            None, None, "now".into());
+        assert!(result.is_err(), "an internally valid stale denominator is not a source pair");
+        assert_eq!(store.to_json().unwrap(), before);
+    }
+
+    #[test]
     fn record_interaction_verdict_takes_cards_and_fingerprint_from_the_denominator() {
-        let book = InteractionBook::from_json(BOOK, "test").unwrap();
+        let book = fresh_interaction_book(BOOK, "test").unwrap();
         let mut store = VerdictStore::default();
         record_interaction_verdict(
             &mut store,
@@ -2054,7 +2270,7 @@ mod interaction_store_tests {
 
     #[test]
     fn an_orphan_interaction_is_refused_and_the_store_is_untouched() {
-        let book = InteractionBook::from_json(BOOK, "test").unwrap();
+        let book = fresh_interaction_book(BOOK, "test").unwrap();
         let mut store = VerdictStore::default();
         let err = record_interaction_verdict(
             &mut store,
@@ -2073,7 +2289,7 @@ mod interaction_store_tests {
 
     #[test]
     fn a_combo_interaction_needs_no_denominator_entry_but_needs_a_card() {
-        let book = InteractionBook::from_json(BOOK, "test").unwrap();
+        let book = fresh_interaction_book(BOOK, "test").unwrap();
         let mut store = VerdictStore::default();
         assert!(record_interaction_verdict(
             &mut store,
@@ -2109,7 +2325,7 @@ mod interaction_store_tests {
 
     #[test]
     fn the_book_lists_gating_ids_per_card() {
-        let book = InteractionBook::from_json(BOOK, "test").unwrap();
+        let book = fresh_interaction_book(BOOK, "test").unwrap();
         assert_eq!(
             book.gating_ids_for_card("BT7-056"),
             vec![
@@ -2143,7 +2359,7 @@ mod interaction_store_tests {
         let bt7: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(dir.join("BT7-056.json")).unwrap())
                 .unwrap();
-        assert_eq!(bt7["version"], 2);
+        assert_eq!(bt7["version"], 3);
         assert_eq!(bt7["last_updated"], "2026-10-02T00:00:00Z");
     }
 
@@ -2151,12 +2367,16 @@ mod interaction_store_tests {
     fn interaction_summary_keeps_the_denominator_and_flags_drift() {
         let mut s = VerdictStore::default();
         s.record_interaction(iv("qa:Q1601", &["BT7-056"], Verdict::Confirmed));
-        s.record_interaction(iv(
+        let mut current = iv(
             "probe:BT7-056#effect#0:scope:neg",
             &["BT7-056"],
             Verdict::Diverged,
-        ));
-        s.set_current_text_sha("qa:Q1601", "edited-answer-sha");
+        );
+        let sha = sha256_hex("fresh semantic fixture");
+        current.extra = semantic_metadata(&sha);
+        s.record_interaction(current);
+        s.set_current_semantic_sha_v1("probe:BT7-056#effect#0:scope:neg", &sha);
+        s.set_current_semantic_sha_v1("qa:Q1601", "edited-answer-sha");
         let ids = vec![
             "qa:Q1601".to_string(),
             "probe:BT7-056#effect#0:scope:neg".to_string(),

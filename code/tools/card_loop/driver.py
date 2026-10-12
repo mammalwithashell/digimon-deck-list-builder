@@ -863,6 +863,17 @@ class Driver:
             self._prelude = f"`tools.clause_coverage.book add` exited {rc}: {(err or out).strip()[-300:]}"
             self.state.problems.append(f"clause-text book prelude: {self._prelude}")
             return False
+        # Append-only add never refreshes existing cards. Verify their full
+        # semantics against current source before dispatching any oracle work.
+        check = [sys.executable, "-c", BOOK_BOOTSTRAP, "validate", "--book", book, "--card-ids", *pool]
+        try:
+            check_rc, check_out, check_err = self.ctx.run_command(check, str(self.repo), 1800)
+        except Exception as e:
+            check_rc, check_out, check_err = None, "", f"{type(e).__name__}: {e}"
+        if check_rc != 0:
+            self._prelude = f"clause source binding validation failed: {(check_err or check_out).strip()[-500:]}"
+            self.state.problems.append(self._prelude)
+            return False
         self._commit_paths([book], f"card-loop: clause-text book covers run {self.run_id}'s pool",
                            body=f"{len(pool)} pool card(s); added by the driver's run prelude.")
         self._prelude = "ok"

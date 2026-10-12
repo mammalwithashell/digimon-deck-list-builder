@@ -286,8 +286,11 @@ def build_readiness(
     bound_i = None
     if not clause_only:
         if interactions_fn is None:
-            from tools.clause_coverage.exam_binding import bind_interactions as interactions_fn
-        bound_i = interactions_fn(ids, denominator_path, verdicts_dir, gating_only=True)
+            from tools.clause_coverage.exam_binding import bind_interactions
+            bound_i = bind_interactions(ids, denominator_path, verdicts_dir, gating_only=True,
+                                        current_clauses=report.get("current_source_clauses"))
+        else:
+            bound_i = interactions_fn(ids, denominator_path, verdicts_dir, gating_only=True)
         for cid, card_report in reports.items():
             irep = bound_i["cards"].get(cid) or {}
             card_report["in_denominator"] = bool(irep.get("in_denominator"))

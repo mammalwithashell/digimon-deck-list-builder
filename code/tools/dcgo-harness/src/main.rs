@@ -718,7 +718,11 @@ fn run(args: &Args) -> Result<ExitCode, String> {
                 id.clone()
             } else {
                 let id = interaction.as_deref().expect("clap requires one of --clause/--interaction");
-                let book = InteractionBook::load(interaction_denominator)?;
+                let mut book = InteractionBook::load(interaction_denominator)?;
+                if !id.starts_with("combo:") {
+                    let clauses = ClauseTextBook::load(clause_text_json)?;
+                    book.pair_clause_source(id, &clauses)?;
+                }
                 set_interaction_verdict(&mut store, &book, id, card, v, reason.clone(), t, now)?;
                 id.to_string()
             };
@@ -937,6 +941,15 @@ fn run_exam(
             scenario.display()
         );
         return Ok(ExitCode::SUCCESS);
+    }
+
+    // Freeze and verify all source pairs before any offline scenario is evaluated.
+    if let Some((_, recorder)) = verdict_ctx.as_mut() {
+        for path in &paths {
+            let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+            let source_scenario = dcgo_harness::exam::scenario::Scenario::from_yaml(&text)?;
+            recorder.preflight_scenario(&source_scenario)?;
+        }
     }
 
     let card_data = dcgo_replay::load_card_data_at(cards_json)
@@ -1456,6 +1469,7 @@ mod migrate_verdicts_guard_tests {
 
         let mut blob = dcgo_harness::exam::verdict::VerdictStore::default();
         blob.record(dcgo_harness::exam::verdict::ClauseVerdict {
+            extra: Default::default(),
             clause_id: "EX12-035#effect#0".to_string(),
             card_id: "EX12-035".to_string(),
             verdict: dcgo_harness::exam::verdict::Verdict::Confirmed,
