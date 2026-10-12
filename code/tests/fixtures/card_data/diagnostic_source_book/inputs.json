@@ -1,0 +1,81 @@
+{
+  "authorizations": {
+    "BT26-033": {
+      "association_proposal": {
+        "bytes": 3402,
+        "path": "reviews/dual-proposal.json",
+        "sha256": "19a5a3bcaad1fd71e136ab527ce59e6172247072d5ff2c59271a1622e9dface3"
+      },
+      "association_review": {
+        "bytes": 7341,
+        "path": "reviews/dual-review.json",
+        "sha256": "5b4ddcec0caa1363de5687098f415dc43702a4e7442071f576da6ea2c523ef63"
+      }
+    },
+    "EX12-031": {
+      "correction_image": {
+        "bytes": 88678,
+        "path": "images/correction.webp",
+        "sha256": "e99dc76323e0652201f5c8282ecbe61ec10659adcd3c4270a1213b9dc09ee167"
+      },
+      "correction_sidecar": {
+        "bytes": 3781,
+        "path": "reviews/correction-sidecar.json",
+        "sha256": "cf580fd55b3c8a68eed3acc54bebbc39808f66e99432b540ff6ef7660a7f56de"
+      }
+    }
+  },
+  "evaluated_card_ids": [
+    "BT24-031",
+    "BT26-033",
+    "EX12-031",
+    "EX12-046"
+  ],
+  "images": {
+    "BT26-033.webp": {
+      "bytes": 91712,
+      "path": "images/BT26-033.webp",
+      "sha256": "944efce3635ca8a06c58177cc8f5f84a984f2257449afb4cf7b85453b3eb86c2"
+    },
+    "BT26-033_P1.webp": {
+      "bytes": 105512,
+      "path": "images/BT26-033_P1.webp",
+      "sha256": "7706db30b4d80f2ae429ec5685e0cc2517f99a995104f27ceb8d0629fd2f7ea5"
+    },
+    "BT26-033_P2.webp": {
+      "bytes": 105676,
+      "path": "images/BT26-033_P2.webp",
+      "sha256": "d91c5848285b0c5671649f5eb21fd66296224041d1a5d4b0b10e326f0bda32bf"
+    },
+    "data/card_correction_evidence/53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0.webp": {
+      "bytes": 142392,
+      "path": "images/53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0.webp",
+      "sha256": "53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0"
+    }
+  },
+  "kind": "source-book-diagnostic-inputs-v1",
+  "qa": {
+    "bytes": 3212719,
+    "path": "qa/card_qa.json",
+    "sha256": "bc0c3b4d2e6384e479003ff1d946fbdb6606a4c2020784dfc504a53db0a53df7"
+  },
+  "raw_pages": {
+    "https://world.digimoncard.com/cards/?search=true&category=522033": {
+      "bytes": 993575,
+      "path": "raw/0209c832fc2123fc7025c77a5286c1b27d9317ca3e230af402586a352906d91c.html",
+      "sha256": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a"
+    },
+    "https://world.digimoncard.com/cards/?search=true&category=522037": {
+      "bytes": 1265155,
+      "path": "raw/4fca85cbc69e60754862825003fa7505ab05dd533ee005a31d3263930458b4fb.html",
+      "sha256": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2"
+    },
+    "https://world.digimoncard.com/cards/?search=true&category=522038": {
+      "bytes": 1135388,
+      "path": "raw/ab274510f2c3a7a21b9bbef1888e191dce9c9bc5dddf3ad64a88590dc73f8049.html",
+      "sha256": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0"
+    }
+  },
+  "schema_version": 1,
+  "snapshot_sha256": "9770babb5cafac567fe65f37cec62a5718e9646fd9d158913db024cf42204211"
+}

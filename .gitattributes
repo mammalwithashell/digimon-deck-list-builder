@@ -94,3 +94,49 @@ code/tests/fixtures/card_data/runtime_snapshot/.gitattributes -text
 /code/tests/fixtures/card_data/ordinary_nbsp/report.json.gz -text
 /code/tests/fixtures/card_data/ordinary_nbsp/secondary.json.gz -text
 /code/tests/fixtures/card_data/ordinary_nbsp/snapshot.json.gz -text
+
+# Preserve reviewed diagnostic source inventory code bytes.
+/code/tools/clause_coverage/diagnostic_source_book.py -text
+/code/tests/tools/test_diagnostic_source_book.py -text
+
+# Keep this policy file LF and source-proof fixtures byte exact.
+/.gitattributes text eol=lf
+/code/tests/fixtures/card_data/diagnostic_source_book/.gitattributes -text
+/code/tests/fixtures/card_data/diagnostic_source_book/04144361acfe97857e3d5f23041dc956ee81981156807f405fc953177144f90c.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/117ed7833602d5889e6ab19d7b034e7233e6d1b2589526b2a17eefaac808139e.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/158fd2fe7c9cc83238d49af2e66e60b3e895501891b8cac9ffdb12c45a8bf83a.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/18ac2bb5d15c86421b719a8ff6e0f4fb8f64acfd6863d5d5b7a1d5eb5b776fc6.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/19a5a3bcaad1fd71e136ab527ce59e6172247072d5ff2c59271a1622e9dface3.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/1af47c5bf1e78f2ccbea652c3537903f6d1038a811aa6baa0a7e54527652f69b.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/2085afe367b7058d5579f2a558d40efc31313c98b38afcf75600033ffa8076cf.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/3dc8b8761d5b817fb1c1c04809063cd3eeb05e16a4324768c6e5effc370d0e1c.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/475d5f541f2ce84f97049373e2fdafee5606537ad671aba2b5f0b46aa5a6af47.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/5016aaf5f6ce69ea9acd8642797bf65e12040a4072a97f9c920fc49540404c38.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/5a016b1f36857f488f3f7cd7ece2b720d0da51d0a88b7df0b089c7b9fd2a0a07.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/5b4ddcec0caa1363de5687098f415dc43702a4e7442071f576da6ea2c523ef63.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/5caec536c19df5650a5d3dbb70bc5dcc85901004ce1e5acd400fa1ec8b99e9e0.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/6102887019bdcf8af5905ee89c9c9dfafb1890513997f0ac2a849eae0945a637.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/7706db30b4d80f2ae429ec5685e0cc2517f99a995104f27ceb8d0629fd2f7ea5.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/7e02b717edd68149f3d1ebba3f006b144cf7f9ffe78d50c2307cbbeae3ee8f86.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/86cebfc129559f3619fa7e1395e28bfb2004aba1369f4c5280b912506eecc4ba.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/8b514f43afd27d2cd7d8cd74d1557b4ddda100280887547a5b050cf94153932d.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/923df174478db3640e7cabd0d01151b97b579b6b9838ed68c57e9eb13525be91.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/944efce3635ca8a06c58177cc8f5f84a984f2257449afb4cf7b85453b3eb86c2.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/a242b1d01ee3c00b6206de7d3860556ee85bddd396a4de99be7b23628164416e.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/archive.json -text
+/code/tests/fixtures/card_data/diagnostic_source_book/b4bf8217956e8941126154d109085235c0a16c39336c1d4a4d86aa82b0418f83.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/bc0c3b4d2e6384e479003ff1d946fbdb6606a4c2020784dfc504a53db0a53df7.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/c75e3cb2891e5952c51be99d86ea0e9db2ba265358678358057714064c7ab5e7.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/c7d760d9b0528fab6ba04da177954b52d56cdac20f6bcf53ea361db83320c1f1.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/cf580fd55b3c8a68eed3acc54bebbc39808f66e99432b540ff6ef7660a7f56de.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/d91c5848285b0c5671649f5eb21fd66296224041d1a5d4b0b10e326f0bda32bf.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/e99dc76323e0652201f5c8282ecbe61ec10659adcd3c4270a1213b9dc09ee167.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/ef589f9c318174a5799730c663c30481a68af8c5018f44b670672d5853c6132c.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/extraction.json -text
+/code/tests/fixtures/card_data/diagnostic_source_book/fd17c7aecab7ee3cd64137f7361961eca1c0574ad4f0a4ca20e83d803f0d5309.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/fe1f313900386f2d8dcde21df7be97b4f19e25a227b708b879acc36fe39ef1a5.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/inputs.json -text
