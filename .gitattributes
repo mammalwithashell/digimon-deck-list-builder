@@ -232,3 +232,6 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/digimon-dsl/src/bin/implementation_inventory.rs -text
 /code/digimon-dsl/src/bin/implementation_inventory/core.rs -text
 /code/digimon-dsl/tests/implementation_inventory.rs -text
+
+# Preserve reviewed native Assembly metadata regression.
+/code/digimon-dsl/tests/focused_assembly_compilation.rs -text
