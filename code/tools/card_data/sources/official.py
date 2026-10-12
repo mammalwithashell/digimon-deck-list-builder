@@ -32,7 +32,7 @@ from ..serialization import content_digest, sha256_hex
 
 
 OFFICIAL_CATALOG_URL = "https://world.digimoncard.com/cards/"
-OFFICIAL_PARSER_VERSION = "official-html-v4"
+OFFICIAL_PARSER_VERSION = "official-html-v5"
 OFFICIAL_SOURCE_SCHEMA_VERSION = "world-card-list-html-v1"
 USER_AGENT = "digimon-deck-list-builder/card-data-v1"
 
@@ -55,6 +55,12 @@ _RULE_TRAIT = re.compile(
 _RULE_ATTRIBUTE = re.compile(
     r"(?<![\w\[(])(?:\[\s*Rule\s*\]|\(\s*Rule\s*\)|Rule)\s*:?\s*Trait\s*:\s*Has\s*\[([^\]]+)\]\s*attribute\b",
     re.IGNORECASE,
+)
+
+
+_RULE_FORM = re.compile(
+    r"^\s*(?:\[\s*Rule\s*\]|\(\s*Rule\s*\)|Rule)\s*:?\s*Trait\s*:\s*Has\s*\[([^\]]+)\]\s*Form\b",
+    re.IGNORECASE | re.MULTILINE,
 )
 
 
@@ -468,13 +474,16 @@ def _qa_entries(block: str) -> list[dict[str, str]]:
 def _rule_grants(text_sections: Iterable[Mapping[str, str]]) -> dict[str, list[str]]:
     traits: list[str] = []
     attributes: list[str] = []
+    forms: list[str] = []
     for section in text_sections:
         text = section["text"]
         traits.extend(match.strip() for match in _RULE_TRAIT.findall(text))
         attributes.extend(match.strip() for match in _RULE_ATTRIBUTE.findall(text))
+        forms.extend(match.strip() for match in _RULE_FORM.findall(text))
     return {
         "traits": list(dict.fromkeys(value for value in traits if value)),
         "attributes": list(dict.fromkeys(value for value in attributes if value)),
+        "forms": list(dict.fromkeys(value for value in forms if value)),
     }
 
 

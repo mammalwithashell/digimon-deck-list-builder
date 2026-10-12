@@ -483,6 +483,10 @@ def _official_fields(extracted: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(rule_grants, Mapping):
         rule_grants = {}
     forms = _split_printed_values(extracted.get("form", ""))
+    for granted in rule_grants.get("forms", []):
+        for item in _split_printed_values(granted):
+            if item not in forms:
+                forms.append(item)
     types = _split_printed_values(extracted.get("type", ""))
     # The official database represents the Appmon mechanic in the Form row
     # (for example ``Stnd./Appmon``), while compatibility consumers expect it

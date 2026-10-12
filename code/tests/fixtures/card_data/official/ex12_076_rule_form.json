@@ -1,0 +1,11 @@
+{
+  "fixture": "ex12_076_rule_form.html",
+  "fixture_sha256": "578082356a62081fcb10bd304bc8cde988d3fa29df6f31b86fb38099a37e0986",
+  "raw_page_sha256": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+  "observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037",
+  "category_id": "522037",
+  "card_id": "EX12-076",
+  "printing_id": "EX12-076",
+  "parser_version": "official-html-v4"
+}
