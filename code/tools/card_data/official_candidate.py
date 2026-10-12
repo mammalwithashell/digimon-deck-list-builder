@@ -10,6 +10,7 @@ from typing import Any, Mapping
 
 from .adjudications import load_migration_adjudications
 from .compatibility_diff import approve_runtime_diffs, diff_runtime_fields
+from .compatibility_conditions import official_condition_projection, refresh_official_conditions
 from .corrections import (
     apply_correction,
     correction_is_already_applied,
@@ -59,19 +60,7 @@ def _source_bootstrap(
         if selected is not None
         else observations[card.printings[0].observation_ids[0]]
     )
-    sections = observation.extracted.get("text_sections", [])
-    xros_labels = (
-        "special play condition",
-        "special digivolution condition",
-        "dna digivolution",
-        "digixros",
-    )
-    xros_req = "\n".join(
-        f"[{row.get('label', '')}] {row.get('text', '')}".strip()
-        for row in sections
-        if isinstance(row, Mapping)
-        and any(label in str(row.get("label", "")).lower() for label in xros_labels)
-    )
+    xros_req, _ = official_condition_projection(card, observations)
     return {
         "card_name_jpn": "",
         "rarity": observation.extracted.get("rarity"),
@@ -216,10 +205,12 @@ def build_official_candidate(
 
     candidate_registry = allocate_append_only(registry, corrected)
     legacy_bootstrap = bootstrap_legacy_compatibility_fields(legacy_cards)
-    for card_id, card in corrected.items():
-        legacy_bootstrap.setdefault(
-            card_id, _source_bootstrap(card, live_observations)
-        )
+    missing_bootstrap_ids = corrected.keys() - legacy_bootstrap.keys()
+    legacy_bootstrap, compatibility_evidence = refresh_official_conditions(
+        corrected, live_observations, legacy_bootstrap
+    )
+    for card_id in missing_bootstrap_ids:
+        legacy_bootstrap[card_id] = _source_bootstrap(corrected[card_id], live_observations)
     generation_cards = dict(corrected)
     legacy_canonical = bootstrap_legacy_canonical_cards(legacy_cards)
     for card_id in candidate_registry.assignments:
@@ -232,7 +223,8 @@ def build_official_candidate(
     )
     generated = dict(sorted(generated.items(), key=lambda item: natural_card_id_key(item[0])))
 
-    raw_diffs = diff_runtime_fields(legacy_cards, generated, corrected)
+    raw_diffs = diff_runtime_fields(legacy_cards, generated, corrected,
+        compatibility_field_provenance=compatibility_evidence)
     old_input_revision = content_digest(legacy_cards)
     new_input_revision = content_digest(corrected)
     approved = approve_runtime_diffs(

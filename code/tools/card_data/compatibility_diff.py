@@ -19,6 +19,7 @@ from .serialization import content_digest, natural_card_id_key
 RUNTIME_FIELDS = (
     "card_name_eng",
     "dual",
+    "xros_req",
     "link_effect_description_eng",
     "max_count_in_deck",
     "dna_costs",
@@ -75,6 +76,8 @@ def diff_runtime_fields(
     old_cards: Mapping[str, Mapping[str, Any]],
     new_cards: Mapping[str, Mapping[str, Any]],
     canonical_cards: Mapping[str, CanonicalCard],
+    *,
+    compatibility_field_provenance: Mapping[str, Mapping[str, tuple[str, ...]]] | None = None,
 ) -> tuple[RuntimeFieldDiff, ...]:
     diffs: list[RuntimeFieldDiff] = []
     for card_id in sorted(set(old_cards) | set(new_cards), key=natural_card_id_key):
@@ -98,6 +101,10 @@ def diff_runtime_fields(
                     if path.split(".", 1)[0] in {"faces", "type_eng", "evo_costs"}
                     for observation_id in source.observation_ids
                 }))
+            if field_path == "xros_req":
+                observation_ids = tuple(sorted(set(
+                    (compatibility_field_provenance or {}).get(card_id, {}).get(field_path, ())
+                )))
             diffs.append(
                 RuntimeFieldDiff(
                     card_id=card_id,

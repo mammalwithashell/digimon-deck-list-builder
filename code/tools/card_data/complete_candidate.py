@@ -37,6 +37,7 @@ from .campaign_generate import (
     render_manifest,
 )
 from .compatibility_diff import approve_runtime_diffs, diff_runtime_fields
+from .compatibility_conditions import refresh_official_conditions
 from .corrections import load_reviewed_corrections
 from .derived_artifacts import generate_derived_artifacts
 from .errors import AdjudicationError, CardDataError, ValidationError
@@ -876,9 +877,13 @@ def build_complete_candidate(
                 },
             )
 
-    for card_id, card in admitted.items():
-        if card_id not in legacy_bootstrap:
-            legacy_bootstrap[card_id] = _source_bootstrap(card, observations)
+    missing_bootstrap_ids = admitted.keys() - legacy_bootstrap.keys()
+    legacy_bootstrap, compatibility_evidence = refresh_official_conditions(
+        {cid: card for cid, card in admitted.items() if card.admission is AdmissionStatus.ADMITTED},
+        observations, legacy_bootstrap,
+    )
+    for card_id in missing_bootstrap_ids:
+        legacy_bootstrap[card_id] = _source_bootstrap(admitted[card_id], observations)
     generated = generate_cards_json(
         generation_cards,
         candidate_registry,
@@ -908,7 +913,8 @@ def build_complete_candidate(
     old_input_revision = content_digest(legacy_cards)
     new_input_revision = content_digest(admitted)
     runtime_diffs = approve_runtime_diffs(
-        diff_runtime_fields(legacy_cards, generated, corrected),
+        diff_runtime_fields(legacy_cards, generated, corrected,
+            compatibility_field_provenance=compatibility_evidence),
         corrections=corrections,
         adjudications=adjudications,
         observations=observations,
