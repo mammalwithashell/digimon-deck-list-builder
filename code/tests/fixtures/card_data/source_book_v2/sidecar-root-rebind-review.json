@@ -1,0 +1,14 @@
+{
+  "status": "APPROVED_EXACT_DEPENDENCY_REBIND_FOR_FRESH_DIAGNOSTIC_REPLAY",
+  "at": "2026-10-12T19:30:22.719527+00:00",
+  "old_sidecar_sha256": "cf580fd55b3c8a68eed3acc54bebbc39808f66e99432b540ff6ef7660a7f56de",
+  "new_sidecar_sha256": "1bbf81e7b17c8cbf16e18fda7d86aa6f792a6d384a6cb47c94ba3a45c15ff22e",
+  "new_sidecar_path": "ex12-031-correction-sidecar-r3-wire-hardening-proposal-20261012.json",
+  "only_changed_dependency": "tools.card_data.corrections",
+  "new_dependency_sha256": "bdc9a8677d62620e5c1caa275c138889e6c8220695970a69ba47ec8c3f5eb894",
+  "dependencies_verified": 13,
+  "implementation_commit": "f959d024827e434364b2ca7e2325142b7d4d45e1",
+  "independent_review": "face-correction-wire-independent-r2-review-20261012.md",
+  "all_input_source_image_correction_ledger_bindings_unchanged": true,
+  "scope": "Rebind only previously independently reviewed exact R3 correction to strict face-loader repair. Fresh compiler must still replay all raw inputs and original source conservation; no old result reclassification or admission."
+}

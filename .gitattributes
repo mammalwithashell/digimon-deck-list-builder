@@ -157,3 +157,13 @@ code/tests/fixtures/card_data/runtime_snapshot/.gitattributes -text
 /code/tests/fixtures/card_data/ordinary_nbsp_correction/EX12-031.json.gz -text
 /code/tools/card_data/corrections.py -text
 /code/tests/tools/test_card_data_face_correction_wire_schema.py -text
+/code/tools/clause_coverage/source_book_v2.py -text
+/code/tests/tools/test_source_book_v2.py -text
+/code/tests/fixtures/card_data/source_book_v2/.gitattributes -text
+/code/tests/fixtures/card_data/source_book_v2/fresh-four-inputs.json -text
+/code/tests/fixtures/card_data/source_book_v2/historical-BT24-101-row.json.gz -text
+/code/tests/fixtures/card_data/source_book_v2/historical-four-diagnostic.json.gz -text
+/code/tests/fixtures/card_data/source_book_v2/provenance.json -text
+/code/tests/fixtures/card_data/source_book_v2/reviewed-correction-sidecar-wire-hardening.json -text
+/code/tests/fixtures/card_data/source_book_v2/semantic_vectors_v2.json -text
+/code/tests/fixtures/card_data/source_book_v2/sidecar-root-rebind-review.json -text
