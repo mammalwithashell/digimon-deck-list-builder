@@ -1,0 +1,247 @@
+{
+  "admission": "admitted",
+  "card_id": "BT26-033",
+  "conflicts": [],
+  "faces": [
+    {
+      "colors": [
+        "Yellow",
+        "Red"
+      ],
+      "dp": 13000,
+      "effect_text": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[TS] trait: Cost 4\n＜Raid＞ ＜Alliance＞ ＜Engage＞ (At the end of your turn, this Digimon may attack.)\n[When Digivolving] Add your top security card to the hand. Then, if it's your turn, you may play or use 1 [Iliad] or [TS] trait card from your hand with the cost reduced by 5.\n[All Turns] When any of your [TS] trait Digimon or Tamers would leave the battle area, by placing this Digimon's top stacked card as the bottom security card, they don't leave.",
+      "face_id": "primary",
+      "inherited_text": "",
+      "kind": "digimon",
+      "level": 6,
+      "play_cost": null,
+      "security_text": ""
+    },
+    {
+      "colors": [
+        "Yellow",
+        "Red"
+      ],
+      "dp": null,
+      "effect_text": "For each of your security cards, add 1 to this card's use cost.\n＜Use Req. ([TS] trait)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete all of your opponent's Digimon with the lowest DP. Then, ＜Recovery +1＞.\n＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)",
+      "face_id": "dual",
+      "inherited_text": "",
+      "kind": "option",
+      "level": null,
+      "play_cost": 2,
+      "security_text": ""
+    }
+  ],
+  "fields": {
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "card_colors": [
+      "Yellow",
+      "Red"
+    ],
+    "card_kind": "Digimon",
+    "card_name_eng": "Jupitermon",
+    "dp": 13000,
+    "effect_description_eng": "＜Raid＞ ＜Alliance＞ ＜Engage＞ (At the end of your turn, this Digimon may attack.)\n[When Digivolving] Add your top security card to the hand. Then, if it's your turn, you may play or use 1 [Iliad] or [TS] trait card from your hand with the cost reduced by 5.\n[All Turns] When any of your [TS] trait Digimon or Tamers would leave the battle area, by placing this Digimon's top stacked card as the bottom security card, they don't leave.",
+    "evo_costs": [
+      {
+        "colors": [
+          "Yellow",
+          "Red"
+        ],
+        "cost": 5,
+        "from_level": 5,
+        "slot": 1
+      }
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "inherited_effect_description_eng": "",
+    "level": 6,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Shaman",
+      "Olympos XII",
+      "Iliad",
+      "TS"
+    ]
+  },
+  "printings": [
+    {
+      "alternate_art": false,
+      "language": "en",
+      "observation_ids": [
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+      ],
+      "printing_id": "BT26-033",
+      "product": null
+    },
+    {
+      "alternate_art": true,
+      "language": "en",
+      "observation_ids": [
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "printing_id": "BT26-033_P1",
+      "product": null
+    },
+    {
+      "alternate_art": true,
+      "language": "en",
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a"
+      ],
+      "printing_id": "BT26-033_P2",
+      "product": null
+    }
+  ],
+  "provenance": {
+    "attribute_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    },
+    "card_colors": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    },
+    "card_kind": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    },
+    "card_name_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    },
+    "dp": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    },
+    "effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    },
+    "evo_costs": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    },
+    "faces": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    },
+    "form_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    },
+    "inherited_effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    },
+    "level": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    },
+    "security_effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    },
+    "type_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+        "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+        "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6"
+      ],
+      "selected_observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a"
+    }
+  },
+  "schema_version": 1,
+  "tombstone_reason": null
+}

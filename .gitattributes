@@ -39,3 +39,8 @@ code/tests/tools/test_runtime_projection_proof.py -text
 code/tools/clause_coverage/source_units.py -text
 code/tools/clause_coverage/source_binding.py -text
 code/tools/clause_coverage/rule_card_composition.py -text
+
+# Exact Dual whole-card checker and test bytes.
+code/tools/clause_coverage/dual_card_composition.py -text
+code/tests/tools/test_dual_card_composition.py -text
+code/tests/fixtures/card_data/dual_card_composition/.gitattributes -text

@@ -1,0 +1,128 @@
+{
+  "status": "ROOT_INDEPENDENT_CODE_AND_EXACT_IMAGE_ASSOCIATION_APPROVED_PROOF_ONLY",
+  "tests_passed": 71,
+  "external_controls": 12,
+  "proposal_sha256": "19a5a3bcaad1fd71e136ab527ce59e6172247072d5ff2c59271a1622e9dface3",
+  "all_3_images_visually_verified": true,
+  "all_original_diagnostics_still_blocked": true,
+  "original_3_observations_match_sealed_candidate": true,
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+  "files": [
+    {
+      "path": "D:\\cl-data-repair\\code\\tools\\clause_coverage\\dual_kind_association.py",
+      "sha256": "0a8583f20808f5a4911c9edea8b296136e471c86bfc7d4fd2867537f53d4aec8",
+      "export_sha256": "0a8583f20808f5a4911c9edea8b296136e471c86bfc7d4fd2867537f53d4aec8",
+      "staged_sha256": "0a8583f20808f5a4911c9edea8b296136e471c86bfc7d4fd2867537f53d4aec8",
+      "export_exact": true,
+      "stage_exact": true
+    },
+    {
+      "path": "D:\\cl-data-repair\\code\\tests\\tools\\test_dual_kind_association.py",
+      "sha256": "007f863db0ef7b9b6c71a4bc3cc80833a569670f0ee50aa7b48b8fd9f3017428",
+      "export_sha256": "007f863db0ef7b9b6c71a4bc3cc80833a569670f0ee50aa7b48b8fd9f3017428",
+      "staged_sha256": "007f863db0ef7b9b6c71a4bc3cc80833a569670f0ee50aa7b48b8fd9f3017428",
+      "export_exact": true,
+      "stage_exact": true
+    },
+    {
+      "path": "D:\\cl-data-repair\\code\\tests\\fixtures\\card_data\\dual_kind_association\\4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0.html.gz",
+      "sha256": "c5980f605c6958b3496b4fa4f7d5dbe4189f667b014fa5b7cdb7dbbaa627f56d",
+      "export_sha256": "c5980f605c6958b3496b4fa4f7d5dbe4189f667b014fa5b7cdb7dbbaa627f56d",
+      "staged_sha256": "c5980f605c6958b3496b4fa4f7d5dbe4189f667b014fa5b7cdb7dbbaa627f56d",
+      "export_exact": true,
+      "stage_exact": true
+    },
+    {
+      "path": "D:\\cl-data-repair\\code\\tests\\fixtures\\card_data\\dual_kind_association\\aggregate.json.gz",
+      "sha256": "e6082cd39d83075bc636d99e0ad62fc998fb41717ac3b0726ff264c1b3678457",
+      "export_sha256": "e6082cd39d83075bc636d99e0ad62fc998fb41717ac3b0726ff264c1b3678457",
+      "staged_sha256": "e6082cd39d83075bc636d99e0ad62fc998fb41717ac3b0726ff264c1b3678457",
+      "export_exact": true,
+      "stage_exact": true
+    },
+    {
+      "path": "D:\\cl-data-repair\\code\\tests\\fixtures\\card_data\\dual_kind_association\\BT26-033.webp",
+      "sha256": "944efce3635ca8a06c58177cc8f5f84a984f2257449afb4cf7b85453b3eb86c2",
+      "export_sha256": "944efce3635ca8a06c58177cc8f5f84a984f2257449afb4cf7b85453b3eb86c2",
+      "staged_sha256": "944efce3635ca8a06c58177cc8f5f84a984f2257449afb4cf7b85453b3eb86c2",
+      "export_exact": true,
+      "stage_exact": true
+    },
+    {
+      "path": "D:\\cl-data-repair\\code\\tests\\fixtures\\card_data\\dual_kind_association\\BT26-033_P1.webp",
+      "sha256": "7706db30b4d80f2ae429ec5685e0cc2517f99a995104f27ceb8d0629fd2f7ea5",
+      "export_sha256": "7706db30b4d80f2ae429ec5685e0cc2517f99a995104f27ceb8d0629fd2f7ea5",
+      "staged_sha256": "7706db30b4d80f2ae429ec5685e0cc2517f99a995104f27ceb8d0629fd2f7ea5",
+      "export_exact": true,
+      "stage_exact": true
+    },
+    {
+      "path": "D:\\cl-data-repair\\code\\tests\\fixtures\\card_data\\dual_kind_association\\BT26-033_P2.webp",
+      "sha256": "d91c5848285b0c5671649f5eb21fd66296224041d1a5d4b0b10e326f0bda32bf",
+      "export_sha256": "d91c5848285b0c5671649f5eb21fd66296224041d1a5d4b0b10e326f0bda32bf",
+      "staged_sha256": "d91c5848285b0c5671649f5eb21fd66296224041d1a5d4b0b10e326f0bda32bf",
+      "export_exact": true,
+      "stage_exact": true
+    },
+    {
+      "path": "D:\\cl-data-repair\\code\\tests\\fixtures\\card_data\\dual_kind_association\\digimoncard_io-scope.json.gz",
+      "sha256": "b7951d7429d8f95be507cd9177d4acf4d118fd0f340143c4ea124d431f4baf7c",
+      "export_sha256": "b7951d7429d8f95be507cd9177d4acf4d118fd0f340143c4ea124d431f4baf7c",
+      "staged_sha256": "b7951d7429d8f95be507cd9177d4acf4d118fd0f340143c4ea124d431f4baf7c",
+      "export_exact": true,
+      "stage_exact": true
+    },
+    {
+      "path": "D:\\cl-data-repair\\code\\tests\\fixtures\\card_data\\dual_kind_association\\inputs.json",
+      "sha256": "ad8c3470b48815d08f000e53544f2f5c8b2eca6fdd90530af3364c7f6b65929b",
+      "export_sha256": "ad8c3470b48815d08f000e53544f2f5c8b2eca6fdd90530af3364c7f6b65929b",
+      "staged_sha256": "ad8c3470b48815d08f000e53544f2f5c8b2eca6fdd90530af3364c7f6b65929b",
+      "export_exact": true,
+      "stage_exact": true
+    },
+    {
+      "path": "D:\\cl-data-repair\\code\\tests\\fixtures\\card_data\\dual_kind_association\\official-scope.json.gz",
+      "sha256": "a6e15994af158c8126ce5ea577513721fdec77b779440a60b844f63f11afc5b1",
+      "export_sha256": "a6e15994af158c8126ce5ea577513721fdec77b779440a60b844f63f11afc5b1",
+      "staged_sha256": "a6e15994af158c8126ce5ea577513721fdec77b779440a60b844f63f11afc5b1",
+      "export_exact": true,
+      "stage_exact": true
+    },
+    {
+      "path": "D:\\cl-data-repair\\code\\tests\\fixtures\\card_data\\dual_kind_association\\proposal.json",
+      "sha256": "19a5a3bcaad1fd71e136ab527ce59e6172247072d5ff2c59271a1622e9dface3",
+      "export_sha256": "19a5a3bcaad1fd71e136ab527ce59e6172247072d5ff2c59271a1622e9dface3",
+      "staged_sha256": "19a5a3bcaad1fd71e136ab527ce59e6172247072d5ff2c59271a1622e9dface3",
+      "export_exact": true,
+      "stage_exact": true
+    },
+    {
+      "path": "D:\\cl-data-repair\\code\\tests\\fixtures\\card_data\\dual_kind_association\\.gitattributes",
+      "sha256": "d3bcf5d1d5d64805786b2036c0109311a0db4703fac18c7dd323470ab110f1c3",
+      "export_sha256": "d3bcf5d1d5d64805786b2036c0109311a0db4703fac18c7dd323470ab110f1c3",
+      "staged_sha256": "e6f49259cea78a2d4c841ac978b46d6474e354dedf43f96c9dda048b2ebb9d55",
+      "export_exact": true,
+      "stage_exact": false
+    },
+    {
+      "path": "D:\\cl-data-repair\\.gitattributes",
+      "sha256": "3198092b4f6536a9acc84d404325844324e8b5a19cb040da1439d7ddf852ea60",
+      "export_sha256": "3198092b4f6536a9acc84d404325844324e8b5a19cb040da1439d7ddf852ea60",
+      "staged_sha256": "1fc3818b917965ae4b73f59b718d81141d0b30c65507299af26175e8962e6d1a",
+      "export_exact": true,
+      "stage_exact": false
+    }
+  ],
+  "dependencies": {
+    "code/tools/card_data/models.py": "d47e33decd8b558236b12ab6e5a82a81da6e18317f7eba4ce4025fee1e21460d",
+    "code/tools/card_data/serialization.py": "2914ac386d48acccfe5767d88134a623690e4b9059aca035208585a1dab9f595",
+    "code/tools/card_data/source_manifest.py": "2463e7cf8e95034b04a7e36b6f261205d433cb19a7a6440a87b1b9ddd3fb43f6",
+    "code/tools/card_data/normalization.py": "ba1a27a1581861c01718aa26e379e2f2d23b2387e911b2d0a9b444f2a7503961",
+    "code/tools/card_data/errors.py": "f173df85f14c0d57db8572869c9fe552c5dc76b7ac8bea9399bc16a1c8b62fab",
+    "code/tools/card_data/sources/official.py": "1eff2ce202b8a8214483fe8c748cb0408aad7f3d406e2bfd8e025bd08bb55bca",
+    "code/tools/clause_coverage/dual_source_units.py": "10131aeb732a153be0014a7ad290fbc819ae68f9c3112540497c034209981aca"
+  },
+  "export": "D:\\dual-root-export-uzudq2hq",
+  "runtime_or_source_book_adopted": false,
+  "scope": "Reviewed exact association only; no raw observation edit or gameplay approval."
+}
