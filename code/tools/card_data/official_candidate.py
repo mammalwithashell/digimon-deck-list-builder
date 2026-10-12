@@ -11,6 +11,10 @@ from typing import Any, Mapping
 from .adjudications import load_migration_adjudications
 from .compatibility_diff import approve_runtime_diffs, diff_runtime_fields
 from .compatibility_conditions import official_condition_projection, refresh_official_conditions
+from .compatibility_selections import (
+    CompatibilitySourceSelection, SELECTION_LEDGER_PATH, load_compatibility_selections,
+    selection_ledger_payload, selections_from_bytes, validate_compatibility_selections,
+)
 from .corrections import (
     apply_correction,
     correction_is_already_applied,
@@ -53,6 +57,7 @@ class OfficialCandidate:
 def _source_bootstrap(
     card: CanonicalCard,
     observations: Mapping[str, SourceObservation],
+    *, condition_value: str | None = None,
 ) -> dict[str, Any]:
     selected = card.provenance.get("card_name_eng")
     observation = (
@@ -60,7 +65,9 @@ def _source_bootstrap(
         if selected is not None
         else observations[card.printings[0].observation_ids[0]]
     )
-    xros_req, _ = official_condition_projection(card, observations)
+    xros_req = condition_value
+    if xros_req is None:
+        xros_req, _ = official_condition_projection(card, observations)
     return {
         "card_name_jpn": "",
         "rarity": observation.extracted.get("rarity"),
@@ -152,7 +159,9 @@ def build_official_candidate(
     corrections: tuple[ReviewedCorrection, ...] = (),
     adjudications: tuple[MigrationAdjudication, ...] = (),
     correction_evidence: Mapping[str, SourceObservation] | None = None,
+    compatibility_selections: tuple[CompatibilitySourceSelection, ...] = (),
 ) -> OfficialCandidate:
+    compatibility_selections = validate_compatibility_selections(compatibility_selections)
     correction_evidence = correction_evidence or {}
     live_observations = {item.observation_id: item for item in snapshot.observations}
     all_observations = {**correction_evidence, **live_observations}
@@ -207,10 +216,12 @@ def build_official_candidate(
     legacy_bootstrap = bootstrap_legacy_compatibility_fields(legacy_cards)
     missing_bootstrap_ids = corrected.keys() - legacy_bootstrap.keys()
     legacy_bootstrap, compatibility_evidence = refresh_official_conditions(
-        corrected, live_observations, legacy_bootstrap
+        corrected, live_observations, legacy_bootstrap, selections=compatibility_selections,
+        source_manifest_revision=source_manifest_digest,
     )
     for card_id in missing_bootstrap_ids:
-        legacy_bootstrap[card_id] = _source_bootstrap(corrected[card_id], live_observations)
+        legacy_bootstrap[card_id] = _source_bootstrap(corrected[card_id], live_observations,
+            condition_value=legacy_bootstrap[card_id]["xros_req"])
     generation_cards = dict(corrected)
     legacy_canonical = bootstrap_legacy_canonical_cards(legacy_cards)
     for card_id in candidate_registry.assignments:
@@ -226,7 +237,8 @@ def build_official_candidate(
     raw_diffs = diff_runtime_fields(legacy_cards, generated, corrected,
         compatibility_field_provenance=compatibility_evidence)
     old_input_revision = content_digest(legacy_cards)
-    new_input_revision = content_digest(corrected)
+    new_input_revision = content_digest({"canonical": corrected,
+        "compatibility_selections": selection_ledger_payload(compatibility_selections)})
     approved = approve_runtime_diffs(
         raw_diffs,
         corrections=corrections,
@@ -246,6 +258,7 @@ def build_official_candidate(
         "cards": corrected,
     }
     artifacts = {
+        SELECTION_LEDGER_PATH: canonical_json_bytes(selection_ledger_payload(compatibility_selections)),
         "data/cards_canonical.json": canonical_json_bytes(canonical_payload),
         "data/card_corrections.json": canonical_json_bytes(
             {
@@ -303,6 +316,7 @@ def build_official_candidate(
         "canonical_conflict_input_revision": source_manifest_digest,
         "canonical_validation": validation.to_dict(),
         "source_manifest_digest": source_manifest_digest,
+        "compatibility_selection_ledger_revision": content_digest(selection_ledger_payload(compatibility_selections)),
         "old_input_revision": old_input_revision,
         "new_input_revision": new_input_revision,
         "candidate_canonical_revision": content_digest(corrected),
@@ -401,6 +415,7 @@ def main(argv: list[str] | None = None) -> int:
             root / "data/card_migration_adjudications.json"
         ),
         correction_evidence=_load_correction_evidence(root),
+        compatibility_selections=load_compatibility_selections(root / SELECTION_LEDGER_PATH),
     )
     write_candidate(candidate, args.output_dir.resolve())
     compact_summary = {

@@ -5,7 +5,8 @@ from typing import Any, Mapping
 
 from .errors import SourceSchemaError
 from .models import CanonicalCard, SourceName, SourceObservation
-from .serialization import observation_digest
+from .serialization import observation_digest, content_digest
+from .compatibility_selections import CompatibilitySourceSelection
 
 _CONDITION_LABELS = (
     "special play condition", "special digivolution condition",
@@ -15,6 +16,8 @@ _CONDITION_LABELS = (
 
 def official_condition_projection(
     card: CanonicalCard, observations: Mapping[str, SourceObservation],
+    *, selections: tuple[CompatibilitySourceSelection, ...] = (),
+    source_manifest_revision: str | None = None,
 ) -> tuple[str, tuple[str, ...]]:
     """Require agreeing official sections; never choose using name provenance.
 
@@ -52,6 +55,16 @@ def official_condition_projection(
     if not values:
         raise SourceSchemaError("condition projection lacks official observation evidence",
             card_id=card.card_id)
+    matches = [row for row in selections
+        if row.card_id == card.card_id and row.source_manifest_revision == source_manifest_revision
+        and dict(row.candidate_values) == values
+        and row.candidate_set_digest == content_digest(values)]
+    if len(matches) > 1:
+        raise SourceSchemaError("multiple current compatibility source selections",
+            card_id=card.card_id, details={"selection_ids": [row.selection_id for row in matches]})
+    if matches:
+        selected = matches[0]
+        return selected.selected_value, tuple(oid for oid, value in values.items() if value == selected.selected_value)
     if len(set(values.values())) != 1:
         raise SourceSchemaError("official condition sections disagree",
             card_id=card.card_id, details={"candidate_conditions": values})
@@ -62,6 +75,8 @@ def refresh_official_conditions(
     cards: Mapping[str, CanonicalCard],
     observations: Mapping[str, SourceObservation],
     compatibility_fields: Mapping[str, Mapping[str, Any]],
+    *, selections: tuple[CompatibilitySourceSelection, ...] = (),
+    source_manifest_revision: str | None = None,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, tuple[str, ...]]]]:
     """Refresh only xros_req, preserving unrelated compatibility-only inputs."""
     output = {cid: dict(row) for cid, row in compatibility_fields.items()}
@@ -69,7 +84,8 @@ def refresh_official_conditions(
     conflicts: list[dict[str, Any]] = []
     for cid, card in cards.items():
         try:
-            value, ids = official_condition_projection(card, observations)
+            value, ids = official_condition_projection(card, observations,
+                selections=selections, source_manifest_revision=source_manifest_revision)
         except SourceSchemaError as exc:
             conflicts.append({"card_id": cid, "message": str(exc),
                 "details": dict(exc.diagnostic.details)})
