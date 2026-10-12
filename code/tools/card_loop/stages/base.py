@@ -413,6 +413,8 @@ def clause_text_json(ctx) -> str:
 
 def clauses_for(ctx, card_ids: Sequence[str]) -> list[dict]:
     """Extracted clause records (`tools.clause_coverage`) for `card_ids`."""
+    from ..source_snapshot import validate_snapshot
+    validate_snapshot(ctx, required_cards=card_ids)
     src = _sources(ctx)
     if src is not None and getattr(src, "clauses", None):
         return list(src.clauses(list(card_ids)))
@@ -468,15 +470,24 @@ def card_qa(ctx) -> Mapping:
 
 
 def denominator(ctx) -> Mapping:
+    from ..source_snapshot import validate_snapshot
+    validate_snapshot(ctx)
     src = _sources(ctx)
     if src is not None and getattr(src, "denominator", None):
         return src.denominator()
-    p = repo_path(ctx, "data/interaction_denominator.json")
+    p = repo_path(ctx, interaction_denominator(ctx))
     if not p.is_file():
+        if interaction_denominator(ctx) != "data/interaction_denominator.json":
+            raise StageDeferred(f"configured interaction denominator missing: {p}")
         return {}
     from ..interactions.denominator import load_denominator
 
     return _cached_json_loader(str(p), load_denominator)
+
+
+def interaction_denominator(ctx) -> str:
+    return str(getattr(getattr(ctx, "config", None), "interaction_denominator", None)
+               or "data/interaction_denominator.json")
 
 
 _LOADED: dict = {}

@@ -850,6 +850,16 @@ class Driver:
         to the whole pool and commit it. A card missing from the book makes
         every oracle verdict for it an orphan refusal. Idempotent; once per session."""
         pool = list((self.plan.get("work_set") or {}).get("pool") or [])
+        if getattr(self.config, "source_manifest", None):
+            from .source_snapshot import validate_snapshot
+            try:
+                validate_snapshot(self.ctx, clause_book=self._clause_text_book(), required_cards=pool)
+            except StageDeferred as error:
+                self._prelude = f"immutable source snapshot validation failed: {error}"
+                self.state.problems.append(self._prelude)
+                return False
+            self._prelude = "ok"
+            return True
         if not pool:
             self._prelude = "ok"
             return True

@@ -148,15 +148,22 @@ def sim_argv(ctx, scenario: str, book: str | None, *, inspect: int | None = None
 
 
 def oracle_argv(ctx, scenario: str, book: str | None, *, clause_text_json: str) -> list[str]:
+    from . import base
+    from ..source_snapshot import validate_snapshot
+    validate_snapshot(ctx, clause_book=clause_text_json, scenario=scenario)
     cfg = getattr(ctx, "config", None)
     argv = [harness_bin(ctx), *_root_args(ctx), "exam", "--oracle"]
     if getattr(cfg, "player_dir", None):
         argv += ["--build", str(cfg.player_dir)]
     argv += ["--scenario", scenario, "--cards-json", CARDS_JSON, *_decks_args(book),
              "--verdicts", "--clause-text-json", clause_text_json, "--backfill"]
-    if (Path(ctx.repo) / INTERACTION_DENOMINATOR).is_file():
-        argv += ["--interaction-denominator", INTERACTION_DENOMINATOR]
+    denominator = base.interaction_denominator(ctx)
+    if (Path(ctx.repo) / denominator).is_file():
+        argv += ["--interaction-denominator", denominator]
+    elif denominator != INTERACTION_DENOMINATOR:
+        raise base.StageDeferred(f"configured interaction denominator missing: {denominator}")
     argv += ["--oracle-timeout", str(oracle_timeout(ctx))]
+    argv += ["--job-timeout", str(getattr(cfg, "job_timeout_s", 180))]
     return argv
 
 
@@ -233,7 +240,12 @@ def verdict_set_argv(ctx, *, verdict: str, reason: str, clause: str | None = Non
     unreachable clause, an interaction ending), with its triage."""
     if (clause is None) == (interaction is None):
         raise ValueError("verdict-set takes exactly one of clause / interaction")
+    from . import base
+    from ..source_snapshot import validate_snapshot
+    validate_snapshot(ctx, required_cards=[clause.split("#")[0]] if clause else ())
     argv = [harness_bin(ctx), "verdict-set"]
+    argv += ["--clause-text-json", base.clause_text_json(ctx),
+             "--interaction-denominator", base.interaction_denominator(ctx)]
     argv += ["--clause", clause] if clause is not None else ["--interaction", interaction]
     argv += ["--verdict", verdict, "--reason", reason]
     if triage:

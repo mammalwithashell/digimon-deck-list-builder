@@ -79,11 +79,23 @@ class LoopConfig:
     # DCGO root for worker references.
     harness_bin: str | None = None
     oracle_timeout_s: int = 300
+    job_timeout_s: int = 180
     stage_budget_usd: float | None = None
     clause_text_json: str = "qa/exam-clause-text.json"
+    interaction_denominator: str = "data/interaction_denominator.json"
+    source_manifest: str | None = None
+    source_manifest_sha256: str | None = None
     dcgo_root: str | None = None
 
     def __post_init__(self):
+        if type(self.job_timeout_s) is not int or not 1 <= self.job_timeout_s <= 2147483647:
+            raise ValueError("job_timeout_s must be an integer within [1, 2147483647]")
+        if self.source_manifest:
+            import re
+            if not isinstance(self.source_manifest_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", self.source_manifest_sha256):
+                raise ValueError("source_manifest requires a pinned source_manifest_sha256")
+        elif self.source_manifest_sha256 is not None:
+            raise ValueError("source_manifest_sha256 requires source_manifest")
         unknown = set(self.routes) - set(STAGES)
         if unknown:
             raise ValueError(f"routes name unknown stages: {sorted(unknown)}")

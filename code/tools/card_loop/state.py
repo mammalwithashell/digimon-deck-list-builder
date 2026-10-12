@@ -98,7 +98,7 @@ class LedgerPaths:
             cards_dir=repo / "code" / "digimon-engine" / "cards",
             scenarios_dir=repo / "qa" / "dcgo-exams",
             verdicts_dir=repo / "qa" / "qa-reports" / "exam-verdicts",
-            denominator_path=repo / "data" / "interaction_denominator.json",
+            denominator_path=repo / getattr(config, "interaction_denominator", "data/interaction_denominator.json"),
             escalations_dir=esc if esc.is_absolute() else repo / esc,
         )
 
@@ -247,7 +247,8 @@ def build_items(plan: Mapping, paths: LedgerPaths, *,
 
     exam_plan = build_plan_for_pool(pool, sorted(core), cards_dir=paths.cards_dir,
                                     scenarios_dir=paths.scenarios_dir,
-                                    verdicts_path=paths.verdicts_dir, ranking=ranking)
+                                    verdicts_path=paths.verdicts_dir, ranking=ranking,
+                                    interaction_denominator=paths.denominator_path)
     implement = list(exam_plan["implement"])
     to_implement = set(implement)
     store = load_verdict_store(paths.verdicts_dir)
