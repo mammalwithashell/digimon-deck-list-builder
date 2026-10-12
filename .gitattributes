@@ -155,3 +155,5 @@ code/tests/fixtures/card_data/runtime_snapshot/.gitattributes -text
 /code/tests/tools/test_card_data_ordinary_nbsp_corrections.py -text
 /code/tests/fixtures/card_data/ordinary_nbsp_correction/7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2.html.gz -text
 /code/tests/fixtures/card_data/ordinary_nbsp_correction/EX12-031.json.gz -text
+/code/tools/card_data/corrections.py -text
+/code/tests/tools/test_card_data_face_correction_wire_schema.py -text

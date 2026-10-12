@@ -287,32 +287,45 @@ def _coerce_face_correction(value: Any) -> tuple[CardFace, ...]:
         raise ValidationError("faces correction must be an array")
     faces: list[CardFace] = []
     for index, raw in enumerate(value):
-        if isinstance(raw, CardFace):
-            faces.append(raw)
-            continue
-        if not isinstance(raw, Mapping):
+        typed_face = isinstance(raw, CardFace)
+        allowed = {
+            "face_id", "kind", "colors", "play_cost", "level", "dp",
+            "effect_text", "inherited_text", "security_text",
+        }
+        data = {key: getattr(raw, key) for key in allowed} if typed_face else raw
+        if not isinstance(data, Mapping):
             raise ValidationError(
                 "faces correction entries must be objects",
                 details={"index": index},
             )
         try:
-            kind = FaceKind(str(raw["kind"]).lower().replace("-", "_").replace(" ", "_"))
-            colors = raw["colors"]
-            if not isinstance(colors, (list, tuple)):
-                raise TypeError("colors must be an array")
-            faces.append(
-                CardFace(
-                    face_id=str(raw["face_id"]),
-                    kind=kind,
-                    colors=tuple(str(color) for color in colors),
-                    play_cost=raw.get("play_cost"),
-                    level=raw.get("level"),
-                    dp=raw.get("dp"),
-                    effect_text=str(raw.get("effect_text", "")),
-                    inherited_text=str(raw.get("inherited_text", "")),
-                    security_text=str(raw.get("security_text", "")),
-                )
+            if set(data) - allowed:
+                raise TypeError("unknown face correction fields")
+            if not isinstance(data["face_id"], str) or not isinstance(data["kind"], str):
+                raise TypeError("face_id and kind must be strings")
+            kind = FaceKind(data["kind"].lower().replace("-", "_").replace(" ", "_"))
+            colors = data["colors"]
+            if not isinstance(colors, (list, tuple)) or any(not isinstance(color, str) for color in colors):
+                raise TypeError("colors must be an array of strings")
+            for name in ("effect_text", "inherited_text", "security_text"):
+                if name in data and not isinstance(data[name], str):
+                    raise TypeError(f"{name} must be a string")
+            for name in ("play_cost", "level", "dp"):
+                number = data.get(name)
+                if number is not None and (type(number) is not int or number < 0):
+                    raise TypeError(f"{name} must be a non-negative integer or null")
+            face = CardFace(
+                face_id=data["face_id"],
+                kind=kind,
+                colors=tuple(colors),
+                play_cost=data.get("play_cost"),
+                level=data.get("level"),
+                dp=data.get("dp"),
+                effect_text=data.get("effect_text", ""),
+                inherited_text=data.get("inherited_text", ""),
+                security_text=data.get("security_text", ""),
             )
+            faces.append(raw if typed_face and isinstance(raw.kind, FaceKind) else face)
         except (KeyError, TypeError, ValueError) as exc:
             raise ValidationError(
                 "faces correction entry is invalid",
