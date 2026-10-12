@@ -581,7 +581,13 @@ def _official_fields(extracted: Mapping[str, Any]) -> dict[str, Any]:
         "security_effect_description_eng": "\n".join(security_parts),
     }
     if link_parts:
-        mapped["link_effect_description_eng"] = "\n".join(link_parts)
+        # The official page can mirror one printed Link box in both legacy
+        # inherited and dedicated Link containers (e.g. P-190). Compare whole
+        # normalized containers, never individual lines or merely timings.
+        # Conflicting containers need source review, not concatenated triggers.
+        if any(part != link_parts[0] for part in link_parts[1:]):
+            raise SourceSchemaError("conflicting official Link effect containers", source="official")
+        mapped["link_effect_description_eng"] = link_parts[0]
     if isinstance(sections, list):
         limit = _printed_deck_copy_limit(section for section in sections if isinstance(section, Mapping))
         if limit is not None:

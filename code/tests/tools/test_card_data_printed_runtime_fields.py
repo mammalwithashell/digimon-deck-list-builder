@@ -121,3 +121,64 @@ def test_printed_copy_limit_is_parsed_not_hardcoded_to_fifty():
     observation = _observation("BT11-061", lambda html: html.replace(original, original.replace("50", "8")))
     assert normalize_card("BT11-061", [observation]).fields["max_count_in_deck"] == 8
 
+
+
+# Exact immutable v4 observations: provenance and content-addressed identities
+# are retained; unlike synthetic mutations below these fixtures must hash.
+def _p190_observations():
+    rows = json.loads((FIXTURES / "p190_link_observations.json").read_text(encoding="utf-8"))
+    observations = [SourceObservation(**dict(row, source=SourceName(row["source"]))) for row in rows]
+    assert all(observation_digest(o) == o.observation_id for o in observations)
+    return observations
+
+
+@pytest.mark.parametrize("printing", ["P-190", "P-190_P1", "P-190_P2"])
+def test_p190_official_mirrored_link_containers_project_one_trigger(printing):
+    observation = next(o for o in _p190_observations() if o.extracted["printing"]["printing_id"] == printing)
+    before = json.dumps(observation.extracted, sort_keys=True)
+    card = normalize_card("P-190", [observation])
+    row = project_canonical_card(card)
+    assert row["link_effect_description_eng"] == "[When Linking] ＜Draw 1＞"
+    assert row["inherited_effect_description_eng"] == ""
+    assert card.faces[0].inherited_text == ""
+    assert row["effect_description_eng"].startswith("[On Play] ＜Draw 1＞")
+    assert "[When Linking]" not in row["effect_description_eng"]
+    assert card.provenance["link_effect_description_eng"].observation_ids == (observation.observation_id,)
+    assert json.dumps(observation.extracted, sort_keys=True) == before
+
+
+def _p190_mutated_explicit(text):
+    import copy
+    observation = next(o for o in _p190_observations() if o.extracted["printing"]["printing_id"] == "P-190")
+    extracted = copy.deepcopy(observation.extracted)
+    for sections in [extracted["text_sections"], extracted["faces"][0]["text_sections"]]:
+        for section in sections:
+            if section["label"] == "Link Effect":
+                section["text"] = text
+    return replace(observation, extracted=extracted)
+
+
+@pytest.mark.parametrize("text", ["[When Linking] ＜Draw 2＞", "[When Attacking] ＜Draw 1＞", ""])
+def test_p190_conflicting_mirrored_link_containers_fail_closed(text):
+    observation = _p190_mutated_explicit(text)
+    with pytest.raises(SourceSchemaError, match="conflicting official Link effect containers"):
+        normalize_card("P-190", [observation])
+
+
+def test_p190_mirrored_link_equality_uses_existing_marker_normalization():
+    observation = _p190_mutated_explicit("{Hand} ＜Draw 1＞")
+    for sections in [observation.extracted["text_sections"], observation.extracted["faces"][0]["text_sections"]]:
+        for section in sections:
+            if section["label"] == "Inherited Effect":
+                section["text"] = section["text"].replace("[When Linking]", "[Hand]")
+    assert normalize_card("P-190", [observation]).fields["link_effect_description_eng"] == "[Hand] ＜Draw 1＞"
+
+
+def test_link_repeated_lines_inside_one_container_are_not_deduplicated():
+    observation = _p190_mutated_explicit("[When Linking] ＜Draw 1＞\n[When Linking] ＜Draw 1＞")
+    extracted = dict(observation.extracted)
+    sections = [s for s in extracted["text_sections"] if s["label"] != "Inherited Effect"]
+    extracted["text_sections"] = sections
+    extracted["faces"] = [dict(extracted["faces"][0], text_sections=sections)]
+    card = normalize_card("P-190", [replace(observation, extracted=extracted)])
+    assert card.fields["link_effect_description_eng"] == "[When Linking] ＜Draw 1＞\n[When Linking] ＜Draw 1＞"
