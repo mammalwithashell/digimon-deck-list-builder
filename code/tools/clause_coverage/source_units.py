@@ -122,6 +122,13 @@ def _compose(**inputs):
 def _validated_context(*,aggregate,scopes,observations,canonical_card,runtime_projection,
              adjudication_ledger,raw_pages,correction_document,condition_selections,
              old_input_revision,new_input_revision,expected_official_universe):
+    return _validated_context_core(**locals())
+
+
+def _validated_context_core(*,aggregate,scopes,observations,canonical_card,runtime_projection,
+             adjudication_ledger,raw_pages,correction_document,condition_selections,
+             old_input_revision,new_input_revision,expected_official_universe,
+             _runtime_validator=None,_correction_binding=None):
     _require(isinstance(new_input_revision,str) and re.fullmatch('[0-9a-f]{64}',new_input_revision)
              and old_input_revision==new_input_revision, 'explicit equal source revision pins required')
     a = _json(aggregate)
@@ -218,7 +225,11 @@ def _validated_context(*,aggregate,scopes,observations,canonical_card,runtime_pr
     runtime_kind=runtime.get('card_kind')
     if type(runtime_kind)is int:
         runtime_kind={0:'Digimon',1:'Tamer',2:'Option',3:'Digi-Egg',4:'Dual'}.get(runtime_kind)
-    _require(type(runtime_kind)is str and runtime_kind==kind, 'runtime kind differs from source')
+    if _runtime_validator is None:
+        _require(type(runtime_kind)is str and runtime_kind==kind, 'runtime kind differs from source')
+    else:
+        _require(_runtime_validator(card=card,runtime=runtime,typed=typed,kind=kind) is None,
+                 'private runtime validator must fail closed or return None')
     if any(c.requires_adjudication(models.AdmissionStatus.ADMITTED)for c in kind_conflicts):
         blockers.append({'code':'UNSUPPORTED_KIND_ADJUDICATION'})
     if len(card.faces)>1 or runtime.get('dual') or runtime.get('xros_req') or runtime.get('link_effect_description_eng') or card.fields.get('link_effect_description_eng'):
@@ -228,7 +239,17 @@ def _validated_context(*,aggregate,scopes,observations,canonical_card,runtime_pr
         eligible=[c for c in candidates if field in c.fields]
         value,provenance,conflicts=normalization._select_field(cid,field,eligible,
             admission=models.AdmissionStatus.ADMITTED,adjudications=ledger,field_selection_input_revision=new_input_revision)
-        _require(isinstance(value,str) and record['fields'][field]==value and runtime[field]==value
+        if _correction_binding is not None and field==_correction_binding['unit']['field_path']:
+            unit=_correction_binding['unit']
+            _require(value==_correction_binding['original_selected_value'] and
+                     serialization.canonical_json_bytes(provenance)==serialization.canonical_json_bytes(_correction_binding['original_provenance'])
+                     and record['fields'][field]==unit['value'] and runtime[field]==unit['value']
+                     and record['provenance'][field]==unit['provenance'],
+                     'corrected field must bind exact original and corrected producer values')
+            selected_fields[field]=(unit['value'],card.provenance[field],{'correction_binding':_correction_binding})
+            continue
+        _require(isinstance(value,str) and record['fields'][field]==value
+                 and (_runtime_validator is not None or runtime[field]==value)
                  and serialization.canonical_json_bytes(record['provenance'][field])==serialization.canonical_json_bytes(provenance),
                  'selected field/provenance/runtime differs from producer replay')
         _require(provenance.authority is models.AuthorityClass.OFFICIAL and not provenance.derived, 'ordinary field requires selected official authority')
@@ -271,6 +292,12 @@ def _compose_verified_ordinary(context, *, delegated_indices=None):
     inventory=result['inventory']
     for field,zone in _FIELDS.items():
         value,provenance,binding=selected_fields[field]
+        if 'correction_binding' in binding:
+            # Only the dedicated corrected entrypoint can construct this private binding.
+            # It installs a distinct adjudicated unit after ordinary/condition/Rule dispatch.
+            result['zones'][zone]={'field':field,'value':value,'source_binding':binding,
+                'unit_indices':[],'presence':'correction-pending','spans':[]}
+            continue
         oid=provenance.selected_observation_id;source=typed[oid];sections=source.extracted['text_sections']
         projected=_ordinary_sections(sections,kind,
             delegated_indices=(delegated_indices or {}).get(oid,set()))

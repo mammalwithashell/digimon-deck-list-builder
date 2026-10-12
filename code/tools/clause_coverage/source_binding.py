@@ -372,7 +372,7 @@ def bind_condition_units(*, aggregate, observations, canonical_card, runtime_pro
 
 
 def _bind_condition_units(aggregate_raw, observation_bytes, card_raw, runtime_raw,
-                          selections_raw, corrections_raw, images, raw_pages, old, new):
+                          selections_raw, corrections_raw, images, raw_pages, old, new, *, _dual_dispatch=False):
     from tools.card_data import models, compatibility_conditions as conditions
     from tools.card_data import compatibility_selections as selections
     from tools.card_data import compatibility_corrections as corrections
@@ -427,6 +427,13 @@ def _bind_condition_units(aggregate_raw, observation_bytes, card_raw, runtime_ra
             # A2 accounts for ordinary boxes outside its condition scope, but
             # never treats unknown structural labels as absent conditions.
             allowed_labels = {label.lower() for label in LABELS} | set(conditions._CONDITION_LABELS)
+            if _dual_dispatch:
+                from .dual_source_units import derive_dual_occurrences
+                diagnostic = derive_dual_occurrences(o)
+                _require(all(b['code']=='TOP_LEVEL_KIND_DISAGREES_WITH_FACES'
+                             for b in diagnostic['blockers']), 'unsupported Dual condition sibling')
+                _require(o['extracted']['layout']=='dual', 'Dual dispatch requires two faces')
+                allowed_labels |= {'dual effect','dual rule'}
             _require(all(isinstance(section,dict) and isinstance(section.get('text'),str)
                          and section.get('label','').lower() in allowed_labels
                          for section in o['extracted']['text_sections']),
@@ -497,7 +504,8 @@ def _bind_condition_units(aggregate_raw, observation_bytes, card_raw, runtime_ra
                       'images':{path:_sha(raw)for path,raw in sorted(images.items())}},
             'validator_sha256':_sha(Path(__file__).read_bytes()),
             'dependencies':{m.__name__:_sha(Path(m.__file__).read_bytes())for m in
-                            (models,normalization,serialization,conditions,selections,corrections,text_split)}}
+                            (models,normalization,serialization,conditions,selections,corrections,text_split)} |
+                            ({'tools.clause_coverage.dual_source_units':_sha(Path(__file__).with_name('dual_source_units.py').read_bytes())} if _dual_dispatch else {})}
 
 
 def validate_condition_units(binding, **inputs):
@@ -505,3 +513,16 @@ def validate_condition_units(binding, **inputs):
     expected=bind_condition_units(**inputs)
     _require(type(binding)is dict and serialization.canonical_json_bytes(binding)==serialization.canonical_json_bytes(expected),
              'condition units differ from complete producer replay')
+
+
+def _bind_dual_condition_units(*, aggregate, observations, canonical_card, runtime_projection,
+        selection_ledger, correction_document, image_artifacts, raw_pages,
+        old_input_revision, new_input_revision):
+    """Internal face-aware binding; recomputes complete sibling diagnostics.
+
+    This does not discharge image/source kind disagreements or approve a card.
+    The public ordinary A2 entrypoint retains its existing refusal behavior.
+    """
+    return _bind_condition_units(aggregate, observations, canonical_card, runtime_projection,
+        selection_ledger, correction_document, image_artifacts, raw_pages,
+        old_input_revision, new_input_revision, _dual_dispatch=True)

@@ -28,7 +28,10 @@ def compose_rule_card(*,image_artifacts,**inputs):
 
 
 def _compose(*,image_artifacts,inputs):
-    context=_validated_context(**inputs)
+    return _compose_rule_context(_validated_context(**inputs),image_artifacts=image_artifacts,inputs=inputs)
+
+
+def _compose_rule_context(context,*,image_artifacts,inputs):
     result=context['result'];cid=result['card_id'];runtime=context['runtime']
     record=_json(inputs['canonical_card']);ledger=_ledger(inputs['adjudication_ledger'])
     candidates=[normalization.observation_candidate(o) for o in context['typed'].values()]
