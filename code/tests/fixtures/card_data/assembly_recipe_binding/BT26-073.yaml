@@ -1,0 +1,186 @@
+# BT26-073 Aegiochusmon: Dark — Digimon, Lv.5, Purple/Red, DP 8000, Cost 8.
+# Traits: Shaman, Iliad, TS + (Rule) Wizard. Form Ultimate. Attribute: Vaccine.
+# Printed digivolve box: Purple Lv.4 / cost 4; Red Lv.4 / cost 4;
+#   [Digivolve] [Aegiomon]: Cost 3.
+# Special play: Assembly -2: Lv.4 or lower Digimon card w/[Chronomon] in text
+#   or w/[TS] trait. (Official Q&A: the level cap applies to BOTH branches.)
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-073.md):
+#   [On Play] [When Digivolving] By deleting this Digimon or returning 1
+#     [Shaman] or [TS] trait card from your trash to the bottom of the deck,
+#     delete 1 of your opponent's level 5 or lower Digimon.
+#   [On Deletion] You may play 1 [TS] trait card with a play cost of 5 or less
+#     from your hand or trash without paying the cost.
+#   (Rule) Trait: Has [Wizard] Type.
+#   Inherited: <Security A. +1>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_073.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: TopCard.EqualsCardName("Aegiomon"), cost 3 (no level gate).
+# Assembly: 1 element, IsDigimon && Level <= 4 && (HasText("Chronomon") ||
+#   HasTSTraits), reduceCost 2. → `kind: assembly` (trash materials,
+#   stack_under), filter `in_text_contains: Chronomon` OR `trait_has: TS`.
+# Shared OP / WD (optional:false, skippable): SetIntSelection over the PAYABLE
+#   costs {Delete this Digimon | Return 1 [Shaman]/[TS] from trash (offered only
+#   when the trash holds one) | Don't use}. Delete branch is paid only if the
+#   deletion succeeded; trash branch is a canNoSelect:true pick (declining =
+#   not paid). If paid: MANDATORY (canNoSelect:false) delete of 1 opponent
+#   level-5-or-lower Digimon.
+#   → modal (two shapes by payability, BT26-082 idiom) + delete source /
+#   optional select_trash + return_trash_list_to_deck_bottom, gated delete.
+# On Deletion (optional): [TS] && HasPlayCost && cost <= 5 && can play; a
+#   From hand / From trash / Don't play location pick, then PlayByEffect free.
+#   → select_union_zone [hand, trash] optional + play_union_bound_free (one
+#   prompt spanning both zones; declining = "Don't play").
+# Inherited: ChangeSelfSAttackStaticEffect(+1) → SecurityAttackPlus 1.
+
+card: BT26-073
+name: "Aegiochusmon: Dark"
+kind: digimon
+level: 5
+color: [purple, red]
+cost: 8
+dp: 8000
+traits: [Shaman, Iliad, TS, Wizard]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: "Aegiomon" }
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_lte: 4
+            - any_of:
+                - in_text_contains: "Chronomon"
+                - trait_has: TS
+        zones: [trash]
+        stack_under: true
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] delete this OR return 1 [Shaman]/[TS] from
+  #     trash → delete 1 opponent level 5 or lower Digimon ──────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] By deleting this Digimon or returning 1 [Shaman] or [TS] trait card from your trash to the bottom of the deck, delete 1 of your opponent's level 5 or lower Digimon"
+    process:
+      - if:
+          condition:
+            count_gte:
+              filter:
+                of: you
+                zone: [trash]
+                any_of:
+                  - trait_has: Shaman
+                  - trait_has: TS
+              n: 1
+          then:
+            - select_effect_choice:
+                bind_as: cost_mode
+                labels:
+                  - "Delete this Digimon"
+                  - "Return 1 [Shaman] or [TS] trait card from your trash to the bottom of the deck"
+                  - "Don't pay the cost"
+                prompt: "Will you pay the cost?"
+            - if:
+                condition: { equals: [cost_mode, 0] }
+                then:
+                  - delete_permanent: { target: source }
+                  - if:
+                      condition: { effect_deleted_any_own_digimon: true }
+                      then:
+                        - select_opponent_permanent:
+                            bind_as: victim
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - level_lte: 5
+                            prompt: "Delete 1 of your opponent's level 5 or lower Digimon"
+                        - delete_permanent: { target: victim }
+            - if:
+                condition: { equals: [cost_mode, 1] }
+                then:
+                  - select_trash:
+                      of: you
+                      bind_as: returned
+                      optional: true
+                      filter:
+                        any_of:
+                          - trait_has: Shaman
+                          - trait_has: TS
+                      prompt: "Return 1 [Shaman] or [TS] trait card from your trash to the bottom of the deck"
+                  - if:
+                      condition: { binding_present: returned }
+                      then:
+                        - return_trash_list_to_deck_bottom:
+                            of: you
+                            cards: returned
+                        - select_opponent_permanent:
+                            bind_as: victim2
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - level_lte: 5
+                            prompt: "Delete 1 of your opponent's level 5 or lower Digimon"
+                        - delete_permanent: { target: victim2 }
+          else:
+            - select_effect_choice:
+                bind_as: cost_mode_b
+                labels:
+                  - "Delete this Digimon"
+                  - "Don't pay the cost"
+                prompt: "Will you pay the cost?"
+            - if:
+                condition: { equals: [cost_mode_b, 0] }
+                then:
+                  - delete_permanent: { target: source }
+                  - if:
+                      condition: { effect_deleted_any_own_digimon: true }
+                      then:
+                        - select_opponent_permanent:
+                            bind_as: victim3
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - level_lte: 5
+                            prompt: "Delete 1 of your opponent's level 5 or lower Digimon"
+                        - delete_permanent: { target: victim3 }
+
+  # ─── [On Deletion] may play 1 [TS] card (play cost <= 5) from hand or trash
+  #     without paying the cost ──────────────────────────────────────────────
+  - when: on_deletion
+    summary: "[On Deletion] You may play 1 [TS] trait card with a play cost of 5 or less from your hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: ts_pick
+          optional: true
+          filter:
+            all_of:
+              - trait_has: TS
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - play_cost_lte: 5
+          prompt: "You may play 1 [TS] trait card with a play cost of 5 or less from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: ts_pick
+
+  # ─── Inherited <Security A. +1> ────────────────────────────────────────────
+  - kind: grant_keyword
+    scope: inherited
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "[Inherited] <Security A. +1>"

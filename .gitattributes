@@ -222,3 +222,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/tools/clause_coverage/link_card_composition.py -text
 /code/tests/tools/test_link_card_composition.py -text
 /code/tests/fixtures/card_data/link_card_composition/.gitattributes -text
+
+# Preserve reviewed Assembly recipe correspondence bytes.
+/code/tools/clause_coverage/assembly_recipe_binding.py -text
+/code/tests/tools/test_assembly_recipe_binding.py -text
+/code/tests/fixtures/card_data/assembly_recipe_binding/.gitattributes -text

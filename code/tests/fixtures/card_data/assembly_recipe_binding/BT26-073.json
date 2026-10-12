@@ -1,0 +1,311 @@
+{
+  "canonical_card": {
+    "admission": "admitted",
+    "card_id": "BT26-073",
+    "conflicts": [],
+    "faces": [
+      {
+        "colors": [
+          "Purple",
+          "Red"
+        ],
+        "dp": 8000,
+        "effect_text": "[Special Digivolution Condition] [Digivolve] [Aegiomon]: Cost 3\n[On Play] [When Digivolving] By deleting this Digimon or returning 1 [Shaman] or [TS] trait card from your trash to the bottom of the deck, delete 1 of your opponent's level 5 or lower Digimon.\n[On Deletion] You may play 1 [TS] trait card with a play cost of 5 or less from your hand or trash without paying the cost.\n(Rule) Trait: Has [Wizard] Type.\n[Special Play Condition] Assembly -2: Lv.4 or lower Digimon card w/[Chronomon] in text or w/[TS] trait",
+        "face_id": "primary",
+        "inherited_text": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+        "kind": "digimon",
+        "level": 5,
+        "play_cost": 8,
+        "security_text": ""
+      }
+    ],
+    "fields": {
+      "attribute_eng": [
+        "Vaccine"
+      ],
+      "card_colors": [
+        "Purple",
+        "Red"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Aegiochusmon: Dark",
+      "dp": 8000,
+      "effect_description_eng": "[On Play] [When Digivolving] By deleting this Digimon or returning 1 [Shaman] or [TS] trait card from your trash to the bottom of the deck, delete 1 of your opponent's level 5 or lower Digimon.\n[On Deletion] You may play 1 [TS] trait card with a play cost of 5 or less from your hand or trash without paying the cost.\n(Rule) Trait: Has [Wizard] Type.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Purple",
+            "Red"
+          ],
+          "cost": 4,
+          "from_level": 4,
+          "slot": 1
+        }
+      ],
+      "form_eng": [
+        "Ultimate"
+      ],
+      "inherited_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+      "level": 5,
+      "play_cost": 8,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Shaman",
+        "Iliad",
+        "TS",
+        "Wizard"
+      ]
+    },
+    "printings": [
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "printing_id": "BT26-073",
+        "product": null
+      },
+      {
+        "alternate_art": true,
+        "language": "en",
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec"
+        ],
+        "printing_id": "BT26-073_P1",
+        "product": null
+      }
+    ],
+    "provenance": {
+      "attribute_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "card_colors": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "card_kind": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "card_name_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "dp": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "evo_costs": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "faces": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "form_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "inherited_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "level": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "play_cost": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "security_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      },
+      "type_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec",
+          "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+        ],
+        "selected_observation_id": "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c"
+      }
+    },
+    "schema_version": 1,
+    "tombstone_reason": null
+  },
+  "observations": [
+    "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c.json",
+    "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec.json"
+  ],
+  "raw_pages": {
+    "https://world.digimoncard.com/cards/?search=true&category=522038": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0.html.gz"
+  },
+  "runtime_record": {
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "card_colors": [
+      6,
+      0
+    ],
+    "card_effect_class_name": "BT26_073",
+    "card_id": "BT26-073",
+    "card_index": 73,
+    "card_kind": 0,
+    "card_name_eng": "Aegiochusmon: Dark",
+    "card_name_jpn": "",
+    "digixros_costs": [
+      {
+        "different_card_numbers": false,
+        "different_names": false,
+        "elements": [
+          {
+            "any_of": [
+              {
+                "text_any": [
+                  "Chronomon"
+                ]
+              },
+              {
+                "trait_alternatives": [],
+                "trait_match": "TS"
+              }
+            ],
+            "color": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "level_max": 4,
+            "name_contains": "",
+            "trait_alternatives": [],
+            "trait_match": ""
+          }
+        ],
+        "has_text": "",
+        "max_materials": 1,
+        "reduce_cost_per_card": 2,
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ],
+    "dp": 8000,
+    "effect_description_eng": "[On Play] [When Digivolving] By deleting this Digimon or returning 1 [Shaman] or [TS] trait card from your trash to the bottom of the deck, delete 1 of your opponent's level 5 or lower Digimon.\r\n[On Deletion] You may play 1 [TS] trait card with a play cost of 5 or less from your hand or trash without paying the cost.\r\n(Rule) Trait: Has [Wizard] Type.",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "index": 4293,
+    "inherited_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+    "level": 5,
+    "norm_id": 0.21465,
+    "play_cost": 8,
+    "rarity": 2,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Shaman",
+      "Iliad",
+      "TS",
+      "Wizard"
+    ],
+    "xros_req": "[Special Digivolution Condition] [Digivolve] [Aegiomon]: Cost 3\n[Special Play Condition] Assembly -2: Lv.4 or lower Digimon card w/[Chronomon] in text or w/[TS] trait"
+  }
+}
