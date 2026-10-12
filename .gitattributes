@@ -253,3 +253,7 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/tests/fixtures/card_data/clean_dual_original_bytes/independent-review.json -text
 /code/tests/fixtures/card_data/clean_dual_original_bytes/pins.json -text
 /code/tests/tools/test_clean_dual_original_bytes.py -text
+
+# Preserve reviewed whole-card Assembly composition bytes.
+/code/tests/tools/test_assembly_card_composition.py -text
+/code/tools/clause_coverage/assembly_card_composition.py -text
