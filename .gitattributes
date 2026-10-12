@@ -71,3 +71,26 @@ code/tests/fixtures/card_data/runtime_snapshot/.gitattributes -text
 /code/tests/fixtures/card_data/runtime_empty_condition/metadata.json -text
 /code/tests/fixtures/card_data/runtime_empty_condition/runtime_projection_before.py.txt -text
 /code/tests/fixtures/card_data/runtime_empty_condition/runtime_rule_before.py.txt -text
+
+# Preserve reviewed ordinary NBSP checker and fixture bytes.
+/code/tools/card_data/ordinary_nbsp_proof.py -text
+/code/tests/tools/test_card_data_ordinary_nbsp_proof.py -text
+/code/digimon-engine/tests/ordinary_nbsp_source_contract.rs -text
+/code/tests/fixtures/card_data/ordinary_nbsp/02790c33595a26eb1dc744958ac6f166442c39c456b87711272d2db12b57e286.html.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/210042873f5b10e6b75098a6df6a3a31fb56cda99ecb0f0eddc69013a1552719.html.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/aggregate.json.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/b59da05be7cce0cab2df4ccd420341d2946148dcb0d2178e12f5c4c9170e2ba1.html.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/BT1-011.webp -text
+/code/tests/fixtures/card_data/ordinary_nbsp/BT11-020.webp -text
+/code/tests/fixtures/card_data/ordinary_nbsp/BT7-059.webp -text
+/code/tests/fixtures/card_data/ordinary_nbsp/BT9-001.webp -text
+/code/tests/fixtures/card_data/ordinary_nbsp/canonical.json.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/consumer-cases.json -text
+/code/tests/fixtures/card_data/ordinary_nbsp/corrections.json.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/d19a21154e21453304021f71a7d07712673ffbf63948c98fe7bc7b3ebd0d0136.html.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/ed7cadc42886414f353a641ef80e46f73707b6d30b821fee7e65d54e7f04ccd9.html.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/ledger.json.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/provenance.json -text
+/code/tests/fixtures/card_data/ordinary_nbsp/report.json.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/secondary.json.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/snapshot.json.gz -text
