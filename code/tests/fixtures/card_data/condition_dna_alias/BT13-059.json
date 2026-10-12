@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "scope": "Pure segmentation fixture only; does not replace full A2 source binding.",
+  "card_id": "BT13-059",
+  "source_unit": {
+    "kind": "official-section",
+    "field": "xros_req",
+    "observation_id": "22b8db9dc74b1d660e6689cf4aab454b2456eaa90dd97fc0292395fe4d5a963a",
+    "section_index": 0,
+    "label": "Special Digivolution Condition",
+    "condition_type": "special_digivolution_condition",
+    "text": "[DNA Digivolution] 0 from green Lv.6 + blue Lv.6\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+  },
+  "observation": {
+    "extracted": {
+      "attribute": "Data",
+      "card_id": "BT13-059",
+      "card_type": "Digimon",
+      "colors": [
+        "Green",
+        "Blue"
+      ],
+      "dp": 14000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Green",
+            "Blue"
+          ],
+          "cost": 4,
+          "from_level": 6,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Green",
+            "Blue"
+          ],
+          "dp": 14000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 7,
+          "name": "Examon",
+          "play_cost": 14,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[DNA Digivolution] 0 from green Lv.6 + blue Lv.6\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+            },
+            {
+              "label": "Effect",
+              "text": "[On Play][When Digivolving] Suspend 1 of your opponent's Digimon. That Digimon doesn't unsuspend during your opponent's next unsuspend phase.\n[All Turns][Once Per Turn] When an opponent's Digimon becomes suspended, you may activate 1 of the effects below.\n・ Suspend 1 of your opponent's Digimon.\n・ Unsuspend 1 of your Digimon."
+            }
+          ]
+        }
+      ],
+      "form": "Mega",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 7,
+      "name": "Examon",
+      "play_cost": 14,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522016",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT13-059_P1.png?260529",
+        "printing_id": "BT13-059_P1"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "R",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[DNA Digivolution] 0 from green Lv.6 + blue Lv.6\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[DNA Digivolution] 0 from green Lv.6 + blue Lv.6\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play][When Digivolving] Suspend 1 of your opponent's Digimon. That Digimon doesn't unsuspend during your opponent's next unsuspend phase.\n[All Turns][Once Per Turn] When an opponent's Digimon becomes suspended, you may activate 1 of the effects below.\n・ Suspend 1 of your opponent's Digimon.\n・ Unsuspend 1 of your Digimon."
+        }
+      ],
+      "type": "Holy Warrior/Royal Knight"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "22b8db9dc74b1d660e6689cf4aab454b2456eaa90dd97fc0292395fe4d5a963a",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "c45b57529e0f401b5468363ae965d41f1061d4ef15bcda0eb1c1c4bf83e2d17a",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522016:BT13-059:BT13-059_P1",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522016"
+  },
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT13-059.webp",
+    "sha256": "810af1219c8164e122ce71d3be646bdc5ab5c42438273a278fb9d88f2fa28a30",
+    "observed": "Printed DNA Digivolution condition independently visible; all body text retained from official observation."
+  }
+}

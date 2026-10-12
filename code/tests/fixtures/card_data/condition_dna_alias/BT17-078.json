@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "scope": "Pure segmentation fixture only; does not replace full A2 source binding.",
+  "card_id": "BT17-078",
+  "source_unit": {
+    "kind": "official-section",
+    "field": "xros_req",
+    "observation_id": "36ea2ed16d97c0e66b106ed3aa54e293b0634883c1837b45d549040a17af7665",
+    "section_index": 0,
+    "label": "Special Digivolution Condition",
+    "condition_type": "special_digivolution_condition",
+    "text": "[DNA Digivolution] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0"
+  },
+  "observation": {
+    "extracted": {
+      "attribute": "Vaccine",
+      "card_id": "BT17-078",
+      "card_type": "Digimon",
+      "colors": [
+        "White"
+      ],
+      "dp": 15000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Red",
+            "Blue"
+          ],
+          "cost": 5,
+          "from_level": 6,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "White"
+          ],
+          "dp": 15000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 7,
+          "name": "Omnimon ACE",
+          "play_cost": 9,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[DNA Digivolution] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0"
+            },
+            {
+              "label": "Effect",
+              "text": "[Hand] [Counter] ＜Blast DNA Digivolve ([WarGreymon] + [MetalGarurumon])＞ (1 of your specified Digimon and 1 specified card in the hand may DNA digivolve into this card.)\n＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] If DNA digivolving, choose 1 of your opponent's Digimon, and return it and all of their Digimon with the same level as it to the bottom of the deck. Then, delete 1 of their Digimon."
+            },
+            {
+              "label": "Special Rule",
+              "text": "＜Overflow (-5)＞ (As this card moves from the battle area or under a card to another area, lose 5 memory.)"
+            }
+          ]
+        }
+      ],
+      "form": "Mega",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 7,
+      "name": "Omnimon ACE",
+      "play_cost": 9,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522023",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT17-078.png?260529",
+        "printing_id": "BT17-078"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "Yes, you can process it.\nEven if this Digimon didn't DNA digivolve, this card's [On Play] [When Digivolving] effect will delete 1 of your opponent's Digimon.",
+          "date": "Jun. 13, 2025",
+          "number": "Q2851",
+          "question": "Can I process the part of the effect after \"then\" in this card's [On Play] [When Digivolving] effect even if the \"if\" condition in the 1st process isn't met?"
+        },
+        {
+          "answer": "Yes, you can.\nIf an effect activates, it is to be fully resolved even if the card that activated the effect is removed from that area during the processing.",
+          "date": "Mar. 13, 2026",
+          "number": "Q6006",
+          "question": "I activated this card's [On Play] [When Digivolving] effect, and when my opponent's Digimon would leave the battle area for the 1st process, an immediate-type effect such as a \"when [...] would leave\" effect caused this card to be removed from the battle area.\nCan I then process the part of the effect after \"then\" in this card's effect?"
+        }
+      ],
+      "rarity": "SR",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[DNA Digivolution] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[DNA Digivolution] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[Hand] [Counter] ＜Blast DNA Digivolve ([WarGreymon] + [MetalGarurumon])＞ (1 of your specified Digimon and 1 specified card in the hand may DNA digivolve into this card.)\n＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] If DNA digivolving, choose 1 of your opponent's Digimon, and return it and all of their Digimon with the same level as it to the bottom of the deck. Then, delete 1 of their Digimon."
+        },
+        {
+          "label": "Special Rule",
+          "text": "＜Overflow (-5)＞ (As this card moves from the battle area or under a card to another area, lose 5 memory.)"
+        }
+      ],
+      "type": "Holy Warrior/Royal Knight"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "36ea2ed16d97c0e66b106ed3aa54e293b0634883c1837b45d549040a17af7665",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "91c0936b4919a1c57faf38c600d4602f922a7ad2e56abd392deae680e6e9ba55",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522023:BT17-078:BT17-078",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522023"
+  },
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT17-078.webp",
+    "sha256": "18f09018f48892d07306ea7bd5ff816376e1f852d73892b1256d200bb8929def",
+    "observed": "Printed DNA Digivolution condition independently visible; all body text retained from official observation."
+  }
+}
