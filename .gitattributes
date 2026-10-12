@@ -235,3 +235,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 
 # Preserve reviewed native Assembly metadata regression.
 /code/digimon-dsl/tests/focused_assembly_compilation.rs -text
+
+# Preserve reviewed diagnostic Link and clean Dual dispatch bytes.
+/code/tools/clause_coverage/diagnostic_source_book.py -text
+/code/tests/tools/test_diagnostic_source_book.py -text
+/code/tests/tools/test_diagnostic_link_dual_dispatch.py -text

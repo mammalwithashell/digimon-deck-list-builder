@@ -15,6 +15,7 @@ from .runtime_rule_composition import compose_runtime_rule_card, wrapper_depende
 from .runtime_empty_condition import compose_empty_condition_runtime_rule_card
 from .dual_card_composition import compose_dual_card
 from .corrected_rule_card_composition import compose_corrected_rule_card, checker_dependencies
+from .link_card_composition import compose_link_card
 
 _json = projection._json
 _sha = projection._sha
@@ -97,14 +98,24 @@ def _source_inputs(snapshot, candidate_root, cid, raw_pages):
 
 
 def _dispatch(snapshot, pin, inputs, images, authorization, input_root):
+    _require(isinstance(authorization, dict), 'capability authorization object required')
     cid = _json(inputs['canonical_card'])['card_id']
     record = snapshot.card(cid)
     card = _json(record['canonical_card'])
     corrections = [r for r in _json(inputs['correction_document'])['corrections'] if r['card_id'] == cid]
     if len(card['faces']) > 1:
-        _require(set(authorization) == {'association_proposal', 'association_review'}, 'Dual review inputs required')
+        required = {'association_proposal', 'association_review'}
+        _require(required <= set(authorization), 'Dual review inputs required')
+        proposal = _file(input_root, authorization['association_proposal'])
+        proposal_object = _json(proposal)
+        _require(isinstance(proposal_object, dict), 'Dual proposal object required')
+        clean = proposal_object.get('kind') == 'clean-dual-image-association-proposal'
+        if clean:
+            required.add('association_proof')
+        _require(set(authorization) == required, 'exact Dual review inputs required')
+        proof = _file(input_root, authorization['association_proof']) if clean else None
         result = compose_dual_card(**inputs, runtime_projection=record['runtime_record'], image_artifacts=images,
-            association_proposal=_file(input_root, authorization['association_proposal']),
+            association_proposal=proposal, association_proof=proof,
             association_pin=authorization['association_proposal']['sha256'],
             association_review=_file(input_root, authorization['association_review']),
             review_pin=authorization['association_review']['sha256'],
@@ -121,6 +132,14 @@ def _dispatch(snapshot, pin, inputs, images, authorization, input_root):
             'producer_sha256': projection.producer_dependencies(), 'checker_sha256': checker_dependencies()})
         result = compose_corrected_rule_card(**a)
         return result, result['runtime_projection']['claimed_fields'], result
+    if (card['fields'].get('link_effect_description_eng')
+            or _json(record['runtime_record']).get('link_effect_description_eng')):
+        _require(set(authorization) == {'link_yaml'}, 'exact Link YAML input required')
+        result = compose_link_card(**inputs, snapshot=snapshot, expected_extraction_sha256=pin,
+            runtime_record=record['runtime_record'], registry_bytes=record['registry_bytes'],
+            yaml_bytes=_file(input_root, authorization['link_yaml']),
+            expected_yaml_sha256=authorization['link_yaml']['sha256'])
+        return result, result['claimed_fields'], result
     _require(not authorization, 'unexpected capability authorization')
     proof_inputs = {k: v for k, v in inputs.items() if k != 'scopes'}
     proof_inputs.update(runtime_record=record['runtime_record'], registry_bytes=record['registry_bytes'], image_artifacts=images)
@@ -255,7 +274,8 @@ def build_diagnostic_source_book(*, candidate_root, input_root, extraction_artif
                                                        for k in unclaimed}
             row['blockers'] = deepcopy(source.get('blockers', []))
             row['blockers'].extend({'code': 'UNCLAIMED_GAMEPLAY_FIELD', 'field': k} for k in unclaimed if k not in _METADATA)
-            if source['status'] not in {'COMPOSED_RULE_CARD', 'COMPOSED_CORRECTED_RULE_CARD', 'COMPOSED_DUAL_SOURCE'}:
+            if source['status'] not in {'COMPOSED_RULE_CARD', 'COMPOSED_CORRECTED_RULE_CARD',
+                                      'COMPOSED_DUAL_SOURCE', 'COMPOSED_LINK_CARD'}:
                 row['blockers'].append({'code': 'SOURCE_COMPOSITION_BLOCKED'})
             if row['blockers']:
                 row['status'] = 'BLOCKED'

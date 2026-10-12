@@ -12,10 +12,14 @@ def files(tmp_path_factory):
  for name,d in json.loads((F/'archive.json').read_bytes()).items():
   raw=gzip.decompress((F/d['file']).read_bytes());assert sha(raw)==d['sha256'] and len(raw)==d['bytes']
   path=root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(raw)
+ # Preserve the original archive and install only the exact independently reviewed rebind.
+ current=(F/'correction-sidecar-wire-hardening.json').read_bytes()
+ assert sha(current)=='1bbf81e7b17c8cbf16e18fda7d86aa6f792a6d384a6cb47c94ba3a45c15ff22e'
+ (root/'reviews/correction-sidecar-wire-hardening.json').write_bytes(current)
  return root
 
 def inputs(root):
- e=(F/'extraction.json').read_bytes();m=(F/'inputs.json').read_bytes()
+ e=(F/'extraction.json').read_bytes();m=(F/'inputs-wire-hardening.json').read_bytes()
  return dict(candidate_root=root/'candidate',input_root=root,extraction_artifact=e,expected_extraction_sha256=sha(e),input_manifest=m,expected_input_manifest_sha256=sha(m))
 
 def build(a):
@@ -48,6 +52,27 @@ def test_condition_dual_rule_and_corrected_sources_conserved(actual):
   r=actual['cards'][cid];assert r['conservation']['occurrences']==len(r['source_composition']['inventory'])==len(r['source_composition']['consumption'])
   assert len({tuple(x['key'])for x in r['source_unit_descriptors']})==len(r['source_unit_descriptors'])
   assert all('clause_id'not in x for x in r['span_descriptors'])
+
+
+def test_historical_correction_sidecar_is_preserved_and_refused(files):
+ a=one(inputs(files),'EX12-031');m=json.loads(a['input_manifest'])
+ old=json.loads((F/'inputs.json').read_bytes())
+ m['authorizations']['EX12-031']=old['authorizations']['EX12-031']
+ a['input_manifest']=enc(m);a['expected_input_manifest_sha256']=sha(a['input_manifest'])
+ row=build(a)['cards']['EX12-031']
+ assert row['status']=='BLOCKED' and row['span_count'] is None
+ assert any('dependenc' in b.get('reason','') for b in row['blockers'])
+
+
+def test_reviewed_correction_rebind_changes_only_approved_dependency():
+ archive=json.loads((F/'archive.json').read_bytes());old_inputs=json.loads((F/'inputs.json').read_bytes())
+ d=old_inputs['authorizations']['EX12-031']['correction_sidecar']
+ old=json.loads(gzip.decompress((F/archive[d['path']]['file']).read_bytes()))
+ new=json.loads((F/'correction-sidecar-wire-hardening.json').read_bytes())
+ changed=[k for k in old['dependency_sha256']if old['dependency_sha256'][k]!=new['dependency_sha256'][k]]
+ assert changed==['tools.card_data.corrections']
+ assert new['dependency_sha256'][changed[0]]=='bdc9a8677d62620e5c1caa275c138889e6c8220695970a69ba47ec8c3f5eb894'
+ old['dependency_sha256']=new['dependency_sha256'];assert old==new
 
 @pytest.mark.parametrize('mutation',['manifest_pin','snapshot_pin','unknown_flag','duplicate_scope','private_composition','extra_manifest'])
 def test_reject_unpinned_or_injected_inputs(files,mutation):
