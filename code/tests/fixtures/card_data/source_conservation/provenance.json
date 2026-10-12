@@ -1,0 +1,11 @@
+{
+  "status": "EXACT_REAL_RECORD_SUBSCOPE_NOT_REPAIRED",
+  "raw_url": "https://world.digimoncard.com/cards/?search=true&category=522037",
+  "raw_sha256": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+  "notes": "Exact selected records from v5 snapshot; canonical/runtime and clauses intentionally retain real older baseline. No fake successful provenance. Fixture scope manifest reduced to these three IDs.",
+  "source_paths": [
+    "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\review-official-v5-offline-20261012\\official-v5-snapshot.json",
+    "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-ex10-complete-text-20261012\\data\\cards_canonical.json",
+    "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\jupiter-semantic-review-artifacts-v2\\exam-clause-text.full.json"
+  ]
+}

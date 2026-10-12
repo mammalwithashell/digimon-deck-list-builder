@@ -1,0 +1,1178 @@
+{
+  "semantic_fingerprint_version": 1,
+  "extraction_revision": "fe690b87d012be955e813c957aab076d12325a5f0e3f5fd56b4a565ff49be72d",
+  "generated_at": "2026-10-12T01:07:31.354718+00:00",
+  "source": "Jupiter isolated semantic migration review; full historical book and interaction membership",
+  "cards": [
+    "EX12-046",
+    "EX12-063",
+    "EX12-076"
+  ],
+  "clauses": [
+    {
+      "id": "EX12-046#effect#0",
+      "card_id": "EX12-046",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.4 w/[Shambala] trait: Cost 3",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "6b22e703458cece56a3e8cae2b55debc05933e1abc8d6ce77c704c12e002567a",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-046",
+        "effect",
+        0,
+        [
+          "timing",
+          [
+            "Digivolve"
+          ],
+          null,
+          "Lv.4 w/[Shambala] trait: Cost 3"
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.4 w/[Shambala] trait: Cost 3"
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "Your Turn"
+            ],
+            null,
+            "When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -2: Lv.4 or lower [TB] trait card"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-046#effect#1",
+      "card_id": "EX12-046",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends.",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "1a064c593fa893d9695679abfcda62f85264ded5fbe3de3b2b6bb0928409bace",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-046",
+        "effect",
+        1,
+        [
+          "timing",
+          [
+            "On Play",
+            "When Digivolving"
+          ],
+          null,
+          "Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends."
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.4 w/[Shambala] trait: Cost 3"
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "Your Turn"
+            ],
+            null,
+            "When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -2: Lv.4 or lower [TB] trait card"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-046#effect#2",
+      "card_id": "EX12-046",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2.",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "fab8e6effcd210d32ec9f90d1c6b0be16b0e22119ba7888aa4ba8659c61d61fb",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-046",
+        "effect",
+        2,
+        [
+          "timing",
+          [
+            "Your Turn"
+          ],
+          null,
+          "When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.4 w/[Shambala] trait: Cost 3"
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "Your Turn"
+            ],
+            null,
+            "When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -2: Lv.4 or lower [TB] trait card"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-046#effect#3",
+      "card_id": "EX12-046",
+      "zone": "effect",
+      "label": "Special Play Condition",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "Assembly -2: Lv.4 or lower [TB] trait card",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "5019076898b5ec7b2ca8d8c03826a8f922f7619b2c010d6df877ad62864442af",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-046",
+        "effect",
+        3,
+        [
+          "untimed",
+          [],
+          null,
+          "Assembly -2: Lv.4 or lower [TB] trait card"
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.4 w/[Shambala] trait: Cost 3"
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "Your Turn"
+            ],
+            null,
+            "When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -2: Lv.4 or lower [TB] trait card"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-046#inherited#0",
+      "card_id": "EX12-046",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "End of Attack",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost.",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "909d44d33f191e367b1a2287449a8af5f55af49e58b9c3a48381ebc2457376ae",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-046",
+        "inherited",
+        0,
+        [
+          "timing",
+          [
+            "End of Attack",
+            "Once Per Turn"
+          ],
+          null,
+          "You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost."
+        ],
+        [
+          [
+            "timing",
+            [
+              "End of Attack",
+              "Once Per Turn"
+            ],
+            null,
+            "You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost."
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-063#effect#0",
+      "card_id": "EX12-063",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "c73702c9d19802e9a6c82dfb6eaa9d2735e06cf6fd0dc9e0863115f4d5d6f09e",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-063",
+        "effect",
+        0,
+        [
+          "timing",
+          [
+            "Digivolve"
+          ],
+          null,
+          "Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "On Deletion"
+            ],
+            null,
+            "You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-063#effect#1",
+      "card_id": "EX12-063",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "d241736039891eace4a6daf55eda18158119162748cdd4df4a3e4856bc2f5fb5",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-063",
+        "effect",
+        1,
+        [
+          "timing",
+          [
+            "On Play",
+            "When Digivolving"
+          ],
+          null,
+          "Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "On Deletion"
+            ],
+            null,
+            "You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-063#effect#2",
+      "card_id": "EX12-063",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "cb001fd60fdc7381da5ffdc09476680f382e8c37c63d742ef44aae7a3b3823a0",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-063",
+        "effect",
+        2,
+        [
+          "timing",
+          [
+            "On Deletion"
+          ],
+          null,
+          "You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "On Deletion"
+            ],
+            null,
+            "You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-063#effect#3",
+      "card_id": "EX12-063",
+      "zone": "effect",
+      "label": "Special Play Condition",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "b3b181348f3fb8f5c379ec7219c6e8a2c23f034faa9e16cc293484a47056871a",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-063",
+        "effect",
+        3,
+        [
+          "untimed",
+          [],
+          null,
+          "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card"
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "On Deletion"
+            ],
+            null,
+            "You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-063#inherited#0",
+      "card_id": "EX12-063",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "On Deletion"
+      ],
+      "keyword": null,
+      "text": "You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "c359abe2d92f6aca836b0ea130a4cff43c26b5772c8798a8feb9b1e7095a16c1",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-063",
+        "inherited",
+        0,
+        [
+          "timing",
+          [
+            "On Deletion"
+          ],
+          null,
+          "You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+        ],
+        [
+          [
+            "timing",
+            [
+              "On Deletion"
+            ],
+            null,
+            "You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-076#effect#0",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "142f1d237850f3a403e6d095aac76781d0c380f4df8cd4c5b53bed01b1f5ff93",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-076",
+        "effect",
+        0,
+        [
+          "timing",
+          [
+            "Digivolve"
+          ],
+          null,
+          "Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          ],
+          [
+            "keyword",
+            [],
+            "Rush",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Raid",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards."
+          ],
+          [
+            "timing",
+            [
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞. (Rule) Trait: Has [Hybrid] Form."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-076#effect#1",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Rush",
+      "text": "",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "cc15ce2b95d462236209a81761d536935a0679e43a8149cdcfeb85a6c73c520e",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-076",
+        "effect",
+        1,
+        [
+          "keyword",
+          [],
+          "Rush",
+          ""
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          ],
+          [
+            "keyword",
+            [],
+            "Rush",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Raid",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards."
+          ],
+          [
+            "timing",
+            [
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞. (Rule) Trait: Has [Hybrid] Form."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-076#effect#2",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "bf5ba13c7c7266e7a2781bade2758699342954c1963566570033dfb5e72f9ef6",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-076",
+        "effect",
+        2,
+        [
+          "keyword",
+          [],
+          "Raid",
+          ""
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          ],
+          [
+            "keyword",
+            [],
+            "Rush",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Raid",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards."
+          ],
+          [
+            "timing",
+            [
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞. (Rule) Trait: Has [Hybrid] Form."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-076#effect#3",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "4f18086868b5daadfaa98d10633aca227f5999453f8222bc041d28d549a15265",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-076",
+        "effect",
+        3,
+        [
+          "keyword",
+          [],
+          "Blocker",
+          ""
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          ],
+          [
+            "keyword",
+            [],
+            "Rush",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Raid",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards."
+          ],
+          [
+            "timing",
+            [
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞. (Rule) Trait: Has [Hybrid] Form."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-076#effect#4",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "bbc58dec557f0ec4be138d65a85645694e29f808e626455935001f1c12780feb",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-076",
+        "effect",
+        4,
+        [
+          "timing",
+          [
+            "On Play",
+            "When Digivolving"
+          ],
+          null,
+          "To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards."
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          ],
+          [
+            "keyword",
+            [],
+            "Rush",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Raid",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards."
+          ],
+          [
+            "timing",
+            [
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞. (Rule) Trait: Has [Hybrid] Form."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-076#effect#5",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞. (Rule) Trait: Has [Hybrid] Form.",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "cb5eade628cc652ca70e224e879aa76451bf2ef08aaf833cb2433f0b3618a29e",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-076",
+        "effect",
+        5,
+        [
+          "timing",
+          [
+            "When Attacking",
+            "Once Per Turn"
+          ],
+          null,
+          "Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞. (Rule) Trait: Has [Hybrid] Form."
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          ],
+          [
+            "keyword",
+            [],
+            "Rush",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Raid",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards."
+          ],
+          [
+            "timing",
+            [
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞. (Rule) Trait: Has [Hybrid] Form."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "EX12-076#effect#6",
+      "card_id": "EX12-076",
+      "zone": "effect",
+      "label": "Special Play Condition",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "409ee27a2d2330c5f4c7a6b6121dd67a9cc4ac5888d17b36872259e2fc0ee962",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "EX12-076",
+        "effect",
+        6,
+        [
+          "untimed",
+          [],
+          null,
+          "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          ],
+          [
+            "keyword",
+            [],
+            "Rush",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Raid",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving"
+            ],
+            null,
+            "To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards."
+          ],
+          [
+            "timing",
+            [
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞. (Rule) Trait: Has [Hybrid] Form."
+          ],
+          [
+            "untimed",
+            [],
+            null,
+            "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          ]
+        ]
+      ]
+    }
+  ],
+  "denominator": {
+    "fixture_subscope": true
+  }
+}
