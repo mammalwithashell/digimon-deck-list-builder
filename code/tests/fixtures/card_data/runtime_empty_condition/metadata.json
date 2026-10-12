@@ -1,0 +1,27 @@
+{
+  "source": "exact sealed R3 observations; no source rewrite",
+  "cards": {
+    "BT26-104": {
+      "raw_files": {
+        "https://world.digimoncard.com/cards/?search=true&category=522038": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0.html.gz"
+      },
+      "observation_ids": [
+        "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+        "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+        "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+        "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+      ]
+    },
+    "EX12-031": {
+      "raw_files": {
+        "https://world.digimoncard.com/cards/?search=true&category=522037": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2.html.gz"
+      },
+      "observation_ids": [
+        "1b91ca068b70824224190013ec76d1027415c7617f6d2cce129bab176f86bee7",
+        "39595eca6f9b2fd4e1d5c50a2c6d90a09528cf88df859cba700c430f3f17a974",
+        "88940a47a03d7bb14e5cecd366f9c8fa48b8d0b308522b34da64eae9d684819d",
+        "94f2cca3363105fbb1489153c2eb0752519d11159cd2d08bae01e177780f915b"
+      ]
+    }
+  }
+}

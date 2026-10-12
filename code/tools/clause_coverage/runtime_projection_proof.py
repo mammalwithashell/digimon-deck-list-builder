@@ -122,7 +122,8 @@ def prove_runtime_projection(*,canonical_card,runtime_record,registry_bytes,aggr
         raise RuntimeProjectionError('runtime projection refused: '+str(e)) from e
 
 
-def _prove(a):
+def _prepare_projection(a):
+    """Private original-input validation and forward18-field expected values."""
     pin=_json(a['binding'])
     _require(set(pin)=={'schema_version','input_sha256','producer_sha256'} and type(pin['schema_version'])is int
              and pin['schema_version']==1,'unsupported binding envelope')
@@ -152,6 +153,11 @@ def _prove(a):
     projected=generate.project_canonical_card(card)
     expected={k:projected[k]for k in FIELDS}
     expected.update(registry.compatibility_values(cid,reg.assignments[cid],capacity=reg.capacity))
+    return pin,deps,card,runtime,cid,expected
+
+
+def _prove(a):
+    pin,deps,card,runtime,cid,expected=_prepare_projection(a)
     condition=bind_condition_units(aggregate=a['aggregate'],observations=a['observations'],
         canonical_card=a['canonical_card'],runtime_projection=enc({'card_id':cid,'xros_req':runtime['xros_req']}),
         selection_ledger=a['condition_selections'],correction_document=a['correction_document'],

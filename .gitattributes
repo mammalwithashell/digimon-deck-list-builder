@@ -56,3 +56,18 @@ code/tests/fixtures/card_data/runtime_snapshot/.gitattributes -text
 /code/tools/clause_coverage/corrected_rule_card_composition.py -text
 
 /code/tests/tools/test_corrected_rule_card_composition.py -text
+
+# Preserve reviewed empty-condition proof and fixture bytes.
+/code/tools/clause_coverage/runtime_projection_proof.py -text
+/code/tools/clause_coverage/runtime_rule_composition.py -text
+/code/tools/clause_coverage/runtime_empty_condition.py -text
+/code/tests/tools/test_runtime_empty_condition.py -text
+/code/tests/tools/test_runtime_empty_refactor_parity.py -text
+/code/tests/fixtures/card_data/runtime_empty_condition/.gitattributes -text
+/code/tests/fixtures/card_data/runtime_empty_condition/4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0.html.gz -text
+/code/tests/fixtures/card_data/runtime_empty_condition/7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2.html.gz -text
+/code/tests/fixtures/card_data/runtime_empty_condition/BT26-104-observations.json.gz -text
+/code/tests/fixtures/card_data/runtime_empty_condition/EX12-031-observations.json.gz -text
+/code/tests/fixtures/card_data/runtime_empty_condition/metadata.json -text
+/code/tests/fixtures/card_data/runtime_empty_condition/runtime_projection_before.py.txt -text
+/code/tests/fixtures/card_data/runtime_empty_condition/runtime_rule_before.py.txt -text

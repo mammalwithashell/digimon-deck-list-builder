@@ -41,9 +41,9 @@ def wrapper_dependencies():
     return dict(sorted(result.items()))
 
 
-def compose_runtime_rule_card(*,snapshot,expected_extraction_sha256,runtime_record,
-        registry_bytes,runtime_binding,image_artifacts,**source_inputs):
-    """Replay proof and public source composition; no submitted proof is trusted."""
+def _verify_snapshot_dispatch(*,snapshot,expected_extraction_sha256,runtime_record,
+        registry_bytes,source_inputs):
+    """Private exact original-byte dispatch checks; no proof flag accepted."""
     _require(type(snapshot)is VerifiedRuntimeSnapshot,'verified snapshot handle required')
     _require(set(source_inputs)==_SOURCE_KEYS,'unsupported or missing source input fields')
     meta=snapshot.metadata()
@@ -64,6 +64,14 @@ def compose_runtime_rule_card(*,snapshot,expected_extraction_sha256,runtime_reco
              'dispatch aggregate source revisions differ')
     _require(source_inputs['expected_official_universe']==meta['official_card_ids'],
              'dispatch full official universe differs')
+    return meta,cid
+
+
+def compose_runtime_rule_card(*,snapshot,expected_extraction_sha256,runtime_record,
+        registry_bytes,runtime_binding,image_artifacts,**source_inputs):
+    """Replay proof and public source composition; no submitted proof is trusted."""
+    meta,cid=_verify_snapshot_dispatch(snapshot=snapshot,expected_extraction_sha256=expected_extraction_sha256,
+        runtime_record=runtime_record,registry_bytes=registry_bytes,source_inputs=source_inputs)
     proof_inputs={k:v for k,v in source_inputs.items()if k!='scopes'}
     proof=prove_runtime_projection(**proof_inputs,runtime_record=runtime_record,
         registry_bytes=registry_bytes,binding=runtime_binding,image_artifacts=image_artifacts)
