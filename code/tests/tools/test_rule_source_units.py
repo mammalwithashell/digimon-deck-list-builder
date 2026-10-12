@@ -117,3 +117,14 @@ def test_nested_bracket_value_is_not_a_supported_single_trait():
 def test_malformed_input_refused(value):
     from tools.clause_coverage.rule_source_units import RuleUnitError
     with pytest.raises(RuleUnitError):derive(value)
+
+@pytest.mark.parametrize('location',['body','label'])
+@pytest.mark.parametrize('marker',['SpecialRule','specialrule','\uff33\uff50\uff45\uff43\uff49\uff41\uff4c\uff32\uff55\uff4c\uff45'])
+def test_concatenated_special_rule_refused_without_normalizing_source(location,marker):
+    o=fixture();before=copy.deepcopy(o)
+    if location=='body':o['extracted']['text_sections'][1]['text']+='\n['+marker+'] Draw 1.'
+    else:o['extracted']['text_sections'].append({'label':marker,'text':'Draw 1.'})
+    supplied=copy.deepcopy(o);r=derive(o)
+    assert r['status']=='BLOCKED_RULE_DIAGNOSTIC' and r['projected_fields'] is None
+    assert r['source_observation']==supplied and o==supplied
+    assert r['occurrences'][0]['line'] in before['extracted']['text_sections'][1]['text']

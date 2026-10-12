@@ -1,0 +1,473 @@
+{
+  "card": {
+    "admission": "admitted",
+    "card_id": "P-213",
+    "conflicts": [
+      {
+        "candidate_observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "field_path": "effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "field_path": "evo_costs",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "field_path": "form_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "field_path": "inherited_effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "field_path": "type_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": 7000,
+        "effect_text": "[Special Digivolution Condition] [Digivolve] [Aegiomon]: Cost 3\n＜Raid＞ ＜Decode《[Aegiomon]》＞\n[When Digivolving] If you have 3 or fewer security cards, this Digimon gains ＜Rush＞ and +3000 DP until your opponent’s turn ends. Then, this Digimon may attack.\n[Rule] Trait: Has [Dragonkin] Type.",
+        "face_id": "primary",
+        "inherited_text": "＜Decode 《[Aegiomon]》＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)",
+        "kind": "digimon",
+        "level": 5,
+        "play_cost": 7,
+        "security_text": ""
+      }
+    ],
+    "fields": {
+      "attribute_eng": [
+        "Vaccine"
+      ],
+      "card_colors": [
+        "Red"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Aegiochusmon",
+      "dp": 7000,
+      "effect_description_eng": "＜Raid＞ ＜Decode《[Aegiomon]》＞\n[When Digivolving] If you have 3 or fewer security cards, this Digimon gains ＜Rush＞ and +3000 DP until your opponent’s turn ends. Then, this Digimon may attack.\n[Rule] Trait: Has [Dragonkin] Type.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Red"
+          ],
+          "cost": 3,
+          "from_level": 4,
+          "slot": 1
+        }
+      ],
+      "form_eng": [
+        "Ultimate"
+      ],
+      "inherited_effect_description_eng": "＜Decode 《[Aegiomon]》＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)",
+      "level": 5,
+      "play_cost": 7,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Shaman",
+        "Iliad",
+        "TS",
+        "Dragonkin"
+      ]
+    },
+    "printings": [
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "printing_id": "P-213",
+        "product": null
+      }
+    ],
+    "provenance": {
+      "attribute_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "card_colors": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "card_kind": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "card_name_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "dp": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "evo_costs": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "faces": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "form_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "inherited_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "level": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "play_cost": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "security_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      },
+      "type_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+          "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+        ],
+        "selected_observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace"
+      }
+    },
+    "schema_version": 1,
+    "tombstone_reason": null
+  },
+  "observations": {
+    "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Vaccine"
+          ],
+          "card_colors": [
+            "Red"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Aegiochusmon",
+          "dp": 7000,
+          "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)\r\n[When Digivolving] If you have 3 or fewer security cards, this Digimon gains ＜Rush＞ (This Digimon can attack the turn it comes into play.) and +3000 DP until your opponent's turn ends. Then, this Digimon may attack.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.))",
+          "level": 5,
+          "play_cost": 7,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Shaman",
+            "Iliad",
+            "TS"
+          ]
+        },
+        "card_id": "P-213",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Red",
+              "cost": 3,
+              "level": 4,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "dp": 7000,
+            "effect_text": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)\r\n[When Digivolving] If you have 3 or fewer security cards, this Digimon gains ＜Rush＞ (This Digimon can attack the turn it comes into play.) and +3000 DP until your opponent's turn ends. Then, this Digimon may attack.",
+            "face_id": "primary",
+            "inherited_text": "＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.))",
+            "kind": "digimon",
+            "level": 5,
+            "play_cost": 7,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] [Aegiomon]: Cost 3",
+          "artist": null,
+          "attribute": "Vaccine",
+          "color": "Red",
+          "color2": null,
+          "date_added": "2026-01-23 16:22:30",
+          "digi_type": "Shaman",
+          "digi_type2": "Iliad",
+          "digi_type3": "TS",
+          "digi_type4": null,
+          "dp": 7000,
+          "evolution_color": null,
+          "evolution_cost": 3,
+          "evolution_level": null,
+          "form": null,
+          "id": "P-213",
+          "level": 5,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)\r\n[When Digivolving] If you have 3 or fewer security cards, this Digimon gains ＜Rush＞ (This Digimon can attack the turn it comes into play.) and +3000 DP until your opponent's turn ends. Then, this Digimon may attack.",
+          "name": "Aegiochusmon",
+          "play_cost": 7,
+          "pretty_url": "P-213-aegiochusmon",
+          "rarity": "P",
+          "series": "Digimon Card Game",
+          "set_name": [],
+          "source_effect": "＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.))",
+          "stage": null,
+          "tcgplayer_id": 666305,
+          "tcgplayer_name": "Aegiochusmon (Official Store Tournament 2026 Vol. 1)",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] [Aegiomon]: Cost 3"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "07744f70072975f72db08c7d7adcb0cf026cf15722aacd645b8b9ad5ba6f3fc7",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "P-213",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace": {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "P-213",
+        "card_type": "Digimon",
+        "colors": [
+          "Red"
+        ],
+        "dp": 7000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "cost": 3,
+            "from_level": 4,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "dp": 7000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 5,
+            "name": "Aegiochusmon",
+            "play_cost": 7,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] [Aegiomon]: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Raid＞ ＜Decode《[Aegiomon]》＞\n[When Digivolving] If you have 3 or fewer security cards, this Digimon gains ＜Rush＞ and +3000 DP until your opponent’s turn ends. Then, this Digimon may attack.\n[Rule] Trait: Has [Dragonkin] Type."
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "＜Decode 《[Aegiomon]》＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)"
+              }
+            ]
+          }
+        ],
+        "form": "Ultimate",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 5,
+        "name": "Aegiochusmon",
+        "play_cost": 7,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522901",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/P-213.png?260529",
+          "printing_id": "P-213"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, you can process it.\nEven if you don't have 3 or fewer security cards, this card's [When Digivolving] effect allows you to have this Digimon attack.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5763",
+            "question": "Can I process the part of the effect after \"then\" in this card's [When Digivolving] effect even if the \"if\" condition in the 1st process isn't met?"
+          }
+        ],
+        "rarity": "P",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": [
+            "Dragonkin"
+          ]
+        },
+        "special_evolution_routes": [
+          "[Digivolve] [Aegiomon]: Cost 3"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Aegiomon]: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Raid＞ ＜Decode《[Aegiomon]》＞\n[When Digivolving] If you have 3 or fewer security cards, this Digimon gains ＜Rush＞ and +3000 DP until your opponent’s turn ends. Then, this Digimon may attack.\n[Rule] Trait: Has [Dragonkin] Type."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "＜Decode 《[Aegiomon]》＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)"
+          }
+        ],
+        "type": "Shaman/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "90db2254846cdcb5174b6348164c827def5a0dcf75e56e8b60d6cd3be9eeeb5c",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522901:P-213:P-213",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522901"
+    }
+  },
+  "raw_files": {
+    "https://world.digimoncard.com/cards/?search=true&category=522901": "90db2254846cdcb5174b6348164c827def5a0dcf75e56e8b60d6cd3be9eeeb5c.html.gz"
+  },
+  "xros_req": "[Special Digivolution Condition] [Digivolve] [Aegiomon]: Cost 3",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+}

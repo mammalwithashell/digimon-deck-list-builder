@@ -1,0 +1,617 @@
+{
+  "card": {
+    "admission": "admitted",
+    "card_id": "BT25-025",
+    "conflicts": [
+      {
+        "candidate_observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "field_path": "effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "field_path": "evo_costs",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "field_path": "form_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "field_path": "inherited_effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "field_path": "type_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue",
+          "Black"
+        ],
+        "dp": 8000,
+        "effect_text": "[Special Digivolution Condition] [Digivolve] [Aegiomon]: Cost 3\n＜Blocker＞ ＜Decode ([Aegiomon])＞\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, if you have 3 or fewer security cards, 1 of your Digimon unsuspends.\n(Rule) Trait: Has [Cyborg] Type.",
+        "face_id": "primary",
+        "inherited_text": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend.",
+        "kind": "digimon",
+        "level": 5,
+        "play_cost": 8,
+        "security_text": ""
+      }
+    ],
+    "fields": {
+      "attribute_eng": [
+        "Vaccine"
+      ],
+      "card_colors": [
+        "Blue",
+        "Black"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Aegiochusmon: Blue",
+      "dp": 8000,
+      "effect_description_eng": "＜Blocker＞ ＜Decode ([Aegiomon])＞\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, if you have 3 or fewer security cards, 1 of your Digimon unsuspends.\n(Rule) Trait: Has [Cyborg] Type.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Blue",
+            "Black"
+          ],
+          "cost": 4,
+          "from_level": 4,
+          "slot": 1
+        }
+      ],
+      "form_eng": [
+        "Ultimate"
+      ],
+      "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend.",
+      "level": 5,
+      "play_cost": 8,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Shaman",
+        "Iliad",
+        "TS",
+        "Cyborg"
+      ]
+    },
+    "printings": [
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+        ],
+        "printing_id": "BT25-025",
+        "product": null
+      },
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "printing_id": "BT25-025#2",
+        "product": null
+      }
+    ],
+    "provenance": {
+      "attribute_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "card_colors": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "card_kind": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "card_name_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "dp": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "evo_costs": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "faces": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "form_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "inherited_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "level": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "play_cost": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "security_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      },
+      "type_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+          "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+          "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f"
+        ],
+        "selected_observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872"
+      }
+    },
+    "schema_version": 1,
+    "tombstone_reason": null
+  },
+  "observations": {
+    "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Vaccine"
+          ],
+          "card_colors": [
+            "Blue",
+            "Black"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Aegiochusmon: Blue",
+          "dp": 8000,
+          "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, if you have 3 or fewer security cards, 1 of your Digimon unsuspends.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend.",
+          "level": 5,
+          "play_cost": 8,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Shaman",
+            "Iliad",
+            "TS"
+          ]
+        },
+        "card_id": "BT25-025",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Blue",
+              "cost": 4,
+              "level": 4,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Blue",
+              "Black"
+            ],
+            "dp": 8000,
+            "effect_text": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, if you have 3 or fewer security cards, 1 of your Digimon unsuspends.",
+            "face_id": "primary",
+            "inherited_text": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend.",
+            "kind": "digimon",
+            "level": 5,
+            "play_cost": 8,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] [Aegiomon]: Cost 3",
+          "artist": null,
+          "attribute": "Vaccine",
+          "color": "Blue",
+          "color2": "Black",
+          "date_added": "2026-03-26 01:02:27",
+          "digi_type": "Shaman",
+          "digi_type2": "Iliad",
+          "digi_type3": "TS",
+          "digi_type4": null,
+          "dp": 8000,
+          "evolution_color": null,
+          "evolution_cost": 4,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT25-025",
+          "level": 5,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, if you have 3 or fewer security cards, 1 of your Digimon unsuspends.",
+          "name": "Aegiochusmon: Blue",
+          "play_cost": 8,
+          "pretty_url": "BT25-025-aegiochusmon-blue",
+          "rarity": "R",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-25: BOOSTER DUAL REVOLUTION"
+          ],
+          "source_effect": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend.",
+          "stage": null,
+          "tcgplayer_id": 685486,
+          "tcgplayer_name": "Aegiochusmon: Blue",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] [Aegiomon]: Cost 3"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "8340d4eede6eef34c8e0c3dd1498dee78a8491ea7b57ef0bde8ce21b912f4a0e",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT25-025",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872": {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT25-025",
+        "card_type": "Digimon",
+        "colors": [
+          "Blue",
+          "Black"
+        ],
+        "dp": 8000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Blue",
+              "Black"
+            ],
+            "cost": 4,
+            "from_level": 4,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Blue",
+              "Black"
+            ],
+            "dp": 8000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 5,
+            "name": "Aegiochusmon: Blue",
+            "play_cost": 8,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] [Aegiomon]: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Blocker＞ ＜Decode ([Aegiomon])＞\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, if you have 3 or fewer security cards, 1 of your Digimon unsuspends.\n(Rule) Trait: Has [Cyborg] Type."
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend."
+              }
+            ]
+          }
+        ],
+        "form": "Ultimate",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 5,
+        "name": "Aegiochusmon: Blue",
+        "play_cost": 8,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522036",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-025.png?260529",
+          "printing_id": "BT25-025"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "[Security] effects take precedence for activation.\nUpon a check, a [Security] effect will immediately activate without pending activation.\nFor other triggered effects, the turn player activates their effects first.",
+            "date": "May. 8, 2026",
+            "number": "Q6289",
+            "question": "In what order do a [Security] effect, \"when [...] performs a security check\" effect, and \"when a card is removed from [...] security stack\" effect activate when they trigger simultaneously upon a security check?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": [
+            "Cyborg"
+          ]
+        },
+        "special_evolution_routes": [
+          "[Digivolve] [Aegiomon]: Cost 3"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Aegiomon]: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Blocker＞ ＜Decode ([Aegiomon])＞\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, if you have 3 or fewer security cards, 1 of your Digimon unsuspends.\n(Rule) Trait: Has [Cyborg] Type."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend."
+          }
+        ],
+        "type": "Shaman/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522036:BT25-025:BT25-025",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    },
+    "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Vaccine"
+          ],
+          "card_colors": [
+            "Blue",
+            "Black"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Aegiochusmon: Blue",
+          "dp": 8000,
+          "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, if you have 3 or fewer security cards, 1 of your Digimon unsuspends.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend.",
+          "level": 5,
+          "play_cost": 8,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Shaman",
+            "Iliad",
+            "TS"
+          ]
+        },
+        "card_id": "BT25-025",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Blue",
+              "cost": 4,
+              "level": 4,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Blue",
+              "Black"
+            ],
+            "dp": 8000,
+            "effect_text": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, if you have 3 or fewer security cards, 1 of your Digimon unsuspends.",
+            "face_id": "primary",
+            "inherited_text": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend.",
+            "kind": "digimon",
+            "level": 5,
+            "play_cost": 8,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] [Aegiomon]: Cost 3",
+          "artist": null,
+          "attribute": "Vaccine",
+          "color": "Blue",
+          "color2": "Black",
+          "date_added": "2026-03-26 01:02:27",
+          "digi_type": "Shaman",
+          "digi_type2": "Iliad",
+          "digi_type3": "TS",
+          "digi_type4": null,
+          "dp": 8000,
+          "evolution_color": null,
+          "evolution_cost": 4,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT25-025",
+          "level": 5,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, if you have 3 or fewer security cards, 1 of your Digimon unsuspends.",
+          "name": "Aegiochusmon: Blue",
+          "play_cost": 8,
+          "pretty_url": "BT25-025-aegiochusmon-blue",
+          "rarity": "R",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-25: BOOSTER DUAL REVOLUTION"
+          ],
+          "source_effect": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend.",
+          "stage": null,
+          "tcgplayer_id": 693857,
+          "tcgplayer_name": "Aegiochusmon: Blue",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] [Aegiomon]: Cost 3"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "d46cbefffa2d8ed8cf4e5aec69b260d5feded647a0ccbbeb7418dd41533e5a4f",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT25-025#2",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    }
+  },
+  "raw_files": {
+    "https://world.digimoncard.com/cards/?search=true&category=522036": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2.html.gz"
+  },
+  "xros_req": "[Special Digivolution Condition] [Digivolve] [Aegiomon]: Cost 3",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+}

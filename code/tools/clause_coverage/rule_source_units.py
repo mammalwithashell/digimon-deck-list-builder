@@ -22,7 +22,7 @@ class RuleUnitError(ValueError):
 _CATEGORIES = {'traits': official._RULE_TRAIT,
                'forms': official._RULE_FORM,
                'attributes': official._RULE_ATTRIBUTE}
-_RULE_WORD = re.compile(r'\bRule\b', re.I)
+_RULE_WORD = re.compile(r'\b(?:Special\s*)?Rule\b', re.I)
 
 
 def _rule_word(text):

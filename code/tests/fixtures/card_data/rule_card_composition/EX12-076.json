@@ -1,0 +1,1069 @@
+{
+  "card": {
+    "admission": "admitted",
+    "card_id": "EX12-076",
+    "conflicts": [
+      {
+        "candidate_observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "field_path": "card_colors",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "field_path": "effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "field_path": "evo_costs",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "field_path": "form_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "field_path": "inherited_effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "field_path": "type_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Yellow",
+          "White",
+          "Red"
+        ],
+        "dp": 16000,
+        "effect_text": "[Special Digivolution Condition] [Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5\n＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form.\n[Special Play Condition] Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 7,
+        "play_cost": 16,
+        "security_text": ""
+      }
+    ],
+    "fields": {
+      "attribute_eng": [
+        "Vaccine"
+      ],
+      "card_colors": [
+        "Yellow",
+        "White",
+        "Red"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Susanoomon",
+      "dp": 16000,
+      "effect_description_eng": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Red",
+            "Blue",
+            "Yellow",
+            "Green",
+            "White",
+            "Black",
+            "Purple"
+          ],
+          "cost": 6,
+          "from_level": 6,
+          "slot": 1
+        }
+      ],
+      "form_eng": [
+        "Mega",
+        "Hybrid"
+      ],
+      "inherited_effect_description_eng": "",
+      "level": 7,
+      "play_cost": 16,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Shaman",
+        "Shambala",
+        "SW",
+        "TB",
+        "TS"
+      ]
+    },
+    "printings": [
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb"
+        ],
+        "printing_id": "EX12-076",
+        "product": null
+      },
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774"
+        ],
+        "printing_id": "EX12-076#2",
+        "product": null
+      },
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "printing_id": "EX12-076#3",
+        "product": null
+      },
+      {
+        "alternate_art": true,
+        "language": "en",
+        "observation_ids": [
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21"
+        ],
+        "printing_id": "EX12-076_P1",
+        "product": null
+      },
+      {
+        "alternate_art": true,
+        "language": "en",
+        "observation_ids": [
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061"
+        ],
+        "printing_id": "EX12-076_P2",
+        "product": null
+      }
+    ],
+    "provenance": {
+      "attribute_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "card_colors": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "card_kind": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "card_name_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "dp": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "evo_costs": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "faces": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "form_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "inherited_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "level": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "play_cost": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "security_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      },
+      "type_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+          "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+          "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+          "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+          "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+          "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+        ],
+        "selected_observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd"
+      }
+    },
+    "schema_version": 1,
+    "tombstone_reason": null
+  },
+  "observations": {
+    "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd": {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "EX12-076",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow",
+          "White",
+          "Red"
+        ],
+        "dp": 16000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Red",
+              "Blue",
+              "Yellow",
+              "Green",
+              "White",
+              "Black",
+              "Purple"
+            ],
+            "cost": 6,
+            "from_level": 6,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "White",
+              "Red"
+            ],
+            "dp": 16000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 7,
+            "name": "Susanoomon",
+            "play_cost": 16,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form."
+              },
+              {
+                "label": "Special Play Condition",
+                "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+              }
+            ]
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 7,
+        "name": "Susanoomon",
+        "play_cost": 16,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522037",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-076.png?260529",
+          "printing_id": "EX12-076"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "No, you cannot.\nAs this card has left the battle area, it doesn't have digivolution cards whose colors could be determined. Thus, the effect cannot be processed.",
+            "date": "Aug. 18, 2026",
+            "number": "Q7194",
+            "question": "When I activate this card's [When Attacking] effect and my opponent's Digimon would leave the battle area due to processing the 1st part, an immediate-type effect such as \"when [...] would leave\" removes this card from the battle area.\nAfter that, can I process the part of the effect following after \"then\" in this card's effect?"
+          }
+        ],
+        "rarity": "SEC",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [
+            "Hybrid"
+          ],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          }
+        ],
+        "type": "Shaman/Shambala/SW/TB/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522037:EX12-076:EX12-076",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+    },
+    "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Vaccine"
+          ],
+          "card_colors": [
+            "Yellow",
+            "White"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Susanoomon",
+          "dp": 16000,
+          "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it was played.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\r\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞ (Place the top card of your deck as your top security card.)",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "|applinkdp =",
+          "level": 7,
+          "play_cost": 16,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Shaman",
+            "Shambala",
+            "SW",
+            "TB"
+          ]
+        },
+        "card_id": "EX12-076",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "All",
+              "cost": 6,
+              "level": 6,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "White"
+            ],
+            "dp": 16000,
+            "effect_text": "＜Rush＞ (This Digimon can attack the turn it was played.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\r\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞ (Place the top card of your deck as your top security card.)",
+            "face_id": "primary",
+            "inherited_text": "|applinkdp =",
+            "kind": "digimon",
+            "level": 7,
+            "play_cost": 16,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5",
+          "artist": null,
+          "attribute": "Vaccine",
+          "color": "Yellow",
+          "color2": "White",
+          "date_added": "2026-06-07 01:00:19",
+          "digi_type": "Shaman",
+          "digi_type2": "Shambala",
+          "digi_type3": "SW",
+          "digi_type4": "TB",
+          "dp": 16000,
+          "evolution_color": "All",
+          "evolution_cost": 6,
+          "evolution_level": null,
+          "form": null,
+          "id": "EX12-076",
+          "level": 7,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "＜Rush＞ (This Digimon can attack the turn it was played.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\r\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞ (Place the top card of your deck as your top security card.)",
+          "name": "Susanoomon",
+          "play_cost": 16,
+          "pretty_url": "EX12-076-susanoomon",
+          "rarity": "SEC",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "EX-12: EXTRA BOOSTER DIGITAL WORLD SHAMBALA"
+          ],
+          "source_effect": "|applinkdp =",
+          "stage": null,
+          "tcgplayer_id": 701591,
+          "tcgplayer_name": "Susanoomon (Rare Pull)",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "EX12-076",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Vaccine"
+          ],
+          "card_colors": [
+            "Yellow",
+            "White"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Susanoomon",
+          "dp": 16000,
+          "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it was played.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\r\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞ (Place the top card of your deck as your top security card.)",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "|applinkdp =",
+          "level": 7,
+          "play_cost": 16,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Shaman",
+            "Shambala",
+            "SW",
+            "TB"
+          ]
+        },
+        "card_id": "EX12-076",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "All",
+              "cost": 6,
+              "level": 6,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "White"
+            ],
+            "dp": 16000,
+            "effect_text": "＜Rush＞ (This Digimon can attack the turn it was played.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\r\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞ (Place the top card of your deck as your top security card.)",
+            "face_id": "primary",
+            "inherited_text": "|applinkdp =",
+            "kind": "digimon",
+            "level": 7,
+            "play_cost": 16,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5",
+          "artist": null,
+          "attribute": "Vaccine",
+          "color": "Yellow",
+          "color2": "White",
+          "date_added": "2026-06-07 01:00:19",
+          "digi_type": "Shaman",
+          "digi_type2": "Shambala",
+          "digi_type3": "SW",
+          "digi_type4": "TB",
+          "dp": 16000,
+          "evolution_color": "All",
+          "evolution_cost": 6,
+          "evolution_level": null,
+          "form": null,
+          "id": "EX12-076",
+          "level": 7,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "＜Rush＞ (This Digimon can attack the turn it was played.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\r\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞ (Place the top card of your deck as your top security card.)",
+          "name": "Susanoomon",
+          "play_cost": 16,
+          "pretty_url": "EX12-076-susanoomon",
+          "rarity": "SEC",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "EX-12: EXTRA BOOSTER DIGITAL WORLD SHAMBALA"
+          ],
+          "source_effect": "|applinkdp =",
+          "stage": null,
+          "tcgplayer_id": 696820,
+          "tcgplayer_name": "Susanoomon",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "EX12-076#2",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Vaccine"
+          ],
+          "card_colors": [
+            "Yellow",
+            "White"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Susanoomon",
+          "dp": 16000,
+          "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it was played.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\r\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞ (Place the top card of your deck as your top security card.)",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "|applinkdp =",
+          "level": 7,
+          "play_cost": 16,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Shaman",
+            "Shambala",
+            "SW",
+            "TB"
+          ]
+        },
+        "card_id": "EX12-076",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "All",
+              "cost": 6,
+              "level": 6,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "White"
+            ],
+            "dp": 16000,
+            "effect_text": "＜Rush＞ (This Digimon can attack the turn it was played.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\r\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞ (Place the top card of your deck as your top security card.)",
+            "face_id": "primary",
+            "inherited_text": "|applinkdp =",
+            "kind": "digimon",
+            "level": 7,
+            "play_cost": 16,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5",
+          "artist": null,
+          "attribute": "Vaccine",
+          "color": "Yellow",
+          "color2": "White",
+          "date_added": "2026-06-07 01:00:19",
+          "digi_type": "Shaman",
+          "digi_type2": "Shambala",
+          "digi_type3": "SW",
+          "digi_type4": "TB",
+          "dp": 16000,
+          "evolution_color": "All",
+          "evolution_cost": 6,
+          "evolution_level": null,
+          "form": null,
+          "id": "EX12-076",
+          "level": 7,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "＜Rush＞ (This Digimon can attack the turn it was played.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\r\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞ (Place the top card of your deck as your top security card.)",
+          "name": "Susanoomon",
+          "play_cost": 16,
+          "pretty_url": "EX12-076-susanoomon",
+          "rarity": "SEC",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "EX-12: EXTRA BOOSTER DIGITAL WORLD SHAMBALA"
+          ],
+          "source_effect": "|applinkdp =",
+          "stage": null,
+          "tcgplayer_id": 701590,
+          "tcgplayer_name": "Susanoomon (Alternate Art)",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "EX12-076#3",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21": {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "EX12-076",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow",
+          "White",
+          "Red"
+        ],
+        "dp": 16000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Red",
+              "Blue",
+              "Yellow",
+              "Green",
+              "White",
+              "Black",
+              "Purple"
+            ],
+            "cost": 6,
+            "from_level": 6,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "White",
+              "Red"
+            ],
+            "dp": 16000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 7,
+            "name": "Susanoomon",
+            "play_cost": 16,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form."
+              },
+              {
+                "label": "Special Play Condition",
+                "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+              }
+            ]
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 7,
+        "name": "Susanoomon",
+        "play_cost": 16,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522037",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-076_P1.png?260529",
+          "printing_id": "EX12-076_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "No, you cannot.\nAs this card has left the battle area, it doesn't have digivolution cards whose colors could be determined. Thus, the effect cannot be processed.",
+            "date": "Aug. 18, 2026",
+            "number": "Q7194",
+            "question": "When I activate this card's [When Attacking] effect and my opponent's Digimon would leave the battle area due to processing the 1st part, an immediate-type effect such as \"when [...] would leave\" removes this card from the battle area.\nAfter that, can I process the part of the effect following after \"then\" in this card's effect?"
+          }
+        ],
+        "rarity": "SEC",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [
+            "Hybrid"
+          ],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          }
+        ],
+        "type": "Shaman/Shambala/SW/TB/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522037:EX12-076:EX12-076_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+    },
+    "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061": {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "EX12-076",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow",
+          "White",
+          "Red"
+        ],
+        "dp": 16000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Red",
+              "Blue",
+              "Yellow",
+              "Green",
+              "White",
+              "Black",
+              "Purple"
+            ],
+            "cost": 6,
+            "from_level": 6,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "White",
+              "Red"
+            ],
+            "dp": 16000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 7,
+            "name": "Susanoomon",
+            "play_cost": 16,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form."
+              },
+              {
+                "label": "Special Play Condition",
+                "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+              }
+            ]
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 7,
+        "name": "Susanoomon",
+        "play_cost": 16,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522037",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-076_P2.png?260529",
+          "printing_id": "EX12-076_P2"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "No, you cannot.\nAs this card has left the battle area, it doesn't have digivolution cards whose colors could be determined. Thus, the effect cannot be processed.",
+            "date": "Aug. 18, 2026",
+            "number": "Q7194",
+            "question": "When I activate this card's [When Attacking] effect and my opponent's Digimon would leave the battle area due to processing the 1st part, an immediate-type effect such as \"when [...] would leave\" removes this card from the battle area.\nAfter that, can I process the part of the effect following after \"then\" in this card's effect?"
+          }
+        ],
+        "rarity": "SEC",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [
+            "Hybrid"
+          ],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          }
+        ],
+        "type": "Shaman/Shambala/SW/TB/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522037:EX12-076:EX12-076_P2",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+    }
+  },
+  "raw_files": {
+    "https://world.digimoncard.com/cards/?search=true&category=522037": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2.html.gz"
+  },
+  "xros_req": "[Special Digivolution Condition] [Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5\n[Special Play Condition] Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+}

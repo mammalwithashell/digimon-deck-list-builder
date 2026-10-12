@@ -37,7 +37,11 @@ def _blocked(result):
 
 
 def _compose(*, image_artifacts, **inputs):
-    context = _validated_context(**inputs)
+    return _compose_context(_validated_context(**inputs), image_artifacts=image_artifacts, inputs=inputs)
+
+
+def _compose_context(context, *, image_artifacts, inputs):
+    """Private dispatcher; public callers always replay complete raw inputs."""
     result = context['result']; runtime = context['runtime']
     _require(isinstance(runtime.get('xros_req'), str), 'explicit runtime condition field required')
     _require(isinstance(image_artifacts, dict) and all(isinstance(k,str) and isinstance(v,bytes)
