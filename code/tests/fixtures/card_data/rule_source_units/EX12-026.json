@@ -1,0 +1,230 @@
+{
+  "observations": [
+    {
+      "extracted": {
+        "attribute": "Data",
+        "card_id": "EX12-026",
+        "card_type": "Digimon",
+        "colors": [
+          "Blue"
+        ],
+        "dp": 5000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "cost": 2,
+            "from_level": 3,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "dp": 5000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 4,
+            "name": "Shellmon",
+            "play_cost": 5,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.3 w/[Shambala] trait: Cost 2"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Blocker＞\n[On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with 1 or fewer digivolution cards can't attack or block until their turn ends.\n(Rule) Trait: Has [Aquatic] Type."
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[When Attacking] [Once Per Turn] If your hand has 7 or fewer cards, ＜Draw 1＞."
+              }
+            ]
+          }
+        ],
+        "form": "Champion",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 4,
+        "name": "Shellmon",
+        "play_cost": 5,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522037",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-026_P1.png?260529",
+          "printing_id": "EX12-026_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "No, it will not. This effect targets one of your opponent's Digimon with one or fewer digivolution cards and gives it a \"can't attack or block until their turn ends\" effect. After the effect is given, it remains on the Digimon even if its digivolution cards increase.",
+            "date": "Jun. 19, 2026",
+            "number": "Q6753",
+            "question": "If a Digimon affected by this card's [On Play] [When Digivolving] effect later gains two or more digivolution cards, will it be able to attack and block?"
+          },
+          {
+            "answer": "It means you can't AA or BB.",
+            "date": "Sep. 18, 2026",
+            "number": "Q7213",
+            "question": "What exactly does a \"can't AA/BB\" effect mean?"
+          }
+        ],
+        "rarity": "C",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": [
+            "Aquatic"
+          ]
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.3 w/[Shambala] trait: Cost 2"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.3 w/[Shambala] trait: Cost 2"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Blocker＞\n[On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with 1 or fewer digivolution cards can't attack or block until their turn ends.\n(Rule) Trait: Has [Aquatic] Type."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] If your hand has 7 or fewer cards, ＜Draw 1＞."
+          }
+        ],
+        "type": "Mollusk/Shambala/TB"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "2ca8ba84eb1f5e5ec5b89aa080d8104f62e9d02a611699428b9cb0f777ca865d",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522037:EX12-026:EX12-026_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+    },
+    {
+      "extracted": {
+        "attribute": "Data",
+        "card_id": "EX12-026",
+        "card_type": "Digimon",
+        "colors": [
+          "Blue"
+        ],
+        "dp": 5000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "cost": 2,
+            "from_level": 3,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "dp": 5000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 4,
+            "name": "Shellmon",
+            "play_cost": 5,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.3 w/[Shambala] trait: Cost 2"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Blocker＞\n[On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with 1 or fewer digivolution cards can't attack or block until their turn ends.\n(Rule) Trait: Has [Aquatic] Type."
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[When Attacking] [Once Per Turn] If your hand has 7 or fewer cards, ＜Draw 1＞."
+              }
+            ]
+          }
+        ],
+        "form": "Champion",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 4,
+        "name": "Shellmon",
+        "play_cost": 5,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522037",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-026.png?260529",
+          "printing_id": "EX12-026"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "No, it will not. This effect targets one of your opponent's Digimon with one or fewer digivolution cards and gives it a \"can't attack or block until their turn ends\" effect. After the effect is given, it remains on the Digimon even if its digivolution cards increase.",
+            "date": "Jun. 19, 2026",
+            "number": "Q6753",
+            "question": "If a Digimon affected by this card's [On Play] [When Digivolving] effect later gains two or more digivolution cards, will it be able to attack and block?"
+          },
+          {
+            "answer": "It means you can't AA or BB.",
+            "date": "Sep. 18, 2026",
+            "number": "Q7213",
+            "question": "What exactly does a \"can't AA/BB\" effect mean?"
+          }
+        ],
+        "rarity": "C",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": [
+            "Aquatic"
+          ]
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.3 w/[Shambala] trait: Cost 2"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.3 w/[Shambala] trait: Cost 2"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Blocker＞\n[On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with 1 or fewer digivolution cards can't attack or block until their turn ends.\n(Rule) Trait: Has [Aquatic] Type."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] If your hand has 7 or fewer cards, ＜Draw 1＞."
+          }
+        ],
+        "type": "Mollusk/Shambala/TB"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "317d7ff2dd895c3bbb1a635d6d8520ab036a221c178b1293cca04703eb63408e",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522037:EX12-026:EX12-026",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+    }
+  ],
+  "image_path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\EX12-026.webp",
+  "image_sha256": "3fa5a61a2f1ba20b5357ec0908c110d7b18acea41dd59aa88759a5a1fb52b04c",
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "scope": "Actual observation fixtures for pure Rule occurrence diagnostics; not complete source authority"
+}
