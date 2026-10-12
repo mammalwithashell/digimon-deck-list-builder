@@ -13,6 +13,7 @@ import json
 import os
 import time
 from contextlib import contextmanager, nullcontext
+from dataclasses import asdict
 from pathlib import Path
 
 from .driver_contracts import ItemRecord
@@ -140,7 +141,12 @@ def create_queue(ctx, selected, *, reviewer, preserved_claims=None):
 
 
 def read_queue(ctx):
-    path = directory(ctx) / "queue.json"
+    from .revalidation_epochs import read_active
+    return read_active(ctx)
+
+
+def _read_queue_at(ctx, root):
+    path = root / "queue.json"
     if not path.exists():
         return None
     try:
@@ -151,7 +157,7 @@ def read_queue(ctx):
         rows = {i: dict(copy.deepcopy(e), status="SIM" if e["previous_state"] == "CONFIRMED" else "HOLD", attempts={}, data={}) for i,e in definition["entries"].items()}
         previous = definition["digest"]
         events = []
-        events_path = directory(ctx) / "events.jsonl"
+        events_path = root / "events.jsonl"
         if events_path.exists():
             for line in events_path.read_text(encoding="utf-8").splitlines():
                 event = json.loads(line)
@@ -164,7 +170,7 @@ def read_queue(ctx):
                 row.update(event.get("update", {}))
                 previous = event["digest"]
                 events.append(event)
-        return {"definition": definition, "items": rows, "events": events, "tip": previous}
+        return {"definition": definition, "items": rows, "events": events, "tip": previous, "directory": str(root)}
     except (OSError, ValueError, KeyError, TypeError) as error:
         raise StageDeferred(f"invalid revalidation history: {error}") from error
 
@@ -174,7 +180,7 @@ def _append(ctx, item, kind, update, **detail):
     event = dict(sequence=len(queue["events"])+1, previous=queue["tip"], item=item, kind=kind,
                  update=update, ts=ctx.now(), **detail)
     event["digest"] = _digest(event)
-    with (directory(ctx)/"events.jsonl").open("a", encoding="utf-8") as out:
+    with (Path(queue["directory"])/"events.jsonl").open("a", encoding="utf-8") as out:
         out.write(json.dumps(event, ensure_ascii=False) + "\n")
         out.flush()
         os.fsync(out.fileno())
@@ -231,6 +237,8 @@ def _review_context(ctx, queue=None, row=None):
                         raise StageDeferred("SIM deck book changed before oracle dispatch")
             require_oracle_idle(_idle_context(ctx, queue))
             _manifest(ctx)
+            from .revalidation_epochs import validate_epoch_inputs
+            validate_epoch_inputs(ctx, queue["definition"])
             if queue["definition"]["runtime"] != _runtime(ctx):
                 raise StageDeferred("runtime changed before oracle dispatch")
         # Use the standard supported recording-only route. Review must precede
@@ -249,6 +257,8 @@ def advance(ctx):
         if (Path(ctx.run_dir)/"STOP").exists():
             return False
         queue = read_queue(ctx)
+        from .revalidation_epochs import validate_epoch_inputs
+        validate_epoch_inputs(ctx, queue["definition"])
         if queue["definition"]["runtime"] != _runtime(ctx):
             raise StageDeferred("revalidation runtime changed; independent review required")
         row = next((r for r in queue["items"].values() if r["status"] in {"SIM", "ORACLE"}), None)
@@ -276,7 +286,8 @@ def advance(ctx):
                 _scenario(ctx,row["item"],name,digest)
             status = "ORACLE" if stage == "SIM" and result.next_state == "ORACLE" else "REVIEW"
             deck_pins = {name:_file_hash(Path(ctx.repo)/name) for name in (result.data.get("deck_books") or {}).values() if name}
-            _append(ctx,row["item"],"result",{"status":status,"data":result.data,"outcome":result.next_state,"reason":result.reason,"deck_book_pins":deck_pins},stage=stage,attempt_id=attempt)
+            _append(ctx,row["item"],"result",{"status":status,"data":result.data,"outcome":result.next_state,"reason":result.reason,"deck_book_pins":deck_pins,
+                    "escalation":asdict(result.escalation) if result.escalation is not None else None},stage=stage,attempt_id=attempt)
         return True
 
 
@@ -342,6 +353,8 @@ def accept(ctx, item, *, reviewer):
         raise StageDeferred("independent recording review required")
     with locked(ctx):
         queue = read_queue(ctx)
+        from .revalidation_epochs import validate_epoch_inputs
+        validate_epoch_inputs(ctx, queue["definition"])
         if queue["definition"]["runtime"] != _runtime(ctx):
             raise StageDeferred("recording runtime changed; independent review required")
         row = queue["items"][item]
@@ -365,6 +378,7 @@ def completion_blocker(ctx):
         queue = read_queue(ctx)
         pending = [i for i,r in queue["items"].items() if r["status"] != "DONE"] if queue else []
         questions = [i for i,r in getattr(ctx,"items",{}).items() if r.state == "ESCALATED"]
+        questions += queue.get("unresolved_escalations", []) if queue else []
         if outstanding or pending or questions:
             return f"source-bound evidence incomplete: {len(outstanding)} clause/gating rows, {len(pending)} revalidations, {len(questions)} preserved escalations"
         return None
