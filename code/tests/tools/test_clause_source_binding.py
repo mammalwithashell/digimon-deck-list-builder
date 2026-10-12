@@ -241,3 +241,95 @@ def test_a1_additional_wire_and_membership_refusals(mutation):
     args['adjudication_ledger']=canonical_json_bytes(ledger);args['canonical_field']=canonical_json_bytes(field)
     with pytest.raises(SourceBindingError):bind_canonical_field(**args)
 
+
+
+def condition_fixture(cid='EX12-076'):
+    f=F/'conditions';d=json.loads((f/'inputs.json').read_text(encoding='utf-8'))
+    return dict(aggregate=gzip.decompress((F/'canonical_selection/aggregate.json.gz').read_bytes()),observations={oid:canonical_json_bytes(o)for oid,o in d['observations'].items()if o['extracted']['card_id']==cid},canonical_card=canonical_json_bytes(d['cards'][cid]),runtime_projection=canonical_json_bytes(d['runtime'][cid]),selection_ledger=(f/'card_compatibility_selections.json').read_bytes(),correction_document=(f/'card_corrections.json').read_bytes(),image_artifacts={path:(f/name).read_bytes()for path,name in d['images'].items()},raw_pages={url:gzip.decompress((f/name).read_bytes())for url,name in d['raw_files'].items()},old_input_revision=d['revision'],new_input_revision=d['revision'])
+
+@pytest.mark.parametrize('cid',['EX12-046','EX12-063','EX12-076','EX3-010'])
+def test_condition_units_real_four_card_batch(cid):
+    from tools.clause_coverage.source_binding import bind_condition_units,validate_condition_units
+    args=condition_fixture(cid);before=copy.deepcopy(args);b=bind_condition_units(**args);validate_condition_units(b,**args);assert args==before
+    assert b['projection']==json.loads(args['runtime_projection'])['xros_req']
+    if cid=='EX3-010':
+        assert len(b['units'])==1 and b['units'][0]['kind']=='image-correction'
+        assert 'observation_id' not in b['units'][0] and b['units'][0]['image_sha256']
+    else:
+        assert any('Assembly' in u['text']for u in b['units'])
+        assert all(u['kind']=='official-section'for u in b['units'])
+
+@pytest.mark.parametrize('mutation',['runtime','missing_observation','foreign_member','raw_change','stale_selection','selection_value','missing_image','changed_image','correction_stale','correction_value','selection_overlap','wrong_card','old_revision','bool_schema','canonical_member'])
+def test_condition_adapter_refusals(mutation):
+    from tools.clause_coverage.source_binding import bind_condition_units
+    correction_case=mutation in ['missing_image','changed_image','correction_stale','correction_value','selection_overlap','bool_schema'];args=condition_fixture('EX3-010'if correction_case else 'EX12-076')
+    if mutation=='runtime':
+        r=json.loads(args['runtime_projection']);r['xros_req']=r['xros_req'].split('\n')[0];args['runtime_projection']=canonical_json_bytes(r)
+    elif mutation=='missing_observation':args['observations'].pop(next(iter(args['observations'])))
+    elif mutation=='foreign_member':args['observations']['0'*64]=next(iter(args['observations'].values()))
+    elif mutation=='raw_change':args['raw_pages']={k:v+b'changed'for k,v in args['raw_pages'].items()}
+    elif mutation in ['stale_selection','selection_value']:
+        d=json.loads(args['selection_ledger']);b=bind_condition_units(**args);values=b['candidate_values'];oid=sorted(values)[0]
+        r=dict(schema_version=1,selection_id='synthetic-negative-only',selection_kind='official_condition_projection',card_id='EX12-076',field_path='xros_req',source_manifest_revision=args['new_input_revision'],candidate_values=values,candidate_set_digest=content_digest(values),selected_observation_id=oid,selected_value=values[oid],selected_value_digest=content_digest(values[oid]),reviewer='test',reason='explicit fault injection, not production approval',reviewed_at='2026-10-12T00:00:00Z')
+        r['source_manifest_revision'if mutation=='stale_selection'else 'selected_value']='0'*64;d['selections'].append(r);args['selection_ledger']=canonical_json_bytes(d)
+    elif mutation=='missing_image':args['image_artifacts']={}
+    elif mutation=='changed_image':args['image_artifacts']={k:v+b'changed'for k,v in args['image_artifacts'].items()}
+    elif mutation in ['correction_stale','correction_value','bool_schema']:
+        d=json.loads(args['correction_document'])
+        if mutation=='bool_schema':d['schema_version']=True
+        else:d['compatibility_corrections'][0]['source_manifest_revision'if mutation=='correction_stale'else 'value']='0'*64
+        args['correction_document']=canonical_json_bytes(d)
+    elif mutation=='selection_overlap':
+        d=json.loads(args['selection_ledger']);r=json.loads(args['correction_document'])['compatibility_corrections'][0];d['selections'].append(dict(schema_version=1,selection_id='synthetic-overlap',selection_kind='official_condition_projection',card_id='EX3-010',field_path='xros_req',source_manifest_revision=r['source_manifest_revision'],candidate_values=r['candidate_values'],candidate_set_digest=r['candidate_set_digest'],selected_observation_id=r['base_observation_id'],selected_value=r['base_value'],selected_value_digest=r['base_value_digest'],reviewer='test',reason='negative overlap',reviewed_at=r['reviewed_at']));args['selection_ledger']=canonical_json_bytes(d)
+    elif mutation=='wrong_card':
+        d=json.loads(args['runtime_projection']);d['card_id']='BT1-001';args['runtime_projection']=canonical_json_bytes(d)
+    elif mutation=='old_revision':args['old_input_revision']='0'*64
+    elif mutation=='canonical_member':
+        d=json.loads(args['canonical_card']);d['printings'].pop();args['canonical_card']=canonical_json_bytes(d)
+    with pytest.raises(SourceBindingError):bind_condition_units(**args)
+
+@pytest.mark.parametrize('mutation',['unit_omission','clause_omission','multiplicity','text','fake_official'])
+def test_condition_metadata_replayed_not_self_certified(mutation):
+    from tools.clause_coverage.source_binding import bind_condition_units,validate_condition_units
+    args=condition_fixture('EX3-010'if mutation=='fake_official'else 'EX12-076');b=bind_condition_units(**args)
+    if mutation=='unit_omission':b['units'].pop()
+    elif mutation=='clause_omission':b['units'][0]['spans'].pop()
+    elif mutation=='multiplicity':b['units'].append(copy.deepcopy(b['units'][0]))
+    elif mutation=='text':b['units'][-1]['text']='Assembly'
+    else:b['units'][0]['kind']='official-section';b['units'][0]['observation_id']='0'*64
+    with pytest.raises(SourceBindingError):validate_condition_units(b,**args)
+
+@pytest.mark.parametrize('cid',['EX12-046','EX12-063','EX12-076'])
+def test_structured_assembly_does_not_get_folded_into_digivolve(cid):
+    from tools.clause_coverage.source_binding import bind_condition_units
+    b=bind_condition_units(**condition_fixture(cid))
+    special=next(u for u in b['units']if u['condition_type']=='special_play_condition')
+    digivolve=next(u for u in b['units']if u['condition_type']=='special_digivolution_condition')
+    assert special['text'].startswith('Assembly -') and special['section_index']!=digivolve['section_index']
+    assert 'Assembly' not in digivolve['text'] and all('Assembly'not in s['text']for s in digivolve['spans'])
+    assert any('Assembly'in s['text']for s in special['spans'])
+    assert not any(s['text']=='[Special Digivolution Condition]'for u in b['units']for s in u['spans'])
+
+def test_unsupported_image_path_refused_by_approved_document_loader():
+    from tools.clause_coverage.source_binding import bind_condition_units
+    a=condition_fixture('EX3-010');d=json.loads(a['correction_document']);d['compatibility_corrections'][0]['image_artifact_path']='../../image.webp';a['correction_document']=canonical_json_bytes(d)
+    with pytest.raises(SourceBindingError):bind_condition_units(**a)
+
+
+def test_unknown_structural_section_is_not_silently_omitted():
+    # Synthetic adversarial source-schema mutation, never a production approval.
+    from tools.clause_coverage.source_binding import bind_condition_units
+    a=condition_fixture();aggregate=json.loads(a['aggregate']);card=json.loads(a['canonical_card']);changes={};newobs={}
+    for oid,raw in a['observations'].items():
+        o=json.loads(raw)
+        if o['source']=='official':o['extracted']['text_sections'].append({'label':'Future Condition','text':'Additional restriction.'})
+        new=content_digest({k:o[k]for k in ['raw_payload_digest','parser_version','source_schema_version','extracted']},exclude_operational=True);changes[oid]=new;o['observation_id']=new;newobs[new]=canonical_json_bytes(o)
+    for lane in aggregate['sources'].values():
+        lane['observation_ids']=[changes.get(x,x)for x in lane['observation_ids']]
+        for ref in lane['observation_refs']:ref['observation_id']=changes.get(ref['observation_id'],ref['observation_id'])
+    aggregate['membership']['observation_ids']=[changes.get(x,x)for x in aggregate['membership']['observation_ids']]
+    aggregate.pop('manifest_revision');rev=content_digest(aggregate,exclude_operational=True);aggregate['manifest_revision']=rev
+    for p in card['printings']:p['observation_ids']=[changes[x]for x in p['observation_ids']]
+    for p in card['provenance'].values():p['observation_ids']=[changes.get(x,x)for x in p['observation_ids']];p['selected_observation_id']=changes.get(p['selected_observation_id'],p['selected_observation_id'])
+    a.update(aggregate=canonical_json_bytes(aggregate),observations=newobs,canonical_card=canonical_json_bytes(card),old_input_revision=rev,new_input_revision=rev)
+    with pytest.raises(SourceBindingError,match='unsupported condition source section'):bind_condition_units(**a)

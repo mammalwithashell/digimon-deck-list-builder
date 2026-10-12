@@ -355,3 +355,153 @@ def _bind_canonical_field(aggregate_raw, observation_bytes, field_raw, ledger_ra
             'dependencies': {m.__name__:_sha(Path(m.__file__).read_bytes())
                              for m in (adjudications, models, normalization, serialization)},
             'validator_sha256': _sha(Path(__file__).read_bytes())}
+
+
+def bind_condition_units(*, aggregate, observations, canonical_card, runtime_projection,
+                         selection_ledger, correction_document, image_artifacts, raw_pages,
+                         old_input_revision, new_input_revision):
+    """A2 condition units only. Does not assign whole-book clause IDs or verdicts."""
+    try:
+        return _bind_condition_units(aggregate, observations, canonical_card, runtime_projection,
+            selection_ledger, correction_document, image_artifacts, raw_pages,
+            old_input_revision, new_input_revision)
+    except SourceBindingError:
+        raise
+    except (KeyError, TypeError, ValueError, AttributeError, IndexError, CardDataError) as error:
+        raise SourceBindingError('condition source binding refused: ' + str(error)) from error
+
+
+def _bind_condition_units(aggregate_raw, observation_bytes, card_raw, runtime_raw,
+                          selections_raw, corrections_raw, images, raw_pages, old, new):
+    from tools.card_data import models, compatibility_conditions as conditions
+    from tools.card_data import compatibility_selections as selections
+    from tools.card_data import compatibility_corrections as corrections
+    from tools.card_data.complete_candidate import _canonical_card_from_payload
+    _require(all(isinstance(x,bytes)for x in (aggregate_raw,card_raw,runtime_raw,selections_raw,corrections_raw)),
+             'condition inputs must be bytes')
+    _require(isinstance(old,str) and isinstance(new,str) and re.fullmatch('[0-9a-f]{64}',new)
+             and old==new,'explicit equal condition source revisions required')
+    aggregate=json.loads(aggregate_raw,object_pairs_hook=_unique)
+    _require(type(aggregate['schema_version'])is int and aggregate['schema_version']==1
+             and aggregate['manifest_kind']=='full-pool-source-aggregate'
+             and aggregate['manifest_revision']==new
+             and serialization.content_digest({k:v for k,v in aggregate.items()if k!='manifest_revision'},exclude_operational=True)==new,
+             'condition aggregate binding mismatch')
+    record=json.loads(card_raw,object_pairs_hook=_unique);cid=record['card_id']
+    _require(type(record['schema_version'])is int and record['schema_version']==1,'canonical card schema')
+    card=_canonical_card_from_payload(cid,record,path=Path('<supplied-bytes>'))
+    _require(set(aggregate['sources'])=={'official','digimoncard_io'},'complete condition source lanes required')
+    member_refs={};all_refs=[]
+    for source,lane in aggregate['sources'].items():
+        refs=lane['observation_refs'];ids=lane['observation_ids']
+        _require(lane['source']==source and lane['scope'].startswith('full-pool:')
+                 and len(ids)==len(set(ids))==len(refs)==lane['observation_count']
+                 and set(ids)=={r['observation_id']for r in refs}
+                 and set(lane['gameplay_card_ids'])=={r['gameplay_card_id']for r in refs}
+                 and len(lane['gameplay_card_ids'])==lane['gameplay_card_count'],'condition source closure')
+        all_refs.extend(refs)
+        for ref in refs:
+            if ref['gameplay_card_id']==cid:
+                _require(ref['observation_id']not in member_refs,'duplicate condition member')
+                member_refs[ref['observation_id']]=(source,ref)
+    membership=aggregate['membership'];all_ids=[r['observation_id']for r in all_refs]
+    _require(len(all_ids)==len(set(all_ids))==membership['observation_count']
+             and set(membership['observation_ids'])==set(all_ids) and len(membership['observation_ids'])==len(all_ids)
+             and set(membership['gameplay_card_ids'])=={r['gameplay_card_id']for r in all_refs}
+             and len(membership['gameplay_card_ids'])==membership['gameplay_card_count'],'condition aggregate closure')
+    _require(member_refs and set(member_refs)==set(observation_bytes),'complete same-card condition membership required')
+    typed={};printing_pairs=set()
+    for oid,raw in observation_bytes.items():
+        _require(isinstance(raw,bytes),'condition observation must be bytes')
+        o=json.loads(raw,object_pairs_hook=_unique);source,ref=member_refs[oid];lane=aggregate['sources'][source]
+        _require(type(o['schema_version'])is int and o['schema_version']==1 and o['observation_id']==oid
+                 and o['source']==source and o['extracted']['card_id']==cid
+                 and o['parser_version']==lane['parser_version'] and o['source_schema_version']==lane['source_schema_version'],
+                 'condition observation identity/source/card mismatch')
+        observation=models.SourceObservation(**{**o,'source':models.SourceName(source)})
+        _require(serialization.observation_digest(observation)==oid,'condition observation hash mismatch')
+        candidate=normalization.observation_candidate(observation)
+        _require(candidate.printing_id==ref['printing_id'],'condition printing mismatch')
+        printing_pairs.add((candidate.printing_id,oid));typed[oid]=observation
+        if source=='official':
+            # A2 accounts for ordinary boxes outside its condition scope, but
+            # never treats unknown structural labels as absent conditions.
+            allowed_labels = {label.lower() for label in LABELS} | set(conditions._CONDITION_LABELS)
+            _require(all(isinstance(section,dict) and isinstance(section.get('text'),str)
+                         and section.get('label','').lower() in allowed_labels
+                         for section in o['extracted']['text_sections']),
+                     'unsupported condition source section')
+            origin=urlparse(o['source_url'])
+            _require(origin.scheme=='https'and origin.netloc=='world.digimoncard.com'and origin.path=='/cards/', 'condition official origin')
+            _require(o['parser_version']=='official-html-v5'and o['source_schema_version']=='world-card-list-html-v1', 'unsupported condition source parser')
+            _require(_sha(raw_pages[o['source_url']])==o['raw_payload_digest'],'condition raw source changed/missing')
+    canonical_pairs=[(p.printing_id,oid)for p in card.printings for oid in p.observation_ids]
+    _require(len(canonical_pairs)==len(set(canonical_pairs))and set(canonical_pairs)==printing_pairs,
+             'canonical condition membership must match aggregate exactly')
+    selected=selections.selections_from_bytes(selections_raw)
+    document=corrections.correction_document_from_bytes(corrections_raw)
+    corrections.validate_image_artifacts(document,images)
+    relevant_selections=[s for s in selected if s.card_id==cid]
+    current_selections=[s for s in relevant_selections if s.source_manifest_revision==new]
+    relevant_corrections=[c for c in document.compatibility_corrections if c.card_id==cid]
+    current_corrections=[c for c in relevant_corrections if c.source_manifest_revision==new]
+    _require(not relevant_selections or len(current_selections)==1,'condition selection stale/ambiguous')
+    _require(not relevant_corrections or len(current_corrections)==1,'condition correction stale/ambiguous')
+    _require(not(current_selections and current_corrections),'condition selection/correction overlap')
+    values={oid:'\n'.join(f"[{s['label']}] {s['text']}".strip()for s in o.extracted['text_sections']
+            if any(label in s['label'].lower()for label in conditions._CONDITION_LABELS))
+            for oid,o in sorted(typed.items())if o.source is models.SourceName.OFFICIAL}
+    if current_selections:
+        _require(dict(current_selections[0].candidate_values)==values
+                 and current_selections[0].candidate_set_digest==serialization.content_digest(values),
+                 'condition selection candidate map changed')
+    if current_corrections:
+        correction=current_corrections[0]
+        projection,evidence=corrections.apply_image_correction(card,typed,correction,
+            source_manifest_revision=new,image_artifacts=images)
+        units=[{'kind':'image-correction','field':'xros_req','text':projection,
+                'correction_id':correction.correction_id,'candidate_values':dict(correction.candidate_values),
+                'candidate_set_digest':correction.candidate_set_digest,
+                'base_observation_id':correction.base_observation_id,'base_value':correction.base_value,
+                'evidence_observation_ids':list(evidence),'image_artifact_path':correction.image_artifact_path,
+                'image_sha256':correction.image_sha256,'reviewer':correction.reviewer,
+                'reviewed_at':correction.reviewed_at,'reason':correction.reason}]
+        selection_id=None
+    else:
+        projection,evidence=conditions.official_condition_projection(card,typed,selections=selected,source_manifest_revision=new)
+        selected_id=current_selections[0].selected_observation_id if current_selections else sorted(evidence)[0]
+        selection_id=current_selections[0].selection_id if current_selections else None
+        units=[]
+        for index,section in enumerate(typed[selected_id].extracted['text_sections']):
+            if any(label in section['label'].lower()for label in conditions._CONDITION_LABELS):
+                _require(section['label'].lower()in conditions._CONDITION_LABELS,'unsupported composite condition label')
+                units.append({'kind':'official-section','field':'xros_req','observation_id':selected_id,
+                    'printing_id':member_refs[selected_id][1]['printing_id'],'section_index':index,
+                    'label':section['label'],'condition_type':section['label'].lower().replace(' ','_'),
+                    'text':section['text']})
+        _require('\n'.join(f"[{u['label']}] {u['text']}".strip()for u in units)==projection,
+                 'condition unit multiplicity/reconstruction mismatch')
+    runtime=json.loads(runtime_raw,object_pairs_hook=_unique)
+    _require(set(runtime)=={'card_id','xros_req'} and runtime['card_id']==cid
+             and isinstance(runtime['xros_req'],str)and runtime['xros_req']==projection,'runtime condition projection mismatch')
+    for unit in units:
+        unit['spans']=[{'kind':s.kind,'timings':s.timings,'keyword':s.keyword,'text':s.text}
+                       for s in text_split.split_clauses(unit['text'])]
+    return {'version':1,'kind':'condition-source-unit-binding','card_id':cid,'field':'xros_req',
+            'old_input_revision':old,'new_input_revision':new,'projection':projection,
+            'candidate_values':values,'evidence_observation_ids':list(evidence),'selection_id':selection_id,'units':units,
+            'inputs':{'aggregate':_sha(aggregate_raw),'canonical_card':_sha(card_raw),'runtime_projection':_sha(runtime_raw),
+                      'selection_ledger':_sha(selections_raw),'correction_document':_sha(corrections_raw),
+                      'observations':{oid:_sha(raw)for oid,raw in sorted(observation_bytes.items())},
+                      'raw_pages':{url:_sha(raw)for url,raw in sorted(raw_pages.items())},
+                      'images':{path:_sha(raw)for path,raw in sorted(images.items())}},
+            'validator_sha256':_sha(Path(__file__).read_bytes()),
+            'dependencies':{m.__name__:_sha(Path(m.__file__).read_bytes())for m in
+                            (models,normalization,serialization,conditions,selections,corrections,text_split)}}
+
+
+def validate_condition_units(binding, **inputs):
+    """Recompute all units/spans from supplied sources; no metadata-only blessing."""
+    expected=bind_condition_units(**inputs)
+    _require(type(binding)is dict and serialization.canonical_json_bytes(binding)==serialization.canonical_json_bytes(expected),
+             'condition units differ from complete producer replay')
