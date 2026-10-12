@@ -91,8 +91,11 @@ def test_no_optional_language_means_no_optional_decline_probe(clauses):
 
 
 def test_a_mandatory_keyword_gets_no_probes_at_all(clauses):
-    assert clauses["EX12-047#effect#0"]["keyword"] == "Piercing"
-    assert fam(clauses, "EX12-047#effect#0") == {}
+    matches = [c for c in clauses.values()
+               if c["card_id"] == "EX12-047" and c["zone"] == "effect"
+               and c["keyword"] == "Piercing"]
+    assert len(matches) == 1, "expected one printed EX12-047 main-effect Piercing clause"
+    assert fam(clauses, matches[0]["id"]) == {}
 
 
 def test_you_may_inside_a_granted_keywords_reminder_is_not_the_clauses_choice(clauses):
