@@ -178,3 +178,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/tools/clause_coverage/link_source_units.py -text
 /code/tests/tools/test_link_source_units.py -text
 /code/tests/fixtures/card_data/link_source_units/.gitattributes -text
+
+# Preserve reviewed clean Dual association bytes.
+/code/tools/clause_coverage/clean_dual_association.py -text
+/code/tests/tools/test_clean_dual_association.py -text
+/code/tests/fixtures/card_data/clean_dual_association/.gitattributes -text

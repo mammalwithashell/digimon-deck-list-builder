@@ -1,0 +1,79 @@
+{
+  "card_id": "BT25-085",
+  "kind": "clean-dual-image-association-proposal",
+  "observations": [
+    {
+      "face_identity": [
+        {
+          "face_id": "primary",
+          "kind": "digimon"
+        },
+        {
+          "face_id": "dual",
+          "kind": "option"
+        }
+      ],
+      "faces_sha256": "2153916c155ef05bee07d559af2cf1a6b2ac71b0cb4fcfec0515b0160a1f2103",
+      "image_artifact": "BT25-085.webp",
+      "image_kind": "Digimon/Option",
+      "image_sha256": "feb3944be2a9d01b5de31efdfe92709a876f04e833bb77d8c48f5e3336cd9266",
+      "observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+      "printing_id": "BT25-085",
+      "raw_kind": "Digimon/Option",
+      "raw_sha256": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "sections_sha256": "010a98f219eebd43fea8a5b3f6cba3d6b53fbc2b5f2c6be9ee468dfd03b40ba8",
+      "source_image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085.png?260529",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    },
+    {
+      "face_identity": [
+        {
+          "face_id": "primary",
+          "kind": "digimon"
+        },
+        {
+          "face_id": "dual",
+          "kind": "option"
+        }
+      ],
+      "faces_sha256": "2153916c155ef05bee07d559af2cf1a6b2ac71b0cb4fcfec0515b0160a1f2103",
+      "image_artifact": "BT25-085_P1.webp",
+      "image_kind": "Digimon/Option",
+      "image_sha256": "169b26496e1265cd4c31a4effa3a3a3dada3623f36febf443128eacd121b317c",
+      "observation_id": "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+      "printing_id": "BT25-085_P1",
+      "raw_kind": "Digimon/Option",
+      "raw_sha256": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "sections_sha256": "010a98f219eebd43fea8a5b3f6cba3d6b53fbc2b5f2c6be9ee468dfd03b40ba8",
+      "source_image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085_P1.png?260529",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    },
+    {
+      "face_identity": [
+        {
+          "face_id": "primary",
+          "kind": "digimon"
+        },
+        {
+          "face_id": "dual",
+          "kind": "option"
+        }
+      ],
+      "faces_sha256": "2153916c155ef05bee07d559af2cf1a6b2ac71b0cb4fcfec0515b0160a1f2103",
+      "image_artifact": "BT25-085_P2.webp",
+      "image_kind": "Digimon/Option",
+      "image_sha256": "35d440e890e0e0acdd6019b550adfe82c66fa2802bba8cda4a79102854d7c222",
+      "observation_id": "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b",
+      "printing_id": "BT25-085_P2",
+      "raw_kind": "Digimon/Option",
+      "raw_sha256": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "sections_sha256": "010a98f219eebd43fea8a5b3f6cba3d6b53fbc2b5f2c6be9ee468dfd03b40ba8",
+      "source_image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085_P2.png?260529",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    }
+  ],
+  "reason": "All three exact official printings and images show Digimon/Option; preserve every face, condition, empty zone and Arts reminder without a correction.",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+  "status": "PENDING_INDEPENDENT_REVIEW",
+  "version": 1
+}
