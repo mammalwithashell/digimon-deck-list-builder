@@ -16,6 +16,7 @@ from .runtime_empty_condition import compose_empty_condition_runtime_rule_card
 from .dual_card_composition import compose_dual_card
 from .corrected_rule_card_composition import compose_corrected_rule_card, checker_dependencies
 from .link_card_composition import compose_link_card
+from .assembly_card_composition import compose_assembly_card
 
 _json = projection._json
 _sha = projection._sha
@@ -140,6 +141,18 @@ def _dispatch(snapshot, pin, inputs, images, authorization, input_root):
             yaml_bytes=_file(input_root, authorization['link_yaml']),
             expected_yaml_sha256=authorization['link_yaml']['sha256'])
         return result, result['claimed_fields'], result
+    if 'digixros_costs' in _json(record['runtime_record']) or 'assembly_yaml' in authorization:
+        _require(set(authorization) == {'assembly_yaml'}, 'exact Assembly YAML authorization required')
+        proof_inputs = {k: v for k, v in inputs.items() if k != 'scopes'}
+        proof_inputs.update(runtime_record=record['runtime_record'], registry_bytes=record['registry_bytes'], image_artifacts=images)
+        binding = enc({'schema_version': 1, 'input_sha256': projection.input_hashes(proof_inputs),
+                       'producer_sha256': projection.producer_dependencies()})
+        result = compose_assembly_card(**inputs, snapshot=snapshot, expected_extraction_sha256=pin,
+            runtime_record=record['runtime_record'], registry_bytes=record['registry_bytes'],
+            runtime_binding=binding, image_artifacts=images,
+            yaml_bytes=_file(input_root, authorization['assembly_yaml']),
+            expected_yaml_sha256=authorization['assembly_yaml']['sha256'])
+        return result['source_composition'], result['claimed_fields'], result
     _require(not authorization, 'unexpected capability authorization')
     proof_inputs = {k: v for k, v in inputs.items() if k != 'scopes'}
     proof_inputs.update(runtime_record=record['runtime_record'], registry_bytes=record['registry_bytes'], image_artifacts=images)
@@ -283,6 +296,14 @@ def build_diagnostic_source_book(*, candidate_root, input_root, extraction_artif
             units, spans, obligations, conservation = _descriptors(cid, source)
             row.update(status='COMPOSED_DIAGNOSTIC', source_unit_descriptors=units, span_descriptors=spans,
                 structural_obligations=obligations, conservation=conservation, span_count=len(spans))
+            if 'implementation_correspondence' in evidence:
+                row['source_status'] = source['status']
+                implementation = deepcopy(evidence['implementation_correspondence'])
+                row['implementation_correspondence'] = implementation
+                if implementation['status'] == 'BLOCKED' or implementation['unresolved_obligations']:
+                    row['status'] = 'BLOCKED'
+                    row['blockers'].append({'code': 'IMPLEMENTATION_CORRESPONDENCE_BLOCKED',
+                        'unresolved_obligations': deepcopy(implementation['unresolved_obligations'])})
         except (ValueError, TypeError, KeyError, IndexError, OSError) as error:
             row['status'] = 'BLOCKED'
             row['blockers'].append({'code': 'COMPOSITION_REFUSED', 'reason': str(error), 'error_type': type(error).__name__})

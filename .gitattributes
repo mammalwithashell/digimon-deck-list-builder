@@ -264,3 +264,6 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/digimon-dsl/src/bin/implementation_inventory/reference_steps.rs -text
 /code/digimon-dsl/src/bin/implementation_inventory/reference_formulas.rs -text
 /code/digimon-dsl/tests/implementation_references.rs -text
+
+# Preserve reviewed Assembly diagnostic dispatch regression bytes.
+/code/tests/tools/test_diagnostic_assembly_dispatch.py -text
