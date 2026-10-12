@@ -588,6 +588,11 @@ class Driver:
         return self._stop is not None
 
     def _idle_stop(self) -> Stop:
+        from .revalidation import completion_blocker
+        if getattr(self.config, "source_manifest", None):
+            reason = completion_blocker(self.ctx)
+            if reason:
+                return Stop("blocked", reason)
         open_items = [r for r in self.state.records.values() if not is_terminal(r.kind, r.state)]
         if not open_items:
             return Stop("complete", "every item is in a terminal state")
@@ -1041,6 +1046,8 @@ class Driver:
         return dcgo_script_presence(cards, root)
 
     def _on_start(self) -> None:
+        if getattr(self.config, "revalidation_enabled", False) and not self.serial:
+            raise ValueError("revalidation requires the serial driver to avoid duplicate item dispatch")
         self._ensure_run_harness("session start")
         scripts = (self.plan.get("dcgo") or {}).get("scripts") or {}
         missing = [c for c, p in scripts.items() if p is None]
@@ -1107,9 +1114,23 @@ class Driver:
             raise
         return self._finish_run()
 
+    def _revalidation_step(self) -> bool:
+        if not getattr(self.config, "revalidation_enabled", False):
+            return False
+        from .revalidation import advance
+        try:
+            return advance(self.ctx)
+        except StageDeferred as error:
+            message = f"revalidation deferred: {error}"
+            if message not in self.state.problems:
+                self.state.problems.append(message)
+            return False
+
     def _loop_serial(self) -> None:
         while not self._check_stop():
             self._round_start()
+            if self._revalidation_step():
+                continue
             task = next(self._ready_tasks({"worker": 1, "oracle": 1}), None)
             if task is None:
                 if self._stop is None:

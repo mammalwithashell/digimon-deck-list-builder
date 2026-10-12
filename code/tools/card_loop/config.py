@@ -83,11 +83,16 @@ class LoopConfig:
     stage_budget_usd: float | None = None
     clause_text_json: str = "qa/exam-clause-text.json"
     interaction_denominator: str = "data/interaction_denominator.json"
+    revalidation_enabled: bool = False
     source_manifest: str | None = None
     source_manifest_sha256: str | None = None
     dcgo_root: str | None = None
 
     def __post_init__(self):
+        if type(self.revalidation_enabled) is not bool:
+            raise ValueError("revalidation_enabled must be a boolean")
+        if self.revalidation_enabled and not self.source_manifest:
+            raise ValueError("revalidation requires an immutable source manifest")
         if type(self.job_timeout_s) is not int or not 1 <= self.job_timeout_s <= 2147483647:
             raise ValueError("job_timeout_s must be an integer within [1, 2147483647]")
         if self.source_manifest:
