@@ -1,0 +1,4 @@
+# Preserve externally pinned fixture bytes across Windows checkouts.
+*.json -text
+*.gz -text
+*.webp -text

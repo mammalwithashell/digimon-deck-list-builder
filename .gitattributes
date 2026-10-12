@@ -27,3 +27,6 @@ qa/qa-reports/exam-log.jsonl merge=union
 qa/card-loop/attempts.jsonl merge=union text eol=lf
 qa/card-loop/corrections.jsonl merge=union text eol=lf
 qa/card-loop/audits.jsonl merge=union text eol=lf
+# Exact checker bytes for the reviewed Dual association proof.
+code/tools/clause_coverage/dual_kind_association.py -text
+code/tests/tools/test_dual_kind_association.py -text
