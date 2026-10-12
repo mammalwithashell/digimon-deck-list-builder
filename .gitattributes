@@ -199,3 +199,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /openspec/changes/add-isolated-focused-runtime-snapshots/specs/legacy-free-training-runtime/spec.md -text
 /openspec/changes/add-isolated-focused-runtime-snapshots/tasks.md -text
 /openspec/changes/add-isolated-focused-runtime-snapshots/progress.md -text
+
+# Preserve reviewed Link YAML binding bytes.
+/code/tools/clause_coverage/link_yaml_binding.py -text
+/code/tests/tools/test_link_yaml_binding.py -text
+/code/tests/fixtures/card_data/link_yaml_binding/.gitattributes -text

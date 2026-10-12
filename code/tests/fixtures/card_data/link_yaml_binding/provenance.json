@@ -1,0 +1,17 @@
+{
+  "scope": "Exact current YAML input copies for offline Link cost and DP binding only",
+  "source_yaml": [
+    {
+      "path": "code\\digimon-engine\\cards\\bt21\\BT21-071.yaml",
+      "sha256": "18ad0845f21b6847342293792e4c42bf3f02863bf41c9a346cbedd3cd1da0a36",
+      "fixture": "BT21-071.yaml"
+    },
+    {
+      "path": "code\\digimon-engine\\cards\\bt21\\BT21-074.yaml",
+      "sha256": "5ec8d29f1c5b6376f654f631403d4da2eda214ccf76e9d5505f8e013542fae05",
+      "fixture": "BT21-074.yaml"
+    }
+  ],
+  "source_observations": "../link_source_units/*.json; reviewed original official R3 observations, not newly approved by this helper",
+  "engine_or_training_validation": false
+}
