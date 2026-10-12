@@ -39,6 +39,8 @@ _KNOWN_FIELD_KEYS = frozenset(
         "form_eng",
         "inherited_effect_description_eng",
         "level",
+        "link_effect_description_eng",
+        "max_count_in_deck",
         "play_cost",
         "security_effect_description_eng",
         "type_eng",
@@ -159,6 +161,7 @@ def _normalize_candidate_fields(raw_fields: Mapping[str, Any]) -> dict[str, Any]
     for field_path in (
         "effect_description_eng",
         "inherited_effect_description_eng",
+        "link_effect_description_eng",
         "security_effect_description_eng",
     ):
         if isinstance(fields.get(field_path), str):
@@ -197,6 +200,49 @@ def _render_effect_section(label: str, text: str) -> str | None:
 
 def _normalized_section_label(label: str) -> str:
     return " ".join(label.lower().split())
+
+
+_LINK_HEADER = re.compile(
+    r"^＜Link＞ .+?: Cost \d+(?: \(Plug this card from the hand or battle area "
+    r"sideways into the specified Digimon in the battle area\.\))?$"
+)
+_DECK_COPY_RULE = re.compile(
+    r"^(?:(?:\[Rule\]|\(Rule\))\s*)?You can include up to ([1-9]\d*) copies "
+    r"of cards with this card's card number in your deck\.$"
+)
+
+
+def _link_section_effect(label: str, text: str) -> str | None:
+    """Recognize explicit Link boxes and the older combined inherited HTML box.
+
+    The condition remains on the immutable observation. Only the text below
+    that condition is a linked effect; mentions of linking are not sufficient.
+    """
+
+    lowered = _normalized_section_label(label)
+    if lowered == "link effect":
+        return _normalize_printed_effect_text(text)
+    if lowered not in {"inherited effect", "inheritable effect"}:
+        return None
+    lines = text.strip().splitlines()
+    if not lines or not lines[0].startswith("＜Link＞"):
+        return None
+    if not _LINK_HEADER.fullmatch(lines[0]):
+        raise SourceSchemaError("unsupported combined official Link condition", source="official")
+    return _normalize_printed_effect_text("\n".join(lines[1:]).strip())
+
+
+def _printed_deck_copy_limit(sections: Iterable[Mapping[str, Any]]) -> int | None:
+    limits = {
+        int(match.group(1))
+        for section in sections
+        if _normalized_section_label(str(section.get("label", ""))) in {"effect", "rule", "special rule"}
+        for line in str(section.get("text", "")).splitlines()
+        if (match := _DECK_COPY_RULE.fullmatch(line.strip()))
+    }
+    if len(limits) > 1:
+        raise SourceSchemaError("conflicting printed deck copy limits", source="official")
+    return next(iter(limits), None)
 
 
 def _split_one_shot_security_lines(text: str) -> tuple[str, list[str]]:
@@ -316,6 +362,10 @@ def _parse_faces(
                 )
             label = str(section.get("label", ""))
             text = str(section.get("text", ""))
+            if observation.source is SourceName.OFFICIAL and _link_section_effect(label, text) is not None:
+                # Link effects have their own canonical field, not a main or
+                # inherited effect on the Digimon's structural face.
+                continue
             rendered = _render_face_section(label, text)
             lowered = _normalized_section_label(label)
             if "security" in lowered:
@@ -470,6 +520,7 @@ def _official_fields(extracted: Mapping[str, Any]) -> dict[str, Any]:
     effect_parts: list[str] = []
     inherited_parts: list[str] = []
     security_parts: list[str] = []
+    link_parts: list[str] = []
     if isinstance(sections, list):
         has_explicit_security = any(
             isinstance(section, Mapping)
@@ -482,7 +533,10 @@ def _official_fields(extracted: Mapping[str, Any]) -> dict[str, Any]:
             label = str(section.get("label", ""))
             text = str(section.get("text", ""))
             lowered = _normalized_section_label(label)
-            if "security" in lowered:
+            link_effect = _link_section_effect(label, text)
+            if link_effect is not None:
+                link_parts.append(link_effect)
+            elif "security" in lowered:
                 rendered = _render_effect_section(label, text)
                 if rendered:
                     security_parts.append(rendered)
@@ -526,6 +580,12 @@ def _official_fields(extracted: Mapping[str, Any]) -> dict[str, Any]:
         "inherited_effect_description_eng": "\n".join(inherited_parts),
         "security_effect_description_eng": "\n".join(security_parts),
     }
+    if link_parts:
+        mapped["link_effect_description_eng"] = "\n".join(link_parts)
+    if isinstance(sections, list):
+        limit = _printed_deck_copy_limit(section for section in sections if isinstance(section, Mapping))
+        if limit is not None:
+            mapped["max_count_in_deck"] = limit
     return {key: value for key, value in mapped.items() if value is not None}
 
 

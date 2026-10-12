@@ -1,0 +1,38 @@
+[
+  {
+    "fixture": "bt21_009_runtime_surface.html",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522028",
+    "category_id": "522028",
+    "observation_id": "dbad11adafff55b56d7fa97d1e6cde53ecb2a7cd5987ad99bf60fd84475c3d0c",
+    "raw_page_sha256": "59226d6e3d8cc446a3668e4b7885b4808f277a6a0eab8345b9001f1fce3b1dc8",
+    "fixture_sha256": "6fe88ce972889f4703051b48c9abaf00e6a02f7dc52f5c3f6081c06e72338565",
+    "card_id": "BT21-009"
+  },
+  {
+    "fixture": "bt24_032_runtime_surface.html",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522033",
+    "category_id": "522033",
+    "observation_id": "0a11db4389f9baabbb3f3cbfd60beb9b9edee1353555e159b9c95ecfc321cafc",
+    "raw_page_sha256": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a",
+    "fixture_sha256": "99b1cc80d8d9c6d1d28851ba24c1477ac7b8760a3fc448d9e67e230030c081b7",
+    "card_id": "BT24-032"
+  },
+  {
+    "fixture": "bt11_061_runtime_surface.html",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522013",
+    "category_id": "522013",
+    "observation_id": "0db1e7c51f324872de4bed9b893b0ed0c0d3a27680a6f2e81d468007775fa171",
+    "raw_page_sha256": "ed7cadc42886414f353a641ef80e46f73707b6d30b821fee7e65d54e7f04ccd9",
+    "fixture_sha256": "4154d589e97a8c62737a4200a5f67030fe1b24e08a92d2865818fbbbc1b7d40c",
+    "card_id": "BT11-061"
+  },
+  {
+    "fixture": "ex11_027_runtime_surface.html",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522034",
+    "category_id": "522034",
+    "observation_id": "ed847c181a9f44f4f8ced08552af23f309be55fd7c17d459226d425bbc08b5d6",
+    "raw_page_sha256": "15b117b93430db7d148b9c94630f836b71e97dfca3c4bc94f7b90bb60c02985d",
+    "fixture_sha256": "fba9b19a9db7f10a90e2fecba40118039ae827e060abdee6050f50baa9a42394",
+    "card_id": "EX11-027"
+  }
+]
