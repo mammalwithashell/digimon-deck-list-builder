@@ -173,3 +173,8 @@ code/tests/fixtures/card_data/source_book_v2_rust/.gitattributes -text
 code/tools/dcgo-harness/src/exam/source_book_v2.rs -text
 code/tools/dcgo-harness/src/exam/source_book_v2_tests.rs -text
 code/tools/clause_coverage/review_source_book_v2.py -text
+
+# Preserve independently reviewed Link adapter bytes.
+/code/tools/clause_coverage/link_source_units.py -text
+/code/tests/tools/test_link_source_units.py -text
+/code/tests/fixtures/card_data/link_source_units/.gitattributes -text
