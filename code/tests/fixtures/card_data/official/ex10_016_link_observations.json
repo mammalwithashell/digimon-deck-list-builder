@@ -1,0 +1,250 @@
+[
+  {
+    "extracted": {
+      "attribute": "Tool",
+      "card_id": "EX10-016",
+      "card_type": "Digimon",
+      "colors": [
+        "Green"
+      ],
+      "dp": 1000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Green"
+          ],
+          "cost": 0,
+          "from_level": 2,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Green"
+          ],
+          "dp": 1000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 3,
+          "name": "Mirrormon",
+          "play_cost": 3,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+            },
+            {
+              "label": "Effect",
+              "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon."
+            },
+            {
+              "label": "Link DP",
+              "text": "+3000 DP"
+            },
+            {
+              "label": "Link Condition",
+              "text": "\uff1cLink\uff1e [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+            },
+            {
+              "label": "Link Effect",
+              "text": "[When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn."
+            }
+          ]
+        }
+      ],
+      "form": "Stnd./Appmon",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 3,
+      "name": "Mirrormon",
+      "play_cost": 3,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522031",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/EX10-016_P1.png?260529",
+        "printing_id": "EX10-016_P1"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "Yes, you can.",
+          "date": "Sep. 5, 2025",
+          "number": "Q5046",
+          "question": "Can I also activate this card's link effect by trashing this card itself when it's a link card?"
+        },
+        {
+          "answer": "Yes, you can.",
+          "date": "Sep. 5, 2025",
+          "number": "Q5047",
+          "question": "I used and have a Digimon that has multiple link cards including this card.\nCan I use this card's Link effect to trash one of that Digimon's link cards other than this card?"
+        }
+      ],
+      "rarity": "C",
+      "rule_grants": {
+        "attributes": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "\uff1cLink\uff1e [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn."
+        }
+      ],
+      "type": "Mirror"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "2808cb56f5070d281459ec50935bbdd989dc8f538a2a16914feefa11678031e1",
+    "parser_version": "official-html-v4",
+    "raw_payload_digest": "0dec695bf2d28636ad0b30f96369b106c022b3d50ef4173e5246f2d941c90c92",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522031:EX10-016:EX10-016_P1",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522031"
+  },
+  {
+    "extracted": {
+      "attribute": "Tool",
+      "card_id": "EX10-016",
+      "card_type": "Digimon",
+      "colors": [
+        "Green"
+      ],
+      "dp": 1000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Green"
+          ],
+          "cost": 0,
+          "from_level": 2,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Green"
+          ],
+          "dp": 1000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 3,
+          "name": "Mirrormon",
+          "play_cost": 3,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+            },
+            {
+              "label": "Effect",
+              "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon."
+            },
+            {
+              "label": "Link DP",
+              "text": "+3000 DP"
+            },
+            {
+              "label": "Link Condition",
+              "text": "\uff1cLink\uff1e [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+            },
+            {
+              "label": "Link Effect",
+              "text": "[When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn."
+            }
+          ]
+        }
+      ],
+      "form": "Stnd./Appmon",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 3,
+      "name": "Mirrormon",
+      "play_cost": 3,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522031",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/EX10-016.png?260529",
+        "printing_id": "EX10-016"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "Yes, you can.",
+          "date": "Sep. 5, 2025",
+          "number": "Q5046",
+          "question": "Can I also activate this card's link effect by trashing this card itself when it's a link card?"
+        },
+        {
+          "answer": "Yes, you can.",
+          "date": "Sep. 5, 2025",
+          "number": "Q5047",
+          "question": "I used and have a Digimon that has multiple link cards including this card.\nCan I use this card's Link effect to trash one of that Digimon's link cards other than this card?"
+        }
+      ],
+      "rarity": "C",
+      "rule_grants": {
+        "attributes": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "\uff1cLink\uff1e [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn."
+        }
+      ],
+      "type": "Mirror"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "5319cc6c72bcb727a465b4451292b072487f0cc9dfd698ce0e21902475ac6d89",
+    "parser_version": "official-html-v4",
+    "raw_payload_digest": "0dec695bf2d28636ad0b30f96369b106c022b3d50ef4173e5246f2d941c90c92",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522031:EX10-016:EX10-016",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522031"
+  }
+]
