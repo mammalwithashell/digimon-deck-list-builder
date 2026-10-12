@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "scope": "Pure segmentation fixture, not source or family approval. Original full snapshot required for A2 validation.",
+  "card_id": "BT12-011",
+  "inventory_sha256": "069f01875a24480557622af63b2392b5edd3b519da57be63840dad569c7806e8",
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "source_unit": {
+    "kind": "official-section",
+    "field": "xros_req",
+    "observation_id": "23ecaca296c4318e7fa6e16c4778a144ddd2c792ad750456d031eafb3e36a62c",
+    "section_index": 2,
+    "label": "Special Play Condition",
+    "condition_type": "special_play_condition",
+    "text": "DigiXros -2: 1 Digimon card w/＜Save＞ in text"
+  },
+  "observation": {
+    "extracted": {
+      "attribute": "Data",
+      "card_id": "BT12-011",
+      "card_type": "Digimon",
+      "colors": [
+        "Red"
+      ],
+      "dp": 4000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Red"
+          ],
+          "cost": 2,
+          "from_level": 3,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Red"
+          ],
+          "dp": 4000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 4,
+          "name": "Shoutmon (King Version)",
+          "play_cost": 5,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[Digivolve] 2 from Lv.3 w/＜Save＞ in text"
+            },
+            {
+              "label": "Effect",
+              "text": "[On Play][When Digivolving] You may play 1 [Taiki Kudo], [Yuu Amano], or [Tagiru Akashi] card from your hand without paying its cost.\n[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers."
+            },
+            {
+              "label": "Special Play Condition",
+              "text": "DigiXros -2: 1 Digimon card w/＜Save＞ in text"
+            }
+          ]
+        }
+      ],
+      "form": "Champion",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 4,
+      "name": "Shoutmon (King Version)",
+      "play_cost": 5,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522902",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT12-011_P1.png?260529",
+        "printing_id": "BT12-011_P1"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "U",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[Digivolve] 2 from Lv.3 w/＜Save＞ in text"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] 2 from Lv.3 w/＜Save＞ in text"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play][When Digivolving] You may play 1 [Taiki Kudo], [Yuu Amano], or [Tagiru Akashi] card from your hand without paying its cost.\n[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "DigiXros -2: 1 Digimon card w/＜Save＞ in text"
+        }
+      ],
+      "type": "Mini Dragon/Xros Heart"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "23ecaca296c4318e7fa6e16c4778a144ddd2c792ad750456d031eafb3e36a62c",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "d19a21154e21453304021f71a7d07712673ffbf63948c98fe7bc7b3ebd0d0136",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522902:BT12-011:BT12-011_P1",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522902"
+  }
+}

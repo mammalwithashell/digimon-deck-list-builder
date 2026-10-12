@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "scope": "Pure segmentation fixture, not source or family approval. Original full snapshot required for A2 validation.",
+  "card_id": "BT10-063",
+  "inventory_sha256": "069f01875a24480557622af63b2392b5edd3b519da57be63840dad569c7806e8",
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "source_unit": {
+    "kind": "official-section",
+    "field": "xros_req",
+    "observation_id": "70e4900f57f68bca8f5b4677f78a3e0478b33c54b413da4024187143fc7f0655",
+    "section_index": 0,
+    "label": "Special Play Condition",
+    "condition_type": "special_play_condition",
+    "text": "DigiXros -2: [Monitamon] × [Monitamon] × [Monitamon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+  },
+  "observation": {
+    "extracted": {
+      "attribute": "Data",
+      "card_id": "BT10-063",
+      "card_type": "Digimon",
+      "colors": [
+        "Black"
+      ],
+      "dp": 7000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Black"
+          ],
+          "cost": 2,
+          "from_level": 3,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Black"
+          ],
+          "dp": 7000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 4,
+          "name": "Hi-VisionMonitamon",
+          "play_cost": 6,
+          "text_sections": [
+            {
+              "label": "Special Play Condition",
+              "text": "DigiXros -2: [Monitamon] × [Monitamon] × [Monitamon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+            }
+          ]
+        }
+      ],
+      "form": "Champion",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 4,
+      "name": "Hi-VisionMonitamon",
+      "play_cost": 6,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522011",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT10-063.png?260529",
+        "printing_id": "BT10-063"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "C",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Play Condition",
+          "text": "DigiXros -2: [Monitamon] × [Monitamon] × [Monitamon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+        }
+      ],
+      "type": "LCD/Twilight/Xros Heart"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "70e4900f57f68bca8f5b4677f78a3e0478b33c54b413da4024187143fc7f0655",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "8456f58ecc89895235347925425e28c72c6453b6bd0b98f9a5073a1e86914df7",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522011:BT10-063:BT10-063",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522011"
+  }
+}

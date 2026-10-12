@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "scope": "Pure segmentation fixture, not source or family approval. Original full snapshot required for A2 validation.",
+  "card_id": "EX3-014",
+  "inventory_sha256": "069f01875a24480557622af63b2392b5edd3b519da57be63840dad569c7806e8",
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "source_unit": {
+    "kind": "official-section",
+    "field": "xros_req",
+    "observation_id": "0e29dacfb3602fd1f88ba7773167a12de6c94a6a22fc308a1db20539d050c43a",
+    "section_index": 1,
+    "label": "Special Play Condition",
+    "condition_type": "special_play_condition",
+    "text": "DigiXros -2 from 5 Digimon cards w/different names and [Dragon], [saur], or [Ceratopsian] in one of their traits\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+  },
+  "observation": {
+    "extracted": {
+      "attribute": "Virus",
+      "card_id": "EX3-014",
+      "card_type": "Digimon",
+      "colors": [
+        "Red"
+      ],
+      "dp": 12000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Red"
+          ],
+          "cost": 4,
+          "from_level": 5,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Red"
+          ],
+          "dp": 12000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 6,
+          "name": "Dorbickmon",
+          "play_cost": 13,
+          "text_sections": [
+            {
+              "label": "Effect",
+              "text": "＜Rush＞ (This Digimon may attack the turn it was played.)\n[On Play] Delete 1 of your opponent's Digimon with 3000 DP or less. For each card with [Dragon], [saur], or [Ceratopsian] in one of its traits in this Digimon's digivolution cards, add 2000 to the maximum DP you can choose with this effect."
+            },
+            {
+              "label": "Special Play Condition",
+              "text": "DigiXros -2 from 5 Digimon cards w/different names and [Dragon], [saur], or [Ceratopsian] in one of their traits\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+            }
+          ]
+        }
+      ],
+      "form": "Mega",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 6,
+      "name": "Dorbickmon",
+      "play_cost": 13,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522012",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/EX3-014_P1.png?260529",
+        "printing_id": "EX3-014_P1"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "Yes, [Dragonkin] is included.",
+          "date": "Mar. 28, 2024",
+          "number": "Q3377",
+          "question": "Does \"[Dragon], [saur] or [Ceratopsian] in one of its traits\" mean that this effect's targets include [Dragonkin] in addition to [Dragon]?"
+        }
+      ],
+      "rarity": "R",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Rush＞ (This Digimon may attack the turn it was played.)\n[On Play] Delete 1 of your opponent's Digimon with 3000 DP or less. For each card with [Dragon], [saur], or [Ceratopsian] in one of its traits in this Digimon's digivolution cards, add 2000 to the maximum DP you can choose with this effect."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "DigiXros -2 from 5 Digimon cards w/different names and [Dragon], [saur], or [Ceratopsian] in one of their traits\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+        }
+      ],
+      "type": "Dragonkin/Big Death-Stars"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "0e29dacfb3602fd1f88ba7773167a12de6c94a6a22fc308a1db20539d050c43a",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "189e190cfb5f0ec5f1e64f140c9b64a15ac2d7d66b8b8932f82168bf212df75d",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522012:EX3-014:EX3-014_P1",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522012"
+  }
+}
