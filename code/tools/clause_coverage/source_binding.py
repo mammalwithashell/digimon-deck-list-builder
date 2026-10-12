@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 
 from tools.card_data import normalization, serialization
 from tools.card_data.models import CARD_ID_RE
+from tools.card_data.errors import CardDataError
 from . import semantic_fingerprint, text_split
 
 VERSION = 1
@@ -230,3 +231,127 @@ def validate_binding(binding, *, inputs, raw_pages, expected_universe):
              'source binding differs from complete fresh derivation')
 
 
+
+
+def bind_canonical_field(*, aggregate: bytes, observations: dict[str, bytes],
+                         canonical_field: bytes, adjudication_ledger: bytes,
+                         old_input_revision: str, new_input_revision: str) -> dict:
+    """A1 only: replay one selected ordinary canonical field, never a whole book.
+
+    Both revisions are caller pins. Current producer selections bind one source
+    revision as both old/new; unequal revisions require a future producer path.
+    All official AND secondary candidate observations come from that pinned
+    aggregate's same-card membership. Raw-page extraction/approval authenticity
+    remain the caller's independently reviewed source-input responsibility.
+    """
+    try:
+        return _bind_canonical_field(aggregate, observations, canonical_field,
+                                     adjudication_ledger, old_input_revision, new_input_revision)
+    except SourceBindingError:
+        raise
+    except (KeyError, TypeError, ValueError, AttributeError, IndexError, CardDataError) as error:
+        raise SourceBindingError('canonical field source binding refused: ' + str(error)) from error
+
+
+def _bind_canonical_field(aggregate_raw, observation_bytes, field_raw, ledger_raw, old, new):
+    from tools.card_data import adjudications, models
+    _require(all(isinstance(x, bytes) for x in (aggregate_raw, field_raw, ledger_raw)), 'field inputs must be bytes')
+    _require(isinstance(old, str) and isinstance(new, str)
+             and re.fullmatch(r'[0-9a-f]{64}', old) and re.fullmatch(r'[0-9a-f]{64}', new)
+             and old == new, 'explicit equal producer input revisions required')
+    aggregate = json.loads(aggregate_raw, object_pairs_hook=_unique)
+    _require(type(aggregate['schema_version']) is int and aggregate['schema_version'] == 1
+             and aggregate['manifest_kind'] == 'full-pool-source-aggregate', 'unsupported aggregate schema')
+    _require(aggregate['manifest_revision'] == new and serialization.content_digest(
+        {k:v for k,v in aggregate.items() if k != 'manifest_revision'}, exclude_operational=True) == new,
+        'aggregate differs from caller source revision')
+    field = json.loads(field_raw, object_pairs_hook=_unique)
+    _require(set(field) == {'card_id','field_path','value','provenance'}, 'unsupported field input envelope')
+    cid, path = field['card_id'], field['field_path']
+    _require(isinstance(cid, str) and CARD_ID_RE.fullmatch(cid)
+             and path in dict(FIELDS) and isinstance(field['value'], str), 'unsupported selected field')
+    _require(set(aggregate['sources']) == {'official', 'digimoncard_io'}, 'complete candidate lanes required')
+    all_refs = []; card_refs = {}
+    for source, lane in aggregate['sources'].items():
+        refs = lane['observation_refs']; ids = lane['observation_ids']
+        _require(lane['source'] == source and lane['scope'].startswith('full-pool:')
+                 and len(ids) == len(set(ids)) == len(refs) == lane['observation_count']
+                 and {r['observation_id'] for r in refs} == set(ids), 'source candidate closure')
+        _require(set(lane['gameplay_card_ids']) == {r['gameplay_card_id'] for r in refs}
+                 and len(lane['gameplay_card_ids']) == lane['gameplay_card_count'], 'source card closure')
+        for ref in refs:
+            all_refs.append(ref)
+            if ref['gameplay_card_id'] == cid:
+                _require(ref['observation_id'] not in card_refs, 'duplicate candidate observation')
+                card_refs[ref['observation_id']] = (source, ref)
+    membership = aggregate['membership']; all_ids = [r['observation_id'] for r in all_refs]
+    _require(len(all_ids) == len(set(all_ids)) == membership['observation_count']
+             and set(membership['observation_ids']) == set(all_ids)
+             and len(membership['observation_ids']) == len(all_ids)
+             and set(membership['gameplay_card_ids']) == {r['gameplay_card_id'] for r in all_refs}
+             and len(membership['gameplay_card_ids']) == membership['gameplay_card_count'], 'aggregate complete membership')
+    _require(card_refs and set(observation_bytes) == set(card_refs), 'complete same-card candidates required')
+    candidates = []
+    for oid, raw in observation_bytes.items():
+        _require(isinstance(raw, bytes), 'observation input must be bytes')
+        value = json.loads(raw, object_pairs_hook=_unique); source, ref = card_refs[oid]
+        _require(type(value['schema_version']) is int and value['schema_version'] == 1
+                 and value['observation_id'] == oid and value['source'] == source
+                 and value['extracted']['card_id'] == cid, 'candidate identity/card/source mismatch')
+        lane = aggregate['sources'][source]
+        _require(value['parser_version'] == lane['parser_version']
+                 and value['source_schema_version'] == lane['source_schema_version'], 'candidate source schema mismatch')
+        observation = models.SourceObservation(**{**value, 'source': models.SourceName(source)})
+        _require(serialization.observation_digest(observation) == oid, 'candidate content identity mismatch')
+        candidate = normalization.observation_candidate(observation)
+        _require(candidate.printing_id == ref['printing_id'] and candidate.gameplay_card_id == cid,
+                 'candidate printing identity mismatch')
+        if path in candidate.fields:
+            candidates.append(candidate)
+    _require(candidates and any(c.authority is models.AuthorityClass.OFFICIAL for c in candidates),
+             'official selected field evidence required')
+    payload = json.loads(ledger_raw, object_pairs_hook=_unique)
+    _require(set(payload) == {'schema_version','adjudications'} and type(payload['schema_version']) is int
+             and payload['schema_version'] == 1 and isinstance(payload['adjudications'], list), 'unsupported adjudication ledger')
+    parsed = []
+    for row in payload['adjudications']:
+        # The shared loader has historical coercions; reject ambiguous wire types
+        # before using its approved typed constructor and matching implementation.
+        _require(isinstance(row, dict) and type(row['schema_version']) is int and row['schema_version'] == 1,
+                 'invalid adjudication row version')
+        for name in ('adjudication_id','kind','card_id','old_input_revision','new_input_revision',
+                     'old_digest','new_digest','reason','reviewer','reviewed_at'):
+            _require(isinstance(row[name], str), 'invalid adjudication scalar')
+        for name in ('provenance_observation_ids','affected_deck_ids'):
+            _require(isinstance(row.get(name, []), list) and all(isinstance(v,str) for v in row.get(name, [])),
+                     'invalid adjudication membership')
+        for name in ('selected_observation_id','field_path'):
+            _require(row.get(name) is None or isinstance(row[name], str), 'invalid adjudication field')
+        parsed.append(adjudications._row(row, path=Path('<supplied-bytes>')))
+    parsed = adjudications.validate_migration_adjudications(parsed)
+    actual, provenance, conflicts = normalization._select_field(cid, path, candidates,
+        admission=models.AdmissionStatus.ADMITTED, adjudications=parsed, field_selection_input_revision=new)
+    _require(serialization.canonical_json_bytes(actual) == serialization.canonical_json_bytes(field['value'])
+             and serialization.canonical_json_bytes(provenance) == serialization.canonical_json_bytes(field['provenance']),
+             'canonical selected value/provenance differs from producer replay')
+    _require(provenance.authority is models.AuthorityClass.OFFICIAL and not provenance.derived,
+             'selected field lacks official authority')
+    binding = normalization._canonical_conflict_binding(card_id=cid, field_path=path, candidates=candidates,
+        selected_value=actual, selected_observation_id=provenance.selected_observation_id,
+        old_input_revision=old, new_input_revision=new)
+    approval = normalization._current_canonical_conflict_adjudication(binding, parsed)
+    _require(conflicts and approval is not None and provenance.adjudicated is True,
+             'current exact canonical field adjudication required')
+    return {'version': 1, 'kind': 'canonical-field-source-binding', 'card_id': cid, 'field_path': path,
+            'old_input_revision': old, 'new_input_revision': new,
+            'selected_observation_id': provenance.selected_observation_id,
+            'selected_value': actual, 'provenance': serialization.canonicalize(provenance),
+            'candidate_values': serialization.canonicalize(binding.candidate_values),
+            'candidate_digest': binding.candidate_digest, 'selected_value_digest': binding.selected_value_digest,
+            'adjudication_id': approval.adjudication_id,
+            'inputs': {'aggregate': _sha(aggregate_raw), 'canonical_field': _sha(field_raw),
+                       'adjudication_ledger': _sha(ledger_raw),
+                       'observations': {oid:_sha(raw) for oid,raw in sorted(observation_bytes.items())}},
+            'dependencies': {m.__name__:_sha(Path(m.__file__).read_bytes())
+                             for m in (adjudications, models, normalization, serialization)},
+            'validator_sha256': _sha(Path(__file__).read_bytes())}

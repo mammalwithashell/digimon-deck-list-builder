@@ -1,0 +1,1995 @@
+{
+  "status": "ROOT_REVIEWED_EXACT_CANONICAL_ROWS_TEST_FIXTURE_NOT_RUNTIME_CUTOVER",
+  "source_ledger_sha256": "a336069dc53378adbd095cf6c6ea6910ae926090ee5ad5c9bbb0a0e2f904388b",
+  "revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+  "observations": {
+    "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [],
+          "card_colors": [
+            "Yellow"
+          ],
+          "card_kind": "Option",
+          "card_name_eng": "Blinding Ray",
+          "effect_description_eng": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "",
+          "level": null,
+          "play_cost": 0,
+          "security_effect_description_eng": "",
+          "type_eng": []
+        },
+        "card_id": "BT4-104",
+        "derived_diagnostics": [],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": null,
+            "effect_text": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+            "face_id": "primary",
+            "inherited_text": "",
+            "kind": "option",
+            "level": null,
+            "play_cost": 0,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "",
+          "artist": null,
+          "attribute": null,
+          "color": "Yellow",
+          "color2": null,
+          "date_added": "2025-11-25 15:16:47",
+          "digi_type": null,
+          "digi_type2": null,
+          "digi_type3": null,
+          "digi_type4": null,
+          "dp": null,
+          "evolution_color": null,
+          "evolution_cost": null,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT4-104",
+          "level": null,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "name": "Blinding Ray",
+          "play_cost": 0,
+          "pretty_url": "blinding-ray-bt4-104",
+          "rarity": "r",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-04: Booster Great Legend",
+            "BT-25: BOOSTER DUAL REVOLUTION",
+            "RB-01: Resurgence Booster"
+          ],
+          "source_effect": "",
+          "stage": null,
+          "tcgplayer_id": 515817,
+          "tcgplayer_name": "Blinding Ray (Resurgence Booster Reprint)",
+          "type": "Option",
+          "xros_req": ""
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT4-104",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [],
+          "card_colors": [
+            "Yellow"
+          ],
+          "card_kind": "Option",
+          "card_name_eng": "Blinding Ray",
+          "effect_description_eng": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "",
+          "level": null,
+          "play_cost": 0,
+          "security_effect_description_eng": "",
+          "type_eng": []
+        },
+        "card_id": "BT4-104",
+        "derived_diagnostics": [],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": null,
+            "effect_text": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+            "face_id": "primary",
+            "inherited_text": "",
+            "kind": "option",
+            "level": null,
+            "play_cost": 0,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "",
+          "artist": null,
+          "attribute": null,
+          "color": "Yellow",
+          "color2": null,
+          "date_added": "2025-11-25 15:16:47",
+          "digi_type": null,
+          "digi_type2": null,
+          "digi_type3": null,
+          "digi_type4": null,
+          "dp": null,
+          "evolution_color": null,
+          "evolution_cost": null,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT4-104",
+          "level": null,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "name": "Blinding Ray",
+          "play_cost": 0,
+          "pretty_url": "blinding-ray-bt4-104",
+          "rarity": "r",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-04: Booster Great Legend",
+            "BT-25: BOOSTER DUAL REVOLUTION",
+            "RB-01: Resurgence Booster"
+          ],
+          "source_effect": "",
+          "stage": null,
+          "tcgplayer_id": 240486,
+          "tcgplayer_name": "Blinding Ray",
+          "type": "Option",
+          "xros_req": ""
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT4-104#2",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [],
+          "card_colors": [
+            "Yellow"
+          ],
+          "card_kind": "Option",
+          "card_name_eng": "Blinding Ray",
+          "effect_description_eng": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "",
+          "level": null,
+          "play_cost": 0,
+          "security_effect_description_eng": "",
+          "type_eng": []
+        },
+        "card_id": "BT4-104",
+        "derived_diagnostics": [],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": null,
+            "effect_text": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+            "face_id": "primary",
+            "inherited_text": "",
+            "kind": "option",
+            "level": null,
+            "play_cost": 0,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "",
+          "artist": null,
+          "attribute": null,
+          "color": "Yellow",
+          "color2": null,
+          "date_added": "2025-11-25 15:16:47",
+          "digi_type": null,
+          "digi_type2": null,
+          "digi_type3": null,
+          "digi_type4": null,
+          "dp": null,
+          "evolution_color": null,
+          "evolution_cost": null,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT4-104",
+          "level": null,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "name": "Blinding Ray",
+          "play_cost": 0,
+          "pretty_url": "blinding-ray-bt4-104",
+          "rarity": "r",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-04: Booster Great Legend",
+            "BT-25: BOOSTER DUAL REVOLUTION",
+            "RB-01: Resurgence Booster"
+          ],
+          "source_effect": "",
+          "stage": null,
+          "tcgplayer_id": 684098,
+          "tcgplayer_name": "Blinding Ray - BT4-104 (Alternate Art)",
+          "type": "Option",
+          "xros_req": ""
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT4-104#3",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [],
+          "card_colors": [
+            "Yellow"
+          ],
+          "card_kind": "Option",
+          "card_name_eng": "Blinding Ray",
+          "effect_description_eng": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "",
+          "level": null,
+          "play_cost": 0,
+          "security_effect_description_eng": "",
+          "type_eng": []
+        },
+        "card_id": "BT4-104",
+        "derived_diagnostics": [],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": null,
+            "effect_text": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+            "face_id": "primary",
+            "inherited_text": "",
+            "kind": "option",
+            "level": null,
+            "play_cost": 0,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "",
+          "artist": null,
+          "attribute": null,
+          "color": "Yellow",
+          "color2": null,
+          "date_added": "2025-11-25 15:16:47",
+          "digi_type": null,
+          "digi_type2": null,
+          "digi_type3": null,
+          "digi_type4": null,
+          "dp": null,
+          "evolution_color": null,
+          "evolution_cost": null,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT4-104",
+          "level": null,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "name": "Blinding Ray",
+          "play_cost": 0,
+          "pretty_url": "blinding-ray-bt4-104",
+          "rarity": "r",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-04: Booster Great Legend",
+            "BT-25: BOOSTER DUAL REVOLUTION",
+            "RB-01: Resurgence Booster"
+          ],
+          "source_effect": "",
+          "stage": null,
+          "tcgplayer_id": 238220,
+          "tcgplayer_name": "Blinding Ray",
+          "type": "Option",
+          "xros_req": ""
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT4-104#4",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [],
+          "card_colors": [
+            "Yellow"
+          ],
+          "card_kind": "Option",
+          "card_name_eng": "Blinding Ray",
+          "effect_description_eng": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "",
+          "level": null,
+          "play_cost": 0,
+          "security_effect_description_eng": "",
+          "type_eng": []
+        },
+        "card_id": "BT4-104",
+        "derived_diagnostics": [],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": null,
+            "effect_text": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+            "face_id": "primary",
+            "inherited_text": "",
+            "kind": "option",
+            "level": null,
+            "play_cost": 0,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "",
+          "artist": null,
+          "attribute": null,
+          "color": "Yellow",
+          "color2": null,
+          "date_added": "2025-11-25 15:16:47",
+          "digi_type": null,
+          "digi_type2": null,
+          "digi_type3": null,
+          "digi_type4": null,
+          "dp": null,
+          "evolution_color": null,
+          "evolution_cost": null,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT4-104",
+          "level": null,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "name": "Blinding Ray",
+          "play_cost": 0,
+          "pretty_url": "blinding-ray-bt4-104",
+          "rarity": "r",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-04: Booster Great Legend",
+            "BT-25: BOOSTER DUAL REVOLUTION",
+            "RB-01: Resurgence Booster"
+          ],
+          "source_effect": "",
+          "stage": null,
+          "tcgplayer_id": 541577,
+          "tcgplayer_name": "Blinding Ray (Bonus Pack)",
+          "type": "Option",
+          "xros_req": ""
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT4-104#5",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [],
+          "card_colors": [
+            "Yellow"
+          ],
+          "card_kind": "Option",
+          "card_name_eng": "Blinding Ray",
+          "effect_description_eng": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "",
+          "level": null,
+          "play_cost": 0,
+          "security_effect_description_eng": "",
+          "type_eng": []
+        },
+        "card_id": "BT4-104",
+        "derived_diagnostics": [],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": null,
+            "effect_text": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+            "face_id": "primary",
+            "inherited_text": "",
+            "kind": "option",
+            "level": null,
+            "play_cost": 0,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "",
+          "artist": null,
+          "attribute": null,
+          "color": "Yellow",
+          "color2": null,
+          "date_added": "2025-11-25 15:16:47",
+          "digi_type": null,
+          "digi_type2": null,
+          "digi_type3": null,
+          "digi_type4": null,
+          "dp": null,
+          "evolution_color": null,
+          "evolution_cost": null,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT4-104",
+          "level": null,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "name": "Blinding Ray",
+          "play_cost": 0,
+          "pretty_url": "blinding-ray-bt4-104",
+          "rarity": "r",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-04: Booster Great Legend",
+            "BT-25: BOOSTER DUAL REVOLUTION",
+            "RB-01: Resurgence Booster"
+          ],
+          "source_effect": "",
+          "stage": null,
+          "tcgplayer_id": 542360,
+          "tcgplayer_name": "Blinding Ray (Bonus Pack)",
+          "type": "Option",
+          "xros_req": ""
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT4-104#6",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [],
+          "card_colors": [
+            "White"
+          ],
+          "card_kind": "Tamer",
+          "card_name_eng": "Kunlun",
+          "effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+          "level": null,
+          "play_cost": 5,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Shambala"
+          ]
+        },
+        "card_id": "BT26-104",
+        "derived_diagnostics": [],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "White"
+            ],
+            "dp": null,
+            "effect_text": "Security Effect [Security] Play this card without paying the cost.",
+            "face_id": "primary",
+            "inherited_text": "[Security] Play this card without paying the cost.",
+            "kind": "tamer",
+            "level": null,
+            "play_cost": 5,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "",
+          "artist": null,
+          "attribute": null,
+          "color": "White",
+          "color2": null,
+          "date_added": "2026-07-04 01:00:23",
+          "digi_type": "Shambala",
+          "digi_type2": null,
+          "digi_type3": null,
+          "digi_type4": null,
+          "dp": null,
+          "evolution_color": null,
+          "evolution_cost": null,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT26-104",
+          "level": null,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "Security Effect [Security] Play this card without paying the cost.",
+          "name": "Kunlun",
+          "play_cost": 5,
+          "pretty_url": "BT26-104-kunlun",
+          "rarity": "SEC",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-26: BOOSTER TIMELESS BONDS"
+          ],
+          "source_effect": "[Security] Play this card without paying the cost.",
+          "stage": null,
+          "tcgplayer_id": null,
+          "tcgplayer_name": null,
+          "type": "Tamer",
+          "xros_req": ""
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT26-104",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8": {
+      "extracted": {
+        "attribute": "",
+        "card_id": "BT4-104",
+        "card_type": "Option",
+        "colors": [
+          "Yellow"
+        ],
+        "dp": null,
+        "evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": null,
+            "face_id": "primary",
+            "kind": "option",
+            "level": null,
+            "name": "Blinding Ray",
+            "play_cost": 0,
+            "text_sections": [
+              {
+                "label": "Effect",
+                "text": "[Main] Trash the top card of your security stack. Then, gain 2 memory."
+              }
+            ]
+          }
+        ],
+        "form": "",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": null,
+        "name": "Blinding Ray",
+        "play_cost": 0,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522003",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT4-104.png?260529",
+          "printing_id": "BT4-104"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes. When your security stack is empty, you gain 2 memory.",
+            "date": "Mar. 28, 2024",
+            "number": "Q1268",
+            "question": "If I use this card when my security stack is empty, do I gain 2 memory?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Main] Trash the top card of your security stack. Then, gain 2 memory."
+          }
+        ],
+        "type": ""
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "cbcfad72e60cc0b2aabcf8f8485de2958d76d3c80264f42b073283c4323a2061",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522003:BT4-104:BT4-104",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522003"
+    },
+    "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94": {
+      "extracted": {
+        "attribute": "",
+        "card_id": "BT4-104",
+        "card_type": "Option",
+        "colors": [
+          "Yellow"
+        ],
+        "dp": null,
+        "evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": null,
+            "face_id": "primary",
+            "kind": "option",
+            "level": null,
+            "name": "Blinding Ray",
+            "play_cost": 0,
+            "text_sections": [
+              {
+                "label": "Effect",
+                "text": "[Main] Trash the top card of your security stack. Then, gain 2 memory."
+              }
+            ]
+          }
+        ],
+        "form": "",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": null,
+        "name": "Blinding Ray",
+        "play_cost": 0,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522017",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT4-104_P1.png?260529",
+          "printing_id": "BT4-104_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes. When your security stack is empty, you gain 2 memory.",
+            "date": "Mar. 28, 2024",
+            "number": "Q1268",
+            "question": "If I use this card when my security stack is empty, do I gain 2 memory?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Main] Trash the top card of your security stack. Then, gain 2 memory."
+          }
+        ],
+        "type": ""
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "979c51db17281fa6fc30a4b59a022da9eea31b0baca4dddbc9c071154df8dbec",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522017:BT4-104:BT4-104_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522017"
+    },
+    "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec": {
+      "extracted": {
+        "attribute": "",
+        "card_id": "BT4-104",
+        "card_type": "Option",
+        "colors": [
+          "Yellow"
+        ],
+        "dp": null,
+        "evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": null,
+            "face_id": "primary",
+            "kind": "option",
+            "level": null,
+            "name": "Blinding Ray",
+            "play_cost": 0,
+            "text_sections": [
+              {
+                "label": "Effect",
+                "text": "[Main] Trash the top card of your security stack. Then, gain 2 memory."
+              }
+            ]
+          }
+        ],
+        "form": "",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": null,
+        "name": "Blinding Ray",
+        "play_cost": 0,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522117",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT4-104_P2.png?260529",
+          "printing_id": "BT4-104_P2"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes. When your security stack is empty, you gain 2 memory.",
+            "date": "Mar. 28, 2024",
+            "number": "Q1268",
+            "question": "If I use this card when my security stack is empty, do I gain 2 memory?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Main] Trash the top card of your security stack. Then, gain 2 memory."
+          }
+        ],
+        "type": ""
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "c1daa81b0ec4a459038328c47e91ac8eacc04545c8e1e1d7a1166da63e08c0f5",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522117:BT4-104:BT4-104_P2",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522117"
+    },
+    "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9": {
+      "extracted": {
+        "attribute": "",
+        "card_id": "BT4-104",
+        "card_type": "Option",
+        "colors": [
+          "Yellow"
+        ],
+        "dp": null,
+        "evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": null,
+            "face_id": "primary",
+            "kind": "option",
+            "level": null,
+            "name": "Blinding Ray",
+            "play_cost": 0,
+            "text_sections": [
+              {
+                "label": "Effect",
+                "text": "[Main] Trash your top security card. Then, gain 2 memory."
+              }
+            ]
+          }
+        ],
+        "form": "",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": null,
+        "name": "Blinding Ray",
+        "play_cost": 0,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522036",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT4-104_P3.png?260529",
+          "printing_id": "BT4-104_P3"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes. When your security stack is empty, you gain 2 memory.",
+            "date": "Mar. 28, 2024",
+            "number": "Q1268",
+            "question": "If I use this card when my security stack is empty, do I gain 2 memory?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Main] Trash your top security card. Then, gain 2 memory."
+          }
+        ],
+        "type": ""
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522036:BT4-104:BT4-104_P3",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    },
+    "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546": {
+      "extracted": {
+        "attribute": "",
+        "card_id": "BT26-104",
+        "card_type": "Tamer",
+        "colors": [
+          "White"
+        ],
+        "dp": null,
+        "evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "White"
+            ],
+            "dp": null,
+            "face_id": "primary",
+            "kind": "tamer",
+            "level": null,
+            "name": "Kunlun",
+            "play_cost": 5,
+            "text_sections": [
+              {
+                "label": "Effect",
+                "text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+              },
+              {
+                "label": "Security Effect",
+                "text": "[Security] Play this card without paying the cost."
+              }
+            ]
+          }
+        ],
+        "form": "",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": null,
+        "name": "Kunlun",
+        "play_cost": 5,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522038",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-104.png?260529",
+          "printing_id": "BT26-104"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, you can.\nIn this situation, and this card's [End of Your Turn] effect trigger simultaneously.\nIf you activate before attacking with a Digimon, [EX12-074 Genshi Continent & Ashino Island]'s {Security} [Your Turn] effect becomes a derived triggering effect, allowing the Digimon to digivolve into the specified card. After all processing that results from digivolving is resolved, and before the counter timing, you can activate this card's [End of Your Turn] effect that is pending activation.\nRelated Cards",
+            "date": "Aug. 18, 2026",
+            "number": "Q7190",
+            "question": "At the end of my turn, I attack with a [Shambala] trait Digimon with and digivolve into a [Tentei Hachibushu] trait Digimon with [EX12-074 Genshi Continent & Ashino Island]'s {Security} [Your Turn] effect.\nAt such times, can I activate this card's [End of Your Turn] effect?"
+          }
+        ],
+        "rarity": "SEC",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+          },
+          {
+            "label": "Security Effect",
+            "text": "[Security] Play this card without paying the cost."
+          }
+        ],
+        "type": "Shambala/SW/TB/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522038:BT26-104:BT26-104",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522038"
+    },
+    "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524": {
+      "extracted": {
+        "attribute": "",
+        "card_id": "BT26-104",
+        "card_type": "Tamer",
+        "colors": [
+          "White"
+        ],
+        "dp": null,
+        "evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "White"
+            ],
+            "dp": null,
+            "face_id": "primary",
+            "kind": "tamer",
+            "level": null,
+            "name": "Kunlun",
+            "play_cost": 5,
+            "text_sections": [
+              {
+                "label": "Effect",
+                "text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+              },
+              {
+                "label": "Security Effect",
+                "text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+              },
+              {
+                "label": "Link Condition",
+                "text": "[Security] Play this card without paying the cost."
+              }
+            ]
+          }
+        ],
+        "form": "",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": null,
+        "name": "Kunlun",
+        "play_cost": 5,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522038",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-104_P1.png?260529",
+          "printing_id": "BT26-104_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, you can.\nIn this situation, and this card's [End of Your Turn] effect trigger simultaneously.\nIf you activate before attacking with a Digimon, [EX12-074 Genshi Continent & Ashino Island]'s {Security} [Your Turn] effect becomes a derived triggering effect, allowing the Digimon to digivolve into the specified card. After all processing that results from digivolving is resolved, and before the counter timing, you can activate this card's [End of Your Turn] effect that is pending activation.\nRelated Cards",
+            "date": "Aug. 18, 2026",
+            "number": "Q7190",
+            "question": "At the end of my turn, I attack with a [Shambala] trait Digimon with and digivolve into a [Tentei Hachibushu] trait Digimon with [EX12-074 Genshi Continent & Ashino Island]'s {Security} [Your Turn] effect.\nAt such times, can I activate this card's [End of Your Turn] effect?"
+          }
+        ],
+        "rarity": "SEC",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+          },
+          {
+            "label": "Security Effect",
+            "text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+          },
+          {
+            "label": "Link Condition",
+            "text": "[Security] Play this card without paying the cost."
+          }
+        ],
+        "type": "Shambala/SW/TB/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522038:BT26-104:BT26-104_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522038"
+    },
+    "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f": {
+      "extracted": {
+        "attribute": "",
+        "card_id": "BT26-104",
+        "card_type": "Tamer",
+        "colors": [
+          "White"
+        ],
+        "dp": null,
+        "evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "White"
+            ],
+            "dp": null,
+            "face_id": "primary",
+            "kind": "tamer",
+            "level": null,
+            "name": "Kunlun",
+            "play_cost": 5,
+            "text_sections": [
+              {
+                "label": "Effect",
+                "text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+              },
+              {
+                "label": "Security Effect",
+                "text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+              },
+              {
+                "label": "Link Condition",
+                "text": "[Security] Play this card without paying the cost."
+              }
+            ]
+          }
+        ],
+        "form": "",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": null,
+        "name": "Kunlun",
+        "play_cost": 5,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522038",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-104_P2.png?260529",
+          "printing_id": "BT26-104_P2"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, you can.\nIn this situation, and this card's [End of Your Turn] effect trigger simultaneously.\nIf you activate before attacking with a Digimon, [EX12-074 Genshi Continent & Ashino Island]'s {Security} [Your Turn] effect becomes a derived triggering effect, allowing the Digimon to digivolve into the specified card. After all processing that results from digivolving is resolved, and before the counter timing, you can activate this card's [End of Your Turn] effect that is pending activation.\nRelated Cards",
+            "date": "Aug. 18, 2026",
+            "number": "Q7190",
+            "question": "At the end of my turn, I attack with a [Shambala] trait Digimon with and digivolve into a [Tentei Hachibushu] trait Digimon with [EX12-074 Genshi Continent & Ashino Island]'s {Security} [Your Turn] effect.\nAt such times, can I activate this card's [End of Your Turn] effect?"
+          }
+        ],
+        "rarity": "SEC",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+          },
+          {
+            "label": "Security Effect",
+            "text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+          },
+          {
+            "label": "Link Condition",
+            "text": "[Security] Play this card without paying the cost."
+          }
+        ],
+        "type": "Shambala/SW/TB/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522038:BT26-104:BT26-104_P2",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522038"
+    }
+  },
+  "cards": {
+    "BT26-104": {
+      "admission": "admitted",
+      "card_id": "BT26-104",
+      "conflicts": [
+        {
+          "candidate_observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "field_path": "effect_description_eng",
+          "kind": "official_printing",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "field_path": "security_effect_description_eng",
+          "kind": "official_printing",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "field_path": "type_eng",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "White"
+          ],
+          "dp": null,
+          "effect_text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost.",
+          "face_id": "primary",
+          "inherited_text": "",
+          "kind": "tamer",
+          "level": null,
+          "play_cost": 5,
+          "security_text": "[Security] Play this card without paying the cost."
+        }
+      ],
+      "fields": {
+        "attribute_eng": [],
+        "card_colors": [
+          "White"
+        ],
+        "card_kind": "Tamer",
+        "card_name_eng": "Kunlun",
+        "effect_description_eng": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost.",
+        "evo_costs": [],
+        "form_eng": [],
+        "inherited_effect_description_eng": "",
+        "level": null,
+        "play_cost": 5,
+        "security_effect_description_eng": "[Security] Play this card without paying the cost.",
+        "type_eng": [
+          "Shambala",
+          "SW",
+          "TB",
+          "TS"
+        ]
+      },
+      "printings": [
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "printing_id": "BT26-104",
+          "product": null
+        },
+        {
+          "alternate_art": true,
+          "language": "en",
+          "observation_ids": [
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524"
+          ],
+          "printing_id": "BT26-104_P1",
+          "product": null
+        },
+        {
+          "alternate_art": true,
+          "language": "en",
+          "observation_ids": [
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f"
+          ],
+          "printing_id": "BT26-104_P2",
+          "product": null
+        }
+      ],
+      "provenance": {
+        "attribute_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+        },
+        "card_colors": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+        },
+        "card_kind": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+        },
+        "card_name_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+        },
+        "effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+        },
+        "evo_costs": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+        },
+        "faces": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+        },
+        "form_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+        },
+        "inherited_effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+        },
+        "level": {
+          "adjudicated": false,
+          "authority": "secondary",
+          "derived": false,
+          "observation_ids": [
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+        },
+        "play_cost": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+        },
+        "security_effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+        },
+        "type_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+            "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+            "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+            "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+          ],
+          "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+        }
+      },
+      "schema_version": 1,
+      "tombstone_reason": null
+    },
+    "BT4-104": {
+      "admission": "admitted",
+      "card_id": "BT4-104",
+      "conflicts": [
+        {
+          "candidate_observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "field_path": "effect_description_eng",
+          "kind": "official_printing",
+          "reason": "official value selected over conflicting secondary observation"
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Yellow"
+          ],
+          "dp": null,
+          "effect_text": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+          "face_id": "primary",
+          "inherited_text": "",
+          "kind": "option",
+          "level": null,
+          "play_cost": 0,
+          "security_text": ""
+        }
+      ],
+      "fields": {
+        "attribute_eng": [],
+        "card_colors": [
+          "Yellow"
+        ],
+        "card_kind": "Option",
+        "card_name_eng": "Blinding Ray",
+        "effect_description_eng": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+        "evo_costs": [],
+        "form_eng": [],
+        "inherited_effect_description_eng": "",
+        "level": null,
+        "play_cost": 0,
+        "security_effect_description_eng": "",
+        "type_eng": []
+      },
+      "printings": [
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+          ],
+          "printing_id": "BT4-104",
+          "product": null
+        },
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8"
+          ],
+          "printing_id": "BT4-104#2",
+          "product": null
+        },
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd"
+          ],
+          "printing_id": "BT4-104#3",
+          "product": null
+        },
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd"
+          ],
+          "printing_id": "BT4-104#4",
+          "product": null
+        },
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459"
+          ],
+          "printing_id": "BT4-104#5",
+          "product": null
+        },
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350"
+          ],
+          "printing_id": "BT4-104#6",
+          "product": null
+        },
+        {
+          "alternate_art": true,
+          "language": "en",
+          "observation_ids": [
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "printing_id": "BT4-104_P1",
+          "product": null
+        },
+        {
+          "alternate_art": true,
+          "language": "en",
+          "observation_ids": [
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec"
+          ],
+          "printing_id": "BT4-104_P2",
+          "product": null
+        },
+        {
+          "alternate_art": true,
+          "language": "en",
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9"
+          ],
+          "printing_id": "BT4-104_P3",
+          "product": null
+        }
+      ],
+      "provenance": {
+        "attribute_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+        },
+        "card_colors": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+        },
+        "card_kind": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+        },
+        "card_name_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+        },
+        "effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+        },
+        "evo_costs": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+        },
+        "faces": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+        },
+        "form_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+        },
+        "inherited_effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+        },
+        "level": {
+          "adjudicated": false,
+          "authority": "secondary",
+          "derived": false,
+          "observation_ids": [
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350"
+          ],
+          "selected_observation_id": "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350"
+        },
+        "play_cost": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+        },
+        "security_effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+        },
+        "type_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+            "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+            "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+            "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+            "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+            "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+            "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+            "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+            "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+            "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+          ],
+          "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+        }
+      },
+      "schema_version": 1,
+      "tombstone_reason": null
+    }
+  },
+  "adjudications": {
+    "schema_version": 1,
+    "adjudications": [
+      {
+        "adjudication_id": "focused-20261011-bt26-104-effect_description_eng-v5-d3861451f9b8",
+        "affected_deck_ids": [],
+        "card_id": "BT26-104",
+        "field_path": "effect_description_eng",
+        "kind": "canonical_field_selection",
+        "new_digest": "23a8b5ce4ca155dce717ac7de10f079ee07ca022635ff2b32202da4fc9c9ec71",
+        "new_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+        "new_value": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost.",
+        "old_digest": "9bbdc9bb4045f5e748d120fad5c3c6f561e784c8c6359c2f904387ce5dcca7b7",
+        "old_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+        "old_value": [
+          {
+            "observation_ids": [
+              "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+            ],
+            "printing_ids": [
+              "BT26-104"
+            ],
+            "value": "Security Effect [Security] Play this card without paying the cost.",
+            "value_digest": "474b333897bd10735370977a998f9acca373c4e55b037d9215357a7ef873475e"
+          },
+          {
+            "observation_ids": [
+              "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+            ],
+            "printing_ids": [
+              "BT26-104"
+            ],
+            "value": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost.",
+            "value_digest": "23a8b5ce4ca155dce717ac7de10f079ee07ca022635ff2b32202da4fc9c9ec71"
+          },
+          {
+            "observation_ids": [
+              "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+              "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524"
+            ],
+            "printing_ids": [
+              "BT26-104_P1",
+              "BT26-104_P2"
+            ],
+            "value": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost.\n[Link Condition] [Security] Play this card without paying the cost.",
+            "value_digest": "85eaeb47dd684121ac6decd64d6da9ba42571cc4da7cc97161e6440c9c98aae2"
+          }
+        ],
+        "provenance_observation_ids": [
+          "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+          "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+          "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+          "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+        ],
+        "reason": "Primary actual image and raw official Effect contain all three distinct timings; Security is only free self-play. Alternates duplicate main text under Security and mislabel free-play as Link Condition. Select complete primary field without dropping any of three main effects. No clause-ID remapping, adjacent approval or runtime cutover yet. Independently reviewed source-choice proposal; exact current full candidate set including secondary retained. Historical adjudication preserved.",
+        "reviewed_at": "2026-10-12T14:52:24.201906+00:00",
+        "reviewer": "Root independent exact-binding review; prior semantic source reviews retained",
+        "schema_version": 1,
+        "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+      },
+      {
+        "adjudication_id": "focused-20261011-bt26-104-security_effect_description_eng-v5-d3861451f9b8",
+        "affected_deck_ids": [],
+        "card_id": "BT26-104",
+        "field_path": "security_effect_description_eng",
+        "kind": "canonical_field_selection",
+        "new_digest": "a04e1bbeb1e0e52faebb256b351f25c8cfa9a4958171c48148fb27f01389fb7d",
+        "new_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+        "new_value": "[Security] Play this card without paying the cost.",
+        "old_digest": "9aff78a026c8673d32ec5070b20d88b2bb0513a56766599235e813d5faaad11a",
+        "old_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+        "old_value": [
+          {
+            "observation_ids": [
+              "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+              "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+            ],
+            "printing_ids": [
+              "BT26-104"
+            ],
+            "value": "[Security] Play this card without paying the cost.",
+            "value_digest": "a04e1bbeb1e0e52faebb256b351f25c8cfa9a4958171c48148fb27f01389fb7d"
+          },
+          {
+            "observation_ids": [
+              "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+              "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524"
+            ],
+            "printing_ids": [
+              "BT26-104_P1",
+              "BT26-104_P2"
+            ],
+            "value": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost.",
+            "value_digest": "23a8b5ce4ca155dce717ac7de10f079ee07ca022635ff2b32202da4fc9c9ec71"
+          }
+        ],
+        "provenance_observation_ids": [
+          "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+          "6ffaa4f1a9a0320ab0295e91d9daed80da5d745c303f26bd780c7ba044d44a7f",
+          "7323a55ce76a5a837ab4331386aa2b588fe5026d3cf9ad9c7385d684f7064524",
+          "c0b9198b64eb219b1c04ddbb55a32ee7e2bcdc26dc70c3237a004a001904a754"
+        ],
+        "reason": "Primary actual image and raw official Effect contain all three distinct timings; Security is only free self-play. Alternates duplicate main text under Security and mislabel free-play as Link Condition. Select complete primary field without dropping any of three main effects. No clause-ID remapping, adjacent approval or runtime cutover yet. Independently reviewed source-choice proposal; exact current full candidate set including secondary retained. Historical adjudication preserved.",
+        "reviewed_at": "2026-10-12T14:52:24.201906+00:00",
+        "reviewer": "Root independent exact-binding review; prior semantic source reviews retained",
+        "schema_version": 1,
+        "selected_observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546"
+      },
+      {
+        "adjudication_id": "focused-20261011-bt4-104-effect_description_eng-v5-d3861451f9b8",
+        "affected_deck_ids": [],
+        "card_id": "BT4-104",
+        "field_path": "effect_description_eng",
+        "kind": "canonical_field_selection",
+        "new_digest": "7d9b1f760efea644e7e39df1100f2d467143192088e80e1d03529ab3a5c82c3d",
+        "new_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+        "new_value": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+        "old_digest": "8fdc45eb2095671da8c9aa4bac97ade813d8b00c8ba3a3c28cf8c9dcd9979d7b",
+        "old_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+        "old_value": [
+          {
+            "observation_ids": [
+              "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+              "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+              "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+              "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+              "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+              "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+              "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+              "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+              "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+            ],
+            "printing_ids": [
+              "BT4-104",
+              "BT4-104#2",
+              "BT4-104#3",
+              "BT4-104#4",
+              "BT4-104#5",
+              "BT4-104#6",
+              "BT4-104_P1",
+              "BT4-104_P2"
+            ],
+            "value": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+            "value_digest": "7d9b1f760efea644e7e39df1100f2d467143192088e80e1d03529ab3a5c82c3d"
+          },
+          {
+            "observation_ids": [
+              "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9"
+            ],
+            "printing_ids": [
+              "BT4-104_P3"
+            ],
+            "value": "[Main] Trash your top security card. Then, gain 2 memory.",
+            "value_digest": "8191d8d1423af2fd6b51b0b0d17caeb3316b4b80e4c6e376521bf39416743f99"
+          }
+        ],
+        "provenance_observation_ids": [
+          "00c63e2f209899ac754239c5b5f4694bc16535552ed97bbb5cc8defc89295fd9",
+          "025ead9ffd74f58d54136f246d96a297725c0ee831c29b91bcb431c5bec487bd",
+          "2a984430dc400a335f1e5258758ad109bb1ef33895bb6563c11e5a7ca86c9ae2",
+          "424a63d097c7c70c799765752b5ded787b18591018518d77989a94031d1cb459",
+          "56995cb04cb78c466e5ee590096561b24a560913d751950aa2cba5e5ef8452ec",
+          "5bd765ee85fb3cdfc677c785c3bf88554818714e5254b65c727376d6d2d328cd",
+          "744cbd1c63eadbc58d6196d930d034ecaab08f111ec8280f82c1e70cc45eb5f8",
+          "78cd184cc8306ff9b133a73519eeba00258b49e6fca6df6bd7fc071c3d6af350",
+          "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8",
+          "faa33e7de7a39800ac1950de63526bc82a46e97ddf5b3a1d993e961577229f94"
+        ],
+        "reason": "Viewed primary image matches original exact sentence: trash top security, then gain2memory. Preserve updated wording as alternative evidence; no may/by/gating rewrite and no automatic resolution of empty-security human question. Independently reviewed source-choice proposal; exact current full candidate set including secondary retained. Historical adjudication preserved.",
+        "reviewed_at": "2026-10-12T14:52:24.201906+00:00",
+        "reviewer": "Root independent exact-binding review; prior semantic source reviews retained",
+        "schema_version": 1,
+        "selected_observation_id": "83daa0fefb483e3b2b29874080633acab17b8599b05e858e265eee5664849aa8"
+      }
+    ]
+  },
+  "review_report": "focused-adjudications-v5-ex3-r1-root-review-20261012.json",
+  "review_report_sha256": "46e5ef13ecffef7207a11bf39d04aa31998b4d41ae5cbfd24d6430064ff11d23"
+}

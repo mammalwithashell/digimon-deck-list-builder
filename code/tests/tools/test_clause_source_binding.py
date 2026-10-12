@@ -167,3 +167,77 @@ def test_official_full_manifest_positive_control():
     v,raw,ids=fixture();m=v['snapshot']['manifest']
     assert (m['source'],m['scope'],m['parser_version'],m['source_schema_version'])==('official','full-pool:official-catalog','official-html-v5','world-card-list-html-v1')
     assert derive_binding(inputs=pack(v),raw_pages=raw,expected_universe=ids)['universe']==ids
+
+# A1 selected-field adapter: complete real candidate membership, not whole-book support.
+def selection_fixture(card_id='BT4-104',field='effect_description_eng'):
+    from tools.card_data.models import SourceObservation,SourceName,AdmissionStatus
+    from tools.card_data import normalization,adjudications,serialization
+    f=F/'canonical_selection';d=json.loads((f/'fields.json').read_text(encoding='utf-8'));a=gzip.decompress((f/'aggregate.json.gz').read_bytes())
+    own={oid:o for oid,o in d['observations'].items()if o['extracted']['card_id']==card_id}
+    typed=[SourceObservation(**{**o,'source':SourceName(o['source'])})for o in own.values()]
+    rows=tuple(adjudications._row(r,path=Path('<fixture>'))for r in d['adjudications']['adjudications'])
+    candidates=[normalization.observation_candidate(o)for o in typed]
+    value,provenance,_=normalization._select_field(card_id,field,[c for c in candidates if field in c.fields],admission=AdmissionStatus.ADMITTED,adjudications=rows,field_selection_input_revision=d['revision'])
+    # Producer replay fixture; original blocked candidate provenance is preserved
+    # in fields.json. This test projection is never emitted to a production tree.
+    canonical={'card_id':card_id,'field_path':field,'value':value,'provenance':serialization.canonicalize(provenance)}
+    return dict(aggregate=a,observations={oid:canonical_json_bytes(o)for oid,o in own.items()},canonical_field=canonical_json_bytes(canonical),adjudication_ledger=canonical_json_bytes(d['adjudications']),old_input_revision=d['revision'],new_input_revision=d['revision'])
+
+@pytest.mark.parametrize('card,field',[('BT4-104','effect_description_eng'),('BT26-104','effect_description_eng'),('BT26-104','security_effect_description_eng')])
+def test_selected_field_exact_producer_replay(card,field):
+    from tools.clause_coverage.source_binding import bind_canonical_field
+    args=selection_fixture(card,field);before=copy.deepcopy(args);b=bind_canonical_field(**args)
+    assert b['selected_observation_id']==json.loads(args['canonical_field'])['provenance']['selected_observation_id']
+    assert b['adjudication_id'] and args==before
+
+@pytest.mark.parametrize('mutation',['missing','duplicate','foreign','field','value','digest','old_revision','new_revision','bool_version','member','selected','provenance','canonical_value','observation_missing','observation_foreign','aggregate','unequal_revisions','caller_bool'])
+def test_selected_field_adversarial(mutation):
+    from tools.clause_coverage.source_binding import bind_canonical_field
+    args=selection_fixture();ledger=json.loads(args['adjudication_ledger']);row=next(r for r in ledger['adjudications']if r['card_id']=='BT4-104');canonical=json.loads(args['canonical_field'])
+    if mutation=='missing':ledger['adjudications'].remove(row)
+    elif mutation=='duplicate':ledger['adjudications'].append({**row,'adjudication_id':'duplicate-current'})
+    elif mutation=='foreign':row['card_id']='BT26-104'
+    elif mutation=='field':row['field_path']='security_effect_description_eng'
+    elif mutation=='value':row['new_value']='invented'
+    elif mutation=='digest':row['new_digest']='0'*64
+    elif mutation=='old_revision':row['old_input_revision']='0'*64
+    elif mutation=='new_revision':row['new_input_revision']='0'*64
+    elif mutation=='bool_version':row['schema_version']=True
+    elif mutation=='member':row['provenance_observation_ids'].pop()
+    elif mutation=='selected':row['selected_observation_id']=row['provenance_observation_ids'][0]
+    elif mutation=='provenance':canonical['provenance']['adjudicated']=False
+    elif mutation=='canonical_value':canonical['value']='invented'
+    elif mutation=='observation_missing':args['observations'].pop(next(iter(args['observations'])))
+    elif mutation=='observation_foreign':args['observations']['0'*64]=next(iter(args['observations'].values()))
+    elif mutation=='aggregate':args['aggregate']+=b'corruption'
+    elif mutation=='unequal_revisions':args['old_input_revision']='0'*64
+    elif mutation=='caller_bool':args['new_input_revision']=True
+    args['adjudication_ledger']=canonical_json_bytes(ledger);args['canonical_field']=canonical_json_bytes(canonical)
+    with pytest.raises(SourceBindingError):bind_canonical_field(**args)
+
+def test_a1_does_not_promote_original_unreviewed_candidate_provenance():
+    from tools.clause_coverage.source_binding import bind_canonical_field
+    args=selection_fixture();d=json.loads((F/'canonical_selection/fields.json').read_text(encoding='utf-8'));card=d['cards']['BT4-104']
+    field=json.loads(args['canonical_field']);field['provenance']=card['provenance']['effect_description_eng'];assert field['provenance']['adjudicated'] is False
+    args['canonical_field']=canonical_json_bytes(field)
+    with pytest.raises(SourceBindingError,match='producer replay'):bind_canonical_field(**args)
+
+@pytest.mark.parametrize('mutation',['ledger_bool','provenance_bool_alias','unknown_field','duplicate_id','old_value','aggregate_member_drop','wrong_printing','observation_changed'])
+def test_a1_additional_wire_and_membership_refusals(mutation):
+    from tools.clause_coverage.source_binding import bind_canonical_field
+    args=selection_fixture();ledger=json.loads(args['adjudication_ledger']);field=json.loads(args['canonical_field']);row=next(r for r in ledger['adjudications']if r['card_id']=='BT4-104')
+    if mutation=='ledger_bool':ledger['schema_version']=True
+    elif mutation=='provenance_bool_alias':field['provenance']['adjudicated']=1
+    elif mutation=='unknown_field':field['field_path']='xros_req'
+    elif mutation=='duplicate_id':ledger['adjudications'].append(copy.deepcopy(row))
+    elif mutation=='old_value':row['old_value']=[]
+    elif mutation=='aggregate_member_drop':
+        a=json.loads(args['aggregate']);a['sources']['official']['observation_refs'].pop();args['aggregate']=canonical_json_bytes(a)
+    else:
+        oid=next(k for k,v in args['observations'].items() if json.loads(v)['source']=='official');o=json.loads(args['observations'][oid])
+        if mutation=='wrong_printing':o['extracted']['printing']['printing_id']='BT9-999'
+        else:o['extracted']['card_id']='BT9-999'
+        args['observations'][oid]=canonical_json_bytes(o)
+    args['adjudication_ledger']=canonical_json_bytes(ledger);args['canonical_field']=canonical_json_bytes(field)
+    with pytest.raises(SourceBindingError):bind_canonical_field(**args)
+
