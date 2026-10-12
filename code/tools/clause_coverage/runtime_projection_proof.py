@@ -143,7 +143,10 @@ def _prove(a):
     _require(isinstance(universe,list) and len(universe)==len(set(universe))
              and set(universe)==set(agg['sources']['official']['gameplay_card_ids']), 'full official universe mismatch')
     reg_raw=_json(a['registry_bytes'])
-    _require(type(reg_raw['schema_version'])is int and type(reg_raw['assignment_count'])is int,'invalid registry schema/count')
+    _require(isinstance(reg_raw,dict) and set(reg_raw)=={'schema_version','registry_version',
+             'capacity','padding_index','assignment_count','assignments'},'invalid registry envelope')
+    _require(all(type(reg_raw[name])is int for name in ('schema_version','registry_version',
+             'capacity','padding_index','assignment_count')),'invalid registry numeric headers')
     reg=registry.StableCardRegistry.from_dict(reg_raw)
     _require(set(universe)<=set(reg.assignments),'registry omits official members')
     projected=generate.project_canonical_card(card)

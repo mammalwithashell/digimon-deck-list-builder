@@ -9,6 +9,26 @@ import pytest
 F=Path(__file__).parents[1]/'fixtures/card_data/runtime_projection'
 
 @pytest.mark.parametrize('field,value',[
+    ('registry_version',True),('padding_index',False),('schema_version',1.0),
+    ('registry_version',1.0),('padding_index',0.0),('capacity',20000.0),
+    ('assignment_count',None)])
+def test_all_registry_headers_strict_integer_with_fresh_pins(field,value):
+    from tools.clause_coverage import runtime_projection_proof as p
+    a=inputs();r=json.loads(a['registry_bytes'])
+    r[field]=float(r[field])if field=='assignment_count'else value
+    a['registry_bytes']=p.enc(r);b=json.loads(a['binding'])
+    b['input_sha256']=p.input_hashes(a);a['binding']=p.enc(b)
+    with pytest.raises(p.RuntimeProjectionError):prove(a)
+
+
+def test_unknown_registry_metadata_is_not_silently_discarded():
+    from tools.clause_coverage import runtime_projection_proof as p
+    a=inputs();r=json.loads(a['registry_bytes']);r['invented_contract']='accepted?'
+    a['registry_bytes']=p.enc(r);b=json.loads(a['binding'])
+    b['input_sha256']=p.input_hashes(a);a['binding']=p.enc(b)
+    with pytest.raises(p.RuntimeProjectionError):prove(a)
+
+@pytest.mark.parametrize('field,value',[
     ('schema_version',True),('schema_version',1.0),('schema_version','1'),
     ('reason',True),('reason',''),('reviewer',[]),('reviewed_at',None),
     ('adjudication_id',7),('kind',True),('kind','unknown'),('card_id',False),
