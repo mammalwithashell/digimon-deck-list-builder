@@ -204,3 +204,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/tools/clause_coverage/link_yaml_binding.py -text
 /code/tests/tools/test_link_yaml_binding.py -text
 /code/tests/fixtures/card_data/link_yaml_binding/.gitattributes -text
+
+# Preserve reviewed clean Dual composition bytes.
+/code/tools/clause_coverage/dual_card_composition.py -text
+/code/tests/tools/test_clean_dual_composition.py -text
+/code/tests/fixtures/card_data/clean_dual_composition/.gitattributes -text

@@ -1,0 +1,19 @@
+{
+  "runtime-snapshot.json.gz": {
+    "path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\cards.json",
+    "sha256": "6102887019bdcf8af5905ee89c9c9dfafb1890513997f0ac2a849eae0945a637"
+  },
+  "registry.json.gz": {
+    "path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_registry.json",
+    "sha256": "8b514f43afd27d2cd7d8cd74d1557b4ddda100280887547a5b050cf94153932d"
+  },
+  "reviewed-ledger.json.gz": {
+    "path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_migration_adjudications.json",
+    "sha256": "fe1f313900386f2d8dcde21df7be97b4f19e25a227b708b879acc36fe39ef1a5"
+  },
+  "selections.json.gz": {
+    "path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_compatibility_selections.json",
+    "sha256": "158fd2fe7c9cc83238d49af2e66e60b3e895501891b8cac9ffdb12c45a8bf83a"
+  },
+  "review_sha256": "f59fd2d8e1e47e0cb27153c8e58573bd0e50b27c7314f34a1957f47aeb65650c"
+}

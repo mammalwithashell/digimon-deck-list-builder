@@ -1,0 +1,369 @@
+{
+  "admission": "admitted",
+  "card_id": "BT25-085",
+  "conflicts": [
+    {
+      "candidate_observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "field_path": "effect_description_eng",
+      "kind": "official_secondary",
+      "reason": "official value selected over conflicting secondary observation"
+    },
+    {
+      "candidate_observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "field_path": "evo_costs",
+      "kind": "official_secondary",
+      "reason": "official value selected over conflicting secondary observation"
+    },
+    {
+      "candidate_observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "field_path": "form_eng",
+      "kind": "official_secondary",
+      "reason": "official value selected over conflicting secondary observation"
+    },
+    {
+      "candidate_observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "field_path": "inherited_effect_description_eng",
+      "kind": "official_secondary",
+      "reason": "official value selected over conflicting secondary observation"
+    }
+  ],
+  "faces": [
+    {
+      "colors": [
+        "Purple",
+        "Black"
+      ],
+      "dp": 12000,
+      "effect_text": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3\n＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+      "face_id": "primary",
+      "inherited_text": "",
+      "kind": "digimon",
+      "level": 6,
+      "play_cost": null,
+      "security_text": ""
+    },
+    {
+      "colors": [
+        "Purple"
+      ],
+      "dp": null,
+      "effect_text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.\n＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)",
+      "face_id": "dual",
+      "inherited_text": "",
+      "kind": "option",
+      "level": null,
+      "play_cost": 6,
+      "security_text": ""
+    }
+  ],
+  "fields": {
+    "attribute_eng": [
+      "Virus"
+    ],
+    "card_colors": [
+      "Purple",
+      "Black"
+    ],
+    "card_kind": "Digimon",
+    "card_name_eng": "BeelStarmon",
+    "dp": 12000,
+    "effect_description_eng": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+    "evo_costs": [
+      {
+        "colors": [
+          "Purple",
+          "Black"
+        ],
+        "cost": 4,
+        "from_level": 5,
+        "slot": 1
+      }
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "inherited_effect_description_eng": "",
+    "level": 6,
+    "play_cost": 6,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Wizard",
+      "Three Musketeers",
+      "Iliad",
+      "TS"
+    ]
+  },
+  "printings": [
+    {
+      "alternate_art": false,
+      "language": "en",
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+      ],
+      "printing_id": "BT25-085",
+      "product": null
+    },
+    {
+      "alternate_art": false,
+      "language": "en",
+      "observation_ids": [
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e"
+      ],
+      "printing_id": "BT25-085#2",
+      "product": null
+    },
+    {
+      "alternate_art": false,
+      "language": "en",
+      "observation_ids": [
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e"
+      ],
+      "printing_id": "BT25-085#3",
+      "product": null
+    },
+    {
+      "alternate_art": true,
+      "language": "en",
+      "observation_ids": [
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3"
+      ],
+      "printing_id": "BT25-085_P1",
+      "product": null
+    },
+    {
+      "alternate_art": true,
+      "language": "en",
+      "observation_ids": [
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "printing_id": "BT25-085_P2",
+      "product": null
+    }
+  ],
+  "provenance": {
+    "attribute_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "card_colors": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "card_kind": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "card_name_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "dp": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "evo_costs": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "faces": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "form_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "inherited_effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "level": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "play_cost": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "security_effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    },
+    "type_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765"
+    }
+  },
+  "schema_version": 1,
+  "tombstone_reason": null
+}
