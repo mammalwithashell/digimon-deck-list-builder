@@ -150,3 +150,8 @@ code/tests/fixtures/card_data/runtime_snapshot/.gitattributes -text
 /code/tests/fixtures/card_data/bt26_kind_correction/observations.json -text
 /code/tests/fixtures/card_data/bt26_kind_correction/prior-corrections.json -text
 /code/tests/fixtures/card_data/bt26_kind_correction/proposed-corrections.json -text
+
+# Preserve prior-correction accounting proof bytes.
+/code/tests/tools/test_card_data_ordinary_nbsp_corrections.py -text
+/code/tests/fixtures/card_data/ordinary_nbsp_correction/7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2.html.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp_correction/EX12-031.json.gz -text

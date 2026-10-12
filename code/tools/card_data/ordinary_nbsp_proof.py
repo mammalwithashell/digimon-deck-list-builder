@@ -12,7 +12,7 @@ import json,re,unicodedata
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup,SoupStrainer
 from . import form_restoration_proof as base,normalization,adjudications,serialization,models,source_manifest
-from . import compatibility_corrections,compatibility_selections,corrections,errors
+from . import compatibility_corrections,compatibility_selections,corrections,errors,compatibility_diff,complete_candidate
 from .sources import official
 from ..clause_coverage import text_split,semantic_fingerprint
 ProofError=base.ProofError
@@ -137,21 +137,49 @@ def _prove(*,report_bytes,snapshot_bytes,canonical_bytes,ledger_bytes,correction
  req(set(ledger)=={'schema_version','adjudications'}and type(ledger['schema_version'])is int and ledger['schema_version']==1 and isinstance(ledger['adjudications'],list),'typed ledger envelope')
  req(all(isinstance(row,dict)and type(row.get('schema_version'))is int and row['schema_version']==1 for row in ledger['adjudications']),'typed ledger rows')
  rows=adjudications.validate_migration_adjudications([adjudications._row(x,path=Path('<pinned-ledger>'))for x in ledger['adjudications']])
- compatibility_corrections.correction_document_from_bytes(corrections_bytes)
+ document=compatibility_corrections.correction_document_from_bytes(corrections_bytes)
+ req(all(type(r.get('schema_version'))is int and r['schema_version']==1 for r in correction['corrections']),'typed correction rows')
+ typed_observations={oid:models.SourceObservation(**(o|{'source':models.SourceName.OFFICIAL}))for oid,o in by_id.items()}
+ typed_observations.update({oid:c.observation for oid,c in secondary_by_id.items()})
+ correction_by_field={(c.card_id,c.field_path):c for c in document.corrections}
+ correction_approved=set();correction_evidence=[]
  current=defaultdict(list)
  for row in rows:
   if row.kind.value=='runtime_field_cutover'and row.old_input_revision==report['old_input_revision']and row.new_input_revision==report['new_input_revision']:current[(row.card_id,row.field_path)].append(row)
  index={};approved=set()
  for d in report['runtime_field_diffs']:
   key=(d['card_id'],d['field_path']);req(key not in index,'duplicate runtime field');index[key]=d
+  req(type(d.get('approved'))is bool,'typed report approval flag')
   req(d['old_digest']==digest(d['old_value'])and d['new_digest']==digest(d['new_value']),'runtime diff digest')
   matches=current.get(key,[]);req(len(matches)<=1,'duplicate current approval')
   for a in matches:
    req(a.old_digest==d['old_digest']and a.new_digest==d['new_digest']and a.old_value==d['old_value']and a.new_value==d['new_value']and a.provenance_observation_ids and set(a.provenance_observation_ids)<=set(d['provenance_observation_ids']),'current approval mismatch');approved.add(key)
-  if d.get('approved')is True:req(matches and d.get('approval_id')==matches[0].adjudication_id,'unbound report approval')
+  if d.get('approved')is True:
+   if d.get('approval_kind')=='correction':
+    c=correction_by_field.get(key)
+    req(c is not None and c.correction_id==d.get('approval_id'),'unbound report correction')
+    ids=c.evidence_observation_ids
+    req(bool(ids)and len(ids)==len(set(ids))and set(ids)==set(d['provenance_observation_ids'])and len(d['provenance_observation_ids'])==len(ids),'exact correction diff evidence')
+    card=cards[d['card_id']];prov=card['provenance'][d['field_path']]
+    req(prov.get('adjudicated')is True and prov.get('derived')is False,'exact correction provenance flags')
+    pairs=[(x['printing_id'],oid)for x in card['printings']for oid in x['observation_ids']]
+    req(len(pairs)==len(set(pairs))and set(pairs)=={(x.printing_id,x.observation.observation_id)for x in all_candidates[d['card_id']]},'full corrected-card printing closure')
+    typed_card=complete_candidate._canonical_card_from_payload(d['card_id'],card,path=Path('<pinned-canonical>'))
+    req(corrections.correction_is_already_applied(typed_card,c,observations=typed_observations),'canonical correction not exactly applied')
+    typed_diff=compatibility_diff.RuntimeFieldDiff(**{k:(tuple(d[k])if k=='provenance_observation_ids'else d[k])for k in ['card_id','field_path','old_value','new_value','old_digest','new_digest','provenance_observation_ids']})
+    replay=compatibility_diff.approve_runtime_diffs([typed_diff],corrections=[c],adjudications=rows,observations=typed_observations,old_input_revision=report['old_input_revision'],new_input_revision=report['new_input_revision'])[0]
+    req(replay.approval_kind=='correction'and replay.approval_id==d['approval_id'],'producer correction approval replay')
+    correction_approved.add(key);correction_evidence.append({'card_id':c.card_id,'field_path':c.field_path,'correction_id':c.correction_id,'correction':serialization.canonicalize(c),'report_diff':d,'canonical_provenance':prov})
+   else:
+    req(d.get('approval_kind')=='migration_adjudication'and matches and d.get('approval_id')==matches[0].adjudication_id,'unbound report approval')
  req(set(current)<=set(index),'current ledger rows outside report')
+ ledger_approved=set(approved);approved|=correction_approved
  remaining=set(index)-approved
  counts={'runtime_count':len(index),'remaining_runtime_count':len(remaining),'remaining_text_count':sum(k[1]in FIELDS for k in remaining)}
+ if 'schema_version'in binding:
+  req(type(binding['schema_version'])is int and binding['schema_version']==2,'unsupported binding schema')
+  counts.update(approved_runtime_ledger_count=len(ledger_approved),approved_correction_count=len(correction_approved),approved_overlap_count=len(ledger_approved&correction_approved))
+ else:req(not correction_approved,'correction accounting requires binding schema2')
  req(all(type(binding[k])is int and binding[k]==v for k,v in counts.items()),'full denominator binding')
  corrected={x['card_id']for doc in [report,correction]for key in ['corrections','compatibility_corrections']for x in doc.get(key,[])}
  conflicts={x['card_id']for x in report.get('canonical_conflicts',[])if x.get('approval_required')}
@@ -198,5 +226,5 @@ def _prove(*,report_bytes,snapshot_bytes,canonical_bytes,ledger_bytes,correction
   else:eligible.append(row|{'consumer_check':check})
  eligiblekeys={(x['card_id'],x['field_path'])for x in eligible};excludedkeys={(x['card_id'],x['field_path'])for x in excluded}
  inventory=[{'card_id':k[0],'field_path':k[1],'diff':d,'existing_approved':k in approved,'classification':'eligible'if k in eligiblekeys else'excluded'if k in excludedkeys else'outside_family'}for k,d in sorted(index.items())]
- mods=[base,normalization,adjudications,serialization,models,source_manifest,compatibility_corrections,compatibility_selections,corrections,errors,official,text_split,semantic_fingerprint]
- return {'status':'PROOF_ONLY_NO_APPROVALS','predicate_version':PREDICATE_VERSION,'predicate_sha256':sha(Path(__file__).read_bytes()),'dependency_sha256':{m.__name__:sha(Path(m.__file__).read_bytes())for m in mods},'rust_keyword_consumer_sha256':sha((Path(__file__).parents[2]/'digimon-engine/src/card_data.rs').read_bytes()),'input_sha256':binding['input_sha256'],'binding_sha256':sha(binding_bytes),'raw_page_sha256':pages,'source_manifest_revision':aggregate['manifest_revision'],'source_membership':aggregate['sources'],'official_card_ids':sorted(by_card),'runtime_inventory':inventory,'counts':counts,'eligible':eligible,'excluded':excluded,'membership_sha256':digest(sorted(eligiblekeys)),'ledger_preserved_sha256':sha(ledger_bytes)}
+ mods=[base,normalization,adjudications,serialization,models,source_manifest,compatibility_corrections,compatibility_selections,corrections,errors,official,text_split,semantic_fingerprint,compatibility_diff,complete_candidate]
+ return {'status':'PROOF_ONLY_NO_APPROVALS','predicate_version':PREDICATE_VERSION,'predicate_sha256':sha(Path(__file__).read_bytes()),'dependency_sha256':{m.__name__:sha(Path(m.__file__).read_bytes())for m in mods},'rust_keyword_consumer_sha256':sha((Path(__file__).parents[2]/'digimon-engine/src/card_data.rs').read_bytes()),'input_sha256':binding['input_sha256'],'binding_sha256':sha(binding_bytes),'raw_page_sha256':pages,'source_manifest_revision':aggregate['manifest_revision'],'source_membership':aggregate['sources'],'official_card_ids':sorted(by_card),'runtime_inventory':inventory,'counts':counts,'correction_approvals':correction_evidence,'eligible':eligible,'excluded':excluded,'membership_sha256':digest(sorted(eligiblekeys)),'ledger_preserved_sha256':sha(ledger_bytes)}
