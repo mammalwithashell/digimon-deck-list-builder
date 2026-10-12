@@ -183,3 +183,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/tools/clause_coverage/clean_dual_association.py -text
 /code/tests/tools/test_clean_dual_association.py -text
 /code/tests/fixtures/card_data/clean_dual_association/.gitattributes -text
+
+# Preserve reviewed focused closure input and producer bytes.
+/code/tools/card_data/focused_closure.py -text
+/code/tests/tools/test_focused_closure.py -text
+/code/tests/fixtures/card_data/focused_closure/.gitattributes -text

@@ -1,0 +1,150 @@
+# Interaction qa:Q6813 -- a [Security] effect and Shishimamon's "opponent's
+# security stack is removed from" trigger fire on the same security check.
+# p1's top security card is Genshi Continent (EX12-074, [Security]) and p1
+# controls Gatomon (BT15-037, "[All Turns] [Once Per Turn] When a card is removed
+# from your security stack, gain 1 memory", mandatory). One security check
+# therefore triggers THREE effect types at once: the [Security] effect (p1 plays
+# EX12-004), Shishimamon's removal trigger (turn player p0, optional digivolve
+# prompt) and Gatomon's removal trigger (non-turn player p1, mandatory, no
+# prompt). The ruling: the [Security] effect activates first, immediately and
+# unpended; then the TURN PLAYER's removal trigger (Shishimamon) before the
+# non-turn player's (Gatomon). No card in the pool is both implemented and
+# printed "when [...] performs a security check", so that third effect type
+# is not exercised.
+# Base: EX12-046 (Shishimamon), clause effect#2 -- "[Your Turn] When
+# your opponent's security stack is removed from, this Digimon may digivolve
+# into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+#
+# The line: p0 plays Shishimamon from hand, then two turns later attacks p1's
+# security. The single check trashes p1's top security card -- a removal from
+# the security stack on p0's own turn -- and the clause parks its optional
+# digivolve prompt. p0 answers with Kaguyamon (EX12-065), the pool's only
+# [TB] trait Digimon that can sit on a level 5:
+#   - its standard purple/green circles miss the yellow/red Shishimamon, so
+#     the ONLY matching route is the "Lv.5 w/[Shambala]: Cost 3" alt path --
+#     one distinct cost, no cost-choice prompt;
+#   - reduced by 2, the digivolve costs 1: memory 3 -> 2 is the cost witness.
+#
+# DCGO's trigger is skippable (SetIsSkippable) and its only prompt is the
+# hand-card pick (SelectHandEffect), so the line answers that pick directly.
+#
+# Kaguyamon's own [When Digivolving] ("play 1 play cost 5 or lower [Puppet]/
+# [Shambala] card from your trash") stays silent: p0's trash is empty. Its
+# [All Turns] keyword grant is an aura, not a prompt. Amaterasumon's card face
+# prints [TB] too, but no EX12-047 copy is in p0's hand, so Kaguyamon stays the
+# pick's only candidate on both sides.
+#
+# p1's security is stacked with plain low-DP Digimon so the check resolves as
+# a silent security battle the 7000 DP attacker survives.
+card: EX12-046
+clause: EX12-046#effect#2
+interaction: {id: "qa:Q6813", source: qa, kind: positive}
+covers: [EX12-046#effect#2]
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Shishimamon, Kaguyamon, inert fillers
+      - EX12-046
+      - EX12-065
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # security (5-9) -- never checked; quiet Digimon regardless
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10), T5 turn (11), T5 digivolve (12)
+      - EX12-074
+      - EX12-075
+      - EX12-070
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): Gammamon-free quiet [Shambala] cost-0 Digimon EX12-004 is
+      # the ONLY play cost 5 or lower [Shambala] card, so the checked
+      # Genshi Continent's [Security] effect has exactly one visible result
+      # (EX12-004 lands on p1's field); the rest are cost > 5 filler
+      - EX12-004
+      - EX12-036
+      - EX12-031
+      - BT15-037
+      - EX12-046
+      # security (5-9): top is Genshi Continent (EX12-074, [Security] text)
+      - EX12-074
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      # draws: T2 turn (10), T4 turn (11), T6 turn (12) -- all cost > 5
+      - EX12-031
+      - EX12-036
+      - EX12-063
+    rest: toho-braves
+steps:
+  # T1 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): play Gatomon (cost 5, memory 3 -> -2; turn ends). Its trigger
+  # only listens for removals from p1's own security stack.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: BT15-037, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (p0): play Shishimamon (cost 7, memory 3 -> -4; turn ends). Its
+  # [On Play] give targets p1's only Digimon, Gatomon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-046, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0): the clause -- attack security; the check removes p1's top
+  # security card and the trigger parks the optional digivolve.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Q6813 ordering: the [Security] effect activates immediately upon the
+  # check, BEFORE the removal triggers. p1 (the checked player) is therefore
+  # asked first: play EX12-004 free from hand. Then the turn player's
+  # trigger (Shishimamon) is offered before the non-turn player's Gatomon
+  # memory gain, which has no prompt and resolves afterward.
+  - actor: 1
+    do: { select: { cards: [EX12-004] } }
+    expect: { prompt: SelectHandEffect }
+  # Answer the digivolve prompt: Kaguyamon from hand (alt Shambala path,
+  # cost 3 - 2 = 1; memory 3 -> 2).
+  - actor: 0
+    do: { select: { cards: [EX12-065] } }
+    expect: { prompt: SelectHandEffect }
+  # Gatomon's gain (memory 2 -> 1) keeps p0 on the turn: pass main.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Trailing pass: p1's next breeding decision closes the line.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+meta: {produced_by: 20261010T182920021380Z-meta-six-20261010-b-dc1570}
+assert: []
