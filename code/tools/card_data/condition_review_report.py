@@ -61,6 +61,9 @@ def build_condition_review_report(
     observations = _validate_snapshot(official, SourceName.OFFICIAL)
     secondary_observations = _validate_snapshot(secondary, SourceName.DIGIMONCARD_IO)
     aggregate = build_full_pool_source_manifest((official.manifest, secondary.manifest))
+    # The property hashes the entire immutable source inventory. Bind it once
+    # for this report rather than repeating whole-pool work for every card.
+    aggregate_revision = aggregate.manifest_revision
     cards = normalize_cards(observations.values())
     official_ids = {ref.gameplay_card_id for ref in official.manifest.observation_refs}
     secondary_ids = {ref.gameplay_card_id for ref in secondary.manifest.observation_refs}
@@ -87,7 +90,7 @@ def build_condition_review_report(
             "value_groups": [{"value": value, "value_digest": content_digest(value), "observation_ids": ids}
                 for value, ids in sorted(groups.items())],
             "review_binding": {"card_id": cid, "field_path": "xros_req",
-                "source_manifest_revision": aggregate.manifest_revision,
+                "source_manifest_revision": aggregate_revision,
                 "candidate_values": dict(sorted(values.items())), "candidate_set_digest": content_digest(values)},
             "observations": [{"observation_id": oid, "raw_payload_digest": observations[oid].raw_payload_digest,
                 "source_url": observations[oid].source_url, "source_record_key": observations[oid].source_record_key,
@@ -99,13 +102,13 @@ def build_condition_review_report(
         if selections:
             try:
                 selected_value, evidence = official_condition_projection(card, observations,
-                    selections=selections, source_manifest_revision=aggregate.manifest_revision)
+                    selections=selections, source_manifest_revision=aggregate_revision)
             except SourceSchemaError as exc:
                 row["status"] = "unresolved"
                 row["source_issue"] = {"message": str(exc), "details": dict(exc.details)}
             else:
                 matching = [item for item in selections if item.card_id == cid
-                    and item.source_manifest_revision == aggregate.manifest_revision
+                    and item.source_manifest_revision == aggregate_revision
                     and dict(item.candidate_values) == values]
                 if matching:
                     row.update(status="reviewed", selection_id=matching[0].selection_id,
@@ -114,7 +117,7 @@ def build_condition_review_report(
     unresolved = sum(row["status"] == "unresolved" for row in rows)
     report = {"schema_version": 1,
         "status": "blocked" if unresolved else "condition_consensus_pass",
-        "aggregate_source_revision": aggregate.manifest_revision,
+        "aggregate_source_revision": aggregate_revision,
         "official_manifest_digest": content_digest(official.manifest),
         "secondary_manifest_digest": content_digest(secondary.manifest),
         "official_card_count": len(official_ids), "official_observation_count": len(observations),
