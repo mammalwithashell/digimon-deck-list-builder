@@ -1,0 +1,78 @@
+{
+  "original_observation": {
+    "extracted": {
+      "attribute": "",
+      "card_id": "BT10-002",
+      "card_type": "Digi-Egg",
+      "colors": [
+        "Blue"
+      ],
+      "dp": null,
+      "evolution_routes": [],
+      "faces": [
+        {
+          "colors": [
+            "Blue"
+          ],
+          "dp": null,
+          "face_id": "primary",
+          "kind": "digi_egg",
+          "level": 2,
+          "name": "Bebydomon",
+          "play_cost": null,
+          "text_sections": [
+            {
+              "label": "Inherited Effect",
+              "text": "[When Attacking][Once Per Turn] If your opponent has 2 or more Digimon in play, ＜Draw 1＞. (Draw 1 card from your deck.)"
+            }
+          ]
+        }
+      ],
+      "form": "In-Training",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 2,
+      "name": "Bebydomon",
+      "play_cost": null,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522011",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT10-002.png?260529",
+        "printing_id": "BT10-002"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "U",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[When Attacking][Once Per Turn] If your opponent has 2 or more Digimon in play, ＜Draw 1＞. (Draw 1 card from your deck.)"
+        }
+      ],
+      "type": "Baby Dragon"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "0c951aaf78ad9c99b894ecd4dabff552b9bc48eaf5470facbc40a6a62fd2314a",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "8456f58ecc89895235347925425e28c72c6453b6bd0b98f9a5073a1e86914df7",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522011:BT10-002:BT10-002",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522011"
+  },
+  "fixture_sha256": "dfc88f6398d516cd6fabdaa90e7ced9f77815333d948e48d9703fa34edd59f4b",
+  "source_raw_path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\official-fetch-cache\\1609f23859f175d2b0ddb25ebed9a3c2d3a09b2fbbec762fbbb38fadeef426e9.html",
+  "source_byte_range": [
+    39742,
+    43024
+  ],
+  "note": "Exact raw page substring. Tests create a distinct synthetic complete scope bound to these fixture bytes; original observation remains unchanged."
+}
