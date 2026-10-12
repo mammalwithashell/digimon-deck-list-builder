@@ -115,7 +115,11 @@ def compose_ordinary_card(**inputs):
         raise SourceUnitError('ordinary source composition refused: '+str(error)) from error
 
 
-def _compose(*,aggregate,scopes,observations,canonical_card,runtime_projection,
+def _compose(**inputs):
+    return _compose_verified_ordinary(_validated_context(**inputs))
+
+
+def _validated_context(*,aggregate,scopes,observations,canonical_card,runtime_projection,
              adjudication_ledger,raw_pages,correction_document,condition_selections,
              old_input_revision,new_input_revision,expected_official_universe):
     _require(isinstance(new_input_revision,str) and re.fullmatch('[0-9a-f]{64}',new_input_revision)
@@ -254,12 +258,22 @@ def _compose(*,aggregate,scopes,observations,canonical_card,runtime_projection,
                 'scopes':{s:_sha(v)for s,v in sorted(scopes.items())},
                 'observations':{oid:_sha(v)for oid,v in sorted(observations.items())},
                 'raw_pages':{url:_sha(v)for url,v in sorted(raw_pages.items())}}}
-    if blockers:
+    return {'result':result,'selected_fields':selected_fields,'typed':typed,
+            'kind':kind,'card':card,'runtime':runtime}
+
+
+def _compose_verified_ordinary(context, *, delegated_indices=None):
+    """Internal projection after full input replay and explicit dispatch."""
+    result=deepcopy(context['result'])
+    if result['blockers']:
         return result
+    selected_fields=context['selected_fields'];typed=context['typed'];kind=context['kind']
+    inventory=result['inventory']
     for field,zone in _FIELDS.items():
         value,provenance,binding=selected_fields[field]
         oid=provenance.selected_observation_id;source=typed[oid];sections=source.extracted['text_sections']
-        projected=_ordinary_sections(sections,kind)
+        projected=_ordinary_sections(sections,kind,
+            delegated_indices=(delegated_indices or {}).get(oid,set()))
         pieces=[(index,text,transform)for index,mapped,text,transform in projected if mapped==field]
         _require('\n'.join(text for _,text,_ in pieces)==value, 'unsupported lossless ordinary projection')
         refs_out=[];spans=[]
@@ -278,11 +292,18 @@ def _compose(*,aggregate,scopes,observations,canonical_card,runtime_projection,
     return result
 
 
-def _ordinary_sections(sections,kind):
+def _ordinary_sections(sections,kind, *, delegated_indices=()):
     """Trace only explicitly supported routes, using producer render helpers."""
     result=[]
     explicit_security=any('security'in s['label'].lower()for s in sections)
     for index,s in enumerate(sections):
+        if index in delegated_indices:
+            # This occurrence is accounted by the condition dispatcher, not
+            # removed from the verified source inventory or observation.
+            from tools.card_data.compatibility_conditions import _CONDITION_LABELS
+            _require(s['label'].lower() in _CONDITION_LABELS,
+                     'only recognized condition occurrences may be delegated')
+            continue
         label=s['label'].lower();field=_LABELS[label]
         text=normalization._render_effect_section(s['label'],s['text'])
         _require(text is not None,'ordinary section cannot be structural')

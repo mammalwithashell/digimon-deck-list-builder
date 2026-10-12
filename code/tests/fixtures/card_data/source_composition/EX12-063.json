@@ -1,0 +1,760 @@
+{
+  "scope": "Pure whole-card source composition fixture, no publication or verdict approval",
+  "card_id": "EX12-063",
+  "card": {
+    "admission": "admitted",
+    "card_id": "EX12-063",
+    "conflicts": [
+      {
+        "candidate_observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "field_path": "effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "field_path": "evo_costs",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "field_path": "form_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "field_path": "inherited_effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Purple",
+          "Green"
+        ],
+        "dp": 7000,
+        "effect_text": "[Special Digivolution Condition] [Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3\n[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.\n[Special Play Condition] Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card",
+        "face_id": "primary",
+        "inherited_text": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+        "kind": "digimon",
+        "level": 5,
+        "play_cost": 7,
+        "security_text": ""
+      }
+    ],
+    "fields": {
+      "attribute_eng": [
+        "Data"
+      ],
+      "card_colors": [
+        "Purple",
+        "Green"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Karakurumon",
+      "dp": 7000,
+      "effect_description_eng": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Purple",
+            "Green"
+          ],
+          "cost": 4,
+          "from_level": 4,
+          "slot": 1
+        }
+      ],
+      "form_eng": [
+        "Ultimate"
+      ],
+      "inherited_effect_description_eng": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+      "level": 5,
+      "play_cost": 7,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Puppet",
+        "Shambala",
+        "TB"
+      ]
+    },
+    "printings": [
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "printing_id": "EX12-063",
+        "product": null
+      },
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60"
+        ],
+        "printing_id": "EX12-063#2",
+        "product": null
+      },
+      {
+        "alternate_art": true,
+        "language": "en",
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152"
+        ],
+        "printing_id": "EX12-063_P1",
+        "product": null
+      }
+    ],
+    "provenance": {
+      "attribute_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "card_colors": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "card_kind": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "card_name_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "dp": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "evo_costs": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "faces": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "form_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "inherited_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "level": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "play_cost": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "security_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      },
+      "type_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+          "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+          "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+          "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+        ],
+        "selected_observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3"
+      }
+    },
+    "schema_version": 1,
+    "tombstone_reason": null
+  },
+  "observations": {
+    "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3": {
+      "extracted": {
+        "attribute": "Data",
+        "card_id": "EX12-063",
+        "card_type": "Digimon",
+        "colors": [
+          "Purple",
+          "Green"
+        ],
+        "dp": 7000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Purple",
+              "Green"
+            ],
+            "cost": 4,
+            "from_level": 4,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Purple",
+              "Green"
+            ],
+            "dp": 7000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 5,
+            "name": "Karakurumon",
+            "play_cost": 7,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+              },
+              {
+                "label": "Special Play Condition",
+                "text": "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card"
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+              }
+            ]
+          }
+        ],
+        "form": "Ultimate",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 5,
+        "name": "Karakurumon",
+        "play_cost": 7,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522037",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-063.png?260529",
+          "printing_id": "EX12-063"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, it can.",
+            "date": "Jun. 19, 2026",
+            "number": "Q6861",
+            "question": "Can this card's [On Play] [When Digivolving] effect suspend a different card from the one that's given \"can't unsuspend until their turn ends\"?"
+          }
+        ],
+        "rarity": "C",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card"
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+          }
+        ],
+        "type": "Puppet/Shambala/TB"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "75b1b422194e4699882cc365344f312e778d3193a1f7d3d7fe94f1484f00a7b3",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522037:EX12-063:EX12-063",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+    },
+    "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Data"
+          ],
+          "card_colors": [
+            "Purple",
+            "Green"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Karakurumon",
+          "dp": 7000,
+          "effect_description_eng": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\r\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+          "level": 5,
+          "play_cost": 7,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Puppet",
+            "Shambala",
+            "TB"
+          ]
+        },
+        "card_id": "EX12-063",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Purple",
+              "cost": 3,
+              "level": 4,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Purple",
+              "Green"
+            ],
+            "dp": 7000,
+            "effect_text": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\r\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+            "face_id": "primary",
+            "inherited_text": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+            "kind": "digimon",
+            "level": 5,
+            "play_cost": 7,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3",
+          "artist": null,
+          "attribute": "Data",
+          "color": "Purple",
+          "color2": "Green",
+          "date_added": "2026-06-04 01:00:30",
+          "digi_type": "Puppet",
+          "digi_type2": "Shambala",
+          "digi_type3": "TB",
+          "digi_type4": null,
+          "dp": 7000,
+          "evolution_color": null,
+          "evolution_cost": 3,
+          "evolution_level": null,
+          "form": null,
+          "id": "EX12-063",
+          "level": 5,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\r\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+          "name": "Karakurumon",
+          "play_cost": 7,
+          "pretty_url": "EX12-063-karakurumon",
+          "rarity": "C",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "EX-12: EXTRA BOOSTER DIGITAL WORLD SHAMBALA"
+          ],
+          "source_effect": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+          "stage": null,
+          "tcgplayer_id": 703082,
+          "tcgplayer_name": "Karakurumon (Limited Foil)",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "EX12-063",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Data"
+          ],
+          "card_colors": [
+            "Purple",
+            "Green"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Karakurumon",
+          "dp": 7000,
+          "effect_description_eng": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\r\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+          "level": 5,
+          "play_cost": 7,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Puppet",
+            "Shambala",
+            "TB"
+          ]
+        },
+        "card_id": "EX12-063",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Purple",
+              "cost": 3,
+              "level": 4,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Purple",
+              "Green"
+            ],
+            "dp": 7000,
+            "effect_text": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\r\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+            "face_id": "primary",
+            "inherited_text": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+            "kind": "digimon",
+            "level": 5,
+            "play_cost": 7,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3",
+          "artist": null,
+          "attribute": "Data",
+          "color": "Purple",
+          "color2": "Green",
+          "date_added": "2026-06-04 01:00:30",
+          "digi_type": "Puppet",
+          "digi_type2": "Shambala",
+          "digi_type3": "TB",
+          "digi_type4": null,
+          "dp": 7000,
+          "evolution_color": null,
+          "evolution_cost": 3,
+          "evolution_level": null,
+          "form": null,
+          "id": "EX12-063",
+          "level": 5,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\r\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+          "name": "Karakurumon",
+          "play_cost": 7,
+          "pretty_url": "EX12-063-karakurumon",
+          "rarity": "C",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "EX-12: EXTRA BOOSTER DIGITAL WORLD SHAMBALA"
+          ],
+          "source_effect": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+          "stage": null,
+          "tcgplayer_id": 696600,
+          "tcgplayer_name": "Karakurumon",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "EX12-063#2",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152": {
+      "extracted": {
+        "attribute": "Data",
+        "card_id": "EX12-063",
+        "card_type": "Digimon",
+        "colors": [
+          "Purple",
+          "Green"
+        ],
+        "dp": 7000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Purple",
+              "Green"
+            ],
+            "cost": 4,
+            "from_level": 4,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Purple",
+              "Green"
+            ],
+            "dp": 7000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 5,
+            "name": "Karakurumon",
+            "play_cost": 7,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+              },
+              {
+                "label": "Special Play Condition",
+                "text": "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card"
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+              }
+            ]
+          }
+        ],
+        "form": "Ultimate",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 5,
+        "name": "Karakurumon",
+        "play_cost": 7,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522037",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-063_P1.png?260529",
+          "printing_id": "EX12-063_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, it can.",
+            "date": "Jun. 19, 2026",
+            "number": "Q6861",
+            "question": "Can this card's [On Play] [When Digivolving] effect suspend a different card from the one that's given \"can't unsuspend until their turn ends\"?"
+          }
+        ],
+        "rarity": "C",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card"
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+          }
+        ],
+        "type": "Puppet/Shambala/TB"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "391323eadc3b94b05a4a36bb457897a0a92d0301b6dbe0ddf886863f55a30152",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522037:EX12-063:EX12-063_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+    }
+  },
+  "xros_req": "[Special Digivolution Condition] [Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3\n[Special Play Condition] Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+  "raw_files": {
+    "https://world.digimoncard.com/cards/?search=true&category=522037": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2.html.gz"
+  },
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\EX12-063.webp",
+    "sha256": "1f6d4a513ab372cd6e94f3254fc1e722b1f7644fb125c7228c964488a39a16d8",
+    "observed": "Ordinary boxes and separate special condition text inspected; full text retained from official observation."
+  }
+}

@@ -1,0 +1,492 @@
+{
+  "scope": "Pure whole-card source composition fixture, no publication or verdict approval",
+  "card_id": "EX12-046",
+  "card": {
+    "admission": "admitted",
+    "card_id": "EX12-046",
+    "conflicts": [
+      {
+        "candidate_observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "field_path": "effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "field_path": "evo_costs",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "field_path": "form_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "field_path": "inherited_effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Yellow",
+          "Red"
+        ],
+        "dp": 7000,
+        "effect_text": "[Special Digivolution Condition] [Digivolve] Lv.4 w/[Shambala] trait: Cost 3\n[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends.\n[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2.\n[Special Play Condition] Assembly -2: Lv.4 or lower [TB] trait card",
+        "face_id": "primary",
+        "inherited_text": "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost.",
+        "kind": "digimon",
+        "level": 5,
+        "play_cost": 7,
+        "security_text": ""
+      }
+    ],
+    "fields": {
+      "attribute_eng": [
+        "Vaccine"
+      ],
+      "card_colors": [
+        "Yellow",
+        "Red"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Shishimamon",
+      "dp": 7000,
+      "effect_description_eng": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends.\n[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Yellow",
+            "Red"
+          ],
+          "cost": 4,
+          "from_level": 4,
+          "slot": 1
+        }
+      ],
+      "form_eng": [
+        "Ultimate"
+      ],
+      "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost.",
+      "level": 5,
+      "play_cost": 7,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Holy Beast",
+        "Shambala",
+        "TB"
+      ]
+    },
+    "printings": [
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "printing_id": "EX12-046",
+        "product": null
+      }
+    ],
+    "provenance": {
+      "attribute_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "card_colors": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "card_kind": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "card_name_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "dp": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "evo_costs": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "faces": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "form_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "inherited_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "level": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "play_cost": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "security_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      },
+      "type_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+          "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+        ],
+        "selected_observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50"
+      }
+    },
+    "schema_version": 1,
+    "tombstone_reason": null
+  },
+  "observations": {
+    "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Vaccine"
+          ],
+          "card_colors": [
+            "Yellow",
+            "Red"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Shishimamon",
+          "dp": 7000,
+          "effect_description_eng": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) and -3000 DP until their turn ends.\r\n[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost.",
+          "level": 5,
+          "play_cost": 7,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Holy Beast",
+            "Shambala",
+            "TB"
+          ]
+        },
+        "card_id": "EX12-046",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Yellow",
+              "cost": 4,
+              "level": 4,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "dp": 7000,
+            "effect_text": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) and -3000 DP until their turn ends.\r\n[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2.",
+            "face_id": "primary",
+            "inherited_text": "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost.",
+            "kind": "digimon",
+            "level": 5,
+            "play_cost": 7,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3",
+          "artist": null,
+          "attribute": "Vaccine",
+          "color": "Yellow",
+          "color2": "Red",
+          "date_added": "2026-05-28 01:00:54",
+          "digi_type": "Holy Beast",
+          "digi_type2": "Shambala",
+          "digi_type3": "TB",
+          "digi_type4": null,
+          "dp": 7000,
+          "evolution_color": null,
+          "evolution_cost": 4,
+          "evolution_level": null,
+          "form": null,
+          "id": "EX12-046",
+          "level": 5,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) and -3000 DP until their turn ends.\r\n[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2.",
+          "name": "Shishimamon",
+          "play_cost": 7,
+          "pretty_url": "EX12-046-shishimamon",
+          "rarity": "R",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "EX-12: EXTRA BOOSTER DIGITAL WORLD SHAMBALA"
+          ],
+          "source_effect": "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost.",
+          "stage": null,
+          "tcgplayer_id": 695719,
+          "tcgplayer_name": "Shishimamon",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "EX12-046",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50": {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "EX12-046",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow",
+          "Red"
+        ],
+        "dp": 7000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "cost": 4,
+            "from_level": 4,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "dp": 7000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 5,
+            "name": "Shishimamon",
+            "play_cost": 7,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends.\n[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+              },
+              {
+                "label": "Special Play Condition",
+                "text": "Assembly -2: Lv.4 or lower [TB] trait card"
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost."
+              }
+            ]
+          }
+        ],
+        "form": "Ultimate",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 5,
+        "name": "Shishimamon",
+        "play_cost": 7,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522037",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-046.png?260529",
+          "printing_id": "EX12-046"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "[Security] effects take precedence for activation.\nUpon a check, a [Security] effect will immediately activate without pending activation.\nFor other triggered effects, the turn player activates their effects first.",
+            "date": "Jun. 19, 2026",
+            "number": "Q6813",
+            "question": "In what order do a [Security] effect, \"when [...] performs a security check\" effect, and \"when a card is removed from [...] security stack\" effect activate when they trigger simultaneously upon a security check?"
+          },
+          {
+            "answer": "Yes, it triggers.",
+            "date": "Jun. 19, 2026",
+            "number": "Q6814",
+            "question": "During an attack by this card, I used its [Your Turn] effect to digivolve it. Does this card's [End of Attack] inherited effect trigger at the end of the attack?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends.\n[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -2: Lv.4 or lower [TB] trait card"
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost."
+          }
+        ],
+        "type": "Holy Beast/Shambala/TB"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522037:EX12-046:EX12-046",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+    }
+  },
+  "xros_req": "[Special Digivolution Condition] [Digivolve] Lv.4 w/[Shambala] trait: Cost 3\n[Special Play Condition] Assembly -2: Lv.4 or lower [TB] trait card",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+  "raw_files": {
+    "https://world.digimoncard.com/cards/?search=true&category=522037": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2.html.gz"
+  },
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\EX12-046.webp",
+    "sha256": "b2df0967eedd6f1e069b7235769d4347680fe35afd8c0d92af85eeae3ad81d5c",
+    "observed": "Ordinary boxes and separate special condition text inspected; full text retained from official observation."
+  }
+}
