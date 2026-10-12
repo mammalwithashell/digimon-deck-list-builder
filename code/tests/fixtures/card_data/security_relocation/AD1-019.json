@@ -1,0 +1,97 @@
+{
+  "original_observation": {
+    "extracted": {
+      "attribute": "",
+      "card_id": "AD1-019",
+      "card_type": "Tamer",
+      "colors": [
+        "Blue",
+        "Yellow"
+      ],
+      "dp": null,
+      "evolution_routes": [],
+      "faces": [
+        {
+          "colors": [
+            "Blue",
+            "Yellow"
+          ],
+          "dp": null,
+          "face_id": "primary",
+          "kind": "tamer",
+          "level": null,
+          "name": "Matt Ishida & T.K. Takaishi",
+          "play_cost": 3,
+          "text_sections": [
+            {
+              "label": "Effect",
+              "text": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\n[Your Turn] When any of your Digimon digivolve into an [ADVENTURE] trait Digimon, by suspending this Tamer, you may play 1 [ADVENTURE] trait card from your hand. For every 2 of your Tamers' colors, reduce this effect's play cost by 1."
+            },
+            {
+              "label": "Security Effect",
+              "text": "[Security] Play this card without paying the cost."
+            }
+          ]
+        }
+      ],
+      "form": "",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": null,
+      "name": "Matt Ishida & T.K. Takaishi",
+      "play_cost": 3,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522035",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/AD1-019.png?260529",
+        "printing_id": "AD1-019"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "No, you can't.\nYou can't activate multiple card-playing effects at the same time.",
+          "date": "Mar. 13, 2026",
+          "number": "Q6097",
+          "question": "2 copies of this card are in the battle area.\nCan I activate the [Your Turn] effect on both copies of this card and play 1 [ADVENTURE] trait card with the play cost reduced by 2?"
+        },
+        {
+          "answer": "Yes, you can.\nRelated Cards",
+          "date": "Mar. 13, 2026",
+          "number": "Q6098",
+          "question": "When I activate this card's [Your Turn] effect and an [ADVENTURE] trait Digimon card would be played, can I activate ST21-13 [Matt Ishida & T.K. Takaishi]'s [Your Turn] effect and reduce the play cost by a total of 2?"
+        }
+      ],
+      "rarity": "R",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\n[Your Turn] When any of your Digimon digivolve into an [ADVENTURE] trait Digimon, by suspending this Tamer, you may play 1 [ADVENTURE] trait card from your hand. For every 2 of your Tamers' colors, reduce this effect's play cost by 1."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Play this card without paying the cost."
+        }
+      ],
+      "type": "ADVENTURE/Hero"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "e79c84444b99b848f954cca08d9cb331b451f2627f955f85bfe54ad79bd64be5",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "b5abf66f8645f0c276ea5abf44d4d14c63cf2ab184a1f7b3c3eead572c5555f5",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522035:AD1-019:AD1-019",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522035"
+  },
+  "fixture_sha256": "491c707e1bcc26aca1f45d879c2d98b44596eec0d876e87cba4d56269048d66b",
+  "original_page_sha256": "b5abf66f8645f0c276ea5abf44d4d14c63cf2ab184a1f7b3c3eead572c5555f5",
+  "image_sha256": "f403d9cee487efb7b359b76b0cff2d61c4dc70ee2656f77c4a5452e5efeddd4c"
+}

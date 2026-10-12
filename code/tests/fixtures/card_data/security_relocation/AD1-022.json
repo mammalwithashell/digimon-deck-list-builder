@@ -1,0 +1,91 @@
+{
+  "original_observation": {
+    "extracted": {
+      "attribute": "",
+      "card_id": "AD1-022",
+      "card_type": "Tamer",
+      "colors": [
+        "Green",
+        "Red"
+      ],
+      "dp": null,
+      "evolution_routes": [],
+      "faces": [
+        {
+          "colors": [
+            "Green",
+            "Red"
+          ],
+          "dp": null,
+          "face_id": "primary",
+          "kind": "tamer",
+          "level": null,
+          "name": "Izzy Izumi & Tai Kamiya",
+          "play_cost": 3,
+          "text_sections": [
+            {
+              "label": "Effect",
+              "text": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\n[Your Turn] When any of your other [ADVENTURE] trait Digimon or Tamers are played, by suspending this Tamer, 1 of your Digimon may digivolve into an [ADVENTURE] trait Digimon card in the hand. For every 2 of your Tamers' colors, reduce this effect's digivolution cost by 1."
+            },
+            {
+              "label": "Security Effect",
+              "text": "[Security] Play this card without paying the cost."
+            }
+          ]
+        }
+      ],
+      "form": "",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": null,
+      "name": "Izzy Izumi & Tai Kamiya",
+      "play_cost": 3,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522035",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/AD1-022.png?260529",
+        "printing_id": "AD1-022"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "No, you can't.\nYou can't activate multiple digivolving effects at the same time.",
+          "date": "Mar. 13, 2026",
+          "number": "Q6112",
+          "question": "2 copies of this card are in the battle area.\nCan I activate the [Your Turn] effect on both copies of this card and digivolve my Digimon into 1 [ADVENTURE] trait card with the digivolution cost reduced by 2?"
+        }
+      ],
+      "rarity": "R",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\n[Your Turn] When any of your other [ADVENTURE] trait Digimon or Tamers are played, by suspending this Tamer, 1 of your Digimon may digivolve into an [ADVENTURE] trait Digimon card in the hand. For every 2 of your Tamers' colors, reduce this effect's digivolution cost by 1."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Play this card without paying the cost."
+        }
+      ],
+      "type": "ADVENTURE/Hero"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "63e9a881cff84d6b5d7038e5a01d27d573030902afae8e2de7befaca6926dfd4",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "b5abf66f8645f0c276ea5abf44d4d14c63cf2ab184a1f7b3c3eead572c5555f5",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522035:AD1-022:AD1-022",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522035"
+  },
+  "fixture_sha256": "73848d553075164117a8c5f437e02f54ead7ae94ee02fd632f21018b9cc170b3",
+  "original_page_sha256": "b5abf66f8645f0c276ea5abf44d4d14c63cf2ab184a1f7b3c3eead572c5555f5",
+  "image_sha256": "778afc1e6c7ce4644a261adac74d915f67efcfa6304b46b0717d1cc334bcc02a"
+}

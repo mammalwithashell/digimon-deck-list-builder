@@ -1,0 +1,2 @@
+# Preserve raw official-source fixture bytes for SHA-256 verification.
+*.html -text
