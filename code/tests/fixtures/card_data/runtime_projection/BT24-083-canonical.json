@@ -1,0 +1,306 @@
+{
+  "admission": "admitted",
+  "card_id": "BT24-083",
+  "conflicts": [
+    {
+      "candidate_observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "field_path": "effect_description_eng",
+      "kind": "official_secondary",
+      "reason": "official value selected over conflicting secondary observation"
+    }
+  ],
+  "faces": [
+    {
+      "colors": [
+        "Red"
+      ],
+      "dp": null,
+      "effect_text": "[Start of Your Turn] If you have 4 or less memory, by returning this Tamer to the bottom of the deck, you may play 1 [Hiroko Sagisaka] or 1 [TS] trait Digimon card with 5000 DP or less from your hand without paying the cost.\n[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+      "face_id": "primary",
+      "inherited_text": "",
+      "kind": "tamer",
+      "level": null,
+      "play_cost": 3,
+      "security_text": "[Security] Play this card without paying the cost."
+    }
+  ],
+  "fields": {
+    "attribute_eng": [],
+    "card_colors": [
+      "Red"
+    ],
+    "card_kind": "Tamer",
+    "card_name_eng": "Hiroko Sagisaka",
+    "effect_description_eng": "[Start of Your Turn] If you have 4 or less memory, by returning this Tamer to the bottom of the deck, you may play 1 [Hiroko Sagisaka] or 1 [TS] trait Digimon card with 5000 DP or less from your hand without paying the cost.\n[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+    "evo_costs": [],
+    "form_eng": [],
+    "inherited_effect_description_eng": "",
+    "level": null,
+    "play_cost": 3,
+    "security_effect_description_eng": "[Security] Play this card without paying the cost.",
+    "type_eng": [
+      "TS"
+    ]
+  },
+  "printings": [
+    {
+      "alternate_art": false,
+      "language": "en",
+      "observation_ids": [
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447"
+      ],
+      "printing_id": "BT24-083",
+      "product": null
+    },
+    {
+      "alternate_art": false,
+      "language": "en",
+      "observation_ids": [
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14"
+      ],
+      "printing_id": "BT24-083#2",
+      "product": null
+    },
+    {
+      "alternate_art": false,
+      "language": "en",
+      "observation_ids": [
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df"
+      ],
+      "printing_id": "BT24-083#3",
+      "product": null
+    },
+    {
+      "alternate_art": false,
+      "language": "en",
+      "observation_ids": [
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f"
+      ],
+      "printing_id": "BT24-083#4",
+      "product": null
+    },
+    {
+      "alternate_art": true,
+      "language": "en",
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02"
+      ],
+      "printing_id": "BT24-083_P1",
+      "product": null
+    },
+    {
+      "alternate_art": true,
+      "language": "en",
+      "observation_ids": [
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "printing_id": "BT24-083_P2",
+      "product": null
+    }
+  ],
+  "provenance": {
+    "attribute_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "selected_observation_id": "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde"
+    },
+    "card_colors": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "selected_observation_id": "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde"
+    },
+    "card_kind": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "selected_observation_id": "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde"
+    },
+    "card_name_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "selected_observation_id": "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde"
+    },
+    "effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "selected_observation_id": "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde"
+    },
+    "evo_costs": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "selected_observation_id": "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde"
+    },
+    "faces": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "selected_observation_id": "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde"
+    },
+    "form_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "selected_observation_id": "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde"
+    },
+    "inherited_effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "selected_observation_id": "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde"
+    },
+    "level": {
+      "adjudicated": false,
+      "authority": "secondary",
+      "derived": false,
+      "observation_ids": [
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df"
+      ],
+      "selected_observation_id": "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f"
+    },
+    "play_cost": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "selected_observation_id": "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde"
+    },
+    "security_effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "selected_observation_id": "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde"
+    },
+    "type_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "4e7efdf53a7202bab4510dba40af1a202dbba3d14e91628e9fe1501620392a02",
+        "6b677b17546913adfa03b4d0493dac6705629acc8527464f600325bb01249e5f",
+        "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde",
+        "bfe906ac5f9594a1ac7a39a1bcdeec58956a7087ea925633559626898f14bf14",
+        "eab5ec60da90367b2445efce2fa220df1a122e647886880aff4a0fcf385b5447",
+        "f2b0b30f619822e531eedea17fd80c7354c30c2c4cfc0b61f4c36ec9b0dfe1df",
+        "f89f50b81757b42232cd076c2990b482309aeab672f8f9277741c7efc3ed9dea"
+      ],
+      "selected_observation_id": "763ceb5b966ffa353d9887d98ffecf49b2b4ad9b52b9e1972395fc4ba0695dde"
+    }
+  },
+  "schema_version": 1,
+  "tombstone_reason": null
+}

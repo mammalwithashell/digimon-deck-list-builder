@@ -1,0 +1,196 @@
+{
+  "admission": "admitted",
+  "card_id": "BT24-003",
+  "conflicts": [
+    {
+      "candidate_observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "field_path": "form_eng",
+      "kind": "official_secondary",
+      "reason": "official value selected over conflicting secondary observation"
+    },
+    {
+      "candidate_observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "field_path": "inherited_effect_description_eng",
+      "kind": "official_secondary",
+      "reason": "official value selected over conflicting secondary observation"
+    }
+  ],
+  "faces": [
+    {
+      "colors": [
+        "Yellow"
+      ],
+      "dp": null,
+      "effect_text": "",
+      "face_id": "primary",
+      "inherited_text": "[Your Turn] [Once Per Turn] When your security stack is removed from, this Digimon may digivolve into a [Shaman] trait Digimon card in the hand with the digivolution cost reduced by 1.",
+      "kind": "digi_egg",
+      "level": 2,
+      "play_cost": null,
+      "security_text": ""
+    }
+  ],
+  "fields": {
+    "attribute_eng": [],
+    "card_colors": [
+      "Yellow"
+    ],
+    "card_kind": "Digi-Egg",
+    "card_name_eng": "Tsunomon",
+    "effect_description_eng": "",
+    "evo_costs": [],
+    "form_eng": [
+      "In-Training"
+    ],
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When your security stack is removed from, this Digimon may digivolve into a [Shaman] trait Digimon card in the hand with the digivolution cost reduced by 1.",
+    "level": 2,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Lesser",
+      "Iliad",
+      "TS"
+    ]
+  },
+  "printings": [
+    {
+      "alternate_art": false,
+      "language": "en",
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "printing_id": "BT24-003",
+      "product": null
+    }
+  ],
+  "provenance": {
+    "attribute_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "selected_observation_id": "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108"
+    },
+    "card_colors": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "selected_observation_id": "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108"
+    },
+    "card_kind": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "selected_observation_id": "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108"
+    },
+    "card_name_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "selected_observation_id": "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108"
+    },
+    "effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "selected_observation_id": "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108"
+    },
+    "evo_costs": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "selected_observation_id": "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108"
+    },
+    "faces": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "selected_observation_id": "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108"
+    },
+    "form_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "selected_observation_id": "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108"
+    },
+    "inherited_effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "selected_observation_id": "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108"
+    },
+    "level": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "selected_observation_id": "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108"
+    },
+    "security_effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "selected_observation_id": "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108"
+    },
+    "type_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108",
+        "86ae382c8ad0bfc7a35320f0b1deddc6db6bd330f8256c4608962f02ac1a8662"
+      ],
+      "selected_observation_id": "2c13946814f576657956c128076897de5291baa5d5857cace52fb60e02410108"
+    }
+  },
+  "schema_version": 1,
+  "tombstone_reason": null
+}

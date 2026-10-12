@@ -30,3 +30,7 @@ qa/card-loop/audits.jsonl merge=union text eol=lf
 # Exact checker bytes for the reviewed Dual association proof.
 code/tools/clause_coverage/dual_kind_association.py -text
 code/tests/tools/test_dual_kind_association.py -text
+
+# Exact checker bytes for the reviewed runtime projection proof.
+code/tools/clause_coverage/runtime_projection_proof.py -text
+code/tests/tools/test_runtime_projection_proof.py -text
