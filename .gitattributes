@@ -227,3 +227,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/tools/clause_coverage/assembly_recipe_binding.py -text
 /code/tests/tools/test_assembly_recipe_binding.py -text
 /code/tests/fixtures/card_data/assembly_recipe_binding/.gitattributes -text
+
+# Preserve reviewed native implementation inventory bytes.
+/code/digimon-dsl/src/bin/implementation_inventory.rs -text
+/code/digimon-dsl/src/bin/implementation_inventory/core.rs -text
+/code/digimon-dsl/tests/implementation_inventory.rs -text
