@@ -77,7 +77,7 @@ _EXAM_TRANSITIONS = {
     # ORACLE -> ORACLE: an unmeasured round trip (timeout, quarantine) retried
     # within the attempt cap. ORACLE -> AUTHORING: both engines contradicted
     # the scenario's expected prompts (spec "Prompt-sequence failures").
-    "ORACLE": ("CONFIRMED", "DIVERGED", "ORACLE", "AUTHORING", "ESCALATED"),
+    "ORACLE": ("CONFIRMED", "DIVERGED", "ORACLE", "SIM", "AUTHORING", "ESCALATED"),
     "DIVERGED": ("TRIAGE", "ESCALATED"),
     "TRIAGE": ("FIX", "TERMINATION_CHECK", "AUTHORING", "ESCALATED"),   # AUTHORING: scenario_wrong
     "FIX": ("GATE", "ESCALATED"),

@@ -19,6 +19,8 @@ exactly as `tools/exam_sim_all.py` runs it.
 """
 from __future__ import annotations
 
+import hashlib
+
 import glob
 import json
 import os
@@ -564,3 +566,16 @@ def scenario_step_for_row(steps: Sequence[Mapping], mismatch: PromptMismatch) ->
         best = min(want, key=lambda i: (abs(i - mismatch.row), i))
         return best, "expect-nearest"
     return min(mismatch.row, len(steps) - 1), "row"
+
+
+def exam_input_pin(ctx, scenario, book):
+    """Pin only the selected files; the source manifest has its own guard."""
+    from . import base
+    try:
+        root = Path(ctx.repo)
+        deck = book or "data/starter_decks.json"
+        return {"scenario_sha256": hashlib.sha256((root/scenario).read_bytes()).hexdigest(),
+                "deck_book": deck,
+                "deck_sha256": hashlib.sha256((root/deck).read_bytes()).hexdigest()}
+    except OSError as error:
+        raise base.StageDeferred(f"oracle input unavailable: {error}") from error
