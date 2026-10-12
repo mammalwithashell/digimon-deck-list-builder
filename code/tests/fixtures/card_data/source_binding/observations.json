@@ -1,0 +1,599 @@
+{
+  "observations": [
+    {
+      "extracted": {
+        "attribute": "Virus",
+        "card_id": "BT1-045",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 3000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 3000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 3,
+            "name": "Tsukaimon",
+            "play_cost": 2,
+            "text_sections": []
+          }
+        ],
+        "form": "Rookie",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 3,
+        "name": "Tsukaimon",
+        "play_cost": 2,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522001",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT1-045.png?260529",
+          "printing_id": "BT1-045"
+        },
+        "printing_field_gaps": [],
+        "qa": [],
+        "rarity": "C",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [],
+        "type": "Mammal"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "0750bea2b3f4d5f61e375f1232378bc57850ecd250a04b2c937cdf96023e6c20",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "b59da05be7cce0cab2df4ccd420341d2946148dcb0d2178e12f5c4c9170e2ba1",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522001:BT1-045:BT1-045",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522001"
+    },
+    {
+      "extracted": {
+        "attribute": "Virus",
+        "card_id": "BT1-045",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 3000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 3000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 3,
+            "name": "Tsukaimon",
+            "play_cost": 2,
+            "text_sections": []
+          }
+        ],
+        "form": "Rookie",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 3,
+        "name": "Tsukaimon",
+        "play_cost": 2,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522903",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT1-045_P1.png?260529",
+          "printing_id": "BT1-045_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [],
+        "rarity": "C",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [],
+        "type": "Mammal"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "1cf98bd35a49c667ce4755705f63a57a050093cb3871fe1ec2a91c6b06c70507",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "b1d4abd15735a65817368737e389619990b4c076ead2752fd2d4a468bdbd40b7",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522903:BT1-045:BT1-045_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522903"
+    },
+    {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT1-010",
+        "card_type": "Digimon",
+        "colors": [
+          "Red"
+        ],
+        "dp": 2000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "dp": 2000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 3,
+            "name": "Agumon",
+            "play_cost": 3,
+            "text_sections": [
+              {
+                "label": "Effect",
+                "text": "[On Play] Reveal 5 cards from the top of your deck. Add 1 Tamer card among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+              }
+            ]
+          }
+        ],
+        "form": "Rookie",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 3,
+        "name": "Agumon",
+        "play_cost": 3,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522001",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT1-010.png?260529",
+          "printing_id": "BT1-010"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, you can.",
+            "date": "Mar. 28, 2024",
+            "number": "Q872",
+            "question": "Can I use this Digimon's effect to add Tamer cards to my hand that aren't red?"
+          },
+          {
+            "answer": "Yes, you can. You reveal as many cards as possible from your deck.",
+            "date": "Mar. 28, 2024",
+            "number": "Q873",
+            "question": "Can I activate this card's effect when I have 4 or fewer cards in your deck?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[On Play] Reveal 5 cards from the top of your deck. Add 1 Tamer card among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+          }
+        ],
+        "type": "Reptile"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "907cb57bd9498bcd7db2dd59b78d39f1d27bcbefe2766e442fa0f3c7ab54f557",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "b59da05be7cce0cab2df4ccd420341d2946148dcb0d2178e12f5c4c9170e2ba1",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522001:BT1-010:BT1-010",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522001"
+    },
+    {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT1-010",
+        "card_type": "Digimon",
+        "colors": [
+          "Red"
+        ],
+        "dp": 2000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "dp": 2000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 3,
+            "name": "Agumon",
+            "play_cost": 3,
+            "text_sections": [
+              {
+                "label": "Effect",
+                "text": "[On Play] Reveal 5 cards from the top of your deck. Add 1 Tamer card among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+              }
+            ]
+          }
+        ],
+        "form": "Rookie",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 3,
+        "name": "Agumon",
+        "play_cost": 3,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522904",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT1-010_P2.png?260529",
+          "printing_id": "BT1-010_P2"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, you can.",
+            "date": "Mar. 28, 2024",
+            "number": "Q872",
+            "question": "Can I use this Digimon's effect to add Tamer cards to my hand that aren't red?"
+          },
+          {
+            "answer": "Yes, you can. You reveal as many cards as possible from your deck.",
+            "date": "Mar. 28, 2024",
+            "number": "Q873",
+            "question": "Can I activate this card's effect when I have 4 or fewer cards in your deck?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[On Play] Reveal 5 cards from the top of your deck. Add 1 Tamer card among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+          }
+        ],
+        "type": "Reptile"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "c099f34f847b388d81ab42aeac601d565557e3caa6537ee8b059dfec3fec6d06",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "40ede9f6bd9735b838d22a67ac02c5a30e23aae9820a68be94e5a956d6e995c1",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522904:BT1-010:BT1-010_P2",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522904"
+    },
+    {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT1-010",
+        "card_type": "Digimon",
+        "colors": [
+          "Red"
+        ],
+        "dp": 2000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "dp": 2000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 3,
+            "name": "Agumon",
+            "play_cost": 3,
+            "text_sections": [
+              {
+                "label": "Effect",
+                "text": "[On Play] Reveal 5 cards from the top of your deck. Add 1 Tamer card among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+              }
+            ]
+          }
+        ],
+        "form": "Rookie",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 3,
+        "name": "Agumon",
+        "play_cost": 3,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522905",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT1-010_P1.png?260529",
+          "printing_id": "BT1-010_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, you can.",
+            "date": "Mar. 28, 2024",
+            "number": "Q872",
+            "question": "Can I use this Digimon's effect to add Tamer cards to my hand that aren't red?"
+          },
+          {
+            "answer": "Yes, you can. You reveal as many cards as possible from your deck.",
+            "date": "Mar. 28, 2024",
+            "number": "Q873",
+            "question": "Can I activate this card's effect when I have 4 or fewer cards in your deck?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[On Play] Reveal 5 cards from the top of your deck. Add 1 Tamer card among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+          }
+        ],
+        "type": "Reptile"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "c1fe17b834165f66a983970e47a1fd0e0ee05a570d893dc1acbadcacf409db1d",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "4714c20ad833527ed6c4b4cff261f89a604750c994b54820bf7658e10f41dc5e",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522905:BT1-010:BT1-010_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522905"
+    },
+    {
+      "extracted": {
+        "attribute": "",
+        "card_id": "BT1-001",
+        "card_type": "Digi-Egg",
+        "colors": [
+          "Red"
+        ],
+        "dp": null,
+        "evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "dp": null,
+            "face_id": "primary",
+            "kind": "digi_egg",
+            "level": 2,
+            "name": "Yokomon",
+            "play_cost": null,
+            "text_sections": [
+              {
+                "label": "Inherited Effect",
+                "text": "[When Attacking] When you attack an opponent's Digimon, this Digimon gets +1000 DP for the turn."
+              }
+            ]
+          }
+        ],
+        "form": "In-Training",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 2,
+        "name": "Yokomon",
+        "play_cost": null,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522001",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT1-001.png?260529",
+          "printing_id": "BT1-001"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "No, it doesn't.",
+            "date": "Mar. 28, 2024",
+            "number": "Q865",
+            "question": "Does this card's inherited effect activate in battles against Security Digimon?"
+          },
+          {
+            "answer": "No, if you declared an attack against your opponent, this card's effect doesn't activate, even if they use another Digimon to block it.",
+            "date": "Mar. 28, 2024",
+            "number": "Q866",
+            "question": "I attack my opponent using a Digimon with this card in its digivolution cards. If they block it with one of their Digimon, does this card's effect activate?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] When you attack an opponent's Digimon, this Digimon gets +1000 DP for the turn."
+          }
+        ],
+        "type": "Bulb"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "c6cca94a80c8351b2f9128d5ec6eb12cdfb370895f05b7fb4214e52469d46283",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "b59da05be7cce0cab2df4ccd420341d2946148dcb0d2178e12f5c4c9170e2ba1",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522001:BT1-001:BT1-001",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522001"
+    },
+    {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT1-010",
+        "card_type": "Digimon",
+        "colors": [
+          "Red"
+        ],
+        "dp": 2000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "dp": 2000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 3,
+            "name": "Agumon",
+            "play_cost": 3,
+            "text_sections": [
+              {
+                "label": "Effect",
+                "text": "[On Play] Reveal 5 cards from the top of your deck. Add 1 Tamer card among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+              }
+            ]
+          }
+        ],
+        "form": "Rookie",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 3,
+        "name": "Agumon",
+        "play_cost": 3,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522017",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT1-010_P4.png?260529",
+          "printing_id": "BT1-010_P4"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, you can.",
+            "date": "Mar. 28, 2024",
+            "number": "Q872",
+            "question": "Can I use this Digimon's effect to add Tamer cards to my hand that aren't red?"
+          },
+          {
+            "answer": "Yes, you can. You reveal as many cards as possible from your deck.",
+            "date": "Mar. 28, 2024",
+            "number": "Q873",
+            "question": "Can I activate this card's effect when I have 4 or fewer cards in your deck?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[On Play] Reveal 5 cards from the top of your deck. Add 1 Tamer card among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+          }
+        ],
+        "type": "Reptile"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "d62cfcf16993183ff14988bf44606502d02c6549320c10bd9147d5a92c3d474c",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "979c51db17281fa6fc30a4b59a022da9eea31b0baca4dddbc9c071154df8dbec",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522017:BT1-010:BT1-010_P4",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522017"
+    }
+  ],
+  "raw_files": {
+    "https://world.digimoncard.com/cards/?search=true&category=522001": "b59da05be7cce0cab2df4ccd420341d2946148dcb0d2178e12f5c4c9170e2ba1.html.gz",
+    "https://world.digimoncard.com/cards/?search=true&category=522903": "b1d4abd15735a65817368737e389619990b4c076ead2752fd2d4a468bdbd40b7.html.gz",
+    "https://world.digimoncard.com/cards/?search=true&category=522904": "40ede9f6bd9735b838d22a67ac02c5a30e23aae9820a68be94e5a956d6e995c1.html.gz",
+    "https://world.digimoncard.com/cards/?search=true&category=522905": "4714c20ad833527ed6c4b4cff261f89a604750c994b54820bf7658e10f41dc5e.html.gz",
+    "https://world.digimoncard.com/cards/?search=true&category=522017": "979c51db17281fa6fc30a4b59a022da9eea31b0baca4dddbc9c071154df8dbec.html.gz"
+  },
+  "universe": [
+    "BT1-001",
+    "BT1-010",
+    "BT1-045"
+  ],
+  "fixture_note": "Real immutable v5 observations and raw cached pages. Tests construct synthetic unadjudicated canonical/runtime projections; no production approval or source choice is fabricated."
+}
