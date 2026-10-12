@@ -73,7 +73,9 @@ def test_immutable_prelude_never_adds_or_commits_even_when_invalid(tmp_path, mon
 
 @pytest.fixture
 def snapshot(tmp_path, monkeypatch):
-    from tools.clause_coverage import extract
+    # Load readers before patching extract.run: their module-level aliases must
+    # not retain this fixture lambda after monkeypatch teardown.
+    from tools.clause_coverage import campaign, exam_binding, extract
     from tools.clause_coverage.semantic_fingerprint import bind_clause_semantics
     from tools.card_loop.interactions import denominator as den
     from tools.card_loop.source_snapshot import SOURCE_INPUTS
