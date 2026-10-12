@@ -85,7 +85,7 @@ def test_boundary(change):
     b['raw_pages'][o['source_url']]=raw;refresh(b)
     if change=='digest':r['runtime_field_diffs'][0]['old_digest']='f'*64
     if change=='missing_provenance':r['runtime_field_diffs'][0]['provenance_observation_ids']=[]
-    if change in {'digest','missing_provenance'}:
+    if change in {'digest','missing_provenance','correction'}:
         with pytest.raises(proof.ProofError):proof.prove(**args(b))
     else:assert not proof.prove(**args(b))['eligible']
 

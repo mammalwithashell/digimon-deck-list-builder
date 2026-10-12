@@ -9,10 +9,12 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from . import form_restoration_proof as base, normalization, adjudications
 from .sources import official
+from . import compatibility_corrections, compatibility_selections, corrections as correction_rows, errors
+from .errors import CardDataError
 from .serialization import canonical_json_bytes, content_digest, canonicalize
 from .models import SourceObservation, SourceName
 
-PREDICATE_VERSION = 'exact-security-zone-pair-v1'
+PREDICATE_VERSION = 'exact-security-zone-pair-v2'
 INHERITED = 'inherited_effect_description_eng'
 SECURITY = 'security_effect_description_eng'
 TEXT_FIELDS = frozenset({INHERITED, SECURITY, 'effect_description_eng'})
@@ -54,6 +56,18 @@ def _raw_reasons(observation, soup):
     security = [n for n in labels if n.get_text(' ', strip=True) == '[Security Effect]']
     if len(security) != 1:
         reasons.append('raw_security_section_count')
+    for label in security:
+        if label.find(True) is not None:
+            reasons.append('security_label_not_literal_text')
+        column = label.find_parent('div', class_='cardInfoCol')
+        if (label.parent.name != 'dl' or 'cardInfoBoxSmall' not in label.parent.get('class', [])
+                or column is None or column.find_parent('div', class_='popupCol') is not block):
+            reasons.append('security_not_in_printed_info_container')
+        for ancestor in [label, *label.parents]:
+            if any(str(name).lower().startswith('cardfaq') for name in ancestor.get('class', [])):
+                reasons.append('security_section_in_faq')
+            if ancestor is block:
+                break
     for label in labels:
         value = label.find_next_sibling('dd')
         if value is None or any(n.has_attr('hidden') or n.get('style') for n in [label, value, *value.find_all(True)]):
@@ -74,7 +88,13 @@ def prove(*, report_bytes, snapshot_bytes, canonical_bytes, ledger_bytes,
     checked = base.prove(report_bytes=report_bytes, snapshot_bytes=snapshot_bytes, raw_pages=raw_pages)
     report, snapshot = base._load(report_bytes), base._load(snapshot_bytes)
     canonical, ledger, corrections = map(base._load, (canonical_bytes, ledger_bytes, corrections_bytes))
-    base._require(ledger.get('schema_version') == 1 and isinstance(ledger.get('adjudications'), list), 'invalid whole ledger')
+    base._require(isinstance(ledger, dict) and set(ledger) == {'schema_version', 'adjudications'}
+                  and type(ledger.get('schema_version')) is int and ledger['schema_version'] == 1
+                  and isinstance(ledger.get('adjudications'), list), 'invalid whole ledger')
+    try:
+        compatibility_corrections.correction_document_from_bytes(corrections_bytes)
+    except CardDataError as error:
+        raise ProofError('invalid complete correction document: ' + str(error)) from error
     rows = adjudications.validate_migration_adjudications(
         [adjudications._row(r, path=Path('<bound-ledger>')) for r in ledger['adjudications']])
     by_card = defaultdict(list)
@@ -142,6 +162,13 @@ def prove(*, report_bytes, snapshot_bytes, canonical_bytes, ledger_bytes,
         for d in pair:
             if d is None: continue
             provenance = card.get('provenance', {}).get(d['field_path'], {})
+            ids = provenance.get('observation_ids')
+            selected = provenance.get('selected_observation_id')
+            official_ids = {o['observation_id'] for o in observed}
+            base._require(isinstance(ids, list) and all(isinstance(x, str) for x in ids)
+                          and len(ids) == len(set(ids)) and isinstance(selected, str)
+                          and selected in ids and selected in official_ids,
+                          'canonical selected provenance is not a same-card official member')
             base._require(set(d.get('provenance_observation_ids', [])) == set(provenance.get('observation_ids', [])), 'canonical diff provenance mismatch')
             base._require({o['observation_id'] for o in observed} <= set(d['provenance_observation_ids']), 'diff omits official printing provenance')
         if not reasons:
@@ -199,7 +226,9 @@ def prove(*, report_bytes, snapshot_bytes, canonical_bytes, ledger_bytes,
                       existing_approved=k in approved, classification='eligible_pair' if k in eligible_keys else 'excluded_pair' if k in excluded_keys else 'outside_family')
                  for k, d in sorted(index.items())]
     dependencies = dict(checked['dependency_sha256'])
-    for name, module in [('form_restoration_proof.py',base),('normalization.py',normalization),('sources/official.py',official)]:
+    for name, module in [('form_restoration_proof.py',base),('normalization.py',normalization),('sources/official.py',official),('compatibility_corrections.py',compatibility_corrections),
+                         ('compatibility_selections.py',compatibility_selections),
+                         ('corrections.py',correction_rows),('errors.py',errors)]:
         dependencies[name] = base._sha(Path(module.__file__).read_bytes())
     return dict(status='PROOF_ONLY_NO_APPROVALS', predicate_version=PREDICATE_VERSION,
                 predicate_sha256=base._sha(Path(__file__).read_bytes()), dependency_sha256=dependencies,
