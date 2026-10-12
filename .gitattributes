@@ -167,3 +167,9 @@ code/tests/fixtures/card_data/runtime_snapshot/.gitattributes -text
 /code/tests/fixtures/card_data/source_book_v2/reviewed-correction-sidecar-wire-hardening.json -text
 /code/tests/fixtures/card_data/source_book_v2/semantic_vectors_v2.json -text
 /code/tests/fixtures/card_data/source_book_v2/sidecar-root-rebind-review.json -text
+code/tools/dcgo-harness/src/exam/mod.rs -text
+code/tests/tools/test_review_source_book_v2.py -text
+code/tests/fixtures/card_data/source_book_v2_rust/.gitattributes -text
+code/tools/dcgo-harness/src/exam/source_book_v2.rs -text
+code/tools/dcgo-harness/src/exam/source_book_v2_tests.rs -text
+code/tools/clause_coverage/review_source_book_v2.py -text

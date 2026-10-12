@@ -122,11 +122,50 @@ def _reconcile(cid,row):
     return result
 
 
+def _validate_inventory(d):
+    """Check retained inventory consistency, not external source authority."""
+    cards=d.get('cards');totals=d.get('membership_counts');selected=d.get('evaluated_card_ids')
+    _require(type(cards)is dict and cards and all(type(k)is str and k for k in cards),'complete card inventory required')
+    axes={'official','canonical','runtime'}
+    flags=axes|{'provisional','runtime_only','test_only','qa','qa_only'}
+    _require(type(totals)is dict and set(totals)==axes and
+             all(type(n)is int and n>=0 for n in totals.values()),'strict membership totals required')
+    _require(type(selected)is list and selected and all(type(cid)is str for cid in selected)
+             and selected==sorted(set(selected)) and set(selected)<=set(cards),'unique present evaluated IDs required')
+    observed=dict.fromkeys(axes,0)
+    for cid,row in cards.items():
+        _require(type(row)is dict,'card row must be an object')
+        m=row.get('membership');blocks=row.get('blockers');status=row.get('status')
+        _require(type(m)is dict and set(m)==flags and all(type(v)is bool for v in m.values()),'strict membership flags required')
+        _require(m['provisional']==(m['canonical'] and not m['official']) and
+                 m['runtime_only']==(m['runtime'] and not m['canonical']) and
+                 m['test_only']==(cid.startswith('TEST-') and not m['official']) and
+                 m['qa_only']==(m['qa'] and not(m['official']or m['canonical']or m['runtime'])),
+                 'derived membership flags differ')
+        for axis in axes:observed[axis]+=int(m[axis])
+        _require(type(blocks)is list and all(type(b)is dict and type(b.get('code'))is str
+                 and b['code'] for b in blocks),'blocker inventory must be a list of coded objects')
+        _require(status in ('COMPOSED_DIAGNOSTIC','NOT_EVALUATED','BLOCKED'),'unknown diagnostic card status')
+        _require('gating_interaction_count'in row and row['gating_interaction_count']is None,'unknown gating count must remain null')
+        if cid in selected:
+            _require(m['official'] and m['canonical'] and m['runtime'] and status!='NOT_EVALUATED','incompatible evaluated card')
+        if status=='COMPOSED_DIAGNOSTIC':
+            _require(cid in selected and not blocks and type(row.get('span_count'))is int
+                     and row['span_count']>=0,'invalid composed count or blockers')
+        else:
+            _require('span_count'in row and row['span_count']is None,'unknown span count must remain null')
+            _require(bool(blocks)==(status=='BLOCKED'),'blocked status and blocker inventory differ')
+            if status=='NOT_EVALUATED':
+                _require(m['official'] and m['canonical'] and m['runtime'],'unevaluated card lacks source membership')
+    _require(totals==observed,'membership totals differ from complete retained inventory')
+
+
 def _materialize(d,deps):
     _require(type(d.get('schema_version'))is int and d['schema_version']==1
              and d.get('kind')=='bounded-source-composition-diagnostic-v1'
              and d.get('status')=='DIAGNOSTIC_ONLY_NOT_ADMISSION','reviewed diagnostic shape required')
     _require(d['full_span_count']is None and d['full_gating_interaction_count']is None,'unexpected completeness claim')
+    _validate_inventory(d)
     generation_payload=['digimon-source-generation',2,d['snapshot_sha256'],d['input_manifest_sha256'],d['source_revision'],
                         _sha(_object_bytes(d['dependency_sha256'])),_sha(_object_bytes(deps))]
     generation=_sha(wire_bytes(generation_payload))
