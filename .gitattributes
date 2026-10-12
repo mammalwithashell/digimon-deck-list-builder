@@ -209,3 +209,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/tools/clause_coverage/dual_card_composition.py -text
 /code/tests/tools/test_clean_dual_composition.py -text
 /code/tests/fixtures/card_data/clean_dual_composition/.gitattributes -text
+
+# Preserve reviewed trait-field-binding bytes.
+/code/tools/clause_coverage/source_binding.py -text
+/code/tests/tools/test_trait_field_source_binding.py -text
+/code/tests/fixtures/card_data/trait_field_source_binding/.gitattributes -text

@@ -236,7 +236,7 @@ def validate_binding(binding, *, inputs, raw_pages, expected_universe):
 def bind_canonical_field(*, aggregate: bytes, observations: dict[str, bytes],
                          canonical_field: bytes, adjudication_ledger: bytes,
                          old_input_revision: str, new_input_revision: str) -> dict:
-    """A1 only: replay one selected ordinary canonical field, never a whole book.
+    """A1 only: replay one selected text or trait-list field, never a whole book.
 
     Both revisions are caller pins. Current producer selections bind one source
     revision as both old/new; unequal revisions require a future producer path.
@@ -268,8 +268,11 @@ def _bind_canonical_field(aggregate_raw, observation_bytes, field_raw, ledger_ra
     field = json.loads(field_raw, object_pairs_hook=_unique)
     _require(set(field) == {'card_id','field_path','value','provenance'}, 'unsupported field input envelope')
     cid, path = field['card_id'], field['field_path']
+    ordinary = path in dict(FIELDS) and isinstance(field['value'], str)
+    trait = path in {'form_eng', 'type_eng', 'attribute_eng'} and isinstance(field['value'], list) \
+        and all(isinstance(value, str) for value in field['value'])
     _require(isinstance(cid, str) and CARD_ID_RE.fullmatch(cid)
-             and path in dict(FIELDS) and isinstance(field['value'], str), 'unsupported selected field')
+             and (ordinary or trait), 'unsupported selected field')
     _require(set(aggregate['sources']) == {'official', 'digimoncard_io'}, 'complete candidate lanes required')
     all_refs = []; card_refs = {}
     for source, lane in aggregate['sources'].items():
