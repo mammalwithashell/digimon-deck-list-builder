@@ -44,3 +44,11 @@ code/tools/clause_coverage/rule_card_composition.py -text
 code/tools/clause_coverage/dual_card_composition.py -text
 code/tests/tools/test_dual_card_composition.py -text
 code/tests/fixtures/card_data/dual_card_composition/.gitattributes -text
+
+# Exact runtime snapshot/wrapper checker, tests and fixture attributes.
+code/tools/clause_coverage/runtime_snapshot.py -text
+code/tools/clause_coverage/runtime_rule_composition.py -text
+code/tests/tools/test_runtime_snapshot.py -text
+code/tests/tools/test_runtime_rule_composition.py -text
+code/tests/tools/test_runtime_rule_actual_snapshot.py -text
+code/tests/fixtures/card_data/runtime_snapshot/.gitattributes -text
