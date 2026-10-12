@@ -214,3 +214,6 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/tools/clause_coverage/source_binding.py -text
 /code/tests/tools/test_trait_field_source_binding.py -text
 /code/tests/fixtures/card_data/trait_field_source_binding/.gitattributes -text
+
+# Preserve reviewed link-native-compilation bytes.
+/code/digimon-dsl/tests/focused_link_compilation.rs -text
