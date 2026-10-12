@@ -1,0 +1,231 @@
+{
+  "card_id": "BT15-020",
+  "category": "exact_body_section_header_only",
+  "has_required_canonical_conflict": false,
+  "diff": {
+    "approval_id": null,
+    "approval_kind": null,
+    "approved": false,
+    "card_id": "BT15-020",
+    "field_path": "xros_req",
+    "new_digest": "31b8609c548937582dbb0d5b6dbad9bdec8b061181683559cd1fc7003ea5df96",
+    "new_value": "[Special Digivolution Condition] [Digivolve] [Tsunomon]: Cost 0",
+    "old_digest": "98b2786e2944ab1058a05158e06242443a7996fa4d2d1781c52a4aa9532cc1ba",
+    "old_value": "[Digivolve] [Tsunomon]: Cost 0",
+    "provenance_observation_ids": [
+      "1e96284aae178862ab090f89190a5c692dde6abc9d5564603765d29458c7006d",
+      "5a25c78dc32c56146c4481626fbc73fcd013b8e1bc7d6836922b9c345b589a18"
+    ]
+  },
+  "source_units": [
+    {
+      "kind": "official-section",
+      "field": "xros_req",
+      "observation_id": "1e96284aae178862ab090f89190a5c692dde6abc9d5564603765d29458c7006d",
+      "section_index": 0,
+      "label": "Special Digivolution Condition",
+      "condition_type": "special_digivolution_condition",
+      "text": "[Digivolve] [Tsunomon]: Cost 0"
+    }
+  ],
+  "observations": {
+    "1e96284aae178862ab090f89190a5c692dde6abc9d5564603765d29458c7006d": {
+      "extracted": {
+        "attribute": "Data",
+        "card_id": "BT15-020",
+        "card_type": "Digimon",
+        "colors": [
+          "Blue"
+        ],
+        "dp": 1000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "dp": 1000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 3,
+            "name": "Gabumon",
+            "play_cost": 3,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] [Tsunomon]: Cost 0"
+              },
+              {
+                "label": "Effect",
+                "text": "[Start of Your Main Phase] 1 of your Digimon gains ＜Blocker＞ until the end of your opponent's turn. Then, if you have a Tamer with [Matt Ishida] in its name, ＜Draw 1＞."
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[When Attacking] [Once Per Turn] ＜Draw 1＞. (Draw 1 card from your deck.)"
+              }
+            ]
+          }
+        ],
+        "form": "Rookie",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 3,
+        "name": "Gabumon",
+        "play_cost": 3,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522020",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT15-020.png?260529",
+          "printing_id": "BT15-020"
+        },
+        "printing_field_gaps": [],
+        "qa": [],
+        "rarity": "SR",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] [Tsunomon]: Cost 0"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Tsunomon]: Cost 0"
+          },
+          {
+            "label": "Effect",
+            "text": "[Start of Your Main Phase] 1 of your Digimon gains ＜Blocker＞ until the end of your opponent's turn. Then, if you have a Tamer with [Matt Ishida] in its name, ＜Draw 1＞."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] ＜Draw 1＞. (Draw 1 card from your deck.)"
+          }
+        ],
+        "type": "Reptile"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "1e96284aae178862ab090f89190a5c692dde6abc9d5564603765d29458c7006d",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "ce40568a71924f547bb75554f5c131bc87e27afff7aff0a37d5ea0e93400e128",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522020:BT15-020:BT15-020",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522020"
+    },
+    "5a25c78dc32c56146c4481626fbc73fcd013b8e1bc7d6836922b9c345b589a18": {
+      "extracted": {
+        "attribute": "Data",
+        "card_id": "BT15-020",
+        "card_type": "Digimon",
+        "colors": [
+          "Blue"
+        ],
+        "dp": 1000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "dp": 1000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 3,
+            "name": "Gabumon",
+            "play_cost": 3,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] [Tsunomon]: Cost 0"
+              },
+              {
+                "label": "Effect",
+                "text": "[Start of Your Main Phase] 1 of your Digimon gains ＜Blocker＞ until the end of your opponent's turn. Then, if you have a Tamer with [Matt Ishida] in its name, ＜Draw 1＞."
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[When Attacking] [Once Per Turn] ＜Draw 1＞. (Draw 1 card from your deck.)"
+              }
+            ]
+          }
+        ],
+        "form": "Rookie",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 3,
+        "name": "Gabumon",
+        "play_cost": 3,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522020",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT15-020_P1.png?260529",
+          "printing_id": "BT15-020_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [],
+        "rarity": "SR",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] [Tsunomon]: Cost 0"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Tsunomon]: Cost 0"
+          },
+          {
+            "label": "Effect",
+            "text": "[Start of Your Main Phase] 1 of your Digimon gains ＜Blocker＞ until the end of your opponent's turn. Then, if you have a Tamer with [Matt Ishida] in its name, ＜Draw 1＞."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] ＜Draw 1＞. (Draw 1 card from your deck.)"
+          }
+        ],
+        "type": "Reptile"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "5a25c78dc32c56146c4481626fbc73fcd013b8e1bc7d6836922b9c345b589a18",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "ce40568a71924f547bb75554f5c131bc87e27afff7aff0a37d5ea0e93400e128",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522020:BT15-020:BT15-020_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522020"
+    }
+  },
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT15-020.webp",
+    "sha256": "8dc9c15d68f0c707fc9ebc9a6475a48f7be5191a6b9f6941253a2f40989b70fa",
+    "observed": "Printed named Digivolve cost matches official condition."
+  },
+  "scope": "Parser hint regression only; runtime field remains unapproved."
+}
