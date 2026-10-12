@@ -18,7 +18,11 @@ Focused deck validation currently encounters unrelated global source-migration d
 
 ### Modified Capabilities
 
-None. This adds a distinct opt-in artifact and consumer. It does not relax global canonical publication, fixed-path revision checks, implementation campaign states, default training pools, or existing readiness requirements. Integration must verify those existing contracts in the destination branch; the campaign repair branch predates parts of the base checkout's producer cutover.
+- `canonical-card-data-pipeline`: Distinct scoped artifact refusal at global boundaries and fresh producer/projection epoch requirements, preserving stronger committed-path and forward-projection contracts.
+- `card-data-validation-gates`: Complete isolated binding tuple, loaded-code freshness, immutable read/activation checks and pack/release separation without weakening global gates.
+- `legacy-free-training-runtime`: Explicit scoped Rust handles and final-deck/worker/cache refusal, preserving Rust-only execution and compact-profile retirement.
+
+Implementation and validation occur only on the existing isolated repair branch, seeded at `1201f706bcc48f27aa813c2dfe301ca1d567beb8`, followed by reviewed integration into the current two focused branches. The base checkout is a read-only human-merge compatibility reference, not an implementation destination. Exact working-tree spec bytes and branch/function pins are in `integration-contract.json`; they are not assumed to be contained in base HEAD. The contract remains proposed pending independent review.
 
 ## Impact
 

@@ -188,3 +188,14 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/tools/card_data/focused_closure.py -text
 /code/tests/tools/test_focused_closure.py -text
 /code/tests/fixtures/card_data/focused_closure/.gitattributes -text
+
+# Preserve reviewed isolated integration contract bytes.
+/openspec/changes/add-isolated-focused-runtime-snapshots/proposal.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/design.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/integration-contract.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/integration-contract.json -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/specs/canonical-card-data-pipeline/spec.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/specs/card-data-validation-gates/spec.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/specs/legacy-free-training-runtime/spec.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/tasks.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/progress.md -text

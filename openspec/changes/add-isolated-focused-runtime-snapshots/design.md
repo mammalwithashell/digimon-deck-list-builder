@@ -4,6 +4,12 @@ The focused campaign has a reviewed source-composition pipeline and preserved en
 
 Branch behavior differs. The isolated repair branch's engine build compiles all YAML into a pack and its harness loads an explicit cards JSON path. The later base checkout adds committed-revision/build checks. Implementation must pin the actual branch's producer and consumer files and preserve the destination branch's stronger default checks. This design does not import a base-branch change or assume the two build paths are identical.
 
+## Implementation route and projection epoch
+
+The sole implementation/validation seed is the existing isolated repair branch at `1201f706bcc48f27aa813c2dfe301ca1d567beb8`. Reviewed commits may then be integrated into the pinned focused Toho and Jupiter branches. The base checkout is read-only: its live capability specifications and stronger committed-snapshot/build contracts are hash-bound compatibility requirements for a future human merge, not authorization to modify that checkout or a claim that its HEAD contains untracked specifications.
+
+`integration-contract.json` records current branch heads and exact source/spec bytes. `integration-contract.md` defines the prospective projection epoch and finite integration gates. Producer code evolving after the seed requires a new explicit dependency identity and fresh-process replay per artifact; the seed does not authorize stale imported modules. R3 source/candidate/ledger proofs retain their original identities. No current source artifacts are adopted by these amendments.
+
 ## Goals / Non-Goals
 
 **Goals:** Establish reproducible, source-derived execution for a finite deck/scenario/opponent closure; keep complete global membership and unresolved evidence visible; support new generation-bound measurement; ultimately admit only the tested bounded configuration to training.
