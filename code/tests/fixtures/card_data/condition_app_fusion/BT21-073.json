@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "scope": "Pure segmentation fixture; complete A2 binding remains caller prerequisite.",
+  "card_id": "BT21-073",
+  "source_unit": {
+    "kind": "official-section",
+    "field": "xros_req",
+    "observation_id": "fdb4021079f8146f311094fd411e5767fff7a03fc4108a33ac8de54591731f1d",
+    "section_index": 0,
+    "label": "Special Digivolution Condition",
+    "condition_type": "special_digivolution_condition",
+    "text": "[App Fusion] [Sociamon] & [Gossipmon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+  },
+  "observation": {
+    "extracted": {
+      "attribute": "Social",
+      "card_id": "BT21-073",
+      "card_type": "Digimon",
+      "colors": [
+        "Purple",
+        "Black"
+      ],
+      "dp": 8000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Purple",
+            "Black"
+          ],
+          "cost": 4,
+          "from_level": 4,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Purple",
+            "Black"
+          ],
+          "dp": 8000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 5,
+          "name": "Charismon",
+          "play_cost": 8,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[App Fusion] [Sociamon] & [Gossipmon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+            },
+            {
+              "label": "Effect",
+              "text": "＜Blocker＞\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.\n[Your Turn] [Once Per Turn] When this Digimon gets linked, give 1 of your opponent's Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends."
+            },
+            {
+              "label": "Special Rule",
+              "text": "+4000 DP"
+            },
+            {
+              "label": "Inherited Effect",
+              "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of this Digimon's link cards, it doesn't leave."
+            }
+          ]
+        }
+      ],
+      "form": "Ult./Appmon",
+      "grade_evolution_routes": [
+        {
+          "colors": [
+            "Multicolor"
+          ],
+          "cost": 4,
+          "from_grade": "Super",
+          "slot": 2
+        }
+      ],
+      "layout": "single",
+      "level": 5,
+      "name": "Charismon",
+      "play_cost": 8,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522028",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT21-073.png?260529",
+        "printing_id": "BT21-073"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "No, you can't.",
+          "date": "Apr. 4, 2025",
+          "number": "Q4581",
+          "question": "Can I use this card's [On Play] [When Digivolving] effect to link a card that doesn't have ?"
+        },
+        {
+          "answer": "You can give that effect to such Digimon, but if the Digimon isn't affected by effects upon the trigger timing, the gained effect won't trigger.",
+          "date": "Jun. 13, 2025",
+          "number": "Q4582",
+          "question": "Can I use this card's [Your Turn] effect to give \"[Start of Your Main Phase] This Digimon attacks\" to a Digimon that isn't affected by effects?"
+        },
+        {
+          "answer": "Yes, you can choose 1 card from among that Digimon's link cards and trash it.",
+          "date": "Sep. 5, 2025",
+          "number": "Q4583",
+          "question": "If a Digimon's maximum links is increased using and has a total of 2 link cards including this card, then it would be removed from the battle area, can I choose from among those cards to trash for this card's effect?"
+        },
+        {
+          "answer": "Yes, you can.",
+          "date": "Sep. 5, 2025",
+          "number": "Q5000",
+          "question": "Can I also activate this card's link effect by trashing this card itself when it's a link card?"
+        }
+      ],
+      "rarity": "R",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[App Fusion] [Sociamon] & [Gossipmon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Sociamon] & [Gossipmon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.\n[Your Turn] [Once Per Turn] When this Digimon gets linked, give 1 of your opponent's Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends."
+        },
+        {
+          "label": "Special Rule",
+          "text": "+4000 DP"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of this Digimon's link cards, it doesn't leave."
+        }
+      ],
+      "type": "Mind Control"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "fdb4021079f8146f311094fd411e5767fff7a03fc4108a33ac8de54591731f1d",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "59226d6e3d8cc446a3668e4b7885b4808f277a6a0eab8345b9001f1fce3b1dc8",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522028:BT21-073:BT21-073",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522028"
+  },
+  "observation_file_sha256": "de5d93335479ac4c500351ac4f6ba6e7bc13f673e65c21468395a1dbeac08d43",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT21-073.webp",
+    "sha256": "ac306be8c91b9fb8fe1b00efab480aa9a7081e374c01c145a35ba4fd3b0f0a81",
+    "observed": "Distinct printed App Fusion condition; named alternatives, zero cost and linked-card stacking reminder visually inspected."
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "scope": "Pure segmentation fixture; complete A2 binding remains caller prerequisite.",
+  "card_id": "AD1-005",
+  "source_unit": {
+    "kind": "official-section",
+    "field": "xros_req",
+    "observation_id": "347e9ed49a4160941044c58e36185d08077c19718814efd95218fc4afe746b1b",
+    "section_index": 0,
+    "label": "Special Digivolution Condition",
+    "condition_type": "special_digivolution_condition",
+    "text": "[App Fusion] [Globemon] & [Charismon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+  },
+  "observation": {
+    "extracted": {
+      "attribute": "God",
+      "card_id": "AD1-005",
+      "card_type": "Digimon",
+      "colors": [
+        "Red",
+        "White"
+      ],
+      "dp": 12000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Red"
+          ],
+          "cost": 4,
+          "from_level": 5,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Red",
+            "White"
+          ],
+          "dp": 12000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 6,
+          "name": "Gaiamon ACE",
+          "play_cost": 7,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[App Fusion] [Globemon] & [Charismon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+            },
+            {
+              "label": "Effect",
+              "text": "{Hand} [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\n＜Security A. +1＞ ＜Blocker＞ ＜Link +1＞\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may link up to 2 [Social], [Navi] or [Tool] trait cards from your hand or this Digimon's digivolution cards to this Digimon without paying the cost. Then, you may delete 1 of your opponent's Digimon with as much or less DP as this Digimon."
+            },
+            {
+              "label": "Special Rule",
+              "text": "＜Overflow (-4)＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)"
+            }
+          ]
+        }
+      ],
+      "form": "God/Appmon",
+      "grade_evolution_routes": [
+        {
+          "colors": [
+            "Multicolor"
+          ],
+          "cost": 4,
+          "from_grade": "Ultimate",
+          "slot": 2
+        }
+      ],
+      "layout": "single",
+      "level": 6,
+      "name": "Gaiamon ACE",
+      "play_cost": 7,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522035",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/AD1-005.png?260529",
+        "printing_id": "AD1-005"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "No, you can't.",
+          "date": "Mar. 13, 2026",
+          "number": "Q6056",
+          "question": "Can I use this card's [On Play] [When Digivolving] [When Attacking] effect to link a card that doesn't have ?"
+        },
+        {
+          "answer": "Yes, you can.",
+          "date": "Mar. 13, 2026",
+          "number": "Q6057",
+          "question": "Can I use this card's [On Play] [When Digivolving] [When Attacking] effect to choose 1 card from my hand, 1 of this card's digivolution cards, and link them to this card?"
+        },
+        {
+          "answer": "No, you can't.",
+          "date": "Mar. 13, 2026",
+          "number": "Q6058",
+          "question": "If I use this card's [On Play] [When Digivolving] [When Attacking] effect to link cards, can I activate the [When Linking] effect on the linked card before processing the part of this card's [On Play] [When Digivolving] [When Attacking] effect after \"then\"?"
+        }
+      ],
+      "rarity": "SR",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[App Fusion] [Globemon] & [Charismon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Globemon] & [Charismon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "{Hand} [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\n＜Security A. +1＞ ＜Blocker＞ ＜Link +1＞\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may link up to 2 [Social], [Navi] or [Tool] trait cards from your hand or this Digimon's digivolution cards to this Digimon without paying the cost. Then, you may delete 1 of your opponent's Digimon with as much or less DP as this Digimon."
+        },
+        {
+          "label": "Special Rule",
+          "text": "＜Overflow (-4)＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)"
+        }
+      ],
+      "type": "Creation"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "347e9ed49a4160941044c58e36185d08077c19718814efd95218fc4afe746b1b",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "b5abf66f8645f0c276ea5abf44d4d14c63cf2ab184a1f7b3c3eead572c5555f5",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522035:AD1-005:AD1-005",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522035"
+  },
+  "observation_file_sha256": "2ff44aea875888691fa385c869a955f1006d861a3d36d857daeaa2d806f4aa52",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\AD1-005.webp",
+    "sha256": "6a725ac75e61299055f91519dc458ce622c41fce7fdb4763fb00ff473da4f236",
+    "observed": "Distinct printed App Fusion condition; named alternatives, zero cost and linked-card stacking reminder visually inspected."
+  }
+}
