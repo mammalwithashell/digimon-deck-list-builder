@@ -1,0 +1,105 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Tool"
+      ],
+      "card_colors": [
+        "Purple"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Scopemon",
+      "dp": 4000,
+      "effect_description_eng": "[On Play] [When Digivolving] By placing 1 card with the [Appmon] or [Three Musketeers] trait from your hand or trash as 1 of your Digimon's bottom digivolution card, gain 1 memory.",
+      "evo_costs": [],
+      "form_eng": [
+        "Sup."
+      ],
+      "inherited_effect_description_eng": "Draw 2 and trash 2 cards in your hand.",
+      "level": 4,
+      "play_cost": 4,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Monitoring (App Name)"
+      ]
+    },
+    "card_id": "BT21-071",
+    "derived_diagnostics": [
+      {
+        "authoritative": false,
+        "candidate": {
+          "color": "Purple",
+          "cost": 2,
+          "level": 3,
+          "ordinal": 1
+        },
+        "derived": true,
+        "field_path": "evolution_routes",
+        "reason": "digimoncard.io omitted explicit evolution route components"
+      }
+    ],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "dp": 4000,
+        "effect_text": "[On Play] [When Digivolving] By placing 1 card with the [Appmon] or [Three Musketeers] trait from your hand or trash as 1 of your Digimon's bottom digivolution card, gain 1 memory.",
+        "face_id": "primary",
+        "inherited_text": "Draw 2 and trash 2 cards in your hand.",
+        "kind": "digimon",
+        "level": 4,
+        "play_cost": 4,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2",
+      "artist": null,
+      "attribute": "Tool",
+      "color": "Purple",
+      "color2": null,
+      "date_added": "2026-03-16 08:41:30",
+      "digi_type": "Monitoring (App Name)",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 4000,
+      "evolution_color": null,
+      "evolution_cost": 2,
+      "evolution_level": null,
+      "form": "Sup.",
+      "id": "BT21-071",
+      "level": 4,
+      "link_dp": 3000,
+      "link_requirements": "Link Requirements [Link] [Appmon] trait: Cost 2\r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+      "main_effect": "[On Play] [When Digivolving] By placing 1 card with the [Appmon] or [Three Musketeers] trait from your hand or trash as 1 of your Digimon's bottom digivolution card, gain 1 memory.",
+      "name": "Scopemon",
+      "play_cost": 4,
+      "pretty_url": "scopemon-bt21-071",
+      "rarity": "C",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-21: BOOSTER WORLD CONVERGENCE",
+        "LM-08: LIMITED CARD PACK FINAL CREST"
+      ],
+      "source_effect": "Draw 2 and trash 2 cards in your hand.",
+      "stage": "Sup.",
+      "tcgplayer_id": 625001,
+      "tcgplayer_name": "Scopemon",
+      "type": "Digimon",
+      "xros_req": "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2"
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "921056cd01b50d10a929bc6252ac784b6485ba5d2c2d39e98fc698cdf29c03f6",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "BT21-071",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

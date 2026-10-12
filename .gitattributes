@@ -217,3 +217,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 
 # Preserve reviewed link-native-compilation bytes.
 /code/digimon-dsl/tests/focused_link_compilation.rs -text
+
+# Preserve reviewed whole Link composition bytes.
+/code/tools/clause_coverage/link_card_composition.py -text
+/code/tests/tools/test_link_card_composition.py -text
+/code/tests/fixtures/card_data/link_card_composition/.gitattributes -text
