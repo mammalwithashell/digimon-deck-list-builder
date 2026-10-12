@@ -52,3 +52,7 @@ code/tests/tools/test_runtime_snapshot.py -text
 code/tests/tools/test_runtime_rule_composition.py -text
 code/tests/tools/test_runtime_rule_actual_snapshot.py -text
 code/tests/fixtures/card_data/runtime_snapshot/.gitattributes -text
+
+/code/tools/clause_coverage/corrected_rule_card_composition.py -text
+
+/code/tests/tools/test_corrected_rule_card_composition.py -text
