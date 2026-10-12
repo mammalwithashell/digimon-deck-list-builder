@@ -210,6 +210,8 @@ def load_candidate_artifacts(candidate_dir: Path) -> dict[str, bytes]:
                 details={"expected_digest": expected, "actual_digest": actual},
             )
         bodies[relative] = body
+    from .compatibility_corrections import validate_correction_artifacts
+    validate_correction_artifacts(bodies)
     return bodies
 
 
@@ -509,6 +511,23 @@ def _progress_batches(
         yield tuple(values[offset : offset + TRANSACTION_PROGRESS_BATCH_SIZE])
 
 
+def _require_preserved_correction_history(root, artifacts, marker_path, journal_path):
+    """A complete publication cannot silently downgrade a versioned ledger."""
+    from .compatibility_corrections import (
+        CORRECTIONS_PATH, CorrectionDocument, correction_document_from_bytes,
+        load_correction_document, require_document_extension,
+    )
+    if load_revision_marker(marker_path) is not None:
+        committed = read_consistent_revision(root, marker_path=marker_path, journal_path=journal_path)
+        raw = committed.values.get(CORRECTIONS_PATH)
+        prior = correction_document_from_bytes(raw) if raw is not None else CorrectionDocument()
+    else:
+        prior = load_correction_document(root / CORRECTIONS_PATH)
+    raw = artifacts.get(CORRECTIONS_PATH)
+    proposed = correction_document_from_bytes(raw) if raw is not None else CorrectionDocument()
+    require_document_extension(prior, proposed)
+
+
 def build_publication_plan(
     *,
     repo_root: Path,
@@ -521,6 +540,9 @@ def build_publication_plan(
     """Bind one complete candidate revision without writing any files."""
 
     root = repo_root.resolve()
+    from .compatibility_corrections import validate_correction_artifacts
+    validate_correction_artifacts(artifact_bytes)
+    _require_preserved_correction_history(root, artifact_bytes, marker_path, journal_path)
     if not artifact_bytes:
         raise ValidationError("publication candidate must contain at least one artifact")
     journal = load_transaction_journal(journal_path)
@@ -684,12 +706,15 @@ def apply_publication(
     """Apply a reviewed plan under lock, writing the revision marker last."""
 
     root = repo_root.resolve()
+    from .compatibility_corrections import validate_correction_artifacts
+    validate_correction_artifacts(plan.artifact_bytes)
     lock = RepositoryWriterLock(
         root,
         lock_path=lock_path,
         recover_stale=recover_stale_lock,
     )
     with lock:
+        _require_preserved_correction_history(root, plan.artifact_bytes, marker_path, journal_path)
         if current_revision(marker_path) != plan.token.base_revision:
             raise ValidationError("publication plan is stale before staging")
         for diff in plan.artifact_diffs:

@@ -1158,10 +1158,9 @@ def load_committed_generation_stack(
         repo_root / CANONICAL_CARDS_PATH,
         payload=canonical_payload,
     )
-    corrections = _corrections_from_payload(
-        _json_object(corrections_raw, path=CORRECTIONS_PATH),
-        path=CORRECTIONS_PATH,
-    )
+    from .compatibility_corrections import validate_correction_artifacts
+    document = validate_correction_artifacts(values)
+    corrections = document.corrections
     registry = StableCardRegistry.from_dict(
         _json_object(registry_raw, path=REGISTRY_PATH)
     )
@@ -1222,6 +1221,25 @@ def load_committed_generation_stack(
             "compatibility projection requires field and fixture mappings",
             path=COMPATIBILITY_PROJECTION_PATH,
         )
+    if document.compatibility_corrections:
+        from .complete_candidate import _observations_from_committed_artifacts
+        from .compatibility_conditions import refresh_official_conditions
+        from .compatibility_selections import SELECTION_LEDGER_PATH, selections_from_bytes
+        all_observations = _observations_from_committed_artifacts(values)
+        selections = selections_from_bytes(_required_raw(values, SELECTION_LEDGER_PATH))
+        checked_fields, _ = refresh_official_conditions(
+            {cid: card for cid, card in canonical_cards.items() if card.admission is AdmissionStatus.ADMITTED},
+            all_observations, compatibility_fields, selections=selections,
+            source_manifest_revision=aggregate.manifest_revision,
+            compatibility_corrections=document.compatibility_corrections,
+            correction_image_artifacts=values,
+        )
+        for row in document.compatibility_corrections:
+            if row.source_manifest_revision == aggregate.manifest_revision and (
+                compatibility_fields.get(row.card_id, {}).get('xros_req') != checked_fields[row.card_id]['xros_req']
+            ):
+                raise ValidationError('committed compatibility projection lost its reviewed correction',
+                                      card_id=row.card_id, field_path=row.field_path)
     expected_projection = build_compatibility_projection(
         canonical_cards,
         registry,

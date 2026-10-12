@@ -77,12 +77,34 @@ def refresh_official_conditions(
     compatibility_fields: Mapping[str, Mapping[str, Any]],
     *, selections: tuple[CompatibilitySourceSelection, ...] = (),
     source_manifest_revision: str | None = None,
+    compatibility_corrections: tuple = (),
+    correction_image_artifacts: Mapping[str, bytes] | None = None,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, tuple[str, ...]]]]:
     """Refresh only xros_req, preserving unrelated compatibility-only inputs."""
     output = {cid: dict(row) for cid, row in compatibility_fields.items()}
     evidence: dict[str, dict[str, tuple[str, ...]]] = {}
     conflicts: list[dict[str, Any]] = []
+    from .compatibility_corrections import CorrectionDocument, apply_image_correction, validate_image_artifacts
+    from .errors import ValidationError
+    document = CorrectionDocument(compatibility_corrections=compatibility_corrections)
+    validate_image_artifacts(document, correction_image_artifacts or {})
+    for correction in compatibility_corrections:
+        if correction.source_manifest_revision == source_manifest_revision and correction.card_id not in cards:
+            raise ValidationError('current compatibility correction targets an absent card')
     for cid, card in cards.items():
+        reviewed = [row for row in compatibility_corrections if row.card_id == cid]
+        current = [row for row in reviewed if row.source_manifest_revision == source_manifest_revision]
+        if reviewed and not current:
+            raise ValidationError('compatibility correction is stale for this source revision', card_id=cid)
+        if current:
+            if any(row.card_id == cid and row.source_manifest_revision == source_manifest_revision for row in selections):
+                raise ValidationError('source selection overlaps a compatibility image correction', card_id=cid)
+            value, ids = apply_image_correction(card, observations, current[0],
+                source_manifest_revision=source_manifest_revision,
+                image_artifacts=correction_image_artifacts or {})
+            output.setdefault(cid, {})['xros_req'] = value
+            evidence[cid] = {'xros_req': ids}
+            continue
         try:
             value, ids = official_condition_projection(card, observations,
                 selections=selections, source_manifest_revision=source_manifest_revision)

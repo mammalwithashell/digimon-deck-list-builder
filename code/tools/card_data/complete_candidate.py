@@ -42,7 +42,11 @@ from .compatibility_selections import (
     CompatibilitySourceSelection, SELECTION_LEDGER_PATH, load_compatibility_selections,
     selection_ledger_payload, selections_from_bytes, validate_compatibility_selections,
 )
-from .corrections import load_reviewed_corrections
+from .compatibility_corrections import (
+    CorrectionDocument, candidate_document, correction_document_from_bytes,
+    correction_document_payload, correction_review_rows, load_correction_document,
+    load_document_images, require_document_extension, validate_image_artifacts,
+)
 from .derived_artifacts import generate_derived_artifacts
 from .errors import AdjudicationError, CardDataError, ValidationError
 from .generate import (
@@ -715,6 +719,8 @@ def build_complete_candidate(
     legacy_cards: Mapping[str, Mapping[str, Any]],
     registry: StableCardRegistry,
     corrections: tuple[ReviewedCorrection, ...] = (),
+    correction_document: CorrectionDocument | None = None,
+    correction_image_artifacts: Mapping[str, bytes] | None = None,
     adjudications: tuple[MigrationAdjudication, ...] = (),
     committed_observations: Mapping[str, SourceObservation] | None = None,
     retained_scope_manifests: Mapping[str, ScopeManifest] | None = None,
@@ -727,6 +733,9 @@ def build_complete_candidate(
 ) -> CompleteCandidate:
     """Build a deterministic review tree without mutating committed paths."""
 
+    document, correction_images = candidate_document(
+        corrections, correction_document, correction_image_artifacts or {})
+    corrections = document.corrections
     compatibility_selections = validate_compatibility_selections(compatibility_selections)
     root = repo_root.resolve()
     if committed_revision is None:
@@ -888,6 +897,8 @@ def build_complete_candidate(
         {cid: card for cid, card in admitted.items() if card.admission is AdmissionStatus.ADMITTED},
         observations, legacy_bootstrap, selections=compatibility_selections,
         source_manifest_revision=aggregate.manifest_revision,
+        compatibility_corrections=document.compatibility_corrections,
+        correction_image_artifacts=correction_images,
     )
     for card_id in missing_bootstrap_ids:
         legacy_bootstrap[card_id] = _source_bootstrap(admitted[card_id], observations,
@@ -919,8 +930,11 @@ def build_complete_candidate(
             projected_cards=cards_bytes,
         )
     old_input_revision = content_digest(legacy_cards)
-    new_input_revision = content_digest({"canonical": admitted,
-        "compatibility_selections": selection_ledger_payload(compatibility_selections)})
+    input_payload = {"canonical": admitted,
+        "compatibility_selections": selection_ledger_payload(compatibility_selections)}
+    if document.compatibility_corrections:
+        input_payload["compatibility_corrections"] = document.compatibility_corrections
+    new_input_revision = content_digest(input_payload)
     runtime_diffs = approve_runtime_diffs(
         diff_runtime_fields(legacy_cards, generated, corrected,
             compatibility_field_provenance=compatibility_evidence),
@@ -968,12 +982,13 @@ def build_complete_candidate(
     }
     canonical_bytes = canonical_json_bytes(canonical_payload)
     artifacts: dict[str, bytes] = {
+        **correction_images,
         SELECTION_LEDGER_PATH: canonical_json_bytes(selection_ledger_payload(compatibility_selections)),
         "data/card_sources/manifest.json": aggregate.to_bytes(),
         **_scope_artifacts(retained_scope_manifests, official, secondary),
         "data/cards_canonical.json": canonical_bytes,
         "data/card_corrections.json": canonical_json_bytes(
-            {"schema_version": SCHEMA_VERSION, "corrections": corrections}
+            correction_document_payload(document)
         ),
         "data/card_migration_adjudications.json": canonical_json_bytes(
             {"schema_version": SCHEMA_VERSION, "adjudications": adjudications}
@@ -1125,6 +1140,7 @@ def build_complete_candidate(
             "approval_required_unresolved": len(unresolved_conflicts),
         },
         "corrections": correction_rows,
+        "compatibility_corrections": correction_review_rows(document, aggregate.manifest_revision),
         "canonical_validation": validation.to_dict(),
         "runtime_field_diff_count": len(runtime_diffs),
         "approved_runtime_field_diff_count": len(runtime_diffs)
@@ -1545,7 +1561,9 @@ def main(argv: list[str] | None = None) -> int:
         prior_compatibility_projection = stack.compatibility_projection
         registry = stack.registry
         compatibility_selections = _compatibility_selections_from_committed_artifacts(stack.artifact_bytes)
-        corrections = stack.corrections
+        document = correction_document_from_bytes(stack.artifact_bytes["data/card_corrections.json"])
+        correction_images = {r.image_artifact_path: stack.artifact_bytes[r.image_artifact_path]
+                             for r in document.compatibility_corrections}
         adjudications = _adjudications_from_committed_artifacts(
             stack.artifact_bytes
         )
@@ -1578,7 +1596,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         registry = read_registry(root / "data/card_registry.json")
         compatibility_selections = load_compatibility_selections(root / SELECTION_LEDGER_PATH)
-        corrections = load_reviewed_corrections(root / "data/card_corrections.json")
+        document = load_correction_document(root / "data/card_corrections.json")
+        correction_images = load_document_images(document, root)
         adjudications = load_migration_adjudications(
             root / "data/card_migration_adjudications.json"
         )
@@ -1602,13 +1621,10 @@ def main(argv: list[str] | None = None) -> int:
                 "explicit staged correction ledger is unavailable",
                 path=staged_corrections_path,
             )
-        staged_corrections = load_reviewed_corrections(staged_corrections_path)
-        corrections = _require_staged_ledger_extension(
-            corrections,
-            staged_corrections,
-            identity_field="correction_id",
-            description="correction ledger",
-        )
+        staged_document = load_correction_document(staged_corrections_path)
+        require_document_extension(document, staged_document)
+        correction_images.update(load_document_images(staged_document, staged_corrections_path.parent))
+        document = staged_document
     if args.adjudications is not None:
         staged_adjudications_path = resolved(args.adjudications)
         if not staged_adjudications_path.is_file():
@@ -1633,7 +1649,8 @@ def main(argv: list[str] | None = None) -> int:
         source_plan=source_plan,
         legacy_cards=legacy_cards,
         registry=registry,
-        corrections=corrections,
+        correction_document=document,
+        correction_image_artifacts=correction_images,
         adjudications=adjudications,
         compatibility_selections=compatibility_selections,
         committed_observations=committed_observations,

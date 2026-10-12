@@ -186,6 +186,12 @@ def write_reviewed_corrections(
     """
 
     destination = Path(path)
+    if destination.exists():
+        # The legacy API has no representation for compatibility corrections.
+        # Refuse a complete-document downgrade rather than erase reviewed data.
+        from .compatibility_corrections import load_correction_document
+        if load_correction_document(destination).compatibility_corrections:
+            raise ValidationError('legacy correction writer cannot erase compatibility corrections')
     ordered = validate_correction_set(corrections)
     payload = {
         "schema_version": CORRECTIONS_DOCUMENT_SCHEMA_VERSION,

@@ -18,9 +18,12 @@ from .compatibility_selections import (
 from .corrections import (
     apply_correction,
     correction_is_already_applied,
-    load_reviewed_corrections,
 )
 from .errors import ValidationError
+from .compatibility_corrections import (
+    CorrectionDocument, candidate_document, correction_document_payload,
+    load_correction_document, load_document_images, correction_review_rows,
+)
 from .generate import (
     bootstrap_legacy_canonical_cards,
     bootstrap_legacy_compatibility_fields,
@@ -160,7 +163,12 @@ def build_official_candidate(
     adjudications: tuple[MigrationAdjudication, ...] = (),
     correction_evidence: Mapping[str, SourceObservation] | None = None,
     compatibility_selections: tuple[CompatibilitySourceSelection, ...] = (),
+    correction_document: CorrectionDocument | None = None,
+    correction_image_artifacts: Mapping[str, bytes] | None = None,
 ) -> OfficialCandidate:
+    correction_document, correction_images = candidate_document(
+        corrections, correction_document, correction_image_artifacts or {})
+    corrections = correction_document.corrections
     compatibility_selections = validate_compatibility_selections(compatibility_selections)
     correction_evidence = correction_evidence or {}
     live_observations = {item.observation_id: item for item in snapshot.observations}
@@ -218,6 +226,8 @@ def build_official_candidate(
     legacy_bootstrap, compatibility_evidence = refresh_official_conditions(
         corrected, live_observations, legacy_bootstrap, selections=compatibility_selections,
         source_manifest_revision=source_manifest_digest,
+        compatibility_corrections=correction_document.compatibility_corrections,
+        correction_image_artifacts=correction_images,
     )
     for card_id in missing_bootstrap_ids:
         legacy_bootstrap[card_id] = _source_bootstrap(corrected[card_id], live_observations,
@@ -238,7 +248,9 @@ def build_official_candidate(
         compatibility_field_provenance=compatibility_evidence)
     old_input_revision = content_digest(legacy_cards)
     new_input_revision = content_digest({"canonical": corrected,
-        "compatibility_selections": selection_ledger_payload(compatibility_selections)})
+        "compatibility_selections": selection_ledger_payload(compatibility_selections),
+        **({'compatibility_corrections': correction_document.compatibility_corrections}
+           if correction_document.compatibility_corrections else {})})
     approved = approve_runtime_diffs(
         raw_diffs,
         corrections=corrections,
@@ -258,13 +270,11 @@ def build_official_candidate(
         "cards": corrected,
     }
     artifacts = {
+        **correction_images,
         SELECTION_LEDGER_PATH: canonical_json_bytes(selection_ledger_payload(compatibility_selections)),
         "data/cards_canonical.json": canonical_json_bytes(canonical_payload),
         "data/card_corrections.json": canonical_json_bytes(
-            {
-                "schema_version": SCHEMA_VERSION,
-                "corrections": corrections,
-            }
+            correction_document_payload(correction_document)
         ),
         "data/card_migration_adjudications.json": canonical_json_bytes(
             {
@@ -288,6 +298,7 @@ def build_official_candidate(
         row for row in conflict_rows if row["approval_required"]
     ]
     report = {
+        'compatibility_corrections': correction_review_rows(correction_document, source_manifest_digest),
         "schema_version": 1,
         "status": "blocked" if validation.has_errors or unapproved or legacy_only_ids or unresolved_conflicts or any(row["status"] != "applied" for row in correction_rows) else "ready",
         "official_card_count": len(official_ids),
@@ -406,11 +417,13 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     legacy_cards = json.loads((root / "data/cards.json").read_text(encoding="utf-8"))
+    document = load_correction_document(root / 'data/card_corrections.json')
     candidate = build_official_candidate(
         snapshot,
         legacy_cards=legacy_cards,
         registry=read_registry(root / "data/card_registry.json"),
-        corrections=load_reviewed_corrections(root / "data/card_corrections.json"),
+        correction_document=document,
+        correction_image_artifacts=load_document_images(document, root),
         adjudications=load_migration_adjudications(
             root / "data/card_migration_adjudications.json"
         ),
