@@ -1,0 +1,94 @@
+{
+  "compatibility_corrections": [
+    {
+      "base_observation_id": "e74ff1f1cdca2a41815bb652167779f7b7201740b44ae6069c0a4790078e05eb",
+      "base_value": "[Special Digivolution Condition] [DNA Digivolve]0 from red Lv.4 + purple Lv.4",
+      "base_value_digest": "af71bfa7ba5fccde2d39ae0cc6c1920b82b55a71c714ea669b545e495984bcbc",
+      "candidate_set_digest": "3c1921436ad53b8bd6cfd9c8e5e4a2fafe8ed03b709fe379f5b81720fd992369",
+      "candidate_values": {
+        "0a41597f3e66bba820abecf8f572907edf6ddaecb875d58fcc3c8ea550da0aeb": "[Special Digivolution Condition] [DNA Digivolve]0 from red Lv.4 + purple Lv.4",
+        "72848178a43c20841c1dc7a59f07439df03e4cbbe598cf373cf6a0e43c471a2e": "[Special Digivolution Condition] [DNA Digivolve] red Lv.4 + purple Lv.4: Cost 0",
+        "e094e2253320845976f12fb9d86f6a963b919c94829cd7d17da2f886fd0598b7": "[Special Digivolution Condition] [DNA Digivolve] red Lv.4 + purple Lv.4: Cost 0",
+        "e74ff1f1cdca2a41815bb652167779f7b7201740b44ae6069c0a4790078e05eb": "[Special Digivolution Condition] [DNA Digivolve]0 from red Lv.4 + purple Lv.4"
+      },
+      "card_id": "EX3-010",
+      "correction_id": "ex3-010-dna-reminder",
+      "correction_kind": "official_condition_image_correction",
+      "evidence_observation_ids": [
+        "0a41597f3e66bba820abecf8f572907edf6ddaecb875d58fcc3c8ea550da0aeb",
+        "72848178a43c20841c1dc7a59f07439df03e4cbbe598cf373cf6a0e43c471a2e",
+        "e094e2253320845976f12fb9d86f6a963b919c94829cd7d17da2f886fd0598b7",
+        "e74ff1f1cdca2a41815bb652167779f7b7201740b44ae6069c0a4790078e05eb"
+      ],
+      "field_path": "xros_req",
+      "image_artifact_path": "data/card_correction_evidence/53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0.webp",
+      "image_sha256": "53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0",
+      "reason": "All four immutable official HTML observations omit the printed DNA stacking reminder. The inspected primary EX3-010 image is paired with primary EX3-010 observation e74ff1f1cdca2a41815bb652167779f7b7201740b44ae6069c0a4790078e05eb. Restore only the exact printed reminder after its observed DNA route. Raw observations and adjacent canonical fields are unchanged.",
+      "reviewed_at": "2026-10-12T14:17:33.959338+00:00",
+      "reviewer": "review_focused_sources; independent root scope/image review pending final patch and ledger review",
+      "schema_version": 1,
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+      "value": "[Special Digivolution Condition] [DNA Digivolve]0 from red Lv.4 + purple Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+      "value_digest": "397f5b12bef4248f16e4a79bfbacbf66a51fcf39352688a8e189d756181ad4f4"
+    }
+  ],
+  "corrections": [
+    {
+      "card_id": "EX10-016",
+      "correction_id": "focused-ex10-016-link-numbers-effect_description_eng-20261012",
+      "evidence_observation_ids": [
+        "25e5a72b631f6525403294500d0246501b1ca59b9bb103662374472beb9ef6f2",
+        "12ac4652e95d51df5533cc8552486d48b88114269e1b436ab4275b81d5fcd965"
+      ],
+      "field_path": "effect_description_eng",
+      "reason": "Image-backed sparse exception for the retained labeled Link metadata in effect_description_eng. Both cited official-html-v4 observations incorrectly state Link DP +3000 DP and Appmon Link Cost 2. The actual official image https://world.digimoncard.com/images/cardlist/card/EX10-016.png, archived as link-wording-review-images-20261012/EX10-016.png with SHA-256 d13352ab672540cb8130ce5a0f5f1bdc6c028477466b1028b1c7b9a45ce82319, prints linked bonus +2000 DP and Appmon Link Cost 1. Replace only these two labeled numeric tokens; preserve every other character, main timing/effect, reminder, and any face special digivolution route. Base-card DP 1000/play cost 3 and all raw observations remain unchanged. This does not introduce typed Link fields or approve zone representation or engine behavior.",
+      "reviewed_at": "2026-10-12T12:13:13.875421+00:00",
+      "reviewer": "Codex independent source reviewer /root/review_focused_sources",
+      "schema_version": 1,
+      "value": "[Your Turn] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon.\n[Link DP] +2000 DP\n[Link Condition] ＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+    },
+    {
+      "card_id": "EX10-016",
+      "correction_id": "focused-ex10-016-link-numbers-faces-0-effect_text-20261012",
+      "evidence_observation_ids": [
+        "25e5a72b631f6525403294500d0246501b1ca59b9bb103662374472beb9ef6f2",
+        "12ac4652e95d51df5533cc8552486d48b88114269e1b436ab4275b81d5fcd965"
+      ],
+      "field_path": "faces.0.effect_text",
+      "reason": "Image-backed sparse exception for the retained labeled Link metadata in faces.0.effect_text. Both cited official-html-v4 observations incorrectly state Link DP +3000 DP and Appmon Link Cost 2. The actual official image https://world.digimoncard.com/images/cardlist/card/EX10-016.png, archived as link-wording-review-images-20261012/EX10-016.png with SHA-256 d13352ab672540cb8130ce5a0f5f1bdc6c028477466b1028b1c7b9a45ce82319, prints linked bonus +2000 DP and Appmon Link Cost 1. Replace only these two labeled numeric tokens; preserve every other character, main timing/effect, reminder, and any face special digivolution route. Base-card DP 1000/play cost 3 and all raw observations remain unchanged. This does not introduce typed Link fields or approve zone representation or engine behavior.",
+      "reviewed_at": "2026-10-12T12:13:13.875517+00:00",
+      "reviewer": "Codex independent source reviewer /root/review_focused_sources",
+      "schema_version": 1,
+      "value": "[Special Digivolution Condition] [Digivolve] Lv.2 w/[Appmon] trait: Cost 0\n[Your Turn] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon.\n[Link DP] +2000 DP\n[Link Condition] ＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+    },
+    {
+      "card_id": "EX10-016",
+      "correction_id": "focused-ex10-016-link-suspend-two-image-20261012",
+      "evidence_observation_ids": [
+        "25e5a72b631f6525403294500d0246501b1ca59b9bb103662374472beb9ef6f2",
+        "12ac4652e95d51df5533cc8552486d48b88114269e1b436ab4275b81d5fcd965"
+      ],
+      "field_path": "link_effect_description_eng",
+      "reason": "Image-backed sparse exception: the inspected official Bandai image https://world.digimoncard.com/images/cardlist/card/EX10-016.png, retained at C:/Users/james/.codex/worktrees/fe80/digimon-deck-list-builder-1/runs/card-loop/meta-six-20261010/link-wording-review-images-20261012/EX10-016.png, SHA-256 d13352ab672540cb8130ce5a0f5f1bdc6c028477466b1028b1c7b9a45ce82319, visibly prints the When Attacking linked effect as suspend 2 of your opponent's Digimon after trashing 1 of this Digimon's link cards. Both cited immutable official-html-v4 observations instead contain the conflicting -6000 DP effect. Correct only link_effect_description_eng; preserve all raw observations and existing timing/cost wording. The image also prints Link Cost 1 and +2000 linked DP whereas these HTML observations say Cost 2 and +3000; those separate unsupported structured fields remain unresolved data gaps and are not approved or invented by this correction.",
+      "reviewed_at": "2026-10-12T02:15:38.709362+00:00",
+      "reviewer": "Codex independent source reviewer /root/review_focused_sources",
+      "schema_version": 1,
+      "value": "[When Attacking] By trashing 1 of this Digimon's link cards, suspend 2 of your opponent's Digimon."
+    },
+    {
+      "card_id": "EX12-031",
+      "correction_id": "focused-ex12-031-inherited-decode-source-zone-20261011",
+      "evidence_observation_ids": [
+        "1b91ca068b70824224190013ec76d1027415c7617f6d2cce129bab176f86bee7",
+        "88940a47a03d7bb14e5cecd366f9c8fa48b8d0b308522b34da64eae9d684819d"
+      ],
+      "field_path": "inherited_effect_description_eng",
+      "reason": "Both immutable official category 522037 observations omit the source-zone phrase from their inherited Decode reminder. Inspected actual card image C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\EX12-031.webp SHA-256 e99dc76323e0652201f5c8282ecbe61ec10659adcd3c4270a1213b9dc09ee167 explicitly prints from its digivolution cards. Restore only that omitted phrase; preserve the rest of the normalized official field and all raw observations. Image-backed sparse exception resolves the documented observation/image discrepancy, not a new keyword rule or zone expansion.",
+      "reviewed_at": "2026-10-11T22:02:18.258594+00:00",
+      "reviewer": "Codex independent source reviewer /root/review_focused_sources",
+      "schema_version": 1,
+      "value": "＜Decode (Lv.4 or lower w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card from its digivolution cards without paying the cost.)"
+    }
+  ],
+  "schema_version": 2
+}

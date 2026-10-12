@@ -140,3 +140,13 @@ code/tests/fixtures/card_data/runtime_snapshot/.gitattributes -text
 /code/tests/fixtures/card_data/diagnostic_source_book/fd17c7aecab7ee3cd64137f7361961eca1c0574ad4f0a4ca20e83d803f0d5309.gz -text
 /code/tests/fixtures/card_data/diagnostic_source_book/fe1f313900386f2d8dcde21df7be97b4f19e25a227b708b879acc36fe39ef1a5.gz -text
 /code/tests/fixtures/card_data/diagnostic_source_book/inputs.json -text
+
+# Preserve reviewed BT26-100 correction evidence and regressions.
+/code/tests/tools/test_bt26_kind_corrections.py -text
+/code/tests/fixtures/card_data/bt26_kind_correction/.gitattributes -text
+/code/tests/fixtures/card_data/bt26_kind_correction/BT26-100.webp -text
+/code/tests/fixtures/card_data/bt26_kind_correction/canonical.json -text
+/code/tests/fixtures/card_data/bt26_kind_correction/metadata.json -text
+/code/tests/fixtures/card_data/bt26_kind_correction/observations.json -text
+/code/tests/fixtures/card_data/bt26_kind_correction/prior-corrections.json -text
+/code/tests/fixtures/card_data/bt26_kind_correction/proposed-corrections.json -text

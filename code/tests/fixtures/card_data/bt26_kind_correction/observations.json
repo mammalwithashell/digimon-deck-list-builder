@@ -1,0 +1,258 @@
+{
+  "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36": {
+    "extracted": {
+      "attribute": "",
+      "card_id": "BT26-100",
+      "card_type": "Tamer",
+      "colors": [
+        "Purple",
+        "Black"
+      ],
+      "dp": null,
+      "evolution_routes": [],
+      "faces": [
+        {
+          "colors": [
+            "Purple",
+            "Black"
+          ],
+          "dp": null,
+          "face_id": "primary",
+          "kind": "tamer",
+          "level": null,
+          "name": "Dark Field",
+          "play_cost": 3,
+          "text_sections": [
+            {
+              "label": "Effect",
+              "text": "While you have no face-up security cards, you can ignore this card's color requirements.\n{Security} [All Turns] All of your [Titan] trait Digimon gain ＜Blocker＞. While you have a Digimon with [Plutomon] or [Titamon] in its name, they also get +3000 DP.\n[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 level 4 or lower [Titan] trait card from your hand or trash without paying the cost."
+            },
+            {
+              "label": "Security Effect",
+              "text": "[Security] You may play 1 level 4 or lower [Titan] trait Digimon card from your hand or trash without paying the cost."
+            }
+          ]
+        }
+      ],
+      "form": "",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": null,
+      "name": "Dark Field",
+      "play_cost": 3,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522038",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-100.png?260529",
+        "printing_id": "BT26-100"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "Yes, it is.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7174",
+          "question": "Is the \"while you have no face-up security cards\" condition met when I have 0 cards in my security stack?"
+        },
+        {
+          "answer": "Yes, you can.\nIn such cases, you can't add a card from your security stack to your hand, therefore you only place this card in your security stack.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7175",
+          "question": "Can I also activate this card’s [Main] effect when I have 0 cards in my security stack?"
+        },
+        {
+          "answer": "They become face-up security cards that remain revealed.\nOther than rules that specify face-up security cards, the rules apply in the same manner as standard security cards.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7176",
+          "question": "What happens to cards placed face up in the security stack by effects?"
+        },
+        {
+          "answer": "The check is performed with the card left revealed.\nOther than rules for cards left revealed, the rules apply in the same manner as standard security checks.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7177",
+          "question": "What happens upon a security check for a security card that is placed face-up?"
+        },
+        {
+          "answer": "Yes, it triggers.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7178",
+          "question": "Does a card's [Security] effect trigger upon a security check if that card is placed face-up?"
+        },
+        {
+          "answer": "Any face-up cards are placed face down, then you shuffle the cards.\nAfter shuffling, all cards are left face-down.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7179",
+          "question": "What happens if I shuffle a security stack that includes security cards placed face-up?"
+        },
+        {
+          "answer": "A {Security} effect can be triggered/activated while its card is face up in the security stack.\nIt can't be triggered or activated in areas other than the face-up security cards.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7180",
+          "question": "What is a {Security} effect?"
+        },
+        {
+          "answer": "No.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7181",
+          "question": "Will this card's {Security} [All Turns]'s effect also give +3000 DP and to [Plutomon] and [Titamon] cards that do not have the [Titan] trait?"
+        }
+      ],
+      "rarity": "R",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "While you have no face-up security cards, you can ignore this card's color requirements.\n{Security} [All Turns] All of your [Titan] trait Digimon gain ＜Blocker＞. While you have a Digimon with [Plutomon] or [Titamon] in its name, they also get +3000 DP.\n[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 level 4 or lower [Titan] trait card from your hand or trash without paying the cost."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] You may play 1 level 4 or lower [Titan] trait Digimon card from your hand or trash without paying the cost."
+        }
+      ],
+      "type": "Titan/TS"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522038:BT26-100:BT26-100",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522038"
+  },
+  "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62": {
+    "extracted": {
+      "attribute": "",
+      "card_id": "BT26-100",
+      "card_type": "Option",
+      "colors": [
+        "Purple",
+        "Black"
+      ],
+      "dp": null,
+      "evolution_routes": [],
+      "faces": [
+        {
+          "colors": [
+            "Purple",
+            "Black"
+          ],
+          "dp": null,
+          "face_id": "primary",
+          "kind": "option",
+          "level": null,
+          "name": "Dark Field",
+          "play_cost": 3,
+          "text_sections": [
+            {
+              "label": "Effect",
+              "text": "While you have no face-up security cards, you can ignore this card's color requirements.\n{Security} [All Turns] All of your [Titan] trait Digimon gain ＜Blocker＞. While you have a Digimon with [Plutomon] or [Titamon] in its name, they also get +3000 DP.\n[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 level 4 or lower [Titan] trait card from your hand or trash without paying the cost."
+            },
+            {
+              "label": "Security Effect",
+              "text": "[Security] You may play 1 level 4 or lower [Titan] trait Digimon card from your hand or trash without paying the cost."
+            }
+          ]
+        }
+      ],
+      "form": "",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": null,
+      "name": "Dark Field",
+      "play_cost": 3,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522902",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-100_P1.png?260529",
+        "printing_id": "BT26-100_P1"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "Yes, it is.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7174",
+          "question": "Is the \"while you have no face-up security cards\" condition met when I have 0 cards in my security stack?"
+        },
+        {
+          "answer": "Yes, you can.\nIn such cases, you can't add a card from your security stack to your hand, therefore you only place this card in your security stack.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7175",
+          "question": "Can I also activate this card’s [Main] effect when I have 0 cards in my security stack?"
+        },
+        {
+          "answer": "They become face-up security cards that remain revealed.\nOther than rules that specify face-up security cards, the rules apply in the same manner as standard security cards.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7176",
+          "question": "What happens to cards placed face up in the security stack by effects?"
+        },
+        {
+          "answer": "The check is performed with the card left revealed.\nOther than rules for cards left revealed, the rules apply in the same manner as standard security checks.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7177",
+          "question": "What happens upon a security check for a security card that is placed face-up?"
+        },
+        {
+          "answer": "Yes, it triggers.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7178",
+          "question": "Does a card's [Security] effect trigger upon a security check if that card is placed face-up?"
+        },
+        {
+          "answer": "Any face-up cards are placed face down, then you shuffle the cards.\nAfter shuffling, all cards are left face-down.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7179",
+          "question": "What happens if I shuffle a security stack that includes security cards placed face-up?"
+        },
+        {
+          "answer": "A {Security} effect can be triggered/activated while its card is face up in the security stack.\nIt can't be triggered or activated in areas other than the face-up security cards.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7180",
+          "question": "What is a {Security} effect?"
+        },
+        {
+          "answer": "No.",
+          "date": "Aug. 18, 2026",
+          "number": "Q7181",
+          "question": "Will this card's {Security} [All Turns]'s effect also give +3000 DP and to [Plutomon] and [Titamon] cards that do not have the [Titan] trait?"
+        }
+      ],
+      "rarity": "R",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "While you have no face-up security cards, you can ignore this card's color requirements.\n{Security} [All Turns] All of your [Titan] trait Digimon gain ＜Blocker＞. While you have a Digimon with [Plutomon] or [Titamon] in its name, they also get +3000 DP.\n[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 level 4 or lower [Titan] trait card from your hand or trash without paying the cost."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] You may play 1 level 4 or lower [Titan] trait Digimon card from your hand or trash without paying the cost."
+        }
+      ],
+      "type": "Titan/TS"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "d19a21154e21453304021f71a7d07712673ffbf63948c98fe7bc7b3ebd0d0136",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522902:BT26-100:BT26-100_P1",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522902"
+  }
+}
