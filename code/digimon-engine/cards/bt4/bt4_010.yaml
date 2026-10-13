@@ -1,0 +1,11 @@
+card: BT4-010
+name: Fugamon
+kind: digimon
+level: 4
+color: [red]
+cost: 3
+dp: 3000
+form: Champion
+attribute: Virus
+traits: [Demon]
+effects: []

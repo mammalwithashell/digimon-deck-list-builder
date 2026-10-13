@@ -1,0 +1,187 @@
+{
+  "BT1-009": {
+    "index": 25,
+    "norm_id": 0.00125,
+    "card_id": "BT1-009",
+    "card_index": 9,
+    "card_name_eng": "Monodramon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT1_009",
+    "play_cost": 2,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Mini Dragon"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "xros_req": ""
+  },
+  "BT1-014": {
+    "index": 30,
+    "norm_id": 0.0015,
+    "card_id": "BT1-014",
+    "card_index": 14,
+    "card_name_eng": "Kokatorimon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT1_014",
+    "play_cost": 3,
+    "dp": 4000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Giant Bird"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "xros_req": ""
+  },
+  "BT3-007": {
+    "index": 250,
+    "norm_id": 0.0125,
+    "card_id": "BT3-007",
+    "card_index": 7,
+    "card_name_eng": "Agumon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT3_007",
+    "play_cost": 2,
+    "dp": 4000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Reptile"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "xros_req": ""
+  },
+  "BT4-010": {
+    "index": 365,
+    "norm_id": 0.01825,
+    "card_id": "BT4-010",
+    "card_index": 10,
+    "card_name_eng": "Fugamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT4_010",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Demon"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 1
+      }
+    ],
+    "xros_req": ""
+  },
+  "BT4-014": {
+    "index": 369,
+    "norm_id": 0.01845,
+    "card_id": "BT4-014",
+    "card_index": 14,
+    "card_name_eng": "Vermilimon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT4_014",
+    "play_cost": 5,
+    "dp": 8000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Ankylosaur"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "xros_req": ""
+  }
+}

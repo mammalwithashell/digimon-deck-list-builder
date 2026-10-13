@@ -526,6 +526,18 @@
         "trash_top_security"
       ]
     },
+    "BT1-009": {
+      "path": "bt1/bt1_009.yaml",
+      "predicates": [],
+      "timings": [],
+      "verbs": []
+    },
+    "BT1-014": {
+      "path": "bt1/bt1_014.yaml",
+      "predicates": [],
+      "timings": [],
+      "verbs": []
+    },
     "BT1-085": {
       "path": "bt1/BT1-085.yaml",
       "predicates": [
@@ -13074,6 +13086,12 @@
         "trash_from_hand_by_index"
       ]
     },
+    "BT3-007": {
+      "path": "bt3/bt3_007.yaml",
+      "predicates": [],
+      "timings": [],
+      "verbs": []
+    },
     "BT3-077": {
       "path": "bt3/BT3-077.yaml",
       "predicates": [
@@ -13164,6 +13182,18 @@
         "play_from_trash_free",
         "select_own_permanent"
       ]
+    },
+    "BT4-010": {
+      "path": "bt4/bt4_010.yaml",
+      "predicates": [],
+      "timings": [],
+      "verbs": []
+    },
+    "BT4-014": {
+      "path": "bt4/bt4_014.yaml",
+      "predicates": [],
+      "timings": [],
+      "verbs": []
     },
     "BT4-072": {
       "path": "bt4/BT4-072.yaml",

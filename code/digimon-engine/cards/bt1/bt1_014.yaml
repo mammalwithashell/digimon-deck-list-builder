@@ -1,0 +1,11 @@
+card: BT1-014
+name: Kokatorimon
+kind: digimon
+level: 4
+color: [red]
+cost: 3
+dp: 4000
+form: Champion
+attribute: Data
+traits: [Giant Bird]
+effects: []

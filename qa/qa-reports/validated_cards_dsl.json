@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05",
+  "last_updated": "2026-10-13",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -14177,6 +14177,101 @@
         "alt-digivolve-name"
       ],
       "notes": "Digivolve circle is green/purple Lv.2 cost 1 (confirmed on enlarged card face); [Your Turn][OPT] other green/[Free] Digimon played or digivolves → gain 1 memory."
+    },
+    "BT1-009": {
+      "card_name": "Monodramon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt1/bt1_009.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt1/bt1_009.rs",
+      "test_count": 7,
+      "patterns": [
+        "native-vanilla-registration",
+        "ordinary-digivolution",
+        "both-seat-action-mask",
+        "battle-security-dp-boundaries"
+      ],
+      "notes": "True no-effect printed card. Exact official observations and image cross-check; minimal native definition. Tests use original R4 metadata, both seats, visible legal base choices, negative color/level, play/evolution cost and draw, battle/security DP boundaries, inherited silence.",
+      "audit_note": "Independent spec and quality approved. Seven per-card tests plus two production-registry probes (full original R4 and portable fixture modes). Simulator-only evidence: no DCGO oracle, source/runtime admission or training-readiness claim; full-five broader checks pending."
+    },
+    "BT1-014": {
+      "card_name": "Kokatorimon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt1/bt1_014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt1/bt1_014.rs",
+      "test_count": 7,
+      "patterns": [
+        "native-vanilla-registration",
+        "ordinary-digivolution",
+        "both-seat-action-mask",
+        "battle-security-dp-boundaries"
+      ],
+      "notes": "True no-effect printed card. Exact official observations and image cross-check; minimal native definition. Tests use original R4 metadata, both seats, visible legal base choices, negative color/level, play/evolution cost and draw, battle/security DP boundaries, inherited silence.",
+      "audit_note": "Independent spec and quality approved. Seven per-card tests plus two production-registry probes (full original R4 and portable fixture modes). Simulator-only evidence: no DCGO oracle, source/runtime admission or training-readiness claim; full-five broader checks pending."
+    },
+    "BT3-007": {
+      "card_name": "Agumon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt3/bt3_007.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_007.rs",
+      "test_count": 7,
+      "patterns": [
+        "native-vanilla-registration",
+        "ordinary-digivolution",
+        "both-seat-action-mask",
+        "battle-security-dp-boundaries"
+      ],
+      "notes": "True no-effect printed card. Exact official observations and image cross-check; minimal native definition. Tests use original R4 metadata, both seats, visible legal base choices, negative color/level, play/evolution cost and draw, battle/security DP boundaries, inherited silence.",
+      "audit_note": "Independent spec and quality approved. Seven per-card tests plus two production-registry probes (full original R4 and portable fixture modes). Simulator-only evidence: no DCGO oracle, source/runtime admission or training-readiness claim; full-five broader checks pending."
+    },
+    "BT4-010": {
+      "card_name": "Fugamon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt4/bt4_010.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_010.rs",
+      "test_count": 7,
+      "patterns": [
+        "native-vanilla-registration",
+        "ordinary-digivolution",
+        "both-seat-action-mask",
+        "battle-security-dp-boundaries"
+      ],
+      "notes": "True no-effect printed card. Exact official observations and image cross-check; minimal native definition. Tests use original R4 metadata, both seats, visible legal base choices, negative color/level, play/evolution cost and draw, battle/security DP boundaries, inherited silence.",
+      "audit_note": "Independent spec and quality approved. Seven per-card tests plus two production-registry probes (full original R4 and portable fixture modes). Simulator-only evidence: no DCGO oracle, source/runtime admission or training-readiness claim; full-five broader checks pending."
+    },
+    "BT4-014": {
+      "card_name": "Vermilimon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt4/bt4_014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_014.rs",
+      "test_count": 7,
+      "patterns": [
+        "native-vanilla-registration",
+        "ordinary-digivolution",
+        "both-seat-action-mask",
+        "battle-security-dp-boundaries"
+      ],
+      "notes": "True no-effect printed card. Exact official observations and image cross-check; minimal native definition. Tests use original R4 metadata, both seats, visible legal base choices, negative color/level, play/evolution cost and draw, battle/security DP boundaries, inherited silence.",
+      "audit_note": "Independent batch2 spec and quality approved. Seven per-card tests plus two production-registry probes in each full original R4 and portable fixture mode, including real BT1-014 and BT4-010 champion bases. Simulator-only evidence: no DCGO oracle, source/runtime admission or training-readiness claim; full-five broader checks pending."
     }
   }
 }

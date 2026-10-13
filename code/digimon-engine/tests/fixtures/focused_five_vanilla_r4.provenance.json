@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "scope": "Test-only exact row extraction; not source or runtime admission",
+  "original_runtime_sha256": "ba7d7f85da1553fb35435131181c598ef555acd0f0890d979a74beee7e60398f",
+  "original_runtime_record_count": 4483,
+  "source_review_plan_sha256": "e5de09f3a23ea421cb00ffd33d5208efa440373266931c6bc3d53a5f192a989e",
+  "fixture_sha256": "aadeaf1c6171f5a8a98dae30c1712ea6c18b2cd55dd9f70c1e38f57ddb925534",
+  "cards": {
+    "BT1-009": {
+      "official_observation_ids": [
+        "0ccd0615a265a095ca4fac2def853193374d3165ef63e424e9b09bc2044197d1",
+        "eecec9cbe3cf09484520b92bc4182cbdfede3a08bdc21ca298fe15ab5c207561"
+      ],
+      "source_assertion": "No printed main, inherited, security, Rule or special digivolution effect",
+      "runtime": {
+        "attribute_eng": [
+          "Vaccine"
+        ],
+        "card_colors": [
+          0
+        ],
+        "card_effect_class_name": "BT1_009",
+        "card_id": "BT1-009",
+        "card_index": 9,
+        "card_kind": 0,
+        "card_name_eng": "Monodramon",
+        "card_name_jpn": "",
+        "dp": 3000,
+        "effect_description_eng": "",
+        "evo_costs": [
+          {
+            "card_color": 0,
+            "level": 2,
+            "memory_cost": 0
+          }
+        ],
+        "form_eng": [
+          "Rookie"
+        ],
+        "index": 25,
+        "inherited_effect_description_eng": "",
+        "level": 3,
+        "norm_id": 0.00125,
+        "play_cost": 2,
+        "rarity": 0,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Mini Dragon"
+        ],
+        "xros_req": ""
+      }
+    },
+    "BT1-014": {
+      "official_observation_ids": [
+        "832e28af9b8f945d569d9079a8405a6e2361aad48f2fb8238696c855897a222e"
+      ],
+      "source_assertion": "No printed main, inherited, security, Rule or special digivolution effect",
+      "runtime": {
+        "attribute_eng": [
+          "Data"
+        ],
+        "card_colors": [
+          0
+        ],
+        "card_effect_class_name": "BT1_014",
+        "card_id": "BT1-014",
+        "card_index": 14,
+        "card_kind": 0,
+        "card_name_eng": "Kokatorimon",
+        "card_name_jpn": "",
+        "dp": 4000,
+        "effect_description_eng": "",
+        "evo_costs": [
+          {
+            "card_color": 0,
+            "level": 3,
+            "memory_cost": 2
+          }
+        ],
+        "form_eng": [
+          "Champion"
+        ],
+        "index": 30,
+        "inherited_effect_description_eng": "",
+        "level": 4,
+        "norm_id": 0.0015,
+        "play_cost": 3,
+        "rarity": 0,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Giant Bird"
+        ],
+        "xros_req": ""
+      }
+    },
+    "BT3-007": {
+      "official_observation_ids": [
+        "5378ba281b8d1becc9326737c4c9c78852d8e2c0ae91b6fecdf2cb0386d2439e"
+      ],
+      "source_assertion": "No printed main, inherited, security, Rule or special digivolution effect",
+      "runtime": {
+        "attribute_eng": [
+          "Virus"
+        ],
+        "card_colors": [
+          0
+        ],
+        "card_effect_class_name": "BT3_007",
+        "card_id": "BT3-007",
+        "card_index": 7,
+        "card_kind": 0,
+        "card_name_eng": "Agumon",
+        "card_name_jpn": "",
+        "dp": 4000,
+        "effect_description_eng": "",
+        "evo_costs": [
+          {
+            "card_color": 0,
+            "level": 2,
+            "memory_cost": 1
+          }
+        ],
+        "form_eng": [
+          "Rookie"
+        ],
+        "index": 250,
+        "inherited_effect_description_eng": "",
+        "level": 3,
+        "norm_id": 0.0125,
+        "play_cost": 2,
+        "rarity": 0,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Reptile"
+        ],
+        "xros_req": ""
+      }
+    },
+    "BT4-010": {
+      "official_observation_ids": [
+        "2fe740a6e814d7b563931e0a8699c2826bbdbadef0e9530df3ec1d0753f768b3"
+      ],
+      "source_assertion": "No printed main, inherited, security, Rule or special digivolution effect",
+      "runtime": {
+        "attribute_eng": [
+          "Virus"
+        ],
+        "card_colors": [
+          0
+        ],
+        "card_effect_class_name": "BT4_010",
+        "card_id": "BT4-010",
+        "card_index": 10,
+        "card_kind": 0,
+        "card_name_eng": "Fugamon",
+        "card_name_jpn": "",
+        "dp": 3000,
+        "effect_description_eng": "",
+        "evo_costs": [
+          {
+            "card_color": 0,
+            "level": 3,
+            "memory_cost": 1
+          }
+        ],
+        "form_eng": [
+          "Champion"
+        ],
+        "index": 365,
+        "inherited_effect_description_eng": "",
+        "level": 4,
+        "norm_id": 0.01825,
+        "play_cost": 3,
+        "rarity": 0,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Demon"
+        ],
+        "xros_req": ""
+      }
+    },
+    "BT4-014": {
+      "official_observation_ids": [
+        "6f7b8bd9eef372d858440d8633de41df075e9067b4ea24ecd483b40dca34e9e4"
+      ],
+      "source_assertion": "No printed main, inherited, security, Rule or special digivolution effect",
+      "runtime": {
+        "attribute_eng": [
+          "Data"
+        ],
+        "card_colors": [
+          0
+        ],
+        "card_effect_class_name": "BT4_014",
+        "card_id": "BT4-014",
+        "card_index": 14,
+        "card_kind": 0,
+        "card_name_eng": "Vermilimon",
+        "card_name_jpn": "",
+        "dp": 8000,
+        "effect_description_eng": "",
+        "evo_costs": [
+          {
+            "card_color": 0,
+            "level": 4,
+            "memory_cost": 3
+          }
+        ],
+        "form_eng": [
+          "Ultimate"
+        ],
+        "index": 369,
+        "inherited_effect_description_eng": "",
+        "level": 5,
+        "norm_id": 0.01845,
+        "play_cost": 5,
+        "rarity": 0,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Ankylosaur"
+        ],
+        "xros_req": ""
+      }
+    }
+  },
+  "rules_manual": "Digimon TCG resources/general_rule.pdf in base repository",
+  "rules_sections": [
+    "7-1-3",
+    "8-1-2",
+    "8-1-3",
+    "11-2",
+    "13-1",
+    "14"
+  ],
+  "card_data_contract": "Ordinary digivolution routes come from native CardData.evo_costs, not CompiledCard.alt_paths",
+  "behavior_or_oracle_confirmation": false
+}

@@ -1,0 +1,14 @@
+# Official observations 0ccd0615a265a095ca4fac2def853193374d3165ef63e424e9b09bc2044197d1
+# and eecec9cbe3cf09484520b92bc4182cbdfede3a08bdc21ca298fe15ab5c207561;
+# primary and BT1-009_P1 images agree: no main, inherited, security or Rule text.
+# The ordinary red Lv.2 cost-0 circle comes from the printed CardData route.
+card: BT1-009
+name: Monodramon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 3000
+form: Rookie
+attribute: Vaccine
+traits: [Mini Dragon]

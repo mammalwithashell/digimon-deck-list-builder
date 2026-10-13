@@ -316,3 +316,25 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/digimon-engine/src/card_store.rs -text
 /code/digimon-engine/tests/card_store_content_cache.rs -text
 /code/digimon-engine/tests/review_card_store_content_cache.rs -text
+
+# Preserve reviewed five-card native definitions and witness bytes.
+/code/digimon-engine/tests/cards_behavioral/bt1/mod.rs -text
+/code/digimon-engine/cards/bt1/bt1_009.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt1/bt1_009.rs -text
+/code/digimon-engine/cards/bt1/bt1_014.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt1/bt1_014.rs -text
+/code/digimon-engine/tests/cards_behavioral/bt3/mod.rs -text
+/code/digimon-engine/cards/bt3/bt3_007.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt3/bt3_007.rs -text
+/code/digimon-engine/tests/cards_behavioral/bt4/mod.rs -text
+/code/digimon-engine/cards/bt4/bt4_010.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt4/bt4_010.rs -text
+/code/digimon-engine/cards/bt4/bt4_014.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt4/bt4_014.rs -text
+/code/digimon-engine/tests/fixtures/focused_five_vanilla_r4.json -text
+/code/digimon-engine/tests/fixtures/focused_five_vanilla_r4.provenance.json -text
+/code/digimon-engine/tests/review_five_vanilla_batch1.rs -text
+/code/digimon-engine/tests/review_five_vanilla_batch2.rs -text
+/qa/impact/dsl_impact_index.json -text
+/qa/qa-reports/validated_cards_dsl.json -text
+/qa/archetype-qa/dsl/focused-missing-definitions-20261013.md -text
