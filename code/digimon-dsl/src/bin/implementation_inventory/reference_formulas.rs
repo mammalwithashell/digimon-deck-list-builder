@@ -87,7 +87,7 @@ impl Walk for digimon_dsl::formula::FormulaSpec {
                 binding_value.walk(
                     c,
                     &format!("{}.binding_value", &format!("{}@BindingValue", path)),
-                    "UNCLASSIFIED_STRING",
+                    "EXISTING_INSTANCE_BINDING",
                 );
             }
             digimon_dsl::formula::FormulaSpec::SourceDp { source_dp } => {

@@ -326,7 +326,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         can_digivolve_onto.walk(
             c,
             &format!("{}.can_digivolve_onto", path),
-            "UNCLASSIFIED_STRING",
+            "EXISTING_INSTANCE_BINDING",
         );
         dp_eq.walk(c, &format!("{}.dp_eq", path), "UNCLASSIFIED_STRING");
         dp_lte.walk(c, &format!("{}.dp_lte", path), "UNCLASSIFIED_STRING");
@@ -889,22 +889,22 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         binding_exists.walk(
             c,
             &format!("{}.binding_exists", path),
-            "UNCLASSIFIED_STRING",
+            "EXISTING_INSTANCE_BINDING",
         );
         binding_present.walk(
             c,
             &format!("{}.binding_present", path),
-            "UNCLASSIFIED_STRING",
+            "EXISTING_INSTANCE_BINDING",
         );
         binding_absent.walk(
             c,
             &format!("{}.binding_absent", path),
-            "UNCLASSIFIED_STRING",
+            "EXISTING_INSTANCE_BINDING",
         );
         binding_count_eq.walk(
             c,
             &format!("{}.binding_count_eq", path),
-            "UNCLASSIFIED_STRING",
+            "EXISTING_INSTANCE_BINDING",
         );
         effect_suspended_any_own_digimon.walk(
             c,
@@ -1931,7 +1931,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         can_digivolve_onto.walk(
             c,
             &format!("{}.can_digivolve_onto", path),
-            "UNCLASSIFIED_STRING",
+            "EXISTING_INSTANCE_BINDING",
         );
         dp_eq.walk(c, &format!("{}.dp_eq", path), "UNCLASSIFIED_STRING");
         dp_lte.walk(c, &format!("{}.dp_lte", path), "UNCLASSIFIED_STRING");
@@ -2214,7 +2214,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         binding_count_eq.walk(
             c,
             &format!("{}.binding_count_eq", path),
-            "UNCLASSIFIED_STRING",
+            "EXISTING_INSTANCE_BINDING",
         );
         your_turn.walk(c, &format!("{}.your_turn", path), "UNCLASSIFIED_STRING");
         opponents_turn.walk(
@@ -2435,17 +2435,17 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         binding_exists.walk(
             c,
             &format!("{}.binding_exists", path),
-            "UNCLASSIFIED_STRING",
+            "EXISTING_INSTANCE_BINDING",
         );
         binding_present.walk(
             c,
             &format!("{}.binding_present", path),
-            "UNCLASSIFIED_STRING",
+            "EXISTING_INSTANCE_BINDING",
         );
         binding_absent.walk(
             c,
             &format!("{}.binding_absent", path),
-            "UNCLASSIFIED_STRING",
+            "EXISTING_INSTANCE_BINDING",
         );
         effect_suspended_any_own_digimon.walk(
             c,

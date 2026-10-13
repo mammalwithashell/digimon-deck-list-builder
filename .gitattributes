@@ -271,3 +271,6 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 # Preserve reviewed campaign process preflight bytes.
 /code/tools/card_loop/supervision.py -text
 /code/tests/tools/test_campaign_process_preflight.py -text
+
+# Preserve independently reviewed typed reference role regression.
+/code/digimon-dsl/tests/implementation_reference_roles.rs -text

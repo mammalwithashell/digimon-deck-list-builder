@@ -38,6 +38,7 @@ impl Collector {
     fn node(&mut self, path: &str, typ: &str, role: &str, value: Value) {
         if role == "TOKEN_CONSTRUCTION"
             || role.starts_with("HOOK_")
+            || role.starts_with("ENGINE_")
             || role == "UNCLASSIFIED_STRING"
         {
             self.blockers.insert(format!("UNRESOLVED_{role}"));
@@ -124,6 +125,9 @@ pub fn visit(
     (a.finish(), b.finish())
 }
 // Explicit typed patterns: all fields and variants, no rest/wildcard patterns.
+// Roles follow typed field semantics, never string values. ENGINE_* names remain
+// unresolved until a separate engine witness proves lookup and behavior. Identity
+// categories and binding slots do not assert card construction or source authority.
 impl Walk for digimon_dsl::spec::CardSpec {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
         c.node(
@@ -161,8 +165,8 @@ impl Walk for digimon_dsl::spec::CardSpec {
         cost.walk(c, &format!("{}.cost", path), "UNCLASSIFIED_STRING");
         dp.walk(c, &format!("{}.dp", path), "UNCLASSIFIED_STRING");
         traits.walk(c, &format!("{}.traits", path), "MATCH_OR_DEFINE_TRAIT");
-        form.walk(c, &format!("{}.form", path), "UNCLASSIFIED_STRING");
-        attribute.walk(c, &format!("{}.attribute", path), "UNCLASSIFIED_STRING");
+        form.walk(c, &format!("{}.form", path), "CARD_FORM_DEFINITION");
+        attribute.walk(c, &format!("{}.attribute", path), "CARD_ATTRIBUTE_DEFINITION");
         ace_overflow.walk(c, &format!("{}.ace_overflow", path), "UNCLASSIFIED_STRING");
         identity.walk(c, &format!("{}.identity", path), "UNCLASSIFIED_STRING");
         digixros_aliases.walk(
@@ -341,7 +345,7 @@ impl Walk for digimon_dsl::spec::DualOptionSpec {
             &format!("{}.security_text", path),
             "METADATA_NO_EXECUTABLE_REFERENCE",
         );
-        keywords.walk(c, &format!("{}.keywords", path), "UNCLASSIFIED_STRING");
+        keywords.walk(c, &format!("{}.keywords", path), "ENGINE_KEYWORD_NAME");
         use_requirement.walk(
             c,
             &format!("{}.use_requirement", path),
@@ -1729,7 +1733,7 @@ impl Walk for digimon_dsl::clause::AuraBody {
             &format!("{}.grant_traits", path),
             "MATCH_OR_DEFINE_TRAIT",
         );
-        modifier.walk(c, &format!("{}.modifier", path), "UNCLASSIFIED_STRING");
+        modifier.walk(c, &format!("{}.modifier", path), "ENGINE_MODIFIER_NAME");
         modifier_value.walk(
             c,
             &format!("{}.modifier_value", path),
@@ -1816,7 +1820,7 @@ impl Walk for digimon_dsl::clause::GrantKeywordValue {
             serde_json::Value::Null,
         );
         let digimon_dsl::clause::GrantKeywordValue { keyword, value } = self;
-        keyword.walk(c, &format!("{}.keyword", path), "UNCLASSIFIED_STRING");
+        keyword.walk(c, &format!("{}.keyword", path), "ENGINE_KEYWORD_NAME");
         value.walk(c, &format!("{}.value", path), "UNCLASSIFIED_STRING");
     }
 }
@@ -1843,7 +1847,7 @@ impl Walk for digimon_dsl::clause::CostReductionBody {
         reduction_timing.walk(
             c,
             &format!("{}.reduction_timing", path),
-            "UNCLASSIFIED_STRING",
+            "ENGINE_TIMING_NAME",
         );
         when_playing_this.walk(
             c,
@@ -1887,8 +1891,8 @@ impl Walk for digimon_dsl::clause::ReplacementBody {
             then_steps,
             process,
         } = self;
-        trigger.walk(c, &format!("{}.trigger", path), "UNCLASSIFIED_STRING");
-        timing.walk(c, &format!("{}.timing", path), "UNCLASSIFIED_STRING");
+        trigger.walk(c, &format!("{}.trigger", path), "ENGINE_TIMING_NAME");
+        timing.walk(c, &format!("{}.timing", path), "ENGINE_TIMING_NAME");
         optional.walk(c, &format!("{}.optional", path), "UNCLASSIFIED_STRING");
         once_per_turn.walk(c, &format!("{}.once_per_turn", path), "UNCLASSIFIED_STRING");
         cost.walk(c, &format!("{}.cost", path), "UNCLASSIFIED_STRING");
@@ -2092,7 +2096,7 @@ impl Walk for digimon_dsl::clause::GrantKeywordBody {
             value,
             overclock_cost_filter,
         } = self;
-        keyword.walk(c, &format!("{}.keyword", path), "UNCLASSIFIED_STRING");
+        keyword.walk(c, &format!("{}.keyword", path), "ENGINE_KEYWORD_NAME");
         value.walk(c, &format!("{}.value", path), "UNCLASSIFIED_STRING");
         overclock_cost_filter.walk(
             c,
@@ -2114,7 +2118,7 @@ impl Walk for digimon_dsl::clause::DelayBody {
             active_when,
             process,
         } = self;
-        trigger.walk(c, &format!("{}.trigger", path), "UNCLASSIFIED_STRING");
+        trigger.walk(c, &format!("{}.trigger", path), "ENGINE_TIMING_NAME");
         active_when.walk(c, &format!("{}.active_when", path), "UNCLASSIFIED_STRING");
         process.walk(c, &format!("{}.process", path), "UNCLASSIFIED_STRING");
     }
@@ -2146,10 +2150,10 @@ impl Walk for digimon_dsl::clause::FloodGateBody {
             target_player,
             expiry,
         } = self;
-        modifier.walk(c, &format!("{}.modifier", path), "UNCLASSIFIED_STRING");
+        modifier.walk(c, &format!("{}.modifier", path), "ENGINE_MODIFIER_NAME");
         target.walk(c, &format!("{}.target", path), "EXISTING_INSTANCE_BINDING");
         target_player.walk(c, &format!("{}.target_player", path), "UNCLASSIFIED_STRING");
-        expiry.walk(c, &format!("{}.expiry", path), "UNCLASSIFIED_STRING");
+        expiry.walk(c, &format!("{}.expiry", path), "ENGINE_EXPIRY_NAME");
     }
 }
 impl Walk for digimon_dsl::clause::SuccessionBody {
@@ -2189,7 +2193,7 @@ impl Walk for digimon_dsl::clause::AltPathRegistrationBody {
             registers,
             applies_to,
         } = self;
-        trigger.walk(c, &format!("{}.trigger", path), "UNCLASSIFIED_STRING");
+        trigger.walk(c, &format!("{}.trigger", path), "ENGINE_TIMING_NAME");
         c.node(
             &format!("{}.registers", path),
             "native_alt_path",
@@ -2258,8 +2262,8 @@ impl Walk for digimon_dsl::compiled::CompiledCard {
         cost.walk(c, &format!("{}.cost", path), "UNCLASSIFIED_STRING");
         dp.walk(c, &format!("{}.dp", path), "UNCLASSIFIED_STRING");
         traits.walk(c, &format!("{}.traits", path), "MATCH_OR_DEFINE_TRAIT");
-        form.walk(c, &format!("{}.form", path), "UNCLASSIFIED_STRING");
-        attribute.walk(c, &format!("{}.attribute", path), "UNCLASSIFIED_STRING");
+        form.walk(c, &format!("{}.form", path), "CARD_FORM_DEFINITION");
+        attribute.walk(c, &format!("{}.attribute", path), "CARD_ATTRIBUTE_DEFINITION");
         ace_overflow.walk(c, &format!("{}.ace_overflow", path), "UNCLASSIFIED_STRING");
         identity.walk(c, &format!("{}.identity", path), "UNCLASSIFIED_STRING");
         digixros_aliases.walk(
@@ -2460,7 +2464,7 @@ impl Walk for digimon_dsl::compiled::CompiledDualOption {
             &format!("{}.security_text", path),
             "METADATA_NO_EXECUTABLE_REFERENCE",
         );
-        keywords.walk(c, &format!("{}.keywords", path), "UNCLASSIFIED_STRING");
+        keywords.walk(c, &format!("{}.keywords", path), "ENGINE_KEYWORD_NAME");
         use_requirement.walk(
             c,
             &format!("{}.use_requirement", path),
@@ -3807,7 +3811,7 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 modifier.walk(
                     c,
                     &format!("{}.modifier", &format!("{}@Aura", path)),
-                    "UNCLASSIFIED_STRING",
+                    "ENGINE_MODIFIER_NAME",
                 );
                 modifier_value.walk(
                     c,
@@ -3903,7 +3907,7 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 reduction_timing.walk(
                     c,
                     &format!("{}.reduction_timing", &format!("{}@CostReduction", path)),
-                    "UNCLASSIFIED_STRING",
+                    "ENGINE_TIMING_NAME",
                 );
                 when_playing_this.walk(
                     c,
@@ -3996,7 +4000,7 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 trigger.walk(
                     c,
                     &format!("{}.trigger", &format!("{}@Replacement", path)),
-                    "UNCLASSIFIED_STRING",
+                    "ENGINE_TIMING_NAME",
                 );
                 optional.walk(
                     c,
@@ -4120,7 +4124,7 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 keyword.walk(
                     c,
                     &format!("{}.keyword", &format!("{}@GrantKeyword", path)),
-                    "UNCLASSIFIED_STRING",
+                    "ENGINE_KEYWORD_NAME",
                 );
                 value.walk(
                     c,
@@ -4183,7 +4187,7 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 trigger.walk(
                     c,
                     &format!("{}.trigger", &format!("{}@Delay", path)),
-                    "UNCLASSIFIED_STRING",
+                    "ENGINE_TIMING_NAME",
                 );
                 process.walk(
                     c,
@@ -4380,7 +4384,7 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 modifier.walk(
                     c,
                     &format!("{}.modifier", &format!("{}@FloodGate", path)),
-                    "UNCLASSIFIED_STRING",
+                    "ENGINE_MODIFIER_NAME",
                 );
                 target.walk(
                     c,
@@ -4395,7 +4399,7 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 expiry.walk(
                     c,
                     &format!("{}.expiry", &format!("{}@FloodGate", path)),
-                    "UNCLASSIFIED_STRING",
+                    "ENGINE_EXPIRY_NAME",
                 );
                 summary.walk(
                     c,
@@ -4436,7 +4440,7 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 trigger.walk(
                     c,
                     &format!("{}.trigger", &format!("{}@AltPathRegistration", path)),
-                    "UNCLASSIFIED_STRING",
+                    "ENGINE_TIMING_NAME",
                 );
                 applies_to.walk(
                     c,
@@ -4949,7 +4953,7 @@ impl Walk for digimon_dsl::compiled::CompiledGrantKeywordValue {
             serde_json::Value::Null,
         );
         let digimon_dsl::compiled::CompiledGrantKeywordValue { keyword, value } = self;
-        keyword.walk(c, &format!("{}.keyword", path), "UNCLASSIFIED_STRING");
+        keyword.walk(c, &format!("{}.keyword", path), "ENGINE_KEYWORD_NAME");
         value.walk(c, &format!("{}.value", path), "UNCLASSIFIED_STRING");
     }
 }
