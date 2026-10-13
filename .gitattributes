@@ -354,3 +354,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/digimon-engine/tests/cards_behavioral/ex12/ex12_026.rs -text
 /code/digimon-engine/cards/ex12/EX12-031.yaml -text
 /code/digimon-engine/tests/cards_behavioral/ex12/ex12_031.rs -text
+
+# Preserve independently reviewed EventTarget identity repair bytes.
+/code/digimon-engine/src/dsl_cards/binding_ref.rs -text
+/code/digimon-engine/tests/event_target_identity.rs -text
+/code/digimon-engine/tests/review_event_target_identity.rs -text
