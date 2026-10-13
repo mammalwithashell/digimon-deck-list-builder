@@ -76,7 +76,7 @@ def _compose(snapshot, extraction, raw_runtime, raw_registry, yaml_raw, yaml_pin
     selections = compatibility_selections.selections_from_bytes(inputs['condition_selections'])
     _require(not any(r.card_id == cid for r in (*corrections.corrections,*corrections.compatibility_corrections,*selections)),
              'Link target corrections or condition selections unsupported')
-    expected = {}; condition = {}
+    expected = {}; condition = {}; conflict_review = []
 
     def verify_runtime(*, card, runtime, typed, kind):
         _require(len(card.faces) == 1 and not runtime.get('dual') and kind == 'Digimon', 'single Digimon Link layout required')
@@ -85,8 +85,18 @@ def _compose(snapshot, extraction, raw_runtime, raw_registry, yaml_raw, yaml_pin
             field_selection_input_revision=inputs['new_input_revision'])
         _require(enc(card.fields) == enc(replay.fields) and enc(card.provenance) == enc(replay.provenance),
                  'complete canonical fields/provenance differ from original producer replay')
-        _require(not any(c.requires_adjudication(models.AdmissionStatus.ADMITTED) for c in replay.conflicts),
-                 'required canonical source conflict remains')
+        # Conflicts are retained historical evidence, including reviewed ones.
+        # Only ordinary text conflicts handled again by the complete A1 binding
+        # below may proceed with an exact current candidate-set approval.
+        conflict_review.extend(normalization.canonical_conflict_review_rows(
+            {cid: replay}, typed.values(), adjudications=ledger,
+            input_revision=inputs['new_input_revision']))
+        for conflict in replay.conflicts:
+            if conflict.requires_adjudication(models.AdmissionStatus.ADMITTED):
+                reviews = [row for row in conflict_review if row['field_path'] == conflict.field_path]
+                _require(conflict.field_path in units._FIELDS and len(reviews) == 1
+                    and reviews[0]['approval_required'] is True and reviews[0]['status'] == 'current',
+                    'required canonical source conflict remains')
         projected = generate.project_canonical_card(card)
         expected.update({k:projected[k] for k in (*FIELDS,'link_effect_description_eng')})
         expected.update(registry.compatibility_values(cid, reg.assignments[cid], capacity=reg.capacity))
@@ -144,7 +154,8 @@ def _compose(snapshot, extraction, raw_runtime, raw_registry, yaml_raw, yaml_pin
         original_canonical_bytes=inputs['canonical_card'].decode('utf8'), original_runtime_bytes=raw_runtime.decode('utf8'),
         claimed_fields=list(expected), projected_claimed_values=expected,
         unclaimed_runtime_fields={k:v for k,v in runtime.items() if k not in expected},
-        condition_binding=condition, link_derivations=diagnostics, yaml_bindings=yaml_bindings,
+        condition_binding=condition, canonical_conflict_review=conflict_review,
+        link_derivations=diagnostics, yaml_bindings=yaml_bindings,
         structural_obligations=obligations, native_compilation_verified=False,
         dependency_sha256=dependencies, consumption=[], limit='Offline source/runtime proof only; no compiler, book, admission, or training approval')
     result['input_sha256'].update(registry=_sha(raw_registry), yaml=yaml_pin, extraction=extraction)

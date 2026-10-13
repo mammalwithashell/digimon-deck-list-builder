@@ -284,3 +284,7 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/digimon-dsl/src/bin/implementation_inventory/equals_witness.rs -text
 /code/digimon-dsl/tests/implementation_equals_witness.rs -text
 /code/digimon-dsl/tests/review_equals_independent.rs -text
+
+# Preserve reviewed current canonical Link selection regression bytes.
+/code/tests/tools/test_link_current_review.py -text
+/code/tests/tools/review_link_current_independent.py -text
