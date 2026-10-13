@@ -5,7 +5,7 @@ level: 5
 color: [blue, yellow]
 cost: 7
 dp: 7000
-traits: [Mollusk, Shambala, TB]
+traits: [Mollusk, Shambala, TB, Aquatic]
 attribute: Data
 
 alt_paths:

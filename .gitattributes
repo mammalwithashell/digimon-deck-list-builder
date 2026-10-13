@@ -348,3 +348,9 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/digimon-engine/tests/fixtures/focused_remaining_effects_r4.json -text
 /code/digimon-engine/tests/fixtures/focused_remaining_effects_r4.provenance.json -text
 /code/digimon-engine/tests/review_remaining_effects_registry.rs -text
+
+# Preserve independently reviewed Aquatic metadata and diagnostic bytes.
+/code/digimon-engine/cards/ex12/EX12-026.yaml -text
+/code/digimon-engine/tests/cards_behavioral/ex12/ex12_026.rs -text
+/code/digimon-engine/cards/ex12/EX12-031.yaml -text
+/code/digimon-engine/tests/cards_behavioral/ex12/ex12_031.rs -text
