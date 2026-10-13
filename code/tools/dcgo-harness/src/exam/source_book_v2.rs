@@ -210,6 +210,370 @@ fn multiset(a: &[Value]) -> Result<Vec<Vec<u8>>, String> {
     Ok(r)
 }
 
+// These checks establish retained wire correspondence, not printed-source
+// authority or an independent replay of the Python segmentation grammar.
+fn folded_link_dp(source: &Value, unit: &Value, zone: &str) -> Result<(), String> {
+    require(
+        zone == "effect" && unit["role"] == "folded-link-dp",
+        "invalid folded DP zone",
+    )?;
+    let oid = text(&unit["observation_id"])?;
+    let derivation = &source["link_derivations"][oid];
+    require(
+        derivation["status"] == "DERIVED_LINK_DIAGNOSTIC",
+        "missing Link derivation",
+    )?;
+    let matching = array(&derivation["occurrences"])?
+        .iter()
+        .filter(|o| o["role"] == "dp" && o["section_index"] == unit["section_index"])
+        .collect::<Vec<_>>();
+    require(matching.len() == 1, "exact DP derivation required")?;
+    let occurrence = matching[0];
+    require(
+        occurrence["executable"] == false
+            && occurrence["text"] == unit["text"]
+            && unit["projected_text"]
+                == json!(format!(
+                    "[{}] {}",
+                    text(&unit["label"])?,
+                    text(&unit["text"])?
+                )),
+        "folded DP projection differs",
+    )?;
+    let mut expected = object(occurrence)?.clone();
+    expected.insert("observation_id".into(), unit["observation_id"].clone());
+    expected.insert("printing_id".into(), unit["printing_id"].clone());
+    require(
+        array(&source["structural_obligations"])?
+            .iter()
+            .filter(|o| **o == Value::Object(expected.clone()))
+            .count()
+            == 1,
+        "exact nonexecuting DP obligation required",
+    )?;
+    require(
+        unit.get("spans")
+            .is_none_or(|s| s.as_array().is_some_and(Vec::is_empty)),
+        "folded DP must not execute",
+    )
+}
+
+fn link_correspondence(row: &Value) -> Result<(), String> {
+    let source = &row["source_composition"];
+    let binding = &source["condition_binding"];
+    let officials = object(&row["original_observations"])?
+        .iter()
+        .filter(|(_, o)| o["source"] == "official")
+        .collect::<BTreeMap<_, _>>();
+    let derivations = object(&source["link_derivations"])?;
+    require(
+        !officials.is_empty()
+            && officials.keys().copied().collect::<BTreeSet<_>>() == derivations.keys().collect(),
+        "complete Link printing set required",
+    )?;
+    let mut contributions = Map::new();
+    let mut obligations = Vec::new();
+    let labels = [
+        "special digivolution condition",
+        "special play condition",
+        "special evolution condition",
+        "dna digivolution",
+        "digixros",
+    ];
+    for (oid, observation) in &officials {
+        let derived = &derivations[*oid];
+        let sections = array(&observation["extracted"]["text_sections"])?;
+        require(
+            derived["observation"] == **observation
+                && derived["section_inventory"] == json!(sections)
+                && derived["status"] == "DERIVED_LINK_DIAGNOSTIC",
+            "Link original derivation differs",
+        )?;
+        let inventory = array(&source["inventory"])?
+            .iter()
+            .filter(|r| r["observation_id"] == json!(oid))
+            .collect::<Vec<_>>();
+        require(
+            inventory.len() == sections.len(),
+            "Link section inventory differs",
+        )?;
+        let mut pieces = Vec::new();
+        for (n, (section, item)) in sections.iter().zip(&inventory).enumerate() {
+            require(
+                item["section_index"] == json!(n)
+                    && item["label"] == section["label"]
+                    && item["text"] == section["text"],
+                "Link original section changed",
+            )?;
+            if labels.contains(&text(&section["label"])?.to_lowercase().as_str()) {
+                pieces.push(
+                    format!("[{}] {}", text(&section["label"])?, text(&section["text"])?)
+                        .trim()
+                        .to_owned(),
+                );
+            }
+        }
+        contributions.insert((*oid).clone(), json!(pieces.join("\n")));
+        for occurrence in array(&derived["occurrences"])? {
+            let section = sections
+                .get(index(&occurrence["section_index"])?)
+                .ok_or("foreign Link section")?;
+            let original = text(&section["text"])?;
+            let start = index(&occurrence["utf8_start"])?;
+            let end = index(&occurrence["utf8_end"])?;
+            require(
+                original.get(start..end) == Some(text(&occurrence["text"])?),
+                "Link occurrence source slice differs",
+            )?;
+            if occurrence["role"] != "effect" {
+                let mut obligation = object(occurrence)?.clone();
+                obligation.insert("observation_id".into(), json!(oid));
+                obligation.insert(
+                    "printing_id".into(),
+                    observation["extracted"]["printing"]["printing_id"].clone(),
+                );
+                obligations.push(Value::Object(obligation));
+            }
+        }
+    }
+    let evidence = array(&binding["evidence_observation_ids"])?
+        .iter()
+        .map(text)
+        .collect::<Result<Vec<_>, _>>()?;
+    require(
+        binding["producer"] == "official_condition_projection"
+            && binding["a2_section_coverage_claimed"] == false
+            && binding["source_revision"] == source["source_revision"]
+            && binding["candidate_values"] == Value::Object(contributions.clone())
+            && evidence.len() == officials.len()
+            && evidence.iter().copied().collect::<BTreeSet<_>>()
+                == officials.keys().map(|k| k.as_str()).collect()
+            && contributions.values().all(|v| *v == binding["projection"]),
+        "Link condition binding differs",
+    )?;
+    require(
+        source["structural_obligations"] == json!(obligations),
+        "Link structural obligations differ",
+    )?;
+    require(
+        source["zones"]["conditions"]["source_binding"] == *binding
+            && source["zones"]["conditions"]["value"] == binding["projection"],
+        "Link condition zone differs",
+    )?;
+    let first = officials.keys().next().ok_or("empty Link sources")?;
+    let selected = array(&source["inventory"])?
+        .iter()
+        .filter(|r| r["observation_id"] == json!(first))
+        .filter_map(|r| match text(&r["label"]) {
+            Ok(label) if labels.contains(&label.to_lowercase().as_str()) => Some(Ok(r)),
+            Ok(_) => None,
+            Err(e) => Some(Err(e)),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let condition_indices = array(&source["zones"]["conditions"]["unit_indices"])?;
+    require(
+        condition_indices.len() == selected.len(),
+        "Link condition occurrence set differs",
+    )?;
+    for (number, original) in condition_indices.iter().zip(selected) {
+        let mut expected = object(original)?.clone();
+        expected.insert("kind".into(), json!("official-section"));
+        expected.insert("field".into(), json!("xros_req"));
+        expected.insert(
+            "condition_type".into(),
+            json!(text(&original["label"])?.to_lowercase().replace(' ', "_")),
+        );
+        expected.insert("projected_text".into(), original["text"].clone());
+        expected.insert("role".into(), json!("condition"));
+        expected.insert(
+            "transformation".into(),
+            json!("unanimous-producer-condition"),
+        );
+        require(
+            array(&source["units"])?.get(index(number)?) == Some(&Value::Object(expected)),
+            "Link condition unit differs",
+        )?;
+    }
+    for u in array(&source["units"])? {
+        let oid = text(&u["observation_id"])?;
+        let is_dp = array(&derivations.get(oid).ok_or("foreign Link unit")?["occurrences"])?
+            .iter()
+            .any(|o| o["role"] == "dp" && o["section_index"] == u["section_index"]);
+        require(
+            is_dp == (u["role"] == "folded-link-dp"),
+            "Link DP role differs",
+        )?;
+        require(
+            matches!(text(&u["role"])?, "effect" | "condition" | "folded-link-dp"),
+            "unknown Link role",
+        )?;
+    }
+    Ok(())
+}
+
+fn paired_main_mirror(row: &Value, units: &[Value]) -> Result<(), String> {
+    let source = &row["source_composition"];
+    let binding = &source["correction_binding"];
+    let corrected = units
+        .iter()
+        .enumerate()
+        .filter(|(_, u)| u["kind"] == "reviewed-paired-main-image-correction")
+        .collect::<Vec<_>>();
+    require(
+        corrected.len() == 1,
+        "one paired main correction unit required",
+    )?;
+    let (i, u) = corrected[0];
+    let mut expected_unit = object(&binding["unit"])?.clone();
+    expected_unit.insert("projected_text".into(), binding["unit"]["value"].clone());
+    expected_unit.insert(
+        "transformation".into(),
+        json!("reviewed-paired-main-image-correction"),
+    );
+    expected_unit.insert("sidecar_sha256".into(), binding["sidecar_sha256"].clone());
+    require(
+        *u == Value::Object(expected_unit) && u["field_path"] == "effect_description_eng",
+        "paired unit differs from binding",
+    )?;
+    let mirror = &binding["face_mirror_obligation"];
+    require(
+        mirror["field_path"] == "faces.0.effect_text"
+            && mirror["value"] == u["value"]
+            && mirror["executable"] == false,
+        "paired face must be exact nonexecuting mirror",
+    )?;
+    let mut expected = object(mirror)?.clone();
+    expected.insert("kind".into(), json!("paired-main-face-consistency"));
+    expected.insert("source_unit_index".into(), json!(i));
+    expected.insert(
+        "correction_sidecar_sha256".into(),
+        binding["sidecar_sha256"].clone(),
+    );
+    let mirrors = array(&source["structural_obligations"])?
+        .iter()
+        .filter(|o| o["kind"] == "paired-main-face-consistency")
+        .collect::<Vec<_>>();
+    require(
+        mirrors.len() == 1 && *mirrors[0] == Value::Object(expected),
+        "paired mirror obligation differs",
+    )?;
+    require(
+        source["zones"]["effect"]["unit_indices"] == json!([i])
+            && source["zones"]["effect"]["source_binding"] == *binding
+            && source["zones"]["effect"]["value"] == u["value"],
+        "paired effect zone binding differs",
+    )?;
+    let observations = object(&binding["source_observations"])?;
+    require(
+        binding["source_observations"] == row["original_observations"],
+        "paired complete observations differ",
+    )?;
+    let corrections = array(&binding["corrections"])?;
+    require(
+        corrections.len() == 2
+            && corrections
+                .iter()
+                .map(|c| text(&c["field_path"]))
+                .collect::<Result<BTreeSet<_>, _>>()?
+                == BTreeSet::from(["effect_description_eng", "faces.0.effect_text"])
+            && corrections
+                .iter()
+                .all(|c| c["card_id"] == u["card_id"] && c["value"] == u["value"]),
+        "paired correction values differ",
+    )?;
+    let images = array(&binding["images"])?;
+    require(images.len() == 2, "exact two image associations required")?;
+    for key in ["artifact_name", "official_observation_id", "printing_id"] {
+        let values = images
+            .iter()
+            .map(|image| text(&image[key]))
+            .collect::<Result<BTreeSet<_>, _>>()?;
+        require(
+            values.len() == 2 && values.iter().all(|v| !v.is_empty()),
+            "distinct image association identities required",
+        )?;
+    }
+    let image_ids = images
+        .iter()
+        .map(|image| text(&image["official_observation_id"]))
+        .collect::<Result<BTreeSet<_>, _>>()?;
+    for correction in corrections {
+        let ids = array(&correction["evidence_observation_ids"])?;
+        require(
+            ids.len() == 2
+                && ids.iter().map(text).collect::<Result<BTreeSet<_>, _>>()? == image_ids,
+            "image/correction evidence membership differs",
+        )?;
+    }
+    for image in images {
+        require(
+            object(image)?
+                .keys()
+                .map(String::as_str)
+                .collect::<BTreeSet<_>>()
+                == BTreeSet::from([
+                    "artifact_name",
+                    "official_observation_id",
+                    "printing_id",
+                    "sha256",
+                ]),
+            "exact image association schema required",
+        )?;
+        let hash = text(&image["sha256"])?;
+        require(
+            hash.len() == 64
+                && hash
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+            "strict image byte pin required",
+        )?;
+        let observation = observations
+            .get(text(&image["official_observation_id"])?)
+            .ok_or("missing image observation")?;
+        require(
+            observation["source"] == "official"
+                && observation["extracted"]["printing"]["printing_id"] == image["printing_id"],
+            "paired image source association differs",
+        )?;
+    }
+    let mut originals = BTreeSet::new();
+    for original in array(&binding["original_sections"])? {
+        let observation = observations
+            .get(text(&original["observation_id"])?)
+            .ok_or("missing original observation")?;
+        let section = array(&observation["extracted"]["text_sections"])?
+            .get(index(&original["section_index"])?)
+            .ok_or("missing original section")?;
+        require(
+            *section == json!({"label":original["label"],"text":original["text"]})
+                && original["source_url"] == observation["source_url"]
+                && original["raw_payload_digest"] == observation["raw_payload_digest"]
+                && original["printing_id"] == observation["extracted"]["printing"]["printing_id"],
+            "paired original section differs",
+        )?;
+        require(
+            originals.insert(identity(original)?),
+            "duplicate corrected original",
+        )?;
+    }
+    let replaced = array(&source["consumption"])?
+        .iter()
+        .filter(|r| r["disposition"] == "superseded-by-reviewed-correction")
+        .collect::<Vec<_>>();
+    require(
+        replaced.len() == originals.len()
+            && replaced
+                .iter()
+                .map(|r| identity(r))
+                .collect::<Result<BTreeSet<_>, _>>()?
+                == originals
+            && replaced.iter().all(|r| {
+                r["unit_indices"] == json!([]) && r["replacement_unit_indices"] == json!([i])
+            }),
+        "paired original source replacement inventory differs",
+    )
+}
+
 // Rebuild occurrence descriptors and projected span choice from the retained
 // source composition, rather than trusting submitted clause semantic_payload.
 fn occurrences(cid: &str, row: &Value) -> Result<Vec<Value>, String> {
@@ -271,7 +635,9 @@ fn occurrences(cid: &str, row: &Value) -> Result<Vec<Value>, String> {
             ])
         } else {
             require(
-                u["kind"] == "reviewed-canonical-image-correction",
+                u["kind"] == "reviewed-canonical-image-correction"
+                    || (source["status"] == "COMPOSED_PAIRED_MAIN_CARD"
+                        && u["kind"] == "reviewed-paired-main-image-correction"),
                 "unknown sourceless unit",
             )?;
             text(&u["sidecar_sha256"])?;
@@ -338,6 +704,12 @@ fn occurrences(cid: &str, row: &Value) -> Result<Vec<Value>, String> {
     )?;
     let mut selected: BTreeMap<usize, (String, Vec<Value>)> = BTreeMap::new();
     let mut used = BTreeSet::new();
+    if source["status"] == "COMPOSED_LINK_CARD" {
+        link_correspondence(row)?;
+    }
+    if source["status"] == "COMPOSED_PAIRED_MAIN_CARD" {
+        paired_main_mirror(row, units)?;
+    }
     if source["status"] == "COMPOSED_DUAL_SOURCE" {
         require(
             source
@@ -372,7 +744,10 @@ fn occurrences(cid: &str, row: &Value) -> Result<Vec<Value>, String> {
         require(
             matches!(
                 text(&source["status"])?,
-                "COMPOSED_RULE_CARD" | "COMPOSED_CORRECTED_RULE_CARD"
+                "COMPOSED_RULE_CARD"
+                    | "COMPOSED_CORRECTED_RULE_CARD"
+                    | "COMPOSED_LINK_CARD"
+                    | "COMPOSED_PAIRED_MAIN_CARD"
             ),
             "unsupported composition",
         )?;
@@ -381,19 +756,30 @@ fn occurrences(cid: &str, row: &Value) -> Result<Vec<Value>, String> {
                 matches!(
                     zone.as_str(),
                     "effect" | "inherited" | "security" | "conditions"
-                ),
+                ) || (source["status"] == "COMPOSED_LINK_CARD" && zone == "link"),
                 "unknown zone",
             )?;
             let indices = array(&z["unit_indices"])?;
             for v in indices {
                 let i = index(v)?;
                 require(i < units.len() && used.insert(i), "invalid duplicate unit")?;
+                if units[i]["role"] == "folded-link-dp" {
+                    require(
+                        source["status"] == "COMPOSED_LINK_CARD",
+                        "folded DP outside Link route",
+                    )?;
+                    folded_link_dp(source, &units[i], zone)?;
+                }
                 selected.insert(i, (zone.clone(), Vec::new()));
             }
             let mut sequence = Vec::new();
             for s in array(&z["spans"])? {
                 let i = index(&s["unit_index"])?;
                 let n = index(&s["span_index"])?;
+                require(
+                    units.get(i).is_some_and(|u| u["role"] != "folded-link-dp"),
+                    "folded DP became executable",
+                )?;
                 let (selected_zone, spans) = selected.get_mut(&i).ok_or("span outside zone")?;
                 require(
                     selected_zone == zone && n == spans.len(),
@@ -520,10 +906,16 @@ fn validate_inventory(d: &Value) -> Result<(), String> {
             )?;
             index(&row["span_count"])?;
         } else {
-            require(
-                row.get("span_count") == Some(&Value::Null),
-                "unknown span count must remain null",
-            )?;
+            if row.get("span_count") != Some(&Value::Null) {
+                require(
+                    status == "BLOCKED" && evaluated,
+                    "only evaluated blocked source spans may be known",
+                )?;
+                index(&row["span_count"])?;
+                // Reconcile all retained descriptors, but never emit clauses or
+                // assign a known executable count for this blocked row.
+                occurrences(cid, row)?;
+            }
             require(
                 !blockers.is_empty() == (status == "BLOCKED"),
                 "blocked status and blockers differ",
@@ -683,6 +1075,9 @@ pub fn load_review_v2(raw: &[u8], expected_sha: &str) -> Result<ReviewBookV2, St
         generation,
     })
 }
+#[cfg(test)]
+#[path = "source_book_v2_composition_routes_tests.rs"]
+mod composition_routes_tests;
 #[cfg(test)]
 #[path = "source_book_v2_tests.rs"]
 mod tests;

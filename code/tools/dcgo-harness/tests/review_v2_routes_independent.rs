@@ -1,0 +1,8 @@
+use dcgo_harness::exam::source_book_v2::load_review_v2;
+use serde_json::{Value,json};
+use sha2::{Digest,Sha256};
+const RAW: &[u8]=include_bytes!("../../../tests/fixtures/card_data/source_book_v2_composition_routes/fresh-six-review-book.json");
+fn check(v: &Value)->bool {let raw=serde_json::to_vec(v).unwrap();let pin=format!("{:x}",Sha256::digest(&raw));load_review_v2(&raw,&pin).is_ok()}
+#[test] fn complete_original_wire_preserves_blocked_unknowns(){let pin=format!("{:x}",Sha256::digest(RAW));let b=load_review_v2(RAW,&pin).unwrap();assert_eq!(b.card_count(),4484);assert_eq!(b.clause_ids().len(),22);assert_eq!(b.card_clause_count("BT24-081").unwrap(),None);assert!(!b.is_recordable());}
+#[test] fn paired_distinct_identity_and_correction_membership_are_required(){for mode in 0..4{let mut v:Value=serde_json::from_slice(RAW).unwrap();let s=&mut v["diagnostic_evidence"]["cards"]["EX1-066"]["source_composition"];let b=&mut s["correction_binding"];match mode{0=>b["images"][1]["artifact_name"]=b["images"][0]["artifact_name"].clone(),1=>b["images"][1]["printing_id"]=b["images"][0]["printing_id"].clone(),2=>b["corrections"][0]["evidence_observation_ids"].as_array_mut().unwrap().push(json!("foreign")),_=>b["images"][0]["sha256"]=json!(true)}s["zones"]["effect"]["source_binding"]=s["correction_binding"].clone();assert!(!check(&v),"mode {mode}");}}
+#[test] fn blocked_and_global_counts_cannot_be_promoted(){for mode in 0..3{let mut v:Value=serde_json::from_slice(RAW).unwrap();match mode{0=>v["full_clause_count"]=json!(0),1=>v["cards"]["BT24-081"]["clause_count"]=json!(0),_=>v["diagnostic_evidence"]["cards"]["BT24-081"]["span_count"]=json!(true)}assert!(!check(&v),"mode {mode}");}}

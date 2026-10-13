@@ -303,3 +303,10 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 # Preserve reviewed paired-main diagnostic boundary tests.
 /code/tests/tools/test_diagnostic_paired_main_dispatch.py -text
 /code/tests/tools/review_paired_main_dispatch_independent.py -text
+
+# Preserve reviewed source-book v2 route evidence and independent controls.
+/code/tests/fixtures/card_data/source_book_v2_composition_routes/origin.json -text
+/code/tests/tools/review_v2_routes_independent.py -text
+/code/tools/dcgo-harness/tests/review_v2_routes_independent.rs -text
+/code/tests/tools/test_source_book_v2_composition_routes.py -text
+/code/tools/dcgo-harness/src/exam/source_book_v2_composition_routes_tests.rs -text
