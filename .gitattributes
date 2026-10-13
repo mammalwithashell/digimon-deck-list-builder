@@ -267,3 +267,7 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 
 # Preserve reviewed Assembly diagnostic dispatch regression bytes.
 /code/tests/tools/test_diagnostic_assembly_dispatch.py -text
+
+# Preserve reviewed campaign process preflight bytes.
+/code/tools/card_loop/supervision.py -text
+/code/tests/tools/test_campaign_process_preflight.py -text
