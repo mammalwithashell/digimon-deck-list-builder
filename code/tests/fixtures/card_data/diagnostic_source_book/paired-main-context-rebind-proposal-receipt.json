@@ -1,0 +1,60 @@
+{
+  "actual_historical_blockers": [
+    {
+      "code": "COMPOSITION_REFUSED",
+      "error_type": "SourceUnitError",
+      "reason": "checker/producer dependencies differ from reviewed proof"
+    }
+  ],
+  "current_dependencies": {
+    "tools.card_data.adjudications": "7e5cf2e23a8d27c8efdd20fdd7380ca9c2b1877e67c636eeeadb44758f9ab0c6",
+    "tools.card_data.compatibility_corrections": "7422d38d75562d7b44f004bdc81333ef9aebab169c79b67040c5eee3af51db8f",
+    "tools.card_data.compatibility_selections": "83172c5b2f13b933c5465e585005bfad9f70a1e8d26f7d5526dc64af3e1f7ed2",
+    "tools.card_data.complete_candidate": "e43db847a705b33340508558fd540a6a75afcd1aa9ec61bf1edea207b8d5f9b3",
+    "tools.card_data.corrections": "bdc9a8677d62620e5c1caa275c138889e6c8220695970a69ba47ec8c3f5eb894",
+    "tools.card_data.errors": "f173df85f14c0d57db8572869c9fe552c5dc76b7ac8bea9399bc16a1c8b62fab",
+    "tools.card_data.generate": "06e8aa70e7e88fc717bc0026991158b9e0b844fc74a006c9df54ff81730d96de",
+    "tools.card_data.models": "d47e33decd8b558236b12ab6e5a82a81da6e18317f7eba4ce4025fee1e21460d",
+    "tools.card_data.normalization": "ba1a27a1581861c01718aa26e379e2f2d23b2387e911b2d0a9b444f2a7503961",
+    "tools.card_data.serialization": "2914ac386d48acccfe5767d88134a623690e4b9059aca035208585a1dab9f595",
+    "tools.card_data.source_manifest": "2463e7cf8e95034b04a7e36b6f261205d433cb19a7a6440a87b1b9ddd3fb43f6",
+    "tools.clause_coverage.canonical_correction_units": "47e1cdba13884ed57807ac65d375889a03fcbf5e167a1f6843323e1194ce4749",
+    "tools.clause_coverage.source_units": "4835707abeddcdba8317ab326e0892052a32a7369d5952131825f04febdfb1ea"
+  },
+  "manifest": {
+    "changed_paths": [
+      "/authorizations/EX12-031/correction_sidecar/path",
+      "/authorizations/EX12-031/correction_sidecar/sha256"
+    ],
+    "original_sha256": "4390531ae1f223e97123d64c09ca456598f0e206fa8255d8979b244377c0278f",
+    "preserved_bytes": 3781,
+    "proposed_sha256": "00305c67e3891b74055cebbe202bfd0ec83397a82b67b48bdb723ed7eade24f5"
+  },
+  "status": "PROPOSED_PENDING_INDEPENDENT_REVIEW",
+  "variants": {
+    "fixture": {
+      "all_other_input_image_row_source_fields_identical": true,
+      "changed_paths": [
+        "/dependency_sha256/tools.clause_coverage.source_units"
+      ],
+      "new_dependency": "4835707abeddcdba8317ab326e0892052a32a7369d5952131825f04febdfb1ea",
+      "old_dependency": "e03de3b88dbe0128ab3ee1362fbaa701448f75265904ce4b073923d209f24671",
+      "original_path": "D:\\cl-data-repair\\code\\tests\\fixtures\\card_data\\diagnostic_source_book\\correction-sidecar-wire-hardening.json",
+      "original_sha256": "1bbf81e7b17c8cbf16e18fda7d86aa6f792a6d384a6cb47c94ba3a45c15ff22e",
+      "proposed_path": "D:\\cl-data-repair\\code\\tests\\fixtures\\card_data\\diagnostic_source_book\\correction-sidecar-paired-main-context-proposed.json",
+      "proposed_sha256": "6d971ad54d370726461a03692e9921c1bb3499f72a05bd03cc483aed1bccdc6d"
+    },
+    "r4": {
+      "all_other_input_image_row_source_fields_identical": true,
+      "changed_paths": [
+        "/dependency_sha256/tools.clause_coverage.source_units"
+      ],
+      "new_dependency": "4835707abeddcdba8317ab326e0892052a32a7369d5952131825f04febdfb1ea",
+      "old_dependency": "e03de3b88dbe0128ab3ee1362fbaa701448f75265904ce4b073923d209f24671",
+      "original_path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\r4-focused-source-proof-proposals-20261012\\ex12-031-sidecar-APPROVED.json",
+      "original_sha256": "2d91986510bb6e9cff7b9c7ddbc59598cf6f0c5f0bf2c83821624c24a903f7d6",
+      "proposed_path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\ex12-031-paired-context-rebind-20261013\\r4-ex12-031-sidecar-PROPOSED.json",
+      "proposed_sha256": "cf784eae96eda84f12ac25b256bfe64f8399a8595cd60499269bb9c15eddcf4a"
+    }
+  }
+}

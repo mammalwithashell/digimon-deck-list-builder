@@ -299,3 +299,7 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/digimon-engine/tests/support/named_material_kind_witness.rs -text
 /code/digimon-engine/tests/named_material_kind_witness.rs -text
 /code/digimon-engine/tests/review_named_material_independent.rs -text
+
+# Preserve reviewed paired-main diagnostic boundary tests.
+/code/tests/tools/test_diagnostic_paired_main_dispatch.py -text
+/code/tests/tools/review_paired_main_dispatch_independent.py -text

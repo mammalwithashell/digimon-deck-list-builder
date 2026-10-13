@@ -213,10 +213,10 @@ def test_fresh_four_card_public_api_once(tmp_path):
  for name,d in json.loads((original/'archive.json').read_bytes()).items():
   raw=gzip.decompress((original/d['file']).read_bytes());assert hashlib.sha256(raw).hexdigest()==d['sha256'] and len(raw)==d['bytes']
   target=tmp_path/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw)
- side=(F/'reviewed-correction-sidecar-wire-hardening.json').read_bytes()
- assert hashlib.sha256(side).hexdigest()=='1bbf81e7b17c8cbf16e18fda7d86aa6f792a6d384a6cb47c94ba3a45c15ff22e'
- (tmp_path/'reviews/correction-sidecar-wire-hardening.json').write_bytes(side)
- extraction=(original/'extraction.json').read_bytes();manifest=(F/'fresh-four-inputs.json').read_bytes();deps=compiler_dependencies()
+ side=(original/'correction-sidecar-paired-main-context-proposed.json').read_bytes()
+ assert hashlib.sha256(side).hexdigest()=='6d971ad54d370726461a03692e9921c1bb3499f72a05bd03cc483aed1bccdc6d'
+ (tmp_path/'reviews/correction-sidecar-paired-main-context-proposed.json').write_bytes(side)
+ extraction=(original/'extraction.json').read_bytes();manifest=(original/'inputs-paired-main-context-proposed.json').read_bytes();deps=compiler_dependencies()
  b=build_source_book_v2(candidate_root=tmp_path/'candidate',input_root=tmp_path,extraction_artifact=extraction,
   expected_extraction_sha256=hashlib.sha256(extraction).hexdigest(),input_manifest=manifest,expected_input_manifest_sha256=hashlib.sha256(manifest).hexdigest())
  validate_wire_book_v2(b);assert deps==compiler_dependencies()

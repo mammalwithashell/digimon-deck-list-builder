@@ -16,10 +16,14 @@ def files(tmp_path_factory):
  current=(F/'correction-sidecar-wire-hardening.json').read_bytes()
  assert sha(current)=='1bbf81e7b17c8cbf16e18fda7d86aa6f792a6d384a6cb47c94ba3a45c15ff22e'
  (root/'reviews/correction-sidecar-wire-hardening.json').write_bytes(current)
+ # Test-only context rebind proposal; independent approval remains external.
+ proposed=(F/'correction-sidecar-paired-main-context-proposed.json').read_bytes()
+ assert sha(proposed)=='6d971ad54d370726461a03692e9921c1bb3499f72a05bd03cc483aed1bccdc6d'
+ (root/'reviews/correction-sidecar-paired-main-context-proposed.json').write_bytes(proposed)
  return root
 
 def inputs(root):
- e=(F/'extraction.json').read_bytes();m=(F/'inputs-wire-hardening.json').read_bytes()
+ e=(F/'extraction.json').read_bytes();m=(F/'inputs-paired-main-context-proposed.json').read_bytes()
  return dict(candidate_root=root/'candidate',input_root=root,extraction_artifact=e,expected_extraction_sha256=sha(e),input_manifest=m,expected_input_manifest_sha256=sha(m))
 
 def build(a):
@@ -177,3 +181,30 @@ def test_dependency_drift_refuses_entire_diagnostic(files,monkeypatch,boundary):
    monkeypatch.setattr(m,'diagnostic_dependencies',lambda:changed);return original(**kwargs)
   monkeypatch.setattr(m,'load_runtime_snapshot',changing)
  with pytest.raises(ValueError,match='dependenc|changed|stable'):build(one(inputs(files),'BT24-031'))
+
+
+def test_historical_wire_hardening_sidecar_is_preserved_and_refused(files):
+ a=one(inputs(files),'EX12-031');m=json.loads(a['input_manifest'])
+ old=json.loads((F/'inputs-wire-hardening.json').read_bytes())
+ m['authorizations']['EX12-031']=old['authorizations']['EX12-031']
+ a['input_manifest']=enc(m);a['expected_input_manifest_sha256']=sha(a['input_manifest'])
+ row=build(a)['cards']['EX12-031']
+ assert row['status']=='BLOCKED' and row['span_count'] is None
+ assert any('dependenc' in b.get('reason','') for b in row['blockers'])
+
+
+def test_proposed_context_rebind_changes_only_private_context_dependency():
+ old=json.loads((F/'correction-sidecar-wire-hardening.json').read_bytes())
+ new=json.loads((F/'correction-sidecar-paired-main-context-proposed.json').read_bytes())
+ assert set(old['dependency_sha256'])==set(new['dependency_sha256'])
+ changed=[k for k in old['dependency_sha256']if old['dependency_sha256'][k]!=new['dependency_sha256'][k]]
+ assert changed==['tools.clause_coverage.source_units']
+ assert old['dependency_sha256'][changed[0]]=='e03de3b88dbe0128ab3ee1362fbaa701448f75265904ce4b073923d209f24671'
+ assert new['dependency_sha256'][changed[0]]=='4835707abeddcdba8317ab326e0892052a32a7369d5952131825f04febdfb1ea'
+ old['dependency_sha256']=new['dependency_sha256'];assert old==new
+ before=json.loads((F/'inputs-wire-hardening.json').read_bytes())
+ after=json.loads((F/'inputs-paired-main-context-proposed.json').read_bytes())
+ before['authorizations']['EX12-031']['correction_sidecar']={
+  'bytes':3781,'path':'reviews/correction-sidecar-paired-main-context-proposed.json',
+  'sha256':'6d971ad54d370726461a03692e9921c1bb3499f72a05bd03cc483aed1bccdc6d'}
+ assert before==after

@@ -17,6 +17,7 @@ from .dual_card_composition import compose_dual_card
 from .corrected_rule_card_composition import compose_corrected_rule_card, checker_dependencies
 from .link_card_composition import compose_link_card
 from .assembly_card_composition import compose_assembly_card
+from .paired_main_card_composition import compose_paired_main_card, checker_dependencies as paired_dependencies
 
 _json = projection._json
 _sha = projection._sha
@@ -124,6 +125,27 @@ def _dispatch(snapshot, pin, inputs, images, authorization, input_root):
             registry=record['registry_bytes'], registry_pin=_sha(record['registry_bytes']))
         return result, result['claimed_runtime_fields'], result
     if corrections:
+        paired = {'paired_main_sidecar', 'paired_main_image_1', 'paired_main_image_2'}
+        if set(authorization) & paired:
+            _require(set(authorization) == paired, 'exact paired-main review inputs required')
+            sidecar = _file(input_root, authorization['paired_main_sidecar'])
+            sidecar_object = _json(sidecar)
+            _require(isinstance(sidecar_object, dict), 'paired-main sidecar object required')
+            associations = sidecar_object.get('images')
+            _require(isinstance(associations, list) and len(associations) == 2
+                and all(isinstance(row, dict) and isinstance(row.get('artifact_name'), str)
+                        and row['artifact_name'] for row in associations)
+                and len({row['artifact_name'] for row in associations}) == 2,
+                'two distinct reviewed image associations required')
+            a = dict(inputs, runtime_record=record['runtime_record'], registry_bytes=record['registry_bytes'],
+                image_artifacts=images, correction_sidecar=sidecar,
+                expected_reviewed_sidecar_sha256=authorization['paired_main_sidecar']['sha256'],
+                correction_images={row['artifact_name']:_file(input_root, authorization[f'paired_main_image_{i+1}'])
+                                   for i,row in enumerate(associations)})
+            a['projection_binding'] = enc({'schema_version': 1, 'input_sha256': projection.input_hashes(a),
+                'producer_sha256': projection.producer_dependencies(), 'checker_sha256': paired_dependencies()})
+            result = compose_paired_main_card(**a)
+            return result, result['runtime_projection']['claimed_fields'], result
         _require(set(authorization) == {'correction_sidecar', 'correction_image'}, 'correction review inputs required')
         a = dict(inputs, runtime_record=record['runtime_record'], registry_bytes=record['registry_bytes'],
             image_artifacts=images, correction_sidecar=_file(input_root, authorization['correction_sidecar']),
@@ -187,7 +209,8 @@ def _descriptors(cid, source):
             key = [cid, 'official-occurrence', unit['observation_id'], unit['section_index'], index]
             _require((unit['observation_id'], unit['section_index']) in by_key, 'foreign unit source')
         else:
-            _require(unit.get('kind') == 'reviewed-canonical-image-correction', 'unknown sourceless unit')
+            _require(unit.get('kind') in {'reviewed-canonical-image-correction',
+                                         'reviewed-paired-main-image-correction'}, 'unknown sourceless unit')
             key = [cid, 'reviewed-correction', unit['sidecar_sha256'], index]
         face = unit.get('face_id', 'primary')
         unit_rows.append({'key': key, 'unit_index': index, 'face': face, 'source_unit': deepcopy(unit)})
@@ -288,7 +311,7 @@ def build_diagnostic_source_book(*, candidate_root, input_root, extraction_artif
             row['blockers'] = deepcopy(source.get('blockers', []))
             row['blockers'].extend({'code': 'UNCLAIMED_GAMEPLAY_FIELD', 'field': k} for k in unclaimed if k not in _METADATA)
             if source['status'] not in {'COMPOSED_RULE_CARD', 'COMPOSED_CORRECTED_RULE_CARD',
-                                      'COMPOSED_DUAL_SOURCE', 'COMPOSED_LINK_CARD'}:
+                                      'COMPOSED_DUAL_SOURCE', 'COMPOSED_LINK_CARD', 'COMPOSED_PAIRED_MAIN_CARD'}:
                 row['blockers'].append({'code': 'SOURCE_COMPOSITION_BLOCKED'})
             if row['blockers']:
                 row['status'] = 'BLOCKED'
