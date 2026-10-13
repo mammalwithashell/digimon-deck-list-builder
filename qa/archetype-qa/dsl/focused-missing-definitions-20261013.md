@@ -19,3 +19,17 @@ Batch 2: 1 IMPLEMENT, 0 AUDIT, 0 SKIP, 0 BLOCKED. Seven intended missing-definit
 Batch 2 evidence in the retained fe80 workspace: five-vanilla-batch2-red-receipt-20261013.json, five-vanilla-batch2-spec-review-20261013T090648Z.json, five-vanilla-batch2-quality-review-20261013.json.
 
 Broader gate status at preservation: Tier 2 remains running; its 82 Python tool tests passed. Oracle-readiness freshness fails before Rust suites. Normal generator outputs from the clean seed and this candidate are byte-identical and differ from the committed artifact in 259 existing cards; none of these five cards belongs to that deck-library scope. Both generated views remain in campaign evidence, with no generated-file overwrite or waived gate. Other Rust suite outcomes remain pending. The prior EventTarget branch also recorded two official Rule/Aquatic DSL failures; this candidate must retain its own actual outcomes.
+
+
+## Subsequent measured verification and remaining-effect batch
+
+The five-card Tier 2 run completed: 17 checks passed and 4 failed. Readiness generation is byte-identical to the clean seed; the two Rule/Aquatic DSL failures and ten replay digest divergences were also reproduced on the clean seed. These baseline defects remain failed gates, with original evidence in five-vanilla-final-verification-review-20261013.json and the three separate baseline reviews. No goldens were blessed or generated source files hand-edited.
+
+| Batch | Card | Mode | Verdict | Targeted checks | Review |
+| --- | --- | --- | --- | --- | --- |
+| 3 | BT4-018 Spinomon | IMPLEMENT | IMPLEMENTED | 9 passed after 9 missing-definition failures | Independent spec and quality approved |
+| 3 | BT6-068 Impmon | IMPLEMENT | IMPLEMENTED | 8 passed after 8 missing-definition failures | Independent spec and quality approved |
+
+Batch 3: 2 IMPLEMENT, 0 AUDIT, 0 SKIP, 0 BLOCKED within this slice. Existing DSL expresses both effects. Spinomon has a live own-turn self DP aura; Impmon exposes optional discard and mandatory own-trash trait-filtered return, with both-seat masks, negative targets and clone/resume checks. Original metadata rows are bound to the full R4 input. Separate ordinary-registry probes pass 2/2 in portable mode and 2/2 with all 4,483 original R4 rows, without manual card-definition registration. Impmon's first GREEN counted optional PASS among target IDs; the corrected test checks its mask separately. The first independent play probe used a pending-only helper; the corrected probe uses the masked normal decoder. Both invalid-fixture failures are retained and are not engine defects.
+
+Evidence in the retained fe80 campaign workspace: bt4-018-independent-{spec,quality}-review-20261013.json, bt6-068-independent-{spec,quality}-review-20261013.json and remaining-effects-production-registry-review-20261013.json. Broader verification for this two-card candidate remains pending. Prior proof inventories are historical and must be regenerated against a new native pack before admission. BT16-033 Harpymon remains blocked on separately reviewed attacker security-check timing. Full clause and gating denominators, five oracle verdict classes, source consumers and training readiness remain open.

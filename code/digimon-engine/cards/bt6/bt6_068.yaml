@@ -1,0 +1,41 @@
+# Official BT6-068/P1/P2/P3 observations and card images; Q1462 requires an
+# actual discard. Rules 15-1-2/5 and 15-7-1/2/5: resolve in order, permit the
+# discard without a return target, then return a matching Digimon if possible.
+# Ordinary purple Lv.2/cost 0 digivolution is printed data, not an alt_path.
+card: BT6-068
+name: Impmon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 2000
+traits: [Evil]
+form: Rookie
+attribute: Virus
+
+effects:
+  - when: on_play
+    summary: "[On Play] You may trash 1 card in your hand. If you do, return 1 Digimon card with the [Seven Great Demon Lords] or [Three Musketeers] trait from your trash to your hand."
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "You may trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - if:
+          condition: { effect_trashed_any_hand_card: true }
+          then:
+            - select_trash:
+                of: you
+                bind_as: returned
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: Seven Great Demon Lords
+                        - trait_has: Three Musketeers
+                prompt: "Return 1 [Seven Great Demon Lords] or [Three Musketeers] Digimon card to your hand"
+            - add_to_hand_from_trash: { of: you, card: returned }

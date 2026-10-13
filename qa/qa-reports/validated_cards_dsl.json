@@ -14272,6 +14272,44 @@
       ],
       "notes": "True no-effect printed card. Exact official observations and image cross-check; minimal native definition. Tests use original R4 metadata, both seats, visible legal base choices, negative color/level, play/evolution cost and draw, battle/security DP boundaries, inherited silence.",
       "audit_note": "Independent batch2 spec and quality approved. Seven per-card tests plus two production-registry probes in each full original R4 and portable fixture mode, including real BT1-014 and BT4-010 champion bases. Simulator-only evidence: no DCGO oracle, source/runtime admission or training-readiness claim; full-five broader checks pending."
+    },
+    "BT4-018": {
+      "card_name": "Spinomon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt4/bt4_018.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_018.rs",
+      "test_count": 9,
+      "patterns": [
+        "your-turn-self-dp-aura",
+        "both-seat-action-mask",
+        "turn-boundary-live-query"
+      ],
+      "notes": "Native self +3000 DP only during its controller turn; ordinary play/evolution masks and battle boundaries, no inherited leak. Actual activation-to-burial and unusual adopted/Succession shapes remain unclaimed.",
+      "audit_note": "Separate fresh independent spec and quality reviews approved. Normal production registry probes pass 2/2 with full original 4483-row R4 and 2/2 portable fixture across this two-card batch. Prior invalid fixture failures retained. Simulator-only: no DCGO/source/runtime/training admission; broader candidate verification pending."
+    },
+    "BT6-068": {
+      "card_name": "Impmon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt6/bt6_068.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_068.rs",
+      "test_count": 8,
+      "patterns": [
+        "optional-hand-discard-cost",
+        "mandatory-own-trash-return",
+        "trait-or-filter",
+        "both-seat-action-mask",
+        "clone-resume"
+      ],
+      "notes": "Actual optional discard precedes mandatory Digimon return from own trash by either exact Seven Great Demon Lords or Three Musketeers trait; Q1462 no-target pre-gate, self-discard eligibility, masks/negative targets and clone covered.",
+      "audit_note": "Separate fresh independent spec and quality reviews approved. Normal production registry probes pass 2/2 with full original 4483-row R4 and 2/2 portable fixture across this two-card batch. Prior invalid fixture failures retained. Simulator-only: no DCGO/source/runtime/training admission; broader candidate verification pending."
     }
   }
 }

@@ -338,3 +338,13 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /qa/impact/dsl_impact_index.json -text
 /qa/qa-reports/validated_cards_dsl.json -text
 /qa/archetype-qa/dsl/focused-missing-definitions-20261013.md -text
+
+# Preserve reviewed remaining-effect definitions and witness bytes.
+/code/digimon-engine/cards/bt4/bt4_018.yaml -text
+/code/digimon-engine/cards/bt6/bt6_068.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt4/bt4_018.rs -text
+/code/digimon-engine/tests/cards_behavioral/bt6/bt6_068.rs -text
+/code/digimon-engine/tests/cards_behavioral/bt6/mod.rs -text
+/code/digimon-engine/tests/fixtures/focused_remaining_effects_r4.json -text
+/code/digimon-engine/tests/fixtures/focused_remaining_effects_r4.provenance.json -text
+/code/digimon-engine/tests/review_remaining_effects_registry.rs -text
