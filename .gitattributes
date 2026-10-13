@@ -279,3 +279,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/tools/clause_coverage/paired_main_correction_units.py -text
 /code/tests/tools/test_paired_main_correction_units.py -text
 /code/tests/tools/review_paired_main_correction_root.py -text
+
+# Preserve independently reviewed strict equals correspondence bytes.
+/code/digimon-dsl/src/bin/implementation_inventory/equals_witness.rs -text
+/code/digimon-dsl/tests/implementation_equals_witness.rs -text
+/code/digimon-dsl/tests/review_equals_independent.rs -text
