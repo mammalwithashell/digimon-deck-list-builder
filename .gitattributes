@@ -310,3 +310,9 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/tools/dcgo-harness/tests/review_v2_routes_independent.rs -text
 /code/tests/tools/test_source_book_v2_composition_routes.py -text
 /code/tools/dcgo-harness/src/exam/source_book_v2_composition_routes_tests.rs -text
+
+# Preserve independently reviewed metadata cache repair and regression bytes.
+/code/digimon-engine/src/card_data.rs -text
+/code/digimon-engine/src/card_store.rs -text
+/code/digimon-engine/tests/card_store_content_cache.rs -text
+/code/digimon-engine/tests/review_card_store_content_cache.rs -text

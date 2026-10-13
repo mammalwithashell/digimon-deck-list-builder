@@ -51,10 +51,10 @@ fn malformed_original_wire_refused_before_runtime_fallback() {
     assert!(witness::strict_records(&b, &"0".repeat(64)).is_err());
 }
 #[test]
-fn actual_full_runtime_optional_diagnostic() {
-    let Ok(path) = std::env::var("NAMED_MATERIAL_RUNTIME") else {
-        return;
-    };
+#[ignore = "requires an explicit pinned runtime and a new diagnostic output path"]
+fn actual_full_runtime_diagnostic() {
+    let path = std::env::var("NAMED_MATERIAL_RUNTIME")
+        .expect("explicit diagnostic requires NAMED_MATERIAL_RUNTIME");
     let b = std::fs::read(path).unwrap();
     let expected = std::env::var("NAMED_MATERIAL_RUNTIME_SHA").unwrap();
     let registry = digimon_engine::dsl_registry::from_embedded_cached().unwrap();
@@ -82,6 +82,7 @@ fn actual_full_runtime_optional_diagnostic() {
         );
     }
     let result = witness::prove(&b, &expected, &["Titamon", "SkullBaluchimon"]);
+    let succeeded = result.is_ok();
     let out = json!({"runtime_sha256":witness::sha(&b),"result":result,"binary_sha256":witness::sha(&std::fs::read(std::env::current_exe().unwrap()).unwrap()),"features":["dsl-yaml-loader","test-helpers"],"fresh_process_required":true,"admission":false});
     let dest = std::env::var("NAMED_MATERIAL_OUTPUT").unwrap();
     use std::io::Write;
@@ -92,6 +93,9 @@ fn actual_full_runtime_optional_diagnostic() {
         .unwrap()
         .write_all(&serde_json::to_vec_pretty(&out).unwrap())
         .unwrap();
+    // Keep the refusal artifact for diagnosis, but never report a failed proof
+    // as a passing validation command.
+    assert!(succeeded, "native proof refused; see saved diagnostic output");
 }
 #[test]
 fn exact_alias_and_nonmatching_routes() {
@@ -123,13 +127,14 @@ fn exact_alias_and_nonmatching_routes() {
     }
 }
 #[test]
-fn cached_same_length_name_change_is_detected_not_waived() {
+fn cached_same_length_name_change_keeps_exact_name_sets_separate() {
     let a = bytes("W-CACHE-LENGTH", "Titamon", 0);
     let b = bytes("W-CACHE-LENGTH", "Abcdefg", 0);
-    witness::prove(&a, &witness::sha(&a), &["Titamon"]).unwrap();
-    assert!(witness::prove(&b, &witness::sha(&b), &["Titamon"])
-        .unwrap_err()
-        .contains("cached"));
+    let original = witness::prove(&a, &witness::sha(&a), &["Titamon"]).unwrap();
+    assert!(!original["names"][0]["name_only"].as_array().unwrap().is_empty());
+    let changed = witness::prove(&b, &witness::sha(&b), &["Titamon"]).unwrap();
+    assert!(changed["names"][0]["name_only"].as_array().unwrap().is_empty());
+    assert_eq!(witness::prove(&a, &witness::sha(&a), &["Titamon"]).unwrap(), original);
 }
 #[test]
 fn original_token_collision_is_refused() {
