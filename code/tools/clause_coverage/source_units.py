@@ -128,7 +128,7 @@ def _validated_context(*,aggregate,scopes,observations,canonical_card,runtime_pr
 def _validated_context_core(*,aggregate,scopes,observations,canonical_card,runtime_projection,
              adjudication_ledger,raw_pages,correction_document,condition_selections,
              old_input_revision,new_input_revision,expected_official_universe,
-             _runtime_validator=None,_correction_binding=None):
+             _runtime_validator=None,_correction_binding=None,_face_validator=None):
     _require(isinstance(new_input_revision,str) and re.fullmatch('[0-9a-f]{64}',new_input_revision)
              and old_input_revision==new_input_revision, 'explicit equal source revision pins required')
     a = _json(aggregate)
@@ -207,8 +207,12 @@ def _validated_context_core(*,aggregate,scopes,observations,canonical_card,runti
     replayed_card=normalization.normalize_card(cid,typed.values(),adjudications=ledger,
         old_input_revision=old_input_revision,new_input_revision=new_input_revision,
         field_selection_input_revision=new_input_revision)
-    _require(serialization.canonical_json_bytes(card.faces)==serialization.canonical_json_bytes(replayed_card.faces),
-             'canonical faces differ from producer replay')
+    if _face_validator is None:
+        _require(serialization.canonical_json_bytes(card.faces)==serialization.canonical_json_bytes(replayed_card.faces),
+                 'canonical faces differ from producer replay')
+    else:
+        _require(_face_validator(card=card,replayed_card=replayed_card,typed=typed) is None,
+                 'private full-record face validator must fail closed or return None')
     corrections=correction_document_from_bytes(correction_document)
     selections=selections_from_bytes(condition_selections)
     if any(r.card_id==cid for r in (*corrections.corrections,*corrections.compatibility_corrections)):

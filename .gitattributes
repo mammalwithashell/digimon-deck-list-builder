@@ -288,3 +288,9 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 # Preserve reviewed current canonical Link selection regression bytes.
 /code/tests/tools/test_link_current_review.py -text
 /code/tests/tools/review_link_current_independent.py -text
+
+# Preserve reviewed paired-main whole-card composition bytes.
+/code/tools/clause_coverage/source_units.py -text
+/code/tools/clause_coverage/paired_main_card_composition.py -text
+/code/tests/tools/test_paired_main_card_composition.py -text
+/code/tests/tools/review_paired_main_composition_root.py -text
