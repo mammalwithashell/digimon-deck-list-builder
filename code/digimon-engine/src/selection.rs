@@ -953,17 +953,16 @@ pub enum OptionResolutionPhase {
 /// `pending_selection` installed inside a `SecuritySkill` process can pause
 /// the flow and resume from the same phase after the selection resolves.
 ///
-/// Order matches Python's `Player.security_attack` / `_execute_security_checks`
-/// sequence: SecuritySkill → battle → OnSecurityCheck → OnLoseSecurity → dispose.
-/// See RUST_PYTHON_PARITY §2.5b / §2.5j.
+/// Official rule 13-1-7 and Q6813: immediate Security, then captured
+/// simultaneous check/removal observers, then security battle and disposal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SecurityPhase {
     /// Enqueue + drain `SecuritySkill` effects on the revealed card.
     SecuritySkillDrain,
     /// Digimon-vs-security DP battle (skipped for non-Digimon security).
     BattleResolved,
-    /// Enqueue + drain `OnSecurityCheck` observer effects over the defender's
-    /// battle area.
+    /// Drain the occurrence-captured check/removal batch and derived effects,
+    /// before the security DP battle. No rescan occurs here.
     OnSecurityCheckDrain,
     /// Offer `WhenWouldLoseSecurity` replacements before the revealed card is
     /// finally removed from the security stack.

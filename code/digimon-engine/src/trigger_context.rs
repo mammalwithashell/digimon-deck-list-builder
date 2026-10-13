@@ -145,6 +145,11 @@ pub struct DeletedObjectSnapshot {
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TriggerContext {
+    /// This entry was captured at an actual security check, before Security
+    /// processing. Leaving its source area permanently cancels activation.
+    pub captured_security_check: bool,
+    pub security_check_source_invalidated: bool,
+    pub security_check_face_generation: Option<u64>,
     pub subject: Option<EventSubject>,
     pub target_permanent: Option<PermanentHandle>,
     pub target_card: Option<CardHandle>,

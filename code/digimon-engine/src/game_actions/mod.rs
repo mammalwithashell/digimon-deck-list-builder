@@ -891,7 +891,14 @@ impl Game {
 
         let mut used = vec![false; trash.len()];
         let mut chosen: Vec<Option<usize>> = vec![None; slots.len()];
-        assembly_assign_keyed(&match_table, &slot_element, &element_distinct, 0, &mut used, &mut chosen)
+        assembly_assign_keyed(
+            &match_table,
+            &slot_element,
+            &element_distinct,
+            0,
+            &mut used,
+            &mut chosen,
+        )
     }
 
     pub(crate) fn commit_pending_would_play(
@@ -1069,7 +1076,9 @@ impl Game {
         base_handle: PermanentHandle,
     ) -> bool {
         self.can_digivolve(card, base)
-            || !self.all_digivolve_routes_for_card(card, base_handle).is_empty()
+            || !self
+                .all_digivolve_routes_for_card(card, base_handle)
+                .is_empty()
     }
 
     fn arts_breeding_handle(owner: PlayerId) -> PermanentHandle {
@@ -1326,7 +1335,11 @@ impl Game {
         let Some(breeding) = self.player(owner).breeding_area.as_ref() else {
             return false;
         };
-        if !self.arts_can_digivolve_onto(&pending_ref.card, breeding, Self::arts_breeding_handle(owner)) {
+        if !self.arts_can_digivolve_onto(
+            &pending_ref.card,
+            breeding,
+            Self::arts_breeding_handle(owner),
+        ) {
             return false;
         }
 
@@ -1430,6 +1443,9 @@ impl Game {
                 // with no deletion/leave triggers ("not considered trashing from
                 // the battle area").
                 self.trash_permanent_stack(handle.player, handle.index as usize);
+                if self.security_resolution.is_some() {
+                    self.shift_effect_queue_after_battle_area_remove(handle.player, handle.index);
+                }
                 continue;
             }
             // A ≤0-DP deletion is a STATE-BASED RULE action, not an effect.
@@ -3435,7 +3451,10 @@ impl Game {
         self.modifiers.expire_player_on_permanent_leave(target);
         self.modifiers
             .shift_after_battle_area_remove(target.player, target.index);
-        self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
+        // Queue, captured event and attacker handles were rekeyed once just
+        // after the actual removal above. A second rekey would address the
+        // newly compacted slots as if another permanent had left.
+
         self.fire_on_place_security(player_id, observer_player, top_handle);
         true
     }
@@ -3719,7 +3738,10 @@ fn assembly_assign_keyed(
             AssemblyDistinct::None => {}
             AssemblyDistinct::Keys(keys) => {
                 if let Some(key) = &keys[t] {
-                    if same_element_prev.iter().any(|&c| keys[c].as_ref() == Some(key)) {
+                    if same_element_prev
+                        .iter()
+                        .any(|&c| keys[c].as_ref() == Some(key))
+                    {
                         continue;
                     }
                 }
@@ -3734,7 +3756,14 @@ fn assembly_assign_keyed(
         }
         used[t] = true;
         chosen[slot] = Some(t);
-        if assembly_assign_keyed(match_table, slot_element, element_distinct, slot + 1, used, chosen) {
+        if assembly_assign_keyed(
+            match_table,
+            slot_element,
+            element_distinct,
+            slot + 1,
+            used,
+            chosen,
+        ) {
             used[t] = false;
             chosen[slot] = None;
             return true;
@@ -3880,20 +3909,23 @@ fn assembly_element_distinct_mode(
     target_card: CardHandle,
     element_idx: usize,
 ) -> Option<crate::effect_context::DistinctByMode> {
-    use digimon_dsl::compiled::{CompiledAltPathKind, CompiledDistinctBy as D};
     use crate::effect_context::DistinctByMode;
+    use digimon_dsl::compiled::{CompiledAltPathKind, CompiledDistinctBy as D};
     let card_id = game.card_data_for_handle(target_card)?.card_id.clone();
     let path = game
         .alt_path_registry
         .get(&card_id)?
         .iter()
         .find(|p| matches!(p.kind, CompiledAltPathKind::Assembly))?;
-    path.materials.get(element_idx)?.distinct_by.map(|d| match d {
-        D::CardNumber => DistinctByMode::CardNumber,
-        D::Level => DistinctByMode::Level,
-        D::Name => DistinctByMode::Name,
-        D::Color => DistinctByMode::Color,
-    })
+    path.materials
+        .get(element_idx)?
+        .distinct_by
+        .map(|d| match d {
+            D::CardNumber => DistinctByMode::CardNumber,
+            D::Level => DistinctByMode::Level,
+            D::Name => DistinctByMode::Name,
+            D::Color => DistinctByMode::Color,
+        })
 }
 
 #[cfg(feature = "dsl-yaml-loader")]

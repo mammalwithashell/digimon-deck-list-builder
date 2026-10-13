@@ -359,3 +359,18 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/digimon-engine/src/dsl_cards/binding_ref.rs -text
 /code/digimon-engine/tests/event_target_identity.rs -text
 /code/digimon-engine/tests/review_event_target_identity.rs -text
+
+# Preserve independently reviewed Security timing source and tests.
+/code/digimon-engine/src/combat/mod.rs -text
+/code/digimon-engine/src/digixros.rs -text
+/code/digimon-engine/src/dsl_cards/lower_triggered.rs -text
+/code/digimon-engine/src/effect.rs -text
+/code/digimon-engine/src/effect_queue.rs -text
+/code/digimon-engine/src/game/mod.rs -text
+/code/digimon-engine/src/game/triggers.rs -text
+/code/digimon-engine/src/game_actions/misc.rs -text
+/code/digimon-engine/src/game_actions/mod.rs -text
+/code/digimon-engine/src/permanent.rs -text
+/code/digimon-engine/src/selection.rs -text
+/code/digimon-engine/src/trigger_context.rs -text
+/code/digimon-engine/tests/security_check_timing.rs -text

@@ -2349,6 +2349,10 @@ impl Game {
             return;
         }
         let perm = p.battle_area.remove(field_index);
+        self.invalidate_captured_security_check_source(crate::permanent::PermanentHandle {
+            player,
+            index: field_index as u8,
+        });
 
         // Empty-stack guard (parity with Player::delete_permanent): if the
         // stack was already drained by a mid-deletion effect, only linked
@@ -2595,6 +2599,9 @@ impl Game {
             .player_mut(target_b.player)
             .battle_area
             .remove(target_b.index as usize);
+        if self.security_resolution.is_some() {
+            self.shift_effect_queue_after_battle_area_remove(target_b.player, target_b.index);
+        }
         let new_top = self.player_mut(hand_owner).hand.remove(hand_index);
         // Capture top_card_id from the removed-hand source before it moves
         // into the merged permanent's stack.
@@ -2605,7 +2612,7 @@ impl Game {
         {
             let perm_a = &mut self.player_mut(target_a.player).battle_area[target_a_index_after];
             perm_a.card_sources.extend(perm_b.card_sources);
-            perm_a.card_sources.push(new_top);
+            perm_a.digivolve(new_top, turn);
             perm_a.turn_digivolved = turn;
         }
 
@@ -2779,7 +2786,7 @@ impl Game {
         {
             let perm = &mut self.player_mut(target.player).battle_area[target.index as usize];
             perm.card_sources.push(partner_source);
-            perm.card_sources.push(result_source);
+            perm.digivolve(result_source, turn);
             perm.turn_digivolved = turn;
         }
 
@@ -2934,7 +2941,7 @@ impl Game {
         {
             let perm = &mut self.player_mut(target.player).battle_area[target.index as usize];
             perm.card_sources.push(trash_material);
-            perm.card_sources.push(result_source);
+            perm.digivolve(result_source, turn);
             perm.turn_digivolved = turn;
         }
 
