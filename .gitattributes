@@ -274,3 +274,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 
 # Preserve independently reviewed typed reference role regression.
 /code/digimon-dsl/tests/implementation_reference_roles.rs -text
+
+# Preserve reviewed paired-main correction proof bytes.
+/code/tools/clause_coverage/paired_main_correction_units.py -text
+/code/tests/tools/test_paired_main_correction_units.py -text
+/code/tests/tools/review_paired_main_correction_root.py -text
