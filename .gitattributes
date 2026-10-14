@@ -375,3 +375,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/digimon-engine/src/trigger_context.rs -text
 /code/digimon-engine/tests/security_check_timing.rs -text
 /code/digimon-engine/tests/security_resolution_regressions.rs -text
+
+# Preserve reviewed Harpymon native implementation and evidence tracker bytes.
+/code/digimon-engine/cards/bt16/BT16-033.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt16/bt16_033.rs -text
+/code/digimon-engine/tests/cards_behavioral/bt16/mod.rs -text

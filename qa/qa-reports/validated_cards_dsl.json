@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-13",
+  "last_updated": "2026-10-14",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -14310,6 +14310,27 @@
       ],
       "notes": "Actual optional discard precedes mandatory Digimon return from own trash by either exact Seven Great Demon Lords or Three Musketeers trait; Q1462 no-target pre-gate, self-discard eligibility, masks/negative targets and clone covered.",
       "audit_note": "Separate fresh independent spec and quality reviews approved. Normal production registry probes pass 2/2 with full original 4483-row R4 and 2/2 portable fixture across this two-card batch. Prior invalid fixture failures retained. Simulator-only: no DCGO/source/runtime/training admission; broader candidate verification pending."
+    },
+    "BT16-033": {
+      "card_name": "Harpymon",
+      "validated_date": "2026-10-14",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_033.rs",
+      "test_count": 15,
+      "patterns": [
+        "attacker-security-check-event",
+        "live-security-thresholds",
+        "named-digivolution-route",
+        "both-seat-action-mask",
+        "source-liveness",
+        "clone-resume"
+      ],
+      "notes": "Printed memory-before-recovery order, mandatory own-turn self security-check trigger without OPT, exact Hawkmon special route, Armor Purge. All 12 required native matrix rows pass in both seats, including Q2629 and actual Q6813 masked setup. Empty actor trash explicitly requires no derived Kaguyamon prompt.",
+      "audit_note": "Independent SPEC and root QUALITY approved at YAML b9e480df/test 230521a6. Full final matrix 15 passed/0 failed/0 ignored, actual exit0; availability RED and invalid fixtures retained. DCGO reference order differs and live oracle remains unmeasured. Source/native-pack/full-denominator/oracle/training gates remain open; no admission."
     }
   }
 }
