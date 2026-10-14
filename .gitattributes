@@ -406,3 +406,4 @@ code/digimon-engine/cards/bt25/BT25-033.yaml -text
 code/digimon-engine/cards/st1/ST1-07.yaml -text
 code/digimon-engine/tests/cards_behavioral/printed_attribute_filters.rs -text
 code/digimon-engine/tests/fixtures/focused_seven_attributes_v6.json -text
+code/digimon-engine/tests/cards_behavioral/bt24/bt24_041.rs -text

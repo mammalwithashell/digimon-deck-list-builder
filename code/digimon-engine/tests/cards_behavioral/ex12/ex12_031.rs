@@ -65,7 +65,7 @@ fn assert_printed_assembly_accepts(kind: digimon_engine::enums::CardKind, trait_
         assert_eq!(
             view.kind,
             SelectionKind::CountCappedMultiSelect {
-                min: 0,
+                min: 1,
                 max: 1,
                 picked: 0,
                 distinct: false,
