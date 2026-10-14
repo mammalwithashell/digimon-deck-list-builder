@@ -28,6 +28,8 @@ mod printed_metadata_routes;
 mod printed_attribute_filters;
 mod printed_form_filters;
 mod gazimon_repeated_triggers;
+mod gazimon_optional_scope;
+mod reveal_optional_pick_continuation;
 mod de_digivolve;
 #[path = "../support/dsl_card_data.rs"]
 mod dsl_card_data;

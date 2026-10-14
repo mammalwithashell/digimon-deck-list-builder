@@ -3,8 +3,8 @@
 # [When Moving][On Play] Reveal top 3; add 1 card with [Three Musketeers] in text to hand,
 # OR you may place 1 [Three Musketeers] trait card as bottom digivolution card; rest to bottom.
 # Inherited <Retaliation>. Alt-digivolve Lv.2 Purple, or Lv.2 [TS]/[Three Musketeers]-text / Cost 0.
-# DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_078.cs (canNoSelect → optional;
-# choice-first P-167 idiom; the two options have different eligibility filters).
+# Printed "you may place" applies only to the trait pick; reveal/return are mandatory.
+# Hand eligibility uses full "[X] in text" per official Q6379.
 card: BT25-078
 name: Gazimon
 kind: digimon
@@ -32,7 +32,6 @@ alt_paths:
     cost: 0
 effects:
   - when: [on_move, on_play]
-    optional: true
     # [When Moving] is self-scoped ("when THIS Digimon moves from breeding");
     # the engine's on_move dispatch is a board-wide observer scan, so gate the
     # on_move timing on the moved permanent being this Digimon (EX11-038 idiom).
@@ -53,7 +52,7 @@ effects:
           then:
             - choose_from_reveal:
                 of: you
-                filter: { effect_text_contains: "Three Musketeers" }
+                filter: { in_text_contains: "Three Musketeers" }
                 destination: hand
                 bind_as: hand_pick
                 prompt: "Add 1 card with [Three Musketeers] in its text to your hand"
@@ -62,6 +61,7 @@ effects:
           then:
             - choose_from_reveal:
                 of: you
+                optional: true
                 filter: { trait_has: "Three Musketeers" }
                 destination:
                   bottom_source_of: { target: this }

@@ -436,3 +436,6 @@ code/digimon-engine/tests/cards_behavioral/printed_form_filters.rs -text
 code/digimon-engine/tests/fixtures/focused_printed_forms_v6.json -text
 code/digimon-engine/tests/cards_behavioral/bt25/bt25_078.rs -text
 code/digimon-engine/tests/cards_behavioral/gazimon_repeated_triggers.rs -text
+code/digimon-engine/tests/cards_behavioral/gazimon_optional_scope.rs -text
+code/digimon-engine/tests/cards_behavioral/reveal_optional_pick_continuation.rs -text
+code/digimon-engine/src/dsl_cards/step/selections.rs -text
