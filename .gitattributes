@@ -434,3 +434,5 @@ code/digimon-engine/cards/p/P-198.yaml -text
 code/digimon-engine/cards/p/P-213.yaml -text
 code/digimon-engine/tests/cards_behavioral/printed_form_filters.rs -text
 code/digimon-engine/tests/fixtures/focused_printed_forms_v6.json -text
+code/digimon-engine/tests/cards_behavioral/bt25/bt25_078.rs -text
+code/digimon-engine/tests/cards_behavioral/gazimon_repeated_triggers.rs -text

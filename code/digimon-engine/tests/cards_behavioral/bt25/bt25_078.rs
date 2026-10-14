@@ -14,8 +14,8 @@
 //! DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_078.cs
 //!
 //! Pattern rows (RUST_DSL_TEST_API §4.3): reveal-N branch route to hand OR
-//! bottom-source-of-self (Group E), optional ("you may"), once-per-turn shared
-//! WM/OP trigger, inherited static keyword grant (Group G), alt-digivolve.
+//! bottom-source-of-self (Group E), current optional gate retained (scope unresolved),
+//! shared WM/OP trigger without printed OPT, inherited static keyword grant (Group G), alt-digivolve.
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledRevealDestination,
@@ -70,7 +70,7 @@ fn shared_process(runner: &DebugRunner) -> Vec<CompiledStep> {
 // ── Section 1: Structural ──────────────────────────────────────────────────
 
 #[test]
-fn bt25_078_shared_clause_is_when_moving_and_on_play_optional_opt() {
+fn bt25_078_shared_clause_is_when_moving_and_on_play_optional_without_opt() {
     let runner = runner();
     let card = runner.compiled_card("BT25-078").expect("compiled");
 
@@ -93,11 +93,11 @@ fn bt25_078_shared_clause_is_when_moving_and_on_play_optional_opt() {
     );
     assert!(
         clause.optional,
-        "printed 'or you may place' → the whole effect is optional"
+        "current whole-effect optional gate retained; printed-scope review remains separate"
     );
     assert!(
-        clause.once_per_turn,
-        "DCGO maxCountPerTurn: 1 → once_per_turn"
+        !clause.once_per_turn,
+        "official BT25-078 observation/image prints no once-per-turn restriction"
     );
 }
 

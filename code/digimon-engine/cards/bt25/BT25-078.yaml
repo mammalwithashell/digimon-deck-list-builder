@@ -33,7 +33,6 @@ alt_paths:
 effects:
   - when: [on_move, on_play]
     optional: true
-    once_per_turn: true
     # [When Moving] is self-scoped ("when THIS Digimon moves from breeding");
     # the engine's on_move dispatch is a board-wide observer scan, so gate the
     # on_move timing on the moved permanent being this Digimon (EX11-038 idiom).
