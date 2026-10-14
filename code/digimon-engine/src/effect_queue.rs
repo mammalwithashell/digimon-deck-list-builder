@@ -1379,6 +1379,17 @@ impl Game {
                 if let Some(index) = self.effect_queue.iter().position(|qe| {
                     qe.timing == EffectTiming::SecuritySkill && qe.source_card == card
                 }) {
+                    // Immediate Security bodies still obey activation gates.
+                    // This path bypasses the ordinary trigger-bundle filter;
+                    // apply its eligibility checks before offering or running
+                    // the body, including mandatory clauses with a cost gate.
+                    if self.queued_effect_opt_exhausted(index)
+                        || !self.queued_effect_condition_passes(index)
+                        || !self.queued_effect_index_is_live(index)
+                    {
+                        self.effect_queue.remove(index);
+                        continue;
+                    }
                     let candidate = self.effect_queue[index].clone();
                     if self.queued_effect_needs_pre_cost_prompt(&candidate) {
                         self.install_trigger_order_selection(candidate.controller, &[index], true);

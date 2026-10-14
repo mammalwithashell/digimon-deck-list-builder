@@ -3575,6 +3575,12 @@ impl Game {
                     self.set_security_phase(SecurityPhase::BattleResolved);
                 }
                 SecurityPhase::WhenWouldLoseSecurity => {
+                    // A battle-deletion replacement may still own the prompt.
+                    // Probing a different replacement here would reset its
+                    // offered-stage keys before the player accepts or declines.
+                    if self.pending_selection.is_some() {
+                        return None;
+                    }
                     let Some(state) = self.security_resolution.as_ref() else {
                         break;
                     };

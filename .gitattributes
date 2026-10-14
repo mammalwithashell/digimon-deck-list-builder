@@ -374,3 +374,4 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/digimon-engine/src/selection.rs -text
 /code/digimon-engine/src/trigger_context.rs -text
 /code/digimon-engine/tests/security_check_timing.rs -text
+/code/digimon-engine/tests/security_resolution_regressions.rs -text
