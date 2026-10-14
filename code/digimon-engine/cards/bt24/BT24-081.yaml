@@ -52,6 +52,7 @@ card: BT24-081
 name: Titamon + SkullBaluchimon
 kind: digimon
 level: 7
+form: Mega
 color: [purple, green]
 cost: 14
 dp: 14000

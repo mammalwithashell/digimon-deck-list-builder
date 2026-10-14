@@ -113,6 +113,7 @@ card: BT25-085
 name: BeelStarmon
 kind: dual
 level: 6
+form: Mega
 color: [purple, black]
 cost: 6
 dp: 12000

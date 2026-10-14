@@ -2,6 +2,7 @@ card: P-194
 name: Aegiomon
 kind: digimon
 level: 4
+form: Champion
 color: [yellow]
 cost: 4
 dp: 4000

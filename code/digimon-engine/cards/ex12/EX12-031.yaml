@@ -2,6 +2,7 @@ card: EX12-031
 name: MarineBullmon
 kind: digimon
 level: 5
+form: Ultimate
 color: [blue, yellow]
 cost: 7
 dp: 7000

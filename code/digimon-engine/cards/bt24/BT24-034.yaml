@@ -2,6 +2,7 @@ card: BT24-034
 name: Aegiomon
 kind: digimon
 level: 4
+form: Champion
 color: [yellow]
 cost: 5
 dp: 5000

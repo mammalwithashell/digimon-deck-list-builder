@@ -49,6 +49,7 @@ card: BT15-037
 name: Gatomon
 kind: digimon
 level: 4
+form: Champion
 color: [yellow]
 cost: 5
 dp: 4000

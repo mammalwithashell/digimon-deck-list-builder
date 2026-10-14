@@ -116,6 +116,7 @@ card: BT25-083
 name: LadyDevimon
 kind: digimon
 level: 5
+form: Ultimate
 color: [purple]
 cost: 7
 dp: 7000

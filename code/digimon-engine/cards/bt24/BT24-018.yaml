@@ -2,6 +2,7 @@ card: BT24-018
 name: Styracomon
 kind: digimon
 level: 7
+form: Mega
 color: [red]
 cost: 14
 dp: 14000

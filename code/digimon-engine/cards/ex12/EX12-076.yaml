@@ -2,6 +2,7 @@ card: EX12-076
 name: Susanoomon
 kind: digimon
 level: 7
+form: Mega
 color: [yellow, white, red]
 cost: 16
 dp: 16000

@@ -81,6 +81,7 @@ card: BT25-082
 name: BlackGatomon
 kind: digimon
 level: 4
+form: Champion
 color: [purple, black]
 cost: 6
 dp: 6000

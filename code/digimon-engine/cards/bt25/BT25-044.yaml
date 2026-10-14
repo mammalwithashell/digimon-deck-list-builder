@@ -44,6 +44,7 @@ card: BT25-044
 name: Junomon
 kind: digimon
 level: 6
+form: Mega
 color: [yellow, purple]
 cost: 12
 dp: 12000

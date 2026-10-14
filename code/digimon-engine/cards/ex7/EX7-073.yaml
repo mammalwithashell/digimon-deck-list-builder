@@ -134,6 +134,7 @@ card: EX7-073
 name: "BeelStarmon (X Antibody)"
 kind: digimon
 level: 6
+form: Mega
 color: [purple]
 cost: 12
 dp: 12000

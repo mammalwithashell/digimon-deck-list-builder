@@ -2,6 +2,7 @@ card: EX12-061
 name: Hanimon
 kind: digimon
 level: 3
+form: Rookie
 color: [purple]
 cost: 3
 dp: 2000

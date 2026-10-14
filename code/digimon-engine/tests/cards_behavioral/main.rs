@@ -26,6 +26,7 @@ mod app_fuse_primitive;
 mod assembly_material_predicates;
 mod printed_metadata_routes;
 mod printed_attribute_filters;
+mod printed_form_filters;
 mod de_digivolve;
 #[path = "../support/dsl_card_data.rs"]
 mod dsl_card_data;

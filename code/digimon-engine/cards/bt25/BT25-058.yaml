@@ -71,6 +71,7 @@ card: BT25-058
 name: Callismon
 kind: digimon
 level: 6
+form: Mega
 color: [green, black]
 cost: 13
 dp: 13000
