@@ -28,7 +28,6 @@ alt_paths:
       - filter:
           any_of:
             - trait_has: Hybrid
-            - form_is: Hybrid
             - trait_has: Shambala
         repeat: { min: 8, max: 8 }
         distinct_by: name
