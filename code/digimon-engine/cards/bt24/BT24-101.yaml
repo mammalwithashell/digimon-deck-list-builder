@@ -6,6 +6,7 @@ color: [yellow]
 cost: 12
 dp: 13000
 traits: [Shaman, Olympos XII, Iliad, TS]
+attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:

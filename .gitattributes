@@ -397,3 +397,12 @@ code/digimon-engine/cards/ex12/EX12-070.yaml -text
 code/digimon-engine/cards/ex12/EX12-071.yaml -text
 code/digimon-engine/tests/cards_behavioral/printed_metadata_routes.rs -text
 code/digimon-engine/tests/fixtures/focused_five_metadata_v6.json -text
+code/digimon-engine/cards/bt21/BT21-007.yaml -text
+code/digimon-engine/cards/bt24/BT24-018.yaml -text
+code/digimon-engine/cards/bt24/BT24-031.yaml -text
+code/digimon-engine/cards/bt24/BT24-101.yaml -text
+code/digimon-engine/cards/bt25/BT25-025.yaml -text
+code/digimon-engine/cards/bt25/BT25-033.yaml -text
+code/digimon-engine/cards/st1/ST1-07.yaml -text
+code/digimon-engine/tests/cards_behavioral/printed_attribute_filters.rs -text
+code/digimon-engine/tests/fixtures/focused_seven_attributes_v6.json -text

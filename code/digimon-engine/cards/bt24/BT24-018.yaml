@@ -6,6 +6,7 @@ color: [red]
 cost: 14
 dp: 14000
 traits: [Dragonkin, LIBERATOR]
+attribute: Data
 alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: red }

@@ -6,6 +6,7 @@ color: [yellow]
 cost: 3
 dp: 1000
 traits: [Mammal, Iliad, TS]
+attribute: Data
 alt_paths:
   - kind: digivolve
     from:

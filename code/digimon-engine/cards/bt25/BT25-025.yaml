@@ -68,6 +68,7 @@ color: [blue, black]
 cost: 8
 dp: 8000
 traits: [Shaman, Iliad, TS, Cyborg]
+attribute: Vaccine
 
 alt_paths:
   - kind: digivolve

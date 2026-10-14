@@ -62,6 +62,7 @@ color: [yellow]
 cost: 5
 dp: 5000
 traits: [Shaman, Iliad, TS]
+attribute: Vaccine
 
 alt_paths:
   - kind: digivolve
