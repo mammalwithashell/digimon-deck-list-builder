@@ -439,3 +439,5 @@ code/digimon-engine/tests/cards_behavioral/gazimon_repeated_triggers.rs -text
 code/digimon-engine/tests/cards_behavioral/gazimon_optional_scope.rs -text
 code/digimon-engine/tests/cards_behavioral/reveal_optional_pick_continuation.rs -text
 code/digimon-engine/src/dsl_cards/step/selections.rs -text
+code/digimon-engine/tests/cards_behavioral/gazimon_alt_paths.rs -text
+code/digimon-engine/tests/fixtures/gazimon_alt_runtime.json -text

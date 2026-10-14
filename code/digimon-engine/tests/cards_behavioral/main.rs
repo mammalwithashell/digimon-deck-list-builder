@@ -29,6 +29,7 @@ mod printed_attribute_filters;
 mod printed_form_filters;
 mod gazimon_repeated_triggers;
 mod gazimon_optional_scope;
+mod gazimon_alt_paths;
 mod reveal_optional_pick_continuation;
 mod de_digivolve;
 #[path = "../support/dsl_card_data.rs"]

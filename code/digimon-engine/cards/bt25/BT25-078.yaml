@@ -28,7 +28,7 @@ alt_paths:
         - level_eq: 2
         - any_of:
             - trait_has: TS
-            - effect_text_contains: "Three Musketeers"
+            - in_text_contains: "Three Musketeers"
     cost: 0
 effects:
   - when: [on_move, on_play]
