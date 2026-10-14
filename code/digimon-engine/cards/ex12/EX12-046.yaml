@@ -22,7 +22,6 @@ alt_paths:
     materials:
       - filter:
           all_of:
-            - kind: digimon
             - level_lte: 4
             - trait_has: TB
         zones: [trash]

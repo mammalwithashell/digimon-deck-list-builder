@@ -384,3 +384,8 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 # Preserve independently reviewed native diagnostic source bytes.
 /code/digimon-engine/examples/native_conversion_diagnostic.rs -text
 /code/digimon-engine/examples/native_conversion_diagnostic/controls.rs -text
+code/digimon-engine/cards/bt24/BT24-081.yaml -text
+code/digimon-engine/cards/ex12/EX12-046.yaml -text
+code/digimon-engine/cards/ex12/EX12-063.yaml -text
+code/digimon-engine/tests/cards_behavioral/assembly_material_predicates.rs -text
+code/digimon-engine/tests/cards_behavioral/main.rs -text
