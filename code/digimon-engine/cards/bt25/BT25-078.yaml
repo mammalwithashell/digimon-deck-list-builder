@@ -1,15 +1,15 @@
-# BT25-078 Gazimon — Digimon, Lv.3, Black, DP 1000, Cost 3.
+# BT25-078 Gazimon — Digimon, Lv.3, Purple, DP 1000, Cost 3.
 # Traits: Mammal, Iliad, TS. Attribute: Virus.
 # [When Moving][On Play] Reveal top 3; add 1 card with [Three Musketeers] in text to hand,
 # OR you may place 1 [Three Musketeers] trait card as bottom digivolution card; rest to bottom.
-# Inherited <Retaliation>. Alt-digivolve Lv.2 Black, or Lv.2 [TS]/[Three Musketeers]-text / Cost 0.
+# Inherited <Retaliation>. Alt-digivolve Lv.2 Purple, or Lv.2 [TS]/[Three Musketeers]-text / Cost 0.
 # DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_078.cs (canNoSelect → optional;
 # choice-first P-167 idiom; the two options have different eligibility filters).
 card: BT25-078
 name: Gazimon
 kind: digimon
 level: 3
-color: [black]
+color: [purple]
 cost: 3
 dp: 1000
 traits: [Mammal, Iliad, TS]
@@ -19,7 +19,7 @@ alt_paths:
     from:
       all_of:
         - level_eq: 2
-        - color_is: black
+        - color_is: purple
     cost: 0
   - kind: digivolve
     from:

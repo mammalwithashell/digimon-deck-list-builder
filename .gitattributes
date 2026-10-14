@@ -390,3 +390,10 @@ code/digimon-engine/cards/ex12/EX12-063.yaml -text
 code/digimon-engine/tests/cards_behavioral/assembly_material_predicates.rs -text
 code/digimon-engine/tests/cards_behavioral/main.rs -text
 code/digimon-engine/tests/dsl/assembly_play.rs -text
+code/digimon-engine/cards/bt24/BT24-041.yaml -text
+code/digimon-engine/cards/bt24/BT24-085.yaml -text
+code/digimon-engine/cards/bt25/BT25-078.yaml -text
+code/digimon-engine/cards/ex12/EX12-070.yaml -text
+code/digimon-engine/cards/ex12/EX12-071.yaml -text
+code/digimon-engine/tests/cards_behavioral/printed_metadata_routes.rs -text
+code/digimon-engine/tests/fixtures/focused_five_metadata_v6.json -text

@@ -1,7 +1,7 @@
 card: EX12-070
 name: Sanmyojin Arrival
 kind: option
-color: [yellow, green]
+color: [yellow, green, blue]
 cost: 3
 traits: [Shambala, TB]
 
