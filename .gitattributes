@@ -380,3 +380,7 @@ code/tools/clause_coverage/review_source_book_v2.py -text
 /code/digimon-engine/cards/bt16/BT16-033.yaml -text
 /code/digimon-engine/tests/cards_behavioral/bt16/bt16_033.rs -text
 /code/digimon-engine/tests/cards_behavioral/bt16/mod.rs -text
+
+# Preserve independently reviewed native diagnostic source bytes.
+/code/digimon-engine/examples/native_conversion_diagnostic.rs -text
+/code/digimon-engine/examples/native_conversion_diagnostic/controls.rs -text
