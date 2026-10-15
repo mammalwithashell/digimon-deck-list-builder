@@ -583,6 +583,8 @@ pub struct OracleExamOptions<'a> {
     /// On `confirmed`, write the observed state into the scenario's `assert:`.
     pub backfill: bool,
     pub timeout: Duration,
+    /// Claimed-job budget, independent of the result-wait timeout.
+    pub job_timeout: u64,
     pub poll: Duration,
 }
 
@@ -714,6 +716,17 @@ pub fn backfill_message(scenario: &Path, dropped: &[String]) -> String {
     m
 }
 
+fn oracle_job_json(job: &mut crate::exam::job_spec::ExamJobSpec, job_timeout: u64) -> Result<String, String> {
+    // Match LoopConfig's positive, signed-32-bit execution-timeout contract.
+    if !(1..=2147483647).contains(&job_timeout) {
+        return Err("job timeout must be within [1, 2147483647] seconds".into());
+    }
+    job.limits.timeout_seconds = job_timeout;
+    serde_json::to_string_pretty(job)
+        .map(|json| json + "\n")
+        .map_err(|e| format!("serializing job {}: {e}", job.job_id))
+}
+
 /// One call: preflight, then [`run_oracle_exam_loaded`] with the card data
 /// and deck book loaded from `opts`.
 pub fn run_oracle_exam(scenario: &Path, opts: &OracleExamOptions) -> Result<OracleExamResult, String> {
@@ -776,7 +789,7 @@ pub fn run_oracle_exam_loaded(
         .file_stem()
         .and_then(|x| x.to_str())
         .ok_or_else(|| format!("unnamed scenario {}", scenario.display()))?;
-    let job = crate::exam::job_spec::build_exam_job(
+    let mut job = crate::exam::job_spec::build_exam_job(
         stem,
         &s,
         book.resolve(&s.decks.p0.rest)?,
@@ -784,9 +797,7 @@ pub fn run_oracle_exam_loaded(
         &lowered.lowered_steps,
         &lowered.lowered_owners,
     )?;
-    let json = serde_json::to_string_pretty(&job)
-        .map_err(|e| format!("serializing job {}: {e}", job.job_id))?
-        + "\n";
+    let json = oracle_job_json(&mut job, opts.job_timeout)?;
 
     let mut result = OracleExamResult {
         scenario: scenario.display().to_string(),
@@ -1526,6 +1537,7 @@ mod oracle_exam_tests {
                 interaction_denominator: &self.none,
                 backfill: true,
                 timeout,
+                job_timeout: 180,
                 poll: Duration::from_millis(20),
             }
         }
@@ -1694,5 +1706,74 @@ mod oracle_exam_tests {
         let err = run_oracle_exam(&sc, &b.opts(Duration::from_secs(1))).unwrap_err();
         assert!(err.contains("no live player"), "{err}");
         assert_eq!(std::fs::read_dir(b.root.path().join("jobs")).unwrap().count(), 0);
+    }
+}
+
+#[cfg(test)]
+mod job_timeout_payload_tests {
+    use super::*;
+    use crate::exam::job_spec::{ExamDeckOrder, ExamJobSpec, ScriptedInput};
+    use crate::job::{JobDecks, JobLimits};
+
+    fn fixture() -> ExamJobSpec {
+        ExamJobSpec {
+            job_id: "exam-timeout-contract".into(), policy: "scripted".into(),
+            decks: JobDecks { p0: vec!["BT16-033".into()], p1: vec!["EX12-065".into()] },
+            deck_order: ExamDeckOrder { p0: vec!["BT16-033".into()], p1: vec![] },
+            inputs: vec![ScriptedInput { actor: 1, expect_prompt: Some("main_phase".into()),
+                action_id: Some(0), ..ScriptedInput::default() }],
+            first_player: 0, seed: 71,
+            limits: JobLimits { max_turns: 40, timeout_seconds: 180 },
+        }
+    }
+
+    #[test]
+    fn configured_limit_changes_only_the_job_deadline() {
+        let mut job = fixture();
+        let mut expected = serde_json::to_value(&job).unwrap();
+        expected["limits"]["timeout_seconds"] = serde_json::json!(600);
+        let json = oracle_job_json(&mut job, 600).unwrap();
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&json).unwrap(), expected);
+        assert_eq!(job_limit_secs(&json), 600, "claim-age reader must consume the configured deadline");
+        assert!(json.ends_with('\n'));
+    }
+
+    #[test]
+    fn default_serialization_is_byte_identical() {
+        let mut job = fixture();
+        let original = serde_json::to_string_pretty(&job).unwrap() + "\n";
+        assert_eq!(oracle_job_json(&mut job, 180).unwrap(), original);
+    }
+
+    #[test]
+    fn smallest_and_largest_configured_deadlines_survive_json() {
+        for value in [1, 2147483647] {
+            let mut job = fixture();
+            assert_eq!(job_limit_secs(&oracle_job_json(&mut job, value).unwrap()), value);
+        }
+    }
+
+    #[test]
+    fn invalid_api_deadlines_refuse_without_mutating_job() {
+        for value in [0, 2147483648, u64::MAX] {
+            let mut job = fixture();
+            let before = serde_json::to_value(&job).unwrap();
+            assert!(oracle_job_json(&mut job, value).unwrap_err().contains("job timeout"));
+            assert_eq!(serde_json::to_value(&job).unwrap(), before);
+        }
+    }
+
+    #[test]
+    fn oracle_wait_is_not_replaced_by_the_job_deadline() {
+        let opts = OracleExamOptions {
+            root: Path::new("unused"), build: None, cards_json: Path::new("unused.json"),
+            decks: None, verdicts_dir: None, clause_text_json: None,
+            interaction_denominator: Path::new("unused.json"), backfill: false,
+            timeout: Duration::from_secs(720), job_timeout: 600, poll: Duration::from_secs(1),
+        };
+        let mut job = fixture();
+        assert_eq!(job_limit_secs(&oracle_job_json(&mut job, opts.job_timeout).unwrap()), 600);
+        assert_eq!(opts.timeout, Duration::from_secs(720));
+        assert_eq!(opts.poll, Duration::from_secs(1));
     }
 }

@@ -165,6 +165,10 @@ enum Command {
         /// Seconds to wait for each oracle job's result.
         #[arg(long, default_value_t = 300, requires = "oracle")]
         oracle_timeout: u64,
+        /// Claimed-job budget in seconds, written into limits.timeout_seconds.
+        /// Independent of --oracle-timeout; the existing stall grace still applies.
+        #[arg(long, default_value_t = 180, requires = "oracle", conflicts_with_all = ["sim_only", "sidecar", "emit_job"], value_parser = clap::value_parser!(u64).range(1..=2147483647))]
+        job_timeout: u64,
     },
     /// Build a standalone DCGO player and stamp its manifest.
     Build {
@@ -524,6 +528,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             oracle,
             build,
             oracle_timeout,
+            job_timeout,
             ..
         } if *oracle => run_oracle(
             args.root.as_deref(),
@@ -536,6 +541,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             interaction_denominator,
             *backfill,
             std::time::Duration::from_secs(*oracle_timeout),
+            *job_timeout,
         ),
         Command::Exam {
             scenario,
@@ -788,6 +794,7 @@ fn run_oracle(
     interaction_denominator: &Path,
     backfill: bool,
     timeout: std::time::Duration,
+    job_timeout: u64,
 ) -> Result<ExitCode, String> {
     use dcgo_harness::exam::oracle::{preflight, run_oracle_exam_loaded, OracleExamOptions};
 
@@ -824,6 +831,7 @@ fn run_oracle(
         interaction_denominator,
         backfill,
         timeout,
+        job_timeout,
         poll: std::time::Duration::from_secs(1),
     };
 
@@ -1630,9 +1638,79 @@ mod oracle_cli_tests {
             Path::new("none.json"),
             false,
             std::time::Duration::from_secs(1),
+            180,
         )
         .unwrap_err();
         assert!(err.contains("no live player"), "{err}");
         assert_eq!(std::fs::read_dir(root.path().join("jobs")).unwrap().count(), 0);
+    }
+}
+
+#[cfg(test)]
+mod job_timeout_cli_tests {
+    use super::*;
+    use clap::CommandFactory;
+
+    fn parse_timeout(extra: &[&str]) -> Result<clap::ArgMatches, clap::Error> {
+        let mut argv = vec!["dcgo-harness", "exam", "--scenario", "never-read.yaml", "--cards-json", "never-read.json"];
+        argv.extend_from_slice(extra);
+        Args::command().try_get_matches_from(argv)
+    }
+
+    fn timeout(matches: &clap::ArgMatches, name: &str) -> Option<u64> {
+        matches.subcommand_matches("exam").unwrap().try_get_one::<u64>(name).ok().flatten().copied()
+    }
+
+    #[test]
+    fn configured_job_timeout_is_distinct_from_oracle_wait() {
+        let m = parse_timeout(&["--oracle", "--job-timeout", "600", "--oracle-timeout", "720"]).unwrap();
+        assert_eq!(timeout(&m, "job_timeout"), Some(600));
+        assert_eq!(timeout(&m, "oracle_timeout"), Some(720));
+    }
+
+    #[test]
+    fn omitted_job_timeout_preserves_180_default() {
+        let m = parse_timeout(&["--oracle"]).unwrap();
+        assert_eq!(timeout(&m, "job_timeout"), Some(180));
+        assert_eq!(timeout(&m, "oracle_timeout"), Some(300));
+    }
+
+    #[test]
+    fn configured_job_timeout_accepts_both_config_boundaries() {
+        for value in ["1", "2147483647"] {
+            let m = parse_timeout(&["--oracle", "--job-timeout", value]).unwrap();
+            assert_eq!(timeout(&m, "job_timeout"), Some(value.parse().unwrap()));
+        }
+    }
+
+    #[test]
+    fn job_timeout_rejects_invalid_values() {
+        for value in ["0", "-1", "2147483648", "18446744073709551616", "1.5", "true"] {
+            assert!(parse_timeout(&["--oracle", "--job-timeout", value]).is_err(), "{value}");
+        }
+    }
+
+    #[test]
+    fn explicit_job_timeout_requires_oracle() {
+        assert!(parse_timeout(&["--job-timeout", "180"]).is_err());
+        assert!(parse_timeout(&["--sim-only", "--job-timeout", "180"]).is_err());
+        assert!(parse_timeout(&["--sidecar", "saved.jsonl", "--job-timeout", "180"]).is_err());
+        assert!(parse_timeout(&["--sim-only", "--emit-job", "unused", "--job-timeout", "180"]).is_err());
+    }
+
+    #[test]
+    fn ordinary_sim_command_is_unchanged() {
+        let m = parse_timeout(&["--sim-only", "--inspect", "18"]).unwrap();
+        assert!(*m.subcommand_matches("exam").unwrap().get_one::<bool>("sim_only").unwrap());
+    }
+
+    #[test]
+    fn unknown_flag_is_still_refused() {
+        assert!(parse_timeout(&["--oracle", "--job-timeout-typo", "600"]).is_err());
+    }
+
+    #[test]
+    fn duplicate_job_timeout_is_refused() {
+        assert!(parse_timeout(&["--oracle", "--job-timeout", "600", "--job-timeout", "601"]).is_err());
     }
 }

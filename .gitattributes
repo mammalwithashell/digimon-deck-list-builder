@@ -450,3 +450,6 @@ code/digimon-engine/tests/fixtures/ex12_076_assembly_equivalence/original.yaml -
 code/digimon-engine/src/card_store/diagnostic_wire.rs -text
 code/digimon-engine/src/card_store/scoped_diagnostic.rs -text
 code/digimon-engine/tests/focused_card_store.rs -text
+code/tools/dcgo-harness/src/exam/oracle.rs -text
+code/tools/dcgo-harness/src/main.rs -text
+code/tools/dcgo-harness/src/mcp/handlers.rs -text

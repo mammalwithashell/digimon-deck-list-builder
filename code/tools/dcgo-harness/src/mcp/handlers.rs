@@ -610,6 +610,7 @@ fn oracle_run(
         interaction_denominator: &denominator,
         backfill: true,
         timeout: std::time::Duration::from_secs(tools::usize_arg(params, "timeout_seconds", 300) as u64),
+        job_timeout: 180,
         poll: std::time::Duration::from_secs(1),
     };
     crate::exam::oracle::run_oracle_exam(scenario, &opts)
