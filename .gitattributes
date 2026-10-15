@@ -454,3 +454,5 @@ code/tools/dcgo-harness/src/exam/oracle.rs -text
 code/tools/dcgo-harness/src/main.rs -text
 code/tools/dcgo-harness/src/mcp/handlers.rs -text
 /code/digimon-dsl/tests/implementation_inventory_cli.rs -text
+/code/digimon-dsl/tests/implementation_current_equals_witness.rs -text
+/code/digimon-dsl/tests/fixtures/current_equals_witness/three_cards.json -text
