@@ -446,3 +446,7 @@ code/digimon-engine/tests/dsl/main.rs -text
 code/digimon-engine/tests/fixtures/ex12_076_assembly_equivalence/original.yaml -text
 /code/digimon-engine/tests/cards_behavioral/native_four_field_consumers.rs -text
 /code/digimon-engine/tests/fixtures/native_four_field_consumers_v6.json -text
+
+code/digimon-engine/src/card_store/diagnostic_wire.rs -text
+code/digimon-engine/src/card_store/scoped_diagnostic.rs -text
+code/digimon-engine/tests/focused_card_store.rs -text

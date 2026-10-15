@@ -16,6 +16,15 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::card_data::CardData;
 
+#[cfg(feature = "dsl-yaml-loader")]
+use crate::enums::Keyword as DiagnosticKeyword;
+#[cfg(feature = "dsl-yaml-loader")]
+mod diagnostic_wire;
+#[cfg(feature = "dsl-yaml-loader")]
+mod scoped_diagnostic;
+#[cfg(feature = "dsl-yaml-loader")]
+pub use scoped_diagnostic::ScopedDiagnosticStore;
+
 /// The immutable, enriched card store derived from `all_card_data`. Memoized and
 /// shared; reused only for identical original metadata inputs.
 pub struct SharedCardStore {
