@@ -453,3 +453,4 @@ code/digimon-engine/tests/focused_card_store.rs -text
 code/tools/dcgo-harness/src/exam/oracle.rs -text
 code/tools/dcgo-harness/src/main.rs -text
 code/tools/dcgo-harness/src/mcp/handlers.rs -text
+/code/digimon-dsl/tests/implementation_inventory_cli.rs -text
