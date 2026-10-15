@@ -444,3 +444,5 @@ code/digimon-engine/tests/fixtures/gazimon_alt_runtime.json -text
 code/digimon-engine/tests/dsl/assembly_material_equivalence.rs -text
 code/digimon-engine/tests/dsl/main.rs -text
 code/digimon-engine/tests/fixtures/ex12_076_assembly_equivalence/original.yaml -text
+/code/digimon-engine/tests/cards_behavioral/native_four_field_consumers.rs -text
+/code/digimon-engine/tests/fixtures/native_four_field_consumers_v6.json -text

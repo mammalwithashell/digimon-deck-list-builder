@@ -27,6 +27,7 @@ mod assembly_material_predicates;
 mod printed_metadata_routes;
 mod printed_attribute_filters;
 mod printed_form_filters;
+mod native_four_field_consumers;
 mod gazimon_repeated_triggers;
 mod gazimon_optional_scope;
 mod gazimon_alt_paths;
