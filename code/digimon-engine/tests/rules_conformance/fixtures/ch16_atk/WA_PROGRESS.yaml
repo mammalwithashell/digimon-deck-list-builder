@@ -1,0 +1,18 @@
+# WA_PROGRESS -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+#   [When Attacking] This Digimon gains <Progress> for the turn.
+# A <Progress> gained mid-attack protects at once (§16-39-2).
+card: WA_PROGRESS
+name: Latemarchmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] This Digimon gains <Progress> for the turn."
+    process:
+      - grant_keyword:
+          target: source
+          keyword: Progress
+          expiry: end_of_turn

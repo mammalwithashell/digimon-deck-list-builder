@@ -1,0 +1,17 @@
+# IMMUNE -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [All Turns] This Digimon isn't affected by your opponent's effects.
+# Not affected by the opponent's <Collision> (§16-30-4: "all of your
+# opponent's Digimon gain <Blocker>" is processing that affects Digimon).
+card: IMMUNE
+name: Aloofmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: aura
+    target: {}
+    effect_immunity:
+      source_controller: opponent
+    summary: "[All Turns] This Digimon isn't affected by your opponent's effects."

@@ -1,0 +1,13 @@
+# RUSH -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   <Rush> (This Digimon can attack the turn it comes into play.)
+card: RUSH
+name: Dashmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush> (This Digimon can attack the turn it comes into play.)"

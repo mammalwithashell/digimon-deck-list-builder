@@ -1287,9 +1287,11 @@
       "mechanisms": [
         "attack-and-timing"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Control: a direct attack on 0 security cards wins; a <Security A. -2> attacker (0 checks) attacking 0 security cards does not win.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::security_attack_instances_do_not_combine_and_floor_at_zero"
+      ],
       "text": "In this situation, the player that made the attack declaration wins the game. However, they don't win if the attacking Digimon can't perform any security checks. For details, refer to 1-2-3 \"Victory Conditions\")1-2-3"
     },
     "11-5-1-3": {
@@ -5458,22 +5460,27 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Deleted as the attack target or as the attacker, <Retaliation> deletes the Digimon it battled.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::retaliation_mandatory_deletes_battled_digimon"
+      ],
       "text": "<Retaliation> is a keyword effect where a battled opponent's Digimon is deleted when a Digimon with this effect is deleted in battle."
     },
     "16-13-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "e0808def8b55cd54b6651e11816946c6e64f1e9f0f3bf60ba4eb9618f7f87999",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ON-DELETION-DRAINED-BEFORE-DELETION-OBSERVERS",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Timing half proven: an effect deletion does not trigger it, a battle deletion does. Kind half fails: <Retaliation> (an OnDeletion effect) and a simultaneously triggered 'when one of your Digimon is deleted' observer are drained in two separate stages with no TriggerOrder (Retaliation always first). retaliation_kind_matches_rule is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::retaliation_kind_matches_rule",
+        "ch16_attack_keywords::retaliation_timing_matches_rule"
+      ],
       "text": "<Retaliation> is a trigger-type effect that triggers when just the Digimon with this effect is deleted in battle. (For details, refer to 15-8-3 \"Trigger-Type Effects\")15-8-3"
     },
     "16-13-3": {
@@ -5484,9 +5491,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "No decision is offered to either player.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::retaliation_mandatory_deletes_battled_digimon"
+      ],
       "text": "The processing from <Retaliation> is mandatory."
     },
     "16-14": {
@@ -5549,9 +5558,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Played from the hand, a <Rush> Digimon may attack (and does); a plain one played this turn may not.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::rush_attacks_the_turn_it_was_played"
+      ],
       "text": "<Rush> is a keyword effect where the Digimon with this effect can also attack in the same turn it was played."
     },
     "16-15-2": {
@@ -5562,9 +5573,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A Digimon played this turn gains <Rush> from a Tamer aura ('All of your Digimon gain <Rush>') and may attack at once; no decision.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::rush_kind_matches_rule"
+      ],
       "text": "<Rush> is a persistent effect. (For details, refer to 15-8- 2 \"Persistent Effects\")15-8-2"
     },
     "16-16": {
@@ -5581,68 +5594,78 @@
       "text": "<Blitz>"
     },
     "16-16-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "d778aec128af5461b1af4cdea667523c605c1f9ec1464b2c5a19efa36599dfb7",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "After a digivolution pays the memory to 1 on the opponent's side, the turn ends at once: the [When Digivolving] <Blitz> never offers its attack. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::blitz_optionality_matches_rule"
+      ],
       "text": "<Blitz> is a keyword effect where a Digimon with this effect can attack if your opponent has 1 or more memory."
     },
     "16-16-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "328603fde8002d1505f8afaf5078c58bef06791b58034c634d9da38918b24d68",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Same cause: the <Blitz> attack is never offered, so its place inside the effect's processing cannot be observed. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::blitz_kind_matches_rule"
+      ],
       "text": "<Blitz> effects execute processing."
     },
     "16-16-3": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "60219343db57508a25e6f5734ecf8fa3a4505d9edd50bc8820b15b4b42e87e95",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Neither the attack nor its decline is offered. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::blitz_optionality_matches_rule"
+      ],
       "text": "<Blitz> has a processing condition that requires the memory to be at 1 or more on your opponent's side. \"This Digimon may attack\" is optional processing."
     },
     "16-16-4": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "0d42f6969a3ca7e86703ef08206e4c5c78f52328f8cb0fc420891bead538b350",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "The <Blitz> attack is never declared. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::blitz_attack_proceeds_after_memory_returns_to_zero_or_more"
+      ],
       "text": "After using <Blitz> to make an attack declaration, the attack will proceed even if the memory moves to 0 or more.38"
     },
     "16-16-5": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "3761cbb0148f1f0d343686eefb060b1103f687ebd03f0d5125cd9c3821887794",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "The no-attack half holds (memory 0 at activation: no attack); the control (memory on the opponent's side at activation) is never offered the attack. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::blitz_cannot_attack_when_memory_already_zero_or_more"
+      ],
       "text": "An attack can't be made using <Blitz> if the memory is at 0 or more upon activating <Blitz>."
     },
     "16-17": {
@@ -6057,22 +6080,27 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The switch offers only the highest-DP unsuspended Digimon; the attack battles the chosen one and checks nothing.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::raid_switches_to_highest_dp_unsuspended_attacker_chooses_tie"
+      ],
       "text": "<Raid> is a keyword effect that can switch the target of attack to the opponent's unsuspended Digimon with the highest DP when a Digimon with this keyword effect attacks."
     },
     "16-23-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "4522f354b5a17616ecdab28334b9b6b8f785d5453bc43f20ea49449a060d6657",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Timing half proven: another Digimon's attack offers no <Raid>. Kind half fails: <Raid> opens its own RaidOpen window after the [When Attacking] drain instead of pending with it in one TriggerOrder (same substrate as <Alliance>). raid_kind_matches_rule is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::raid_kind_matches_rule",
+        "ch16_attack_keywords::raid_timing_matches_rule"
+      ],
       "text": "<Raid> is a trigger-type effect that triggers when a Digimon with this effect attacks. (For details, refer to 15-8-3 \"Trigger-Type Effects\")15-8-3"
     },
     "16-23-3": {
@@ -6083,9 +6111,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Declining keeps the attack on the player. Matrix row Raid (optional) agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::raid_optionality_matches_rule"
+      ],
       "text": "The processing from <Raid> is optional."
     },
     "16-23-4": {
@@ -6096,9 +6126,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "With two tied highest-DP Digimon the attacking player (P0) is offered both and picks one.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::raid_switches_to_highest_dp_unsuspended_attacker_chooses_tie"
+      ],
       "text": "If the opponent has multiple unsuspended Digimon with the highest DP when <Raid> activates, the player that activated the effect chooses a Digimon from among them and the attack target is switched to it."
     },
     "16-24": {
@@ -6122,9 +6154,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Only when this Digimon attacks; only another unsuspended own Digimon is offered; the DP lasts for the attack only.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::alliance_timing_matches_rule"
+      ],
       "text": "<Alliance> is a keyword effect. When a Digimon with this effect attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to the attacking Digimon and it gains <Security A. +1> for the attack."
     },
     "16-24-2": {
@@ -6135,10 +6169,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "<Alliance> is not a queued trigger-type effect; see 15-4-3-2. Test is #[ignore]d.",
+      "note": "<Alliance> is not a queued trigger-type effect; see 15-4-3-2. Both tests are #[ignore]d.",
       "status": "gap",
       "tests": [
-        "ch15_04_effect_states::when_attacking_and_alliance_share_one_pool"
+        "ch15_04_effect_states::when_attacking_and_alliance_share_one_pool",
+        "ch16_attack_keywords::alliance_kind_matches_rule"
       ],
       "text": "<Alliance> is a trigger-type effect that triggers when a Digimon with this effect attacks. (For details, refer to 15-8-3 \"Trigger-Type Effects\")15-8-3"
     },
@@ -6150,9 +6185,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Declining: no suspension, no DP. Suspending: +DP and <Security A. +1> follow with no further decision. Matrix row Alliance (optional_cost_then_mandatory) agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::alliance_optionality_matches_rule"
+      ],
       "text": "\"By suspending 1 of your other Digimon\" in <Alliance> is an optional processing condition. If the content of that condition is executed, the processing for \"when a Digimon with this effect attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to the attacking Digimon and it gains <Security A. +1> for the attack\" will be mandatory."
     },
     "16-24-4": {
@@ -6163,9 +6200,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A [Counter] -3000 DP on the suspended Digimon leaves the attacker's added DP unchanged.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::alliance_dp_and_sa_persist_after_suspended_digimon_leaves"
+      ],
       "text": "The value added to DP by <Alliance> is the value of the suspended Digimon upon the suspension. The added DP from <Alliance> isn't modified, even if the DP of your suspended Digimon is later modified."
     },
     "16-24-5": {
@@ -6176,9 +6215,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A [Counter] deleting the suspended Digimon leaves the added DP and <Security A. +1>.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::alliance_dp_and_sa_persist_after_suspended_digimon_leaves"
+      ],
       "text": "Even if your Digimon that was suspended by <Alliance> is removed from the battle area during the attack, the added DP and <Security A. +1> remain."
     },
     "16-25": {
@@ -6514,29 +6555,34 @@
       "text": "<Collision>"
     },
     "16-30-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "b98f2cdcdfd77f46069943046dfa3ee618912ff173dfbd42fdc5a6f56c577631",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Forced-block half proven (mandatory block window over every unsuspended opponent Digimon; one that can't suspend isn't forced). Gain-<Blocker> half fails: no <Blocker> is granted (has_keyword false during the attack); block candidacy short-circuits on the attacker's <Collision>. collision_kind_matches_rule is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::collision_forces_block_whenever_possible",
+        "ch16_attack_keywords::collision_kind_matches_rule"
+      ],
       "text": "<Collision> is a keyword effect. While a Digimon with this effect is attacking, all of your opponent's Digimon gain <Blocker> and the opponent player is forced to block whenever possible during the block timing."
     },
     "16-30-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "1511ba084735ea3cd9f9de5d009337204841f504177a579b5b3481287a254f7e",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "The persistent grant is not applied at all (see 16-30-1). #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::collision_kind_matches_rule"
+      ],
       "text": "<Collision> is a persistent effect. (For details, refer to 15-8-2 \"Persistent Effects\")15-8-2"
     },
     "16-30-3": {
@@ -6547,22 +6593,26 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Another Digimon's attack forces no block.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::collision_timing_matches_rule"
+      ],
       "text": "<Collision> will activate while the Digimon with this effect is attacking."
     },
     "16-30-4": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "94657e983f0ec20140f6912a2ad374c65d16a7c9ad897b176a39ee14129157fe",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "A Digimon unaffected by the opponent's effects is still forced into the block window (engine: [0, 1], rule: [1]) and, alone, is still offered. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::collision_blocker_grant_affects_digimon_forced_block_affects_player"
+      ],
       "text": "\"All of your opponent's Digimon gain <Blocker>\" in <Collision> is processing that affects Digimon. \"The opponent player is forced to block whenever possible\" is processing that affects the opponent player."
     },
     "16-31": {
@@ -6730,29 +6780,36 @@
       "text": "<Vortex>"
     },
     "16-33-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "0cc680ee2a3fb25134d4e8df2ef558b151c863305f9393912a8b68a1eef1b427",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Proven: a Digimon played this turn may attack an opponent's suspended Digimon (not the player) at the end of the turn. Fails: the <Vortex> attack is also offered against UNSUSPENDED Digimon (this gap), and it skips the counter / block timings (G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK). Both tests #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::vortex_optional_eot_attack_on_digimon_and_same_turn_played",
+        "ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon",
+        "ch16_attack_keywords::vortex_attack_has_block_timing"
+      ],
       "text": "<Vortex> allows the Digimon with this effect to attack an opponent's Digimon at the end of your turn. <Vortex> is a keyword effect that also allows a Digimon to attack in the same turn it was played."
     },
     "16-33-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "9ac3af1732d2fd1a4588d9b79e7717d9d4c870c92614e7be23d7a8f2b05d7ca1",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Timing half proven (no <Vortex> at the opponent's end of turn). Kind half fails: <Vortex> is not a trigger at all; [End of Your Turn] effects resolve with no TriggerOrder and the attack is offered afterwards in EndOfTurnAction. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::vortex_kind_matches_rule",
+        "ch16_attack_keywords::vortex_timing_matches_rule"
+      ],
       "text": "<Vortex> is a trigger-type effect that triggers at the end of your turn. (For details, refer to 15-8-3 \"Trigger-Type Effects\")15-8-3"
     },
     "16-33-3": {
@@ -6763,9 +6820,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "PASS declines: no battle, the turn passes. Matrix row Vortex (optional) agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::vortex_optional_eot_attack_on_digimon_and_same_turn_played",
+        "ch16_attack_keywords::vortex_optionality_matches_rule"
+      ],
       "text": "The processing from <Vortex> is optional."
     },
     "16-34": {
@@ -6789,22 +6849,27 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Only the specified ([Puppet]) Digimon is offered as the cost; the attack is on the player and the attacker stays unsuspended. The Token half is not staged (no DSL Token fixture).",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::overclock_optional_cost_then_mandatory_attack_without_suspending"
+      ],
       "text": "<Overclock> is a keyword effect. At the end of your turn, by deleting 1 of your Tokens or 1 of your other specified Digimon, the Digimon with this effect attacks a player without suspending. This is shown on cards using text such as <Overclock ([Puppet] Trait)>."
     },
     "16-34-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "d2abce098c733349c81dcc728df5453f32a89e52a3085a72af19a83d50e7d4aa",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Timing half proven (not in the main phase, not at the opponent's end of turn). Kind half fails: <Overclock> is not a trigger; [End of Your Turn] effects resolve with no TriggerOrder and <Overclock> is offered afterwards in EndOfTurnAction. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::overclock_kind_matches_rule",
+        "ch16_attack_keywords::overclock_timing_matches_rule"
+      ],
       "text": "<Overclock> is a trigger-type effect that triggers at the end of your turn. (For details, refer to 15-8-3 \"Trigger- Type Effects\")15-8-341"
     },
     "16-34-3": {
@@ -6815,9 +6880,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Declining the condition: nothing deleted, no attack. Executing it: the attack follows with no decision. Matrix row Overclock (optional_cost_then_mandatory) agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::overclock_optional_cost_then_mandatory_attack_without_suspending",
+        "ch16_attack_keywords::overclock_optionality_matches_rule"
+      ],
       "text": "\"By deleting 1 of your Tokens or 1 of your other specified Digimon\" in <Overclock> is an optional processing condition. If the content of that condition is executed, the processing for \"the Digimon with this effect attacks a player without suspending\" will be mandatory."
     },
     "16-35": {
@@ -6841,9 +6909,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Higher count wins over higher DP, lower count loses, equal counts both lose; applies when the defender has <Iceclad>; a Security Digimon battle compares DP.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::iceclad_compares_digivolution_cards_tie_both_lose_not_vs_security"
+      ],
       "text": "<Iceclad> is a keyword effect where you compare the number of digivolution cards instead of DP when you battle using the Digimon with this effect, other than battles against Security Digimon."
     },
     "16-35-2": {
@@ -6854,9 +6924,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "An <Iceclad> gained by [When Attacking] decides the battle at once; no decision.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::iceclad_kind_matches_rule"
+      ],
       "text": "<Iceclad> is a persistent effect. (For details, refer to 15- 8-2 \"Persistent Effects\")15-8-2"
     },
     "16-35-3": {
@@ -6867,9 +6939,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Higher count wins over higher DP, lower count loses, equal counts both lose; applies when the defender has <Iceclad>; a Security Digimon battle compares DP.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::iceclad_compares_digivolution_cards_tie_both_lose_not_vs_security"
+      ],
       "text": "<Iceclad> is an effect that changes the rules of a battle."
     },
     "16-35-4": {
@@ -6880,9 +6954,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Higher count wins over higher DP, lower count loses, equal counts both lose; applies when the defender has <Iceclad>; a Security Digimon battle compares DP.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::iceclad_compares_digivolution_cards_tie_both_lose_not_vs_security"
+      ],
       "text": "When using <Iceclad> to compare the number of digivolution cards for two cards in a battle, the winner and loser of the battle are determined as follows."
     },
     "16-35-4-1": {
@@ -6893,9 +6969,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Higher count wins over higher DP, lower count loses, equal counts both lose; applies when the defender has <Iceclad>; a Security Digimon battle compares DP.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::iceclad_compares_digivolution_cards_tie_both_lose_not_vs_security"
+      ],
       "text": "The card with the higher number of digivolution cards is the winner."
     },
     "16-35-4-2": {
@@ -6906,9 +6984,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Higher count wins over higher DP, lower count loses, equal counts both lose; applies when the defender has <Iceclad>; a Security Digimon battle compares DP.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::iceclad_compares_digivolution_cards_tie_both_lose_not_vs_security"
+      ],
       "text": "The card with the lower number of digivolution cards is the loser."
     },
     "16-35-4-3": {
@@ -6919,9 +6999,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Higher count wins over higher DP, lower count loses, equal counts both lose; applies when the defender has <Iceclad>; a Security Digimon battle compares DP.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::iceclad_compares_digivolution_cards_tie_both_lose_not_vs_security"
+      ],
       "text": "If both have the same number of digivolution cards, both cards lose the battle."
     },
     "16-36": {
@@ -7058,29 +7140,34 @@
       "text": "<Execute>"
     },
     "16-38-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "b090a85e9f9c4f35e89d7a59494000303d11788a70b96c098e7123119e38c356",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "The end-of-turn attack (an unsuspended Digimon or the player) is offered and resolves; but when another end-of-attack effect pends with the deletion, the attack has already ended (pending_attack cleared) when the deletion resolves, so the <Execute> Digimon is never deleted, in either order. Without another end-of-attack effect it is deleted (tests/keyword_phase_f/execute.rs). #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack"
+      ],
       "text": "<Execute> is a keyword effect. At the end of your turn, the Digimon with this keyword effect may attack. At the end of the attack, this Digimon is deleted. This effect also allows for attacking an opponent's unsuspended Digimon."
     },
     "16-38-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "01e0440be41939f399496200cabe760c9f909e0e54aa9099b61c76b33435c75c",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Timing half proven (a main-phase attack doesn't delete it; nothing at the opponent's end of turn). Kind half fails: <Execute> pends in a TriggerOrder with EOT_MEM, but choosing it first only grants the attack; EOT_MEM resolves before the attack. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::execute_kind_matches_rule",
+        "ch16_attack_keywords::execute_timing_matches_rule"
+      ],
       "text": "<Execute> is a trigger-type effect that triggers at the end of your turn. (For details, refer to 15-8-3 \"Trigger- Type Effects\")15-8-3"
     },
     "16-38-3": {
@@ -7091,22 +7178,26 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "PASS declines: no attack, not deleted, the turn passes. Matrix row Execute (optional) agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::execute_optionality_matches_rule"
+      ],
       "text": "The processing from <Execute> is optional."
     },
     "16-38-4": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "7128885b633f7006c37746edcd94e3a1a4a50abee76aa37d909ca823b1c4509a",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "The deletion does pend with EOA_OBS in one TriggerOrder (the 18-1-2 half holds), but it never deletes (see 16-38-1). #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_attack_keywords::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack"
+      ],
       "text": "The processing from <Execute> for deleting this Digimon at the end of the attack is pending processing. (For details, refer to 18-1 \"Pending Processing\")18-1"
     },
     "16-39": {
@@ -7130,9 +7221,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The opponent's 'when an opponent's Digimon attacks, 1 of your opponent's Digimon gets -3000 DP' can't choose the attacking <Progress> Digimon.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::progress_persistent_only_while_attacking"
+      ],
       "text": "<Progress> is a keyword effect that reads \"this Digimon isn't affected by your opponent's effects while attacking.\""
     },
     "16-39-2": {
@@ -7143,9 +7236,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A <Progress> gained by [When Attacking] protects at once from the opponent's effect resolving after it.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::progress_kind_matches_rule"
+      ],
       "text": "<Progress> is a persistent effect. (For details, refer to 15-8-2 \"Persistent Effects\")15-8-2"
     },
     "16-39-3": {
@@ -7156,9 +7251,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Not attacking (another Digimon attacks), it can be chosen and gets -3000 DP.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::progress_persistent_only_while_attacking"
+      ],
       "text": "<Progress> will activate while the Digimon with this effect is attacking."
     },
     "16-4": {
@@ -7182,9 +7279,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "+1 instances add checks, -2 removes them (floored at 0).",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::security_attack_instances_do_not_combine_and_floor_at_zero"
+      ],
       "text": "<Security A.> is a keyword effect where the Digimon with this effect will have a modified number of security checks according to the number specified for this effect. This is shown on cards using text such as <Security A. +1>."
     },
     "16-4-2": {
@@ -7195,9 +7294,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example: a <Security A. +1> gained by [When Attacking] before the check makes it 2 cards; no decision offered.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::security_attack_kind_matches_rule"
+      ],
       "text": "<Security A.> effects are persistent effects. The number of security checks is modified as soon as the effect is applied. (Example: If a Digimon gained <Security A. +1> at the point when it performs a security check, it will perform 1 additional security check.) (For details, refer to 15-8-2 \"Persistent Effects\")15-8-2"
     },
     "16-4-3": {
@@ -7208,9 +7309,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Two <Security A. +1> instances (own + inherited) check 3 cards. The 'not considered <Security A. +2>' half is not staged (no effect references a <Security A.> value; see G-ENGINE-KEYWORD-REFERENCE-MATCHES-ONE-VALUE for value references).",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::security_attack_instances_do_not_combine_and_floor_at_zero"
+      ],
       "text": "If 1 Digimon has multiple instances of <Security A.>, the number of security checks that can be performed is36 modified according to their numerical values. However, even if a card has multiple instances of <Security A.>, the effect isn't considered to be an effect with the combined values from <Security A.>. (Examples: If a Digimon has 2 instances of <Security A. +1>, the additional number of cards checked will be 2, but the Digimon isn't considered to have <Security A. +2>.)"
     },
     "16-4-4": {
@@ -7221,9 +7324,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "<Security A. -2> on a 1-check attacker checks nothing (security untouched).",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::security_attack_instances_do_not_combine_and_floor_at_zero"
+      ],
       "text": "Even if a negative value is the result of the number of security checks being modified, the actual number of security checks is 0."
     },
     "16-40": {
@@ -7695,9 +7800,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The block window offers the Digimon with <Blocker> (printed or inherited), not a plain one.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::blocker_kind_matches_rule"
+      ],
       "text": "<Blocker> is a keyword effect that applies a rule that allows a Digimon with that effect to block. (For details, refer to 12 \"Blocking\")12-1"
     },
     "16-5-2": {
@@ -7708,9 +7815,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Persistent: the block window is the first decision of the attack; nothing is activated for <Blocker>.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::blocker_kind_matches_rule"
+      ],
       "text": "<Blocker> is a persistent effect. (For details, refer to 15- 8-2 \"Persistent Effects\")15-8-2"
     },
     "16-5-3": {
@@ -7721,9 +7830,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A Digimon with two <Blocker> instances is offered once and, after blocking, no second block is offered.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::blocker_once_per_block_timing_even_with_two_instances"
+      ],
       "text": "Even if 1 Digimon has multiple instances of <Blocker>, the number of blocks that can be performed during the block timing is only 1."
     },
     "16-6": {
@@ -7786,9 +7897,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "An effect battle outside an attack that deletes the opponent Digimon checks nothing (not attacking).",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::piercing_timing_matches_rule"
+      ],
       "text": "<Piercing> is a keyword effect that reads \"When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.\" (For details, refer to 13 \"Security Checks\")"
     },
     "16-7-2": {
@@ -7799,9 +7912,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Deleting the blocker it battled checks security; a battled Digimon saved by <Barrier> (not deleted in battle) triggers no check.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::piercing_kind_matches_rule"
+      ],
       "text": "<Piercing> is a trigger-type effect that triggers and activates when a Digimon with this effect battles an opponent's Digimon and the opponent's Digimon is deleted in battle. (For details, refer to 15-8-3 \"Trigger- Type Effects\")"
     },
     "16-7-3": {
@@ -7812,9 +7927,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The check follows with no decision offered.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::piercing_optionality_matches_rule"
+      ],
       "text": "The security check from using <Piercing> is mandatory."
     },
     "16-7-4": {
@@ -7951,9 +8068,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A <Jamming> gained by [When Attacking] applies to the security battle at once; no decision.",
+      "status": "proven",
+      "tests": [
+        "ch16_attack_keywords::jamming_kind_matches_rule"
+      ],
       "text": "<Jamming> is a persistent effect. (For details, refer to 15-8-2 \"Persistent Effects\")15-8-2"
     },
     "17-1": {
@@ -14916,9 +15035,9 @@
         "total": 10
       },
       "11": {
-        "gap": 31,
+        "gap": 30,
         "not_testable": 8,
-        "proven": 1,
+        "proven": 2,
         "total": 40
       },
       "12": {
@@ -14946,9 +15065,9 @@
         "total": 244
       },
       "16": {
-        "gap": 115,
+        "gap": 78,
         "not_testable": 44,
-        "proven": 47,
+        "proven": 84,
         "total": 206
       },
       "17": {
@@ -15012,15 +15131,15 @@
         "total": 13
       }
     },
-    "gap": 757,
+    "gap": 719,
     "mechanics": {
-      "gap_blocking": 22,
-      "gap_nonblocking": 444,
+      "gap_blocking": 38,
+      "gap_nonblocking": 390,
       "not_testable": 152,
-      "proven": 97
+      "proven": 135
     },
     "not-testable": 246,
-    "proven": 116
+    "proven": 154
   },
   "version": 1
 }

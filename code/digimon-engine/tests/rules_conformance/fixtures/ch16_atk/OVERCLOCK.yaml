@@ -1,0 +1,23 @@
+# OVERCLOCK -- Digimon, Lv.5, red, 6000 DP, play cost 7.
+#   <Overclock ([Puppet] trait)> (At the end of your turn, by deleting 1 of
+#   your Tokens or 1 of your other [Puppet] trait Digimon, this Digimon
+#   attacks a player without suspending.)
+# Production idiom (BT22-036): `overclock_cost_filter` = a Token or the
+# specified Digimon.
+card: OVERCLOCK
+name: Gearmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 6000
+effects:
+  - kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter:
+      any_of:
+        - kind: token
+        - all_of:
+            - kind: digimon
+            - trait_has: Puppet
+    summary: "<Overclock ([Puppet] trait)> (At the end of your turn, by deleting 1 of your Tokens or 1 of your other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)"

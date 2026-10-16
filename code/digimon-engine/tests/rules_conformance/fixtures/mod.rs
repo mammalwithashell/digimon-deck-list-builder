@@ -166,6 +166,38 @@ const CH16_REPL: &[&str] = &[
     include_str!("ch16_repl/SCAPEGOAT.yaml"),
 ];
 
+/// §16-4..§16-39 attack keyword cards (`ch16_attack_keywords.rs`).
+const CH16_ATK: &[&str] = &[
+    include_str!("ch16_atk/ALLIANCE.yaml"),
+    include_str!("ch16_atk/BLITZ.yaml"),
+    include_str!("ch16_atk/BLITZ_WA.yaml"),
+    include_str!("ch16_atk/BLOCKER_INH.yaml"),
+    include_str!("ch16_atk/COLLISION.yaml"),
+    include_str!("ch16_atk/COUNTER_DEL5K.yaml"),
+    include_str!("ch16_atk/COUNTER_MINUS3000.yaml"),
+    include_str!("ch16_atk/EXECUTE.yaml"),
+    include_str!("ch16_atk/ICECLAD.yaml"),
+    include_str!("ch16_atk/IMMUNE.yaml"),
+    include_str!("ch16_atk/OBS_DIGI_LOSE2.yaml"),
+    include_str!("ch16_atk/OBS_OWN_DEL_MEM.yaml"),
+    include_str!("ch16_atk/OPP_WA_MINUS3000.yaml"),
+    include_str!("ch16_atk/OVERCLOCK.yaml"),
+    include_str!("ch16_atk/PIERCING.yaml"),
+    include_str!("ch16_atk/PROGRESS.yaml"),
+    include_str!("ch16_atk/PUPPET.yaml"),
+    include_str!("ch16_atk/RAID.yaml"),
+    include_str!("ch16_atk/RAID_WA.yaml"),
+    include_str!("ch16_atk/RETALIATION.yaml"),
+    include_str!("ch16_atk/RUSH.yaml"),
+    include_str!("ch16_atk/RUSH_AURA.yaml"),
+    include_str!("ch16_atk/SA_MINUS2.yaml"),
+    include_str!("ch16_atk/VORTEX.yaml"),
+    include_str!("ch16_atk/WA_GAIN_SA.yaml"),
+    include_str!("ch16_atk/WA_ICECLAD.yaml"),
+    include_str!("ch16_atk/WA_JAM.yaml"),
+    include_str!("ch16_atk/WA_PROGRESS.yaml"),
+];
+
 /// §17 "Rule Checks" chapter cards (`ch17_rule_checks.rs`).
 const CH17: &[&str] = &[
     include_str!("ch17/LINK_A.yaml"),
@@ -238,6 +270,11 @@ pub fn ch16_repl_cards() -> &'static [&'static str] {
     CH16_REPL
 }
 
+/// Every `ch16_atk/` card's YAML source.
+pub fn ch16_atk_cards() -> &'static [&'static str] {
+    CH16_ATK
+}
+
 /// Every `ch17/` card's YAML source.
 pub fn ch17_cards() -> &'static [&'static str] {
     CH17
@@ -288,6 +325,7 @@ fn every_fixture_file_is_listed() {
         ("ch15_08", CH15_08.len()),
         ("ch16_new", CH16_NEW.len()),
         ("ch16_repl", CH16_REPL.len()),
+        ("ch16_atk", CH16_ATK.len()),
         ("ch17", CH17.len()),
         ("ch18", CH18.len()),
     ] {
