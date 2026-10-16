@@ -29,8 +29,8 @@
 //! `kind: delay` clause beside `place_self_as_delay_option`; `<Blast DNA
 //! Digivolve>` is a `blast_dna_digivolve` alt path; `<Link +>` is a
 //! `ChangeLinkMax` aura; `<Mind Link>` and `<Training>` ride on the
-//! printed-keyword parse (`mind_link_card`, `train_card`); `<Digisorption>`
-//! has no engine path at all (`digisorption_card` loads its printed face).
+//! printed-keyword parse (`mind_link_card`, `train_card`), as does
+//! `<Digisorption>` (`digisorption_card` loads its printed face).
 //! Each fixture card's header names the idiom it uses.
 //!
 //! Fixture cards: `fixtures/common/*.yaml` + `fixtures/ch16_proc/*.yaml` (plus
@@ -441,8 +441,8 @@ fn draw_is_mandatory() {
 // ─── §16-10 <Digisorption> ──────────────────────────────────────────────────
 
 /// `DIGISORB`'s printed face as production would load it from cards.json
-/// (effect text + its red Lv.3 digivolve cost 2): `<Digisorption>` has no
-/// DSL vocabulary, no `Keyword` variant and no `parse_printed_keywords` arm.
+/// (effect text + its red Lv.3 digivolve cost 2): `parse_printed_keywords`
+/// reads `Keyword::Digisorption` off the printed text.
 fn digisorption_card(id: &str, text: &str) -> CardData {
     let mut card = make_test_card(id, "Absorbmon");
     card.level = Some(4);
@@ -664,6 +664,180 @@ fn digisorption_timing_matches_rule() {
         "a digivolution from the hand offers <Digisorption>: {:?}",
         current_prompt(&r)
     );
+}
+
+/// §3-4-7-6 "Trigger conditions can't be met by cards in breeding areas,
+/// except for effects that explicitly specify or reference breeding areas."
+/// §16-10-2 "<Digisorption> is an immediate-type effect that triggers when a
+/// digivolution into a card with this effect in the hand would occur. ..."
+///
+/// P0 digivolves the `FILL` in its BREEDING area into `DIGISORB` from the
+/// hand while `LV4_PLAIN` (unsuspended, could pay the condition) is in its
+/// battle area: the digivolving Digimon is in the breeding area and
+/// <Digisorption> does not reference breeding areas, so it is not offered
+/// (DCGO `BT2_047` likewise requires the digivolving permanent to be in the
+/// battle area). The full cost 2 is paid and `LV4_PLAIN` stays unsuspended.
+#[test]
+fn digisorption_not_offered_for_a_breeding_area_digivolution() {
+    cite!(
+        "3-4-7-6",
+        "28cf3f5f581997bd3dd8df2fdac718cd968e073c9431706ec612efceda45cd52"
+    );
+    cite!(
+        "16-10-2",
+        "a6a10bed2ea37996c30e662df98118930a6e6f7fdba2f0c7efae3f1a8615b815"
+    );
+    let mut r = board_on(
+        ch16_proc().add_card(digisorption_card("DIGISORB", DIGISORB_TEXT)),
+        &["DIGISORB"],
+        &[],
+    );
+    r.place_in_breeding(0, FILL);
+    let other = r.place_on_field(0, "LV4_PLAIN", Some(0));
+    r.game.decode_action(encode_digivolve(0, BREEDING_TARGET), 0);
+    assert!(
+        current_prompt(&r).is_none(),
+        "a breeding-area digivolution offers nothing: {:?}",
+        current_prompt(&r)
+    );
+    let breeding_top = r.game.players[0]
+        .breeding_area
+        .as_ref()
+        .map(|b| b.top_card().card_id(&r.game.card_data).to_string());
+    assert_eq!(breeding_top.as_deref(), Some("DIGISORB"), "it digivolved");
+    assert_eq!(r.memory(), 3, "the full cost 2");
+    assert!(!is_suspended(&r, other));
+}
+
+/// §16-10-3 ""By suspending 1 of your Digimon" in <Digisorption> is an
+/// optional processing condition. ..."
+///
+/// With no Digimon of P0's that can be suspended (the only one, the base
+/// `FILL`, is already suspended), the condition can't be performed:
+/// <Digisorption> is not offered and the full cost 2 is paid.
+#[test]
+fn digisorption_not_offered_without_a_digimon_to_suspend() {
+    cite!(
+        "16-10-3",
+        "096c5b9d397f4219597aea82e472b233ba6032fe1b474ef40de8077ab0639fad"
+    );
+    let mut r = board_on(
+        ch16_proc().add_card(digisorption_card("DIGISORB", DIGISORB_TEXT)),
+        &["DIGISORB"],
+        &[],
+    );
+    let base = r.place_on_field(0, FILL, Some(0));
+    set_suspended(&mut r, base, true);
+    digivolve_into_digisorb(&mut r, base);
+    assert!(
+        current_prompt(&r).is_none(),
+        "nothing to suspend, nothing offered: {:?}",
+        current_prompt(&r)
+    );
+    assert_eq!(stack_ids(&r, base), owned(&[FILL, "DIGISORB"]));
+    assert_eq!(r.memory(), 3);
+}
+
+/// §16-10-1 "... by suspending 1 of your Digimon, the digivolution cost is
+/// reduced according to the value specified in the effect. ..."
+///
+/// While P0 can't reduce digivolution costs (`CannotReduceDigivolveCost`),
+/// <Digisorption> is not offered: nothing is suspended and the full cost 2 is
+/// paid.
+#[test]
+fn digisorption_not_offered_while_digivolution_cost_cannot_be_reduced() {
+    cite!(
+        "16-10-1",
+        "46ffa6072e70675fb7aad16dc7a671b4dfe3bf31402d69494bb9807a3c7af35a"
+    );
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut r, base, other) = digisorption_board(DIGISORB_TEXT);
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotReduceDigivolveCost,
+            0,
+            Expiry::Permanent,
+            None,
+            0,
+        ),
+    );
+    digivolve_into_digisorb(&mut r, base);
+    assert!(
+        current_prompt(&r).is_none(),
+        "no reduction possible, nothing offered: {:?}",
+        current_prompt(&r)
+    );
+    assert_eq!(stack_ids(&r, base), owned(&[FILL, "DIGISORB"]));
+    assert_eq!(r.memory(), 3);
+    assert!(!is_suspended(&r, base) && !is_suspended(&r, other));
+}
+
+/// §16-10-4 "... Multiple instances of <Digisorption> can be activated for a
+/// single digivolution."
+/// §16-10-3 the condition is "by suspending 1 of your Digimon".
+///
+/// `DIGISORB` printed with two <Digisorption -1>, and the base `FILL` is P0's
+/// only Digimon: after the first instance suspends it, no Digimon can pay the
+/// second, so the second is not offered. The cost is 2 - 1 = 1.
+#[test]
+fn digisorption_second_instance_not_offered_once_nothing_can_suspend() {
+    cite!(
+        "16-10-4",
+        "9eaef97b28a20933b73e2847d5d3ba0498fe1f822579d7e51b26efeb9e15fa3b"
+    );
+    cite!(
+        "16-10-3",
+        "096c5b9d397f4219597aea82e472b233ba6032fe1b474ef40de8077ab0639fad"
+    );
+    let mut r = board_on(
+        ch16_proc().add_card(digisorption_card("DIGISORB", DIGISORB_X2_TEXT)),
+        &["DIGISORB"],
+        &[],
+    );
+    let base = r.place_on_field(0, FILL, Some(0));
+    digivolve_into_digisorb(&mut r, base);
+    accept(&mut r, 0);
+    pick_field(&mut r, base.index as u16);
+    assert!(
+        current_prompt(&r).is_none(),
+        "the second <Digisorption -1> has no Digimon to suspend: {:?}",
+        current_prompt(&r)
+    );
+    assert_eq!(stack_ids(&r, base), owned(&[FILL, "DIGISORB"]));
+    assert_eq!(r.memory(), 4, "2 - 1 = 1 paid");
+}
+
+/// §16-10-5 "<Digisorption> can be used to suspend a Digimon that will become
+/// a digivolution card." -- when that Digimon CAN be suspended.
+///
+/// The base `NOSUSP3` ("This Digimon can't suspend") is not among the Digimon
+/// P0 may suspend; `LV4_PLAIN` is the only candidate, and suspending it
+/// reduces the cost 2 to 0.
+#[test]
+fn digisorption_base_that_cannot_suspend_is_not_a_candidate() {
+    cite!(
+        "16-10-5",
+        "bb23bb4ee3301d9acd8de6afd8ca7546e8313f5bebf9271e1a74759ecc1956fb"
+    );
+    let mut r = board_on(
+        ch16_proc().add_card(digisorption_card("DIGISORB", DIGISORB_TEXT)),
+        &["DIGISORB"],
+        &[],
+    );
+    let base = r.place_on_field(0, "NOSUSP3", Some(0));
+    let other = r.place_on_field(0, "LV4_PLAIN", Some(0));
+    digivolve_into_digisorb(&mut r, base);
+    accept(&mut r, 0);
+    let p = current_prompt(&r).expect("P0 chooses the Digimon to suspend");
+    let slots: Vec<u16> = p.actions.iter().map(|&a| a - ATTACK_START).collect();
+    assert_eq!(slots, vec![other.index as u16], "only a Digimon that can suspend");
+    pick_field(&mut r, other.index as u16);
+    settle_declining(&mut r);
+    assert_eq!(stack_ids(&r, base), owned(&["NOSUSP3", "DIGISORB"]));
+    assert!(is_suspended(&r, other));
+    assert_eq!(r.memory(), 5);
 }
 
 // ─── §16-11 <Reboot> ────────────────────────────────────────────────────────
