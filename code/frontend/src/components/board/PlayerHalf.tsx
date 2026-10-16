@@ -5,12 +5,10 @@ import { DeckPile } from './DeckPile';
 import { SecurityStack } from './SecurityStack';
 import { TrashPile } from './TrashPile';
 import type { PlayerState } from '@/types/game';
-import type { BoardStyle } from '@/stores/uiStore';
 
 interface PlayerHalfProps {
   player: PlayerState;
   isOpponent: boolean;
-  boardStyle?: BoardStyle;
   highlightedSlots?: Set<number>;
   /** Slots already picked during a "choose N" selection (marked as selected). */
   selectedSlots?: Set<number>;
@@ -35,7 +33,6 @@ interface PlayerHalfProps {
 export function PlayerHalf({
   player,
   isOpponent,
-  boardStyle = 'classic',
   highlightedSlots,
   selectedSlots,
   targetedSlots,
@@ -96,10 +93,10 @@ export function PlayerHalf({
 
       <div className="ib-player-half__resources">
         <DeckPile count={player.deckCount} />
-        <SecurityStack count={player.securityCount} isOpponent={isOpponent} variant={boardStyle} />
+        <SecurityStack count={player.securityCount} isOpponent={isOpponent} />
         <TrashPile
           count={player.trashIds.length}
-          topCardId={boardStyle === 'arena' ? player.trashIds[player.trashIds.length - 1] ?? null : null}
+          topCardId={player.trashIds[player.trashIds.length - 1] ?? null}
           onClick={onTrashClick}
         />
       </div>

@@ -11,27 +11,24 @@ interface MemoryGaugeProps {
   currentPhase: GamePhase;
   /** Preview cost — positive means memory moves toward opponent */
   previewCost?: number | null;
-  /** `classic`: diamond segments with an Action pill. `arena`: numbered
-   *  coins with a round End Turn button. */
+  /** `classic`: diamond segments with ticks between 1, 5 and 10.
+   *  `arena`: a numbered coin for every step. */
   variant?: BoardStyle;
-  /** Latest decoded action label for the classic Action pill */
-  latestActionLabel?: string | null;
-  /** Arena: end-turn handler; when absent the round button renders disabled. */
+  /** End-turn handler; when absent the round button renders disabled. */
   onEndTurn?: () => void;
-  /** Arena: text on the round end-turn button. */
+  /** Text on the round end-turn button. */
   endTurnLabel?: string;
 }
 
-/** Memory gauge between the two fields, flanked by a phase badge. Classic is
- *  the DCGO-style diamond track; arena is a coin track with an End Turn
- *  button. Player's memory is always on the LEFT. */
+/** Memory gauge between the two fields, flanked by the phase badge and a
+ *  round End Turn button. Classic is the DCGO-style diamond track; arena is
+ *  a coin track. Player's memory is always on the LEFT. */
 export function MemoryGauge({
   value,
   localPlayer,
   currentPhase,
   previewCost,
   variant = 'classic',
-  latestActionLabel,
   onEndTurn,
   endTurnLabel = 'End Turn',
 }: MemoryGaugeProps) {
@@ -111,22 +108,15 @@ export function MemoryGauge({
         </div>
       </div>
 
-      {variant === 'arena' ? (
-        <button
-          type="button"
-          data-testid="board-end-turn"
-          className="ib-end-turn"
-          disabled={!onEndTurn}
-          onClick={onEndTurn}
-        >
-          {endTurnLabel}
-        </button>
-      ) : (
-        <div className="ib-gauge-pill ib-gauge-pill--action">
-          <span>Action</span>
-          {latestActionLabel ?? 'Resolve'}
-        </div>
-      )}
+      <button
+        type="button"
+        data-testid="board-end-turn"
+        className="ib-end-turn"
+        disabled={!onEndTurn}
+        onClick={onEndTurn}
+      >
+        {endTurnLabel}
+      </button>
     </div>
   );
 }

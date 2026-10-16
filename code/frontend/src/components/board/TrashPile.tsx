@@ -9,13 +9,13 @@ interface TrashPileProps {
 
 export function TrashPile({ count, topCardId, onClick }: TrashPileProps) {
   return (
-    <div className="ib-zone ib-zone--clickable">
+    <div className="ib-zone ib-zone--trash ib-zone--clickable">
       <div className="ib-zone__label">Trash</div>
       <div
         className={`ib-zone__body ib-zone__body--trash ${topCardId ? 'has-cards' : ''}`}
         onClick={onClick}
       >
-        {topCardId && <Card cardId={topCardId} size="sm" className="!w-[72px] !h-[100px]" />}
+        {topCardId && <Card cardId={topCardId} size="sm" />}
         <span className="ib-zone__count">{count}</span>
       </div>
     </div>

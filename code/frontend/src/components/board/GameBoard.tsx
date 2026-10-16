@@ -50,8 +50,7 @@ interface GameBoardProps {
   onHandCardInspect?: (cardId: string) => void;
   actionTraces?: ActionTrace[];
   latestTensorSummary?: TensorSummary | null;
-  /** End-turn (pass) handler for the arena board's round button on the
-   *  memory track. Omit when passing is not legal right now; the button then
+  /** End-turn (pass) handler for the round button on the memory track. Omit when passing is not legal right now; the button then
    *  shows disabled. */
   onEndTurn?: () => void;
 }
@@ -149,7 +148,6 @@ export function GameBoard({
     ...fieldHighlights.enemy,
     ...anyFieldHighlights.enemy,
   ]);
-  const latestActionLabel = (actionTraces as unknown as { at(index: number): ActionTrace | undefined }).at(-1)?.decoded.label ?? null;
   const isYourTurn = currentPlayer === 1;
   const endTurnLabel = isYourTurn ? 'End Turn' : 'Enemy Turn';
 
@@ -205,7 +203,6 @@ export function GameBoard({
           <PlayerHalf
             player={player2}
             isOpponent
-            boardStyle={boardStyle}
             highlightedSlots={enemySlots}
             selectedSlots={selectedEnemySlots}
             onTrashClick={onOpponentTrashClick}
@@ -223,7 +220,6 @@ export function GameBoard({
             currentPhase={currentPhase}
             previewCost={previewCost}
             variant={boardStyle}
-            latestActionLabel={latestActionLabel}
             onEndTurn={isYourTurn ? onEndTurn : undefined}
             endTurnLabel={endTurnLabel}
           />
@@ -233,7 +229,6 @@ export function GameBoard({
           <PlayerHalf
             player={player1}
             isOpponent={false}
-            boardStyle={boardStyle}
             highlightedSlots={ownSlots}
             selectedSlots={selectedOwnSlots}
             canHatch={canHatch}

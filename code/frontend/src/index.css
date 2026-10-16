@@ -246,12 +246,13 @@ body {
 
 .ib-board__top-chrome {
   position: absolute;
-  top: 10px;
+  top: 12px;
   left: 14px;
-  right: 14px;
+  right: 22px;
   z-index: 8;
   display: flex;
-  justify-content: center;
+  /* Top-right corner: the top centre belongs to the opponent's hand. */
+  justify-content: flex-end;
   gap: 8px;
   pointer-events: none;
 }
@@ -380,20 +381,13 @@ body {
   text-transform: uppercase;
 }
 
+/* The opponent's face-down fan peeks down from the top edge. */
 .ib-board__opponent-hand {
   position: absolute;
-  top: 8px;
+  top: -46px;
   left: 50%;
   z-index: 5;
-  width: 48%;
-  height: 58px;
-  transform: translateX(-50%);
-  overflow: hidden;
-  opacity: 0.72;
-}
-
-.ib-board__opponent-hand .ib-hand-zone {
-  transform: scale(0.48);
+  transform: translateX(-50%) scale(0.72);
   transform-origin: top center;
 }
 
@@ -407,12 +401,12 @@ body {
   position: absolute;
   left: 16px;
   right: 16px;
-  top: 74px;     /* clears the top chrome + opponent hand */
-  bottom: 146px; /* reserves room for the player hand */
+  top: 66px;     /* clears the opponent's peeking hand */
+  bottom: 150px; /* reserves room for the player hand */
   z-index: 3;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .ib-board__side {
@@ -426,7 +420,7 @@ body {
 .ib-board__gauge {
   flex: 0 0 auto;
   z-index: 9;
-  width: min(96%, 1220px);
+  width: min(98%, 1500px);
   margin: 0 auto;
 }
 
@@ -439,23 +433,29 @@ body {
   max-width: 80%;
 }
 
+/* The hand drops off the bottom edge; hovering a card lifts it clear. */
 .ib-board__hand {
   position: absolute;
   z-index: 12;
   left: 50%;
-  bottom: 8px;
-  width: min(940px, calc(100% - 220px));
+  bottom: -26px;
+  width: min(1000px, calc(100% - 420px));
   transform: translateX(-50%);
 }
 
+/* Each half: eggs + raising on one flank, battle area centre, deck/trash
+   + security on the other. Full width so the flanks stay at the board edges
+   however few permanents are in play.
+
+   The opponent half is the player half turned 180° (as across a real
+   table, and DCGO): its flanks swap sides, its rows swap order, and its
+   raising area hugs the top edge where the player's hugs the bottom. */
 .ib-player-half {
   display: grid;
-  grid-template-columns: 116px minmax(0, 1fr) 116px;
-  gap: 12px;
+  grid-template-columns: 220px minmax(0, 1fr) 220px;
+  gap: 16px;
   align-items: center;
-  max-width: 1240px;
-  /* Full width so the flanks stay put however few permanents are in play
-     (the centred battle area no longer stretches the row on its own). */
+  max-width: 1560px;
   width: 100%;
   margin: 0 auto;
 }
@@ -464,22 +464,41 @@ body {
 .ib-player-half--opp .ib-player-half__battle { grid-column: 2; grid-row: 1; }
 .ib-player-half--opp .ib-player-half__resources { grid-column: 1; grid-row: 1; }
 
-/* DCGO-parity layout: player's raising area sits at the bottom-left of the
-   player field band. The gauge is now a separate flex band above the player
-   field (not a centered overlay), so the previous translateY(56px) nudge that
-   dodged the gauge overlap is no longer needed. */
+/* Eggs then raising, side by side, raising nearer the centre. */
+.ib-player-half__raise {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 14px;
+}
+
 .ib-player-half--you .ib-player-half__raise {
   align-self: end;
 }
 
-.ib-player-half__raise,
-.ib-player-half__resources {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+.ib-player-half--opp .ib-player-half__raise {
+  align-self: start;
+  flex-direction: row-reverse;
+  align-items: flex-start;
 }
+
+/* Deck and trash side by side, security row on the side nearer the hand. */
+.ib-player-half__resources {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  align-items: end;
+  gap: 10px 14px;
+}
+
+.ib-player-half__resources .ib-security { grid-column: 1 / -1; }
+.ib-player-half--you .ib-player-half__resources .ib-zone--deck { grid-row: 1; grid-column: 1; }
+.ib-player-half--you .ib-player-half__resources .ib-zone--trash { grid-row: 1; grid-column: 2; }
+.ib-player-half--you .ib-player-half__resources .ib-security { grid-row: 2; }
+.ib-player-half--opp .ib-player-half__resources { align-items: start; }
+.ib-player-half--opp .ib-player-half__resources .ib-security { grid-row: 1; }
+.ib-player-half--opp .ib-player-half__resources .ib-zone--trash { grid-row: 2; grid-column: 1; }
+.ib-player-half--opp .ib-player-half__resources .ib-zone--deck { grid-row: 2; grid-column: 2; }
 
 .ib-player-half__battle {
   min-width: 0;
@@ -621,7 +640,6 @@ body {
 }
 
 .ib-zone__body,
-.ib-security__shield,
 .ib-raise-zone__empty {
   position: relative;
   display: grid;
@@ -634,8 +652,6 @@ body {
 
 .ib-zone__body::before,
 .ib-zone__body::after,
-.ib-security__shield::before,
-.ib-security__shield::after,
 .ib-raise-zone__empty::before,
 .ib-raise-zone__empty::after {
   content: "";
@@ -647,7 +663,6 @@ body {
 }
 
 .ib-zone__body::before,
-.ib-security__shield::before,
 .ib-raise-zone__empty::before {
   top: -1px;
   left: -1px;
@@ -656,7 +671,6 @@ body {
 }
 
 .ib-zone__body::after,
-.ib-security__shield::after,
 .ib-raise-zone__empty::after {
   right: -1px;
   bottom: -1px;
@@ -664,8 +678,7 @@ body {
   border-top: 0;
 }
 
-.ib-zone__body span,
-.ib-security__shield span {
+.ib-zone__body span {
   color: var(--ib-bone);
   font-size: 22px;
   font-weight: 700;
@@ -723,35 +736,58 @@ body {
   color: var(--ib-opp);
 }
 
-.ib-security__shield {
-  width: 62px;
-  height: 68px;
-  color: currentColor;
-  clip-path: polygon(50% 0, 94% 24%, 84% 85%, 50% 100%, 16% 85%, 6% 24%);
-}
-
-.ib-security__shield span {
-  color: currentColor;
-  font-size: 18px;
-}
-
-.ib-security__tokens {
+/* Security: a row of shields in the side colour, the top one lit. */
+.ib-security__gems {
+  position: relative;
   display: flex;
-  gap: 3px;
-  margin-top: 5px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  max-width: 200px;
+  min-height: 30px;
 }
 
-.ib-security__tokens span {
-  width: 5px;
-  height: 18px;
-  border: 1px solid currentColor;
-  background: oklch(from var(--ib-panel) l c h / 0.7);
-  opacity: 0.66;
+.ib-security__gem {
+  width: 24px;
+  height: 28px;
+  clip-path: polygon(50% 0, 100% 16%, 92% 70%, 50% 100%, 8% 70%, 0 16%);
+  background:
+    linear-gradient(to bottom, oklch(from currentColor l c h / 0.85), oklch(from currentColor l c h / 0.45)),
+    oklch(from var(--ib-panel) l c h / 0.9);
 }
 
-.ib-security__tokens span.is-top {
-  opacity: 1;
-  box-shadow: 0 0 10px currentColor;
+.ib-security__gem.is-top {
+  background: currentColor;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.ib-security__empty {
+  color: var(--ib-bone-dd);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  line-height: 30px;
+}
+
+/* Trash shows its newest card face-up, with the count as a corner tag. */
+.ib-zone__body--trash.has-cards {
+  border-color: transparent;
+  background: none;
+}
+
+.ib-zone__body--trash.has-cards::before,
+.ib-zone__body--trash.has-cards::after {
+  content: none;
+}
+
+.ib-zone__body--trash.has-cards .ib-zone__count {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  z-index: 2;
+  padding: 1px 6px;
+  border: 1px solid var(--ib-line);
+  background: oklch(from var(--ib-panel) l c h / 0.92);
+  font-size: 12px;
 }
 
 .ib-gauge-frame {
@@ -764,6 +800,8 @@ body {
 
 .ib-gauge-bar {
   position: relative;
+  /* Hug the segments so the corner brackets frame the track itself. */
+  justify-self: center;
   display: flex;
   justify-content: center;
   min-width: 0;
@@ -904,6 +942,58 @@ body {
   50% { opacity: 1; }
 }
 
+/* End Turn: a round console button, lit in the player colour when yours. */
+.ib-end-turn {
+  justify-self: start;
+  display: grid;
+  width: 92px;
+  height: 92px;
+  place-items: center;
+  padding: 10px;
+  border: 2px solid var(--ib-player);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 35%, oklch(from var(--ib-player) l c h / 0.30), transparent 70%),
+    oklch(from var(--ib-panel) l c h / 0.92);
+  color: var(--ib-player);
+  box-shadow:
+    inset 0 0 0 4px oklch(from var(--ib-panel) l c h / 0.9),
+    inset 0 0 0 5px oklch(from var(--ib-player) l c h / 0.45),
+    0 0 26px oklch(from var(--ib-player) l c h / 0.45);
+  font-family: var(--ib-font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  text-align: center;
+  text-transform: uppercase;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.ib-end-turn:hover:not(:disabled) {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+
+.ib-end-turn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.ib-end-turn:focus-visible {
+  outline: 2px solid var(--ib-warn);
+  outline-offset: 5px;
+}
+
+.ib-end-turn:disabled {
+  border-color: var(--ib-line);
+  background: oklch(from var(--ib-panel) l c h / 0.8);
+  color: var(--ib-bone-dd);
+  box-shadow: inset 0 0 0 4px oklch(from var(--ib-panel) l c h / 0.9);
+  cursor: default;
+}
+
 .ib-gauge-pill {
   position: relative;
   display: grid;
@@ -944,13 +1034,6 @@ body {
 .ib-gauge-pill--phase {
   color: var(--ib-warn);
   box-shadow: 0 0 24px oklch(0.82 0.17 90 / 0.32);
-}
-
-.ib-gauge-pill--action {
-  color: var(--ib-player);
-  clip-path: polygon(0 0, 92% 0, 100% 30%, 100% 100%, 0 100%);
-  box-shadow: 0 0 28px oklch(0.74 0.17 50 / 0.38);
-  padding: 18px 12px 6px;
 }
 
 .ib-hand-zone {
@@ -1193,15 +1276,7 @@ body {
 .ib-board--arena .ib-board__rings::after { bottom: -170px; }
 
 .ib-board--arena .ib-board__top-chrome {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  right: 22px;
-  z-index: 8;
-  display: flex;
-  justify-content: flex-end;
   gap: 6px;
-  pointer-events: none;
 }
 
 .ib-board--arena .ib-chrome-tag {
@@ -1346,116 +1421,8 @@ body {
   text-transform: uppercase;
 }
 
-/* Opponent's hand: face-down fan peeking down from the top edge. */
-.ib-board--arena .ib-board__opponent-hand {
-  position: absolute;
-  top: -46px;
-  left: 50%;
-  z-index: 5;
-  transform: translateX(-50%) scale(0.72);
-  transform-origin: top center;
-  pointer-events: auto;
-}
-
-/* Flow stage: opponent field / memory track / player field share the height
-   between the opponent hand (top) and the player hand (bottom). The two
-   fields are flex:1 (equal), the track is auto-height between them. */
-.ib-board--arena .ib-board__stage {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  top: 66px;
-  bottom: 150px;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ib-board--arena .ib-board__side {
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.ib-board--arena .ib-board__gauge {
-  flex: 0 0 auto;
-  z-index: 9;
-  width: min(98%, 1500px);
-  margin: 0 auto;
-}
-
-.ib-board--arena .ib-board__revealed {
-  position: absolute;
-  z-index: 11;
-  left: 50%;
-  top: calc(50% + 62px);
-  transform: translateX(-50%);
-  max-width: 80%;
-}
-
-.ib-board--arena .ib-board__hand {
-  position: absolute;
-  z-index: 12;
-  left: 50%;
-  bottom: -26px;
-  width: min(1000px, calc(100% - 420px));
-  transform: translateX(-50%);
-}
-
-/* Each half: raising/eggs on one flank, battle area centre, deck/trash/
-   security on the other flank. The opponent half is mirrored. */
-.ib-board--arena .ib-player-half {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 220px;
-  gap: 16px;
-  align-items: center;
-  max-width: 1560px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-.ib-board--arena .ib-player-half--opp .ib-player-half__raise { grid-column: 3; grid-row: 1; }
-.ib-board--arena .ib-player-half--opp .ib-player-half__battle { grid-column: 2; grid-row: 1; }
-.ib-board--arena .ib-player-half--opp .ib-player-half__resources { grid-column: 1; grid-row: 1; }
-
-.ib-board--arena .ib-player-half__raise {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 14px;
-}
-
-.ib-board--arena .ib-player-half__resources {
-  display: grid;
-  grid-template-columns: auto auto;
-  justify-content: center;
-  align-items: end;
-  gap: 10px 14px;
-}
-
-.ib-board--arena .ib-player-half__resources .ib-security { grid-column: 1 / -1; }
-/* Security sits on the side nearer its owner's hand. */
-.ib-board--arena .ib-player-half--you .ib-player-half__resources .ib-zone { grid-row: 1; }
-.ib-board--arena .ib-player-half--you .ib-player-half__resources .ib-security { grid-row: 2; }
-.ib-board--arena .ib-player-half--opp .ib-player-half__resources .ib-security { grid-row: 1; }
-.ib-board--arena .ib-player-half--opp .ib-player-half__resources .ib-zone { grid-row: 2; }
-
-.ib-board--arena .ib-player-half__battle {
-  min-width: 0;
-}
-
-/* Permanents gather in the centre and wrap; empty slots are not drawn
-   except the one landing spot shown while a playable card is dragged. */
 .ib-board--arena .ib-battle-area {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-content: center;
   gap: 12px 16px;
-  min-height: 150px;
 }
 
 .ib-board--arena .ib-drop-slot {
@@ -1643,6 +1610,9 @@ body {
 }
 
 .ib-board--arena .ib-zone__body--trash > .relative.inline-block {
+  /* Card sizes itself inline; the arena's piles are a step larger. */
+  width: 72px !important;
+  height: 100px !important;
   border-radius: 7px;
   transform: rotate(-4deg);
 }
@@ -1692,7 +1662,7 @@ body {
   --shield: var(--ib-opp);
 }
 
-.ib-board--arena .ib-security__shields {
+.ib-board--arena .ib-security__gems {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -1701,7 +1671,7 @@ body {
   min-height: 34px;
 }
 
-.ib-board--arena .ib-security__shield {
+.ib-board--arena .ib-security__gem {
   width: 30px;
   height: 34px;
   clip-path: polygon(50% 0, 100% 16%, 92% 70%, 50% 100%, 8% 70%, 0 16%);
@@ -1711,7 +1681,7 @@ body {
   filter: drop-shadow(0 3px 3px oklch(0 0 0 / 0.4));
 }
 
-.ib-board--arena .ib-security__shield.is-top {
+.ib-board--arena .ib-security__gem.is-top {
   filter: drop-shadow(0 0 8px var(--shield));
 }
 
@@ -2063,8 +2033,8 @@ body {
   opacity: 1;
 }
 
-.ib-board--arena :is(.ib-zone__body, .ib-raise-zone__empty, .ib-security__shield, .ib-battle-slot--empty, .ib-gauge-bar, .ib-gauge-pill)::before,
-.ib-board--arena :is(.ib-zone__body, .ib-raise-zone__empty, .ib-security__shield, .ib-battle-slot--empty, .ib-gauge-bar)::after {
+.ib-board--arena :is(.ib-zone__body, .ib-raise-zone__empty, .ib-battle-slot--empty, .ib-gauge-bar, .ib-gauge-pill)::before,
+.ib-board--arena :is(.ib-zone__body, .ib-raise-zone__empty, .ib-battle-slot--empty, .ib-gauge-bar)::after {
   content: none;
 }
 
@@ -2078,25 +2048,6 @@ body {
   border: 0;
   background: none;
   backdrop-filter: none;
-}
-
-.ib-board--arena .ib-board__opponent-hand {
-  width: auto;
-  height: auto;
-  overflow: visible;
-  opacity: 1;
-}
-
-.ib-board--arena .ib-board__opponent-hand .ib-hand-zone {
-  transform: none;
-}
-
-.ib-board--arena .ib-player-half__raise {
-  flex-direction: row;
-}
-
-.ib-board--arena .ib-security__shield {
-  border: 0;
 }
 
 .ib-board--arena .ib-gauge-seg {

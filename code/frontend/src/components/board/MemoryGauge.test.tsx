@@ -28,9 +28,13 @@ describe('MemoryGauge arena variant', () => {
 });
 
 describe('MemoryGauge classic variant', () => {
-  it('keeps the action pill and no end-turn button', () => {
-    render(<MemoryGauge value={0} localPlayer={1} currentPhase={GamePhase.Main} latestActionLabel="Play Agumon" />);
-    expect(screen.getByText('Play Agumon')).toBeInTheDocument();
-    expect(screen.queryByTestId('board-end-turn')).not.toBeInTheDocument();
+  it('has the end-turn button and ticks between numbered steps', () => {
+    const onEndTurn = vi.fn();
+    const { container } = render(
+      <MemoryGauge value={0} localPlayer={1} currentPhase={GamePhase.Main} onEndTurn={onEndTurn} />,
+    );
+    fireEvent.click(screen.getByTestId('board-end-turn'));
+    expect(onEndTurn).toHaveBeenCalledOnce();
+    expect(container.querySelectorAll('.ib-gauge-seg.is-tick').length).toBeGreaterThan(0);
   });
 });
