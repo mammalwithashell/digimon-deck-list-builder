@@ -117,7 +117,7 @@
 "15-8-3-9-1":
   status: proven
   tests: ["ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger"]
-  note: "The 15-8-3-9-3 example: 'level 4 or higher' unmet when the observer triggered (level 3 played), met when it activates (digivolved to 4): it activates and gains memory."
+  note: "Two witnesses. The 15-8-3-9-3 example (two branches). Single-branch OBS_OPP_PLAY_GE4 ('if that Digimon is level 4 or higher, gain 1 memory', mandatory): the level 3 play triggers it with the processing condition unmet; digivolved to 4 before activation it activates, otherwise it can't (15-6-3). 'Triggered' is shown through the later activation, not a pending-list entry."
 "15-8-3-9-3":
   status: proven
   tests: ["ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger"]
@@ -138,11 +138,9 @@
   tests: ["ch15_08_effect_categories::immediate_effects_only_simultaneous_with_immediate_effects"]
   note: "A would-be-deleted effect is offered alone before the deletion; the [On Deletion] of the other simultaneously deleted Digimon triggers after it. The positive half (two immediates sharing one ordering choice) is G-REPLACEMENT-NO-ORDER-PROMPT territory and is not asserted here."
 "15-8-5-4":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT
+  status: proven
   tests: ["ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause"]
-  note: "Controller ruling: the cause is the resolving [Main]. New-cause half (a fresh [Main]) passes; same-cause half fails: the second deletion from one [Main] re-offers the replacement (replacement_fired is cleared per depth-0 event). Test is #[ignore]d."
+  note: "Controller ruling (task 8 review, PDF governs; reverses the earlier [Main]-scope ruling): the cause is the interrupting event, i.e. each 'would be deleted' (15-8-5-1/-2; the example closes the window 'until the deletion is resolved'). Two deletions from one [Main] are two causes: the Sukamon effect activates for each. One-event witness: two non-preventing would-be-deleted effects on one Digimon each activate once in that event, then the deletion proceeds. DCGO enforces neither reading for BT11-041 (ChainActivations -1; IsCutInEffectHasUsed stub). G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT retracted."
 "15-8-5-5-2":
   status: proven
   tests: ["ch15_08_effect_categories::immediate_effect_with_condition_met_later_can_activate"]

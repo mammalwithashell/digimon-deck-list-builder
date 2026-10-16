@@ -13,267 +13,25 @@
 //! §15-8-3-9-2 (processing conditions checked at activation) is proven in
 //! `ch15_04_effect_states::pending_effect_whose_condition_lapsed_is_dropped`
 //! and is not repeated here.
+//!
+//! The §15-8-3-8 test reads the played Digimon's level through the
+//! snapshot-reading `event_target_level` formula (the event card's printed
+//! level), while the §15-8-3-9-1/3 test reads it through the live-reading
+//! `event_target_level_gte` / `_eq` conditions (the event permanent's current
+//! top). Both tests show the DSL can express each semantics; they do not show
+//! the engine chooses the right one unaided -- the card author picks it.
 
 use crate::fixtures;
+use crate::support::*;
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
-    ATTACK_START, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
-    PLAY_HAND_START,
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
 };
 use digimon_engine::card_data::parse_printed_keywords;
-use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{GamePhase, Keyword, PlayerId};
-use digimon_engine::events::GameEvent;
+use digimon_engine::enums::{GamePhase, Keyword};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::{OptionPlayResult, SelectionKind};
-
-const FILL: &str = "VANILLA_LV3";
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-/// Card id of a `TriggerOrder` branch: the drainer labels each branch
-/// `"<card_id> slot <n> (<optional|mandatory>)"`.
-fn branch_card(label: &str) -> &str {
-    label.split(" slot ").next().unwrap_or(label)
-}
-
-/// The pending `TriggerOrder` prompt's branch labels. Panics unless the next
-/// decision is a `TriggerOrder` owned by `player`.
-fn order_choices(r: &DebugRunner, player: PlayerId) -> Vec<String> {
-    let sel = r
-        .pending_selection()
-        .unwrap_or_else(|| panic!("expected a TriggerOrder prompt for P{player}; nothing pending"));
-    assert_eq!(
-        sel.kind,
-        SelectionKind::TriggerOrder,
-        "expected a TriggerOrder prompt for P{player}, got {sel:?}"
-    );
-    assert_eq!(
-        sel.selecting_player, player,
-        "the TriggerOrder prompt belongs to the wrong player: {sel:?}"
-    );
-    sel.effect_choices
-        .as_ref()
-        .expect("TriggerOrder branches")
-        .iter()
-        .map(|c| c.label.clone())
-        .collect()
-}
-
-/// Resolve the pending `TriggerOrder` by picking the branch whose label starts
-/// with `prefix` (a card id, or `"<card_id> slot <n>"`).
-fn choose(r: &mut DebugRunner, prefix: &str) {
-    let (player, action) = {
-        let sel = r.pending_selection().expect("a TriggerOrder prompt");
-        assert_eq!(sel.kind, SelectionKind::TriggerOrder, "{sel:?}");
-        let choice = sel
-            .effect_choices
-            .as_ref()
-            .expect("TriggerOrder branches")
-            .iter()
-            .find(|c| c.label == prefix || c.label.starts_with(&format!("{prefix} ")))
-            .unwrap_or_else(|| panic!("no TriggerOrder branch for {prefix}: {sel:?}"));
-        (sel.selecting_player, choice.action_id)
-    };
-    r.execute_action(player, action)
-        .unwrap_or_else(|e| panic!("TriggerOrder pick {prefix} rejected: {e:?}"));
-}
-
-/// Resolve the pending target / replacement prompt by taking its ONLY legal
-/// option. A prompt with several options (or a `TriggerOrder`, which is a
-/// decision the scenario did not expect here) fails the test.
-fn step_prompt(r: &mut DebugRunner) {
-    let sel = r.pending_selection().expect("a pending prompt");
-    assert_ne!(
-        sel.kind,
-        SelectionKind::TriggerOrder,
-        "unexpected ordering decision: {sel:?}"
-    );
-    assert_eq!(
-        sel.valid_action_ids.len(),
-        1,
-        "the scenario stages exactly one legal option: {sel:?}"
-    );
-    let (player, action) = (sel.selecting_player, sel.valid_action_ids[0]);
-    r.execute_action(player, action)
-        .unwrap_or_else(|e| panic!("prompt pick rejected: {e:?}"));
-}
-
-/// `step_prompt` until nothing is pending.
-fn resolve_prompts(r: &mut DebugRunner) {
-    for _ in 0..16 {
-        if r.pending_selection().is_none() {
-            return;
-        }
-        step_prompt(r);
-    }
-    panic!("prompts did not settle after 16 picks");
-}
-
-/// Resolve a pending hand pick by choosing `card_id` from `player`'s hand.
-fn pick_hand_card(r: &mut DebugRunner, player: PlayerId, card_id: &str) {
-    let index = hand_ids(r, player)
-        .iter()
-        .position(|c| c == card_id)
-        .unwrap_or_else(|| panic!("{card_id} not in P{player}'s hand"));
-    let action = PLAY_HAND_START + index as u16;
-    let sel = r.pending_selection().expect("a hand pick");
-    assert_eq!(sel.selecting_player, player, "{sel:?}");
-    assert!(
-        sel.valid_action_ids.contains(&action),
-        "{card_id} (hand index {index}) is a legal pick: {sel:?}"
-    );
-    r.execute_action(player, action)
-        .unwrap_or_else(|e| panic!("hand pick {card_id} rejected: {e:?}"));
-}
-
-/// Resolve a pending own-/opponent-field pick by choosing battle-area `slot`
-/// (`OwnField` / `OppField` encode a slot as `ATTACK_START + slot`).
-fn pick_field(r: &mut DebugRunner, slot: u16) {
-    let action = ATTACK_START + slot;
-    let sel = r.pending_selection().expect("a field pick");
-    assert!(
-        matches!(sel.kind, SelectionKind::OwnField | SelectionKind::OppField),
-        "expected a field pick, got {sel:?}"
-    );
-    assert!(
-        sel.valid_action_ids.contains(&action),
-        "slot {slot} is a legal pick: {sel:?}"
-    );
-    let player = sel.selecting_player;
-    r.execute_action(player, action)
-        .unwrap_or_else(|e| panic!("field pick {slot} rejected: {e:?}"));
-}
-
-/// Accept the pending optional prompt (an optional trigger or an optional
-/// immediate-type effect), asserting it belongs to `player`.
-fn accept(r: &mut DebugRunner, player: PlayerId) {
-    let sel = r.pending_selection().expect("an optional prompt");
-    assert!(sel.is_optional, "expected an optional prompt: {sel:?}");
-    assert_eq!(sel.selecting_player, player, "{sel:?}");
-    r.accept_optional_trigger()
-        .unwrap_or_else(|e| panic!("accept rejected: {e:?}"));
-}
-
-/// Use the Option `card_id` from `player`'s hand ([Main] timing).
-fn use_option(r: &mut DebugRunner, player: PlayerId, card_id: &str) {
-    let index = hand_ids(r, player)
-        .iter()
-        .position(|c| c == card_id)
-        .unwrap_or_else(|| panic!("{card_id} not in P{player}'s hand"));
-    let result = r.game.play_option_from_hand(player, index);
-    assert_ne!(
-        result,
-        OptionPlayResult::Invalid,
-        "{card_id} could not be used (phase {:?})",
-        r.current_phase()
-    );
-}
-
-/// A used Option is trashed as pending processing once its [Main] effect has
-/// resolved (§9-1-5); when triggered effects are pending at that point the
-/// engine asks the turn player to order the trash among them. Trash the
-/// Option first, so the scenario continues with only the triggered effects.
-fn trash_used_option_first(r: &mut DebugRunner) -> bool {
-    let is_option_trash_order = r.pending_selection().is_some_and(|sel| {
-        sel.kind == SelectionKind::TriggerOrder
-            && sel
-                .effect_choices
-                .iter()
-                .flatten()
-                .any(|c| c.label.starts_with("Trash the used Option"))
-    });
-    if is_option_trash_order {
-        choose(r, "Trash the used Option");
-    }
-    is_option_trash_order
-}
-
-/// `resolve_prompts`, trashing a used Option first whenever the engine asks
-/// to order it among pending triggered effects.
-fn settle_after_option(r: &mut DebugRunner) {
-    for _ in 0..16 {
-        if r.pending_selection().is_none() {
-            return;
-        }
-        if !trash_used_option_first(r) {
-            step_prompt(r);
-        }
-    }
-    panic!("prompts did not settle after 16 picks");
-}
-
-/// `(player, source card id)` of every effect-sourced memory change since `cp`,
-/// in event order.
-fn memory_sources(r: &DebugRunner, cp: usize) -> Vec<(PlayerId, String)> {
-    r.events_since(cp)
-        .iter()
-        .filter_map(|e| match e {
-            GameEvent::MemoryChange {
-                player,
-                source_card_id: Some(id),
-                ..
-            } => Some((*player, id.clone())),
-            _ => None,
-        })
-        .collect()
-}
-
-fn card_ids(r: &DebugRunner, cards: &[CardSource]) -> Vec<String> {
-    cards
-        .iter()
-        .map(|c| c.card_id(&r.game.card_data).to_string())
-        .collect()
-}
-
-fn hand_ids(r: &DebugRunner, p: PlayerId) -> Vec<String> {
-    card_ids(r, &r.game.player(p).hand)
-}
-
-fn trash_ids(r: &DebugRunner, p: PlayerId) -> Vec<String> {
-    let mut ids = card_ids(r, &r.game.player(p).trash);
-    ids.sort();
-    ids
-}
-
-fn field_top_ids(r: &DebugRunner, p: PlayerId) -> Vec<String> {
-    r.game
-        .player(p)
-        .battle_area
-        .iter()
-        .map(|perm| perm.top_card().card_id(&r.game.card_data).to_string())
-        .collect()
-}
-
-fn owned(ids: &[&str]) -> Vec<String> {
-    ids.iter().map(|s| s.to_string()).collect()
-}
-
-/// Put a face-down `card_id` at the bottom of `host`'s stack (a card "under"
-/// a Tamer).
-fn attach_face_down(r: &mut DebugRunner, host: PermanentHandle, card_id: &str) {
-    let data_index = r
-        .game
-        .card_data
-        .iter()
-        .position(|c| c.card_id == card_id)
-        .unwrap_or_else(|| panic!("unknown card_id {card_id}"));
-    let index = r.game.next_card_index();
-    let mut card = CardSource::new(data_index, host.player, index);
-    card.face_down = true;
-    r.game.players[host.player as usize].battle_area[host.index as usize]
-        .card_sources
-        .insert(0, card);
-}
-
-fn set_suspended(r: &mut DebugRunner, h: PermanentHandle, suspended: bool) {
-    r.game.players[h.player as usize].battle_area[h.index as usize].is_suspended = suspended;
-}
-
-fn is_suspended(r: &DebugRunner, h: PermanentHandle) -> bool {
-    r.game.players[h.player as usize].battle_area[h.index as usize].is_suspended
-}
+use digimon_engine::selection::SelectionKind;
 
 // ─── §15-8-3-2 ──────────────────────────────────────────────────────────────
 
@@ -640,18 +398,18 @@ fn trigger_reference_tied_to_condition_uses_trigger_time_state() {
 
 // ─── §15-8-3-9-1 / §15-8-3-9-3 ──────────────────────────────────────────────
 
-/// A board for the §15-8-3-9-1/3 test: P1's Tamer `OBS_OPP_PLAY_LVL` (the
-/// rule's example text) on the field; P0 holds `OP_DIGI_LV3` ("[On Play]
-/// This Digimon may digivolve into a level 4 Digimon card in your hand
-/// without paying the cost") and `LV4_PLAIN`. P0 plays `OP_DIGI_LV3`.
-fn processing_reference_board() -> (DebugRunner, PermanentHandle) {
+/// A board for the §15-8-3-9-1/3 test: P1's Tamer `observer` on the field;
+/// P0 holds `OP_DIGI_LV3` ("[On Play] This Digimon may digivolve into a level
+/// 4 Digimon card in your hand without paying the cost") and `LV4_PLAIN`. P0
+/// plays `OP_DIGI_LV3`.
+fn processing_reference_board(observer: &str) -> (DebugRunner, PermanentHandle) {
     let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
         .hand(0, &["OP_DIGI_LV3", "LV4_PLAIN"])
         .deck(0, &[FILL; 4])
         .deck(1, &[FILL; 4])
         .memory(5)
         .start();
-    let tamer = r.place_on_field(1, "OBS_OPP_PLAY_LVL", Some(0));
+    let tamer = r.place_on_field(1, observer, Some(0));
     r.play(0, 0);
     (r, tamer)
 }
@@ -675,6 +433,16 @@ fn processing_reference_board() -> (DebugRunner, PermanentHandle) {
 /// - P0 digivolves it into `LV4_PLAIN` -- it was level 3 when the effect
 ///   triggered ("level 4 or higher" unmet then), but level 4 when referenced
 ///   at processing, so P1 gains 1 memory and doesn't draw.
+///
+/// Single-branch §15-8-3-9-1 witness, `OBS_OPP_PLAY_GE4` ("[All Turns] When
+/// your opponent plays a Digimon, if that Digimon is level 4 or higher, gain 1
+/// memory"; mandatory, no other branch). Its only processing condition is
+/// unmet when the level 3 Digimon is played, so "it triggered" is observable
+/// only through what happens next: if P0 digivolves the Digimon to level 4
+/// before it activates, it activates (it had triggered regardless of the
+/// unmet condition); if P0 doesn't, it can't activate (§15-6-3). An engine
+/// that gated the trigger on the processing condition would gain nothing in
+/// the first board.
 #[test]
 fn processing_condition_checked_at_activation_not_trigger() {
     cite!(
@@ -686,7 +454,7 @@ fn processing_condition_checked_at_activation_not_trigger() {
         "5b7a0031fb2110b5f52c02890fe2231471493a3cf527d6ee65f538904d4ca7ed"
     );
     // Control: no digivolve.
-    let (mut r, tamer) = processing_reference_board();
+    let (mut r, tamer) = processing_reference_board("OBS_OPP_PLAY_LVL");
     let cp = r.event_checkpoint();
     r.execute_action(0, PASS)
         .expect("decline the optional digivolve");
@@ -705,7 +473,7 @@ fn processing_condition_checked_at_activation_not_trigger() {
     );
 
     // Digivolve to level 4 before P1's effect activates.
-    let (mut r, tamer) = processing_reference_board();
+    let (mut r, tamer) = processing_reference_board("OBS_OPP_PLAY_LVL");
     let cp = r.event_checkpoint();
     pick_hand_card(&mut r, 0, "LV4_PLAIN");
     assert_eq!(
@@ -723,6 +491,30 @@ fn processing_condition_checked_at_activation_not_trigger() {
         "level 4 upon being referenced at processing: gain 1 memory"
     );
     assert_eq!(r.hand_size(1), hand1, "and no <Draw 1>");
+
+    // Single branch: triggered at level 3, activates once it is level 4.
+    let (mut r, _) = processing_reference_board("OBS_OPP_PLAY_GE4");
+    let cp = r.event_checkpoint();
+    pick_hand_card(&mut r, 0, "LV4_PLAIN");
+    resolve_prompts(&mut r);
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(1, "OBS_OPP_PLAY_GE4".to_string())],
+        "it triggered on the level 3 play although its processing condition was unmet, and \
+         activated once the condition was met"
+    );
+
+    // Single branch, condition never met: it can't activate.
+    let (mut r, _) = processing_reference_board("OBS_OPP_PLAY_GE4");
+    let cp = r.event_checkpoint();
+    r.execute_action(0, PASS)
+        .expect("decline the optional digivolve");
+    resolve_prompts(&mut r);
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "level 3 when it would activate: no memory: {:?}",
+        memory_sources(&r, cp)
+    );
 }
 
 // ─── §15-8-3-9-4 ────────────────────────────────────────────────────────────
@@ -1015,6 +807,18 @@ fn once_per_cause_board(hand: &[&str]) -> DebugRunner {
     r
 }
 
+/// Prevent one deletion of `SCAPEGOAT_LIKE` (slot 0): pick it as the target,
+/// accept its immediate-type effect, pay with the [Sukamon] in `pay_slot`.
+fn delete_scapegoat_and_prevent(r: &mut DebugRunner, pay_slot: u16) {
+    pick_field(r, 0); // SCAPEGOAT_LIKE
+    accept(r, 1);
+    if r.pending_action_count() == 1 {
+        step_prompt(r);
+    } else {
+        pick_field(r, pay_slot);
+    }
+}
+
 /// §15-8-5-4 "Each immediate-type effect can be activated once until the
 /// cause that first interrupted the immediate-type effect is resolved.
 /// (Example: If "[Main] Delete 1 of your opponent's Digimon" causes "[All
@@ -1024,38 +828,39 @@ fn once_per_cause_board(hand: &[&str]) -> DebugRunner {
 /// deleted, by deleting 1 other Digimon with [Sukamon] in its name, it isn't
 /// deleted" can't activate again.)"
 ///
-/// The rule's own example (`SCAPEGOAT_LIKE`), with two [Sukamon] to pay with,
-/// so payability never decides the outcome. Controller ruling: the cause is
-/// the resolving `[Main]` (DCGO scopes its used-cut-in list to the
-/// `MainProcessingEffect`, `AutoProcessing.cs` `_usedCutinEffects`).
-/// - New cause: two separate `MAIN_DEL1` uses each target it; the effect
-///   activates for each, and it survives both.
-/// - Same cause: `MAIN_DEL2` ("[Main] Delete 1 of your opponent's Digimon.
-///   Then, delete 1 of your opponent's Digimon.") targets it twice. The first
-///   deletion is prevented; the second, from the same `[Main]`, can't use the
-///   effect again, so `SCAPEGOAT_LIKE` is deleted with a [Sukamon] left over.
+/// Controller ruling (task 8 review, PDF governs): the cause is the
+/// interrupting EVENT -- immediate-type effects interrupt "right before the
+/// cause" (§15-8-5-1/-2), here "X would be deleted", and the example closes
+/// the window "until the deletion is resolved". DCGO enforces neither reading
+/// for BT11-041 (`ChainActivations` defaults to -1; `IsCutInEffectHasUsed` is a
+/// stub).
+/// - Two deletions from ONE `[Main]` (`MAIN_DEL2`: "Delete 1 of your
+///   opponent's Digimon. Then, delete 1 of your opponent's Digimon."): the
+///   first deletion of `SCAPEGOAT_LIKE` is resolved (prevented) before "Then,
+///   delete 1" begins, so the second deletion is a new cause and the effect
+///   activates again: both [Sukamon] are spent and it survives.
+/// - Two separate `[Main]` uses (`MAIN_DEL1` twice): the same.
+/// - ONE deletion event: `IMM_TWO_MAY` has two immediate-type effects on
+///   "would be deleted" ("you may gain 1 memory", "you may <Draw 1>"), neither
+///   of which prevents the deletion. Each activates once; after the first one
+///   resolves it is not offered again within that event, and the deletion
+///   then proceeds.
 #[test]
-#[ignore = "G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT (§15-8-5-4)"]
 fn immediate_effect_once_per_interrupting_cause() {
     cite!(
         "15-8-5-4",
         "7586ddc0ccc9332f3ced38f131201eceaf1856a8343ac14248891fafc18fb30b"
     );
-    // New cause: a fresh [Main] each time.
-    let mut r = once_per_cause_board(&["MAIN_DEL1", "MAIN_DEL1"]);
-    use_option(&mut r, 0, "MAIN_DEL1");
-    pick_field(&mut r, 0);
-    accept(&mut r, 1);
-    pick_field(&mut r, 1);
+    // One [Main], two deletions: each deletion is its own cause.
+    let mut r = once_per_cause_board(&["MAIN_DEL2"]);
+    use_option(&mut r, 0, "MAIN_DEL2");
+    delete_scapegoat_and_prevent(&mut r, 1);
     assert_eq!(
         field_top_ids(&r, 1),
         owned(&["SCAPEGOAT_LIKE", "SUKAMON"]),
-        "the first [Main]'s deletion was prevented"
+        "the first deletion was prevented"
     );
-    use_option(&mut r, 0, "MAIN_DEL1");
-    pick_field(&mut r, 0);
-    accept(&mut r, 1); // a new cause: the effect can activate again
-    step_prompt(&mut r); // the remaining SUKAMON
+    delete_scapegoat_and_prevent(&mut r, 1); // "Then, delete 1": a new deletion
     assert!(
         r.pending_selection().is_none(),
         "{:?}",
@@ -1064,33 +869,68 @@ fn immediate_effect_once_per_interrupting_cause() {
     assert_eq!(
         field_top_ids(&r, 1),
         owned(&["SCAPEGOAT_LIKE"]),
-        "the second [Main]'s deletion was prevented too"
+        "the second deletion is a new cause: the effect activated again and prevented it"
     );
     assert_eq!(trash_ids(&r, 1), owned(&["SUKAMON", "SUKAMON"]));
 
-    // Same cause: one [Main] that deletes twice.
-    let mut r = once_per_cause_board(&["MAIN_DEL2"]);
-    use_option(&mut r, 0, "MAIN_DEL2");
-    pick_field(&mut r, 0); // SCAPEGOAT_LIKE
-    accept(&mut r, 1);
-    pick_field(&mut r, 1); // pay with the first SUKAMON
-    assert_eq!(
-        field_top_ids(&r, 1),
-        owned(&["SCAPEGOAT_LIKE", "SUKAMON"]),
-        "the first deletion was prevented"
-    );
-    pick_field(&mut r, 0); // the [Main]'s second deletion: SCAPEGOAT_LIKE again
+    // Two [Main] uses: the same.
+    let mut r = once_per_cause_board(&["MAIN_DEL1", "MAIN_DEL1"]);
+    use_option(&mut r, 0, "MAIN_DEL1");
+    delete_scapegoat_and_prevent(&mut r, 1);
+    use_option(&mut r, 0, "MAIN_DEL1");
+    delete_scapegoat_and_prevent(&mut r, 1);
     assert!(
         r.pending_selection().is_none(),
-        "the already activated immediate-type effect can't activate again for the same cause: {:?}",
+        "{:?}",
         r.pending_selection()
     );
+    assert_eq!(field_top_ids(&r, 1), owned(&["SCAPEGOAT_LIKE"]));
+    assert_eq!(trash_ids(&r, 1), owned(&["SUKAMON", "SUKAMON"]));
+
+    // One deletion event, two non-preventing immediate-type effects.
+    let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
+        .hand(0, &["MAIN_DEL1"])
+        .deck(0, &[FILL; 4])
+        .deck(1, &[FILL; 4])
+        .memory(3)
+        .start();
+    r.place_on_field(0, FILL, Some(0));
+    r.place_on_field(1, "IMM_TWO_MAY", Some(0));
+    let hand1 = r.hand_size(1);
+    let cp = r.event_checkpoint();
+    use_option(&mut r, 0, "MAIN_DEL1");
+    step_prompt(&mut r); // the deletion target
+    let mut accepted = 0;
+    for _ in 0..8 {
+        let Some(sel) = r.pending_selection() else {
+            break;
+        };
+        assert_eq!(sel.selecting_player, 1, "{sel:?}");
+        if sel.is_optional {
+            accepted += 1;
+            accept(&mut r, 1);
+        } else {
+            // An ordering choice between the two: take the first.
+            let action = sel.valid_action_ids[0];
+            r.execute_action(1, action)
+                .unwrap_or_else(|e| panic!("order pick rejected: {e:?}"));
+        }
+    }
     assert_eq!(
-        field_top_ids(&r, 1),
-        owned(&["SUKAMON"]),
-        "SCAPEGOAT_LIKE was deleted although a [Sukamon] was still available"
+        accepted, 2,
+        "each immediate-type effect is offered exactly once for the one deletion"
     );
-    assert_eq!(trash_ids(&r, 1), owned(&["SCAPEGOAT_LIKE", "SUKAMON"]));
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(1, "IMM_TWO_MAY".to_string())],
+        "the memory effect activated once"
+    );
+    assert_eq!(r.hand_size(1), hand1 + 1, "the <Draw 1> activated once");
+    assert_eq!(
+        trash_ids(&r, 1),
+        owned(&["IMM_TWO_MAY"]),
+        "then the deletion proceeded"
+    );
 }
 
 // ─── §15-8-5-5-2 ────────────────────────────────────────────────────────────

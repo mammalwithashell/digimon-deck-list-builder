@@ -21,8 +21,9 @@ const CHAPTER_SOURCES: &[(&str, &str)] = &[
     ),
 ];
 
-/// `main.rs`, `cite.rs`, `meta.rs` are infrastructure, not chapter modules.
-const INFRA_FILES: usize = 3;
+/// `main.rs`, `cite.rs`, `meta.rs`, `support.rs` are infrastructure, not
+/// chapter modules.
+const INFRA_FILES: usize = 4;
 
 #[test]
 fn cite_known_rule_with_correct_fingerprint_passes() {

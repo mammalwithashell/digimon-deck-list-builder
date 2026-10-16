@@ -4736,7 +4736,7 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "The 15-8-3-9-3 example: 'level 4 or higher' unmet when the observer triggered (level 3 played), met when it activates (digivolved to 4): it activates and gains memory.",
+      "note": "Two witnesses. The 15-8-3-9-3 example (two branches). Single-branch OBS_OPP_PLAY_GE4 ('if that Digimon is level 4 or higher, gain 1 memory', mandatory): the level 3 play triggers it with the processing condition unmet; digivolved to 4 before activation it activates, otherwise it can't (15-6-3). 'Triggered' is shown through the later activation, not a pending-list entry.",
       "status": "proven",
       "tests": [
         "ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger"
@@ -4938,15 +4938,15 @@
       "text": "Immediate-type effects will only trigger simultaneously with other immediate-type effects."
     },
     "15-8-5-4": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 15,
       "fingerprint": "7586ddc0ccc9332f3ced38f131201eceaf1856a8343ac14248891fafc18fb30b",
-      "gap_id": "G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT",
+      "gap_id": null,
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Controller ruling: the cause is the resolving [Main]. New-cause half (a fresh [Main]) passes; same-cause half fails: the second deletion from one [Main] re-offers the replacement (replacement_fired is cleared per depth-0 event). Test is #[ignore]d.",
-      "status": "gap",
+      "note": "Controller ruling (task 8 review, PDF governs; reverses the earlier [Main]-scope ruling): the cause is the interrupting event, i.e. each 'would be deleted' (15-8-5-1/-2; the example closes the window 'until the deletion is resolved'). Two deletions from one [Main] are two causes: the Sukamon effect activates for each. One-event witness: two non-preventing would-be-deleted effects on one Digimon each activate once in that event, then the deletion proceeds. DCGO enforces neither reading for BT11-041 (ChainActivations -1; IsCutInEffectHasUsed stub). G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT retracted.",
+      "status": "proven",
       "tests": [
         "ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause"
       ],
@@ -14662,9 +14662,9 @@
         "total": 10
       },
       "15": {
-        "gap": 157,
+        "gap": 156,
         "not_testable": 66,
-        "proven": 21,
+        "proven": 22,
         "total": 244
       },
       "16": {
@@ -14734,15 +14734,15 @@
         "total": 13
       }
     },
-    "gap": 851,
+    "gap": 850,
     "mechanics": {
-      "gap_blocking": 6,
+      "gap_blocking": 5,
       "gap_nonblocking": 535,
       "not_testable": 152,
-      "proven": 22
+      "proven": 23
     },
     "not-testable": 246,
-    "proven": 22
+    "proven": 23
   },
   "version": 1
 }

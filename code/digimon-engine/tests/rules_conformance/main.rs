@@ -13,5 +13,8 @@ mod meta;
 // subdirectory), so `meta::chapter_source_list_is_complete` does not count it.
 mod fixtures;
 
+// Shared prompt-driving / board-reading helpers (infrastructure, no tests).
+mod support;
+
 mod ch15_04_effect_states;
 mod ch15_08_effect_categories;
