@@ -809,9 +809,12 @@ fn bt5_092_clause2_no_offer_when_nokia_already_suspended() {
     assert!(runner.pending_selection().is_none());
 }
 
-/// DCGO HasGreymonName / HasGarurumonName exclude DoruGreymon, BurningGreymon,
-/// DexDoruGreymon and KendoGarurumon (CardSource.cs:1597-1629): digivolving
-/// into any of them gets no offer and pays the full cost.
+/// Bandai's Language Standardization Rules (2026-05-29) treat DoruGreymon,
+/// BurningGreymon and DexDoruGreymon as not having [Greymon] in their names,
+/// and KendoGarurumon as not having [Garurumon], whatever the referencing card
+/// prints (docs/digimon-rules/language-standardization.md; DCGO's
+/// HasGreymonName / HasGarurumonName agree): digivolving into any of them gets
+/// no offer and pays the full cost.
 #[test]
 fn bt5_092_clause2_excluded_greymon_garurumon_names_pay_full_cost() {
     for name in [
@@ -849,7 +852,7 @@ fn bt5_092_clause2_excluded_greymon_garurumon_names_pay_full_cost() {
         assert_eq!(
             memory_before - runner.game.memory,
             3,
-            "{name} is excluded by DCGO's name helper → full cost 3"
+            "{name} is excluded by the Language Standardization Rules → full cost 3"
         );
         assert!(
             !runner.game.players[0].battle_area[nokia.index as usize].is_suspended,
