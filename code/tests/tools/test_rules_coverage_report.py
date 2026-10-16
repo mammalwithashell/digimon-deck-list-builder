@@ -3,8 +3,10 @@ import json
 from pathlib import Path
 
 from tools.rules.coverage_report import (
+    check_proven_quality,
     check_proven_tests_exist,
     collect_rust_test_fns,
+    collect_rust_tests,
     report,
 )
 
@@ -80,3 +82,69 @@ def test_collect_rust_test_fns(tmp_path):
 
 def test_collect_rust_test_fns_missing_dir(tmp_path):
     assert collect_rust_test_fns(tmp_path / "nope") == set()
+
+RULE = "15-4-3-5-1"
+
+
+def _tests(tmp_path, src):
+    (tmp_path / "m.rs").write_text(src, encoding="utf-8")
+    return collect_rust_tests(tmp_path)
+
+
+def test_collect_rust_tests_reports_ignored_and_cited_ids(tmp_path):
+    tests = _tests(
+        tmp_path,
+        '#[test]\nfn a() { cite!("1-1", "ff"); cite!(\n  "2-2"\n); }\n'
+        '#[test]\n#[ignore = "G-X"]\nfn b() { cite!("3-3"); }\n'
+        '#[test]\nfn c() {}\n',
+    )
+    assert tests["m::a"].ignored is False and tests["m::a"].cited_ids == {"1-1", "2-2"}
+    assert tests["m::b"].ignored is True and tests["m::b"].cited_ids == {"3-3"}
+    assert tests["m::c"].cited_ids == frozenset()
+
+
+def test_check_passes_when_a_live_test_cites_the_id(tmp_path):
+    tests = _tests(tmp_path, f'#[test]\nfn t() {{ cite!("{RULE}", "ff"); }}\n')
+    obl = with_status(OBL, RULE, "proven", tests=["m::t"])
+    assert check_proven_quality(obl, tests) == ([], [])
+
+
+def test_check_fails_when_proven_has_no_tests(tmp_path):
+    obl = with_status(OBL, RULE, "proven", tests=[])
+    errors, _ = check_proven_quality(obl, _tests(tmp_path, ""))
+    assert len(errors) == 1 and RULE in errors[0] and "no tests" in errors[0]
+
+
+def test_check_fails_when_only_listed_test_is_ignored(tmp_path):
+    tests = _tests(
+        tmp_path, f'#[test]\n#[ignore = "G-X"]\nfn t() {{ cite!("{RULE}", "ff"); }}\n'
+    )
+    obl = with_status(OBL, RULE, "proven", tests=["m::t"])
+    errors, _ = check_proven_quality(obl, tests)
+    assert len(errors) == 1 and "non-ignored" in errors[0]
+
+
+def test_check_fails_when_no_listed_test_cites_the_id(tmp_path):
+    tests = _tests(tmp_path, '#[test]\nfn t() { cite!("9-9-9", "ff"); }\n')
+    obl = with_status(OBL, RULE, "proven", tests=["m::t"])
+    errors, warnings = check_proven_quality(obl, tests)
+    assert len(errors) == 1 and RULE in errors[0]
+    assert len(warnings) == 1
+
+
+def test_check_fails_when_no_listed_test_exists(tmp_path):
+    obl = with_status(OBL, RULE, "proven", tests=["m::nope"])
+    errors, _ = check_proven_quality(obl, _tests(tmp_path, ""))
+    assert len(errors) == 1 and "exists" in errors[0]
+
+
+def test_check_warns_on_secondary_test_that_does_not_cite(tmp_path):
+    tests = _tests(
+        tmp_path,
+        f'#[test]\nfn primary() {{ cite!("{RULE}", "ff"); }}\n'
+        '#[test]\nfn secondary() { cite!("9-9-9", "ff"); }\n',
+    )
+    obl = with_status(OBL, RULE, "proven", tests=["m::primary", "m::secondary"])
+    errors, warnings = check_proven_quality(obl, tests)
+    assert errors == []
+    assert len(warnings) == 1 and "m::secondary" in warnings[0]

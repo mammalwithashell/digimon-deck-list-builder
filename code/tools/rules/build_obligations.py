@@ -2,7 +2,7 @@
 
 Every numbered rule unit of the Comprehensive Rules (``parse_rules``) is one
 *obligation*. ``qa/rules/cr_obligations.json`` is the generated denominator the
-Rust ``rule_test!`` macro embeds with ``include_str!`` and the coverage report
+Rust ``cite!`` macro embeds with ``include_str!`` and the coverage report
 reads. Statuses are hand-maintained in the sidecar
 ``qa/rules/cr_obligations_status.yaml``; an id absent from the sidecar is a
 ``gap`` (``blocks_training: false``), except heading-only units, which are

@@ -77,8 +77,6 @@ def parse_rules(path: Path) -> list[RuleUnit]:
             break
         if _CHAPTER_HEADING.match(line):
             continue  # "17. Rule Checks": neither a rule nor continuation text
-        if _CHAPTER_HEADING.match(line):
-            continue  # "17. Rule Checks": neither a rule nor continuation text
         m = RULE_RE.match(line)
         if m:
             raw_units.append((m.group(1), [m.group(2)]))

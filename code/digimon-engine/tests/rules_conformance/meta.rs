@@ -142,22 +142,53 @@ fn test_block_splitter_flags_an_uncited_test() {
     assert!(!blocks[1].contains("cite!("));
 }
 
-/// Count of unpinned `cite!("id")` calls (single argument). Chapter tasks may
-/// leave these in a first draft; their last step pins them. Reported, not
-/// failed, so a draft chapter still compiles and runs; the final task gates
-/// on this being zero.
+/// Count of unpinned `cite!("id")` calls (single argument). Every cite in the
+/// chapter modules is pinned to its rule fingerprint, so this must stay zero:
+/// a new unpinned cite would silently skip the renumber/reword guard.
 #[test]
-fn unpinned_cites_are_counted() {
-    let mut unpinned = 0usize;
-    for (_, src) in CHAPTER_SOURCES {
+fn no_unpinned_cites_remain() {
+    let mut unpinned = Vec::new();
+    for (file, src) in CHAPTER_SOURCES {
         for part in src.split("cite!(").skip(1) {
             let args = part.split(')').next().unwrap_or("");
             if !args.contains(',') {
-                unpinned += 1;
+                unpinned.push(format!("{file}: cite!({args})"));
             }
         }
     }
-    eprintln!("unpinned cite! calls in chapter modules: {unpinned}");
+    assert!(
+        unpinned.is_empty(),
+        "{} unpinned cite! call(s) remain:\n{}",
+        unpinned.len(),
+        unpinned.join("\n")
+    );
+}
+
+/// Statically verify every pinned `cite!("<id>", "<64 hex>")` in the chapter
+/// sources, including those inside `#[ignore]`d tests (which never run, so
+/// their runtime `cite!` never fires). Mismatches are all reported at once.
+#[test]
+fn every_pinned_cite_in_source_matches() {
+    let re = regex::Regex::new(r#"cite!\(\s*"([^"]+)"\s*,\s*"([0-9a-f]{64})"\s*,?\s*\)"#).unwrap();
+    let mut checked = 0usize;
+    let mut failures = Vec::new();
+    for (file, src) in CHAPTER_SOURCES {
+        for cap in re.captures_iter(src) {
+            let (id, fp) = (&cap[1], &cap[2]);
+            checked += 1;
+            let result = std::panic::catch_unwind(|| check(id, Some(fp)));
+            if result.is_err() {
+                failures.push(format!("{file}: cite!({id}, {fp}) does not match the denominator"));
+            }
+        }
+    }
+    assert!(checked > 0, "no pinned cites found; the scanner regex is broken");
+    assert!(
+        failures.is_empty(),
+        "{} of {checked} pinned cites are stale or unknown:\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
 }
 
 #[test]

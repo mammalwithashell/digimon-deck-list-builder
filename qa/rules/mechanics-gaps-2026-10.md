@@ -56,7 +56,7 @@ Statuses live in `qa/rules/cr_obligations_status.yaml` (hand-maintained sidecar)
 
 ## Blocking gaps
 
-**31 gap ids** block training (66 obligations). **All 31 are `PDF-explicit`**: the 4.3 text (with, where noted, an official Q&A) settles the expected behaviour, so Plan 3 fixes them without asking. **None is `PDF-silent`.** Seven explicit gaps carry a worksheet question that does not hold up their fix: Vortex target (W2), the end-of-turn attack keywords (W3), DUAL (W5 and W11), infinite loops (W10), Overflow (W11) and Link-at-limit (W12).
+**31 gap ids** block training (66 obligations). **All 31 are `PDF-explicit`**: the 4.3 text (with, where noted, an official Q&A) settles the expected behaviour, so Plan 3 fixes them without asking. **None is `PDF-silent`.** Six explicit gaps carry a worksheet question that does not hold up their fix: Vortex target (W2), the end-of-turn attack keywords (W3), DUAL (W5 and W11), infinite loops (W10), Overflow (W11) and Link-at-limit (W12).
 
 Grouped by the mechanism the defect lives in; when the obligation's Aegis taxonomy tag differs, it is given after the rule id. The tests are those the sidecar lists for the gap's obligations: the red ones are `#[ignore]`d under the gap id and fail with `--include-ignored`; the green ones (other halves of the same obligations) are marked "(green)". "DCGO" and "Aegis" give each reference engine's stance on the rule as the gap entry and Aegis's vendored scenario index (`qa/rules/aegis/conformance-scenario-index.md`) / engine audits (`docs/audits/engine/*.md` at Aegis `ec0cd22f0`) record it.
 

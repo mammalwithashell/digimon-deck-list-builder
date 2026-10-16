@@ -165,6 +165,13 @@ def tier0_suites() -> list[Suite]:
         ),
         Suite(
             tier=0,
+            name="rules_obligations_check",
+            kind="python",
+            command=[PYTHON, "-m", "tools.rules.build_obligations", "--check"],
+            env={"PYTHONPATH": "code"},
+        ),
+        Suite(
+            tier=0,
             name="rules_coverage_report",
             kind="python",
             command=[PYTHON, "code/tools/rules/coverage_report.py"],
@@ -207,6 +214,7 @@ def tier0_suites() -> list[Suite]:
                 "code/tests/tools/test_rules_coverage_report.py",
                 "code/tests/tools/test_rules_build_obligations.py",
                 "code/tests/tools/test_rules_parse.py",
+                "code/tests/tools/test_rules_renumber_map.py",
                 "code/tests/tools/test_faq_conformance_generator.py",
                 "code/tests/tools/test_clause_coverage_authoring_guide.py",
                 "code/tests/tools/test_clause_coverage_readiness.py",

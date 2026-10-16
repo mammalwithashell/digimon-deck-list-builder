@@ -8,8 +8,9 @@
 /// mimalloc as this test binary's global allocator, exactly as
 /// `tests/cards_behavioral/main.rs` does. With the Windows system heap the
 /// target crawls at the default thread count under heap-lock contention
-/// (CLAUDE.md rule 33): measured 741 s without mimalloc vs 15 s with it. `#[global_allocator]` must live in the binary crate,
-/// and an integration-test binary is its own crate, so it goes here.
+/// (CLAUDE.md rule 33): measured 741 s without mimalloc vs 15 s with it.
+/// `#[global_allocator]` must live in the binary crate, and an integration-test
+/// binary is its own crate, so it goes here.
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 

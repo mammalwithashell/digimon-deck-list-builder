@@ -158,10 +158,14 @@ pub fn use_option(r: &mut DebugRunner, player: PlayerId, card_id: &str) {
     );
 }
 
-/// A used Option is trashed as pending processing once its [Main] effect has
-/// resolved (§9-1-5); when triggered effects are pending at that point the
-/// engine asks the turn player to order the trash among them. Trash the
-/// Option first, so the scenario continues with only the triggered effects.
+/// Workaround for `F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE`: the engine
+/// currently offers the turn player a trigger-order choice that includes
+/// "Trash the used Option" when triggered effects are pending after the
+/// Option's [Main] effect resolves. Per §9-1-5 the used Option is trashed as
+/// pending processing once the effect resolves, with no ordering choice, so a
+/// conforming engine would never present this prompt. Until that gap is fixed
+/// this helper picks the trash first, so the scenario continues with only the
+/// triggered effects.
 pub fn trash_used_option_first(r: &mut DebugRunner) -> bool {
     let is_option_trash_order = r.pending_selection().is_some_and(|sel| {
         sel.kind == SelectionKind::TriggerOrder
