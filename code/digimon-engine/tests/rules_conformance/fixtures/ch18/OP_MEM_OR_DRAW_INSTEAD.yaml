@@ -1,0 +1,35 @@
+# OP_MEM_OR_DRAW_INSTEAD -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] Gain 1 memory. If you have a Tamer, you may <Draw 1> instead.
+# Optional overwrite processing (§18-2-2): with a Tamer, the player chooses
+# whether "Gain 1 memory" is replaced by "<Draw 1>". Without one, there is
+# nothing to choose and the normal processing is performed.
+card: OP_MEM_OR_DRAW_INSTEAD
+name: Swapmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] Gain 1 memory. If you have a Tamer, you may <Draw 1> instead."
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Gain 1 memory"
+            - "<Draw 1> instead"
+          legal_when:
+            - {}
+            - any_permanent:
+                of: you
+                kind: tamer
+          prompt: "Gain 1 memory, or <Draw 1> instead"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - gain_memory: 1
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - draw: { of: you, count: 1 }

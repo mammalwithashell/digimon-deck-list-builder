@@ -24,6 +24,10 @@ const CHAPTER_SOURCES: &[(&str, &str)] = &[
         include_str!("ch15_08_effect_categories.rs"),
     ),
     ("ch17_rule_checks.rs", include_str!("ch17_rule_checks.rs")),
+    (
+        "ch18_pending_overwrite.rs",
+        include_str!("ch18_pending_overwrite.rs"),
+    ),
 ];
 
 /// `main.rs`, `cite.rs`, `meta.rs`, `support.rs` are infrastructure, not

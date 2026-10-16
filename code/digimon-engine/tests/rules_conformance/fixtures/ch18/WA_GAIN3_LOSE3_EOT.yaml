@@ -1,0 +1,21 @@
+# WA_GAIN3_LOSE3_EOT -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+# The §18-1-1 example text:
+#   [When Attacking] Gain 3 memory. Lose 3 memory at the end of the turn.
+# "Lose 3 memory at the end of the turn" is pending processing (§18-1-1),
+# processed as if it triggered at the end of the turn.
+card: WA_GAIN3_LOSE3_EOT
+name: Loanmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Gain 3 memory. Lose 3 memory at the end of the turn."
+    process:
+      - gain_memory: 3
+      - schedule_delayed:
+          when: end_of_your_turn
+          body:
+            - lose_memory: 3

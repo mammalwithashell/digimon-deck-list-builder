@@ -113,6 +113,25 @@ const CH17: &[&str] = &[
     include_str!("ch17/ZERO_OD_MEM.yaml"),
 ];
 
+/// §18 "Other Information" chapter cards, with the §9-1-5 and §16-7 cards
+/// (`ch18_pending_overwrite.rs`).
+const CH18: &[&str] = &[
+    include_str!("ch18/GREYMON_LV4.yaml"),
+    include_str!("ch18/INH_PIERCE.yaml"),
+    include_str!("ch18/LOOP_FLIP.yaml"),
+    include_str!("ch18/LOOP_FLIP_MAY.yaml"),
+    include_str!("ch18/MAIN_DEL_6000_OR_LOWEST_IF_GREYMON.yaml"),
+    include_str!("ch18/MAIN_MINUS3000.yaml"),
+    include_str!("ch18/MAIN_PLAY_LV3.yaml"),
+    include_str!("ch18/OBS_OPP_PLAY_MEM.yaml"),
+    include_str!("ch18/OD_DEL_OPP.yaml"),
+    include_str!("ch18/OP_MAY_MEM.yaml"),
+    include_str!("ch18/OP_MEM.yaml"),
+    include_str!("ch18/OP_MEM_OR_DRAW_INSTEAD.yaml"),
+    include_str!("ch18/PIERCE_EOA.yaml"),
+    include_str!("ch18/WA_GAIN3_LOSE3_EOT.yaml"),
+];
+
 /// Every shared card's YAML source.
 pub fn common_cards() -> &'static [&'static str] {
     COMMON
@@ -136,6 +155,11 @@ pub fn ch15_08_cards() -> &'static [&'static str] {
 /// Every `ch17/` card's YAML source.
 pub fn ch17_cards() -> &'static [&'static str] {
     CH17
+}
+
+/// Every `ch18/` card's YAML source.
+pub fn ch18_cards() -> &'static [&'static str] {
+    CH18
 }
 
 /// Register each card of `cards` on `builder`. Panics with the card's compile
@@ -176,6 +200,7 @@ fn every_fixture_file_is_listed() {
         ("ch15_07", CH15_07.len()),
         ("ch15_08", CH15_08.len()),
         ("ch17", CH17.len()),
+        ("ch18", CH18.len()),
     ] {
         let on_disk = std::fs::read_dir(format!("{root}/{dir}"))
             .unwrap_or_else(|e| panic!("read fixtures/{dir}: {e}"))

@@ -1,0 +1,17 @@
+# OBS_OPP_PLAY_MEM -- Tamer, red, play cost 3.
+#   [All Turns] When your opponent plays a Digimon, gain 1 memory.
+# A trigger left pending alongside the §18-3 loops.
+card: OBS_OPP_PLAY_MEM
+name: Witness Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_any_digimon_played
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    summary: "[All Turns] When your opponent plays a Digimon, gain 1 memory."
+    process:
+      - gain_memory: 1

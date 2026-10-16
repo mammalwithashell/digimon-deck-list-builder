@@ -1,0 +1,17 @@
+# OP_MAY_MEM -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] You may gain 1 memory.
+# Its optional decision parks while the [On Play] is activating, so a test can
+# read the board at that moment (§9-1-5: the used Option is already trashed).
+card: OP_MAY_MEM
+name: Maybemon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    optional: true
+    summary: "[On Play] You may gain 1 memory."
+    process:
+      - gain_memory: 1

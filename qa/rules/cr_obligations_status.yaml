@@ -242,3 +242,83 @@
   status: proven
   tests: ["ch17_rule_checks::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers"]
   note: "The rule's example: an '[Opponent's Turn] -3000 DP' aura leaves a 3000 DP Digimon at 0 DP when its controller's turn starts; its [On Deletion] and a [Start of Your Turn] effect are offered in ONE TriggerOrder, nothing activated before the choice."
+
+# ── ch18 Pending / Overwrite Processing, Infinite Loops (§18), §9-1-4/5, §16-7-4..6 — tests/rules_conformance/ch18_pending_overwrite.rs ──
+"18-1-1":
+  status: proven
+  tests: ["ch18_pending_overwrite::pending_processing_fires_at_its_timing_like_a_trigger"]
+  note: "The rule's example '[When Attacking] Gain 3 memory. Lose 3 memory at the end of the turn' (schedule_delayed): after the attack only +3 is applied and the turn goes on; on pass the -3 is processed before P1's TurnStart."
+"18-1-2":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-PENDING-PROCESSING-OUTSIDE-TRIGGER-POOL
+  tests: ["ch18_pending_overwrite::pending_processing_orders_with_simultaneous_triggers"]
+  note: "fire_end_of_your_turn drains the printed [End of Your Turn] effects, then runs scheduled effects with no prompt: with EOT_MEM on board there is no TriggerOrder and the order is always EOT_MEM +2, then the pending -3. Test is #[ignore]d."
+"18-2-1":
+  status: proven
+  tests: ["ch18_pending_overwrite::instead_overwrites_the_normal_processing"]
+  note: "The rule's example Option against 1000/3000/7000 DP: without [Greymon] the deletion is offered on the two 6000-or-less Digimon; with [Greymon] only on the lowest DP one; a lone 7000 DP Digimon is deleted only by the overwriting processing. The DSL author expresses 'instead' with if/else."
+"18-2-3":
+  status: proven
+  tests: ["ch18_pending_overwrite::instead_overwrites_the_normal_processing"]
+  note: "With the condition met, no choice to keep the normal processing is offered: the first decision is the lowest-DP pick, which excludes the 3000 DP Digimon the normal processing allowed."
+"18-2-2":
+  status: proven
+  tests: ["ch18_pending_overwrite::optional_instead_lets_the_player_choose"]
+  note: "'[On Play] Gain 1 memory. If you have a Tamer, you may <Draw 1> instead.' via select_effect_choice + legal_when: no Tamer, no prompt and +1 memory; with a Tamer the player picks, and each branch performs only its own processing. Expressible in the DSL, so no vocab gap."
+"9-1-4":
+  status: proven
+  tests: ["ch18_pending_overwrite::used_option_is_in_no_area_during_its_main"]
+  note: "While the used Option's [Main] waits on its hand pick, the Option is in neither the hand, the trash nor the battle area."
+"9-1-5":
+  status: gap
+  blocks_training: true
+  gap_id: F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE
+  tests: ["ch18_pending_overwrite::used_option_trashed_immediately_after_first_main_uninterrupted"]
+  note: "Two interruptions, both red: (1) the rule check deletes a 0 DP Digimon the [Main] caused before the Option is trashed (its would-be-deleted decision parks with P0's trash empty); (2) a trigger the [Main] caused makes the engine offer 'Trash the used Option' as a TriggerOrder branch. Test is #[ignore]d."
+"18-3-1":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
+  tests: ["ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared"]
+  note: "Definition; pinned with 18-3-2. The engine never recognises a loop: MAX_CHAIN_DEPTH (50) clears the effect queue silently. Test is #[ignore]d."
+"18-3-2":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
+  tests: ["ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared"]
+  note: "A mandatory suspend/unsuspend loop: no GameOver (draw), nothing pending, the game goes on, and the opponent's trigger from the same play is discarded. Test is #[ignore]d."
+"18-3-3":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
+  tests: ["ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it"]
+  note: "A loop with 'you may suspend it': after 24 acceptances the next repetition is not offered (the cap counts prompted iterations) and the opponent's pending trigger is discarded. Test is #[ignore]d."
+"18-3-3-1":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
+  note: "No declaration of a repeat count exists; the conformance test substitutes a per-repetition choice. Untested until the declaration procedure is built."
+"18-3-3-2":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
+  note: "As 18-3-3-1, for the non-turn player."
+"18-3-3-3":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
+  tests: ["ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it"]
+  note: "The player cannot repeat the loop 40 times and then stop it: the engine abandons it at the cap. Test is #[ignore]d."
+"16-7-4":
+  status: proven
+  tests: ["ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack"]
+  note: "The rule's example: <Piercing> deletes a Digimon with '[On Deletion] Gain 1 memory'; event order is the [On Deletion] memory, then the single SecurityReveal, then the attacker's [End of Attack] memory."
+"16-7-5":
+  status: proven
+  tests: ["ch18_pending_overwrite::piercing_checks_security_once_however_many_instances"]
+  note: "Printed + inherited <Piercing> give one security check of 1 card. The second sentence (a modified check count checked in that single check) is not staged; has_keyword is a boolean, so a second instance cannot add a check."
+"16-7-6":
+  status: proven
+  tests: ["ch18_pending_overwrite::piercing_without_the_attacker_checks_nothing"]
+  note: "The deleted defender's '[On Deletion] Delete 1 of your opponent's Digimon' deletes the attacker before <Piercing> is processed: no security card is revealed."

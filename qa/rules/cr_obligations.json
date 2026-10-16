@@ -7659,9 +7659,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example: <Piercing> deletes a Digimon with '[On Deletion] Gain 1 memory'; event order is the [On Deletion] memory, then the single SecurityReveal, then the attacker's [End of Attack] memory.",
+      "status": "proven",
+      "tests": [
+        "ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack"
+      ],
       "text": "<Piercing> is pending processing that is processed immediately before the transition to the end of attack timing. Therefore, it will trigger simultaneously with effects triggered by the battle, but it is processed before the end of the attack. (Example: If a Digimon with <Piercing> attacks and deletes a Digimon with an [On Deletion] effect in the battle, first the [On Deletion] effect is resolved, then <Piercing> is processed.)"
     },
     "16-7-5": {
@@ -7672,9 +7674,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Printed + inherited <Piercing> give one security check of 1 card. The second sentence (a modified check count checked in that single check) is not staged; has_keyword is a boolean, so a second instance cannot add a check.",
+      "status": "proven",
+      "tests": [
+        "ch18_pending_overwrite::piercing_checks_security_once_however_many_instances"
+      ],
       "text": "Only 1 security check can be performed during a single attack, even if <Piercing> activates multiple times. However, if the number of cards that can be checked by the attacking Digimon is modified, that number of cards will be checked in a single security check."
     },
     "16-7-6": {
@@ -7685,9 +7689,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The deleted defender's '[On Deletion] Delete 1 of your opponent's Digimon' deletes the attacker before <Piercing> is processed: no security card is revealed.",
+      "status": "proven",
+      "tests": [
+        "ch18_pending_overwrite::piercing_without_the_attacker_checks_nothing"
+      ],
       "text": "If there are no Digimon to perform a security check at the point when <Piercing> is processed, a security check won't be possible."
     },
     "16-8": {
@@ -8033,22 +8039,26 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example '[When Attacking] Gain 3 memory. Lose 3 memory at the end of the turn' (schedule_delayed): after the attack only +3 is applied and the turn goes on; on pass the -3 is processed before P1's TurnStart.",
+      "status": "proven",
+      "tests": [
+        "ch18_pending_overwrite::pending_processing_fires_at_its_timing_like_a_trigger"
+      ],
       "text": "Pending processing refers to processing for rules or effects that is pending. Pending processing will be processed at the predetermined timing for the corresponding rule or effect, similar to triggered effects. (Example: If an effect reads \"[When Attacking] Gain 3 memory. Lose 3 memory at the end of the turn,\" \"lose 3 memory at the end of the turn\" is pending processing that is processed similar to how it would be processed if it triggered at the end of the turn.)"
     },
     "18-1-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 18,
       "fingerprint": "1b5f8339dafb6d36f24a37380b4ccbcf4131788de779f4d1800da5a65bbd3372",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-PENDING-PROCESSING-OUTSIDE-TRIGGER-POOL",
       "mechanisms": [
         "other-information"
       ],
-      "note": null,
+      "note": "fire_end_of_your_turn drains the printed [End of Your Turn] effects, then runs scheduled effects with no prompt: with EOT_MEM on board there is no TriggerOrder and the order is always EOT_MEM +2, then the pending -3. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch18_pending_overwrite::pending_processing_orders_with_simultaneous_triggers"
+      ],
       "text": "If other processing will be performed at the same time as pending processing, it is performed similar to effects that trigger simultaneously. For details, refer to 15-4-3 \"Simultaneous Triggering\")15-4-3"
     },
     "18-2": {
@@ -8072,9 +8082,11 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example Option against 1000/3000/7000 DP: without [Greymon] the deletion is offered on the two 6000-or-less Digimon; with [Greymon] only on the lowest DP one; a lone 7000 DP Digimon is deleted only by the overwriting processing. The DSL author expresses 'instead' with if/else.",
+      "status": "proven",
+      "tests": [
+        "ch18_pending_overwrite::instead_overwrites_the_normal_processing"
+      ],
       "text": "Overwrite processing refers to when the processing that is normally performed for a rule or effect is overwritten with different processing using \"instead\" in text. (Example: In an effect that reads \"[Main] Delete 1 of your opponent's Digimon with 6000 DP or less. If you have a Digimon with [Greymon] in its name, instead delete 1 of your opponent's Digimon with the lowest DP,\" the overwrite processing is shown right before \"instead.\""
     },
     "18-2-2": {
@@ -8085,9 +8097,11 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "'[On Play] Gain 1 memory. If you have a Tamer, you may <Draw 1> instead.' via select_effect_choice + legal_when: no Tamer, no prompt and +1 memory; with a Tamer the player picks, and each branch performs only its own processing. Expressible in the DSL, so no vocab gap.",
+      "status": "proven",
+      "tests": [
+        "ch18_pending_overwrite::optional_instead_lets_the_player_choose"
+      ],
       "text": "If overwrite processing is optional, it will be possible to choose to overwrite with the different processing shown for the \"instead\" in text, and it will be considered optional processing. (Example: If an effect reads \"[On Play] Reveal the top 4 cards of your deck. Add 2 cards with the [Blue Flare] trait among them to the hand. Return the rest to the bottom of the deck in any order. When you have [Kiriha Aonuma], you may return 1 [MetalGreymon] from your trash to your hand instead,\" while the player has [Kiriha Aonuma], they can choose whether or not the processing is replaced with the processing shown for \"instead,\" and they can choose whether or not they return 1 [MetalGreymon] from their trash to the hand.)"
     },
     "18-2-3": {
@@ -8098,9 +8112,11 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "With the condition met, no choice to keep the normal processing is offered: the first decision is the lowest-DP pick, which excludes the 3000 DP Digimon the normal processing allowed.",
+      "status": "proven",
+      "tests": [
+        "ch18_pending_overwrite::instead_overwrites_the_normal_processing"
+      ],
       "text": "If overwrite processing is mandatory, the processing must be overwritten with the different processing shown for the \"instead\" in text, and it will be considered mandatory processing."
     },
     "18-2-4": {
@@ -8130,81 +8146,89 @@
       "text": "Infinite Loops44"
     },
     "18-3-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 18,
       "fingerprint": "ed4b8654d01a7037421af96f1ccf80ac81741aaff69b040659d881003f0e2d79",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED",
       "mechanisms": [
         "other-information"
       ],
-      "note": null,
+      "note": "Definition; pinned with 18-3-2. The engine never recognises a loop: MAX_CHAIN_DEPTH (50) clears the effect queue silently. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared"
+      ],
       "text": "An infinite loop refers to a state where a set of processing will continue infinitely or must be continued infinitely as a result of processing for a rule or effect, and game progress is no longer possible."
     },
     "18-3-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 18,
       "fingerprint": "989de42a09e690aa1c0e80632ee1aeb9f94eb27d3fdfeff9b09fa784f38f29ca",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED",
       "mechanisms": [
         "other-information"
       ],
-      "note": null,
+      "note": "A mandatory suspend/unsuspend loop: no GameOver (draw), nothing pending, the game goes on, and the opponent's trigger from the same play is discarded. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared"
+      ],
       "text": "If an infinite loop occurs and neither player has the ability to stop it, that game ends in a draw."
     },
     "18-3-3": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 18,
       "fingerprint": "a169b8994a199a4ab6a8c59166edc61777c3d6e87c8fe2315c770341d74cd9c1",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED",
       "mechanisms": [
         "other-information"
       ],
-      "note": null,
+      "note": "A loop with 'you may suspend it': after 24 acceptances the next repetition is not offered (the cap counts prompted iterations) and the opponent's pending trigger is discarded. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it"
+      ],
       "text": "If an infinite loop occurs and one of the players has the ability to stop it, use the following procedure. After performing the following processing, it will not be possible to perform the actions for the same infinite loop again."
     },
     "18-3-3-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 18,
       "fingerprint": "503e182b7f7ee8842c86a89246e6c5d644b3f493e987df5135c4b9f4d1480111",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED",
       "mechanisms": [
         "other-information"
       ],
-      "note": null,
+      "note": "No declaration of a repeat count exists; the conformance test substitutes a per-repetition choice. Untested until the declaration procedure is built.",
       "status": "gap",
       "tests": [],
       "text": "The turn player declares to repeat the processing a certain number of times. If the turn player doesn't have the ability to stop the infinite loop, skip this step and go on to the next step."
     },
     "18-3-3-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 18,
       "fingerprint": "f851d2e3c2051fb0c680025da03d9874223df50cfd8802c5ae549e1da7054cba",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED",
       "mechanisms": [
         "other-information"
       ],
-      "note": null,
+      "note": "As 18-3-3-1, for the non-turn player.",
       "status": "gap",
       "tests": [],
       "text": "The non-turn player declares to repeat the processing a certain number of times. If the non- turn player doesn't have the ability to stop the infinite loop, skip this step and go on to the next step."
     },
     "18-3-3-3": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 18,
       "fingerprint": "ca1e36ce6f3f4e7299e9b32d4fe477ced92d86d03f8f391235592a23b66a6ca0",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED",
       "mechanisms": [
         "other-information"
       ],
-      "note": null,
+      "note": "The player cannot repeat the loop 40 times and then stop it: the engine abandons it at the cap. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it"
+      ],
       "text": "The processing is executed at least the number of times that was declared it would be repeated, then the player stops the processing when possible."
     },
     "2-1": {
@@ -14548,22 +14572,26 @@
       "mechanisms": [
         "card-use-and-costs"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "While the used Option's [Main] waits on its hand pick, the Option is in neither the hand, the trash nor the battle area.",
+      "status": "proven",
+      "tests": [
+        "ch18_pending_overwrite::used_option_is_in_no_area_during_its_main"
+      ],
       "text": "A used Option card is treated as not being in any area during the period from activation of its 1st [Main] effect until it's been resolved."
     },
     "9-1-5": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 9,
       "fingerprint": "2886ba315f2847fdd735e7c839b0b9c80cd0bf7391a1596460851d82cc7eb003",
-      "gap_id": null,
+      "gap_id": "F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE",
       "mechanisms": [
         "card-use-and-costs"
       ],
-      "note": null,
+      "note": "Two interruptions, both red: (1) the rule check deletes a 0 DP Digimon the [Main] caused before the Option is trashed (its would-be-deleted decision parks with P0's trash empty); (2) a trigger the [Main] caused makes the engine offer 'Trash the used Option' as a TriggerOrder branch. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch18_pending_overwrite::used_option_trashed_immediately_after_first_main_uninterrupted"
+      ],
       "text": "A used Option card is immediately trashed as pending processing as soon as the timing when its 1st [Main] effect has been resolved, unless that Option card is considered to be placed in an area. Other effects and rule checks don't interrupt the period between [Main] effect activation and trashing. (For details, refer to 18-1 \"Pending Processing\")"
     },
     "9-1-6": {
@@ -14708,9 +14736,9 @@
         "total": 244
       },
       "16": {
-        "gap": 162,
+        "gap": 159,
         "not_testable": 44,
-        "proven": 0,
+        "proven": 3,
         "total": 206
       },
       "17": {
@@ -14720,9 +14748,9 @@
         "total": 16
       },
       "18": {
-        "gap": 12,
+        "gap": 8,
         "not_testable": 3,
-        "proven": 0,
+        "proven": 4,
         "total": 15
       },
       "2": {
@@ -14768,21 +14796,21 @@
         "total": 55
       },
       "9": {
-        "gap": 12,
+        "gap": 11,
         "not_testable": 1,
-        "proven": 0,
+        "proven": 1,
         "total": 13
       }
     },
-    "gap": 841,
+    "gap": 833,
     "mechanics": {
-      "gap_blocking": 14,
-      "gap_nonblocking": 517,
+      "gap_blocking": 15,
+      "gap_nonblocking": 512,
       "not_testable": 152,
-      "proven": 32
+      "proven": 36
     },
     "not-testable": 246,
-    "proven": 32
+    "proven": 40
   },
   "version": 1
 }
