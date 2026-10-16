@@ -17,6 +17,11 @@ ratio is >= 0.9, else the best unused old unit, (4) any old unit still unpaired
 whose id also exists as a still-unpaired new unit is paired when the ratio is
 >= 0.4 and reported ``reworded`` -- a rule that kept its number but was
 rewritten (e.g. a reversed ruling) is the most important migration case.
+
+An id may legitimately appear in both ``added`` and ``removed``: the number was
+reused for unrelated text (similarity below 0.4, 15 such ids today). That is a
+reuse of the number, not a collision -- the old rule is gone and the new one is
+new.
 """
 from __future__ import annotations
 

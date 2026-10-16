@@ -1,6 +1,9 @@
+import difflib
 from pathlib import Path
 
 from tools.rules.parse_rules import RuleUnit, parse_rules
+from tools.rules.renumber_map import FUZZY_MIN as FUZZY_MIN_FOR_TEST
+from tools.rules.renumber_map import SAME_ID_REWRITE_MIN as SAME_ID_MIN_FOR_TEST
 from tools.rules.renumber_map import build_map
 
 REPO = Path(__file__).resolve().parents[3]
@@ -35,13 +38,25 @@ def test_same_id_rewrite_pass_four_on_synthetic_units():
     def unit(i, t):
         return RuleUnit(i, int(i.split("-")[0]), t, t, "x")
 
-    old = [unit("1-1", "the quick brown fox jumps over the lazy dog today")]
-    new = [unit("1-1", "a quick brown fox leaps over the very lazy dog now")]
-    m = build_map(old, new)
+    def ratio(a, b):
+        return difflib.SequenceMatcher(None, a, b).ratio()
+
+    base = "the quick brown fox jumps over the lazy dog today"
+    rewritten = "the quick red owl sleeps under a busy mouse tonight"
+    unrelated = "one red dog runs by the quiet fox soon"
+    # Pin the ratios so the fixtures cannot drift out of the pass-4 band.
+    assert FUZZY_MIN_FOR_TEST > ratio(base, rewritten) >= SAME_ID_MIN_FOR_TEST
+    assert ratio(base, unrelated) < SAME_ID_MIN_FOR_TEST
+
+    # In [0.4, 0.6): only pass 4 can pair it, and it lands in reworded.
+    m = build_map([unit("1-1", base)], [unit("1-1", rewritten)])
     assert [(r["old"], r["new"]) for r in m["reworded"]] == [("1-1", "1-1")]
     assert m["added"] == [] and m["removed"] == []
-    unrelated = build_map(old, [unit("1-1", "zzz qqq xxx")])
-    assert unrelated["added"] == ["1-1"] and unrelated["removed"] == ["1-1"]
+
+    # Below 0.4 the same id stays in both added and removed.
+    m = build_map([unit("1-1", base)], [unit("1-1", unrelated)])
+    assert m["reworded"] == [] and m["renumbered"] == {}
+    assert m["added"] == ["1-1"] and m["removed"] == ["1-1"]
 
 
 def test_added_includes_new_keywords():
