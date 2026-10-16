@@ -342,6 +342,8 @@ fn bt25_100_security_flip_links_to_defenders_digimon() {
     runner
         .execute_action(1, encode_attack(0, attacker.index as u16))
         .expect("defender picks the attacking stack");
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(runner.declare_max_count().expect("declare 2"));
 
     // [Main] step 2: the link tail — an OPTIONAL own-Digimon pick, asked even
     // though the card came from security.
@@ -403,6 +405,8 @@ fn bt25_100_security_flip_declined_link_trashes_the_card_once() {
     runner
         .execute_action(1, encode_attack(0, attacker.index as u16))
         .expect("defender picks the attacking stack");
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(runner.declare_max_count().expect("declare 2"));
     let lview = runner.pending_selection_view().expect("link-host prompt");
     assert!(lview.is_optional);
     runner.execute_action(1, PASS).expect("decline the link");
@@ -440,6 +444,8 @@ fn bt25_100_security_flip_without_host_trashes_the_card() {
     runner
         .execute_action(1, encode_attack(0, attacker.index as u16))
         .expect("defender picks the attacking stack");
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(runner.declare_max_count().expect("declare 2"));
     assert!(
         runner.pending_selection().is_none(),
         "no host → no link prompt"
