@@ -1,0 +1,19 @@
+# MAIN_DEL_OWN_MEM -- Option, red, use cost 0.
+#   [Main] Delete 1 of your Digimon. Then, gain 1 memory.
+# A player's own effect removing their own Digimon (the "by your effects"
+# controls of <Guard> / <Detach>), and the §4-19-2 <Overflow> cause.
+card: MAIN_DEL_OWN_MEM
+name: Self Sacrifice
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Delete 1 of your Digimon. Then, gain 1 memory."
+    process:
+      - select_own_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your Digimon"
+      - delete_permanent: { target: victim }
+      - gain_memory: 1

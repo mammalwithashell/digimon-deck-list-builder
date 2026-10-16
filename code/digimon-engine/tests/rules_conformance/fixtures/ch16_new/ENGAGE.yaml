@@ -1,0 +1,14 @@
+# ENGAGE -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   <Engage> (At the end of your turn, this Digimon may attack.)
+# The §16-44 keyword card.
+card: ENGAGE
+name: Engagemon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - kind: grant_keyword
+    keyword: Engage
+    summary: "<Engage> (At the end of your turn, this Digimon may attack.)"

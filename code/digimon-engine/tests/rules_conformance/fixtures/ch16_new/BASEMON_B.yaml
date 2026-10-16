@@ -1,0 +1,17 @@
+# BASEMON_B -- Digimon, Lv.4, red, 5000 DP, play cost 5. Name: Basemon.
+#   [When Attacking] Gain 2 memory.
+# The lower [Basemon] of the §16-47 stack: <Succession ([Basemon])> adopts
+# only the TOPMOST [Basemon], so this card's text applies only once the upper
+# one is gone.
+card: BASEMON_B
+name: Basemon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Gain 2 memory."
+    process:
+      - gain_memory: 2

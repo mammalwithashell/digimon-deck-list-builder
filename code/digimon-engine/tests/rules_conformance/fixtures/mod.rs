@@ -115,6 +115,36 @@ const CH15_08: &[&str] = &[
     include_str!("ch15_08/WOULD_DEL_MEM.yaml"),
 ];
 
+/// §16-42..§16-47 Ver. 4.x keyword cards, with the §4-6 DUAL, §4-19
+/// <Overflow> and §4-20 Arts Digivolve cards (`ch16_new_keywords.rs`).
+const CH16_NEW: &[&str] = &[
+    include_str!("ch16_new/ACE.yaml"),
+    include_str!("ch16_new/ASCEND.yaml"),
+    include_str!("ch16_new/BASEMON_A.yaml"),
+    include_str!("ch16_new/BASEMON_B.yaml"),
+    include_str!("ch16_new/DETACH.yaml"),
+    include_str!("ch16_new/DUAL_ARTS.yaml"),
+    include_str!("ch16_new/ENGAGE.yaml"),
+    include_str!("ch16_new/GUARD.yaml"),
+    include_str!("ch16_new/HAND_PICK_DIGI.yaml"),
+    include_str!("ch16_new/HAND_PICK_OPT.yaml"),
+    include_str!("ch16_new/HAND_PICK_PURPLE_OPT.yaml"),
+    include_str!("ch16_new/IMM_DIGI.yaml"),
+    include_str!("ch16_new/IMM_OPT.yaml"),
+    include_str!("ch16_new/LOWMON.yaml"),
+    include_str!("ch16_new/MAIN_BOUNCE1.yaml"),
+    include_str!("ch16_new/MAIN_DEL_ALL_ANY.yaml"),
+    include_str!("ch16_new/MAIN_DEL_OWN_MEM.yaml"),
+    include_str!("ch16_new/MAIN_PLACE_UNDER.yaml"),
+    include_str!("ch16_new/MAIN_TRASH_OPP_OPT.yaml"),
+    include_str!("ch16_new/PURPLE_LV3.yaml"),
+    include_str!("ch16_new/SEVEN_LINK.yaml"),
+    include_str!("ch16_new/SUCC_TOP.yaml"),
+    include_str!("ch16_new/TS_DIGI.yaml"),
+    include_str!("ch16_new/TS_TAMER.yaml"),
+    include_str!("ch16_new/USE_REQ_OPT.yaml"),
+];
+
 /// §17 "Rule Checks" chapter cards (`ch17_rule_checks.rs`).
 const CH17: &[&str] = &[
     include_str!("ch17/LINK_A.yaml"),
@@ -177,6 +207,11 @@ pub fn ch15_08_cards() -> &'static [&'static str] {
     CH15_08
 }
 
+/// Every `ch16_new/` card's YAML source.
+pub fn ch16_new_cards() -> &'static [&'static str] {
+    CH16_NEW
+}
+
 /// Every `ch17/` card's YAML source.
 pub fn ch17_cards() -> &'static [&'static str] {
     CH17
@@ -225,6 +260,7 @@ fn every_fixture_file_is_listed() {
         ("ch15_04", CH15_04.len()),
         ("ch15_07", CH15_07.len()),
         ("ch15_08", CH15_08.len()),
+        ("ch16_new", CH16_NEW.len()),
         ("ch17", CH17.len()),
         ("ch18", CH18.len()),
     ] {

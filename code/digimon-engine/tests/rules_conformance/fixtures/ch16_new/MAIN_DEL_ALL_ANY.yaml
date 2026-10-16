@@ -1,0 +1,18 @@
+# MAIN_DEL_ALL_ANY -- Option, red, use cost 0.
+#   [Main] Delete all Digimon.
+# Deletes both players' Digimon at the same time (the §4-19-5 simultaneous
+# <Overflow> case).
+card: MAIN_DEL_ALL_ANY
+name: Clean Slate
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Delete all Digimon."
+    process:
+      - delete_all_permanents:
+          over:
+            all_of:
+              - of: any
+              - kind: digimon

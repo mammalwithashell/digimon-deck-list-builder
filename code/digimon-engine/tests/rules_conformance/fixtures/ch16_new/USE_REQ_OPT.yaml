@@ -1,0 +1,21 @@
+# USE_REQ_OPT -- Option, purple, use cost 1.
+#   <Use Req. ([TS] trait)> (You can ignore this card's color requirements
+#   while you have a Digimon or Tamer with the [TS] trait.)
+#   [Main] Gain 1 memory.
+# The §16-42 keyword card. There is no `Keyword::UseReq`: the keyword is the
+# card-level `use_requirement` (BT26-032 / EX12-071 idiom), which lowers to the
+# Option's color-requirement bypass.
+card: USE_REQ_OPT
+name: Codeword Plan
+kind: option
+color: [purple]
+cost: 1
+use_requirement:
+  any_field_permanent:
+    of: you
+    trait_has: TS
+effects:
+  - when: main_from_hand
+    summary: "<Use Req. ([TS] trait)> [Main] Gain 1 memory."
+    process:
+      - gain_memory: 1

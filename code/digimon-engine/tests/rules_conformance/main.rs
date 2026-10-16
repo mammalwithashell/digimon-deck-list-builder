@@ -20,5 +20,6 @@ mod ch11_14_attack_procedure;
 mod ch15_04_effect_states;
 mod ch15_07_optional_conditions;
 mod ch15_08_effect_categories;
+mod ch16_new_keywords;
 mod ch17_rule_checks;
 mod ch18_pending_overwrite;

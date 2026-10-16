@@ -1,0 +1,23 @@
+# MAIN_PLACE_UNDER -- Option, red, use cost 0.
+#   [Main] Place 1 Digimon card from your hand as the bottom digivolution card
+#   of 1 of your Digimon.
+# Moves a card from another area to under a card (§4-19-4).
+card: MAIN_PLACE_UNDER
+name: Bury Deep
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Place 1 Digimon card from your hand as the bottom digivolution card of 1 of your Digimon."
+    process:
+      - select_hand:
+          of: you
+          bind_as: card
+          filter: { kind: digimon }
+          prompt: "Place 1 Digimon card from your hand as a bottom digivolution card"
+      - select_own_permanent:
+          bind_as: host
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon"
+      - place_as_bottom_source: { source: card, target: host }

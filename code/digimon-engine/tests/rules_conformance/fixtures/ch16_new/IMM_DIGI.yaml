@@ -1,0 +1,17 @@
+# IMM_DIGI -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [All Turns] This Digimon isn't affected by the effects of your opponent's
+#   Digimon.
+card: IMM_DIGI
+name: Beastproofmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: aura
+    target: {}
+    effect_immunity:
+      source_kind: digimon
+      source_controller: opponent
+    summary: "[All Turns] This Digimon isn't affected by the effects of your opponent's Digimon."

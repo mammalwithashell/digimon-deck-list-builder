@@ -7276,9 +7276,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A purple Option with <Use Req. ([TS] trait)> is usable with only a red [TS] Tamer or red [TS] Digimon on the field (and resolves); not with a red non-[TS] card; a permission only (still usable via a purple card, no extra decision). Proven via the card-level `use_requirement` idiom (no Keyword variant); no matrix row.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::use_req_ignores_color_requirements_with_specified_cards",
+        "ch16_new_keywords::use_req_optionality_matches_rule"
+      ],
       "text": "<Use Req.> is a keyword effect that allows a player to ignore the color requirements with the specified cards."
     },
     "16-42-2": {
@@ -7289,9 +7292,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Persistent: placing a [TS] Digimon makes the Option usable at once with no prompt and no event.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::use_req_kind_matches_rule"
+      ],
       "text": "<Use Req.> is a persistent effect. (For details, refer to 15-8-2 \"Persistent Effects\")15-8-2"
     },
     "16-42-3": {
@@ -7302,9 +7307,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Only cards ON THE FIELD count: a [TS] Digimon in the hand does not; read at use time (usable, then not after the [TS] Digimon is deleted, then usable again with a [TS] Tamer).",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::use_req_ignores_color_requirements_with_specified_cards",
+        "ch16_new_keywords::use_req_timing_matches_rule"
+      ],
       "text": "<Use Req.> allows a player to ignore the color requirements with specific Digimon and/or Tamers on the field."
     },
     "16-43": {
@@ -7328,9 +7336,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Deleted by an opponent's effect, 'Yes' moves the card from the trash to the top of the security stack.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::ascension_optional_places_on_top_of_security"
+      ],
       "text": "<Ascension> is a keyword effect. When the card with this effect is deleted, the player may place this card at the top of the security stack."
     },
     "16-43-2": {
@@ -7341,9 +7351,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Trigger-type: pends in one TriggerOrder with a simultaneously deleted [On Deletion] card, both already in the trash; triggers on battle deletion, not on a return to the hand. Matrix row Ascension (optional) agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::ascension_kind_matches_rule",
+        "ch16_new_keywords::ascension_timing_matches_rule"
+      ],
       "text": "<Ascension> is a trigger-type effect that triggers when the Digimon with this effect is deleted. (For details, refer to 15-8-3 \"Trigger-Type Effects\")15-8-3"
     },
     "16-43-3": {
@@ -7354,9 +7367,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Yes/No decision; 'No' leaves the card in the trash.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::ascension_optionality_matches_rule"
+      ],
       "text": "The processing from <Ascension> is optional."
     },
     "16-44": {
@@ -7380,22 +7395,27 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "At the end of P0's turn an attack with the <Engage> Digimon is offered (with PASS); it checks security, then the turn ends. The engine then parks EndOfTurnAction once more with PASS as the only legal action (a no-choice step, not a rule violation).",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::engage_optional_eot_attack"
+      ],
       "text": "<Engage> is a keyword effect where a Digimon with this effect may attack at the end of your turn."
     },
     "16-44-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "79b60bcf0f08f7a04f7b1871680339ca5d113e9d2fe8b5302292d199840ba737",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Timing half proven (no <Engage> at the end of the opponent's turn). Kind half fails: <Engage> pends in a TriggerOrder with another [End of Your Turn] effect, but choosing it first only grants MayAttack; the other effect resolves before the attack, which happens after the drain in EndOfTurnAction. engage_kind_matches_rule is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_new_keywords::engage_kind_matches_rule",
+        "ch16_new_keywords::engage_timing_matches_rule"
+      ],
       "text": "<Engage> is a trigger-type effect that triggers at the End of Your Turn timing. (For details, refer to 15-8-3 \"Trigger-Type Effects\")15-8-3"
     },
     "16-44-3": {
@@ -7406,9 +7426,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "PASS declines: no attack, the turn passes. Matrix row Engage (optional) agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::engage_optionality_matches_rule"
+      ],
       "text": "The processing from <Engage> is optional."
     },
     "16-45": {
@@ -7432,9 +7454,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Opponent's deletion effect on another own Digimon: offered; accepting deletes the <Guard> Digimon and the other stays. Not offered for the owner's own effect, a battle deletion, or the <Guard> Digimon itself.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::guard_immediate_optional_other_digimon_leave_by_opp_effect"
+      ],
       "text": "<Guard> is a keyword effect. When any of a player's other Digimon would leave the battle area by an opponent's effect, by deleting the Digimon with this effect, it doesn't leave."
     },
     "16-45-2": {
@@ -7445,9 +7469,13 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Immediate-type: offered while the threatened Digimon is still in the battle area and nothing is trashed; it never leaves. Also covers leaving by return to the hand.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::guard_immediate_optional_other_digimon_leave_by_opp_effect",
+        "ch16_new_keywords::guard_kind_matches_rule",
+        "ch16_new_keywords::guard_timing_matches_rule"
+      ],
       "text": "<Guard> is an immediate-type effect that triggers when any of a player's other Digimon would leave the battle area by an opponent's effect. (For details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-45-3": {
@@ -7458,9 +7486,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Declining: the other Digimon is deleted, <Guard> stays. Matrix row Guard says optional_cost_then_mandatory; consistent (no further decision after the deletion).",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::guard_optionality_matches_rule"
+      ],
       "text": "The processing from <Guard> is optional."
     },
     "16-46": {
@@ -7484,9 +7514,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Opponent's bounce: offered; accepting trashes the [Seven Code] link card and the Digimon stays. Not offered for the owner's own effect, nor when the only link card lacks the specified trait. Proven via the BT26-010 `replacement` + `trash_own_link_card` idiom (no Keyword variant); no matrix row.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::detach_optional_cost_then_mandatory_stay",
+        "ch16_new_keywords::detach_needs_a_specified_link_card"
+      ],
       "text": "<Detach> is a keyword effect that reads \"When this Digimon would leave the battle area other than by your effects, by trashing 1 of its specified link cards, it doesn't leave.\" It is shown on cards using text such as \"<Detach ([Seven Code] trait)>.\""
     },
     "16-46-2": {
@@ -7497,9 +7530,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule says trigger-type but defines it by 'would leave' and cites 15-8-5; tested as an interrupt: offered while the Digimon is still on the field with its link card, never trashed. Also offered when it loses a battle (other than by its owner's effects).",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::detach_kind_matches_rule",
+        "ch16_new_keywords::detach_timing_matches_rule"
+      ],
       "text": "<Detach> is a trigger-type effect that triggers when the Digimon with this effect would leave the battle area other than by its owner's effects. (For details, refer to 15- 8-5 \"Immediate-Type Effects\")"
     },
     "16-46-3": {
@@ -7510,9 +7546,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Declining: the Digimon is deleted with its link card. Accepting: no further decision ('it doesn't leave' mandatory).",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::detach_optional_cost_then_mandatory_stay",
+        "ch16_new_keywords::detach_optionality_matches_rule"
+      ],
       "text": "\"By trashing 1 of its specified link cards\" within <Detach> is an optional processing condition. If the content of that condition is executed, the processing for \"it doesn't leave\" will be mandatory."
     },
     "16-47": {
@@ -7536,9 +7575,13 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Gains the topmost [Basemon] source's <Security A. +1> and [When Attacking] (not the lower [Basemon]'s, not what its own <Succession ([Lowmon])> names); no decision; nothing adopted when the <Succession> card is not the top card. Proven via DSL `kind: succession` (no Keyword variant); no matrix row.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::succession_gains_all_effects_of_topmost_specified_source",
+        "ch16_new_keywords::succession_optionality_matches_rule",
+        "ch16_new_keywords::succession_timing_matches_rule"
+      ],
       "text": "<Succession> is a keyword effect that reads \"This Digimon gains all effects other than <Succession> on its topmost specified digivolution card.\" It is shown on cards using text such as \"<Succession ([Ceresmon])>.\""
     },
     "16-47-2": {
@@ -7549,9 +7592,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Persistent: with the topmost [Basemon] trashed from the sources, the next one is adopted at once.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::succession_kind_matches_rule"
+      ],
       "text": "<Succession> is a persistent effect. (For details, refer to 15-8-2 \"Persistent Effects\")"
     },
     "16-5": {
@@ -11187,9 +11232,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "<Overflow <-3>> owner loses 3 when the ACE is deleted from the field, returned to the hand, or trashed from under a card; control: a non-ACE moves nothing. Proven via the `ace_overflow` card field; no matrix row.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::overflow_moves_memory_when_card_leaves_field_or_from_under"
+      ],
       "text": "<Overflow> is a rule on Digimon ACE cards. When a card with <Overflow> moves from the field or from under a card to another area, the memory marker is moved according to the value specified for <Overflow>."
     },
     "4-19-2": {
@@ -11200,9 +11247,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "'Delete 1 of your Digimon. Then, gain 1 memory.' on own ACE: -3 (no source) precedes the +1.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::overflow_memory_moves_immediately_during_processing"
+      ],
       "text": "When <Overflow> causes the memory marker to move, the processing for moving it is performed immediately, even if the processing for another action is already being performed."
     },
     "4-19-3": {
@@ -11213,9 +11262,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Playing or digivolving into the ACE moves only the paid cost.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::overflow_not_processed_entering_field"
+      ],
       "text": "<Overflow> isn't processed when a card is moved from another area to the field. (For details, refer to 3-4 \"The Field\")3-4"
     },
     "4-19-4": {
@@ -11226,48 +11277,56 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "An ACE placed from the hand as a bottom digivolution card moves no memory.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::overflow_not_processed_entering_under_a_card"
+      ],
       "text": "<Overflow> isn't processed when a card is moved from another area to under a card. (For details, refer to 4-5 \"Stacked Cards\")4-7"
     },
     "4-19-5": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 4,
       "fingerprint": "db673babf873b635f4000e8a40250beca96b214ad6f7a98c2ae89cc342169865",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT",
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
+      "note": "Simultaneous <Overflow> from one 'delete all Digimon' is applied per deleted permanent in batch order. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player"
+      ],
       "text": "When multiple instances of <Overflow> are processed simultaneously, they are processed using the following procedure."
     },
     "4-19-5-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 4,
       "fingerprint": "2aa92cc4fda8bccbd05ada27cdaf868a00a675960ba19d78d3fc8cbaaf9dee81",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT",
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
+      "note": "Observed: P1's instance first (memory 9 -> 10 capped), then P0's two (-> 4); the rule gives 9 -> 3 -> 6. The turn player's choice among their own instances is unobservable (same direction). Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player"
+      ],
       "text": "The turn player chooses 1 instance of <Overflow> on their cards and processes it. The turn player repeats this procedure until there are no more unresolved instances of <Overflow> on their cards."
     },
     "4-19-5-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 4,
       "fingerprint": "a60b917e4326f91400b6ec0304d6d0fca2db87be4de9c94faf18251a4c08d765",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT",
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
+      "note": "The non-turn player's instance is not deferred until the turn player's are processed. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player"
+      ],
       "text": "Once all instances of <Overflow> on the turn player's cards have been processed, then the non- turn player chooses 1 instance of <Overflow> on12 their cards and processes it. The non-turn player repeats this procedure until there are no more unresolved instances of <Overflow> on their cards."
     },
     "4-2": {
@@ -11356,9 +11415,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "After the used DUAL's [Main], P0 may digivolve a Lv.5 into it instead of trashing: no digivolution cost paid; declining trashes it.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::arts_digivolve_replaces_option_trash_with_free_digivolve"
+      ],
       "text": "Arts Digivolve is a rule on DUAL cards. Instead of the trashing from the pending processing after using an Option card, one of your cards on the field may digivolve into that DUAL card without paying the cost."
     },
     "4-20-2": {
@@ -11369,9 +11430,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Overwrite: the card is not in the trash at the decision and never reaches it when accepted. Matrix row ArtsDigivolve (optional) agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::arts_digivolve_replaces_option_trash_with_free_digivolve"
+      ],
       "text": "Arts Digivolve is overwrite processing that replaces the trashing of an Option card from the pending processing. (For details, refer to 18-1 \"Pending Processing\")"
     },
     "4-21": {
@@ -12019,9 +12082,12 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "In the hand a DUAL is offered both as an Option (use) and as a Digimon (digivolve), and matches both 'Digimon card' and 'Option card' trait searches.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::dual_use_declares_digimon_or_option_information",
+        "ch16_new_keywords::dual_traits_belong_to_both_informations"
+      ],
       "text": "A DUAL card is a card that can be treated as being in either the Digimon card category or the Option card category."
     },
     "4-6-2": {
@@ -12032,9 +12098,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The two declarations are distinct actions in the mask (use bit vs digivolve bit).",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::dual_use_declares_digimon_or_option_information"
+      ],
       "text": "When using a DUAL card, the player must declare whether they are digivolving with the Digimon information or using the Option information on that card."
     },
     "4-6-3": {
@@ -12045,9 +12113,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example: 'trash 1 of your opponent's Option cards in the battle area' never takes the DUAL stack (trashes a real field Option instead, or nothing); 'delete 1 Digimon' deletes it.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::dual_on_field_is_a_digimon_not_an_option"
+      ],
       "text": "A DUAL card placed on the field is treated as a Digimon. It can't be referenced as an Option card placed on the field. (Example: A DUAL card that is digivolved by placing it on top of one of your cards on the field will be treated as a Digimon, and it can't be trashed by a \"trash an Option card in the battle area\" effect.)"
     },
     "4-6-4": {
@@ -12058,9 +12128,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "One card carries both: digivolving reads the Digimon information (cost 3, 12000 DP), using reads the Option information (cost 2, purple).",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::dual_use_declares_digimon_or_option_information"
+      ],
       "text": "A single DUAL card has both Digimon information and Option information."
     },
     "4-6-5": {
@@ -12084,9 +12156,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The trait is matched when the hand card is referenced as a Digimon card.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::dual_traits_belong_to_both_informations"
+      ],
       "text": "This refers to a DUAL card's traits and the information above them."
     },
     "4-6-5-2": {
@@ -12097,9 +12171,12 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Digivolution cost/level/DP from the Digimon information; a 'level 6 Digimon card' hand search matches it.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::dual_use_declares_digimon_or_option_information",
+        "ch16_new_keywords::dual_traits_belong_to_both_informations"
+      ],
       "text": "A DUAL card's Digimon information can be referenced when referencing the card as a Digimon card or Digimon."
     },
     "4-6-5-3": {
@@ -12110,9 +12187,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The Digimon information's [When Digivolving] is a Digimon effect: blocked by 'not affected by your opponent's Digimon effects', like a plain Digimon's (control).",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::dual_effects_are_digimon_or_option_effects_by_information"
+      ],
       "text": "Effects in the Digimon information are considered Digimon effects. (For details, refer to 15-2 \"Effect Types\")"
     },
     "4-6-6": {
@@ -12136,22 +12215,27 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The trait is matched when the hand card is referenced as an Option card.",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::dual_traits_belong_to_both_informations"
+      ],
       "text": "This refers a DUAL card's traits and the information below them."
     },
     "4-6-6-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 4,
       "fingerprint": "048c65a256d7f9e5a4d1bfb47bdb99c098feb6678a7d999b6b2062c4e2e40b52",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH",
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
+      "note": "Option USE reads the Option information (purple color requirement, use cost 2: proven). A 'purple Option card' hand search does not match the DUAL (its Option information is purple): card-search predicates read the top-level (Digimon information) colors. dual_option_information_referenced_as_option_card is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_new_keywords::dual_use_declares_digimon_or_option_information",
+        "ch16_new_keywords::dual_option_information_referenced_as_option_card"
+      ],
       "text": "A DUAL card's Option information can be referenced when referencing the card as an Option card."
     },
     "4-6-6-3": {
@@ -12162,9 +12246,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The Option information's [Main] is an Option card effect: blocked by 'not affected by your opponent's Option cards' effects', like a plain Option's (control).",
+      "status": "proven",
+      "tests": [
+        "ch16_new_keywords::dual_effects_are_digimon_or_option_effects_by_information"
+      ],
       "text": "Effects in the Option information are treated as Option card effects. (For details, refer to 15-2 \"Effect Types\")"
     },
     "4-7": {
@@ -14785,9 +14871,9 @@
         "total": 244
       },
       "16": {
-        "gap": 158,
+        "gap": 142,
         "not_testable": 44,
-        "proven": 4,
+        "proven": 20,
         "total": 206
       },
       "17": {
@@ -14815,9 +14901,9 @@
         "total": 66
       },
       "4": {
-        "gap": 105,
+        "gap": 90,
         "not_testable": 34,
-        "proven": 0,
+        "proven": 15,
         "total": 139
       },
       "5": {
@@ -14851,15 +14937,15 @@
         "total": 13
       }
     },
-    "gap": 815,
+    "gap": 784,
     "mechanics": {
-      "gap_blocking": 21,
-      "gap_nonblocking": 488,
+      "gap_blocking": 22,
+      "gap_nonblocking": 471,
       "not_testable": 152,
-      "proven": 54
+      "proven": 70
     },
     "not-testable": 246,
-    "proven": 58
+    "proven": 89
   },
   "version": 1
 }

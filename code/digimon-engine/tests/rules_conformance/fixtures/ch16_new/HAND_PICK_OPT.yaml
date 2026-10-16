@@ -1,0 +1,21 @@
+# HAND_PICK_OPT -- Option, red, use cost 0.
+#   [Main] Trash 1 Option card with the [Artsy] trait from your hand.
+# References a hand card AS AN OPTION CARD by its trait (§4-6-6-1).
+card: HAND_PICK_OPT
+name: Plan Audit
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash 1 Option card with the [Artsy] trait from your hand."
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: Artsy
+          prompt: "Trash 1 Option card with the [Artsy] trait from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: pick }
