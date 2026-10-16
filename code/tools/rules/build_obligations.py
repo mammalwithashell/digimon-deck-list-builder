@@ -55,19 +55,20 @@ _KEYWORD_ICON = re.compile(r"^<[^<>]+>$")
 _TRAILING_FOOTNOTE = re.compile(r"(?<=[.)])\d{1,2}$")
 _TERMINATORS = (".", ")", ":")
 _MAX_HEADING_WORDS = 6
-# Rule-check enumerations: every unit under these prefixes is normative (an
-# enumerated deletion/trash target, even when it is short and unterminated, e.g.
-# 17-1-3-2-4 "Face-down cards placed on the field"), so the heading heuristic
-# never seeds them `not-testable`.
-_NORMATIVE_PREFIXES = ("17-1-3-",)
+# Rule-check enumerations: the enumerated leaves under 17-1-3 (ids 17-1-3-<n>-<m>,
+# depth >= 5) are normative targets even when short and unterminated, e.g.
+# 17-1-3-2-4 "Face-down cards placed on the field", so the heading heuristic never
+# seeds them `not-testable`. The depth-4 sub-headings 17-1-3-1 "Deletion Targets"
+# and 17-1-3-2 "Trash Targets" are real headings and are still seeded.
+_NORMATIVE_LEAF = re.compile(r"^17-1-3-\d+-\d+")
 
 
 def is_heading(text: str, rule_id: str | None = None) -> bool:
     """Heading-only unit: no sentence terminator and at most 6 words, or a bare keyword icon.
 
-    Units under ``_NORMATIVE_PREFIXES`` (rule-check target enumerations) are never headings.
+    Enumerated rule-check leaves (``_NORMATIVE_LEAF``) are never headings.
     """
-    if rule_id is not None and rule_id.startswith(_NORMATIVE_PREFIXES):
+    if rule_id is not None and _NORMATIVE_LEAF.match(rule_id):
         return False
     t = _TRAILING_FOOTNOTE.sub("", text.strip())
     if _KEYWORD_ICON.match(t):

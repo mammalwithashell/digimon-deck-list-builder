@@ -16,10 +16,11 @@
 # Ids must exist in the rules source; unknown ids make the build fail. Each entry
 # must be a mapping.
 #
-# Heuristic exception: every unit under the `17-1-3-` prefix (the enumerated
-# deletion/trash targets of the rule checks) is normative, so the heading
-# heuristic never seeds them `not-testable` (e.g. 17-1-3-2-4 "Face-down cards
-# placed on the field", 17-1-3-1 "Deletion Targets"). They default to `gap`.
+# Heuristic exception: the enumerated leaves under 17-1-3 (ids 17-1-3-<n>-<m>,
+# depth >= 5; the deletion/trash targets of the rule checks) are normative, so the
+# heading heuristic never seeds them `not-testable` (e.g. 17-1-3-2-4 "Face-down
+# cards placed on the field"). They default to `gap`. The depth-4 sub-headings
+# 17-1-3-1 "Deletion Targets" and 17-1-3-2 "Trash Targets" stay `not-testable`.
 "17-1-3-2-4":
   status: gap
   note: "Rule-check trash target (normative); explicit so the short text is never read as a heading."

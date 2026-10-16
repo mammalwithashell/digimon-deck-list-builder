@@ -93,14 +93,18 @@ def test_is_heading_branches():
     assert not is_heading("Ends with a paren (like this)")
     assert not is_heading("one two three four five six seven")  # > 6 words
     assert not is_heading("Face-down cards placed on the field", "17-1-3-2-4")  # normative prefix
-    assert not is_heading("Deletion Targets", "17-1-3-1")
+    assert is_heading("Deletion Targets", "17-1-3-1")  # depth-4 sub-heading stays a heading
+    assert not is_heading("Deletion Targets", "17-1-3-1-1")  # depth >= 5 leaf
     assert is_heading("Deletion Targets", "17-1-2")
 
 
-def test_rule_check_targets_never_seeded_not_testable():
+def test_rule_check_leaves_never_seeded_not_testable():
     obs = build(SRC, {}, MECH)["obligations"]
     assert obs["17-1-3-2-4"]["status"] == "gap"
-    assert all(o["status"] == "gap" for k, o in obs.items() if k.startswith("17-1-3-"))
+    assert obs["17-1-3-1"]["status"] == "not-testable"  # "Deletion Targets"
+    assert obs["17-1-3-2"]["status"] == "not-testable"  # "Trash Targets"
+    leaves = [k for k in obs if k.startswith("17-1-3-") and k.count("-") >= 4]
+    assert leaves and all(obs[k]["status"] == "gap" for k in leaves)
 
 
 def test_committed_sidecar_overrides_applied():

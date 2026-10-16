@@ -7797,7 +7797,7 @@
         "rule-checks"
       ],
       "note": null,
-      "status": "gap",
+      "status": "not-testable",
       "tests": [],
       "text": "Deletion Targets"
     },
@@ -7823,7 +7823,7 @@
         "rule-checks"
       ],
       "note": null,
-      "status": "gap",
+      "status": "not-testable",
       "tests": [],
       "text": "Trash Targets"
     },
@@ -14618,8 +14618,8 @@
         "total": 206
       },
       "17": {
-        "gap": 15,
-        "not_testable": 1,
+        "gap": 13,
+        "not_testable": 3,
         "proven": 0,
         "total": 16
       },
@@ -14678,14 +14678,14 @@
         "total": 13
       }
     },
-    "gap": 875,
+    "gap": 873,
     "mechanics": {
       "gap_blocking": 0,
-      "gap_nonblocking": 565,
-      "not_testable": 150,
+      "gap_nonblocking": 563,
+      "not_testable": 152,
       "proven": 0
     },
-    "not-testable": 244,
+    "not-testable": 246,
     "proven": 0
   },
   "version": 1
