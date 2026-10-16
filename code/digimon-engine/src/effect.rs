@@ -761,6 +761,15 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnDigivolutionCardTrashed)
     }
 
+    /// Fires when the TOP stacked card of a Digimon is trashed: once per
+    /// <De-Digivolve> instance with every card it trashed (§16-12-1 /
+    /// §16-12-5), and by <Armor Purge>. Not a digivolution-card trash
+    /// (§4-8-1). DCGO `EffectTiming.WhenTopCardTrashed`.
+    /// G-DSL-TOP-CARD-TRASHED-TIMING.
+    pub fn on_top_card_trashed(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnTopCardTrashed)
+    }
+
     /// Fires once per host after an EFFECT places cards into that permanent's
     /// digivolution cards (BT7-056 Dorumon, EX7-005 Kapurimon, BT25-005
     /// Pagumon). Read the host via `event_host_permanent()`, the added batch

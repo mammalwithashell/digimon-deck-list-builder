@@ -598,6 +598,10 @@ fn write_resume_stack(
                 crate::resume::ResumeSelectKind::SourcePrefixCount { state, .. } => {
                     debug_field(hasher, "resume.source_prefix_count", state)
                 }
+                crate::resume::ResumeSelectKind::DeDigivolveCount { page, state } => {
+                    debug_field(hasher, "resume.de_digivolve_count", page);
+                    debug_field(hasher, "resume.de_digivolve_count_state", state)
+                }
                 _ => {}
             }
             if let crate::resume::ResumeSelectKind::CountChoice(page) = select_kind {

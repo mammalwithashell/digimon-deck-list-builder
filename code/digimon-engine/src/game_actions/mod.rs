@@ -34,6 +34,7 @@ mod cost;
 pub(crate) mod digivolve;
 mod field_top_source_move;
 mod helpers; // facade-decomposition Tier-2 primitives (trash_source_and_fire, would_replacement_*, …)
+pub use helpers::DeDigivolveCountState;
 mod link; // DigiLink Shape-B (Digimon-link) — activate/begin/commit/absorb + facet-#9 chosen-card link
 mod misc;
 mod movement;
@@ -2105,6 +2106,37 @@ impl Game {
         self.drain_effect_queue();
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
+    }
+
+    /// Enqueue `OnTopCardTrashed` ONCE for the top card(s) one event trashed
+    /// from `host`'s stack: every card of one <De-Digivolve> instance
+    /// (§16-12-1 "starting with the top card"; §16-12-5 "considered to be
+    /// trashed at the same time"), or <Armor Purge>'s top card (§16-19). These
+    /// are top cards, not digivolution cards (§4-8-1), so they never fire
+    /// `OnDigivolutionCardTrashed`. Enqueue-only: the observers wait for the
+    /// causing effect to finish and are drained by the effect-queue loop. DCGO
+    /// `StackSkillInfos(.., EffectTiming.WhenTopCardTrashed)` with the
+    /// permanent and every trashed card. G-ENGINE-DEDIGIVOLVE-FIRES-
+    /// DIGIVOLUTION-CARD-TRASHED, G-DSL-TOP-CARD-TRASHED-TIMING.
+    pub(crate) fn enqueue_top_cards_trashed(
+        &mut self,
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: crate::card_source::CardHandle,
+        cards: Vec<crate::card_source::CardHandle>,
+        cause: crate::trigger_context::EventCause,
+    ) {
+        self.tick_declarative_effects();
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnTopCardTrashed,
+            crate::selection::TriggerSource::TopCardsTrashed {
+                player,
+                host,
+                host_card,
+                cards,
+                cause,
+            },
+        );
     }
 
     pub(crate) fn enqueue_digivolution_card_trashed(

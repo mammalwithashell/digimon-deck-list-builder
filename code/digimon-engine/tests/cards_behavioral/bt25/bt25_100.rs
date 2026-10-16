@@ -152,6 +152,8 @@ fn bt25_100_main_de_digivolves_two_then_can_decline_link() {
     runner
         .execute_action(tview.selecting_player, encode_attack(0, opp.index as u16))
         .expect("choose opponent Digimon");
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(runner.declare_max_count().expect("declare 2"));
 
     // De-Digivolve 2 trashes the top two sources (Lv5 + Lv4), leaving Lv3 top.
     assert_eq!(

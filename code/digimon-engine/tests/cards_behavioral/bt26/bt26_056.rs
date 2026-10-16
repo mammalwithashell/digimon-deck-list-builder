@@ -107,7 +107,8 @@ fn bt26_056_option_trashes_hand_then_de_digivolves_three() {
     let v = r.pending_selection_view().expect("de-digivolve pick");
     assert!(!v.is_optional);
     pick_first(&mut r, 0);
-    let _ = r.auto_resolve();
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    let _ = r.auto_resolve_declaring_max();
     assert_eq!(top_id(&r, opp), "D3", "3 cards trashed off the top");
     assert_eq!(r.hand_size(0), 0);
     assert_eq!(r.memory(), 6 - 3);

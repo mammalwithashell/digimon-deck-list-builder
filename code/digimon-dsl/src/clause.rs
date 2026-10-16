@@ -173,6 +173,18 @@ pub enum Timing {
     OnOpponentSecurityRemoved,
     OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
+    /// `[All Turns]`-style observer: the TOP stacked card of a Digimon was
+    /// trashed -- "When the top stacked card of any of your [Armor Form] trait
+    /// Digimon is trashed" (BT21-094). Fired ONCE per <De-Digivolve> instance
+    /// with every card it trashed (§16-12-1 / §16-12-5: the cards are trashed
+    /// starting with the top card, all at the same time) and by <Armor Purge>
+    /// (§16-19) -- DCGO `EffectTiming.WhenTopCardTrashed`. Distinct from
+    /// `on_digivolution_card_trashed`: a top card is not a digivolution card
+    /// (§4-8-1), so those observers do NOT see these trashes. The host rides
+    /// on the trigger context (`event_host_*` leaves, e.g.
+    /// `event_host_is_own_digimon`). Lowers to `EffectTiming::OnTopCardTrashed`.
+    /// G-DSL-TOP-CARD-TRASHED-TIMING.
+    OnTopCardTrashed,
     /// Source-ADDED observer: an EFFECT placed one or more cards into a
     /// permanent's digivolution cards — "[Your Turn] [Once Per Turn] When
     /// your effect places a digivolution card under this Digimon, gain 1

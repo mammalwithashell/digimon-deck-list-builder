@@ -673,6 +673,26 @@ impl Game {
                     }
                 }
             }
+            TriggerSource::TopCardsTrashed { .. } => {
+                // Board-wide observer scan with the host / trashed-cards
+                // context attached. The trashed top cards are in the trash and
+                // are not observers of their own trashing (they are not
+                // digivolution cards, §4-8-1). Event-gated Delays (BT21-094)
+                // are fanned out below. G-DSL-TOP-CARD-TRASHED-TIMING.
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
             TriggerSource::LinkCardTrashed { .. } => {
                 // Board-wide observer scan (same shape as the PlayerBattleArea
                 // fan-out this dispatch replaced) with the host / trashed-card
@@ -860,6 +880,10 @@ impl Game {
                 // ("When effects trash any of your Digimon's link cards").
                 // G-DSL-ON-LINK-CARD-TRASHED-DELAY.
                 | TriggerSource::LinkCardTrashed { .. }
+                // BT21-094's `<Delay>` observes "When the top stacked card of
+                // any of your [Armor Form] trait Digimon is trashed".
+                // G-DSL-TOP-CARD-TRASHED-TIMING.
+                | TriggerSource::TopCardsTrashed { .. }
         ) {
             let trigger_context = self.trigger_context_for_source(&source, None, timing);
             self.enqueue_event_gated_delayed_options(timing, trigger_context);
@@ -2066,6 +2090,40 @@ impl Game {
                 cause: Some(cause),
                 moved_card_sets: vec![crate::trigger_context::MovedCardSet {
                     cards: vec![card],
+                    from: Some(crate::enums::Zone::BattleArea),
+                    to: Some(crate::enums::Zone::Trash),
+                }],
+                ..TriggerContext::default()
+            },
+            TriggerSource::TopCardsTrashed {
+                player,
+                host,
+                host_card,
+                ref cards,
+                cause,
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Permanent(host)),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                // The host whose top card(s) were trashed (`event_host_*`
+                // leaves). The trashed batch rides in `moved_card_sets`; the
+                // single-card `event_card` is set only for a one-card batch
+                // (<Armor Purge>, <De-Digivolve> trashing 1) so a multi-card
+                // instance is never mis-gated by a one-card alias.
+                event_card: if cards.len() == 1 { Some(cards[0]) } else { None },
+                event_host_card: Some(host_card),
+                event_host_permanent: Some(host),
+                event_permanent: Some(host),
+                affected_player: Some(player),
+                source_player: Some(player),
+                cause: Some(cause),
+                effect_initiated: !matches!(
+                    cause,
+                    crate::trigger_context::EventCause::Rule
+                        | crate::trigger_context::EventCause::BattleDeletion
+                ),
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: cards.clone(),
                     from: Some(crate::enums::Zone::BattleArea),
                     to: Some(crate::enums::Zone::Trash),
                 }],

@@ -247,6 +247,11 @@ effects:
 /// Auto-answer every pending selection with its first non-PASS action.
 pub fn drain_first(r: &mut DebugRunner) {
     while let Some(v) = r.pending_selection_view() {
+        // A count declaration (§16-12-1 <De-Digivolve N>) is answered with
+        // its largest value.
+        if r.declare_max_count().unwrap() {
+            continue;
+        }
         let a = v
             .valid_action_ids
             .iter()

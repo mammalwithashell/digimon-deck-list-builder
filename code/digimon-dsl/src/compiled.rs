@@ -1430,6 +1430,10 @@ pub enum CompiledTiming {
     OnOpponentSecurityRemoved,
     OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
+    /// The TOP stacked card of a Digimon was trashed (<De-Digivolve>, once per
+    /// instance; <Armor Purge>) -- `when: on_top_card_trashed`; lowers to
+    /// `EffectTiming::OnTopCardTrashed`. G-DSL-TOP-CARD-TRASHED-TIMING.
+    OnTopCardTrashed,
     /// An EFFECT placed cards into a permanent's digivolution cards
     /// (`when: on_add_digivolution_cards`); lowers to
     /// `EffectTiming::OnAddDigivolutionCards`. Scope-gate via `active_when:`

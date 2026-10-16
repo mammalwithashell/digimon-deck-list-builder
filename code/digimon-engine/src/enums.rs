@@ -400,6 +400,19 @@ pub enum EffectTiming {
     /// (cost payment, source-displacement effects, etc.). Rocks core
     /// archetype observer.
     OnDigivolutionCardTrashed,
+    /// Fires when the TOP stacked card of a Digimon is trashed -- ONCE per
+    /// <De-Digivolve> instance carrying every card that instance trashed
+    /// (§16-12-1 "trashed ... starting with the top card"; §16-12-5 "all of
+    /// the cards are considered to be trashed at the same time"), and once by
+    /// <Armor Purge> (§16-19). A top card is not a digivolution card (§4-8-1
+    /// "A digivolution card refers to a card placed under a Digimon"), so these
+    /// trashes do NOT fire `OnDigivolutionCardTrashed`. Mirrors DCGO
+    /// `EffectTiming.WhenTopCardTrashed` (`CardController.cs` `IDegeneration`,
+    /// `ArmorPurge.cs`). The `TriggerContext` carries the host
+    /// (`event_host_permanent` / `event_host_card`) and the trashed cards
+    /// (`moved_card_sets[0].cards`). G-DSL-TOP-CARD-TRASHED-TIMING,
+    /// G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED.
+    OnTopCardTrashed,
     /// Fires ONCE per host permanent after an EFFECT places one or more cards
     /// into that permanent's digivolution cards (the source-ADDED sibling of
     /// `OnDigivolutionCardTrashed`). Mirrors DCGO `EffectTiming.

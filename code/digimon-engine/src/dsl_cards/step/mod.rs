@@ -712,6 +712,14 @@ fn run_steps_with_runtime_inner(
             expanded.extend_from_slice(&steps[i + 1..]);
             return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
         }
+        // "<De-Digivolve 1> for each ..." -> that many separate instances
+        // (§16-12-7 / §16-12-8). G-DEDIGIVOLVE-NO-DECLARATION.
+        if let Some(mut expanded) =
+            permanent_mutations::expand_de_digivolve_instances(step, ctx, bindings)
+        {
+            expanded.extend_from_slice(&steps[i + 1..]);
+            return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        }
 
         if let Some(outcome) = simultaneous_play::try_run(step, ctx, bindings, runtime) {
             if matches!(outcome, RunOutcome::Parked) { park_outer_tail(ctx, bindings, steps, i, runtime); return outcome; }
@@ -846,6 +854,10 @@ pub fn run_step_with_runtime(
         return;
     }
     if source_play_batch::try_run(step, ctx, bindings, runtime) {
+        return;
+    }
+    if let Some(expanded) = permanent_mutations::expand_de_digivolve_instances(step, ctx, bindings) {
+        run_steps_with_runtime(&expanded, ctx, bindings, runtime);
         return;
     }
     if let CompiledStep::RawRust { fn_name, .. } = step {
