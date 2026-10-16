@@ -1472,17 +1472,17 @@
       "text": "The attack target Digimon can't perform a block."
     },
     "12-1-6": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 12,
       "fingerprint": "7c4fe4546109936efb5011ee2e4e08278f57a2c7f8d563fbee572015561172c9",
-      "gap_id": "G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES",
+      "gap_id": null,
       "mechanisms": [
         "blocking"
       ],
-      "note": "The block half behaves correctly in the test (no block is offered once the attacker has left), but the test is #[ignore]d because the §11-1-5 counter half fails; proven once the gap is fixed and the test un-ignored.",
-      "status": "gap",
+      "note": "An attacker that deletes itself on its [When Attacking]: P1's unsuspended <Blocker> is not offered a block (no reveal, the blocker stays unsuspended, the end of attack timing arrives); control: an attacker that stays is blocked.",
+      "status": "proven",
       "tests": [
-        "ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution"
+        "ch11_14_attack_procedure::block_not_offered_when_attacker_left_battle_area"
       ],
       "text": "A block can only be performed if an attacking Digimon is in the battle area."
     },
@@ -1854,7 +1854,7 @@
       "mechanisms": [
         "battle"
       ],
-      "note": "Each loser is in its owner's trash after the battle; with equal DP both are.",
+      "note": "Each loser is in its owner's trash after the battle. Equal DP: both are deleted, and with an [On Deletion] on each both Trash events precede the first [On Deletion] (deleted at the same time, before either effect resolves).",
       "status": "proven",
       "tests": [
         "ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"
@@ -14761,9 +14761,9 @@
         "total": 40
       },
       "12": {
-        "gap": 5,
+        "gap": 4,
         "not_testable": 1,
-        "proven": 3,
+        "proven": 4,
         "total": 9
       },
       "13": {
@@ -14851,15 +14851,15 @@
         "total": 13
       }
     },
-    "gap": 816,
+    "gap": 815,
     "mechanics": {
-      "gap_blocking": 22,
+      "gap_blocking": 21,
       "gap_nonblocking": 488,
       "not_testable": 152,
-      "proven": 53
+      "proven": 54
     },
     "not-testable": 246,
-    "proven": 57
+    "proven": 58
   },
   "version": 1
 }

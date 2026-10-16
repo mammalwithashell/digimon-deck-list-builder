@@ -331,11 +331,9 @@
   tests: ["ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution"]
   note: "The rule's example: an attacker that deletes itself on its [When Attacking]. The end of attack timing arrives (EOA_OBS resolves), but the defender is never offered the counter timing: the engine abandons the attack as soon as the attacker leaves. Test is #[ignore]d."
 "12-1-6":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES
-  tests: ["ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution"]
-  note: "The block half behaves correctly in the test (no block is offered once the attacker has left), but the test is #[ignore]d because the §11-1-5 counter half fails; proven once the gap is fixed and the test un-ignored."
+  status: proven
+  tests: ["ch11_14_attack_procedure::block_not_offered_when_attacker_left_battle_area"]
+  note: "An attacker that deletes itself on its [When Attacking]: P1's unsuspended <Blocker> is not offered a block (no reveal, the blocker stays unsuspended, the end of attack timing arrives); control: an attacker that stays is blocked."
 "11-2-6":
   status: gap
   blocks_training: true
@@ -421,7 +419,7 @@
 "14-2-2":
   status: proven
   tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]
-  note: "Each loser is in its owner's trash after the battle; with equal DP both are."
+  note: "Each loser is in its owner's trash after the battle. Equal DP: both are deleted, and with an [On Deletion] on each both Trash events precede the first [On Deletion] (deleted at the same time, before either effect resolves)."
 "14-2-4":
   status: proven
   tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]

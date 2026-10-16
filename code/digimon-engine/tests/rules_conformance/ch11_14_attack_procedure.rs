@@ -128,8 +128,6 @@ fn decline_windows(r: &mut DebugRunner) -> Vec<Window> {
 /// follow will occur. (Example: Even if an attacking Digimon leaves the
 /// battle area, the non-turn player's counter timing and block timing will
 /// still occur.)"
-/// §12-1-6 "A block can only be performed if an attacking Digimon is in the
-/// battle area."
 ///
 /// P1 has `COUNTER_MEM` ("[Counter] Gain 1 memory") and an unsuspended
 /// `BLOCKER`; P0 has `EOA_OBS` ("[All Turns] At the end of an attack, gain 1
@@ -139,18 +137,15 @@ fn decline_windows(r: &mut DebugRunner) -> Vec<Window> {
 /// - P0's `WA_DEL_SELF` ("[When Attacking] Delete this Digimon") attacks P1
 ///   and deletes itself. The timings still follow: P1 is still offered the
 ///   counter timing (§11-1-5), the block timing offers no block (no attacking
-///   Digimon, §12-1-6), nothing checks security, and the end of attack timing
-///   arrives (`EOA_OBS` resolves).
+///   Digimon, §12-1-6; pinned on its own by
+///   `block_not_offered_when_attacker_left_battle_area`), nothing checks
+///   security, and the end of attack timing arrives (`EOA_OBS` resolves).
 #[test]
 #[ignore = "G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES (§11-1-5)"]
 fn attack_timings_continue_when_attacker_leaves_mid_resolution() {
     cite!(
         "11-1-5",
         "cd109077bced1cb39983cddfc3851c42da90acec2ee7c54922c7d0df6542d1c9"
-    );
-    cite!(
-        "12-1-6",
-        "7c4fe4546109936efb5011ee2e4e08278f57a2c7f8d563fbee572015561172c9"
     );
     let leave_board = |attacker: &str| {
         let mut r = board(&[FILL; 3]);
@@ -195,6 +190,57 @@ fn attack_timings_continue_when_attacker_leaves_mid_resolution() {
     assert!(
         resolved(&r, cp, "EOA_OBS"),
         "the end of attack timing still arrives"
+    );
+}
+
+/// §12-1-6 "A block can only be performed if an attacking Digimon is in the
+/// battle area."
+///
+/// P1 has an unsuspended `BLOCKER` (and no [Counter] effect); P0 has
+/// `EOA_OBS`.
+/// - Control: P0's `LV5_PLAIN` attacks P1: the block timing offers `BLOCKER`.
+/// - P0's `WA_DEL_SELF` ("[When Attacking] Delete this Digimon") attacks P1
+///   and deletes itself: with no attacking Digimon in the battle area no block
+///   is offered; nothing checks security, `BLOCKER` stays unsuspended, and the
+///   end of attack timing still arrives (`EOA_OBS` resolves, §11-1-5).
+#[test]
+fn block_not_offered_when_attacker_left_battle_area() {
+    cite!(
+        "12-1-6",
+        "7c4fe4546109936efb5011ee2e4e08278f57a2c7f8d563fbee572015561172c9"
+    );
+    let attack = |attacker: &str| {
+        let mut r = board(&[FILL; 3]);
+        r.place_on_field(0, "EOA_OBS", Some(0));
+        let a = r.place_on_field(0, attacker, Some(0));
+        r.place_on_field(1, "BLOCKER", Some(0));
+        let cp = r.event_checkpoint();
+        r.attack_player(a, 1, false);
+        let windows = decline_windows(&mut r);
+        (r, cp, windows)
+    };
+
+    let (_, _, windows) = attack("LV5_PLAIN");
+    assert_eq!(windows, vec![Window::Block(1, vec![0])], "control");
+
+    let (r, cp, windows) = attack("WA_DEL_SELF");
+    assert_eq!(
+        field_top_ids(&r, 0),
+        owned(&["EOA_OBS"]),
+        "the attacker left the battle area"
+    );
+    assert!(
+        windows.is_empty(),
+        "no block without an attacking Digimon in the battle area: {windows:?}"
+    );
+    assert!(revealed(&r, cp, 1).is_empty(), "no security check");
+    assert!(
+        !is_suspended(&r, r.perm_handle(1, 0)),
+        "the blocker did not block"
+    );
+    assert!(
+        resolved(&r, cp, "EOA_OBS"),
+        "the end of attack timing arrives"
     );
 }
 
@@ -321,14 +367,14 @@ fn attack_does_not_end_until_all_processing_resolved() {
         !resolved(&r, cp, "WA_DP_UP_EOA_MAY"),
         "the [End of Attack] effect has not resolved"
     );
-    assert!(
-        r.game.pending_attack.is_some(),
-        "the attack has not ended while its end-of-attack processing is unresolved"
-    );
     assert_eq!(
         r.effective_dp(attacker),
         Some(8000),
         "'+2000 DP for the attack' still applies: the attack is still going"
+    );
+    assert!(
+        r.game.pending_attack.is_some(),
+        "the attack has not ended while its end-of-attack processing is unresolved"
     );
 
     accept(&mut r, 0);
@@ -730,6 +776,8 @@ fn non_digimon_security_card_skips_battle_and_is_trashed() {
 ///   resolves before the end of battle effect.
 /// - `FILL` (1000) vs `OD_MEM`: the attacker is deleted; `OD_MEM` stays.
 /// - `LV4_PLAIN` (5000) vs `LV4_PLAIN`: both are deleted.
+/// - `OD_MEM` vs `OD_MEM`: both are deleted at the same time -- both are in
+///   the trash before either [On Deletion] resolves.
 /// Each battle reaches the end of battle (`EOB_OBS` resolves once), and none
 /// checks security.
 #[test]
@@ -807,6 +855,37 @@ fn battle_compares_dp_then_deletes_loser_then_end_of_battle() {
     assert!(field_top_ids(&r, 1).is_empty());
     assert_eq!(trash_ids(&r, 0), owned(&["LV4_PLAIN"]));
     assert_eq!(trash_ids(&r, 1), owned(&["LV4_PLAIN"]));
+
+    // Same DP, both with [On Deletion]: deleted at the same time, so both are
+    // in the trash before either [On Deletion] resolves.
+    let (r, cp) = battle("OD_MEM", "OD_MEM");
+    assert!(field_top_ids(&r, 1).is_empty());
+    assert_eq!(field_top_ids(&r, 0), owned(&["EOB_OBS"]));
+    let events = r.events_since(cp);
+    let trashed = |player: PlayerId| {
+        events
+            .iter()
+            .position(|e| {
+                matches!(e, GameEvent::Trash { player: p, card_id, .. }
+                    if *p == player && card_id == "OD_MEM")
+            })
+            .unwrap_or_else(|| panic!("P{player}'s OD_MEM was trashed"))
+    };
+    let first_on_deletion = memory_event_index(&r, cp, "OD_MEM").expect("[On Deletion] resolved");
+    assert!(
+        trashed(0) < first_on_deletion && trashed(1) < first_on_deletion,
+        "both deleted at the same time: trashed #{} and #{}, first [On Deletion] #{first_on_deletion}",
+        trashed(0),
+        trashed(1)
+    );
+    assert_eq!(
+        memory_sources(&r, cp)
+            .iter()
+            .filter(|(_, id)| id == "OD_MEM")
+            .count(),
+        2,
+        "both [On Deletion] effects resolved"
+    );
 }
 
 // ─── §16-9 ──────────────────────────────────────────────────────────────────
