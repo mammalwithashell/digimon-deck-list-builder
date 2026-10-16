@@ -28,6 +28,10 @@ const CHAPTER_SOURCES: &[(&str, &str)] = &[
         "ch18_pending_overwrite.rs",
         include_str!("ch18_pending_overwrite.rs"),
     ),
+    (
+        "ch11_14_attack_procedure.rs",
+        include_str!("ch11_14_attack_procedure.rs"),
+    ),
 ];
 
 /// `main.rs`, `cite.rs`, `meta.rs`, `support.rs` are infrastructure, not

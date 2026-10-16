@@ -925,16 +925,18 @@
       "text": "The next timing won't begin until all of the processing is resolved for the current timing. (Example: After declaring an attack, the counter timing won't begin until any triggered [When Attacking] effects and other triggered effects have been resolved.)"
     },
     "11-1-5": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 11,
       "fingerprint": "cd109077bced1cb39983cddfc3851c42da90acec2ee7c54922c7d0df6542d1c9",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES",
       "mechanisms": [
         "attack-and-timing"
       ],
-      "note": null,
+      "note": "The rule's example: an attacker that deletes itself on its [When Attacking]. The end of attack timing arrives (EOA_OBS resolves), but the defender is never offered the counter timing: the engine abandons the attack as soon as the attacker leaves. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution"
+      ],
       "text": "Once an attack declaration has been made, all of the timings that follow will occur. (Example: Even if an attacking Digimon leaves the battle area, the non-turn player's counter timing and block timing will still occur.)"
     },
     "11-2": {
@@ -1016,16 +1018,18 @@
       "text": "An attack declaration can't be made using a Digimon that can't suspend."
     },
     "11-2-6": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 11,
       "fingerprint": "e60a2eaee1b38ae5a8c29be9bb45b4cc36ed04dfdad365b10fa5eb3b7953c938",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED",
       "mechanisms": [
         "attack-and-timing"
       ],
-      "note": null,
+      "note": "The rule's example: [When Attacking] deletes the target. A second opponent Digimon shifts into the removed target's battle-area slot and is battled (the 6000 DP attacker loses to it) instead of the attack failing. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch11_14_attack_procedure::removed_target_stays_the_target_and_attack_fails"
+      ],
       "text": "Even if the attack target Digimon is removed during an attack, that Digimon remains the attack target, but the attack fails. (Example: Even if an attack target Digimon is deleted by a [When Attacking] effect, that Digimon remains the attack target. The attack fails because the attack target Digimon is removed.)"
     },
     "11-2-7": {
@@ -1335,9 +1339,11 @@
       "mechanisms": [
         "attack-and-timing"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The target is deleted by the attacker's [When Attacking] (no other opponent Digimon): no battle (no end of battle), no security check, the end of attack timing occurs (EOA_OBS resolves) and the attack ends.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::unsuccessful_attack_reaches_end_of_attack_timing"
+      ],
       "text": "In this situation, no other actions are taken and the end of attack timing occurs."
     },
     "11-6": {
@@ -1367,16 +1373,18 @@
       "text": "The end of attack timing arrives and the attack ends."
     },
     "11-6-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 11,
       "fingerprint": "1ff1d8bbe91ca39303301f28674c016bedbefa0af1de276c657c3d443fed84f7",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE",
       "mechanisms": [
         "attack-and-timing"
       ],
-      "note": null,
+      "note": "While an optional [End of Attack] waits on its decision, pending_attack is already None and the attack's '+2000 DP for the attack' has expired. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch11_14_attack_procedure::attack_does_not_end_until_all_processing_resolved"
+      ],
       "text": "For the end of the attack timing, the attack won't end until all processing has been resolved."
     },
     "12-1": {
@@ -1413,9 +1421,11 @@
       "mechanisms": [
         "blocking"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Two unsuspended <Blocker>s; after the first blocks, no second block is offered; the blocker battles, the other stays unsuspended, no security check.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::one_block_per_attack"
+      ],
       "text": "A block can only be performed once per attack. Multiple Digimon can't block at the same time."
     },
     "12-1-3": {
@@ -1439,9 +1449,11 @@
       "mechanisms": [
         "blocking"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "An unsuspended <Blocker> with '[All Turns] This Digimon can't suspend' is not offered a block (the attack checks security); control: a plain <Blocker> is offered.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::digimon_that_cannot_suspend_cannot_block"
+      ],
       "text": "A block can't be performed using a Digimon that can't suspend."
     },
     "12-1-5": {
@@ -1452,22 +1464,26 @@
       "mechanisms": [
         "blocking"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The attacked <Blocker> unsuspends itself when attacked; at the block timing only the other unsuspended <Blocker> is offered.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::attack_target_cannot_block"
+      ],
       "text": "The attack target Digimon can't perform a block."
     },
     "12-1-6": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 12,
       "fingerprint": "7c4fe4546109936efb5011ee2e4e08278f57a2c7f8d563fbee572015561172c9",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES",
       "mechanisms": [
         "blocking"
       ],
-      "note": null,
+      "note": "The block half behaves correctly in the test (no block is offered once the attacker has left), but the test is #[ignore]d because the §11-1-5 counter half fails; proven once the gap is fixed and the test un-ignored.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution"
+      ],
       "text": "A block can only be performed if an attacking Digimon is in the battle area."
     },
     "12-1-7": {
@@ -1530,9 +1546,11 @@
       "mechanisms": [
         "security"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A <Piercing> attacker with <Security A. +1> checks 2 cards in its one security check, with one or two <Piercing> instances (see 16-7-5).",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::one_security_check_per_attack_sa_plus_counts_inside_it"
+      ],
       "text": "Only 1 security check can be performed during a single attack. However, if the number of cards that can be checked is modified by an effect on the attacking Digimon, the modified number of cards will be checked in a single security check."
     },
     "13-1-3": {
@@ -1569,9 +1587,11 @@
       "mechanisms": [
         "security"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A <Security A. +1> attacker loses the battle against the first Security Digimon and is deleted: the second card is never checked; control: 2 checks.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::checking_digimon_leaving_stops_further_checks"
+      ],
       "text": "If the Digimon performing the security check is no longer present in the battle area, that card can't perform any more security checks."
     },
     "13-1-6": {
@@ -1601,16 +1621,18 @@
       "text": "A checked Digimon card is treated as a Security Digimon."
     },
     "13-1-8": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 13,
       "fingerprint": "d796225ea662544003beeb852eb91ae73c1a94a74d48c0ff98caf97ba27bda77",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE",
       "mechanisms": [
         "security"
       ],
-      "note": null,
+      "note": "Procedure order: the check-triggered effects (13-1-8-2) resolve after the Security Digimon battle (13-1-8-3). Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle"
+      ],
       "text": "A security check is performed using the following procedure."
     },
     "13-1-8-1": {
@@ -1653,16 +1675,18 @@
       "text": "Processing for effects triggered upon a security check"
     },
     "13-1-8-2-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 13,
       "fingerprint": "0e1852a3368ea62c1d17008d028f5130221066709cb66d79f3170065d76d34ca",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE",
       "mechanisms": [
         "security"
       ],
-      "note": null,
+      "note": "A defender's 'when your opponent's Digimon checks your security, that Digimon gets -3000 DP for the turn' resolves after the battle: the 7000 DP attacker beats the 5000 DP Security Digimon and only then drops to 4000. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle"
+      ],
       "text": "If an effect is triggered by a security check, that effect is to be resolved. The next action won't begin until all of the processing is resolved for the current action."
     },
     "13-1-8-3": {
@@ -1679,16 +1703,18 @@
       "text": "Processing Battles against Security Digimon"
     },
     "13-1-8-3-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 13,
       "fingerprint": "bfd93b2798f4fdd0540acabda0f8ec1ef16c15c5701a0d71dc1cce3a42e05c85",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE",
       "mechanisms": [
         "security"
       ],
-      "note": null,
+      "note": "The battle itself happens (see 13-1-5, 16-9-1), but before the check-triggered effects resolve; the citing test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle"
+      ],
       "text": "A battle will occur between the Security Digimon and the Digimon that performed the security check. The next action won't begin until all of the processing is resolved for the current action. (For details, refer to 14 \"Battles\")1424"
     },
     "13-1-8-3-2": {
@@ -1699,9 +1725,11 @@
       "mechanisms": [
         "security"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "An Option and a Tamer (neither with a [Security] effect) revealed by the check: no battle (no end of battle, the 1000 DP attacker stays).",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::non_digimon_security_card_skips_battle_and_is_trashed"
+      ],
       "text": "If a Security Digimon isn't present, proceed to the next step."
     },
     "13-1-8-4": {
@@ -1712,9 +1740,11 @@
       "mechanisms": [
         "security"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The revealed Option / Tamer is placed in the trash (not played, its [Main] not activated).",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::non_digimon_security_card_skips_battle_and_is_trashed"
+      ],
       "text": "A card revealed from a security check is placed in the trash unless it belongs to an area."
     },
     "13-1-8-5": {
@@ -1764,9 +1794,11 @@
       "mechanisms": [
         "battle"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "7000 vs 3000, 1000 vs 3000 and 5000 vs 5000 DP battles from attacks on suspended Digimon.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"
+      ],
       "text": "The DP values of the two battling cards are compared."
     },
     "14-2-1-1": {
@@ -1777,9 +1809,11 @@
       "mechanisms": [
         "battle"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "7000 DP beats 3000 DP; the attacker stays.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"
+      ],
       "text": "The card with the higher DP is the winner."
     },
     "14-2-1-2": {
@@ -1790,9 +1824,11 @@
       "mechanisms": [
         "battle"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A 1000 DP attacker loses to a 3000 DP Digimon and is deleted.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"
+      ],
       "text": "The card with the lower DP loses."
     },
     "14-2-1-3": {
@@ -1803,9 +1839,11 @@
       "mechanisms": [
         "battle"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "5000 vs 5000 DP: both lose and both are deleted.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"
+      ],
       "text": "If both cards have the same DP, both lose the battle."
     },
     "14-2-2": {
@@ -1816,9 +1854,11 @@
       "mechanisms": [
         "battle"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Each loser is in its owner's trash after the battle; with equal DP both are.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"
+      ],
       "text": "The Digimon that loses is immediately deleted. If both lose, both are deleted at the same time."
     },
     "14-2-3": {
@@ -1842,9 +1882,11 @@
       "mechanisms": [
         "battle"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The deleted Digimon's [On Deletion], triggered by the battle, resolves before the end of battle effect.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"
+      ],
       "text": "If an effect is triggered by a battle, that effect is to be resolved. The next action won't begin until all of the processing is resolved for the current action."
     },
     "14-2-5": {
@@ -1855,9 +1897,11 @@
       "mechanisms": [
         "battle"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "An '[All Turns] At the end of a battle, gain 1 memory' resolves exactly once after each battle, after the battle-triggered effects.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"
+      ],
       "text": "If an effect is triggered by the end of the battle timing when a battle ends, that effect is to be resolved."
     },
     "15-1": {
@@ -3341,9 +3385,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A revealed Option's '[Security] Gain 1 memory' resolves before the defender's 'when your opponent's Digimon checks your security, gain 1 memory', with no ordering choice offered.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::security_effect_activates_before_other_check_triggers"
+      ],
       "text": "A triggered [Security] effect will immediately activate without pending activation. Therefore, [Security] effects take precedence for activation even when they trigger simultaneously with other effects."
     },
     "15-16-11": {
@@ -7674,10 +7720,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "first sentence pinned as a regression check by ch18_pending_overwrite::piercing_checks_security_once_however_many_instances; cannot discriminate (fire_piercing_or_finish gates on a boolean has_keyword); modified-count sentence unstaged (needs <Security A. +1> on the Piercing attacker)",
-      "status": "gap",
+      "note": "Both sentences staged by the ch11_14 test: a <Security A. +1> attacker with one <Piercing> (inherited) checks 2 cards in its single <Piercing> check, and with two <Piercing> instances (PIERCING_X2 over an inherited <Security A. +1>) still exactly 2 cards (not 4) out of 5. The ch18 test stays as the strike-1 regression pin.",
+      "status": "proven",
       "tests": [
-        "ch18_pending_overwrite::piercing_checks_security_once_however_many_instances"
+        "ch18_pending_overwrite::piercing_checks_security_once_however_many_instances",
+        "ch11_14_attack_procedure::one_security_check_per_attack_sa_plus_counts_inside_it"
       ],
       "text": "Only 1 security check can be performed during a single attack, even if <Piercing> activates multiple times. However, if the number of cards that can be checked by the attacking Digimon is modified, that number of cards will be checked in a single security check."
     },
@@ -7769,9 +7816,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A 5000 DP <Jamming> attacker loses to a 7000 DP Security Digimon and stays; it is deleted losing to a 7000 DP Digimon in the battle area.",
+      "status": "proven",
+      "tests": [
+        "ch11_14_attack_procedure::jamming_survives_security_battle_only"
+      ],
       "text": "<Jamming> is a keyword effect where a Digimon with this effect isn't deleted as a result of a battle with an opponent's Security Digimon."
     },
     "16-9-2": {
@@ -14706,39 +14755,39 @@
         "total": 10
       },
       "11": {
-        "gap": 32,
+        "gap": 31,
         "not_testable": 8,
-        "proven": 0,
+        "proven": 1,
         "total": 40
       },
       "12": {
-        "gap": 8,
+        "gap": 5,
         "not_testable": 1,
-        "proven": 0,
+        "proven": 3,
         "total": 9
       },
       "13": {
-        "gap": 15,
+        "gap": 11,
         "not_testable": 3,
-        "proven": 0,
+        "proven": 4,
         "total": 18
       },
       "14": {
-        "gap": 10,
+        "gap": 3,
         "not_testable": 0,
-        "proven": 0,
+        "proven": 7,
         "total": 10
       },
       "15": {
-        "gap": 152,
+        "gap": 151,
         "not_testable": 66,
-        "proven": 26,
+        "proven": 27,
         "total": 244
       },
       "16": {
-        "gap": 160,
+        "gap": 158,
         "not_testable": 44,
-        "proven": 2,
+        "proven": 4,
         "total": 206
       },
       "17": {
@@ -14802,15 +14851,15 @@
         "total": 13
       }
     },
-    "gap": 834,
+    "gap": 816,
     "mechanics": {
-      "gap_blocking": 15,
-      "gap_nonblocking": 513,
+      "gap_blocking": 22,
+      "gap_nonblocking": 488,
       "not_testable": 152,
-      "proven": 35
+      "proven": 53
     },
     "not-testable": 246,
-    "proven": 39
+    "proven": 57
   },
   "version": 1
 }

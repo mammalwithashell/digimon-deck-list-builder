@@ -28,6 +28,26 @@ const COMMON: &[&str] = &[
     include_str!("common/WA_MEM.yaml"),
 ];
 
+/// §11-14 "Attacking", "Blocking", "Security Checks", "Battles" chapter
+/// cards, with the §16-4/§16-5/§16-7/§16-9 keyword cards
+/// (`ch11_14_attack_procedure.rs`).
+const CH11_14: &[&str] = &[
+    include_str!("ch11_14/BLOCKER.yaml"),
+    include_str!("ch11_14/BLOCKER_CANNOT_SUSPEND.yaml"),
+    include_str!("ch11_14/BLOCKER_WAKES.yaml"),
+    include_str!("ch11_14/COUNTER_MEM.yaml"),
+    include_str!("ch11_14/EOA_OBS.yaml"),
+    include_str!("ch11_14/EOB_OBS.yaml"),
+    include_str!("ch11_14/JAMMING.yaml"),
+    include_str!("ch11_14/PIERCING_X2.yaml"),
+    include_str!("ch11_14/SA_PLUS1.yaml"),
+    include_str!("ch11_14/SEC_CHECK_OBS_MEM.yaml"),
+    include_str!("ch11_14/SEC_CHECK_OBS_MINUS_DP.yaml"),
+    include_str!("ch11_14/SEC_MEM_OPT.yaml"),
+    include_str!("ch11_14/WA_DEL_SELF.yaml"),
+    include_str!("ch11_14/WA_DP_UP_EOA_MAY.yaml"),
+];
+
 /// §15-4 "Effect States" chapter cards (`ch15_04_effect_states.rs`).
 const CH15_04: &[&str] = &[
     include_str!("ch15_04/BIG_LV6.yaml"),
@@ -137,6 +157,11 @@ pub fn common_cards() -> &'static [&'static str] {
     COMMON
 }
 
+/// Every `ch11_14/` card's YAML source.
+pub fn ch11_14_cards() -> &'static [&'static str] {
+    CH11_14
+}
+
 /// Every `ch15_04/` card's YAML source.
 pub fn ch15_04_cards() -> &'static [&'static str] {
     CH15_04
@@ -196,6 +221,7 @@ fn every_fixture_file_is_listed() {
     );
     for (dir, listed) in [
         ("common", COMMON.len()),
+        ("ch11_14", CH11_14.len()),
         ("ch15_04", CH15_04.len()),
         ("ch15_07", CH15_07.len()),
         ("ch15_08", CH15_08.len()),

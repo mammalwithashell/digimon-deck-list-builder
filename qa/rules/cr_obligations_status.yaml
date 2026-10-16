@@ -315,11 +315,122 @@
   tests: ["ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack"]
   note: "The rule's example: <Piercing> deletes a Digimon with '[On Deletion] Gain 1 memory'; event order is the [On Deletion] memory, then the single SecurityReveal, then the attacker's [End of Attack] memory."
 "16-7-5":
-  status: gap
-  blocks_training: false
-  tests: ["ch18_pending_overwrite::piercing_checks_security_once_however_many_instances"]
-  note: "first sentence pinned as a regression check by ch18_pending_overwrite::piercing_checks_security_once_however_many_instances; cannot discriminate (fire_piercing_or_finish gates on a boolean has_keyword); modified-count sentence unstaged (needs <Security A. +1> on the Piercing attacker)"
+  status: proven
+  tests: ["ch18_pending_overwrite::piercing_checks_security_once_however_many_instances", "ch11_14_attack_procedure::one_security_check_per_attack_sa_plus_counts_inside_it"]
+  note: "Both sentences staged by the ch11_14 test: a <Security A. +1> attacker with one <Piercing> (inherited) checks 2 cards in its single <Piercing> check, and with two <Piercing> instances (PIERCING_X2 over an inherited <Security A. +1>) still exactly 2 cards (not 4) out of 5. The ch18 test stays as the strike-1 regression pin."
 "16-7-6":
   status: proven
   tests: ["ch18_pending_overwrite::piercing_without_the_attacker_checks_nothing"]
   note: "The deleted defender's '[On Deletion] Delete 1 of your opponent's Digimon' deletes the attacker before <Piercing> is processed: no security card is revealed."
+
+# ── ch11-14 Attack, Block, Security Check, Battle (§11-§14), §15-16-10-2, §16-7-5, §16-9-1 — tests/rules_conformance/ch11_14_attack_procedure.rs ──
+"11-1-5":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES
+  tests: ["ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution"]
+  note: "The rule's example: an attacker that deletes itself on its [When Attacking]. The end of attack timing arrives (EOA_OBS resolves), but the defender is never offered the counter timing: the engine abandons the attack as soon as the attacker leaves. Test is #[ignore]d."
+"12-1-6":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES
+  tests: ["ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution"]
+  note: "The block half behaves correctly in the test (no block is offered once the attacker has left), but the test is #[ignore]d because the §11-1-5 counter half fails; proven once the gap is fixed and the test un-ignored."
+"11-2-6":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED
+  tests: ["ch11_14_attack_procedure::removed_target_stays_the_target_and_attack_fails"]
+  note: "The rule's example: [When Attacking] deletes the target. A second opponent Digimon shifts into the removed target's battle-area slot and is battled (the 6000 DP attacker loses to it) instead of the attack failing. Test is #[ignore]d."
+"11-5-1-4-1":
+  status: proven
+  tests: ["ch11_14_attack_procedure::unsuccessful_attack_reaches_end_of_attack_timing"]
+  note: "The target is deleted by the attacker's [When Attacking] (no other opponent Digimon): no battle (no end of battle), no security check, the end of attack timing occurs (EOA_OBS resolves) and the attack ends."
+"11-6-2":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE
+  tests: ["ch11_14_attack_procedure::attack_does_not_end_until_all_processing_resolved"]
+  note: "While an optional [End of Attack] waits on its decision, pending_attack is already None and the attack's '+2000 DP for the attack' has expired. Test is #[ignore]d."
+"12-1-2":
+  status: proven
+  tests: ["ch11_14_attack_procedure::one_block_per_attack"]
+  note: "Two unsuspended <Blocker>s; after the first blocks, no second block is offered; the blocker battles, the other stays unsuspended, no security check."
+"12-1-4":
+  status: proven
+  tests: ["ch11_14_attack_procedure::digimon_that_cannot_suspend_cannot_block"]
+  note: "An unsuspended <Blocker> with '[All Turns] This Digimon can't suspend' is not offered a block (the attack checks security); control: a plain <Blocker> is offered."
+"12-1-5":
+  status: proven
+  tests: ["ch11_14_attack_procedure::attack_target_cannot_block"]
+  note: "The attacked <Blocker> unsuspends itself when attacked; at the block timing only the other unsuspended <Blocker> is offered."
+"13-1-2":
+  status: proven
+  tests: ["ch11_14_attack_procedure::one_security_check_per_attack_sa_plus_counts_inside_it"]
+  note: "A <Piercing> attacker with <Security A. +1> checks 2 cards in its one security check, with one or two <Piercing> instances (see 16-7-5)."
+"13-1-5":
+  status: proven
+  tests: ["ch11_14_attack_procedure::checking_digimon_leaving_stops_further_checks"]
+  note: "A <Security A. +1> attacker loses the battle against the first Security Digimon and is deleted: the second card is never checked; control: 2 checks."
+"13-1-8":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE
+  tests: ["ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle"]
+  note: "Procedure order: the check-triggered effects (13-1-8-2) resolve after the Security Digimon battle (13-1-8-3). Test is #[ignore]d."
+"13-1-8-2-1":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE
+  tests: ["ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle"]
+  note: "A defender's 'when your opponent's Digimon checks your security, that Digimon gets -3000 DP for the turn' resolves after the battle: the 7000 DP attacker beats the 5000 DP Security Digimon and only then drops to 4000. Test is #[ignore]d."
+"13-1-8-3-1":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE
+  tests: ["ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle"]
+  note: "The battle itself happens (see 13-1-5, 16-9-1), but before the check-triggered effects resolve; the citing test is #[ignore]d."
+"15-16-10-2":
+  status: proven
+  tests: ["ch11_14_attack_procedure::security_effect_activates_before_other_check_triggers"]
+  note: "A revealed Option's '[Security] Gain 1 memory' resolves before the defender's 'when your opponent's Digimon checks your security, gain 1 memory', with no ordering choice offered."
+"13-1-8-3-2":
+  status: proven
+  tests: ["ch11_14_attack_procedure::non_digimon_security_card_skips_battle_and_is_trashed"]
+  note: "An Option and a Tamer (neither with a [Security] effect) revealed by the check: no battle (no end of battle, the 1000 DP attacker stays)."
+"13-1-8-4":
+  status: proven
+  tests: ["ch11_14_attack_procedure::non_digimon_security_card_skips_battle_and_is_trashed"]
+  note: "The revealed Option / Tamer is placed in the trash (not played, its [Main] not activated)."
+"14-2-1":
+  status: proven
+  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]
+  note: "7000 vs 3000, 1000 vs 3000 and 5000 vs 5000 DP battles from attacks on suspended Digimon."
+"14-2-1-1":
+  status: proven
+  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]
+  note: "7000 DP beats 3000 DP; the attacker stays."
+"14-2-1-2":
+  status: proven
+  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]
+  note: "A 1000 DP attacker loses to a 3000 DP Digimon and is deleted."
+"14-2-1-3":
+  status: proven
+  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]
+  note: "5000 vs 5000 DP: both lose and both are deleted."
+"14-2-2":
+  status: proven
+  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]
+  note: "Each loser is in its owner's trash after the battle; with equal DP both are."
+"14-2-4":
+  status: proven
+  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]
+  note: "The deleted Digimon's [On Deletion], triggered by the battle, resolves before the end of battle effect."
+"14-2-5":
+  status: proven
+  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]
+  note: "An '[All Turns] At the end of a battle, gain 1 memory' resolves exactly once after each battle, after the battle-triggered effects."
+"16-9-1":
+  status: proven
+  tests: ["ch11_14_attack_procedure::jamming_survives_security_battle_only"]
+  note: "A 5000 DP <Jamming> attacker loses to a 7000 DP Security Digimon and stays; it is deleted losing to a 7000 DP Digimon in the battle area."

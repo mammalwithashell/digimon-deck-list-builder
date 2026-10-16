@@ -1,0 +1,16 @@
+# COUNTER_MEM -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [Counter] Gain 1 memory.
+# A [Counter] effect usable in any counter timing (§11-3-1): the witness
+# that the counter timing occurred.
+card: COUNTER_MEM
+name: Parrymon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: counter
+    summary: "[Counter] Gain 1 memory."
+    process:
+      - gain_memory: 1
