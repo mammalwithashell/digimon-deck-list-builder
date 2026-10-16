@@ -1,0 +1,25 @@
+# BDNA -- Digimon, Lv.6, red/blue, 12000 DP, play cost 10.
+#   DNA Digivolve: red Lv.5 + blue Lv.5 : cost 0
+#   {Hand} [Counter] <Blast DNA Digivolve> <[Leftmon] + [Rightmon]> (1 of your
+#   specified Digimon and a specified card in your hand may DNA digivolve into
+#   this card without paying the cost.)
+# The §16-31 keyword card (production idiom: the `blast_dna_digivolve`
+# alt path beside the printed `dna_digivolve` requirement, BT17-078).
+card: BDNA
+name: Unionmon
+kind: digimon
+level: 6
+color: [red, blue]
+cost: 10
+dp: 12000
+alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 5, color_is: red }
+      - { level_eq: 5, color_is: blue }
+    cost: 0
+  - kind: blast_dna_digivolve
+    materials:
+      - { kind: digimon, name_is: "Leftmon" }
+      - { kind: digimon, name_is: "Rightmon" }
+    cost: 0

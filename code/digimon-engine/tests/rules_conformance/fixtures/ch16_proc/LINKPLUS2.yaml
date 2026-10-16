@@ -1,0 +1,24 @@
+# LINKPLUS2 -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   <Link +1> (Add 1 to this Digimon's maximum links.)
+#   <Link +1> (Add 1 to this Digimon's maximum links.)
+# Two instances of <Link +1> on 1 Digimon (§16-40-3; production idiom: a
+# self `ChangeLinkMax` aura, AD1-005). It meets LINK_A's link requirement
+# (a level 4 Digimon).
+card: LINKPLUS2
+name: Hubmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - kind: aura
+    target: {}
+    modifier: ChangeLinkMax
+    modifier_value: 1
+    summary: "<Link +1> (Add 1 to this Digimon's maximum links.)"
+  - kind: aura
+    target: {}
+    modifier: ChangeLinkMax
+    modifier_value: 1
+    summary: "<Link +1> (Add 1 to this Digimon's maximum links.)"

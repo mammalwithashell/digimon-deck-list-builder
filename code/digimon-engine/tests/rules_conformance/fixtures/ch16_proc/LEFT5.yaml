@@ -1,0 +1,9 @@
+# LEFT5 -- Digimon, Lv.5, red, 7000 DP, play cost 7. No text.
+# [Leftmon] meeting BDNA's DNA requirement (red Lv.5).
+card: LEFT5
+name: Leftmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000

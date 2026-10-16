@@ -1,0 +1,15 @@
+# MINDLINK -- Tamer, red, play cost 3.
+#   [Main] <Mind Link> with 1 of your Digimon. (Place this Tamer as that
+#   Digimon's bottom digivolution card if there are no Tamer cards in its
+#   digivolution cards.)
+# The §16-28 keyword card. The DSL cannot grant <Mind Link> (not in
+# `KNOWN_KEYWORD_KEYS`): production drives it from the printed-keyword parse
+# (`Keyword::MindLink`, BT14-086), so this file only registers the plain body.
+# The tests (`ch16_processing_keywords::mind_link_card`) load the printed text
+# through `card_data::parse_printed_keywords`, as `ch15_08/TRAIN.yaml` does
+# for <Training>.
+card: MINDLINK
+name: Bond Tamer
+kind: tamer
+color: [red]
+cost: 3

@@ -1,0 +1,14 @@
+# REBOOT -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   <Reboot> (Unsuspend this Digimon during your opponent's unsuspend phase.)
+# The §16-11 keyword card.
+card: REBOOT
+name: Restartmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot> (Unsuspend this Digimon during your opponent's unsuspend phase.)"

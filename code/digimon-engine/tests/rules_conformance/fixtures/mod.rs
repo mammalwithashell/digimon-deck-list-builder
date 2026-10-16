@@ -198,6 +198,37 @@ const CH16_ATK: &[&str] = &[
     include_str!("ch16_atk/WA_PROGRESS.yaml"),
 ];
 
+/// §16-6..§16-41 processing keyword cards (`ch16_processing_keywords.rs`).
+const CH16_PROC: &[&str] = &[
+    include_str!("ch16_proc/BDNA.yaml"),
+    include_str!("ch16_proc/BLAST.yaml"),
+    include_str!("ch16_proc/BURST.yaml"),
+    include_str!("ch16_proc/DEDIGI1X2_OPT.yaml"),
+    include_str!("ch16_proc/DEDIGI1_OPT.yaml"),
+    include_str!("ch16_proc/DEDIGI2_OPT.yaml"),
+    include_str!("ch16_proc/DELAY_MEM.yaml"),
+    include_str!("ch16_proc/DELAY_SOYT.yaml"),
+    include_str!("ch16_proc/DIGISORB.yaml"),
+    include_str!("ch16_proc/DRAW_OPT.yaml"),
+    include_str!("ch16_proc/FORT.yaml"),
+    include_str!("ch16_proc/IMMUNE_LV4.yaml"),
+    include_str!("ch16_proc/LEFT4.yaml"),
+    include_str!("ch16_proc/LEFT5.yaml"),
+    include_str!("ch16_proc/LINKPLUS2.yaml"),
+    include_str!("ch16_proc/LINKPLUS_AURA.yaml"),
+    include_str!("ch16_proc/MINDLINK.yaml"),
+    include_str!("ch16_proc/MSAVE2.yaml"),
+    include_str!("ch16_proc/OBS_SRC_TRASH_MEM.yaml"),
+    include_str!("ch16_proc/REBOOT.yaml"),
+    include_str!("ch16_proc/REBOOT_INH.yaml"),
+    include_str!("ch16_proc/REC_OPT.yaml"),
+    include_str!("ch16_proc/RIGHT5.yaml"),
+    include_str!("ch16_proc/SAVE.yaml"),
+    include_str!("ch16_proc/UNSUSP_OBS_INH.yaml"),
+    include_str!("ch16_proc/XROSSA.yaml"),
+    include_str!("ch16_proc/XROSSB.yaml"),
+];
+
 /// §17 "Rule Checks" chapter cards (`ch17_rule_checks.rs`).
 const CH17: &[&str] = &[
     include_str!("ch17/LINK_A.yaml"),
@@ -275,6 +306,11 @@ pub fn ch16_atk_cards() -> &'static [&'static str] {
     CH16_ATK
 }
 
+/// Every `ch16_proc/` card's YAML source.
+pub fn ch16_proc_cards() -> &'static [&'static str] {
+    CH16_PROC
+}
+
 /// Every `ch17/` card's YAML source.
 pub fn ch17_cards() -> &'static [&'static str] {
     CH17
@@ -326,6 +362,7 @@ fn every_fixture_file_is_listed() {
         ("ch16_new", CH16_NEW.len()),
         ("ch16_repl", CH16_REPL.len()),
         ("ch16_atk", CH16_ATK.len()),
+        ("ch16_proc", CH16_PROC.len()),
         ("ch17", CH17.len()),
         ("ch18", CH18.len()),
     ] {

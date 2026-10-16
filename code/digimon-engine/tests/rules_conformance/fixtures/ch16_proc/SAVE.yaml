@@ -1,0 +1,14 @@
+# SAVE -- Digimon, Lv.4, red, 4000 DP, play cost 4.
+#   [On Deletion] <Save> (You may place this card under one of your Tamers.)
+# The §16-20 keyword card (production idiom: `grant_keyword: Save`, BT10-029).
+card: SAVE
+name: Keepmon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+effects:
+  - kind: grant_keyword
+    keyword: Save
+    summary: "[On Deletion] <Save> (You may place this card under one of your Tamers.)"

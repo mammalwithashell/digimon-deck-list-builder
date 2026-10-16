@@ -5185,68 +5185,80 @@
       "text": "<Digisorption>"
     },
     "16-10-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "46ffa6072e70675fb7aad16dc7a671b4dfe3bf31402d69494bb9807a3c7af35a",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "No engine path (no Keyword variant, no printed parse, no DSL vocabulary); the card is loaded from its printed face. Digivolving into it offers nothing and pays the full cost. #[ignore]d. Blocks training in principle; no authored card prints it.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"
+      ],
       "text": "<Digisorption> is a keyword effect. When a digivolution into a Digimon card with this effect in the hand would occur, by suspending 1 of your Digimon, the digivolution cost is reduced according to the value specified in the effect. This is shown on cards using text such as <Digisorption -3>."
     },
     "16-10-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "a6a10bed2ea37996c30e662df98118930a6e6f7fdba2f0c7efae3f1a8615b815",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Both #[ignore]d. The play-from-hand half of the timing test (no offer, play cost paid) passes.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::digisorption_kind_matches_rule",
+        "ch16_processing_keywords::digisorption_timing_matches_rule"
+      ],
       "text": "<Digisorption> is an immediate-type effect that triggers when a digivolution into a card with this effect in the hand would occur. (For details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-10-3": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "096c5b9d397f4219597aea82e472b233ba6032fe1b474ef40de8077ab0639fad",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Both #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::digisorption_optionality_matches_rule",
+        "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"
+      ],
       "text": "\"By suspending 1 of your Digimon\" in <Digisorption> is an optional processing condition. If the content of that condition is executed, the processing for \"the digivolution cost is reduced\" will be mandatory."
     },
     "16-10-4": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "9eaef97b28a20933b73e2847d5d3ba0498fe1f822579d7e51b26efeb9e15fa3b",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Two printed <Digisorption -1> on one card, both activated for one digivolution. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"
+      ],
       "text": "If 1 Digimon card has multiple instances of <Digisorption>, they overlap when they trigger.37 Multiple instances of <Digisorption> can be activated for a single digivolution."
     },
     "16-10-5": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "bb23bb4ee3301d9acd8de6afd8ca7546e8313f5bebf9271e1a74759ecc1956fb",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "The digivolving base must be among the Digimon that can be suspended. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"
+      ],
       "text": "<Digisorption> can be used to suspend a Digimon that will become a digivolution card."
     },
     "16-11": {
@@ -5270,9 +5282,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Unsuspended after P1's TurnStart and before P1's PhaseChange into Draw (witness: an inherited 'when this Digimon unsuspends, gain 1 memory').",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::reboot_unsuspends_in_opponents_unsuspend_phase_once_with_two_instances",
+        "ch16_processing_keywords::reboot_timing_matches_rule"
+      ],
       "text": "<Reboot> is a keyword effect where a Digimon with this effect is unsuspended during the opponent's unsuspend phase."
     },
     "16-11-2": {
@@ -5283,9 +5298,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "No decision; an inherited <Reboot> whose source card was removed before the opponent's turn no longer unsuspends the Digimon.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::reboot_kind_matches_rule"
+      ],
       "text": "<Reboot> is a persistent effect. (For details, refer to 15- 8-2 \"Persistent Effects\")15-8-2"
     },
     "16-11-3": {
@@ -5296,9 +5313,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Own + inherited <Reboot>: the 'when this Digimon unsuspends' observer fires once.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::reboot_unsuspends_in_opponents_unsuspend_phase_once_with_two_instances"
+      ],
       "text": "Even if 1 Digimon has multiple instances of <Reboot>, it is only unsuspended once during the opponent's unsuspend phase."
     },
     "16-11-4": {
@@ -5310,8 +5329,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::reboot_optionality_matches_rule"
+      ],
       "text": "The unsuspending from <Reboot> is mandatory."
     },
     "16-11-5": {
@@ -5322,9 +5343,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Both the <Reboot> Digimon and the turn player's own suspended Digimon unsuspend in the same unsuspend phase (both observers before the draw phase). The 'no particular order' half has no observable here.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::reboot_unsuspends_in_opponents_unsuspend_phase_once_with_two_instances"
+      ],
       "text": "The unsuspending from <Reboot> is performed at the same time as the unsuspending of the turn player's Digimon. The unsuspends aren't performed in any particular order."
     },
     "16-12": {
@@ -5341,16 +5364,18 @@
       "text": "<De-Digivolve>"
     },
     "16-12-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "29204991edef21032de826718e2bd74edb37cbc6f870483b871c14735d057d0a",
-      "gap_id": null,
+      "gap_id": "G-DEDIGIVOLVE-NO-DECLARATION",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "<De-Digivolve 2> offers no 1-or-2 declaration; the maximum is always trashed. #[ignore]d. The 'starting with the top card' half is proven by de_digivolve_multi_card_trash_is_simultaneous_but_sequential.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3"
+      ],
       "text": "<De-Digivolve> is a keyword effect where the player declares a number from 1 up to the number specified in the effect, then the declared number of cards are trashed from the chosen stack(s) of cards starting with the top card. This is shown on cards using text such as <De- Digivolve 1>."
     },
     "16-12-2": {
@@ -5362,8 +5387,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::de_digivolve_kind_matches_rule"
+      ],
       "text": "<De-Digivolve> effects execute processing."
     },
     "16-12-3": {
@@ -5374,22 +5401,27 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Mandatory, nothing to decline, 0 not choosable. Also cited by the #[ignore]d declaration test (G-DEDIGIVOLVE-NO-DECLARATION, 16-12-1), which additionally requires the 1..N declaration to be non-optional.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::de_digivolve_optionality_matches_rule"
+      ],
       "text": "The trashing from <De-Digivolve> is mandatory. Once activated, a player can't choose to trash 0 cards."
     },
     "16-12-4": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "b205c610d0d6b7a30e8002e5585a7cae99d9a1e5300f403b8d0803ee15675fdd",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-DEDIGIVOLVE-LEVEL-FLOOR-READS-NEXT-CARD",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "A level 3 Digimon on a level 3 card is de-digivolved (the floor reads the card below the top). The ordinary stop at a level 3 card under a level 4 top holds. Both #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::de_digivolve_cannot_trash_level_3_or_lower",
+        "ch16_processing_keywords::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3"
+      ],
       "text": "<De-Digivolve> can't trash cards from level 3 cards or lower."
     },
     "16-12-5": {
@@ -5400,9 +5432,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "<De-Digivolve 2>: trash order top first; a 'when cards are trashed from your Digimon' observer triggers once.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential"
+      ],
       "text": "If multiple cards are trashed using 1 instance of <De- Digivolve>, all of the cards are considered to be trashed at the same time, but the procedure for trashing them is 1 card from the stack at a time."
     },
     "16-12-6": {
@@ -5413,22 +5447,26 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "With a Tamer card exposed after the 1st card (top category changes), the 2nd card is still trashed.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential"
+      ],
       "text": "When using <De-Digivolve> to trash multiple cards, even if the category of the top card changes while the trashing is still being performed, the trashing will continue until the declared number is trashed."
     },
     "16-12-7": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "706566bf4559d2891c74d862aaf32604927b34d4ade8ad425abca709c5584da5",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Two <De-Digivolve 1> instances in one Option [Main]: both cards trashed, but the observer triggers once instead of once per trashing (15-4-2-4, owner ruling 2026-10-10 #5). #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::de_digivolve_separate_instances_processed_separately"
+      ],
       "text": "When separate instances of <De-Digivolve> are executed multiple times in a single effect, the processing is performed separately for each instance."
     },
     "16-12-8": {
@@ -5439,9 +5477,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The 1st instance exposes an 'isn't affected by your opponent's effects' card; the 2nd doesn't affect it. Control: a plain card is trashed by the 2nd.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::de_digivolve_state_confirmed_after_each_instance"
+      ],
       "text": "When separate instances of <De-Digivolve> are executed multiple times in a single effect, the state of the chosen card is confirmed after each single process for <De-Digivolve> ends. If an effect will be activated as a result of the confirmed state, it is then activated. (Example: When 3 instances of <De-Digivolve 1> are executed in a single effect, if the chosen card becomes an \"unaffected by effects\" card as a result of the 1st instance of <De-Digivolve 1>, that card is unaffected by the following instances of <De-Digivolve 1>."
     },
     "16-13": {
@@ -5525,8 +5565,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::digi_burst_optional_trash_sources_then_linked_effect"
+      ],
       "text": "<Digi-Burst> is a keyword effect where another effect specified by this effect will activate by trashing the specified number of digivolution cards from the Digimon with this effect. This is shown on cards using text such as <Digi-Burst 1>."
     },
     "16-14-2": {
@@ -5537,9 +5579,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "[Main] <Digi-Burst 1>: activation and PASS both legal; not activatable with no digivolution card.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::digi_burst_optional_trash_sources_then_linked_effect",
+        "ch16_processing_keywords::digi_burst_optionality_matches_rule"
+      ],
       "text": "The processing from <Digi-Burst> is optional. For details, refer to 15-6 \"Processing Conditions\")15-6"
     },
     "16-15": {
@@ -5694,9 +5739,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Activated by trashing the Option, no cost paid, no color requirement (no red card left on the field).",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::delay_optional_trash_option_not_the_turn_it_entered_no_color_or_cost"
+      ],
       "text": "<Delay> is a keyword effect. While a card with this effect is in the battle area, by trashing that card, the effect specified in <Delay> will activate."
     },
     "16-17-2": {
@@ -5707,9 +5754,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "[Main]-activated and [Start of Your Turn] <Delay> both optional (decline keeps the Option). The latter contradicts the OPEN G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN entry, which now carries an 'observed fixed' note.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::delay_optionality_matches_rule",
+        "ch16_processing_keywords::delay_scheduled_window_is_optional"
+      ],
       "text": "The processing from <Delay> is optional. (For details, refer to 15-7 \"Optional Processing Conditions\")"
     },
     "16-17-3": {
@@ -5721,8 +5771,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::delay_optional_trash_option_not_the_turn_it_entered_no_color_or_cost"
+      ],
       "text": "<Delay> can't be activated the same turn the card with the effect is placed in the battle area."
     },
     "16-18": {
@@ -5883,8 +5935,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::save_optional_places_under_tamer"
+      ],
       "text": "<Save> is a keyword effect that allows you to place this card under 1 of your Tamers."
     },
     "16-20-2": {
@@ -5895,9 +5949,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "<Save> is processed within its own [On Deletion] effect, ordered by the player with another [On Deletion] of the same deletion.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::save_kind_matches_rule"
+      ],
       "text": "<Save> effects execute processing."
     },
     "16-20-3": {
@@ -5909,8 +5965,11 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::save_optional_places_under_tamer",
+        "ch16_processing_keywords::save_optionality_matches_rule"
+      ],
       "text": "The processing from <Save> is optional."
     },
     "16-21": {
@@ -5934,35 +5993,44 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Only DigiXros-specified cards from the digivolution cards are offered; not offered on a bounce. Processed after the deletion rather than before it (16-21-2).",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::material_save_timing_matches_rule",
+        "ch16_processing_keywords::material_save_allows_duplicate_specified_cards_and_places_at_bottom",
+        "ch16_processing_keywords::material_save_player_chooses_placement_order"
+      ],
       "text": "<Material Save> is a keyword effect. When a Digimon with this effect is deleted, this effect allows you to place a number of the cards specified in the top card's DigiXros requirements from among the digivolution cards under 1 of your Tamers. The number of cards placed is the number specified in this keyword effect. This is shown on cards using text such as <Material Save 1>."
     },
     "16-21-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "b4eebc4754207c3b4d0f8c7f5d648e87f8e3801229f1881a7d24cf554fb3a534",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-MATERIAL-SAVE-AFTER-DELETION",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "Offered after the Digimon and its cards are in the trash. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::material_save_kind_matches_rule"
+      ],
       "text": "<Material Save> is an immediate-type effect that triggers when the Digimon with this effect would be deleted. (For details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-21-3": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "a6b45d1101b59e1daac87590542d11d809faa7d23c7bfdd40b56b1980cba3acd",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-MATERIAL-SAVE-MAY-PLACE-FEWER",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "The optional half (decline) is proven; after 1 card the multi-select stays optional, so fewer than the specified number can be placed. The second test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::material_save_optionality_matches_rule",
+        "ch16_processing_keywords::material_save_places_the_full_number_whenever_possible"
+      ],
       "text": "The processing from <Material Save> is optional. However, if <Material Save> will be processed, the number of cards specified by this effect must be placed under your Tamer whenever possible."
     },
     "16-21-4": {
@@ -5973,9 +6041,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The pick order decides the stacking. The 'considered placed at the same time' half has no observer staged.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::material_save_player_chooses_placement_order"
+      ],
       "text": "When multiple cards would be placed under 1 Tamer for 1 instance of <Material Save>, the procedure for placing them is 1 card at a time, but they are considered to be placed at the same time. In addition, the placement order is chosen by the player processing <Material Save>."
     },
     "16-21-5": {
@@ -5987,8 +6057,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::material_save_allows_duplicate_specified_cards_and_places_at_bottom"
+      ],
       "text": "As long as you use a card specified in the DigiXros requirements, multiple copies of the same card can be placed under the Tamer for <Material Save>. (Example: If a Digimon with <Material Save 2> has [Shoutmon]×[Ballistamon]×[Dorulumon] in its DigiXros requirements, 2 copies of [Shoutmon] can be placed under the Tamer.)"
     },
     "16-21-6": {
@@ -6000,8 +6072,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::material_save_allows_duplicate_specified_cards_and_places_at_bottom"
+      ],
       "text": "If there are any cards stacked under the Tamer when processing <Material Save>, the new card is placed at the bottom."
     },
     "16-22": {
@@ -6310,8 +6384,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::blast_digivolve_optional_free_digivolve_of_chosen_battle_area_digimon"
+      ],
       "text": "<Blast Digivolve> is a keyword effect that allows one of your Digimon to digivolve into a card with this keyword effect in the hand without paying the cost."
     },
     "16-26-2": {
@@ -6323,8 +6399,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::blast_digivolve_kind_matches_rule"
+      ],
       "text": "<Blast Digivolve> effects execute processing."
     },
     "16-26-3": {
@@ -6336,8 +6414,11 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::blast_digivolve_optional_free_digivolve_of_chosen_battle_area_digimon",
+        "ch16_processing_keywords::blast_digivolve_optionality_matches_rule"
+      ],
       "text": "The processing from <Blast Digivolve> is optional."
     },
     "16-26-4": {
@@ -6348,9 +6429,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Only the Lv.4 Digimon that can digivolve are offered; the chosen one digivolves, the other is unchanged.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::blast_digivolve_optional_free_digivolve_of_chosen_battle_area_digimon"
+      ],
       "text": "<Blast Digivolve> is an effect that digivolves the chosen Digimon in the battle area."
     },
     "16-27": {
@@ -6375,8 +6458,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::fortitude_mandatory_play_from_trash_when_deleted_with_sources"
+      ],
       "text": "<Fortitude> is a keyword effect. When a Digimon with digivolution cards and this effect is deleted, you play this Digimon without paying the cost."
     },
     "16-27-2": {
@@ -6387,9 +6472,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Pends in one TriggerOrder with an inherited [On Deletion] of the same deletion; triggers on effect and battle deletion, not on a bounce.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::fortitude_kind_matches_rule",
+        "ch16_processing_keywords::fortitude_timing_matches_rule"
+      ],
       "text": "<Fortitude> is a trigger-type effect that triggers when a Digimon with digivolution cards and this effect is deleted. (For details, refer to 15-8-3 \"Trigger-Type Effects\")"
     },
     "16-27-3": {
@@ -6401,8 +6489,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::fortitude_mandatory_play_from_trash_when_deleted_with_sources"
+      ],
       "text": "The processing from <Fortitude> is mandatory."
     },
     "16-28": {
@@ -6426,9 +6516,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Only a Digimon with no Tamer card in its digivolution cards can be chosen; not activatable without one.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::mind_link_kind_matches_rule",
+        "ch16_processing_keywords::mind_link_timing_matches_rule"
+      ],
       "text": "<Mind Link> is a keyword effect that places a Tamer with this effect in the digivolution cards of a Digimon with no Tamer cards in its digivolution cards."
     },
     "16-28-2": {
@@ -6440,21 +6533,26 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::mind_link_kind_matches_rule"
+      ],
       "text": "<Mind Link> effects execute processing."
     },
     "16-28-3": {
       "blocks_training": false,
       "chapter": 16,
       "fingerprint": "d7fd5721ce3b7c69bff1c61b31052bfab5b629db1f039b4e9e34b72d43a70db1",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-MIND-LINK-PLACEMENT-OPTIONAL",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "The [Main] timing half is proven; after activation the Digimon pick is optional (DCGO agrees, the PDF governs). #[ignore]d. Does not block training: declining is outcome-equal to not declaring.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::mind_link_timing_matches_rule",
+        "ch16_processing_keywords::mind_link_places_tamer_under_tamerless_digimon_mandatory"
+      ],
       "text": "The processing from <Mind Link> is mandatory. However, if it uses the [Main] activation timing, it can be activated and processed at a timing chosen by the player."
     },
     "16-29": {
@@ -6642,8 +6740,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::blast_dna_optionality_matches_rule"
+      ],
       "text": "<Blast DNA Digivolve> is a keyword effect. One of your Digimon specified in this effect and a card from your hand may digivolve into a card with this keyword effect in the hand without paying the cost. This is shown on cards using text such as \"<Blast DNA Digivolve> <[Durandamon] + [BryweLudramon]>.\""
     },
     "16-31-2": {
@@ -6655,8 +6755,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::blast_dna_kind_matches_rule"
+      ],
       "text": "<Blast DNA Digivolve> effects execute processing."
     },
     "16-31-3": {
@@ -6668,8 +6770,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::blast_dna_optionality_matches_rule"
+      ],
       "text": "The processing from <Blast DNA Digivolve> is optional."
     },
     "16-31-4": {
@@ -6680,22 +6784,26 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "One DNA digivolution, stacked per 8-2-2-2, at no cost.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::blast_dna_kind_matches_rule"
+      ],
       "text": "<Blast DNA Digivolve> is an effect that performs DNA digivolution. (For details, refer to 8-2 \"DNA Digivolution\")8-2"
     },
     "16-31-5": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "aea0042eadc9cfcd7a1c47c8e7351868f3bc79a569016c612a3bd6b6876232ec",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-BLAST-DNA-IGNORES-DNA-REQUIREMENTS",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "A same-named level 4 field Digimon (DNA requirement: Lv.5) is offered. #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::blast_dna_cannot_ignore_dna_requirements"
+      ],
       "text": "A Digimon card's DNA digivolution requirements can't be ignored for <Blast DNA Digivolve>."
     },
     "16-31-6": {
@@ -6706,9 +6814,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Witness: the field Digimon and the hand card are both chosen before any card moves (no reveal-from-hand event exists to observe the reveal itself).",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::blast_dna_kind_matches_rule"
+      ],
       "text": "When DNA digivolution is performed using <Blast DNA Digivolve>, the player reveals the cards that will become digivolution cards from their hand at the same time as when they choose their Digimon that meet the DNA digivolution requirements."
     },
     "16-32": {
@@ -7357,9 +7467,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Measured relative to the plain host's limit. The absolute base (1, 4-9-5) is wrong in the engine: G-ENGINE-LINK-MAX-BASE, test link_max_base_is_one.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::link_plus_adds_to_max_link_cards_and_instances_add"
+      ],
       "text": "<Link +> is a keyword effect that adds the specified number to the maximum link cards of the Digimon with this effect."
     },
     "16-40-2": {
@@ -7370,9 +7482,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A granted <Link +1> raises the limit by exactly 1 with no decision.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::link_plus_kind_matches_rule"
+      ],
       "text": "<Link +> is a persistent effect. (For details, refer to 15- 8-2 \"Persistent Effects\")15-8-2"
     },
     "16-40-3": {
@@ -7383,9 +7497,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Two printed <Link +1> raise it by exactly 2. The 'not considered <Link +2>' half is not staged.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::link_plus_adds_to_max_link_cards_and_instances_add"
+      ],
       "text": "If 1 Digimon has multiple instances of <Link +>, the maximum number of link cards will increase according to those numerical values. However, even if a card has multiple instances of <Link +>, the effect isn't considered to be an effect with the combined values from <Link +>. (Examples: If a Digimon has 2 instances42 of <Link +1>, its maximum number of links will increase by 2, but the Digimon isn't considered to have <Link +2>.)"
     },
     "16-41": {
@@ -7409,9 +7525,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Battle area and breeding area.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::training_optional_cost_then_mandatory_place_also_in_breeding_area"
+      ],
       "text": "<Training> is a keyword effect that reads \"By suspending this Digimon during the main phase, place the top card of your deck at the bottom of this Digimon's digivolution cards. This effect can also activate in the breeding area.\""
     },
     "16-41-2": {
@@ -7423,8 +7541,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::training_kind_matches_rule"
+      ],
       "text": "<Training> is an activation-type effect. (For details, refer to 15-8-4 \"Activation-Type Effects\")"
     },
     "16-41-3": {
@@ -7436,8 +7556,11 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::training_optional_cost_then_mandatory_place_also_in_breeding_area",
+        "ch16_processing_keywords::training_optionality_matches_rule"
+      ],
       "text": "\"By suspending this Digimon\" in <Training> is an optional processing condition. If this condition is performed, \"place the top card of your deck at the bottom of this Digimon's digivolution cards\" is mandatory processing."
     },
     "16-42": {
@@ -7863,9 +7986,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "<Recovery +2 (Deck)>: the top 2 deck cards end on top of the security stack, nothing revealed. The placement order of the 2 cards is not asserted (the rule doesn't state it).",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::recovery_places_top_deck_cards_face_down_on_security"
+      ],
       "text": "<Recovery> is a keyword effect where the specified number of cards from the specified area are placed face down on top of the security stack. This is shown on cards using text such as <Recovery +1>."
     },
     "16-6-2": {
@@ -7876,9 +8001,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Processed inside the Option's [Main] effect, no decision of its own.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::recovery_kind_matches_rule"
+      ],
       "text": "<Recovery> effects execute processing."
     },
     "16-7": {
@@ -8007,8 +8134,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::draw_kind_matches_rule"
+      ],
       "text": "<Draw> is a keyword effect where a player draws the cards from their deck according to the number specified in the effect. This is shown on cards using text such as <Draw 1>."
     },
     "16-8-2": {
@@ -8020,8 +8149,10 @@
         "keywords"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::draw_kind_matches_rule"
+      ],
       "text": "<Draw> effects execute processing."
     },
     "16-8-3": {
@@ -8032,9 +8163,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "No decision from an Option [Main] <Draw 2> nor from a [When Attacking] <Draw 1>.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::draw_is_mandatory"
+      ],
       "text": "A draw from <Draw> is mandatory."
     },
     "16-9": {
@@ -12700,16 +12833,18 @@
       "text": "A link card isn't considered to be a card on the field. (For details, refer to 3-4 \"The Field\")3-4"
     },
     "4-9-5": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 4,
       "fingerprint": "fcec093c198b9ce1bb55b9d769eefe9b189ae82d63c7002091435e834fb2c980",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-LINK-MAX-BASE",
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
+      "note": "The engine's base link limit is 5, not 1 (a host with no <Link +> accepts up to 5 link cards). #[ignore]d. The 'excess trashed' half is covered by ch17 (17-1-3-2-5).",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch16_processing_keywords::link_max_base_is_one"
+      ],
       "text": "1 card can have a maximum of 1 link card. When linking to a Digimon that has already reached the link limit, the same number of the existing link cards are trashed at the same time as the newly linked cards."
     },
     "4-9-6": {
@@ -15070,9 +15205,9 @@
         "total": 244
       },
       "16": {
-        "gap": 78,
+        "gap": 31,
         "not_testable": 44,
-        "proven": 84,
+        "proven": 131,
         "total": 206
       },
       "17": {
@@ -15136,15 +15271,15 @@
         "total": 13
       }
     },
-    "gap": 719,
+    "gap": 672,
     "mechanics": {
-      "gap_blocking": 40,
-      "gap_nonblocking": 388,
+      "gap_blocking": 51,
+      "gap_nonblocking": 330,
       "not_testable": 152,
-      "proven": 135
+      "proven": 182
     },
     "not-testable": 246,
-    "proven": 154
+    "proven": 201
   },
   "version": 1
 }

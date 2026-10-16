@@ -967,3 +967,250 @@
   gap_id: G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK
   tests: ["ch16_attack_keywords::vortex_attack_has_block_timing"]
   note: "A <Vortex> attack at the end of P0's turn offers P1 no block timing (nor counter timing): the engine jumps from the declaration straight to the battle. Ordinary attacks' block timing is proven in ch11_14 (one_block_per_attack et al.). #[ignore]d."
+
+# ── ch16 processing keywords (§16-6..§16-41) — tests/rules_conformance/ch16_processing_keywords.rs ──
+"16-6-1":
+  status: proven
+  tests: ["ch16_processing_keywords::recovery_places_top_deck_cards_face_down_on_security"]
+  note: "<Recovery +2 (Deck)>: the top 2 deck cards end on top of the security stack, nothing revealed. The placement order of the 2 cards is not asserted (the rule doesn't state it)."
+"16-6-2":
+  status: proven
+  tests: ["ch16_processing_keywords::recovery_kind_matches_rule"]
+  note: "Processed inside the Option's [Main] effect, no decision of its own."
+"16-8-1":
+  status: proven
+  tests: ["ch16_processing_keywords::draw_kind_matches_rule"]
+"16-8-2":
+  status: proven
+  tests: ["ch16_processing_keywords::draw_kind_matches_rule"]
+"16-8-3":
+  status: proven
+  tests: ["ch16_processing_keywords::draw_is_mandatory"]
+  note: "No decision from an Option [Main] <Draw 2> nor from a [When Attacking] <Draw 1>."
+"16-10-1":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED
+  tests: ["ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"]
+  note: "No engine path (no Keyword variant, no printed parse, no DSL vocabulary); the card is loaded from its printed face. Digivolving into it offers nothing and pays the full cost. #[ignore]d. Blocks training in principle; no authored card prints it."
+"16-10-2":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED
+  tests: ["ch16_processing_keywords::digisorption_kind_matches_rule", "ch16_processing_keywords::digisorption_timing_matches_rule"]
+  note: "Both #[ignore]d. The play-from-hand half of the timing test (no offer, play cost paid) passes."
+"16-10-3":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED
+  tests: ["ch16_processing_keywords::digisorption_optionality_matches_rule", "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"]
+  note: "Both #[ignore]d."
+"16-10-4":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED
+  tests: ["ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"]
+  note: "Two printed <Digisorption -1> on one card, both activated for one digivolution. #[ignore]d."
+"16-10-5":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED
+  tests: ["ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"]
+  note: "The digivolving base must be among the Digimon that can be suspended. #[ignore]d."
+"16-11-1":
+  status: proven
+  tests: ["ch16_processing_keywords::reboot_unsuspends_in_opponents_unsuspend_phase_once_with_two_instances", "ch16_processing_keywords::reboot_timing_matches_rule"]
+  note: "Unsuspended after P1's TurnStart and before P1's PhaseChange into Draw (witness: an inherited 'when this Digimon unsuspends, gain 1 memory')."
+"16-11-2":
+  status: proven
+  tests: ["ch16_processing_keywords::reboot_kind_matches_rule"]
+  note: "No decision; an inherited <Reboot> whose source card was removed before the opponent's turn no longer unsuspends the Digimon."
+"16-11-3":
+  status: proven
+  tests: ["ch16_processing_keywords::reboot_unsuspends_in_opponents_unsuspend_phase_once_with_two_instances"]
+  note: "Own + inherited <Reboot>: the 'when this Digimon unsuspends' observer fires once."
+"16-11-4":
+  status: proven
+  tests: ["ch16_processing_keywords::reboot_optionality_matches_rule"]
+"16-11-5":
+  status: proven
+  tests: ["ch16_processing_keywords::reboot_unsuspends_in_opponents_unsuspend_phase_once_with_two_instances"]
+  note: "Both the <Reboot> Digimon and the turn player's own suspended Digimon unsuspend in the same unsuspend phase (both observers before the draw phase). The 'no particular order' half has no observable here."
+"16-12-1":
+  status: gap
+  blocks_training: true
+  gap_id: G-DEDIGIVOLVE-NO-DECLARATION
+  tests: ["ch16_processing_keywords::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3"]
+  note: "<De-Digivolve 2> offers no 1-or-2 declaration; the maximum is always trashed. #[ignore]d. The 'starting with the top card' half is proven by de_digivolve_multi_card_trash_is_simultaneous_but_sequential."
+"16-12-2":
+  status: proven
+  tests: ["ch16_processing_keywords::de_digivolve_kind_matches_rule"]
+"16-12-3":
+  status: proven
+  tests: ["ch16_processing_keywords::de_digivolve_optionality_matches_rule"]
+  note: "Mandatory, nothing to decline, 0 not choosable. Also cited by the #[ignore]d declaration test (G-DEDIGIVOLVE-NO-DECLARATION, 16-12-1), which additionally requires the 1..N declaration to be non-optional."
+"16-12-4":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-DEDIGIVOLVE-LEVEL-FLOOR-READS-NEXT-CARD
+  tests: ["ch16_processing_keywords::de_digivolve_cannot_trash_level_3_or_lower", "ch16_processing_keywords::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3"]
+  note: "A level 3 Digimon on a level 3 card is de-digivolved (the floor reads the card below the top). The ordinary stop at a level 3 card under a level 4 top holds. Both #[ignore]d."
+"16-12-5":
+  status: proven
+  tests: ["ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential"]
+  note: "<De-Digivolve 2>: trash order top first; a 'when cards are trashed from your Digimon' observer triggers once."
+"16-12-6":
+  status: proven
+  tests: ["ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential"]
+  note: "With a Tamer card exposed after the 1st card (top category changes), the 2nd card is still trashed."
+"16-12-7":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS
+  tests: ["ch16_processing_keywords::de_digivolve_separate_instances_processed_separately"]
+  note: "Two <De-Digivolve 1> instances in one Option [Main]: both cards trashed, but the observer triggers once instead of once per trashing (15-4-2-4, owner ruling 2026-10-10 #5). #[ignore]d."
+"16-12-8":
+  status: proven
+  tests: ["ch16_processing_keywords::de_digivolve_state_confirmed_after_each_instance"]
+  note: "The 1st instance exposes an 'isn't affected by your opponent's effects' card; the 2nd doesn't affect it. Control: a plain card is trashed by the 2nd."
+"16-14-1":
+  status: proven
+  tests: ["ch16_processing_keywords::digi_burst_optional_trash_sources_then_linked_effect"]
+"16-14-2":
+  status: proven
+  tests: ["ch16_processing_keywords::digi_burst_optional_trash_sources_then_linked_effect", "ch16_processing_keywords::digi_burst_optionality_matches_rule"]
+  note: "[Main] <Digi-Burst 1>: activation and PASS both legal; not activatable with no digivolution card."
+"16-17-1":
+  status: proven
+  tests: ["ch16_processing_keywords::delay_optional_trash_option_not_the_turn_it_entered_no_color_or_cost"]
+  note: "Activated by trashing the Option, no cost paid, no color requirement (no red card left on the field)."
+"16-17-2":
+  status: proven
+  tests: ["ch16_processing_keywords::delay_optionality_matches_rule", "ch16_processing_keywords::delay_scheduled_window_is_optional"]
+  note: "[Main]-activated and [Start of Your Turn] <Delay> both optional (decline keeps the Option). The latter contradicts the OPEN G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN entry, which now carries an 'observed fixed' note."
+"16-17-3":
+  status: proven
+  tests: ["ch16_processing_keywords::delay_optional_trash_option_not_the_turn_it_entered_no_color_or_cost"]
+"16-20-1":
+  status: proven
+  tests: ["ch16_processing_keywords::save_optional_places_under_tamer"]
+"16-20-2":
+  status: proven
+  tests: ["ch16_processing_keywords::save_kind_matches_rule"]
+  note: "<Save> is processed within its own [On Deletion] effect, ordered by the player with another [On Deletion] of the same deletion."
+"16-20-3":
+  status: proven
+  tests: ["ch16_processing_keywords::save_optional_places_under_tamer", "ch16_processing_keywords::save_optionality_matches_rule"]
+"16-21-1":
+  status: proven
+  tests: ["ch16_processing_keywords::material_save_timing_matches_rule", "ch16_processing_keywords::material_save_allows_duplicate_specified_cards_and_places_at_bottom", "ch16_processing_keywords::material_save_player_chooses_placement_order"]
+  note: "Only DigiXros-specified cards from the digivolution cards are offered; not offered on a bounce. Processed after the deletion rather than before it (16-21-2)."
+"16-21-2":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-MATERIAL-SAVE-AFTER-DELETION
+  tests: ["ch16_processing_keywords::material_save_kind_matches_rule"]
+  note: "Offered after the Digimon and its cards are in the trash. #[ignore]d."
+"16-21-3":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-MATERIAL-SAVE-MAY-PLACE-FEWER
+  tests: ["ch16_processing_keywords::material_save_optionality_matches_rule", "ch16_processing_keywords::material_save_places_the_full_number_whenever_possible"]
+  note: "The optional half (decline) is proven; after 1 card the multi-select stays optional, so fewer than the specified number can be placed. The second test is #[ignore]d."
+"16-21-4":
+  status: proven
+  tests: ["ch16_processing_keywords::material_save_player_chooses_placement_order"]
+  note: "The pick order decides the stacking. The 'considered placed at the same time' half has no observer staged."
+"16-21-5":
+  status: proven
+  tests: ["ch16_processing_keywords::material_save_allows_duplicate_specified_cards_and_places_at_bottom"]
+"16-21-6":
+  status: proven
+  tests: ["ch16_processing_keywords::material_save_allows_duplicate_specified_cards_and_places_at_bottom"]
+"16-26-1":
+  status: proven
+  tests: ["ch16_processing_keywords::blast_digivolve_optional_free_digivolve_of_chosen_battle_area_digimon"]
+"16-26-2":
+  status: proven
+  tests: ["ch16_processing_keywords::blast_digivolve_kind_matches_rule"]
+"16-26-3":
+  status: proven
+  tests: ["ch16_processing_keywords::blast_digivolve_optional_free_digivolve_of_chosen_battle_area_digimon", "ch16_processing_keywords::blast_digivolve_optionality_matches_rule"]
+"16-26-4":
+  status: proven
+  tests: ["ch16_processing_keywords::blast_digivolve_optional_free_digivolve_of_chosen_battle_area_digimon"]
+  note: "Only the Lv.4 Digimon that can digivolve are offered; the chosen one digivolves, the other is unchanged."
+"16-27-1":
+  status: proven
+  tests: ["ch16_processing_keywords::fortitude_mandatory_play_from_trash_when_deleted_with_sources"]
+"16-27-2":
+  status: proven
+  tests: ["ch16_processing_keywords::fortitude_kind_matches_rule", "ch16_processing_keywords::fortitude_timing_matches_rule"]
+  note: "Pends in one TriggerOrder with an inherited [On Deletion] of the same deletion; triggers on effect and battle deletion, not on a bounce."
+"16-27-3":
+  status: proven
+  tests: ["ch16_processing_keywords::fortitude_mandatory_play_from_trash_when_deleted_with_sources"]
+"16-28-1":
+  status: proven
+  tests: ["ch16_processing_keywords::mind_link_kind_matches_rule", "ch16_processing_keywords::mind_link_timing_matches_rule"]
+  note: "Only a Digimon with no Tamer card in its digivolution cards can be chosen; not activatable without one."
+"16-28-2":
+  status: proven
+  tests: ["ch16_processing_keywords::mind_link_kind_matches_rule"]
+"16-28-3":
+  status: gap
+  blocks_training: false
+  gap_id: G-ENGINE-MIND-LINK-PLACEMENT-OPTIONAL
+  tests: ["ch16_processing_keywords::mind_link_timing_matches_rule", "ch16_processing_keywords::mind_link_places_tamer_under_tamerless_digimon_mandatory"]
+  note: "The [Main] timing half is proven; after activation the Digimon pick is optional (DCGO agrees, the PDF governs). #[ignore]d. Does not block training: declining is outcome-equal to not declaring."
+"16-31-1":
+  status: proven
+  tests: ["ch16_processing_keywords::blast_dna_optionality_matches_rule"]
+"16-31-2":
+  status: proven
+  tests: ["ch16_processing_keywords::blast_dna_kind_matches_rule"]
+"16-31-3":
+  status: proven
+  tests: ["ch16_processing_keywords::blast_dna_optionality_matches_rule"]
+"16-31-4":
+  status: proven
+  tests: ["ch16_processing_keywords::blast_dna_kind_matches_rule"]
+  note: "One DNA digivolution, stacked per 8-2-2-2, at no cost."
+"16-31-5":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-BLAST-DNA-IGNORES-DNA-REQUIREMENTS
+  tests: ["ch16_processing_keywords::blast_dna_cannot_ignore_dna_requirements"]
+  note: "A same-named level 4 field Digimon (DNA requirement: Lv.5) is offered. #[ignore]d."
+"16-31-6":
+  status: proven
+  tests: ["ch16_processing_keywords::blast_dna_kind_matches_rule"]
+  note: "Witness: the field Digimon and the hand card are both chosen before any card moves (no reveal-from-hand event exists to observe the reveal itself)."
+"16-40-1":
+  status: proven
+  tests: ["ch16_processing_keywords::link_plus_adds_to_max_link_cards_and_instances_add"]
+  note: "Measured relative to the plain host's limit. The absolute base (1, 4-9-5) is wrong in the engine: G-ENGINE-LINK-MAX-BASE, test link_max_base_is_one."
+"16-40-2":
+  status: proven
+  tests: ["ch16_processing_keywords::link_plus_kind_matches_rule"]
+  note: "A granted <Link +1> raises the limit by exactly 1 with no decision."
+"16-40-3":
+  status: proven
+  tests: ["ch16_processing_keywords::link_plus_adds_to_max_link_cards_and_instances_add"]
+  note: "Two printed <Link +1> raise it by exactly 2. The 'not considered <Link +2>' half is not staged."
+"16-41-1":
+  status: proven
+  tests: ["ch16_processing_keywords::training_optional_cost_then_mandatory_place_also_in_breeding_area"]
+  note: "Battle area and breeding area."
+"16-41-2":
+  status: proven
+  tests: ["ch16_processing_keywords::training_kind_matches_rule"]
+"16-41-3":
+  status: proven
+  tests: ["ch16_processing_keywords::training_optional_cost_then_mandatory_place_also_in_breeding_area", "ch16_processing_keywords::training_optionality_matches_rule"]
+"4-9-5":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-LINK-MAX-BASE
+  tests: ["ch16_processing_keywords::link_max_base_is_one"]
+  note: "The engine's base link limit is 5, not 1 (a host with no <Link +> accepts up to 5 link cards). #[ignore]d. The 'excess trashed' half is covered by ch17 (17-1-3-2-5)."

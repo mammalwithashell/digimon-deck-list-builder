@@ -22,6 +22,7 @@ mod ch15_07_optional_conditions;
 mod ch15_08_effect_categories;
 mod ch16_attack_keywords;
 mod ch16_new_keywords;
+mod ch16_processing_keywords;
 mod ch16_replacement_keywords;
 mod ch17_rule_checks;
 mod ch18_pending_overwrite;

@@ -2336,6 +2336,8 @@ Surfaced: 2026-07-09 bug-list faithfulness campaign, while fixing "Delay trigger
 - **Suggested fix:** route the scheduled scan through the same outer-optional prompt machinery (`install_outer_optional_trigger_selection`) the OnEvent path now uses; decline leaves the Delay parked and re-armable at the next matching boundary.
 - **Blast radius:** any scheduled-delay card where declining is strategically meaningful (e.g. keeping the option in the battle area as Decode/Partition fodder or to dodge a punish window).
 
+- **Observed fixed (2026-10-16, rules_conformance):** `ch16_processing_keywords::delay_scheduled_window_is_optional` (green, not ignored) places `DELAY_SOYT` ("[Start of Your Turn] <Delay> ・Gain 1 memory", `kind: delay, trigger: start_of_your_turn`) and, at the start of P0's next turn, gets an optional accept/decline for P0: declining keeps it in the battle area with no memory gained, accepting trashes it and gains 1 (the decline path is `game_phases.rs` `take_declined_delay_reschedule` / `effect_queue.rs` `note_declined_delay`). This entry looks resolved for that shape; whoever owns it should confirm the other scheduled triggers (`end_of_your_next_turn`, …) and move it to `qa/resolved-gaps.md`.
+
 ## G-ENGINE-DELAY-BODY-BEFORE-TRASH â€” [Main]-activated Delay runs its body before trashing the Option (RESOLVED 2026-09-19, 70694334d)
 
 - **Found by:** buglist faithfulness campaign, BT25-098 audit.
@@ -2656,6 +2658,8 @@ This is a **rule-17 violation**: a choice the rules grant is not in the RL actio
 
 Fixing it needs a `SelectCountEffect`-shaped prompt (our `CountCappedMultiSelect` or a count selection) installed when `max >= 2` AND at least 2 sources are actually trashable -- installing it for a forced 1 would be the mirror mistake (see G-ORDERED-PERMUTATION-FORCED-SINGLETON below).
 
+
+**Rules-conformance repro (2026-10-16, Ver. 4.3 §16-12-1 / §16-12-3).** `code/digimon-engine/tests/rules_conformance/ch16_processing_keywords.rs::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3` (`#[ignore]`d on this id): P0's `DEDIGI2_OPT` (<De-Digivolve 2>) on P1's `[FILL, LV4_PLAIN, LV5_PLAIN]` offers no declaration after the target pick (the rule: a non-optional decision with exactly 2 options, 1 and 2); both cards are trashed. Ver. 4.3 renumbers the rules this entry quotes (16-11-x in 3.6 is 16-12-x in 4.3).
 
 ## `<Decode>`'s optional processing is offered TWICE on one card and once on another  [G-DECODE-DOUBLE-OPTIONAL]
 
@@ -4655,6 +4659,8 @@ park in `dsl_cards/step/mod.rs` once nothing drains inline.
 
 **Rules-conformance repro (2026-10-16, Ver. 4.3 §15-8-3-2).** `code/digimon-engine/tests/rules_conformance/ch15_08_effect_categories.rs::trigger_type_waits_for_causing_effect_to_finish` (`#[ignore]`d on this id) runs the same text, "Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.", from two causes, with `OBS_TAMER_TRASH` ("[All Turns] When effects trash cards from under your Tamers, gain 1 memory") on the field. From an Option's `[Main]` (`MAIN_TRASH_UNDER_MEM`) the observer waits: memory events are `[MAIN_TRASH_UNDER_MEM, OBS_TAMER_TRASH]`. From an `[On Play]` (`OP_TRASH_UNDER_MEM`), a triggered effect being drained, it does not: `[OBS_TAMER_TRASH, OP_TRASH_UNDER_MEM]`, i.e. the observer resolves before the trasher's "Then, gain 1 memory". A scratch probe showed the same split for a Digimon's own digivolution card (`trash_bottom_sources` + an `event_host_permanent_is_source` observer). So the inline drain in `fire_digivolution_card_trashed` (`game_actions/mod.rs` ~L2096-2105, `drain_effect_queue`) bites whenever the trasher is itself a queued trigger; an Option body defers it. Un-ignore the test when #726 (or its rework) lands.
 
+**Rules-conformance repro of rule 5 (2026-10-16, Ver. 4.3 §16-12-7 with §15-4-2-4).** `ch16_processing_keywords::de_digivolve_separate_instances_processed_separately` (`#[ignore]`d on this id): P0's `DEDIGI1X2_OPT` ("<De-Digivolve 1> it, then <De-Digivolve 1> it again", an Option `[Main]`) trashes 2 cards from P1's `[FILL, LV4_PLAIN, LV5_PLAIN]` in 2 separate instances, but P1's `OBS_SRC_TRASH_MEM` ("[All Turns] When cards are trashed from the digivolution cards of one of your Digimon, gain 1 memory") triggers once (rule: twice, once per trashing event). The single-instance control is right: `DEDIGI2_OPT` (<De-Digivolve 2>, 2 cards at the same time, §16-12-5 / §15-5-2) triggers it once (`de_digivolve_multi_card_trash_is_simultaneous_but_sequential`, green). So inside an Option body, where the per-card drain is deferred, two separate events coalesce into one trigger.
+
 ## G-ENGINE-SELF-TRASHED-FROM-HAND — RESOLVED (2026-10-03, BT26-069 Dobermon)
 
 "When this card is trashed from the hand, â€¦" (DCGO `CanTriggerOnTrashSelfHand`) had no
@@ -4716,6 +4722,8 @@ link_max_delta`), while DCGO `Permanent.LinkedMax` starts at 1 (`<Link +N>` rais
 the engine's base, a Digimon can hold up to 5 link cards without any `<Link +N>`, and Dantemon's
 `<Link +6>` yields 11 instead of 7. Verify against `general_rule.pdf` Â§10 before changing â€” the
 change affects every link card in the pool.
+
+**Rules-conformance repro (2026-10-16, Ver. 4.3 §4-9-5).** `general_rule.pdf` Ver. 4.3 §4-9-5: "1 card can have a maximum of 1 link card." `ch16_processing_keywords::link_max_base_is_one` (`#[ignore]`d on this id): `LINK_HOST_LV4` (no <Link +>) with 1 link card still accepts `LINK_A` from the hand (the `HAND_EFFECT` bit is legal up to 4 link cards), and `LINKPLUS2` (two <Link +1>) accepts one with 3. The <Link +> keyword itself is right relative to the base: `link_plus_kind_matches_rule` and `link_plus_adds_to_max_link_cards_and_instances_add` (green) show a granted <Link +1> and two printed <Link +1> raise the limit by exactly 1 and 2.
 
 ## G-ENGINE-LINK-TEXT-IN-INHERITED-SLOT â€” RESOLVED (2026-10-05; opened 2026-10-03, BT26 Seven Code Appmon)
 
@@ -5494,3 +5502,51 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
 - **Obligations:** linked through §11-4-1 (block timing) in `qa/rules/cr_obligations_status.yaml`; also listed under §11-1-5 and §16-33-1.
 - **Fix shape:** drop the short-circuit (always transition to `RaidOpen`); keep `AttackInitiator::Vortex` only for the played-this-turn exemption. `tests/combat/counter_interrupt.rs::vortex_bypasses_counter` encodes the wrong behaviour and must be inverted by the fix.
 - **Blocks training:** yes. The opponent's counter and block choices are missing for every <Vortex> attack, and the attacker's <Raid> / <Alliance> choices with it.
+
+### `<Digisorption>` has no engine path at all  [G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED]
+
+- **Rule:** §16-10-1 (Ver. 4.3) "When a digivolution into a Digimon card with this effect in the hand would occur, by suspending 1 of your Digimon, the digivolution cost is reduced according to the value specified in the effect." §16-10-2: immediate-type, triggered when that digivolution would occur. §16-10-3: "by suspending 1 of your Digimon" is an optional processing condition; once executed, the reduction is mandatory. §16-10-4: several instances on one card can all be activated for one digivolution. §16-10-5: the Digimon that will become a digivolution card can be the one suspended.
+- **Ours:** nothing. There is no `Keyword` variant (`enums.rs` ~L525), no `parse_printed_keywords` arm (`card_data.rs` ~L650), no DSL vocabulary (`KNOWN_KEYWORD_KEYS`, `digimon-dsl/src/validator.rs` ~L3050), and no production card that prints it is authored (BT2-045, BT2-047, BT5, BT10-052, BT11-091 exist only as cards.json rows). The nearest substrate, a `kind: cost_reduction` with `when_any_ally_digivolves_into` (P-200, BT5-092), is keyed on field cards, not on the hand card being digivolved into, and its `pay_cost` suspends the source, not "1 of your Digimon" chosen by the player. Observed (`ch16_processing_keywords::digisorption_*`, 4 tests, all `#[ignore]`d): with `DIGISORB` loaded from its printed face (`<Digisorption -3>`, digivolve cost 2), digivolving P0's `FILL` into it offers nothing and pays the full 2.
+- **DCGO:** per card, an `EffectTiming.BeforePayCost` `ActivateClass` (`CardEffect/BT2/Green/BT2_047.cs`): `CanTapWhenAbsorbEvolution` gate, a `SelectPermanentEffect` in `Mode.Tap` over the owner's Digimon (the digivolving base included), then a `ChangeCostClass` for the paying cost; it also fires `EffectTiming.WhenDigisorption` observers.
+- **Fix shape:** a printed-keyword `Keyword::Digisorption(n)` (parse `<Digisorption -N>`) whose auto-effect is an optional before-pay-cost reducer on the digivolution INTO the carrier from the hand: offer the suspend as the optional condition (candidates: every own unsuspended Digimon that can suspend, including the base), then apply -N (floor 0); one prompt per instance, through the same reducer prompt loop `G-COST-REDUCTION-OPTIONAL-REDUCER-RESIDUAL` asks for. Then author the BT2/BT5/BT10/BT11 printings.
+- **Blocks training:** yes in principle (a cost choice missing from the action space, and the full cost charged), but no authored card prints <Digisorption>, so no deck that passes the readiness gate reaches it today.
+
+### `<De-Digivolve>` checks the level floor against the card below the top  [G-ENGINE-DEDIGIVOLVE-LEVEL-FLOOR-READS-NEXT-CARD]
+
+- **Rule:** §16-12-4 (Ver. 4.3) "<De-Digivolve> can't trash cards from level 3 cards or lower." The card being trashed is the top card, so a level 3 (or lower) top card is never trashed.
+- **Ours:** `game_actions/helpers.rs` `de_digivolve_core` (~L331-341) pops while the NEXT card's level is at least `stop_at_level` (the DSL default is 3, `digimon-dsl/src/compile.rs` ~L3086): `if nt_level < floor { break }` reads `stack[len - 2]`, never the top. Observed (`ch16_processing_keywords::de_digivolve_cannot_trash_level_3_or_lower`, `#[ignore]`d): `DEDIGI1_OPT` (<De-Digivolve 1>) on P1's `[FILL, OD_MEM]` (a level 3 Digimon on a level 3 card) trashes `OD_MEM`; the stack ends `[FILL]`. The mirror case (a level 4 top on a level 2 card) is refused although the level 4 top may be trashed. Proven green beside it: `[FILL, LV4_PLAIN]` stops at the level 3 `FILL`.
+- **DCGO:** `CardController.cs` `IDegeneration` (~L5313-5332) stops when `_permanent.Level == 3 && TopCard.HasLevel` (the permanent's own level, i.e. the top card) or when it has no digivolution cards.
+- **Fix shape:** test the top card's (the permanent's) level before each pop: stop when it is `<= 3` (and has a level), or when the stack has no digivolution cards; drop the next-card read.
+- **Blocks training:** yes. An illegal trash changes the board (a level 3 Digimon stacked on another level 3 card loses its top card).
+
+### `<Material Save>` is processed after the deletion, from the trash  [G-ENGINE-MATERIAL-SAVE-AFTER-DELETION]
+
+- **Rule:** §16-21-2 (Ver. 4.3) "<Material Save> is an immediate-type effect that triggers when the Digimon with this effect would be deleted." §15-8-5-2: an immediate-type effect interrupts right before its cause, so the Digimon and its digivolution cards are still in the battle area when it is offered and processed.
+- **Ours:** `cards/keyword_effects.rs` `Keyword::MaterialSave(n)` (~L1562) is an `Effect::on_deletion` (post-trash, rule 25): it reads `deleted_object_snapshot()`, picks the Tamer, then `select_snapshot_digisources_from_trash`. Observed (`ch16_processing_keywords::material_save_kind_matches_rule`, `#[ignore]`d): when P1 is offered <Material Save> for `MSAVE2` (deleted by P0's `MAIN_DEL1`), `MSAVE2` and all its digivolution cards are already in P1's trash. Proven green alongside it: the specified-card filter (both copies of a named card offered, the unspecified card not), placement at the bottom under the Tamer, the player-chosen order, the decline, and no offer on a bounce.
+- **DCGO:** `CardEffect/BT11/Red/BT11_018.cs` registers `MaterialSaveEffect` at `EffectTiming.WhenPermanentWouldBeDeleted`; `CardEffectCommons.MaterialSaveProcess` requires `IsExistOnBattleArea(card)` and picks from `PermanentOfThisCard().DigivolutionCards`.
+- **Fix shape:** re-time the auto-effect as a non-cancelling `WhenWouldBeDeleted` immediate effect (the `<Partition>` shape in the same file: optional, offered while the carrier stands, picks from the live stack, no `cancel_leave`), moving the chosen sources under the Tamer before the deletion proceeds.
+- **Blocks training:** yes. The cards pass through the trash (trash-count and "when trashed" readers see them), and the effect's place among the other "would be deleted" effects changes.
+
+### `<Material Save>` lets the player place fewer cards than it can  [G-ENGINE-MATERIAL-SAVE-MAY-PLACE-FEWER]
+
+- **Rule:** §16-21-3 (Ver. 4.3) "The processing from <Material Save> is optional. However, if <Material Save> will be processed, the number of cards specified by this effect must be placed under your Tamer whenever possible."
+- **Ours:** the card pick is `select_snapshot_digisources_from_trash(owner, eligible, n, ..., /*is_optional_zero=*/ true, ...)` (`cards/keyword_effects.rs` ~L1610), a `CountCappedMultiSelect { min: 0, max: n }` that stays optional after every pick. Observed (`ch16_processing_keywords::material_save_places_the_full_number_whenever_possible`, `#[ignore]`d): with 3 specified cards available for <Material Save 2>, after P1 places `XROSSB` the next decision is still optional (P1 can stop at 1 card).
+- **DCGO:** `MaterialSaveProcess` uses `canEndNotMax: false` with `maxCount = Math.Min(materialSaveCount, matching cards)`: once the Tamer is chosen, exactly that many cards.
+- **Fix shape:** after the Tamer pick (the optional decision), require `min = max = min(n, eligible)`; keep the decline at the Tamer pick.
+- **Blocks training:** yes. An illegal choice (placing fewer) is in the action space.
+
+### `<Mind Link>`'s placement can be declined after activation  [G-ENGINE-MIND-LINK-PLACEMENT-OPTIONAL]
+
+- **Rule:** §16-28-3 (Ver. 4.3) "The processing from <Mind Link> is mandatory. However, if it uses the [Main] activation timing, it can be activated and processed at a timing chosen by the player." The player chooses WHEN to activate; once activated, the Tamer is placed.
+- **Ours:** `cards/keyword_effects.rs` `Keyword::MindLink` (~L2118) parks `select_own_permanent(..., /*is_optional=*/ true, ...)`. Observed (`ch16_processing_keywords::mind_link_places_tamer_under_tamerless_digimon_mandatory`, `#[ignore]`d): after P0 declares `MINDLINK`'s [Main] <Mind Link>, the Digimon pick (correctly only the Tamer-less `LV4_PLAIN`) is optional. Proven green: the candidate filter and the placement (`mind_link_kind_matches_rule`), the player-chosen timing (`mind_link_timing_matches_rule`).
+- **DCGO:** `CardEffectCommons/KeyWordEffects/MindLink.cs` (~L60) also uses `canNoSelect: true`. `general_rule.pdf` governs rules questions over DCGO (source priority), so the rule's "mandatory" wins.
+- **Fix shape:** make the pick mandatory (`is_optional = false`); the activation gate (a Tamer-less Digimon exists) already guarantees a candidate.
+- **Blocks training:** no. Declining after declaring reaches exactly the state of not declaring (the [Main] has no cost and no use limit), which PASS already offers; no outcome changes. It is one redundant decision in the action space.
+
+### `<Blast DNA Digivolve>` ignores the DNA digivolution requirements  [G-ENGINE-BLAST-DNA-IGNORES-DNA-REQUIREMENTS]
+
+- **Rule:** §16-31-5 (Ver. 4.3) "A Digimon card's DNA digivolution requirements can't be ignored for <Blast DNA Digivolve>." §16-31-4: it performs DNA digivolution (§8-2), whose materials must meet the revealed card's DNA requirements (§8-2-1).
+- **Ours:** `dna_digivolve.rs` `blast_dna_route_for_hand_card` (~L1048) returns the DSL-registered blast route (`registered_blast_dna_route_for_hand_card`) as soon as the `blast_dna_digivolve` alt path's own material filters match, and only falls back to the card's `dna_costs` when no blast path is registered; the card's `dna_digivolve` requirement is never consulted on the registered path. Observed (`ch16_processing_keywords::blast_dna_cannot_ignore_dna_requirements`, `#[ignore]`d): `BDNA` ("DNA Digivolve: red Lv.5 + blue Lv.5; <Blast DNA Digivolve> <[Leftmon] + [Rightmon]>") is offered in P1's counter timing with P1's level 4 [Leftmon] (`LEFT4`). Proven green: the offer and the DNA digivolution itself with a requirement-meeting [Leftmon], stacked per §8-2-2-2, at no cost (`blast_dna_kind_matches_rule`), and the decline.
+- **DCGO:** `CardEffectFactory/KeyWordEffects/BlastDNADigivolution.cs` matches the field and hand materials by name, then plays the DNA digivolution only `if (card.CanPlayJogress(true))` (`CardSource.cs` ~L2806: each `JogressCondition` element's `EvoRootCondition`, i.e. the card's DNA requirement); otherwise the hand material just returns to the hand.
+- **Fix shape:** on the registered path, also require that (field, hand material) satisfy one of the result card's DNA requirements (its `dna_digivolve` alt paths / `dna_costs`), in the requirement's order, before offering the route.
+- **Blocks training:** yes. An illegal digivolution is offered in the action space (e.g. a level-modified or same-named lower-level Digimon).

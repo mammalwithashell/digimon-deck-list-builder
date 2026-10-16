@@ -44,6 +44,10 @@ const CHAPTER_SOURCES: &[(&str, &str)] = &[
         "ch16_attack_keywords.rs",
         include_str!("ch16_attack_keywords.rs"),
     ),
+    (
+        "ch16_processing_keywords.rs",
+        include_str!("ch16_processing_keywords.rs"),
+    ),
 ];
 
 /// `main.rs`, `cite.rs`, `meta.rs`, `support.rs` are infrastructure, not
