@@ -10765,9 +10765,11 @@
       "mechanisms": [
         "zones-and-visibility"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A breeding-area digivolution cannot meet <Digisorption>'s trigger condition (the rule's own example is a breeding digivolution not triggering 'when your Digimon digivolves'); DCGO BT2_047.cs gates on a battle-area permanent. Pinned with Task 16 (Plan 4).",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::digisorption_not_offered_for_a_breeding_area_digivolution"
+      ],
       "text": "Trigger conditions can't be met by cards in breeding areas, except for effects that explicitly specify or reference breeding areas. (Example: Even if your Digimon in the breeding area digivolves during your turn, a \"[Your Turn] When your Digimon digivolves, by suspending this Tamer, <Draw 1>\" effect doesn't trigger.)"
     },
     "3-4-7-7": {
@@ -15236,9 +15238,9 @@
         "total": 115
       },
       "3": {
-        "gap": 52,
+        "gap": 51,
         "not_testable": 14,
-        "proven": 0,
+        "proven": 1,
         "total": 66
       },
       "4": {
@@ -15278,7 +15280,7 @@
         "total": 13
       }
     },
-    "gap": 662,
+    "gap": 661,
     "mechanics": {
       "gap_blocking": 41,
       "gap_nonblocking": 330,
@@ -15286,7 +15288,7 @@
       "proven": 192
     },
     "not-testable": 246,
-    "proven": 211
+    "proven": 212
   },
   "version": 1
 }

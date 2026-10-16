@@ -613,6 +613,10 @@
   status: proven
   tests: ["ch16_new_keywords::succession_kind_matches_rule"]
   note: "Persistent: with the topmost [Basemon] trashed from the sources, the next one is adopted at once."
+"3-4-7-6":
+  status: proven
+  tests: ["ch16_processing_keywords::digisorption_not_offered_for_a_breeding_area_digivolution"]
+  note: "A breeding-area digivolution cannot meet <Digisorption>'s trigger condition (the rule's own example is a breeding digivolution not triggering 'when your Digimon digivolves'); DCGO BT2_047.cs gates on a battle-area permanent. Pinned with Task 16 (Plan 4)."
 "4-19-1":
   status: proven
   tests: ["ch16_new_keywords::overflow_moves_memory_when_card_leaves_field_or_from_under"]
