@@ -9092,10 +9092,11 @@ Found by the rules-conformance ch16 replacement-keywords suite (`code/digimon-en
 - **Tests that rely on the authoring path:** `ch16_replacement_keywords::{partition_*, decode_*, specified_cards_follow_the_icon_note}` (sidecar notes for 16-29-1/2, 16-36-1/2/3 and 16-3 say so).
 
 
-### No "top stacked card is trashed" timing [G-DSL-TOP-CARD-TRASHED-TIMING] — OPEN (2026-10-16)
+### No "top stacked card is trashed" timing [G-DSL-TOP-CARD-TRASHED-TIMING] — RESOLVED (2026-10-16, 6e5298de5)
 
 Found by the rules-conformance ch16 processing-keywords suite (`code/digimon-engine/tests/rules_conformance/ch16_processing_keywords.rs`). Printed text such as BT21-094's "[All Turns] When the top stacked card of any of your [Armor Form] trait Digimon is trashed" (DCGO `EffectTiming.WhenTopCardTrashed`, stacked once per <De-Digivolve> instance by `IDegeneration` and by <Armor Purge>) has no DSL timing: the only stack-trash timing is `on_digivolution_card_trashed` ("when cards are trashed from the digivolution cards", DCGO `OnDigivolutionCardDiscarded`), which the engine also fires for top-card trashes (`G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED` in `docs/RUST_ENGINE_GAPS.md`).
 
 - **Wanted:** `when: on_top_card_trashed` lowered to a new `EffectTiming::OnTopCardTrashed`, fired once per <De-Digivolve> instance / <Armor Purge> with the trashed cards and the host on the trigger context (`event_host_*` leaves apply).
 - **Interim authoring:** the conformance fixture `fixtures/ch16_proc/OBS_TOP_TRASH_MEM.yaml` prints the top-card wording but is authored with `on_digivolution_card_trashed`; its scenarios contain no other stack trash, so it fires exactly when the printed condition is met. Re-author it on the new timing.
 - **Production cards affected:** BT21-094, BT8-110, EX10-010 (DCGO `WhenTopCardTrashed` users) are unauthored or need re-checking when authored.
+- **Resolution (6e5298de5):** `when: on_top_card_trashed` (`Timing::OnTopCardTrashed` -> `CompiledTiming::OnTopCardTrashed` -> `EffectTiming::OnTopCardTrashed`), fired once per <De-Digivolve> instance with every trashed card and by <Armor Purge>; the host is on the trigger context (`event_host_*` leaves), the trashed cards in `moved_card_sets`, `event_card` only for a one-card batch; event-gated `<Delay>` Options are fanned out (BT21-094 shape). `OBS_TOP_TRASH_MEM` re-authored on it. BT21-094 / BT8-110 remain unauthored; EX10-010 needs no timing (DCGO uses it only to recompute an aura).
