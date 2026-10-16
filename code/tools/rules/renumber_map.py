@@ -13,38 +13,24 @@ already neutralised in ``RuleUnit.text_norm``), then classifies every unit:
 Pairing passes, each iterating in document order with ties going to the first
 candidate: (1) same id + identical text, (2) identical text elsewhere,
 (3) fuzzy ``SequenceMatcher`` ratio >= 0.6, preferring the same id when its
-ratio is >= 0.9, else the best unused old unit.
+ratio is >= 0.9, else the best unused old unit, (4) any old unit still unpaired
+whose id also exists as a still-unpaired new unit is paired when the ratio is
+>= 0.4 and reported ``reworded`` -- a rule that kept its number but was
+rewritten (e.g. a reversed ruling) is the most important migration case.
 """
 from __future__ import annotations
 
 import argparse
 import difflib
 import json
-import re
-import tempfile
 from pathlib import Path
 
 from tools.rules.parse_rules import RuleUnit, parse_rules
 
 FUZZY_MIN = 0.6
+SAME_ID_REWRITE_MIN = 0.4
 SAME_ID_ACCEPT = 0.9
 RENUMBER_MIN = 0.97
-
-
-# ``pdftotext -raw`` puts each page number on its own line behind a form feed
-# ("\f37"). ``parse_rules`` strips the form feed and would glue the number onto
-# the preceding rule ("<alliance> 37"), so drop those lines before parsing.
-_PAGE_NUMBER_LINE = re.compile(r"^\f\d{1,3}[ \t]*$", re.MULTILINE)
-
-
-def load_units(path: Path) -> list[RuleUnit]:
-    """``parse_rules`` with pdftotext page-number lines removed first."""
-    text = Path(path).read_text(encoding="utf-8", errors="replace")
-    cleaned = _PAGE_NUMBER_LINE.sub("", text)
-    with tempfile.TemporaryDirectory() as td:
-        tmp = Path(td) / "rules.txt"
-        tmp.write_bytes(cleaned.encode("utf-8"))
-        return parse_rules(tmp)
 
 
 def _ratio(a: str, b: str) -> float:
@@ -100,6 +86,15 @@ def _pair(old_units: list[RuleUnit], new_units: list[RuleUnit]) -> dict[str, tup
         if best is not None and best_ratio >= FUZZY_MIN:
             pairs[r] = (best, best_ratio)
             used_old.add(best)
+
+    # Pass 4: a rule that kept its number but was rewritten.
+    for r in new_order:
+        if r in pairs or r not in on or r in used_old:
+            continue
+        ratio = _ratio(on[r], nn[r])
+        if ratio >= SAME_ID_REWRITE_MIN:
+            pairs[r] = (r, ratio)
+            used_old.add(r)
     return pairs
 
 
@@ -138,7 +133,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--new", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args(argv)
-    m = build_map(load_units(args.old), load_units(args.new))
+    m = build_map(parse_rules(args.old), parse_rules(args.new))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", encoding="utf-8", newline="\n") as f:
         f.write(json.dumps(m, sort_keys=True, indent=2, ensure_ascii=False) + "\n")

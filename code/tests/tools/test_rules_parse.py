@@ -84,3 +84,30 @@ def test_chapter_headings_are_not_continuation_text():
     for u in units:
         assert not tail.search(u.text), u.id
         assert not heading_line.search(u.text), u.id
+
+
+def test_page_number_lines_are_dropped(tmp_path):
+    ff = chr(12)
+    src = tmp_path / "cr.txt"
+    src.write_text(
+        "1-1. First rule text\n"
+        + ff + "37\n"
+        + "continues here\n"
+        + "1-2. <Alliance>\n"
+        + ff + "38\n"
+        + "1-3. Third " + ff + "39\n"
+        + "rule\n"
+        + "Update History\n",
+        encoding="utf-8",
+    )
+    units = {u.id: u for u in parse_rules(src)}
+    assert units["1-1"].text == "First rule text continues here"
+    assert units["1-2"].text == "<Alliance>"
+    assert units["1-3"].text == "Third rule"
+
+
+def test_bare_digit_continuation_line_is_kept(tmp_path):
+    # Without a form feed a lone digit line is rule text (wrapped cross-reference).
+    src = tmp_path / "cr.txt"
+    src.write_text("1-1. See 15-4-\n4\n1-2. Next\nUpdate History\n", encoding="utf-8")
+    assert parse_rules(src)[0].text == "See 15-4- 4"

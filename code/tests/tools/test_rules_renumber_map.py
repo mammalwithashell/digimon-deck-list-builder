@@ -1,10 +1,11 @@
 from pathlib import Path
 
-from tools.rules.renumber_map import build_map, load_units
+from tools.rules.parse_rules import RuleUnit, parse_rules
+from tools.rules.renumber_map import build_map
 
 REPO = Path(__file__).resolve().parents[3]
-OLD = load_units(REPO / "docs/digimon-rules/cr-3.6.txt")
-NEW = load_units(REPO / "qa/rules/aegis/comprehensive-4.3.md")
+OLD = parse_rules(REPO / "docs/digimon-rules/cr-3.6.txt")
+NEW = parse_rules(REPO / "qa/rules/aegis/comprehensive-4.3.md")
 MAP = build_map(OLD, NEW)
 
 
@@ -21,11 +22,26 @@ def test_reworded_pairs_carry_similarity():
     assert "16-6-4" not in MAP["renumbered"]
 
 
-def test_reversal_is_not_silently_renumbered():
-    # 15-7-4 reverses meaning (may-execute -> cannot-execute); its text is below
-    # the 0.6 fuzzy floor so it surfaces as removed + added, never renumbered.
-    assert "15-7-4" in MAP["removed"] and "15-7-4" in MAP["added"]
+def test_reversal_is_reworded_not_renumbered():
+    # 15-7-4 kept its number but reversed meaning (text similarity 0.53, under the
+    # 0.6 fuzzy floor): pass 4 pairs it as reworded at the same id.
+    rew = {(r["old"], r["new"]) for r in MAP["reworded"]}
+    assert ("15-7-4", "15-7-4") in rew
     assert "15-7-4" not in MAP["renumbered"]
+    assert "15-7-4" not in MAP["added"] and "15-7-4" not in MAP["removed"]
+
+
+def test_same_id_rewrite_pass_four_on_synthetic_units():
+    def unit(i, t):
+        return RuleUnit(i, int(i.split("-")[0]), t, t, "x")
+
+    old = [unit("1-1", "the quick brown fox jumps over the lazy dog today")]
+    new = [unit("1-1", "a quick brown fox leaps over the very lazy dog now")]
+    m = build_map(old, new)
+    assert [(r["old"], r["new"]) for r in m["reworded"]] == [("1-1", "1-1")]
+    assert m["added"] == [] and m["removed"] == []
+    unrelated = build_map(old, [unit("1-1", "zzz qqq xxx")])
+    assert unrelated["added"] == ["1-1"] and unrelated["removed"] == ["1-1"]
 
 
 def test_added_includes_new_keywords():

@@ -29,6 +29,12 @@ _CROSS_REF = re.compile(
 )
 _BARE_RULE_NUM = re.compile(r"\b\d{1,2}(-\d+)+\b")
 _CHAPTER_HEADING = re.compile(r"^(1[0-8]|[1-9])\.\s+[A-Z]")
+# ``pdftotext -raw`` puts each page number on its own line behind a form feed
+# ("\f37"). Left alone, ``splitlines`` (which also breaks on \f) would yield a
+# bare digit line that gets glued onto the preceding rule ("<alliance> 37").
+# Only form-feed-prefixed numbers are page furniture: a bare digit line can be
+# the tail of a wrapped cross-reference ("15-4-" / "4") and must be kept.
+_PAGE_NUMBER = re.compile(r"\f\d{1,3}[ \t]*(?:\r?\n|$)")
 
 
 @dataclass(frozen=True)
@@ -58,7 +64,8 @@ def fingerprint(text_norm: str) -> str:
 def parse_rules(path: Path) -> list[RuleUnit]:
     raw_units: list[tuple[str, list[str]]] = []
     started = False
-    for raw in Path(path).read_text(encoding="utf-8", errors="replace").splitlines():
+    text = Path(path).read_text(encoding="utf-8", errors="replace")
+    for raw in _PAGE_NUMBER.sub("", text).splitlines():
         line = raw.strip()
         if not started:
             # The table of contents precedes the body; the first real rule is 1-1.
