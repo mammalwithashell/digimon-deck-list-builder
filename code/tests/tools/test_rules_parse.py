@@ -1,4 +1,5 @@
 import hashlib
+import re
 from pathlib import Path
 
 from tools.rules.parse_rules import fingerprint, normalise, parse_rules
@@ -37,8 +38,7 @@ def test_normalise_is_stable_across_extractions():
 
 def test_normalise_cross_references_and_rule_numbers():
     t = 'Do X. (For details, refer to 15-8-3 "Trigger-Type Effects")15-8-3 Then see 8-3 and 16-1-2.'
-    # removal happens after whitespace collapse (binding order), so a double space remains
-    assert normalise(t) == "do x.  then see # and #."
+    assert normalise(t) == "do x. then see # and #."
     # cross-reference wrapped across lines / glued number differs from inner one
     t2 = 'Y (For details, refer to 4-7 "Link\nCards")4-9'
     assert normalise(t2) == "y"
@@ -50,3 +50,37 @@ def test_normalise_character_folding():
 
 def test_fingerprint_is_sha256_of_norm():
     assert fingerprint(normalise("x")) == hashlib.sha256(normalise("x").encode()).hexdigest()
+
+
+def test_normalise_has_no_double_spaces_or_edge_whitespace():
+    assert normalise('a (For details, refer to 1-2 "X") 1-2  b ') == "a b"
+    for u in parse_rules(SRC):
+        assert "  " not in u.text_norm and u.text_norm == u.text_norm.strip(), u.id
+
+
+def test_normalise_tolerates_dropped_opening_paren_and_spaced_number():
+    # opening paren lost by the extraction (8-1-2-1 shape)
+    assert normalise('Pick it. For details, refer to 2-3-6 "Requirements")2-3-5') == "pick it."
+    # number after the closing paren separated by a space (4-17-5 shape)
+    assert normalise('Done.) (For details, refer to 15-4 "Effect States") 15-4') == "done.)"
+    # case-insensitive, optional comma
+    assert normalise('A. (for details refer to 3-1 "Z")3-1 B') == "a. b"
+
+
+def test_cross_references_fully_removed_in_corpus():
+    units = {u.id: u for u in parse_rules(SRC)}
+    for rid in ("8-1-2-1", "9-1-1", "11-5-1-2-1", "16-14-2", "18-1-2", "4-17-5"):
+        n = units[rid].text_norm
+        assert "refer to" not in n and "#" not in n, (rid, n)
+
+
+def test_chapter_headings_are_not_continuation_text():
+    units = parse_rules(SRC)
+    by_id = {u.id: u for u in units}
+    assert not by_id["16-47-2"].text.endswith("17. Rule Checks")
+    assert by_id["16-47-2"].text.endswith('"Persistent Effects")')
+    tail = re.compile(r"\b\d{1,2}\. [A-Z][a-z]+$")
+    heading_line = re.compile(r"(?:^|\s)(?:1[0-8]|[1-9])\. [A-Z][a-z]+(?: [A-Za-z]+)*$")
+    for u in units:
+        assert not tail.search(u.text), u.id
+        assert not heading_line.search(u.text), u.id

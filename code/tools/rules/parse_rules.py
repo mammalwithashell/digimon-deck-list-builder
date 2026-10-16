@@ -21,9 +21,14 @@ STOP_PREFIX = "Update History"
 
 _WS = re.compile(r"\s+")
 _PAGE_NUM = re.compile(r"([a-z.)])\d{1,2}(\s|$)")
-# "(For details, refer to ...)" plus any bare rule number glued right after it.
-_CROSS_REF = re.compile(r"\(For details, refer to [^)]*\)(?:\d{1,2}(?:-\d+)+)?")
+# "(For details, refer to ...)" (the opening paren is sometimes lost by the
+# extraction), the closing paren if present, and any rule number that follows,
+# glued or spaced. Applied after lower-casing.
+_CROSS_REF = re.compile(
+    r"\(?\s*for details,? refer to [^)\n]*\)?\s*(\d{1,2}(?:-\d+)*)?", re.IGNORECASE
+)
 _BARE_RULE_NUM = re.compile(r"\b\d{1,2}(-\d+)+\b")
+_CHAPTER_HEADING = re.compile(r"^(1[0-8]|[1-9])\.\s+[A-Z]")
 
 
 @dataclass(frozen=True)
@@ -40,9 +45,10 @@ def normalise(text: str) -> str:
     t = _PAGE_NUM.sub(r"\1\2", t)
     t = t.replace("\u2019", "'").replace("\u201c", '"').replace("\u201d", '"')
     t = t.replace("\u3000", " ")
+    t = t.lower()
     t = _CROSS_REF.sub("", t)
     t = _BARE_RULE_NUM.sub("#", t)
-    return t.lower().strip()
+    return _WS.sub(" ", t).strip()
 
 
 def fingerprint(text_norm: str) -> str:
@@ -62,6 +68,10 @@ def parse_rules(path: Path) -> list[RuleUnit]:
                 continue
         elif line.startswith(STOP_PREFIX):
             break
+        if _CHAPTER_HEADING.match(line):
+            continue  # "17. Rule Checks": neither a rule nor continuation text
+        if _CHAPTER_HEADING.match(line):
+            continue  # "17. Rule Checks": neither a rule nor continuation text
         m = RULE_RE.match(line)
         if m:
             raw_units.append((m.group(1), [m.group(2)]))
