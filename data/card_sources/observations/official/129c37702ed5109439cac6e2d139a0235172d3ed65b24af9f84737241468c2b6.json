@@ -1,0 +1,43 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "P-137",
+    "colors": "Red Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "5000",
+    "form": "Armor Form",
+    "play_cost": "5",
+    "special_digivolution_condition": "[Digivolve] [Veemon]: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Veemon]: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Armor Purge＞ ＜Raid＞ [Your Turn] [Once Per Turn] When this Digimon's attack target changes, your opponent adds their top security card to the hand."
+      }
+    ],
+    "type": "Dragonkin"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "129c37702ed5109439cac6e2d139a0235172d3ed65b24af9f84737241468c2b6",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "68865582c55b9225c074f3f55062fa2c24ece629fe4cb18ac98c6ceb90a7ee85",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:P-137",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/P-137"
+}

@@ -1,0 +1,58 @@
+{
+  "extracted": {
+    "attribute": "Social",
+    "card_id": "BT25-052",
+    "colors": "Green Red",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "6000",
+    "form": "Sup./Appmon",
+    "play_cost": "5",
+    "qa": [
+      "No, you can't."
+    ],
+    "special_digivolution_condition": "[App Fusion] [Onmon] & [Gatchmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Onmon] & [Gatchmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+      },
+      {
+        "label": "Effect",
+        "text": "[Main] [Once Per Turn] You may link 1 [Social], [Tool] or [Game] trait Digimon card from your hand or this Digimon's digivolution cards to this Digimon with the cost reduced by 1. [Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Kazuki & Itsuki] from your hand without paying the cost."
+      },
+      {
+        "label": "Link DP",
+        "text": "DP+3000"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Linking] Suspend 1 of your opponent's Digimon or Tamers."
+      }
+    ],
+    "type": "Login"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "27cc2231804a68bed1825ad8a2deb60eb3830607a73bea88afe01fdd9aa4e48b",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "ab205c0c578f2029829e710cf4bfad5bc85ba2ab22ac45bf640c21f0dff55314",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-052",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-052"
+}

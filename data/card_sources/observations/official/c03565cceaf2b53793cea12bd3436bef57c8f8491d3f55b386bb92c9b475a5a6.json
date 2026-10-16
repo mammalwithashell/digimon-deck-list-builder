@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT25-051",
+    "colors": "Green Black",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "qa": [
+      "It triggers when the battle is won. When the Digimon with this effect wins a battle, the opponent's Digimon that lost the battle is deleted, then the \"when this Digimon wins a battle\" effect can be activated."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[TS] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[TS] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Blocker＞ [On Play] [When Digivolving] 1 of your Digimon with [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits or the [Shaman] or [TS] trait gets +3000 DP until your opponent's turn ends."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] [Once Per Turn] When this Digimon wins a battle, ＜Draw 1＞."
+      }
+    ],
+    "type": "Beast/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "c03565cceaf2b53793cea12bd3436bef57c8f8491d3f55b386bb92c9b475a5a6",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "de1b75bbe770450304e38d892f816b3a989d81ebab4f833f350a80f2f178e7fd",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-051",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-051"
+}

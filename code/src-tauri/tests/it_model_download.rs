@@ -8,6 +8,7 @@
 
 use digimon_engine::action::space::ACTION_SPACE_SIZE;
 use digimon_engine::tensor::TENSOR_SIZE;
+use digimon_engine::tensor_profiles::default_profile;
 use digimon_tcg::models::{ManifestModel, ModelsManager};
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -29,6 +30,10 @@ fn make_manifest_entry(id: &str, url: String, sha: &str, size: u64) -> ManifestM
         model_type: "mlp".to_string(),
         tensor_size: TENSOR_SIZE,
         action_space_size: ACTION_SPACE_SIZE,
+        observation_profile: Some(default_profile().id.into()),
+        tensor_version: Some(default_profile().tensor_version),
+        feature_schema_version: Some(default_profile().feature_schema_version.into()),
+        tensor_layout_hash: Some(default_profile().layout_hash.into()),
         engine_commit: None,
         trained_at: None,
         file_sha256: sha.to_string(),
@@ -70,6 +75,10 @@ async fn test_download_verify_and_cache() {
             "model_type": "mlp",
             "tensor_size": TENSOR_SIZE,
             "action_space_size": ACTION_SPACE_SIZE,
+            "observation_profile": default_profile().id,
+            "tensor_version": default_profile().tensor_version,
+            "feature_schema_version": default_profile().feature_schema_version,
+            "tensor_layout_hash": default_profile().layout_hash,
             "engine_commit": null,
             "trained_at": null,
             "file_sha256": sha,
@@ -284,4 +293,20 @@ async fn test_download_rejects_incompatible_tensor_size_no_network() {
     );
     // No model dir should have been created (no side effects before the check).
     assert!(!mgr.model_dir("wrong-shape").exists());
+}
+
+#[tokio::test]
+async fn stale_same_shape_contract_is_rejected_before_network_or_cache_write() {
+    let tmp = tempdir().unwrap();
+    let mgr = ModelsManager::new(tmp.path().to_path_buf());
+    let mut stale = make_manifest_entry(
+        "stale",
+        "http://127.0.0.1:19999/must-not-download".into(),
+        "deadbeef",
+        10,
+    );
+    stale.feature_schema_version = Some("previous-same-shape".into());
+    let err = mgr.download(&stale).await.unwrap_err();
+    assert!(err.to_string().contains("incompatible"));
+    assert!(!mgr.model_dir("stale").exists());
 }

@@ -1008,6 +1008,7 @@ impl Game {
         card: crate::card_source::CardHandle,
         cause: crate::trigger_context::EffectAttribution,
     ) -> bool {
+        if self.is_token_source_destination(host) { return false; }
         let Some(perm) = self
             .player_mut(host.player)
             .battle_area

@@ -1,0 +1,93 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "EX12-003",
+    "card_type": "Digi-Egg",
+    "colors": [
+      "Black"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Black"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "digi_egg",
+        "level": 2,
+        "name": "Kapurimon",
+        "play_cost": null,
+        "text_sections": [
+          {
+            "label": "Inherited Effect",
+            "text": "[All Turns] When any of your [ME] trait Digimon would leave the battle area other than by your effects, 1 of them and any of your other Digimon may DNA digivolve into an [ME] trait Digimon card in the hand."
+          }
+        ]
+      }
+    ],
+    "form": "In-Training",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 2,
+    "name": "Kapurimon",
+    "play_cost": null,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-003.png?260529",
+      "printing_id": "EX12-003"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "No. You can’t ignore the digivolution requirements, so you can’t DNA digivolve into a Digimon card that doesn’t have [DNA Digivolve].",
+        "date": "Jun. 19, 2026",
+        "number": "Q6724",
+        "question": "With this card's inherited effect, can I DNA digivolve into a Digimon card in my hand that doesn’t have [DNA Digivolve]?"
+      },
+      {
+        "answer": "No. You can’t ignore the digivolution requirements, so you can’t DNA digivolve using a Digimon that isn’t specified in [DNA Digivolution].",
+        "date": "Jun. 19, 2026",
+        "number": "Q6725",
+        "question": "Using this card's inherited effect, can I DNA digivolve into a card in the hand that isn't the Digimon specified in [DNA Digivolve]?"
+      },
+      {
+        "answer": "It refers to any Digimon that is not the [ME] trait Digimon leaving the battle area.\nThis card's inherited effect triggers when any of your [ME] trait Digimon would leave the battle area.\nWhen activated, one [ME] trait Digimon that would leave the battle area and one of your other Digimon DNA Digivolve.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6726",
+        "question": "In this card's inherited effect, which Digimon does \"other Digimon\" refer to?"
+      },
+      {
+        "answer": "No, it doesn't leave the battle area.\nDNA digivolution digivolves it into a new Digimon that is different from the one that would leave the battle area.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6727",
+        "question": "If I use this card's inherited effect to DNA digivolve using two Digimon including one that would leave the battle area, does the DNA digivolved Digimon leave the battle area?"
+      }
+    ],
+    "rarity": "U",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] When any of your [ME] trait Digimon would leave the battle area other than by your effects, 1 of them and any of your other Digimon may DNA digivolve into an [ME] trait Digimon card in the hand."
+      }
+    ],
+    "type": "Lesser/ME"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "1bfff6a729179fe0343f8f33aece2e87181c5af5c107fac0f192c41f81bd8803",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-003:EX12-003",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT25-077",
+    "colors": "Black Green",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "12",
+    "qa": [
+      "Yes, it triggers. In addition, the \"if played or digivolved by an effect\" condition will be met if it was played or digivolved by an effect."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.5 w/[TS] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "When this card would be played, if there are 12 or more levels' total worth of Digimon, reduce the cost by 5. [On Play] [When Digivolving] You may play 1 [TS] trait Digimon card with 6000 DP or less from your hand without paying the cost. [All Turns] [Once Per Turn] When any Digimon are played or digivolve, you may suspend 1 Digimon. Then, if played or digivolved by an effect, delete 1 of your opponent's lowest DP Digimon."
+      }
+    ],
+    "type": "Shaman/Olympos XII/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "adaceee8956c863e6076507fdc7d1fa55fcb550be8e4936273dcff40f1529039",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "33833762c1f9b23ca2cb4199269e5f92278ab7eea2ba7a94fdcde3f6ef0af967",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-077",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-077"
+}

@@ -1,0 +1,77 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "P-058",
+    "card_type": "Digimon",
+    "colors": [
+      "Red"
+    ],
+    "dp": 7000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "cost": 1,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": 7000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Gammamon",
+        "play_cost": 4,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[When Digivolving] Trash the top 3 cards of your deck. Then, if you have a Tamer in play, this Digimon gets +3000 DP for the turn."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Gammamon",
+    "play_cost": 4,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522901",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-058.png?260529",
+      "printing_id": "P-058"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] Trash the top 3 cards of your deck. Then, if you have a Tamer in play, this Digimon gets +3000 DP for the turn."
+      }
+    ],
+    "type": "Ceratopsian"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "ae76a6af72d14151f3a5f398247685da416d99e22e58d0a89533220cf3201c47",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "4163c69eeb2accbdaaf7fd53d0819dbe2822df97d5e385efc9b7a115f3f090d2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522901:P-058:P-058",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522901"
+}

@@ -1,0 +1,54 @@
+{
+  "extracted": {
+    "attribute": "Social",
+    "card_id": "P-190",
+    "colors": "Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Stnd./Appmon",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] ＜Draw 1＞"
+      },
+      {
+        "label": "Link DP",
+        "text": "DP+2000"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Linking] ＜Draw 1＞"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking] ＜Draw 1＞"
+      }
+    ],
+    "type": "Tweet"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "692f5c471d4f456798dcc0da2dab0bcc1633a6fdbb919453cf716585f0e40b23",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "dfa9d92b813f1d152ef87c9b3166f928c032e60cc9d0e3a1a67a838d3d67c2e1",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:P-190",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/P-190"
+}

@@ -24,6 +24,44 @@ from tools.clause_coverage.card_sources import (
 )
 
 
+def test_empty_official_scrape_does_not_hide_printed_effects_or_security():
+    clauses = extract_card_clauses(
+        "X-EMPTY",
+        cards_index={"X-EMPTY": {
+            "card_kind": CARD_KIND_OPTION,
+            "effect_description_eng": "[Main] Draw 1.",
+        }},
+        overrides_index={},
+        official_index={"X-EMPTY": {"card_id": "X-EMPTY", "text_sections": []}},
+        image_cache={"X-EMPTY": {"security": "[Security] Draw 1."}},
+        dcgo_root=None,
+    )
+    assert [(c.zone, c.source) for c in clauses] == [
+        ("effect", "cards_json"), ("security", "image-cache")
+    ]
+
+
+def test_empty_official_scrape_without_secondary_security_stays_unresolved():
+    clauses = extract_card_clauses(
+        "X-EMPTY",
+        cards_index={"X-EMPTY": {"card_kind": CARD_KIND_OPTION}},
+        overrides_index={},
+        official_index={"X-EMPTY": {"text_sections": [{"label": "Effect", "text": " "}]}},
+        dcgo_root=None,
+    )
+    assert [(c.zone, c.source) for c in clauses] == [("security", "image-required")]
+
+
+def test_complete_official_vanilla_does_not_create_phantom_security_clause():
+    assert extract_card_clauses(
+        "X-VANILLA",
+        cards_index={"X-VANILLA": {"card_kind": CARD_KIND_DIGIMON}},
+        overrides_index={},
+        official_index={"X-VANILLA": {"colors": "Red", "text_sections": []}},
+        dcgo_root=None,
+    ) == []
+
+
 def test_card_overrides_field_is_tagged_card_overrides_source():
     cards_index = {"X-001": {"card_kind": CARD_KIND_DIGIMON, "effect_description_eng": "[On Play] Draw 1."}}
     overrides_index = {"X-001": {"effect_description_eng": "[On Play] Draw 2 instead."}}

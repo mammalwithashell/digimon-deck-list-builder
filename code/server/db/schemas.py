@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, StrictInt, StrictStr
 
 
 # ── Auth ────────────────────────────────────────────────────────────────
@@ -984,6 +984,13 @@ class PatchNotesResponse(BaseModel):
 # ── AI Models ────────────────────────────────────────────────────────────
 
 class AIModelCreateRequest(BaseModel):
+    observation_profile: StrictStr
+    tensor_version: StrictInt
+    feature_schema_version: StrictStr
+    tensor_layout_hash: StrictStr
+    tensor_size: StrictInt
+    action_space_size: StrictInt
+    action_schema_version: StrictInt
     name: str
     model_type: Literal["mlp", "lstm"]
     engine_commit: Optional[str] = None
@@ -1001,12 +1008,17 @@ class AIModelCreateResponse(BaseModel):
 
 
 class AIModelConfirmResponse(BaseModel):
+    observation_profile: StrictStr
+    tensor_version: StrictInt
+    feature_schema_version: StrictStr
+    tensor_layout_hash: StrictStr
     id: str
     state: str
     file_sha256: str
     file_size_bytes: int
     tensor_size: int
     action_space_size: int
+    action_schema_version: int
 
 
 class AIModelUpdateRequest(BaseModel):
@@ -1020,11 +1032,16 @@ class AIModelUpdateRequest(BaseModel):
 
 
 class AIModelResponse(BaseModel):
+    observation_profile: Optional[StrictStr] = None
+    tensor_version: Optional[StrictInt] = None
+    feature_schema_version: Optional[StrictStr] = None
+    tensor_layout_hash: Optional[StrictStr] = None
     id: str
     name: str
     model_type: str
     tensor_size: Optional[int]
     action_space_size: Optional[int]
+    action_schema_version: Optional[int]
     engine_commit: Optional[str]
     trained_at: Optional[datetime]
     file_sha256: Optional[str]
@@ -1047,11 +1064,16 @@ class ListAIModelsResponse(BaseModel):
 
 
 class ManifestModel(BaseModel):
+    observation_profile: StrictStr
+    tensor_version: StrictInt
+    feature_schema_version: StrictStr
+    tensor_layout_hash: StrictStr
     id: str
     name: str
     model_type: str
     tensor_size: int
     action_space_size: int
+    action_schema_version: int
     engine_commit: Optional[str]
     trained_at: Optional[datetime]
     file_sha256: str

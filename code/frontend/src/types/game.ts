@@ -1,3 +1,4 @@
+import type { CountChoice } from '@/types/countChoice';
 export enum GamePhase {
   Start = 0,
   Draw = 1,
@@ -113,6 +114,7 @@ export interface PermanentInfo {
 }
 
 export interface EffectChoice {
+  countChoice?: CountChoice | null;
   index: number;
   cardId: string;
   cardName: string;

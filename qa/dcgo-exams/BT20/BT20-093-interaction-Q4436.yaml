@@ -1,0 +1,76 @@
+# qa:Q4436 (2025-01-24) -- "If I use this card's [Delay] to DNA digivolve using 2 Digimon including one
+# that would leave the battle area, does the DNA digivolved Digimon leave the battle area?" -> "No, it
+# doesn't leave the battle area. DNA digivolution results in a digivolution into a new Digimon that is
+# considered a different Digimon from the one that would leave the battle area."
+# P0 fields Dracomon BT20-007, places Unleash the Dragon Gene BT20-093 as a Delay Option (its [Main]
+# plays Wingdramon BT20-025 for 3 less), then plays Groundramon BT20-042 (its [On Play] needs P1's
+# WarGreymon ST1-11 as a target). On P1's turn 4 Gaia Force ST1-16 targets WINGDRAMON: it "would leave
+# the battle area other than in battle", P0 activates the Delay, and DNA digivolves Groundramon +
+# WINGDRAMON (the would-leave Digimon itself) into Examon BT20-045 from hand. The final row (step 21)
+# shows Examon on P0's field with sources [BT20-025, BT20-042]: the new Digimon did not leave.
+# Representational rows (engine vs DCGO prompt classes for the SAME three decisions; the end state
+# compares): our Delay field-pair DNA lowers to EffectChoice prompts labelled by CARD NAME in three
+# stages -- result, first material, second material (lower_replacement.rs DelayFieldDnaDigivolveFlow /
+# install_delay_field_dna_stage, EffectChoiceEntry.label = card_name) -- authored as `choice:` rows,
+# which are sim-only by construction. DCGO (DNADigivolveEffects.cs DNADigivolvePermanentsIntoHandOrTrashCard)
+# asks a SelectHandEffect for the Examon result ("Select 1 card to DNA digivolve.") and then the
+# SelectJogressEffect material picks, answered here by identity as dcgo_only rows in DCGO's recipe
+# order (Groundramon, then Wingdramon). Same choreography as the oracle-confirmed
+# BT20-093-effect1-repair.yaml (backfilled through step 21).
+# Step 5: P0 declines Dracomon BT20-007's [Start of Your Main Phase] optional trash-and-draw cost.
+# Step 14: the Delay replacement window (DCGO OptionalSkill; our Replacement prompt, 1:1).
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: BT20-093
+clause: BT20-093#effect#1
+covers: [BT20-093#effect#1, BT20-093#effect#0]
+interaction: { id: "qa:Q4436", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: BT20-007, BT20-093, BT20-025, BT20-042, BT20-045 | security bottom->top: ST1-03 x4, ST2-03 | draws: BT3-093, BT3-093, ST1-02, ST1-02, ST2-04, ST2-04
+    stack: [BT20-007, BT20-093, BT20-025, BT20-042, BT20-045, ST1-03, ST1-03, ST1-03, ST1-03, ST2-03, BT3-093, BT3-093, ST1-02, ST1-02, ST2-04, ST2-04]
+    rest: BT20-093-effect1-repair-p0
+  p1:
+    # hand: ST1-11, ST1-16, BT1-090, BT1-090, BT3-093 | security bottom->top: ST1-03 x4, ST2-03 | draws: BT3-093, BT3-093, ST1-02, ST1-02, ST2-04, ST2-04
+    stack: [ST1-11, ST1-16, BT1-090, BT1-090, BT3-093, ST1-03, ST1-03, ST1-03, ST1-03, ST2-03, BT3-093, BT3-093, ST1-02, ST1-02, ST2-04, ST2-04]
+    rest: BT20-093-effect1-repair-p1
+steps:
+# T1 P0: Dracomon BT20-007 (3) -> -3.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: BT20-007, from: hand } }, expect: { prompt: main_phase } }
+# T2 P1 (3): WarGreymon ST1-11 (12) -> -9 (P0 starts T3 with 9).
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { play: { card: ST1-11, from: hand } }, expect: { prompt: main_phase } }
+# T3 P0 (9): decline Dracomon's start-of-main cost; Unleash the Dragon Gene (2) -> 7, play Wingdramon for 7-3=4 -> 3; Groundramon (7) -> -4.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { select: { decline: true } } }
+- { actor: 0, do: { play: { card: BT20-093, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { select: { cards: [BT20-025] } } }
+- { actor: 0, do: { play: { card: BT20-042, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { select: { targets: [opp.field.0] } } }
+- { actor: 0, do: { select: { targets: [opp.field.0] } } }
+# T4 P1 (4): Gaia Force ST1-16 (8) -> -4 on WINGDRAMON (P0 slot 1) -- the Digimon that would leave.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { play: { card: ST1-16, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { select: { targets: [opp.field.1] } } }
+# The Delay window: P0 activates Unleash the Dragon Gene.
+- { actor: 0, do: { select: { 'yes': true } }, expect: { prompt: OptionalSkill } }
+# DNA result: Examon BT20-045 from hand (ours: EffectChoice by name; DCGO: SelectHandEffect by identity).
+- { actor: 0, do: { select: { choice: Examon, sim_only: true } } }
+- { actor: 0, do: { select: { cards: [BT20-045], dcgo_only: true } } }
+# First material: Groundramon BT20-042.
+- { actor: 0, do: { select: { choice: Groundramon, sim_only: true } } }
+- { actor: 0, do: { select: { cards: [BT20-042], dcgo_only: true } } }
+# Second material: WINGDRAMON BT20-025 -- the would-leave Digimon itself is used as DNA material.
+- { actor: 0, do: { select: { choice: Wingdramon, sim_only: true } } }
+- { actor: 0, do: { select: { cards: [BT20-025], dcgo_only: true } } }
+# Observation (T5 P0 breeding): Examon BT20-045 on P0's field with sources [BT20-025, BT20-042]; BT20-093 in P0's trash; ST1-16 in P1's trash.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+expect_ruling:
+  q_id: Q4436
+  assert:
+  - at: 21
+    that:
+      p0.field:
+      - BT20-007
+      - BT20-045

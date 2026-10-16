@@ -1,0 +1,42 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "EX1-014",
+    "colors": "Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "5",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] While this Digimon has [Imperialdramon] in its name or [Free] in its traits, it gains ＜Jamming＞."
+      }
+    ],
+    "type": "Mythical Dragon"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "f769abccb7ae5304b50e0b865cee231fb5051ec5664332dabc63ae2a4ded04fb",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "fa4eb3ceee094ed0941568ea037d6751b50210e8fa93d38d6ed339dddbf98116",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX1-014",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX1-014"
+}

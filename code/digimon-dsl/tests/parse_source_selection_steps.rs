@@ -105,8 +105,9 @@ effects:
             assert_eq!(
                 then,
                 vec![
-                    CompiledStep::TrashSelectedSources {
+                    CompiledStep::TrashSelectedSourcesAsCost {
                         source_refs: "burst_sources".to_string(),
+                        min_count: None,
                     },
                     CompiledStep::GainMemory(2),
                 ]

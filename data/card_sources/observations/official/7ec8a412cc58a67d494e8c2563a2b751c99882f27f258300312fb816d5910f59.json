@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "AD1-017",
+    "colors": "Yellow Red",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "11000",
+    "form": "Mega",
+    "play_cost": "11",
+    "qa": [
+      "No, you can't."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "When this card would be played, if you have 4 or more cards with [Lucemon] or [Witchelny] in their texts in your trash, reduce the play cost by 5. [On Play] [When Digivolving] By trashing your top or bottom security card, all of your opponent's Digimon get -6000 DP for the turn. [All Turns] [Once Per Turn] When your security stack is removed from, you may delete 1 of your opponent's lowest DP Digimon."
+      },
+      {
+        "label": "Security Effect",
+        "text": "[Security] Give 1 of your opponent's Digimon ＜Security A. -1＞ for the turn. Then, 1 of their Digimon gets -3000 DP until your turn ends."
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "7ec8a412cc58a67d494e8c2563a2b751c99882f27f258300312fb816d5910f59",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "6890f4727116a7844f45721e25ce2f69f3853b62b7cb3f65357d5a61bc97972a",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:AD1-017",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/AD1-017"
+}

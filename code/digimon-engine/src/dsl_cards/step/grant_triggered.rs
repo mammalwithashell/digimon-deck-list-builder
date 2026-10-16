@@ -3,7 +3,9 @@
 //! Walks battle areas for permanents matching the step's `target`
 //! predicate; for each match, calls `EffectContext::grant_triggered_effect`
 //! with a body closure that executes the compiled-step list via
-//! `run_steps`. DCGO `AddSkillClass.cs` analog.
+//! `run_steps`. With `dynamic: true`, install a turn-bound predicate instead
+//! so later entrants and changing immunity are evaluated at each trigger.
+//! DCGO `AddSkillClass.cs` analog.
 //!
 //! Selection-driving bodies (RESOLVED — `G-ENGINE-GRANTED-EFFECT-SELECTION-BODY`,
 //! round-2 gap closure): the old v1 note here claimed a granted body installing a
@@ -51,6 +53,7 @@ pub(crate) fn try_run(
 ) -> bool {
     let CompiledStep::GrantTriggeredEffect {
         target,
+        dynamic,
         timing,
         expiry,
         body,
@@ -79,6 +82,25 @@ pub(crate) fn try_run(
         );
         return true;
     };
+
+    if *dynamic {
+        if let CompiledModifierTarget::Filter(predicate) = target {
+            let predicate = predicate.clone();
+            let body = body.clone();
+            ctx.grant_dynamic_triggered_effect(
+                engine_timing,
+                engine_expiry,
+                move |rctx, carrier| {
+                    eval_predicate(&predicate, rctx, PredicateSubject::Permanent(carrier))
+                },
+                move |inner_ctx| {
+                    let mut bindings = Bindings::default();
+                    let _ = run_steps(&body, inner_ctx, &mut bindings);
+                },
+            );
+        }
+        return true;
+    }
 
     let matches = resolve_target_permanents(target, ctx, bindings);
 
@@ -170,6 +192,7 @@ fn compiled_timing_string_to_effect_timing(s: &str) -> Option<crate::enums::Effe
         "start_of_your_turn" => T::StartOfYourTurn,
         "start_of_opponents_turn" => T::StartOfOpponentsTurn,
         "start_of_your_main_phase" => T::StartOfYourMainPhase,
+        "start_of_opponents_main_phase" => T::StartOfOpponentsMainPhase,
         "end_of_your_turn" => T::EndOfYourTurn,
         "end_of_opponents_turn" => T::EndOfOpponentsTurn,
 

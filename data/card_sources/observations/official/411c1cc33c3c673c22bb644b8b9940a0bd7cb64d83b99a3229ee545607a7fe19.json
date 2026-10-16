@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "EX9-021",
+    "colors": "Blue White Red",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "15000",
+    "form": "Mega",
+    "play_cost": "15",
+    "qa": [
+      "Yes, you can process it. Even if this Digimon didn't DNA digivolve, this card's [When Digivolving] effect deletes all of your opponent's Digimon with the highest level."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.6 w/[DM] trait: Cost 5 [DNA Digivolve] Blue Lv.6 + red Lv.6: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.6 w/[DM] trait: Cost 5 [DNA Digivolve] Blue Lv.6 + red Lv.6: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] If DNA digivolving, your opponent's Digimon's effects don't affect this Digimon for the turn. Then, delete all of their Digimon with the highest level. [End of Attack] You may play 1 card with [Greymon] in its name or the [Ver.1] trait and 1 card with [Garurumon] in its name or the [Ver.2] trait from this Digimon's digivolution cards without paying the costs. If this effect played, place this Digimon as your top security card."
+      }
+    ],
+    "type": "Holy Warrior/DM/Ver.1/Ver.2"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "411c1cc33c3c673c22bb644b8b9940a0bd7cb64d83b99a3229ee545607a7fe19",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "a9789ecbf0824a62ab268b94db2fb89834c97c06bc4a8f4c4337c4ae8775770f",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX9-021",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX9-021"
+}

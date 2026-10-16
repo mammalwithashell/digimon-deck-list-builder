@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "EX5-015",
+    "colors": "Blue Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "dp": "2000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "Yes, you can. In such cases, you add as many cards to your hand as possible."
+    ],
+    "special_digivolution_condition": "[Digivolve] [Tsunomon]/[Gabumon]: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Tsunomon]/[Gabumon]: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play][When Digivolving] Reveal the top 4 cards of your deck. Add 2 cards with [Garurumon] or [X Antibody] in their names among them to the hand. Place the rest at the bottom of the deck. If you added cards, trash 1 card in your hand."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns][Once Per Turn] When this Digimon with [Garurumon] or [Omnimon] in its name would be deleted in battle, by returning 2 non-Digi-Egg cards from your trash to the bottom of the deck, prevent that deletion."
+      }
+    ],
+    "type": "Beast/X Antibody"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "2c2a0864e3e027b4877e1d01390edc2e393099dd0b9451b97ef6bc5316c69efc",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "904715207378fee1eb9ece92c9cf12b29dc4cdb3af49c6a5fe0ea7a4d6028f43",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX5-015",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX5-015"
+}

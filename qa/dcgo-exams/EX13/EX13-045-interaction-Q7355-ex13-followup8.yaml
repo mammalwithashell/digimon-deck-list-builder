@@ -1,0 +1,142 @@
+# Source-derived draft; independent verification pending.
+card: EX13-045
+clause: EX13-045#effect#7
+interaction:
+  id: qa:Q7355
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST2-11
+    - EX13-045
+    - EX3-020
+    - BT1-090
+    - BT1-090
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-05
+    rest: EX13-045-interaction-Q7355-ex13-followup8-p0
+  p1:
+    stack:
+    - ST1-11
+    - ST1-02
+    - ST1-10
+    - BT1-090
+    - ST2-03
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-05
+    rest: EX13-045-interaction-Q7355-ex13-followup8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST2-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: EX13-045
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX3-020
+- actor: 0
+  do:
+    select:
+      decline: true
+      sim_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert: []
+expect_ruling:
+  q_id: Q7355
+  assert:
+  - at: 13
+    that:
+      memory: -2
+      p0.field:
+      - card_id: EX13-045
+        suspended: false
+        dp: 15000
+        sources:
+        - ST2-11
+      - card_id: EX3-020
+        suspended: false
+        sources: []
+      p1.field: []
+      p1.trash:
+      - ST1-11
+      p1.security: 5

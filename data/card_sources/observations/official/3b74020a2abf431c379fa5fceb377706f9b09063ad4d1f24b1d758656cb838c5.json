@@ -1,0 +1,43 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT21-037",
+    "colors": "Blue Green",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "6000",
+    "form": "Armor Form",
+    "play_cost": "6",
+    "special_digivolution_condition": "[Digivolve] [Veemon]: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Veemon]: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Piercing＞ ＜Armor Purge＞ [When Digivolving] Suspend 1 of your opponent's Digimon. Then, this Digimon gets +2000 DP until your opponent's turn ends."
+      }
+    ],
+    "type": "Beast"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3b74020a2abf431c379fa5fceb377706f9b09063ad4d1f24b1d758656cb838c5",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "92d008b094ad341fb4882817b21cd409f18d3d17fe816e688339ffb6af480ffe",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-037",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-037"
+}

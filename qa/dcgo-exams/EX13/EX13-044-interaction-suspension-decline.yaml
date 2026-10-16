@@ -1,0 +1,343 @@
+# INTERACTION DRAFT: own oracle comparison required; no verdict established.
+# On play, both own Breakdramon and opposing ST1-11 are unsuspended eligible suspension targets. Decline all optional suspension, then select the mandatory opponent unsuspend lock; both remain unsuspended.
+# Adapted from EX13/EX13-044-inherited0-repair.yaml. Original unchanged; no OPT preservation claim.
+card: EX13-044
+clause: EX13-044#effect#3
+covers:
+- EX13-044#effect#3
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX13-044
+    - EX13-045
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST2-03
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    - ST2-04
+    rest: EX13-044-inherited0-repair-p0
+  p1:
+    stack:
+    - ST1-11
+    - BT20-042
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST2-03
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    - ST2-04
+    rest: EX13-044-inherited0-repair-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX13-044
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert:
+- at: 0
+  that:
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - EX13-044
+    - EX13-045
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-042
+    - BT3-093
+    - ST1-11
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - EX13-044
+    - EX13-045
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-042
+    - BT3-093
+    - ST1-11
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - EX13-044
+    - EX13-045
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-042
+    - BT3-093
+    - BT3-093
+    - ST1-11
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 2
+- at: 3
+  that:
+    memory: -3
+    p0.field: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - EX13-044
+    - EX13-045
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-042
+    - BT3-093
+    - BT3-093
+    - ST1-11
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 4
+  that:
+    memory: 9
+    p0.field: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - EX13-044
+    - EX13-045
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-11
+      dp: 12000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-042
+    - BT3-093
+    - BT3-093
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 3
+- at: 5
+  that:
+    memory: 9
+    p0.field: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - EX13-044
+    - EX13-045
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-11
+      dp: 12000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-042
+    - BT3-093
+    - BT3-093
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 6
+  that:
+    memory: -3
+    p0.field:
+    - card_id: EX13-044
+      dp: 12000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - EX13-045
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-11
+      dp: 12000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-042
+    - BT3-093
+    - BT3-093
+    p1.security: 5
+    p1.trash: []
+    turn: 3
+- at: 7
+  that:
+    memory: -3
+    p0.field:
+    - card_id: EX13-044
+      dp: 12000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - EX13-045
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-11
+      dp: 12000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-042
+    - BT3-093
+    - BT3-093
+    p1.security: 5
+    p1.trash: []
+    turn: 3
+- at: 8
+  that:
+    memory: -3
+    p0.field:
+    - card_id: EX13-044
+      dp: 12000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - EX13-045
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-11
+      dp: 12000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-042
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 4
+interaction:
+  id: probe:EX13-044#effect#3:optional_decline
+  source: probe
+  kind: positive

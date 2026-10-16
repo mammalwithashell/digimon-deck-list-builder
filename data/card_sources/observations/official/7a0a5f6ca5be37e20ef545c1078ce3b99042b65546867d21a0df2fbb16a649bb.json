@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Tool",
+    "card_id": "BT21-053",
+    "colors": "Black",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Stnd./Appmon",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] Until your opponent's turn ends, 1 of their Digimon can't attack players."
+      },
+      {
+        "label": "Special Rule",
+        "text": "+2000 DP"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking] Until your opponent's turn ends, 1 of their Digimon can't attack players."
+      }
+    ],
+    "type": "Clock"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "7a0a5f6ca5be37e20ef545c1078ce3b99042b65546867d21a0df2fbb16a649bb",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "1d0e04a087e29cff47e6057842d2bf0c52a072e16c60673db7069e4ae501b7cf",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-053",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-053"
+}

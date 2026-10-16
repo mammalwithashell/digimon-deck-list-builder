@@ -68,6 +68,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CannotUseOptionCards" => ModifierType::CannotUseOptionCards,
         "CannotActivateSecurityEffects" => ModifierType::CannotActivateSecurityEffects,
         "CannotPlayDigimonByEffect" => ModifierType::CannotPlayDigimonByEffect,
+        "CannotPlayDigimonWithDPAtMost" => ModifierType::CannotPlayDigimonWithDPAtMost,
         "CannotPlayTamerByEffect" => ModifierType::CannotPlayTamerByEffect,
         "IgnoreColorRequirement" => ModifierType::IgnoreColorRequirement,
         "CannotActivateOnPlayEffects" => ModifierType::CannotActivateOnPlayEffects,
@@ -230,7 +231,8 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::ChangeBaseCardColor
         | ModifierType::ChangeCardLevelForAssembly
         | ModifierType::ChangeCardNamesForDigiXros
-        | ModifierType::DnaMaterialIdentity => {}
+        | ModifierType::DnaMaterialIdentity
+        | ModifierType::CannotPlayDigimonWithDPAtMost => {}
     }
 }
 
@@ -303,6 +305,7 @@ mod tests {
             ModifierType::CannotPlayFromHand,
             ModifierType::CannotUseOptionCards,
             ModifierType::CannotPlayDigimonByEffect,
+            ModifierType::CannotPlayDigimonWithDPAtMost,
             ModifierType::CannotPlayTamerByEffect,
             ModifierType::CannotGainMemoryByEffect,
             ModifierType::CannotGainMemoryExceptFromTamers,

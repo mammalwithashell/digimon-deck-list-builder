@@ -1,0 +1,75 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "EX12-002",
+    "card_type": "Digi-Egg",
+    "colors": [
+      "Yellow"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "digi_egg",
+        "level": 2,
+        "name": "Mococomon",
+        "play_cost": null,
+        "text_sections": [
+          {
+            "label": "Inherited Effect",
+            "text": "[Your Turn] [Once Per Turn] When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2."
+          }
+        ]
+      }
+    ],
+    "form": "In-Training",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 2,
+    "name": "Mococomon",
+    "play_cost": null,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-002.png?260529",
+      "printing_id": "EX12-002"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Activate the digivolved Digimon's [When Digivolving] effect first.\nSince it is newly triggered when you activate this card's inherited effect and the Digimon digivolves, it is activated first according to the derived triggering rule.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6723",
+        "question": "When one of my [SW] trait Digimon is played, its [On Play] effect triggers simultaneously with this card's inherited effect.\nIf I activate this card's inherited effect first and digivolve, in what order can I activate the digivolved card's [When Digivolving] effect and the played Digimon's [On Play] effect?"
+      }
+    ],
+    "rarity": "U",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] [Once Per Turn] When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2."
+      }
+    ],
+    "type": "Smoke/Shambala/SW"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "c0da3a3dcc83f7f79268fcea57ab85df47268a8b7aab612aed1a0fa20496d83f",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-002:EX12-002",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

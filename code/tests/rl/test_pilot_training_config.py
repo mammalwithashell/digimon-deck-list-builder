@@ -509,13 +509,7 @@ def test_train_passes_config_tensor_profile_to_held_out_eval_suite(
 ):
     from digimon_gym.agents import pilot_training
 
-    layout = SimpleNamespace(
-        id="standard_lite_v2",
-        tensor_version=2,
-        feature_schema_version="standard_lite_v2.2",
-        tensor_size=8410,
-        layout_hash="sha256:test",
-    )
+    layout = pilot_training.get_tensor_profile("standard_lite_v2")
     captured = {}
 
     class FakeSuite:
@@ -528,6 +522,8 @@ def test_train_passes_config_tensor_profile_to_held_out_eval_suite(
     class FakePPO:
         def __init__(self, *_args, **_kwargs):
             self.num_timesteps = 0
+            self.observation_space = SimpleNamespace(shape=(layout.tensor_size,))
+            self.action_space = SimpleNamespace(n=pilot_training.ACTION_SPACE_SIZE)
 
         def learn(self, *_, **__):
             return self
@@ -588,6 +584,8 @@ def test_train_passes_config_tensor_profile_to_held_out_eval_suite(
     assert captured["tensor_profile"] == "standard_lite_v2"
     assert isinstance(captured["eval_suite"], FakeSuite)
     meta = json.loads((tmp_path / "eval-suite-profile-test" / "final.meta.json").read_text())
+    assert type(meta["action_schema_version"]) is int
+    assert meta["action_schema_version"] == __import__("model_contract").current_contract(layout.id)["action_schema_version"]
     assert meta["eval_suite_results"] == {
         "overall_win_rate": 0.75,
         "suite_path": "from-callback",
@@ -651,12 +649,13 @@ def test_checkpoint_contract_rejects_incompatible_tensor_profile(tmp_path):
 
     checkpoint = tmp_path / "base.zip"
     checkpoint.write_text("model")
-    checkpoint.with_suffix(".meta.json").write_text(
-        '{"observation_profile":"old","tensor_layout_hash":"sha256:test","action_space_size":2192}'
-    )
-    layout = SimpleNamespace(id="standard_lite_v2", layout_hash="sha256:test")
+    from model_contract import current_contract
+    metadata = current_contract("standard_lite_v2")
+    metadata["observation_profile"] = "old"
+    checkpoint.with_suffix(".meta.json").write_text(json.dumps(metadata))
+    layout = pilot_training.get_tensor_profile("standard_lite_v2")
 
-    with pytest.raises(ValueError, match="observation_profile"):
+    with pytest.raises(ValueError, match="profile"):
         pilot_training._validate_checkpoint_contract(checkpoint, layout)
 
 
@@ -666,12 +665,11 @@ def _write_contract_meta(tmp_path, extra: str = "") -> "Path":
 
     checkpoint = tmp_path / "base.zip"
     checkpoint.write_text("model")
-    checkpoint.with_suffix(".meta.json").write_text(
-        '{"observation_profile":"standard_lite_v2",'
-        '"tensor_layout_hash":"sha256:test",'
-        f'"action_space_size":{pilot_training.ACTION_SPACE_SIZE}'
-        f'{extra}}}'
-    )
+    from model_contract import current_contract
+    metadata = current_contract("standard_lite_v2")
+    if extra:
+        metadata.update(json.loads("{" + extra.lstrip(",") + "}"))
+    checkpoint.with_suffix(".meta.json").write_text(json.dumps(metadata))
     return checkpoint
 
 
@@ -684,7 +682,7 @@ def test_checkpoint_contract_rejects_action_space_structure_mismatch(tmp_path):
     checkpoint = _write_contract_meta(
         tmp_path, extra=f',"action_space_structure":{shifted}'
     )
-    layout = SimpleNamespace(id="standard_lite_v2", layout_hash="sha256:test")
+    layout = pilot_training.get_tensor_profile("standard_lite_v2")
 
     with pytest.raises(ValueError, match="action_space_structure"):
         pilot_training._validate_checkpoint_contract(checkpoint, layout)
@@ -697,7 +695,7 @@ def test_checkpoint_contract_accepts_matching_structure(tmp_path):
     checkpoint = _write_contract_meta(
         tmp_path, extra=f',"action_space_structure":{current}'
     )
-    layout = SimpleNamespace(id="standard_lite_v2", layout_hash="sha256:test")
+    layout = pilot_training.get_tensor_profile("standard_lite_v2")
 
     pilot_training._validate_checkpoint_contract(checkpoint, layout)
 
@@ -709,7 +707,7 @@ def test_checkpoint_contract_warns_when_structure_absent(tmp_path, caplog):
     from digimon_gym.agents import pilot_training
 
     checkpoint = _write_contract_meta(tmp_path)
-    layout = SimpleNamespace(id="standard_lite_v2", layout_hash="sha256:test")
+    layout = pilot_training.get_tensor_profile("standard_lite_v2")
 
     with caplog.at_level(logging.WARNING, logger="digimon_gym.agents.pilot_training"):
         pilot_training._validate_checkpoint_contract(checkpoint, layout)
@@ -719,19 +717,15 @@ def test_checkpoint_contract_warns_when_structure_absent(tmp_path, caplog):
 def test_train_model_kwargs_include_observation_layout(monkeypatch, tmp_path):
     from digimon_gym.agents import pilot_training
 
-    layout = SimpleNamespace(
-        id="standard_lite_v2",
-        tensor_version=2,
-        feature_schema_version="standard_lite_v2.2",
-        tensor_size=8410,
-        layout_hash="sha256:test",
-    )
+    layout = pilot_training.get_tensor_profile("standard_lite_v2")
     captured = {}
 
     class FakePPO:
         def __init__(self, *_args, policy_kwargs=None, **_kwargs):
             captured["policy_kwargs"] = policy_kwargs
             self.num_timesteps = 0
+            self.observation_space = SimpleNamespace(shape=(layout.tensor_size,))
+            self.action_space = SimpleNamespace(n=pilot_training.ACTION_SPACE_SIZE)
 
         def learn(self, *_, **__):
             return self
@@ -762,17 +756,13 @@ def test_train_model_kwargs_include_observation_layout(monkeypatch, tmp_path):
 def test_train_generalist_metadata_includes_curriculum(monkeypatch, tmp_path):
     from digimon_gym.agents import pilot_training
 
-    layout = SimpleNamespace(
-        id="standard_lite_v2",
-        tensor_version=2,
-        feature_schema_version="standard_lite_v2.2",
-        tensor_size=8410,
-        layout_hash="sha256:test",
-    )
+    layout = pilot_training.get_tensor_profile("standard_lite_v2")
 
     class FakePPO:
         def __init__(self, *_args, **_kwargs):
             self.num_timesteps = 0
+            self.observation_space = SimpleNamespace(shape=(layout.tensor_size,))
+            self.action_space = SimpleNamespace(n=pilot_training.ACTION_SPACE_SIZE)
 
         def learn(self, *_, **__):
             return self
@@ -824,24 +814,22 @@ def test_train_generalist_metadata_includes_curriculum(monkeypatch, tmp_path):
 def test_train_init_from_records_base_checkpoint(monkeypatch, tmp_path):
     from digimon_gym.agents import pilot_training
 
-    layout = SimpleNamespace(
-        id="standard_lite_v2",
-        tensor_version=2,
-        feature_schema_version="standard_lite_v2.2",
-        tensor_size=8410,
-        layout_hash="sha256:test",
-    )
+    from model_contract import current_contract
+    layout = pilot_training.get_tensor_profile("standard_lite_v2")
+    training_contract = current_contract(layout.id)
     base = tmp_path / "base.zip"
     base.write_text("model")
     base.with_suffix(".meta.json").write_text(
-        '{"observation_profile":"standard_lite_v2","tensor_layout_hash":"sha256:test","action_space_size":2192}'
+        json.dumps(training_contract)
     )
 
     class FakePPO:
         num_timesteps = 0
 
         def __init__(self, *_args, **_kwargs):
-            pass
+            self.digimon_contract = dict(training_contract)
+            self.observation_space = SimpleNamespace(shape=(training_contract["tensor_size"],))
+            self.action_space = SimpleNamespace(n=training_contract["action_space_size"])
 
         @classmethod
         def load(cls, *_args, **_kwargs):
@@ -871,6 +859,7 @@ def test_train_init_from_records_base_checkpoint(monkeypatch, tmp_path):
     pilot_training.train(cfg=cfg, deck1=["ST1-01"], verbose=0)
 
     meta = (tmp_path / "fine-tune-meta" / "final.meta.json").read_text()
+    assert json.loads(meta)["action_schema_version"] == training_contract["action_schema_version"]
     assert '"training_mode": "fine_tune"' in meta
     assert f'"base_checkpoint": "{str(base).replace(chr(92), chr(92) + chr(92))}"' in meta
 
@@ -988,3 +977,39 @@ def test_cli_archetypes_overrides_yaml(monkeypatch, tmp_path):
     pilot_training.main()
 
     assert captured["cfg"].allowed_archetypes == ["Rocks", "Yellow Hybrid"]
+
+
+@pytest.mark.parametrize("mode", ["init_from", "resume_from"])
+@pytest.mark.parametrize("bad", ["missing", None, True, "mismatch"])
+def test_train_rejects_action_field_only_before_load_or_learning(tmp_path, monkeypatch, mode, bad):
+    from digimon_gym.agents import pilot_training
+    from model_contract import current_contract, validate_checkpoint
+    layout = pilot_training.get_tensor_profile("standard_lite_v2")
+    contract = current_contract(layout.id)
+    if bad == "missing":
+        del contract["action_schema_version"]
+    else:
+        contract["action_schema_version"] = contract["action_schema_version"] + 1 if bad == "mismatch" else bad
+    checkpoint = tmp_path / "old.zip"
+    checkpoint.write_bytes(b"unaltered historical weights")
+    checkpoint.with_suffix(".meta.json").write_text(json.dumps(contract))
+    with pytest.raises(ValueError, match="action_schema_version"):
+        pilot_training._validate_checkpoint_contract(checkpoint, layout)
+    model = SimpleNamespace(digimon_contract=dict(contract),
+        observation_space=SimpleNamespace(shape=(layout.tensor_size,)),
+        action_space=SimpleNamespace(n=pilot_training.ACTION_SPACE_SIZE))
+    with pytest.raises(ValueError, match="action_schema_version"):
+        validate_checkpoint(model, layout.id)
+    class RefuseLoad:
+        @classmethod
+        def load(cls, *a, **k):
+            pytest.fail("bad action semantics reached checkpoint loading")
+    monkeypatch.setattr(pilot_training, "MaskablePPO", RefuseLoad)
+    monkeypatch.setattr(pilot_training, "make_env", lambda **kwargs: object())
+    cfg = TrainingConfig(timesteps=1, eval_freq=0, eval_episodes=1, checkpoint_every=0,
+        models_dir=str(tmp_path), run_name="reject", tensor_profile=layout.id, **{mode: str(checkpoint)})
+    with pytest.raises(ValueError, match="action_schema_version"):
+        pilot_training.train(cfg=cfg, deck1=["ST1-01"], verbose=0)
+    assert checkpoint.read_bytes() == b"unaltered historical weights"
+    assert json.loads(checkpoint.with_suffix(".meta.json").read_text()) == contract
+    assert not (tmp_path / "reject" / "final.meta.json").exists()

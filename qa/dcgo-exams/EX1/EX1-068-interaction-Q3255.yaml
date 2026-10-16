@@ -1,0 +1,72 @@
+# qa:Q3255 (2024-03-28) -- "If I use this card, do I lose 2 memory every time my opponent attacks with a
+# Digimon?" -> "Your opponent loses the 2 memory. The memory marker will be moved 2 spaces towards you every
+# time your opponent attacks with a Digimon."
+# Sources: data/card_bundles/EX1-068 + official observation 472a2180... + card image EX1-068.webp ([Main] All of
+# your opponent's Digimon gain "[When Attacking] Lose 2 memory" until the end of their next turn); DCGO
+# EX1/Blue/EX1_068.cs (AddSkillClass on card.Owner.UntilOpponentTurnEndEffects granting an OnAllyAttack
+# ActivateClass whose coroutine is cardSource.Owner.AddMemory(-2) -- the ATTACKER's owner loses, every attack);
+# ours EX1-068.yaml grant_triggered_effect when_attacking lose_memory: 2 (the attacking/turn player).
+# general_rule.pdf 6-1-4-1 / 6-6-2 (turn end after processing), 11-1-3 (attack timings), 13 (security
+# checks), 14 (battles).
+# Line: P0 fields Gabumon ST2-03 (T1; the blue permanent that makes the blue Option playable). P1 fields TWO
+# Biyomon ST1-02 (T2; 3 -> 1 -> -1). T3: P0 uses Ice Wall! (1 -> 2). T4 P1 (3) attacks P0's security twice:
+# attack 1 -> P1 loses 2 (memory 1 on P1's side), the top security card Dracomon ST1-04 (4000) deletes the
+# 3000-DP attacker; attack 2 with the remaining Biyomon -> P1 loses 2 again (memory 1 on P0's side), it beats
+# Agumon ST1-03 (2000) in security, the attack ends and P1's turn ends (6-1-4-1).
+# Discriminator: the memory rows read -3 (before attack 1), -1 (before attack 2) and +1 after -- two moves of
+# 2 TOWARD P0, taken from P1, with P0 (the Option's user) never losing memory; the next row is P0's
+# breeding_action (turn 5). A "the user loses 2" reading would show -5 / -7 and no turn change.
+# Slot safety: attack 1 is declared with two IDENTICAL vanilla Biyomon on P1's board (ours attacks the
+# 1st-entered, DCGO's compact index 0 is the 2nd-entered -- README "Slot safety"); the copies are
+# indistinguishable in the projection (same id/DP/sources/orientation) and the attacker is deleted in its
+# security battle, so attack 2 is declared with a LONE Digimon (index 0 on both wires). P0 has no <Blocker>,
+# so no block window opens. No selection prompt is expected.
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: EX1-068
+clause: EX1-068#effect#0
+covers: [EX1-068#effect#0, EX1-068#effect#1]
+interaction: { id: "qa:Q3255", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: ST2-03, EX1-068, ST2-04, ST2-05, ST2-06 | security bottom->top: ST1-02 x3, ST1-03, ST1-04 (top = Dracomon 4000, checked by attack 1; then Agumon 2000) | draws (T3, T5): ST1-05, ST1-05
+    stack: [ST2-03, EX1-068, ST2-04, ST2-05, ST2-06, ST1-02, ST1-02, ST1-02, ST1-03, ST1-04, ST1-05, ST1-05]
+    rest: EX1-068-interaction-Q3255-p0
+  p1:
+    # hand: ST1-02 x2, ST2-04, ST2-05, ST2-06 | security bottom->top: ST1-03 x4, ST1-04 | draws (T2, T4): ST2-03, ST2-03
+    stack: [ST1-02, ST1-02, ST2-04, ST2-05, ST2-06, ST1-03, ST1-03, ST1-03, ST1-03, ST1-04, ST2-03, ST2-03]
+    rest: EX1-068-interaction-Q3255-p1
+steps:
+# T1 P0 (0): Gabumon ST2-03 (3) -> -3.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: ST2-03, from: hand } }, expect: { prompt: main_phase } }
+# T2 P1 (3): Biyomon (2) -> 1; Biyomon (2) -> -1 (two identical attackers for turn 4).
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { play: { card: ST1-02, from: hand.0 } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { play: { card: ST1-02, from: hand } }, expect: { prompt: main_phase } }
+# T3 P0 (3): Ice Wall! EX1-068 (1) -> 2; pass. P1's Digimon now carry "[When Attacking] Lose 2 memory".
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: EX1-068, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+# T4 P1 (3): attack 1 -> P1 loses 2 (memory -1 from P0's view); attacker deleted by Dracomon in security.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { attack: { attacker: field.0, target: security } }, expect: { prompt: main_phase } }
+# attack 2 (lone Biyomon) -> P1 loses 2 again (memory +1 from P0's view); Agumon trashed; turn ends after the attack.
+- { actor: 1, do: { attack: { attacker: field.0, target: security } }, expect: { prompt: main_phase } }
+# T5 P0: P1's turn ended because the memory moved to P0's side -- the observation row.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+expect_ruling:
+  q_id: Q3255
+  assert:
+  - at: 9
+    that:
+      memory: -3
+  - at: 10
+    that:
+      memory: -1
+      p0.security: 4
+  - at: 11
+    that:
+      memory: 1
+      phase: Breeding
+      p0.security: 3

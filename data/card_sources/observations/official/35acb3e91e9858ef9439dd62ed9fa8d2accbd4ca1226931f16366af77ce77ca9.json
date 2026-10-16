@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT24-035",
+    "colors": "Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "qa": [
+      "No, it isn't deleted yet. Once all of the processing for the activated effect has resolved, a rule check will occur, then all of the Digimon with 0 DP are deleted at the same time."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[TS] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[TS] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if it's your turn, 2 of your Digimon may DNA digivolve into [Silphymon] in the hand."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+      }
+    ],
+    "type": "Holy Beast/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "35acb3e91e9858ef9439dd62ed9fa8d2accbd4ca1226931f16366af77ce77ca9",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "940b14f3e7fea3ddda1b1e48502706eba257cde7b0e278b2d3c92deeba532fa5",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-035",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-035"
+}

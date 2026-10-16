@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT21-011",
+    "colors": "Red Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "No, it doesn’t trigger."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[Xros Heart]/[Hero] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[Xros Heart]/[Hero] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Xros Heart] or [Hero] trait, reduce the digivolution cost by 1. [On Deletion] ＜Save＞"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Rush＞."
+      }
+    ],
+    "type": "Mini Dragon/Xros Heart/Hero"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "26af055592d431426fa575dfdea59518d8d3f6e5e681e650b3f677be15a7d3a2",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "b2e3024084b1d8e2b1649c722ba8362e9f8ff6d121e30ce2814e3eb1277aa124",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-011",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-011"
+}

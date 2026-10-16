@@ -33,6 +33,7 @@ fn fighter(id: &str) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: id.replace('-', "_"),
@@ -46,10 +47,14 @@ fn fighter(id: &str) -> CardData {
 
 fn install_parked(game: &mut digimon_engine::game::Game, target: PermanentHandle) {
     game.install_parked_replacement_for_test(ParkedReplacement {
+        window: None,
+        outer_conts: Vec::new(),
+        deletion_receipt: None,
         // This fixture installs a park directly, bypassing the dispatcher that
         // normally stamps the window; no commit-key behaviour is under test here.
         timing: None,
         subject: ReplacementSubject::Permanent(target),
+        stable_subject_card: None,
         cause: ReplacementCause::OpponentEffect,
         event_cause_override: None,
         original_destination: Some(Zone::Trash),
@@ -427,7 +432,11 @@ fn second_park_stacks_above_an_outstanding_park_and_drains_lifo() {
     let a = v.valid_action_ids[0];
     r.execute_action(v.selecting_player, a).expect("pick");
     assert!(r.game.pending_selection.is_none());
-    assert_eq!(r.game.parked_replacement_depth_for_test(), 0, "stack fully drained");
+    assert_eq!(
+        r.game.parked_replacement_depth_for_test(),
+        0,
+        "stack fully drained"
+    );
     let _ = (parker, other);
 }
 

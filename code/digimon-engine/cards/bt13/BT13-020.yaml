@@ -96,7 +96,7 @@ effects:
   #     silent no-op, so the modifier steps below also no-op (their binding
   #     target never resolves).
   #   - `add_modifier: TreatAsDigimon` with `synth_identity { dp: 12000 }`
-  #     (kind defaults to Digimon) lowers to ModifierPayload::SynthIdentity —
+  #     (kind defaults to Digimon) lowers to ModifierPayload::AdditiveSynthIdentity —
   #     "treat as a 12000 DP Digimon". `add_modifier: CannotDigivolve` is the
   #     "it cannot digivolve" clause; `grant_keyword: Rush` is the "<Rush>"
   #     clause. All three expire end_of_turn = "For the turn".

@@ -16,6 +16,18 @@ use crate::replacement::{ReplacementOutcome, ReplacementSubject};
 
 pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut Bindings) -> bool {
     match step {
+        CompiledStep::SuspendAndCancelAllMatchingLeaves { target, .. } => {
+            if let Some(ResolvedBinding::Permanent(payer)) = resolve_binding_ref(target, ctx, bindings) {
+                if ctx.can_affect_permanent(payer) {
+                    if let Some(card) = ctx.game.suspend_state_only(payer) {
+                        ctx.game.enqueue_on_suspend(payer, card, true);
+                        ctx.game.reevaluate_until_condition_modifiers();
+                        set_outcome(ctx, ReplacementOutcome::Cancelled);
+                    }
+                }
+            }
+            true
+        }
         CompiledStep::CancelReplacement => {
             set_outcome(ctx, ReplacementOutcome::Cancelled);
             true
@@ -61,19 +73,8 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::DeleteSelfAndCancelLeave => {
-            // BT25-039 — the protect-OTHERS cost: DELETE the CARRIER (the effect's
-            // own `source_permanent`), then cancel the parked leave (preventing
-            // the replacement SUBJECT's leave — the framework applies the outcome
-            // to the subject, not the carrier). The self-delete is an atomic cost
-            // (no player selection), so this is a synchronous body: `set_outcome`
-            // writes `Cancelled` into `dsl_replacement_outcome`, which the generic
-            // replacement process reads into `rctx.outcome`. With no carrier this
-            // no-ops (should not happen for a live leave replacement).
-            if let Some(carrier) = ctx.source_permanent {
-                ctx.delete_permanent(carrier);
-                set_outcome(ctx, ReplacementOutcome::Cancelled);
-            }
+        CompiledStep::DeleteSelfAndCancelLeave | CompiledStep::DeleteSelfAndCancelAllMatchingLeaves => {
+            delete_carrier_and_cancel_after_payment(ctx);
             true
         }
         CompiledStep::TrashTopSecurityAndCancelReplacement { of } => {
@@ -183,7 +184,7 @@ pub(crate) fn matching_link_cards_read(
         .collect()
 }
 
-fn set_outcome(ctx: &mut EffectContext<'_>, outcome: ReplacementOutcome) {
+pub(super) fn set_outcome(ctx: &mut EffectContext<'_>, outcome: ReplacementOutcome) {
     if ctx.game.has_active_parked_replacement() {
         match outcome {
             ReplacementOutcome::None => {}
@@ -220,4 +221,70 @@ fn lower_zone(zone: CompiledZone) -> Option<Zone> {
         CompiledZone::DigiEggDeck => Some(Zone::DigitamaDeck),
         CompiledZone::Material => None,
     }
+}
+
+/// Pay the carrier's own deletion before preventing another departure.
+/// A fresh receipt and result environment exclude prior or nested deletions.
+/// The ordinary DSL continuation parks the finalizer behind payment choices.
+pub(crate) fn delete_carrier_and_cancel_after_payment(ctx: &mut EffectContext<'_>) {
+    let Some(carrier) = ctx.source_permanent else { return; };
+    let members = ctx.game.current_trigger_context.as_ref().map(|c|c.replacement_deletion_members.clone()).unwrap_or_default();
+    let profile = paid_prevention_profile(ctx);
+    let Some((receipt, payer)) = start_deletion_payment(ctx, carrier) else { return; };
+    let step=if members.is_empty(){CompiledStep::PaidDeletionPreventionFinalize{receipt,payer}}
+        else{
+            let Some((filter,protect_all,cause,cause_player))=profile else { return; };
+            CompiledStep::PaidDeletionBatchPreventionFinalize{receipt,payer,members,filter,protect_all,cause,cause_player}
+        };
+    let steps = [step];
+    super::run_steps_with_runtime(&steps, ctx, &mut Bindings::new(), &super::StepRuntime::default());
+}
+
+/// Scapegoat pays with a selected Digimon while retaining the keyword carrier
+/// as the effect source. Its protection remains on the current parent subject.
+pub(crate) fn delete_selected_and_cancel_after_payment(
+    ctx: &mut EffectContext<'_>, payer_handle: crate::permanent::PermanentHandle,
+) {
+    let Some((receipt,payer)) = start_deletion_payment(ctx,payer_handle) else { return; };
+    super::run_steps_with_runtime(
+        &[CompiledStep::PaidDeletionPreventionFinalize{receipt,payer}],
+        ctx, &mut Bindings::new(), &super::StepRuntime::default(),
+    );
+}
+
+fn start_deletion_payment(
+    ctx: &mut EffectContext<'_>, payer_handle: crate::permanent::PermanentHandle,
+) -> Option<(u64,(u8,u16,u64))> {
+    if !ctx.can_affect_permanent(payer_handle) { return None; }
+    let top = ctx.game.player(payer_handle.player).battle_area.get(payer_handle.index as usize)?.top_card().handle().0;
+    let payer = (payer_handle.player, top, ctx.game.capture_digivolve_host_identity(payer_handle));
+    let receipt = ctx.game.next_deletion_receipt;
+    ctx.game.next_deletion_receipt = receipt.checked_add(1).expect("deletion receipt exhausted");
+    ctx.game.deletion_receipts.push((receipt, Vec::new()));
+    // A resumed replacement may still carry the initiating opponent's ambient
+    // attribution. Payment is this keyword carrier's effect, never the payer's.
+    let previous = (ctx.game.effect_source_player, ctx.game.effect_source_card, ctx.game.effect_source_permanent);
+    ctx.game.effect_source_player = Some(ctx.player);
+    ctx.game.effect_source_card = Some(ctx.source_card);
+    ctx.game.effect_source_permanent = ctx.source_permanent;
+    ctx.game.delete_permanents_batch_with_receipt(
+        vec![payer_handle], crate::replacement::ReplacementCause::OwnEffect, Some(receipt));
+    (ctx.game.effect_source_player, ctx.game.effect_source_card, ctx.game.effect_source_permanent) = previous;
+    Some((receipt,payer))
+}
+
+fn paid_prevention_profile(ctx:&EffectContext<'_>)->Option<(digimon_dsl::compiled::CompiledPredicate,bool,digimon_dsl::compiled::CompiledReplacementCause,Option<u8>)> {
+    use crate::replacement::ReplacementCause as R;
+    use digimon_dsl::compiled::CompiledReplacementCause as C;
+    let c=ctx.game.current_trigger_context.as_ref()?;
+    let (card,id,slot,keyword)=c.replacement_paid_prevention.as_ref()?;
+    let (cause,player)=c.replacement_deletion_cause?;
+    let cause=match cause {R::Battle=>C::Battle,R::OwnEffect|R::DigiXros=>C::OwnEffect,R::OpponentEffect=>C::OpponentEffect,
+        R::SecurityCheck=>C::SecurityCheck,R::Cost=>C::Cost,R::Overclock=>C::Overclock};
+    let effects=match keyword {
+        Some(k)=>std::sync::Arc::new(crate::cards::keyword_effects::keyword_to_auto_effect(*k,*card)),
+        None=>ctx.game.effects_for_card(id,*card)?,
+    };
+    let effect=effects.get(*slot as usize)?;
+    Some((effect.paid_prevention_filter.clone().unwrap_or_default(),effect.paid_prevention_all,cause,player))
 }

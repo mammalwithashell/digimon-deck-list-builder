@@ -1,0 +1,109 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Data"
+      ],
+      "card_colors": [
+        "Red"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Huckmon",
+      "dp": 2000,
+      "effect_description_eng": "[Security] At the end of the battle, delete 1 of your opponent's Digimon with 4000 DP or less. If you don't delete an opponent's Digimon with this effect, ＜Draw 1＞ (Draw 1 card from your deck.) Then, add this card to its owner's hand.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Red"
+          ],
+          "cost": 0,
+          "from_level": 2
+        }
+      ],
+      "form_eng": [
+        "Rookie"
+      ],
+      "inherited_effect_description_eng": "",
+      "level": 3,
+      "play_cost": 3,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Mini Dragon"
+      ]
+    },
+    "card_id": "P-066",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [
+      {
+        "authority": "secondary",
+        "color": "Red",
+        "cost": 0,
+        "derived": false,
+        "level": 2,
+        "ordinal": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": 2000,
+        "effect_text": "[Security] At the end of the battle, delete 1 of your opponent's Digimon with 4000 DP or less. If you don't delete an opponent's Digimon with this effect, ＜Draw 1＞ (Draw 1 card from your deck.) Then, add this card to its owner's hand.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 3,
+        "play_cost": 3,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": "Data",
+      "color": "Red",
+      "color2": null,
+      "date_added": "2025-11-25 15:15:54",
+      "digi_type": "Mini Dragon",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 2000,
+      "evolution_color": "Red",
+      "evolution_cost": 0,
+      "evolution_level": 2,
+      "form": "Rookie",
+      "id": "P-066",
+      "level": 3,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[Security] At the end of the battle, delete 1 of your opponent's Digimon with 4000 DP or less. If you don't delete an opponent's Digimon with this effect, ＜Draw 1＞ (Draw 1 card from your deck.) Then, add this card to its owner's hand.",
+      "name": "Huckmon",
+      "play_cost": 3,
+      "pretty_url": "huckmon-p-066",
+      "rarity": "p",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-12: Limited Card Pack",
+        "RB-01: Resurgence Booster"
+      ],
+      "source_effect": "",
+      "stage": "Rookie",
+      "tcgplayer_id": 490704,
+      "tcgplayer_name": "Huckmon - P-066 (Limited Card Pack)",
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "2a771f631dc71261e5882b8af56b9c554557f5628bd2c9bb3483f5f0884af8fc",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "P-066",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

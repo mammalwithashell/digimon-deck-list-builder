@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT25-017",
+    "colors": "Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "7000",
+    "form": "Ultimate",
+    "play_cost": "6",
+    "qa": [
+      "Yes, it triggers. However, this effect can only be activated when that Digimon is blue."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.4 w/[TS] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[TS] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] This Digimon may attack. Then, by trashing 1 card in your hand, delete 1 of your opponent's Digimon with 7000 DP or less. [Your Turn] When your Digimon are played or digivolve, if any of them are blue, this Digimon may digivolve into [Apollomon] in the hand with the cost reduced by 2."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+      }
+    ],
+    "type": "Beastkin/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "6e89cf6e7bf1d17bb9a27baec7da5dd20606775c5bd13895fcfc0b961999b4a6",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "95340397a7af5e762371074a38d7d370eb7fdec51c1b35aeab0f6c17ba5903ac",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-017",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-017"
+}

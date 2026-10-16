@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT19-061",
+    "colors": "Black Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "5000",
+    "form": "Champion",
+    "play_cost": "5",
+    "qa": [
+      "Yes, you must add as many cards to your hand as possible."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Xros Heart] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Xros Heart] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "This card is also treated as [Sparrowmon] for DigiXros. [On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with the [Xros Heart] or [Blue Flare] trait among them to the hand. Trash the rest. [On Deletion] You may place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under any of your Tamers."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Collision＞."
+      }
+    ],
+    "type": "Cyborg/Xros Heart"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "7ffe230082c0e0a644c94a8bd586e315df87e3c72d97502c1c3ae4231d84bf12",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "f0b086056c1cf2d9e8578f4fbd23cb677859fd36c81a957558676322f9ec8959",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT19-061",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT19-061"
+}

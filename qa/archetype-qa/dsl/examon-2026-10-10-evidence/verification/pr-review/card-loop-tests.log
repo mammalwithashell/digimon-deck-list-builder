@@ -1,0 +1,14 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\examon-authoring\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 95 items
+
+code\tests\tools\test_card_loop_stages_exam.py ......................... [ 26%]
+...........................................                              [ 71%]
+code\tests\tools\test_card_loop_stages_harness.py ...................... [ 94%]
+.....                                                                    [100%]
+
+============================= 95 passed in 4.63s ==============================

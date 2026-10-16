@@ -28,6 +28,28 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
 use digimon_engine::selection::SelectionKind;
 
+fn option_color_provider() -> digimon_engine::card_data::CardData {
+    let mut card =
+        digimon_engine::debug_runner::make_test_card("OPTION-PROVIDER", "OptionProvider");
+    card.colors = vec![CardColor::Purple];
+    card
+}
+fn use_printed_option(runner: &mut DebugRunner) {
+    use digimon_engine::action::{mask::build_action_mask, space::PLAY_HAND_START};
+    runner.skip_mulligan();
+    runner.place_in_breeding(0, "OPTION-PROVIDER");
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        1.0
+    );
+    runner.game.decode_action(PLAY_HAND_START, 0);
+    assert!(!runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "BT9-108"));
+}
+
 // ─── Card-data helpers ────────────────────────────────────────────────────────
 
 /// A purple level-3 Digimon with **no** scripted [On Play] effect. The clean
@@ -118,6 +140,7 @@ fn gorgon_runner() -> DebugRunner {
         .add_card(yellow_l3("YELLOW-L3"))
         .add_card(opp_digimon("OPP-DIGI"))
         .add_card(opp_digimon("OPP-DIGI2"))
+        .add_card(option_color_provider())
         .hand(0, &["BT9-108"])
         .deck(0, &["PURPLE-L3", "PURPLE-L3", "PURPLE-L3"])
         .memory(10)
@@ -219,7 +242,7 @@ fn bt9_108_main_with_unsuspended_opponent_digimon_prompts_delete() {
     let mut runner = gorgon_runner();
     runner.place_on_field(1, "OPP-DIGI", Some(0)); // unsuspended by default
 
-    runner.play(0, 0).expect("play BT9-108 from hand");
+    use_printed_option(&mut runner);
 
     let sel = runner
         .pending_selection_view()
@@ -242,7 +265,7 @@ fn bt9_108_main_with_only_suspended_opponent_digimon_installs_no_delete() {
     let suspended = runner.place_on_field(1, "OPP-DIGI", Some(0));
     runner.game.suspend(suspended);
 
-    runner.play(0, 0).expect("play BT9-108 from hand");
+    use_printed_option(&mut runner);
 
     assert!(
         runner.pending_selection().is_none(),
@@ -265,7 +288,7 @@ fn bt9_108_main_only_unsuspended_digimon_offered_as_delete_target() {
     let suspended = runner.place_on_field(1, "OPP-DIGI2", Some(0));
     runner.game.suspend(suspended);
 
-    runner.play(0, 0).expect("play BT9-108 from hand");
+    use_printed_option(&mut runner);
 
     let sel = runner
         .pending_selection_view()
@@ -284,7 +307,7 @@ fn bt9_108_main_deletes_chosen_unsuspended_digimon() {
     // No purple Lv.3 in trash → the trash-play sub-step finds no candidates and
     // short-circuits; this test isolates the delete outcome.
 
-    runner.play(0, 0).expect("play BT9-108 from hand");
+    use_printed_option(&mut runner);
     runner
         .execute_action(0, encode_attack(0, victim.index as u16))
         .expect("delete the unsuspended opponent Digimon");
@@ -309,7 +332,7 @@ fn bt9_108_main_after_delete_prompts_optional_purple_l3_trash_play() {
     seed_trash(&mut runner, 0, "PURPLE-L4"); // wrong level — filtered out
     seed_trash(&mut runner, 0, "YELLOW-L3"); // wrong color — filtered out
 
-    runner.play(0, 0).expect("play BT9-108 from hand");
+    use_printed_option(&mut runner);
     runner
         .execute_action(0, encode_attack(0, victim.index as u16))
         .expect("delete the unsuspended opponent Digimon");
@@ -344,7 +367,7 @@ fn bt9_108_main_declining_trash_play_leaves_trash_card_in_place() {
     let victim = runner.place_on_field(1, "OPP-DIGI", Some(0));
     seed_trash(&mut runner, 0, "PURPLE-L3");
 
-    runner.play(0, 0).expect("play BT9-108 from hand");
+    use_printed_option(&mut runner);
     runner
         .execute_action(0, encode_attack(0, victim.index as u16))
         .expect("delete the unsuspended opponent Digimon");
@@ -378,7 +401,7 @@ fn bt9_108_main_plays_chosen_purple_l3_from_trash_into_battle_area() {
     let victim = runner.place_on_field(1, "OPP-DIGI", Some(0));
     seed_trash(&mut runner, 0, "PURPLE-L3");
 
-    runner.play(0, 0).expect("play BT9-108 from hand");
+    use_printed_option(&mut runner);
     runner
         .execute_action(0, encode_attack(0, victim.index as u16))
         .expect("delete the unsuspended opponent Digimon");
@@ -423,7 +446,7 @@ fn bt9_108_main_free_play_pays_no_memory() {
     let victim = runner.place_on_field(1, "OPP-DIGI", Some(0));
     seed_trash(&mut runner, 0, "PURPLE-L3");
 
-    runner.play(0, 0).expect("play BT9-108 from hand");
+    use_printed_option(&mut runner);
     // Playing BT9-108 (cost 8) from 10 memory leaves 2.
     let memory_after_option = runner.memory();
 
@@ -453,7 +476,7 @@ fn bt9_108_main_suppresses_on_play_of_played_digimon() {
     let victim = runner.place_on_field(1, "OPP-DIGI", Some(0));
     seed_trash(&mut runner, 0, "ONPLAY-PURPLE-L3");
 
-    runner.play(0, 0).expect("play BT9-108 from hand");
+    use_printed_option(&mut runner);
     runner
         .execute_action(0, encode_attack(0, victim.index as u16))
         .expect("delete the unsuspended opponent Digimon");

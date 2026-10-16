@@ -1,0 +1,181 @@
+card: EX13-045
+clause: EX13-045#effect#7
+interaction:
+  id: qa:Q7361
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST2-11
+    - EX13-045
+    - BT20-023
+    - BT1-090
+    - BT1-090
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    rest: Q7361-turn-player-payout-first-v2-p0
+  p1:
+    stack:
+    - BT20-040
+    - EX13-041
+    - BT1-090
+    - BT1-090
+    - ST2-03
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    rest: Q7361-turn-player-payout-first-v2-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: BT20-040
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    digivolve:
+      from: field.0
+      using: EX13-041
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    select:
+      value: 3
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST2-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: EX13-045
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      cards:
+      - BT20-023
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+expect_ruling:
+  q_id: Q7361
+  assert:
+  - at: 17
+    that:
+      p1.field: []
+      p1.trash:
+      - BT20-040
+      - EX13-041
+  - at: 18
+    that:
+      p0.field:
+      - card_id: EX13-045
+      - card_id: BT20-023
+      p1.field:
+      - card_id: EX13-041
+        sources: []
+      p1.trash:
+      - BT20-040
+  - at: 20
+    that:
+      p1.field:
+      - card_id: EX13-041
+        sources: []
+      p1.trash:
+      - BT20-040

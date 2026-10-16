@@ -1,0 +1,60 @@
+# Official observation e7d98de2f242c2f3626fd9ab538063629890092bbcfa8fe39ac4329b4c01fea0;
+# reviewed base card_corrections section/trait repairs; actual BT9-109.webp.
+# DCGO BT9/White/BT9_109.cs; Q1918, Q1920, Q1922, Q1923.
+card: BT9-109
+name: X Antibody
+kind: option
+color: [white]
+cost: 0
+traits: [X Antibody]
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: digimon
+
+effects:
+  - when: main_from_hand
+    summary: "Place this card as the bottom source of 1 own Digimon without X Antibody sources"
+    process:
+      - select_own_permanent:
+          bind_as: host
+          filter:
+            all_of:
+              - kind: digimon
+              - not:
+                  source_count:
+                    filter: { name_is: X Antibody }
+                    at_least: 1
+          prompt: "Choose a Digimon without X Antibody in its digivolution cards"
+      - place_self_under_permanent: { target: host }
+
+  - scope: inherited
+    kind: aura
+    target: {}
+    source_card_trash_protection: { name_is: X Antibody }
+
+  - scope: inherited
+    when: when_attacking
+    summary: "This Digimon may digivolve into an X Antibody trait Digimon in hand for its digivolution cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evolution
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: X Antibody
+              - can_digivolve_onto: source
+          prompt: "You may digivolve this Digimon into an X Antibody trait Digimon"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evolution
+          cost: printed
+
+  - when: on_security
+    summary: "Gain 1 memory and add this card to its owner's hand"
+    process:
+      - gain_memory: 1
+      - add_this_option_to_hand: {}

@@ -1,0 +1,86 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [],
+      "card_colors": [
+        "Black"
+      ],
+      "card_kind": "Option",
+      "card_name_eng": "DCD Bomb",
+      "effect_description_eng": "[Main] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, by returning 3 cards with the [D-Brigade] or [DigiPolice] trait from your trash to the top of the deck, delete up to 6 play cost's total worth of your opponent's Digimon.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+      "level": null,
+      "play_cost": 4,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "D-Brigade"
+      ]
+    },
+    "card_id": "BT14-098",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Black"
+        ],
+        "dp": null,
+        "effect_text": "[Main] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, by returning 3 cards with the [D-Brigade] or [DigiPolice] trait from your trash to the top of the deck, delete up to 6 play cost's total worth of your opponent's Digimon.",
+        "face_id": "primary",
+        "inherited_text": "Security Effect [Security] Activate this card's [Main] effects.",
+        "kind": "option",
+        "level": null,
+        "play_cost": 4,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": null,
+      "color": "Black",
+      "color2": null,
+      "date_added": "2025-11-25 15:14:05",
+      "digi_type": "D-Brigade",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": null,
+      "evolution_color": null,
+      "evolution_cost": null,
+      "evolution_level": null,
+      "form": null,
+      "id": "BT14-098",
+      "level": null,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[Main] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, by returning 3 cards with the [D-Brigade] or [DigiPolice] trait from your trash to the top of the deck, delete up to 6 play cost's total worth of your opponent's Digimon.",
+      "name": "DCD Bomb",
+      "play_cost": 4,
+      "pretty_url": "dcd-bomb-bt14-098",
+      "rarity": "C",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-14: Booster Blast Ace"
+      ],
+      "source_effect": "Security Effect [Security] Activate this card's [Main] effects.",
+      "stage": null,
+      "tcgplayer_id": 524032,
+      "tcgplayer_name": "DCD Bomb",
+      "type": "Option",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "8c212d574167704e0f4804a5701b4f24362089233614ba7d196b1a1c837f37f8",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "BT14-098",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

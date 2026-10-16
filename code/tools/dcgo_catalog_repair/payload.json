@@ -1,0 +1,434 @@
+{
+  "schemaVersion": 1,
+  "cards": [
+    {
+      "CardID": "EX13-005",
+      "CardSpriteName": "EX13-005",
+      "CardEffectClassName": "EX13_005",
+      "CardName_ENG": "Bebydomon",
+      "cardColors": [
+        3
+      ],
+      "cardKind": [
+        3
+      ],
+      "PlayCost": -1,
+      "DP": 0,
+      "Level": 2,
+      "Form_ENG": [
+        "In-Training"
+      ],
+      "Attribute_ENG": [],
+      "Type_ENG": [
+        "Baby Dragon"
+      ],
+      "EvoCosts": [],
+      "rarity": 1,
+      "EffectDiscription_ENG": "",
+      "InheritedEffectDiscription_ENG": "[When Attacking] [Once Per Turn] You may play or use 1 card with [Dracomon] or [Examon] in its text from your hand with the cost reduced by 1.",
+      "SecurityEffectDiscription_ENG": "",
+      "MaxCountInDeck": 4,
+      "OverflowMemory": 0,
+      "LinkDP": 0,
+      "LinkEffect": "",
+      "LinkRequirement": "",
+      "dualEffect": "",
+      "OptionCardColorRequirements": [],
+      "OptionEffect": ""
+    },
+    {
+      "CardID": "EX13-008",
+      "CardSpriteName": "EX13-008",
+      "CardEffectClassName": "EX13_008",
+      "CardName_ENG": "Dracomon",
+      "cardColors": [
+        0
+      ],
+      "cardKind": [
+        0
+      ],
+      "PlayCost": 3,
+      "DP": 1000,
+      "Level": 3,
+      "Form_ENG": [
+        "Rookie"
+      ],
+      "Attribute_ENG": [
+        "Data"
+      ],
+      "Type_ENG": [
+        "Dragon"
+      ],
+      "EvoCosts": [
+        {
+          "CardColor": 0,
+          "Level": 2,
+          "MemoryCost": 0
+        }
+      ],
+      "rarity": 2,
+      "EffectDiscription_ENG": "[Digivolve] [Bebydomon]: Cost 0\n\n[When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Dracomon] or [Examon] in its text among them to the hand. Return the rest to the bottom of the deck.",
+      "InheritedEffectDiscription_ENG": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+      "SecurityEffectDiscription_ENG": "",
+      "MaxCountInDeck": 4,
+      "OverflowMemory": 0,
+      "LinkDP": 0,
+      "LinkEffect": "",
+      "LinkRequirement": "",
+      "dualEffect": "",
+      "OptionCardColorRequirements": [],
+      "OptionEffect": ""
+    },
+    {
+      "CardID": "EX13-018",
+      "CardSpriteName": "EX13-018",
+      "CardEffectClassName": "EX13_018",
+      "CardName_ENG": "Coredramon",
+      "cardColors": [
+        1,
+        0
+      ],
+      "cardKind": [
+        0
+      ],
+      "PlayCost": 5,
+      "DP": 5000,
+      "Level": 4,
+      "Form_ENG": [
+        "Champion"
+      ],
+      "Attribute_ENG": [
+        "Vaccine"
+      ],
+      "Type_ENG": [
+        "Dragon"
+      ],
+      "EvoCosts": [
+        {
+          "CardColor": 1,
+          "Level": 3,
+          "MemoryCost": 3
+        },
+        {
+          "CardColor": 0,
+          "Level": 3,
+          "MemoryCost": 3
+        }
+      ],
+      "rarity": 0,
+      "EffectDiscription_ENG": "[Digivolve] Lv.3 w/[Dracomon] in name: Cost 2\n\n[On Play] [When Digivolving] By trashing 1 card with [Dracomon] or [Examon] in its text from your hand, ＜Draw 2＞.\n[Your Turn] When any of your other Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into a Digimon card with [Examon] in its text in the hand with the cost reduced by 2.",
+      "InheritedEffectDiscription_ENG": "[Your Turn] This Digimon gets +2000 DP.",
+      "SecurityEffectDiscription_ENG": "",
+      "MaxCountInDeck": 4,
+      "OverflowMemory": 0,
+      "LinkDP": 0,
+      "LinkEffect": "",
+      "LinkRequirement": "",
+      "dualEffect": "",
+      "OptionCardColorRequirements": [],
+      "OptionEffect": ""
+    },
+    {
+      "CardID": "EX13-021",
+      "CardSpriteName": "EX13-021",
+      "CardEffectClassName": "EX13_021",
+      "CardName_ENG": "Wingdramon",
+      "cardColors": [
+        1,
+        0
+      ],
+      "cardKind": [
+        0
+      ],
+      "PlayCost": 7,
+      "DP": 7000,
+      "Level": 5,
+      "Form_ENG": [
+        "Ultimate"
+      ],
+      "Attribute_ENG": [
+        "Vaccine"
+      ],
+      "Type_ENG": [
+        "Sky Dragon"
+      ],
+      "EvoCosts": [
+        {
+          "CardColor": 1,
+          "Level": 4,
+          "MemoryCost": 4
+        },
+        {
+          "CardColor": 0,
+          "Level": 4,
+          "MemoryCost": 4
+        }
+      ],
+      "rarity": 1,
+      "EffectDiscription_ENG": "[Digivolve] [Coredramon]: Cost 3\n\n＜Jamming＞\n[On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon or Tamers can't suspend until their turn ends.\n[All Turns] This Digimon is also treated as Lv.6 [Slayerdramon] for [Examon]'s DNA digivolution.",
+      "InheritedEffectDiscription_ENG": "[All Turns] [Once Per Turn] When this Digimon with [Dracomon] or [Examon] in its text suspends, it may unsuspend.",
+      "SecurityEffectDiscription_ENG": "",
+      "MaxCountInDeck": 4,
+      "OverflowMemory": 0,
+      "LinkDP": 0,
+      "LinkEffect": "",
+      "LinkRequirement": "",
+      "dualEffect": "",
+      "OptionCardColorRequirements": [],
+      "OptionEffect": ""
+    },
+    {
+      "CardID": "EX13-024",
+      "CardSpriteName": "EX13-024",
+      "CardEffectClassName": "EX13_024",
+      "CardName_ENG": "Slayerdramon",
+      "cardColors": [
+        1,
+        0
+      ],
+      "cardKind": [
+        0
+      ],
+      "PlayCost": 12,
+      "DP": 12000,
+      "Level": 6,
+      "Form_ENG": [
+        "Mega"
+      ],
+      "Attribute_ENG": [
+        "Vaccine"
+      ],
+      "Type_ENG": [
+        "Dragonkin"
+      ],
+      "EvoCosts": [
+        {
+          "CardColor": 1,
+          "Level": 5,
+          "MemoryCost": 4
+        },
+        {
+          "CardColor": 0,
+          "Level": 5,
+          "MemoryCost": 4
+        }
+      ],
+      "rarity": 2,
+      "EffectDiscription_ENG": "[Digivolve] [Wingdramon]/[Groundramon]: Cost 3\n\n＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] For each of this Digimon's digivolution cards, trash any 1 digivolution card from your opponent's Digimon. Then, you may return all of their Digimon with the fewest digivolution cards to the bottom of the deck.\n[All Turns] [Once Per Turn] When any of your [Dracomon] or [Examon] text Digimon would leave the battle area, by suspending 1 of your such Digimon, they don't leave.\n\nAssembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text",
+      "InheritedEffectDiscription_ENG": "[All Turns] [Once Per Turn] When any of your [Dracomon] or [Examon] text Digimon would leave the battle area, by suspending 1 of your such Digimon, they don't leave.",
+      "SecurityEffectDiscription_ENG": "",
+      "MaxCountInDeck": 4,
+      "OverflowMemory": 0,
+      "LinkDP": 0,
+      "LinkEffect": "",
+      "LinkRequirement": "",
+      "dualEffect": "",
+      "OptionCardColorRequirements": [],
+      "OptionEffect": ""
+    },
+    {
+      "CardID": "EX13-039",
+      "CardSpriteName": "EX13-039",
+      "CardEffectClassName": "EX13_039",
+      "CardName_ENG": "Coredramon",
+      "cardColors": [
+        3,
+        0
+      ],
+      "cardKind": [
+        0
+      ],
+      "PlayCost": 5,
+      "DP": 5000,
+      "Level": 4,
+      "Form_ENG": [
+        "Champion"
+      ],
+      "Attribute_ENG": [
+        "Virus"
+      ],
+      "Type_ENG": [
+        "Dragon"
+      ],
+      "EvoCosts": [
+        {
+          "CardColor": 3,
+          "Level": 3,
+          "MemoryCost": 3
+        },
+        {
+          "CardColor": 0,
+          "Level": 3,
+          "MemoryCost": 3
+        }
+      ],
+      "rarity": 0,
+      "EffectDiscription_ENG": "[Digivolve] Lv.3 w/[Dracomon] in name: Cost 2\n\n[On Play] [When Digivolving] You may return 1 non-Digi-Egg card with [Dracomon] or [Examon] in its text from your trash to the hand.\n[Your Turn] When any of your other Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into a Digimon card with [Examon] in its text in the hand with the cost reduced by 2.",
+      "InheritedEffectDiscription_ENG": "[Your Turn] This Digimon gets +2000 DP.",
+      "SecurityEffectDiscription_ENG": "",
+      "MaxCountInDeck": 4,
+      "OverflowMemory": 0,
+      "LinkDP": 0,
+      "LinkEffect": "",
+      "LinkRequirement": "",
+      "dualEffect": "",
+      "OptionCardColorRequirements": [],
+      "OptionEffect": ""
+    },
+    {
+      "CardID": "EX13-041",
+      "CardSpriteName": "EX13-041",
+      "CardEffectClassName": "EX13_041",
+      "CardName_ENG": "Groundramon",
+      "cardColors": [
+        3,
+        0
+      ],
+      "cardKind": [
+        0
+      ],
+      "PlayCost": 7,
+      "DP": 7000,
+      "Level": 5,
+      "Form_ENG": [
+        "Ultimate"
+      ],
+      "Attribute_ENG": [
+        "Virus"
+      ],
+      "Type_ENG": [
+        "Earth Dragon"
+      ],
+      "EvoCosts": [
+        {
+          "CardColor": 3,
+          "Level": 4,
+          "MemoryCost": 4
+        },
+        {
+          "CardColor": 0,
+          "Level": 4,
+          "MemoryCost": 4
+        }
+      ],
+      "rarity": 0,
+      "EffectDiscription_ENG": "[Digivolve] [Coredramon]: Cost 3\n\n＜Fortitude＞\n[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend in their next unsuspend phase.\n[All Turns] This Digimon is also treated as Lv.6 [Breakdramon] for [Examon]'s DNA digivolution.",
+      "InheritedEffectDiscription_ENG": "[All Turns] [Once Per Turn] When any of your Digimon with [Dracomon] or [Examon] in their texts delete your opponent's Digimon in battle, trash their top security card.",
+      "SecurityEffectDiscription_ENG": "",
+      "MaxCountInDeck": 4,
+      "OverflowMemory": 0,
+      "LinkDP": 0,
+      "LinkEffect": "",
+      "LinkRequirement": "",
+      "dualEffect": "",
+      "OptionCardColorRequirements": [],
+      "OptionEffect": ""
+    },
+    {
+      "CardID": "EX13-044",
+      "CardSpriteName": "EX13-044",
+      "CardEffectClassName": "EX13_044",
+      "CardName_ENG": "Breakdramon",
+      "cardColors": [
+        3,
+        0
+      ],
+      "cardKind": [
+        0
+      ],
+      "PlayCost": 12,
+      "DP": 12000,
+      "Level": 6,
+      "Form_ENG": [
+        "Mega"
+      ],
+      "Attribute_ENG": [
+        "Virus"
+      ],
+      "Type_ENG": [
+        "Machine Dragon"
+      ],
+      "EvoCosts": [
+        {
+          "CardColor": 3,
+          "Level": 5,
+          "MemoryCost": 4
+        },
+        {
+          "CardColor": 0,
+          "Level": 5,
+          "MemoryCost": 4
+        }
+      ],
+      "rarity": 2,
+      "EffectDiscription_ENG": "[Digivolve] [Groundramon]/[Wingdramon]: Cost 3\n\n＜Piercing＞ ＜Blocker＞\n[On Play] [When Digivolving] You may suspend up to 2 Digimon or Tamers. Then, 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends.\n[All Turns] [Once Per Turn] When any of your Digimon suspend, 1 of your Digimon with [Dracomon] or [Examon] in its text may battle 1 of your opponent's Digimon.\n\nAssembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text",
+      "InheritedEffectDiscription_ENG": "[All Turns] [Once Per Turn] When any of your Digimon suspend, 1 of your Digimon with [Dracomon] or [Examon] in its text may battle 1 of your opponent's Digimon.",
+      "SecurityEffectDiscription_ENG": "",
+      "MaxCountInDeck": 4,
+      "OverflowMemory": 0,
+      "LinkDP": 0,
+      "LinkEffect": "",
+      "LinkRequirement": "",
+      "dualEffect": "",
+      "OptionCardColorRequirements": [],
+      "OptionEffect": ""
+    },
+    {
+      "CardID": "EX13-045",
+      "CardSpriteName": "EX13-045",
+      "CardEffectClassName": "EX13_045",
+      "CardName_ENG": "Examon",
+      "cardColors": [
+        3,
+        0,
+        1
+      ],
+      "cardKind": [
+        0
+      ],
+      "PlayCost": 15,
+      "DP": 15000,
+      "Level": 7,
+      "Form_ENG": [
+        "Mega"
+      ],
+      "Attribute_ENG": [
+        "Data"
+      ],
+      "Type_ENG": [
+        "Holy Warrior",
+        "Royal Knight"
+      ],
+      "EvoCosts": [
+        {
+          "CardColor": 3,
+          "Level": 6,
+          "MemoryCost": 5
+        },
+        {
+          "CardColor": 0,
+          "Level": 6,
+          "MemoryCost": 5
+        },
+        {
+          "CardColor": 1,
+          "Level": 6,
+          "MemoryCost": 5
+        }
+      ],
+      "rarity": 3,
+      "EffectDiscription_ENG": "[DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0\n\n＜Raid＞ ＜Piercing＞ ＜Security A. +1＞ ＜Blocker＞ ＜Evade＞\n[When Digivolving] If DNA digivolving, this Digimon attacks and all of your Digimon get +10000 DP until your opponent's turn ends. Then, this Digimon may battle 1 of your opponent's Digimon.\n[Your Turn] [Once Per Turn] When this Digimon wins a battle, you may play or use 1 play or use cost 12 or lower [Dracomon] or [Examon] text card from your hand or its digivolution cards without paying the cost.",
+      "InheritedEffectDiscription_ENG": "",
+      "SecurityEffectDiscription_ENG": "",
+      "MaxCountInDeck": 4,
+      "OverflowMemory": 0,
+      "LinkDP": 0,
+      "LinkEffect": "",
+      "LinkRequirement": "",
+      "dualEffect": "",
+      "OptionCardColorRequirements": [],
+      "OptionEffect": ""
+    }
+  ],
+  "evidenceManifestSha256": "0f2b0921972e10e3ab86f682174befb11e8391b86b0854852e802fdac8385a9a"
+}

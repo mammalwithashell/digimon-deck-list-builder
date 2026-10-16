@@ -411,7 +411,12 @@ fn diff_projection(ours: &StateProjection, dcgo: &StateProjection) -> Vec<FieldD
     // `phase: ours=SelectBudgeted dcgo=Main` with every state field equal,
     // turning a CLEAN selection round-trip into a false divergence.
     if phase_is_compared(&ours.phase, &dcgo.phase) {
-        push_ne(&mut diffs, "phase", ours.phase.as_str(), dcgo.phase.as_str());
+        push_ne(
+            &mut diffs,
+            "phase",
+            ours.phase.as_str(),
+            dcgo.phase.as_str(),
+        );
     }
     push_ne(&mut diffs, "memory", &ours.memory, &dcgo.memory);
     diff_seat(&mut diffs, "p0", &ours.p0, &dcgo.p0);
@@ -426,6 +431,26 @@ fn diff_seat(out: &mut Vec<FieldDiff>, seat: &str, ours: &SeatProjection, dcgo: 
         &ours.security,
         &dcgo.security,
     );
+    // Missing optional observations are handled by the request-aware oracle
+    // boundary. Unrequested legacy sidecars remain compatible.
+    if let (Some(a), Some(b)) = (&ours.movement_observations, &dcgo.movement_observations) {
+        if a != b {
+            out.push(FieldDiff {
+                path: format!("{seat}.movement_observations"),
+                ours: format!("{a:?}"),
+                dcgo: format!("{b:?}"),
+            });
+        }
+    }
+    if let (Some(a), Some(b)) = (&ours.legal_option_plays, &dcgo.legal_option_plays) {
+        push_list_ne(out, &format!("{seat}.legal_option_plays"), a, b);
+    }
+    if let (Some(a), Some(b)) = (&ours.selection_candidates, &dcgo.selection_candidates) {
+        push_list_ne(out, &format!("{seat}.selection_candidates"), a, b);
+    }
+    if let (Some(a), Some(b)) = (ours.selection_can_decline, dcgo.selection_can_decline) {
+        push_ne(out, &format!("{seat}.selection_can_decline"), &a, &b);
+    }
     push_list_ne(out, &format!("{seat}.hand"), &ours.hand, &dcgo.hand);
     push_list_ne(out, &format!("{seat}.trash"), &ours.trash, &dcgo.trash);
 
@@ -539,7 +564,6 @@ mod tests {
         .unwrap()
     }
 
-
     #[test]
     fn a_selection_phase_on_our_side_is_representation_not_a_divergence() {
         // Live case from the ST1-15 gate: our engine parks in a Select* phase
@@ -548,15 +572,18 @@ mod tests {
         let ours = StateProjection::from_sidecar_line(
             r#"{"step":0,"turn":1,"phase":"SelectBudgeted","memory":0,
                 "p0":{"security":5,"hand":[],"trash":[],"field":[]},
-                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#,
+        )
+        .unwrap();
         let dcgo = StateProjection::from_sidecar_line(
             r#"{"step":0,"turn":1,"phase":"Main","memory":0,
                 "p0":{"security":5,"hand":[],"trash":[],"field":[]},
-                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#,
+        )
+        .unwrap();
         let r = diff(&[ours], &[dcgo]);
         assert!(r.is_clean(), "{:?}", r.divergences);
     }
-
 
     #[test]
     fn a_combat_interrupt_phase_on_our_side_is_representation() {
@@ -564,11 +591,15 @@ mod tests {
         let ours = StateProjection::from_sidecar_line(
             r#"{"step":0,"turn":1,"phase":"BlockTiming","memory":0,
                 "p0":{"security":5,"hand":[],"trash":[],"field":[]},
-                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#,
+        )
+        .unwrap();
         let dcgo = StateProjection::from_sidecar_line(
             r#"{"step":0,"turn":1,"phase":"Main","memory":0,
                 "p0":{"security":5,"hand":[],"trash":[],"field":[]},
-                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#,
+        )
+        .unwrap();
         assert!(diff(&[ours], &[dcgo]).is_clean());
     }
 
@@ -680,11 +711,15 @@ mod tests {
         let ours = StateProjection::from_sidecar_line(
             r#"{"step":0,"turn":1,"phase":"Breeding","memory":0,
                 "p0":{"security":5,"hand":[],"trash":[],"field":[]},
-                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#,
+        )
+        .unwrap();
         let dcgo = StateProjection::from_sidecar_line(
             r#"{"step":0,"turn":1,"phase":"Main","memory":0,
                 "p0":{"security":5,"hand":[],"trash":[],"field":[]},
-                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#,
+        )
+        .unwrap();
         let r = diff(&[ours], &[dcgo]);
         assert!(!r.is_clean(), "Breeding-vs-Main is semantics and must diff");
     }
@@ -720,7 +755,10 @@ mod tests {
         let r = diff_paired(&ours, &dcgo, &pair_by_wire_rows(&[1, 2, 1], dcgo.len()));
         let d = r.denominator();
         assert!(d.contains("compared 3 of 3 ours / 4 dcgo"), "{d}");
-        assert!(d.contains("1 DCGO intermediate"), "the drop must be named: {d}");
+        assert!(
+            d.contains("1 DCGO intermediate"),
+            "the drop must be named: {d}"
+        );
         assert!(r.to_string().contains("1 DCGO intermediate"), "{}", r);
     }
 
@@ -766,7 +804,10 @@ mod tests {
         let r = diff_paired(&ours, &dcgo, &pair_by_wire_rows(&[1, 2, 1], dcgo.len()));
         assert!(!r.is_clean());
         let first = r.first().unwrap();
-        assert_eq!(first.step, 2, "the divergence is reported at OUR step index");
+        assert_eq!(
+            first.step, 2,
+            "the divergence is reported at OUR step index"
+        );
         assert_eq!(first.diffs[0].path, "memory");
         assert_eq!(first.diffs[0].dcgo, "7");
     }
@@ -796,12 +837,18 @@ mod tests {
 
         let lead_only = r.to_string();
         assert!(lead_only.contains("(+2 downstream"), "got: {lead_only}");
-        assert!(!lead_only.contains("step 2"), "Display must stay lead-only: {lead_only}");
+        assert!(
+            !lead_only.contains("step 2"),
+            "Display must stay lead-only: {lead_only}"
+        );
 
         let all = r.render_verbose();
         for step in ["step 1", "step 2", "step 3"] {
-            assert!(all.contains(step), "{step} missing from:
-{all}");
+            assert!(
+                all.contains(step),
+                "{step} missing from:
+{all}"
+            );
         }
         // Every row still shows its field-level values, so nothing has to be
         // inferred from a count.
@@ -815,7 +862,10 @@ mod tests {
         let ours = vec![row(0, 0), row(1, 1), row(2, 2)];
         let dcgo = vec![row(0, 0), row(1, 9), row(2, 9)];
         let all = diff(&ours, &dcgo).render_verbose();
-        assert!(all.contains("LEAD"), "the cause must stay distinguishable: {all}");
+        assert!(
+            all.contains("LEAD"),
+            "the cause must stay distinguishable: {all}"
+        );
         assert!(all.contains("downstream"), "{all}");
         // The denominator rides every rendering, verbose included.
         assert!(all.contains("compared 3 of 3 ours / 3 dcgo"), "{all}");

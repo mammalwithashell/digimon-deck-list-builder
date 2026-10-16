@@ -279,7 +279,7 @@ fn st6_keyword_recursion_and_digiburst_shapes_are_authored() {
     )));
     assert!(any_step(&main.process, &|step| matches!(
         step,
-        CompiledStep::TrashSelectedSources { .. }
+        CompiledStep::TrashSelectedSourcesAsCost { .. }
     )));
     assert!(any_step(&main.process, &|step| matches!(
         step,

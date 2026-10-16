@@ -1,0 +1,114 @@
+{
+  "extracted": {
+    "attribute": "Unknown",
+    "card_id": "BT12-057",
+    "card_type": "Digimon",
+    "colors": [
+      "Green"
+    ],
+    "dp": 15000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Green",
+          "Black",
+          "White"
+        ],
+        "cost": 6,
+        "from_level": 6,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "dp": 15000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 7,
+        "name": "Quartzmon",
+        "play_cost": 16,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/＜Save＞ in text: Cost 9"
+          },
+          {
+            "label": "Effect",
+            "text": "[When Digivolving] Suspend all other Digimon and all Tamers. Then, for every 2 suspended Digimon and Tamers, gain 1 memory.\n[All Turns] Other than this Digimon, no Digimon or Tamers can unsuspend.\n[When Attacking] Suspend 1 of your opponent's Digimon or Tamers. Then, for every 5 suspended Digimon and Tamers, trash your opponent's top security card."
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 7,
+    "name": "Quartzmon",
+    "play_cost": 16,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522902",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT12-057_P2.png?260529",
+      "printing_id": "BT12-057_P2"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Count the total number of you and your opponent's suspended Digimon and suspended Tamers, then gain 1 memory for every 2.\nFor example, if you have 1 suspended Digimon and 1 suspended Tamer while your opponent has 2 suspended Digimon, the total would be 4 and you gain 2 memory.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2183",
+        "question": "How do I count \"for every 2 suspended Digimon and/or Tamers, gain 1 memory\" for this card's [When Digivolving] effect?"
+      },
+      {
+        "answer": "Yes, that's right.\nOther [BT12-057 Quartzmon]'s [Other than this Digimon, all Digimon and Tamers don't unsuspend.]'s effect will also activate, so if there's more than 1 of this Digimon in play, none of them will be able to unsuspended during the unsuspend phase.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2184",
+        "question": "If I have 2 or more of this Digimon in the battle area, or if me and my opponent have 1 or more each, does this Digimon itself become unable to unsuspend during the unsuspend phase because of this card's [All Turns] effect?"
+      },
+      {
+        "answer": "Yes, it unsuspends.\nDNA Digivolve treats unsuspended Digimon because of the DNA Digivolve as new Digimon in the battle area. This card's effect does not affect it since it's not treated as a suspended Digimon becoming unsuspended",
+        "date": "Mar. 28, 2024",
+        "number": "Q2185",
+        "question": "If this Digimon is in play, and 2 suspended Digimon perform DNA Digivolve, will that Digimon unsuspend?"
+      },
+      {
+        "answer": "Yes, that's right. Even with the \"Unsuspend this...\" effect, they don't unsuspend.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2186",
+        "question": "If this Digimon is in play, do other Digimon or Tamers with effects such as or \"Unsuspend this...\" become unable to unsuspend?"
+      }
+    ],
+    "rarity": "SR",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.5 w/＜Save＞ in text: Cost 9"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/＜Save＞ in text: Cost 9"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] Suspend all other Digimon and all Tamers. Then, for every 2 suspended Digimon and Tamers, gain 1 memory.\n[All Turns] Other than this Digimon, no Digimon or Tamers can unsuspend.\n[When Attacking] Suspend 1 of your opponent's Digimon or Tamers. Then, for every 5 suspended Digimon and Tamers, trash your opponent's top security card."
+      }
+    ],
+    "type": "Unidentified"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "1fd61fc37458b65d12254c6a5217269f26ce5d0956d5361fc91ae0ed98230136",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "21a0bd2f0ac472bf751dcaad6c79231ead53bfebf72afc5fdbc64e961501c104",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522902:BT12-057:BT12-057_P2",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522902"
+}

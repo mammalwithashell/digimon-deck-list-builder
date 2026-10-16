@@ -1,14 +1,15 @@
-//! BT1-090 Gravity Crush — Option, Cost 0, Black.
+//! BT1-090 Gravity Crush — Option, Cost 0, Red.
 //!
-//! # Card text (cards.json)
+//! # Card text (official observation and image)
 //!
 //! [Main] Gain 2 memory. At end of turn, lose 2 memory.
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/BT1/Red/BT1_090.cs
 //!
-//! Note: DCGO stores this in Red/ directory despite the card being Black
-//! in the physical card. The behavioral implementation is identical:
+//! The official observation 5fcfac8ce4098c0278f09a82a4534425327038f85f79a9a0a64e59832d0cc8aa
+//! and inspected physical card image both identify this option as Red.
+//! DCGO implements the printed memory changes as follows:
 //!   1. `card.Owner.AddMemory(2, activateClass)` — immediate gain
 //!   2. `CardEffectCommons.AddEffectToPlayer(effectDuration: EffectDuration.UntilEachTurnEnd,
 //!      timing: EffectTiming.OnEndTurn)` — schedules `AddMemory(-2)` at end of this turn
@@ -347,4 +348,75 @@ fn bt1_090_schedule_does_not_fire_at_end_of_opponents_turn() {
         runner.game.scheduled_effects.is_empty(),
         "no phantom schedule appears at end of opponent's turn"
     );
+}
+
+/// The official BT1-090 face is red (official observation 5fcfac8c...), so
+/// a red Digimon must enable the option through the real action mask.
+#[test]
+fn bt1_090_red_support_enables_legal_option_play() {
+    use digimon_engine::action::mask::build_action_mask;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT1-090").unwrap()
+        .dsl_card("ST1-02").unwrap()
+        .hand(0, &["BT1-090"])
+        .memory(0)
+        .start();
+    runner.place_on_field(0, "ST1-02", Some(0));
+    runner.game.enter_main_phase();
+    assert_eq!(build_action_mask(&runner.game, 0)[0], 1.0,
+        "red support must enable Gravity Crush's legal play action");
+    runner.game.play_option_from_hand(0, 0);
+    assert_eq!(runner.hand_size(0), 0);
+    assert_eq!(runner.trash_size(0), 1);
+    assert_eq!(runner.memory(), 2);
+    assert_eq!(runner.game.scheduled_effects.len(), 1);
+}
+
+/// A black-only board must not satisfy the printed red color requirement.
+#[test]
+fn bt1_090_black_only_support_rejects_option_play() {
+    use digimon_engine::action::mask::build_action_mask;
+    use digimon_engine::selection::OptionPlayResult;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT1-090").unwrap()
+        .dsl_card("ST5-02").unwrap()
+        .hand(0, &["BT1-090"])
+        .memory(0)
+        .start();
+    runner.place_on_field(0, "ST5-02", Some(0));
+    runner.game.enter_main_phase();
+    assert_eq!(build_action_mask(&runner.game, 0)[0], 0.0,
+        "black-only support cannot enable the red option");
+    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Invalid);
+    assert_eq!(runner.hand_size(0), 1);
+    assert_eq!(runner.memory(), 0);
+    assert!(runner.game.scheduled_effects.is_empty());
+}
+
+/// general_rule.pdf p7, 4-2-1/4-2-2: a hatched Digi-Egg is a Digimon.
+/// Together with p10, 4-19-2, red Koromon alone satisfies this red option.
+/// This must use a real DigiEgg card, not a Digimon fixture named "egg".
+#[test]
+fn bt1_090_hatched_red_digi_egg_enables_legal_option_play() {
+    use digimon_engine::action::mask::build_action_mask;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT1-090").unwrap()
+        .dsl_card("ST1-01").unwrap()
+        .hand(0, &["BT1-090", "ST1-01"])
+        .memory(0)
+        .start();
+    let egg = runner.game.players[0].hand.pop().unwrap();
+    runner.game.players[0].digitama_deck.push(egg);
+    assert!(runner.game.hatch(0));
+    runner.game.enter_main_phase();
+    assert!(runner.game.players[0].battle_area.is_empty());
+    assert!(runner.game.players[0].breeding_area.as_ref().unwrap()
+        .is_digi_egg(&runner.game.card_data));
+    assert_eq!(build_action_mask(&runner.game, 0)[0], 1.0,
+        "a hatched red Digi-Egg is a Digimon and supplies option color");
+    runner.game.play_option_from_hand(0, 0);
+    assert_eq!(runner.hand_size(0), 0);
+    assert_eq!(runner.trash_size(0), 1);
+    assert_eq!(runner.memory(), 2);
+    assert_eq!(runner.game.scheduled_effects.len(), 1);
 }

@@ -1,0 +1,117 @@
+# SUPPORT ONLY: positive control for Q6238 fixture; outside the 52-card denominator.
+# No interaction identity: this outcome must not be recorded as a Q6238 verdict.
+# Same deck openings as Q6238 but no Crimson Blaze is used.
+# T1 P0 hatches red Koromon and passes. T2 P1 passes breeding, plays Grademon (3-7=-4),
+# selects Dorumon to play into breeding. Dorumon's On Play search must not activate there.
+# T3 P0 passes from 4. T4 P1 moves the played Dorumon into battle, exposing the result.
+# Empty assertions deliberately await live oracle evidence; no verdict claimed.
+# BT20_053.cs explicitly uses SelectHandEffect for the optional hand selection.
+card: BT20-053
+clause: BT20-053#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT8-097
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST1-07
+    - ST1-08
+    - ST1-08
+    - ST1-09
+    - ST2-02
+    - ST2-03
+    - ST2-04
+    rest: BT20-053-support-breeding-positive-p0
+  p1:
+    stack:
+    - ST1-02
+    - BT20-053
+    - BT7-056
+    - ST2-05
+    - ST2-06
+    - ST1-03
+    - ST1-03
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - ST2-02
+    - ST2-03
+    - ST2-04
+    rest: BT20-053-support-breeding-positive-p1
+steps:
+- actor: 0
+  do:
+    hatch: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: BT20-053
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    select:
+      cards:
+      - BT7-056
+  expect:
+    prompt: SelectHandEffect
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    move:
+      from: breeding
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+assert:
+- at: 5
+  that:
+    memory: 4
+    p1.field:
+    - card_id: BT20-053
+      sources: []
+    p1.hand:
+    - ST1-02
+    - ST2-05
+    - ST2-06
+    - ST2-02
+- at: 7
+  that:
+    memory: -3
+    phase: Main
+    p1.field:
+    - card_id: BT20-053
+      sources: []
+    - card_id: BT7-056
+      sources: []
+    p1.hand:
+    - ST1-02
+    - ST2-05
+    - ST2-06
+    - ST2-02
+    - ST2-03

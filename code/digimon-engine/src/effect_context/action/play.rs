@@ -24,6 +24,16 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 
 impl<'a> EffectContext<'a> {
+    /// Preserve the original effect controller even when a different player is
+    /// selecting or receiving the card. Restore the surrounding scope after play.
+    fn with_play_controller<R>(&mut self, play: impl FnOnce(&mut Game) -> R) -> R {
+        let previous = self.game.effect_source_player;
+        self.game.effect_source_player = Some(self.player);
+        let result = play(self.game);
+        self.game.effect_source_player = previous;
+        result
+    }
+
     /// Materialize a token on `controller`'s battle area.
     ///
     /// Looks up `token_name` in `game.token_registry`, synthesizes a
@@ -62,11 +72,16 @@ impl<'a> EffectContext<'a> {
         // `CanNotPutFieldClass(IsDigimon || IsDigiEgg)`, which blocks Digimon
         // tokens under this lock. Mirror the hand/trash play-gate
         // (`Game::play_from_hand_with_cost`) so effect-played tokens are blocked
-        // when the controller carries the modifier. (G-PLAY-TOKEN-FLOODGATE.)
+        // when the effect controller carries the modifier, even if the token
+        // enters the other player's battle area. (G-PLAY-TOKEN-FLOODGATE.)
         if self.game.modifiers.player_has(
-            controller,
+            self.player,
             crate::enums::ModifierType::CannotPlayDigimonByEffect,
         ) {
+            return None;
+        }
+
+        if self.game.card_data_play_is_prohibited(self.player, &self.game.card_data[data_index]) {
             return None;
         }
 
@@ -155,16 +170,18 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(taken);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.game.play_from_hand_with_cost_result_from_origin(
-            player,
-            hand_index,
-            crate::enums::CostDelta::Free,
-            PlaySource::ByEffect,
-            false,
-            PendingWouldPlayOrigin::Reveal {
-                index: reveal_index,
-            },
-        ) {
+        match self.with_play_controller(|game| {
+            game.play_from_hand_with_cost_result_from_origin(
+                player,
+                hand_index,
+                crate::enums::CostDelta::Free,
+                PlaySource::ByEffect,
+                false,
+                PendingWouldPlayOrigin::Reveal {
+                    index: reveal_index,
+                },
+            )
+        }) {
             PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
                 player,
                 index: field_index as u8,
@@ -196,12 +213,9 @@ impl<'a> EffectContext<'a> {
         hand_index: usize,
         cost_delta: crate::enums::CostDelta,
     ) -> Option<PermanentHandle> {
-        let field_index = self.game.play_from_hand_with_cost(
-            player,
-            hand_index,
-            cost_delta,
-            PlaySource::ByEffect,
-        )?;
+        let field_index = self.with_play_controller(|game| {
+            game.play_from_hand_with_cost(player, hand_index, cost_delta, PlaySource::ByEffect)
+        })?;
         Some(PermanentHandle {
             player,
             index: field_index as u8,
@@ -252,9 +266,8 @@ impl<'a> EffectContext<'a> {
         cost_delta: crate::enums::CostDelta,
         suppress_on_play: bool,
     ) -> Option<PermanentHandle> {
-        match self
-            .game
-            .play_from_hand_with_cost_result_from_origin_suppress(
+        match self.with_play_controller(|game| {
+            game.play_from_hand_with_cost_result_from_origin_suppress(
                 player,
                 hand_index,
                 cost_delta,
@@ -262,7 +275,8 @@ impl<'a> EffectContext<'a> {
                 false,
                 PendingWouldPlayOrigin::Hand,
                 suppress_on_play,
-            ) {
+            )
+        }) {
             PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
                 player,
                 index: field_index as u8,
@@ -278,13 +292,15 @@ impl<'a> EffectContext<'a> {
         cost_delta: crate::enums::CostDelta,
         suppress_on_play: bool,
     ) -> Option<PermanentHandle> {
-        let field_index = self.game.play_from_trash_with_cost_suppress(
-            player,
-            trash_index,
-            cost_delta,
-            PlaySource::ByEffect,
-            suppress_on_play,
-        )?;
+        let field_index = self.with_play_controller(|game| {
+            game.play_from_trash_with_cost_suppress(
+                player,
+                trash_index,
+                cost_delta,
+                PlaySource::ByEffect,
+                suppress_on_play,
+            )
+        })?;
         Some(PermanentHandle {
             player,
             index: field_index as u8,
@@ -676,16 +692,18 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(revealed);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.game.play_from_hand_with_cost_result_from_origin(
-            player,
-            hand_index,
-            cost_delta,
-            PlaySource::ByEffect,
-            false,
-            PendingWouldPlayOrigin::Reveal {
-                index: reveal_index,
-            },
-        ) {
+        match self.with_play_controller(|game| {
+            game.play_from_hand_with_cost_result_from_origin(
+                player,
+                hand_index,
+                cost_delta,
+                PlaySource::ByEffect,
+                false,
+                PendingWouldPlayOrigin::Reveal {
+                    index: reveal_index,
+                },
+            )
+        }) {
             PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
                 player,
                 index: field_index as u8,
@@ -739,14 +757,16 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(card);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.game.play_from_hand_with_cost_result_from_origin(
-            player,
-            hand_index,
-            crate::enums::CostDelta::Free,
-            PlaySource::ByEffect,
-            false,
-            PendingWouldPlayOrigin::SecurityTop { was_face_up },
-        ) {
+        match self.with_play_controller(|game| {
+            game.play_from_hand_with_cost_result_from_origin(
+                player,
+                hand_index,
+                crate::enums::CostDelta::Free,
+                PlaySource::ByEffect,
+                false,
+                PendingWouldPlayOrigin::SecurityTop { was_face_up },
+            )
+        }) {
             PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
                 player,
                 index: field_index as u8,
@@ -868,12 +888,44 @@ impl<'a> EffectContext<'a> {
         cost_delta: crate::enums::CostDelta,
         suppress_on_play: bool,
     ) -> Option<PermanentHandle> {
+        self.play_from_materials_with_entry_options(
+            target, source_index, cost_delta, suppress_on_play, false,
+        )
+    }
+
+    /// Entry orientation travels with this source play's captured origin,
+    /// through cost/replacement parking and clones, never an ambient slot.
+    pub fn play_from_materials_with_entry_options(
+        &mut self,
+        target: PermanentHandle,
+        source_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        suppress_on_play: bool,
+        suspended: bool,
+    ) -> Option<PermanentHandle> {
+        self.play_from_materials_with_entry_receipt(target, source_index, cost_delta, suppress_on_play, suspended, None)
+    }
+    pub(crate) fn play_from_materials_with_entry_receipt(
+        &mut self, target: PermanentHandle, source_index: usize,
+        cost_delta: crate::enums::CostDelta, suppress_on_play: bool,
+        suspended: bool, receipt: Option<u64>,
+    ) -> Option<PermanentHandle> {
+        if let Some(receipt_id)=receipt.filter(|id|self.game.prepared_source_plays.iter().any(|(r,_)|r==id)) {
+            let card=crate::effect_context::material_carrier_permanent(self.game,target)
+                .and_then(|p|p.card_sources.get(source_index)).map(|c|c.handle())?;
+            let host_identity=self.game.capture_source_play_host_identity(target)?;
+            let origin=crate::game::PendingWouldPlayOrigin::Source{permanent:target,host_identity,source_index,suspended,receipt:Some(receipt_id)};
+            self.with_play_controller(|game|game.prepare_source_play_from_origin(target.player,card,origin,cost_delta,suppress_on_play));
+            return None;
+        }
         if target.index == crate::action::space::BREEDING_TARGET as u8 {
             return self.play_from_breeding_materials_suppress_on_play(
                 target,
                 source_index,
                 cost_delta,
                 suppress_on_play,
+                suspended,
+                receipt,
             );
         }
 
@@ -891,16 +943,17 @@ impl<'a> EffectContext<'a> {
         // Extract the source. `Vec::remove` shifts subsequent sources down
         // one index — that's the desired behavior for material extraction
         // (the stack closes the gap left by the removed source).
+        let host_identity = self.game.capture_source_play_host_identity(target)?;
         let source = self.game.remove_source_from_permanent(target, source_index);
+        let source_card = source.handle();
 
         // Park at the end of `player`'s hand and route through the standard
         // play-from-hand path. The hand index is the new last position.
         self.game.player_mut(player).hand.push(source);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self
-            .game
-            .play_from_hand_with_cost_result_from_origin_suppress(
+        match self.with_play_controller(|game| {
+            game.play_from_hand_with_cost_result_from_origin_suppress(
                 player,
                 hand_index,
                 cost_delta,
@@ -908,10 +961,14 @@ impl<'a> EffectContext<'a> {
                 false,
                 PendingWouldPlayOrigin::Source {
                     permanent: target,
+                    host_identity,
                     source_index,
+                    suspended,
+                    receipt,
                 },
                 suppress_on_play,
-            ) {
+            )
+        }) {
             PlayFromHandCostResult::Played(field_index) => {
                 let played = PermanentHandle {
                     player,
@@ -956,21 +1013,7 @@ impl<'a> EffectContext<'a> {
                 None
             }
             PlayFromHandCostResult::Failed => {
-                // Rollback: pop the card out of hand and reinsert it at
-                // its original index in `target.card_sources` so the
-                // failure is a clean no-op for callers. Soft-remove MUST
-                // NOT have run before this — Decision 2 in `design.md`.
-                let card = self
-                    .game
-                    .player_mut(player)
-                    .hand
-                    .pop()
-                    .expect("invariant: card was just pushed to hand");
-                // The target permanent index is still valid here — only
-                // hand was mutated by the failed play attempt; the
-                // battle-area entry was left untouched.
-                self.game
-                    .insert_source_into_permanent(target, source_index, card);
+                self.game.restore_source_play_card(player, source_card, target, host_identity, source_index);
                 None
             }
         }
@@ -982,6 +1025,8 @@ impl<'a> EffectContext<'a> {
         source_index: usize,
         cost_delta: crate::enums::CostDelta,
         suppress_on_play: bool,
+        suspended: bool,
+        receipt: Option<u64>,
     ) -> Option<PermanentHandle> {
         let player = target.player;
         {
@@ -993,6 +1038,7 @@ impl<'a> EffectContext<'a> {
             }
         }
 
+        let host_identity = self.game.capture_source_play_host_identity(target)?;
         let source = self
             .game
             .player_mut(player)
@@ -1000,13 +1046,13 @@ impl<'a> EffectContext<'a> {
             .as_mut()?
             .card_sources
             .remove(source_index);
+        let source_card = source.handle();
 
         self.game.player_mut(player).hand.push(source);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self
-            .game
-            .play_from_hand_with_cost_result_from_origin_suppress(
+        match self.with_play_controller(|game| {
+            game.play_from_hand_with_cost_result_from_origin_suppress(
                 player,
                 hand_index,
                 cost_delta,
@@ -1014,28 +1060,21 @@ impl<'a> EffectContext<'a> {
                 false,
                 PendingWouldPlayOrigin::Source {
                     permanent: target,
+                    host_identity,
                     source_index,
+                    suspended,
+                    receipt,
                 },
                 suppress_on_play,
-            ) {
+            )
+        }) {
             PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
                 player,
                 index: field_index as u8,
             }),
             PlayFromHandCostResult::Pending => None,
             PlayFromHandCostResult::Failed => {
-                let card = self
-                    .game
-                    .player_mut(player)
-                    .hand
-                    .pop()
-                    .expect("invariant: card was just pushed to hand");
-                self.game
-                    .player_mut(player)
-                    .breeding_area
-                    .as_mut()?
-                    .card_sources
-                    .insert(source_index, card);
+                self.game.restore_source_play_card(player, source_card, target, host_identity, source_index);
                 None
             }
         }
@@ -1049,12 +1088,9 @@ impl<'a> EffectContext<'a> {
         trash_index: usize,
         cost_delta: crate::enums::CostDelta,
     ) -> Option<PermanentHandle> {
-        let field_index = self.game.play_from_trash_with_cost(
-            player,
-            trash_index,
-            cost_delta,
-            PlaySource::ByEffect,
-        )?;
+        let field_index = self.with_play_controller(|game| {
+            game.play_from_trash_with_cost(player, trash_index, cost_delta, PlaySource::ByEffect)
+        })?;
         Some(PermanentHandle {
             player,
             index: field_index as u8,
@@ -1164,30 +1200,37 @@ impl<'a> EffectContext<'a> {
                 return None;
             }
         };
-        let field_index = self.game.play_from_trash_with_cost_suppress(
-            controller,
-            trash_index,
-            crate::enums::CostDelta::Free,
-            PlaySource::ByEffect,
-            suppress_on_play,
-        )?;
+        let field_index = self.with_play_controller(|game| {
+            game.play_from_trash_with_cost_suppress(
+                controller,
+                trash_index,
+                crate::enums::CostDelta::Free,
+                PlaySource::ByEffect,
+                suppress_on_play,
+            )
+        })?;
         Some(PermanentHandle {
             player: controller,
             index: field_index as u8,
         })
     }
 
+    /// Read-only eligibility using this effect's controller, even when a
+    /// surrounding effect-source scope belongs to a different player.
+    pub fn can_play_to_breeding_from_hand(&self, player: PlayerId, hand_index: usize) -> bool {
+        self.game.can_play_to_breeding_from_hand(player, hand_index, self.player)
+    }
+
     /// Play/place `player`'s hand card into their real breeding area by effect.
     pub fn play_to_breeding_from_hand(&mut self, player: PlayerId, hand_index: usize) -> bool {
-        self.game.play_to_breeding_from_hand(player, hand_index)
+        self.with_play_controller(|game| game.play_to_breeding_from_hand(player, hand_index))
     }
 
     pub fn play_selected_sources_without_cost(
         &mut self,
         selected: Vec<SourceSelectionRef>,
     ) -> bool {
-        self.game
-            .play_source_refs_from_effect_without_cost(selected)
+        self.with_play_controller(|game| game.play_source_refs_from_effect_without_cost(selected))
     }
 
     /// Move the top of `player`'s digitama deck into the breeding area.

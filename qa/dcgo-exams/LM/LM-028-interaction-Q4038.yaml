@@ -1,0 +1,90 @@
+# Source-authored interaction draft; no oracle verdict or measured assertions.
+# Official Q4038: Scramble does not ignore requirements. A level3 ST2-03 has legal level4 ST2-05 and illegal level5 ST2-08 of the same color in hand. The hand selection must contain only ST2-05; selecting it succeeds. Cost max(0,2-3)=0 after the Option costs2 from memory3.
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST2-03
+    - LM-028
+    - ST2-05
+    - ST2-08
+    - ST1-04
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-05
+    - ST2-04
+    - ST2-06
+    rest: gpt8-LM-028-interaction-Q4038-p0
+  p1:
+    stack:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST2-04
+    - ST2-03
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-05
+    - ST2-06
+    - ST2-07
+    rest: gpt8-LM-028-interaction-Q4038-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+- actor: 0
+  do:
+    play:
+      card: ST2-03
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+- actor: 1
+  do:
+    pass: {}
+- actor: 0
+  do:
+    pass: {}
+- actor: 0
+  do:
+    play:
+      card: LM-028
+      from: hand
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 0
+  do:
+    select:
+      cards:
+      - ST2-05
+  expect:
+    prompt: SelectHandEffect
+    count: 1
+    candidates:
+    - ST2-05
+- actor: 0
+  do:
+    pass: {}
+card: LM-028
+clause: LM-028#effect#0
+covers:
+- LM-028#effect#0
+interaction:
+  id: qa:Q4038
+  source: qa
+  kind: positive
+expect_ruling:
+  q_id: Q4038
+  assert:
+  - at: 7
+    that:
+      p0.selection_candidates:
+      - ST2-05

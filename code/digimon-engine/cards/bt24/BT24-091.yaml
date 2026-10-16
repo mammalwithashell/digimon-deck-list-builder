@@ -36,7 +36,7 @@ effects:
   - when: main_from_hand
     summary: "[Main] Return all opponent lowest-level Digimon; if returned, unsuspend 1 TS Digimon; then optionally link this card"
     process:
-      - for_each:
+      - return_all_to_hand:
           over:
             of: opponent
             zone: [battle_area]
@@ -44,9 +44,6 @@ effects:
             level_matches_aggregate:
               selector: lowest_level
               of: opponent
-          bind_as: lowest
-          body:
-            - return_to_hand: { target: lowest }
       - if:
           condition: { effect_returned_any_card: true }
           then:
@@ -70,7 +67,7 @@ effects:
     when: on_security
     summary: "[Security] Activate [Main] effects: return all opponent lowest-level Digimon; if returned, unsuspend 1 TS Digimon; then optionally link this card"
     process:
-      - for_each:
+      - return_all_to_hand:
           over:
             of: opponent
             zone: [battle_area]
@@ -78,9 +75,6 @@ effects:
             level_matches_aggregate:
               selector: lowest_level
               of: opponent
-          bind_as: sec_lowest
-          body:
-            - return_to_hand: { target: sec_lowest }
       - if:
           condition: { effect_returned_any_card: true }
           then:

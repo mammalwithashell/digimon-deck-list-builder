@@ -58,12 +58,15 @@ fn st5_15_security_activates_laser_eye_main_effect() {
         .add_card(digimon("ST5-15-SEC3", "Laser Eye Security Target 3", 3, 3))
         .add_card(digimon("ST5-15-SEC4", "Laser Eye Security Target 4", 4, 5))
         .build();
-    let option = runner.place_on_field(0, "ST5-15", None);
+    let option = prepare_security_option(&mut runner, "ST5-15");
     runner.place_stack(1, &["ST5-15-SEC3", "ST5-15-SEC4"]);
 
     runner.game.enqueue_triggered(
         EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(option),
+        TriggerSource::SecurityRevealed {
+            defender: 0,
+            card: option,
+        },
     );
     runner.game.drain_effect_queue();
 
@@ -115,12 +118,15 @@ fn st5_16_security_activates_dark_side_attack_main_effect() {
         .expect("ST5-16 YAML parses")
         .add_card(digimon("ST5-16-SEC", "Dark Side Security Target", 4, 7))
         .build();
-    let option = runner.place_on_field(0, "ST5-16", None);
+    let option = prepare_security_option(&mut runner, "ST5-16");
     runner.place_on_field(1, "ST5-16-SEC", Some(0));
 
     runner.game.enqueue_triggered(
         EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(option),
+        TriggerSource::SecurityRevealed {
+            defender: 0,
+            card: option,
+        },
     );
     runner.game.drain_effect_queue();
 
@@ -168,4 +174,20 @@ fn st5_15_main_de_digivolve_targets_up_to_two_and_allows_zero() {
         2,
         "both opponent Digimon are eligible De-Digivolve targets"
     );
+}
+
+// A SecurityRevealed card is outside the battle area while its security effect resolves.
+fn prepare_security_option(
+    runner: &mut DebugRunner,
+    id: &str,
+) -> digimon_engine::card_source::CardHandle {
+    runner.add_to_hand(0, id);
+    let card = runner.game.players[0].hand.pop().unwrap();
+    let handle = card.handle();
+    runner.game.pending_security = Some(digimon_engine::selection::PendingSecurity {
+        defender: 0,
+        card,
+        played: false,
+    });
+    handle
 }

@@ -105,43 +105,10 @@ pub fn try_run(
             bind_as,
             body,
         } => {
-            // `scan` returns positional `PermanentHandle`s ({player, index}).
-            // Those indices are invalidated the moment a body step removes a
-            // permanent — every higher-indexed permanent shifts down by one,
-            // so a later snapshotted handle becomes stale (points at a
-            // different permanent, or out of bounds). To make `ForEach`
-            // correct for ALL bodies (delete, return-to-hand, bounce, etc.),
-            // snapshot each matched permanent's STABLE identity — the top
-            // card's `CardHandle` (`card_index` is unique per game instance)
-            // — and re-resolve the positional handle at the START of each
-            // iteration. If the permanent has left the field since the
-            // snapshot, its iteration is skipped (the match no longer
-            // exists). See G-FOR-EACH-DELETE-INDEX-SHIFT.
-            let matches = scan(ctx, over, Some(bindings));
-            let snapshot: Vec<CardHandle> = matches
-                .iter()
-                .filter_map(|h| top_card_handle(ctx, *h))
-                .collect();
-            for stable_id in snapshot {
-                let Some(handle) = resolve_by_top_card(ctx, stable_id) else {
-                    // Permanent left the field (e.g. an earlier iteration's
-                    // body deleted it). Nothing to iterate over — skip.
-                    continue;
-                };
-                let mut iter_bindings = bindings.clone();
-                let cursor = iter_bindings.result_log_cursor();
-                iter_bindings.insert_permanent(bind_as, handle);
-                let outcome = run_steps_with_runtime(body, ctx, &mut iter_bindings, runtime);
-                bindings.merge_result_log_from_since(&iter_bindings, cursor);
-                if matches!(outcome, RunOutcome::Parked) {
-                    // v1 semantics: a parked iteration aborts remaining
-                    // iterations. Faithful per-iteration resumption is
-                    // a future-phase enhancement.
-                    return Some(RunOutcome::Parked);
-                }
-            }
-            Some(RunOutcome::Synchronous)
+            let members=scan(ctx,over,Some(bindings)).into_iter().map(|h|(h.player,ctx.game.capture_digivolve_host_identity(h))).collect::<Vec<_>>();
+            Some(run_for_each_remaining(&members,bind_as,body,ctx,bindings,runtime))
         }
+        CompiledStep::ForEachRemaining { members,bind_as,body } => Some(run_for_each_remaining(members,bind_as,body,ctx,bindings,runtime)),
         CompiledStep::PerSelected {
             selection,
             bind_as,
@@ -243,4 +210,24 @@ pub fn try_run(
         )),
         _ => None,
     }
+}
+
+/// A parked body retains each later physical incarnation and its original lexical
+/// bindings. It remains one separate operation per member, never a group event.
+fn run_for_each_remaining(members:&[(u8,u64)],bind_as:&str,body:&[CompiledStep],ctx:&mut EffectContext<'_>,bindings:&mut Bindings,runtime:&StepRuntime)->RunOutcome {
+    for (index,(player,id)) in members.iter().enumerate() {
+        let Some(handle)=ctx.game.resolve_digivolve_host_identity(*player,*id)else{continue;};
+        let mut local=bindings.clone();let cursor=local.result_log_cursor();local.insert_permanent(bind_as,handle);
+        let outcome=run_steps_with_runtime(body,ctx,&mut local,runtime);
+        bindings.merge_result_log_from_since(&local,cursor);
+        if matches!(outcome,RunOutcome::Parked) {
+            if index+1<members.len() {
+                let tail=vec![CompiledStep::ForEachRemaining{members:members[index+1..].to_vec(),bind_as:bind_as.into(),body:body.to_vec()}];
+                let trigger=ctx.game.current_trigger_context.clone();
+                super::wrap_pending_selection_with_tail(ctx.game,ctx.source_card,ctx.source_permanent,ctx.player,tail,bindings.clone(),runtime.clone(),trigger);
+            }
+            return RunOutcome::Parked;
+        }
+    }
+    RunOutcome::Synchronous
 }

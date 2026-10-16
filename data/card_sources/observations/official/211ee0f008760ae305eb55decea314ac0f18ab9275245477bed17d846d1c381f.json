@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "AD1-024",
+    "colors": "Blue Green",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "Mega",
+    "play_cost": "13",
+    "qa": [
+      "Yes, it triggers. In addition, the \" if played or digivolved by effects\" condition will be met if it was played or digivolved by an effect."
+    ],
+    "special_digivolution_condition": "[Digivolve] [Imperialdramon: Dragon Mode]: Cost 1/Lv.5 w/[Hero] trait: Cost 5",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Imperialdramon: Dragon Mode]: Cost 1/Lv.5 w/[Hero] trait: Cost 5"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Security A. +1＞ ＜Blocker＞ [When Digivolving] [When Attacking] [Once Per Turn] Return 1 of your opponent's lowest DP Digimon to the bottom of the deck. [All Turns] [Once Per Turn] When Digimon are played or digivolve, you may suspend 1 of your opponent's Digimon and unsuspend this Digimon. Then, if played or digivolved by effects, you may return 1 of your opponent's suspended Digimon to the bottom of the deck."
+      }
+    ],
+    "type": "Ancient Dragonkin/Hero"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "211ee0f008760ae305eb55decea314ac0f18ab9275245477bed17d846d1c381f",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "e3500fbe9e81b3aef04005b5b990ff92d30f4e8ac1d95cf7a48964f4534d6427",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:AD1-024",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/AD1-024"
+}

@@ -1,0 +1,97 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "EX12-019",
+    "card_type": "Digimon",
+    "colors": [
+      "Red",
+      "Black"
+    ],
+    "dp": 12000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red",
+          "Black"
+        ],
+        "cost": 4,
+        "from_level": 5,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Black"
+        ],
+        "dp": 12000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 6,
+        "name": "Nezhamon",
+        "play_cost": 12,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Rush＞ ＜Collision＞ ＜Piercing＞ ＜Blocker＞ ＜Engage＞ (At the end of your turn, this Digimon may attack.)\n[All Turns] [Once Per Turn] When attack targets change, until your opponent's turn ends, their Digimon effects don't affect this Digimon and it gets +4000 DP.\n[All Turns] [Once Per Turn] When security stacks are removed from, this Digimon may unsuspend."
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 6,
+    "name": "Nezhamon",
+    "play_cost": 12,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-019.png?260529",
+      "printing_id": "EX12-019"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "The [Security] effect is activated first.\nWhen a [Security] effect is checked, it is activated immediately without waiting.\nActivate the other triggered effects in order, starting with the turn player's effects.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6750",
+        "question": "When performing a security check, if a [Security] effect, a \"when this Digimon checks an opponent's security\" effect, and a \"when a security stack is removed from\" effect trigger simultaneously, what order do they activate in?"
+      }
+    ],
+    "rarity": "SR",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Rush＞ ＜Collision＞ ＜Piercing＞ ＜Blocker＞ ＜Engage＞ (At the end of your turn, this Digimon may attack.)\n[All Turns] [Once Per Turn] When attack targets change, until your opponent's turn ends, their Digimon effects don't affect this Digimon and it gets +4000 DP.\n[All Turns] [Once Per Turn] When security stacks are removed from, this Digimon may unsuspend."
+      }
+    ],
+    "type": "Cyborg/Saneiketsu/Tentei Hachibushu/Shambala/SW"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "599afb6ca8d7034a9a0415054bee725ccb14368da2ac51f5fd41d4efc13c60a2",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-019:EX12-019",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

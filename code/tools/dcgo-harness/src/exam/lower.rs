@@ -90,7 +90,7 @@ pub fn lower_step(game: &Game, actor: PlayerId, act: &StepAction) -> Result<u16,
 
 fn matches_intent(game: &Game, actor: PlayerId, e: &ActionExplanation, act: &StepAction) -> bool {
     match act {
-        StepAction::Pass(_) => e.kind == ActionKind::Pass,
+        StepAction::Pass(_) | StepAction::PassSimOnly(_) => e.kind == ActionKind::Pass,
         StepAction::Hatch(_) => e.kind == ActionKind::Hatch,
         StepAction::Move { from } => {
             e.kind == ActionKind::Move && breeding_source_matches(e.source_zone, e.source_index, from)

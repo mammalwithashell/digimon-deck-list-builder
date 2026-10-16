@@ -1,0 +1,193 @@
+card: EX13-008
+clause: EX13-008#inherited#0
+interaction:
+  id: probe:EX13-008#inherited#0:scope:neg
+  source: probe
+  kind: negative
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX13-008
+    - EX3-018
+    - BT20-025
+    - BT20-042
+    - BT20-045
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    - ST2-05
+    rest: EX13-008-inherited-anchor-scope-attempt-v2-p0
+  p1:
+    stack:
+    - ST1-11
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-03
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    - ST2-05
+    rest: EX13-008-inherited-anchor-scope-attempt-v2-p1
+steps:
+- actor: 0
+  do:
+    hatch: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: breeding
+      using: EX13-008
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    digivolve:
+      from: breeding
+      using: EX3-018
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    move:
+      from: breeding
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-025
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+      sim_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-042
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      'yes': true
+      sim_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    dna:
+      card: BT20-045
+      materials:
+      - field.2
+      - field.1
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+      sim_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert:
+- at: 13
+  that:
+    p0.field:
+    - card_id: EX3-018
+      sources:
+      - BT20-002
+      - EX13-008
+    - card_id: BT20-025
+      sources: []
+    - card_id: BT20-042
+      sources: []
+    phase: Breeding
+    turn: 6
+- at: 16
+  that:
+    p0.field:
+    - card_id: EX3-018
+      sources:
+      - BT20-002
+      - EX13-008
+    - card_id: BT20-025
+      sources: []
+    - card_id: BT20-042
+      sources: []
+- at: 17
+  that:
+    p0.field:
+    - card_id: EX3-018
+      sources:
+      - BT20-002
+      - EX13-008
+    - card_id: BT20-045

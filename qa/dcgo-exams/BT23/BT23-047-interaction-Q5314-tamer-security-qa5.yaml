@@ -1,0 +1,170 @@
+card: BT23-047
+clause: BT23-047#effect#6
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-025
+    - BT20-042
+    - BT23-047
+    - EX3-018
+    - BT21-046
+    - BT20-027
+    - BT20-027
+    - BT20-027
+    - BT20-044
+    - BT20-044
+    - BT13-096
+    - BT13-096
+    rest: examon-security-option-fixture
+  p1:
+    stack:
+    - ST2-09
+    - BT20-025
+    - BT20-027
+    - BT20-027
+    - BT20-027
+    - BT20-025
+    - BT20-025
+    - BT20-025
+    - BT20-042
+    - P-035
+    - BT13-096
+    - BT13-096
+    rest: examon-security-option-fixture
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-025
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST2-09
+      from: hand.0
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-042
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: BT20-025
+      from: hand.0
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    dna:
+      card: BT23-047
+      materials:
+      - field.1
+      - field.0
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+      - opp.field.1
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    attack:
+      target: security
+      attacker: field.0
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.2
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+interaction:
+  id: qa:Q5314
+  source: qa
+  kind: positive
+expect_ruling:
+  q_id: Q5314
+  assert:
+  - at: 16
+    that:
+      p1.field:
+      - card_id: ST2-09
+        suspended: true
+      - card_id: BT20-025
+        suspended: true
+      - card_id: P-035
+      p1.security: 4
+      p1.trash: []
+  - at: 17
+    that:
+      p1.field:
+      - card_id: ST2-09
+        suspended: true
+      - card_id: BT20-025
+        suspended: true
+      p1.trash:
+      - P-035

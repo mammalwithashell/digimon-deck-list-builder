@@ -89,11 +89,16 @@ pub fn card_database() -> &'static HashMap<String, CardSummary> {
                 (
                     k,
                     CardSummary {
-                        card_id: v.card_id,
+                        card_id: v.card_id.clone(),
                         card_name_eng: v.card_name_eng,
                         card_kind: v.card_kind,
                         rarity,
-                        max_count_in_deck: v.max_count_in_deck,
+                        max_count_in_deck: crate::dsl_registry::from_embedded_cached()
+                            .expect("embedded DSL metadata must load for deck validation")
+                            .lookup(&v.card_id)
+                            .and_then(|card| card.deck_rule.as_ref())
+                            .map(|rule| u32::from(rule.max_copies))
+                            .unwrap_or(v.max_count_in_deck),
                     },
                 )
             })
@@ -815,6 +820,7 @@ fn kind_name(raw: u8) -> &'static str {
         1 => "Tamer",
         2 => "Option",
         3 => "Digi-Egg",
+        4 => "Dual",
         _ => "",
     }
 }

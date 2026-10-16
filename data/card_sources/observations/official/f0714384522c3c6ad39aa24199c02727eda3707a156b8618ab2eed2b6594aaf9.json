@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT21-072",
+    "colors": "Purple Red",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "10000",
+    "form": "Ultimate",
+    "play_cost": "9",
+    "qa": [
+      "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements. For example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.4 w/＜Save＞ in text or w/[Hero] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/＜Save＞ in text or w/[Hero] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Raid＞ ＜Piercing＞ [When Digivolving] This Digimon may attack without suspending. [All Turns] This Digimon gets +1000 DP for each of its digivolution cards."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon gets +2000 DP."
+      }
+    ],
+    "type": "Dragon/Hero"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "f0714384522c3c6ad39aa24199c02727eda3707a156b8618ab2eed2b6594aaf9",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "096d692d2485e7ad3c06c57e87a4d65b5c2fad90b95b0ba0dc403b52e9a1964f",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-072",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-072"
+}

@@ -44,6 +44,7 @@ fn strong_digimon(card_id: &str, dp: i32) -> digimon_engine::card_data::CardData
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: card_id.replace('-', "_"),
@@ -529,11 +530,10 @@ fn collision_attacker_expands_blocker_pool_to_all_defenders() {
         .pending_selection
         .as_ref()
         .expect("Collision installs a BlockTiming selection");
-    // All three defender Digimon are candidates.
+    // Rule12-1-5: the current target is excluded; both other Digimon can block.
     assert_eq!(
         sel.valid_action_ids,
         vec![
-            encode_attack(0, 0),
             encode_attack(0, 1),
             encode_attack(0, 2)
         ],
@@ -551,6 +551,7 @@ fn collision_still_skips_suspended_defenders() {
     let atk = r.place_on_field(0, "ATK", Some(0));
     let def_a = r.place_on_field(1, "DEF", Some(0));
     let _def_b = r.place_on_field(1, "DEF", Some(0));
+    let _def_c = r.place_on_field(1, "DEF", Some(0));
     r.game
         .modifiers
         .grant_keyword(atk, Keyword::Collision, Expiry::Permanent, 0);
@@ -559,8 +560,8 @@ fn collision_still_skips_suspended_defenders() {
 
     r.attack_digimon(atk, def_a, false);
     let sel = r.game.pending_selection.as_ref().unwrap();
-    // Only the unsuspended defender remains.
-    assert_eq!(sel.valid_action_ids, vec![encode_attack(0, 0)]);
+    // Current target0 and suspended1 cannot block; distinct unsuspended2 remains.
+    assert_eq!(sel.valid_action_ids, vec![encode_attack(0, 2)]);
 }
 
 /// Collision + existing Blocker don't double-count — each opponent Digimon
@@ -585,8 +586,8 @@ fn collision_with_blocker_keyword_does_not_double_list() {
     let sel = r.game.pending_selection.as_ref().unwrap();
     assert_eq!(
         sel.valid_action_ids,
-        vec![encode_attack(0, 0), encode_attack(0, 1)],
-        "each defender emitted once despite dual qualification"
+        vec![encode_attack(0, 1)],
+        "distinct blocker emitted once despite dual qualification; current target excluded"
     );
 }
 

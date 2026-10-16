@@ -106,6 +106,19 @@ fn filler(id: &str) -> CardData {
     make_test_card(id, &format!("{id} Filler"))
 }
 
+/// Dispatch an Option through the same masked Main action used by gameplay.
+fn use_fusionize(runner: &mut DebugRunner) {
+    use digimon_engine::action::{mask::build_action_mask, space::PLAY_HAND_START};
+    runner.skip_mulligan();
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        1.0
+    );
+    runner.game.decode_action(PLAY_HAND_START, 0);
+    assert_eq!(runner.hand_size(0), 0, "paid Option must leave hand");
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 1 — Structural assertions
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -423,8 +436,7 @@ fn bt11_105_cost_reduced_by_1_with_snatchmon_in_play() {
     runner.place_on_field(0, "SNATCH-A", Some(0));
 
     let memory_before = runner.memory();
-    let played = runner.play(0, 0);
-    assert!(played.is_some(), "BT11-105 must be playable with 1 memory");
+    use_fusionize(&mut runner);
     // Printed cost 1, reduced by 1 = 0 memory spent.
     assert_eq!(
         runner.memory(),
@@ -440,13 +452,14 @@ fn bt11_105_cost_not_reduced_without_snatchmon() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT11-105")
         .expect("BT11-105 compiles")
+        .add_card(plain_digimon("BLACK-PROVIDER", "Color provider"))
         .hand(0, &["BT11-105"])
         .memory(1)
         .start();
 
+    runner.place_on_field(0, "BLACK-PROVIDER", Some(0));
     let memory_before = runner.memory();
-    let played = runner.play(0, 0);
-    assert!(played.is_some(), "BT11-105 must be playable with 1 memory");
+    use_fusionize(&mut runner);
     assert_eq!(
         runner.memory(),
         memory_before - 1,
@@ -474,7 +487,7 @@ fn bt11_105_main_with_no_eligible_trash_card_does_nothing() {
     runner.place_on_field(0, "PLAIN-A", Some(0));
     let trash_before = runner.trash_size(0);
 
-    let _ = runner.play(0, 0);
+    use_fusionize(&mut runner);
     runner.game.drain_effect_queue();
 
     // No candidates for the cost select → the clause-level `condition:
@@ -507,7 +520,7 @@ fn bt11_105_main_with_eligible_trash_card_installs_cost_select() {
     runner.place_on_field(0, "PLAIN-B", Some(0));
     runner.inject_trash(0, "VEM-A");
 
-    let _ = runner.play(0, 0);
+    use_fusionize(&mut runner);
     runner.game.drain_effect_queue();
 
     assert!(
@@ -540,7 +553,7 @@ fn bt11_105_main_accepting_placement_adds_bottom_source() {
     let stack_before = runner.top_card(target); // sanity: card exists
     let _ = stack_before;
 
-    let _ = runner.play(0, 0);
+    use_fusionize(&mut runner);
     runner.game.drain_effect_queue();
 
     // Drive the trash-select prompt: pick the Vemmon.
@@ -566,10 +579,11 @@ fn bt11_105_main_accepting_placement_adds_bottom_source() {
 
     let perm = runner.game.player(0).battle_area.get(target.index as usize);
     let stack_size = perm.map(|p| p.card_sources.len()).unwrap_or(0);
-    assert!(
-        stack_size >= 1,
-        "target Digimon must have gained a bottom digivolution source \
-         (stack_size={stack_size})"
+    assert_eq!(stack_size, 2, "one physical Vemmon source must be added");
+    assert_eq!(
+        runner.game.player(0).battle_area[target.index as usize].card_sources[0]
+            .card_id(&runner.game.card_data),
+        "VEM-B"
     );
 }
 
@@ -603,7 +617,7 @@ fn bt11_105_main_declining_placement_does_nothing_further() {
         "sanity: fresh permanent starts with 1 source"
     );
 
-    let _ = runner.play(0, 0);
+    use_fusionize(&mut runner);
     runner.game.drain_effect_queue();
 
     let view = runner
@@ -648,7 +662,7 @@ fn bt11_105_main_declining_digivolve_tail_keeps_placement_only() {
     runner.inject_trash(0, "VEM-D");
     runner.inject_trash(0, "DEST-D");
 
-    let _ = runner.play(0, 0);
+    use_fusionize(&mut runner);
     runner.game.drain_effect_queue();
 
     // Accept the placement cost (pick whichever card is offered first).
@@ -732,7 +746,7 @@ fn bt11_105_main_full_digivolve_chain_pays_printed_cost() {
 
     let memory_before = runner.memory();
 
-    let _ = runner.play(0, 0);
+    use_fusionize(&mut runner);
     runner.game.drain_effect_queue();
 
     // Accept placement: only Vemmon eligible for the cost select.
@@ -1111,7 +1125,7 @@ fn bt11_105_main_placement_removes_card_from_trash() {
     runner.inject_trash(0, "VEM-L");
     let trash_before = runner.trash_size(0);
 
-    let _ = runner.play(0, 0);
+    use_fusionize(&mut runner);
     runner.game.drain_effect_queue();
 
     let view = runner

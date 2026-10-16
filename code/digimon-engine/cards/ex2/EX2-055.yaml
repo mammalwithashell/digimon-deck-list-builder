@@ -1,0 +1,39 @@
+# Official observation a87d7f8e892d0a6af9f8fdde5d784fc0575155de92ec976330758da7a3e243c0.
+# Printed erratum sets the payable base to zero; it does not reduce by twenty.
+card: EX2-055
+name: Reaper
+kind: digimon
+color: [white]
+cost: 20
+dp: 15000
+form: D-Reaper
+traits: [Ability Synthesis Agent]
+effects:
+  - kind: cost_assignment
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    set_cost: 0
+    pay_cost:
+      - pay_source_prefix:
+          host_filter: {name_is: Mother D-Reaper}
+          minimum: 7
+          optional: true
+    summary: "When this card would be played, you may trash 7 or more bottom digivolution cards of 1 of your Mother D-Reaper to set its play cost to 0"
+  - kind: grant_keyword
+    keyword: Rush
+  - when: when_attacking
+    process:
+      - select_zone_cards:
+          zones: [trash]
+          filter: {name_is: ADR-02 Searcher}
+          min: 2
+          max: 2
+          optional_zero: true
+          bind_as: searchers
+          prompt: "Place 2 ADR-02 Searcher from your trash as bottom digivolution cards in the chosen order"
+      - if:
+          condition: {binding_present: searchers}
+          then:
+            - place_cards_as_bottom_sources: {cards: searchers, target: source}
+            - unsuspend: {target: source}
+    summary: "[When Attacking] You may place 2 ADR-02 Searcher from your trash under this Digimon in any order as its bottom digivolution cards to unsuspend it"

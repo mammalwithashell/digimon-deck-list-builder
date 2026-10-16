@@ -1,0 +1,102 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT11-009",
+    "card_type": "Digimon",
+    "colors": [
+      "Red",
+      "Yellow"
+    ],
+    "dp": 4000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "cost": 0,
+        "from_level": 3,
+        "slot": 1
+      },
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "cost": 1,
+        "from_level": 2,
+        "slot": 2
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Yellow"
+        ],
+        "dp": 4000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Shoutmon + Star Sword",
+        "play_cost": 5,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "This card/Digimon is also treated as if its name is [Shoutmon] and [Starmons].\n＜Material Save 1＞ (When this Digimon would be deleted, you may place 1 card in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)\n[On Play] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if DigiXrosing with 2 cards, delete 1 of your opponent's Digimon with 2000 DP or less."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "DigiXros -1: [Shoutmon] × [Starmons]\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Shoutmon + Star Sword",
+    "play_cost": 5,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522013",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT11-009.png?260529",
+      "printing_id": "BT11-009"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "This is a special rule for this card that always treats it as if it also has the [Shoutmon] and [Starmons] names.",
+        "date": "Aug. 1, 2024",
+        "number": "Q2054",
+        "question": "What does this card's (Rule) mean, exactly?\n(*This card's \"This card/Digimon is also treated as if its name is [Shoutmon] and [Starmons]\" has been changed to \"(Rule) Name: Also treated as [Shoutmon] and [Starmons].\")"
+      }
+    ],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "This card/Digimon is also treated as if its name is [Shoutmon] and [Starmons].\n＜Material Save 1＞ (When this Digimon would be deleted, you may place 1 card in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)\n[On Play] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if DigiXrosing with 2 cards, delete 1 of your opponent's Digimon with 2000 DP or less."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "DigiXros -1: [Shoutmon] × [Starmons]\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+      }
+    ],
+    "type": "Enhancement/Xros Heart"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "510a19d8603ba01b24029b7b9992ef756e89cb903dd89a6eeb9427980c6135e6",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "cabbd473ce34b05e205ecbe7680eee9ca7347123ef8e24592aece2b02c366e37",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522013:BT11-009:BT11-009",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522013"
+}

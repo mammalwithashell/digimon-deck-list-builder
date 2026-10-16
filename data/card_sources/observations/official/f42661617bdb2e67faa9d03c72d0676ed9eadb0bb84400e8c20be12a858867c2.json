@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "ST9-06",
+    "colors": "Blue Green",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "13",
+    "qa": [
+      "No. The effect reads, “you may,” so you can choose whether to play them. However, if you choose to play them, you must play as many cards as possible. If there are both a level 4 or lower blue Digimon card and a level 4 or lower green Digimon card in the digivolution cards, you can't choose to only play one of them."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] You may play 1 level 4 or lower blue Digimon card and/or 1 level 4 or lower green Digimon card from this Digimon's digivolution cards without paying their memory costs."
+      }
+    ],
+    "type": "Ancient Dragon"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "f42661617bdb2e67faa9d03c72d0676ed9eadb0bb84400e8c20be12a858867c2",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "eea48308b4ca4be3147fc92a28295357bcedc6b01ec9ca7217296c915bfe3baa",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:ST9-06",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/ST9-06"
+}

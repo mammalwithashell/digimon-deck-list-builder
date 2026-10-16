@@ -1,0 +1,46 @@
+# Live oracle comparison confirmed this clause on 2026-10-10; see campaign evidence JSON.
+# Paid start-main trash cost: trash Coredramon, draw one, gain one memory.
+# Expected assertions are author-derived, NOT oracle-backfilled evidence.
+# Clause text_sha256: faae4f44bb28461f93bd32ac3a9b9dc962fca11f037ac82ab013cc3304713ff7
+# Exact historical library deck digilab_eabd2374a811; 50 main + 5 eggs.
+# Opponent passes throughout; no opposing targets for evolution effects.
+card: BT20-007
+clause: BT20-007#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT20-007, BT20-023, BT23-047, BT23-047, BT23-047, BT20-027, BT20-027, BT20-027, BT20-044, BT20-044, BT13-096, BT13-096]
+    rest: examon-sanchez-20260207
+  p1:
+    stack: []
+    rest: examon-sanchez-20260207
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT20-007, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # OptionalSkill fold: DCGO yes/no gate followed by the hand-card pick.
+  - actor: 0
+    do: { select: { cards: [BT20-023] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 6
+    that:
+      p0.memory: 4
+      p0.trash: [BT20-023]
+      p0.hand: [BT23-047, BT23-047, BT23-047, BT13-096, BT13-096]
+      p0.field: [{ card_id: BT20-007, sources: [] }]

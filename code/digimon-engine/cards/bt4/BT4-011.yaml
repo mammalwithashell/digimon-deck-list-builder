@@ -1,0 +1,18 @@
+card: BT4-011
+name: Agunimon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+traits: [Wizard]
+form: Hybrid
+attribute: Variable
+alt_paths:
+  - kind: digivolve
+    from: {kind: digimon, level_eq: 3, color_is: red}
+    cost: 2
+  - kind: digivolve
+    from: {owner: you, kind: tamer, color_is: red}
+    source_treated_as: level_3_digimon_from_hand
+    cost: 2

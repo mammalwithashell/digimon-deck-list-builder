@@ -41,14 +41,27 @@ pub struct ScenarioDecks {
 pub enum StepAction {
     Hatch(EmptyArgs),
     Pass(EmptyArgs),
+    /// Explicit forced Main pass with no DCGO prompt; validated against the live mask.
+    PassSimOnly(EmptyArgs),
     /// Move the breeding-area Digimon to the battle area (the second breeding
     /// action besides `hatch`). `from` defaults to `breeding` — the only zone
     /// a move can come from — but accepts an explicit `breeding` / `breeding.0`
     /// so authors who pin slots everywhere else can here too.
-    Move { from: String },
-    Play { card: String, from: String },
-    Digivolve { from: String, using: String },
-    Attack { attacker: String, target: String },
+    Move {
+        from: String,
+    },
+    Play {
+        card: String,
+        from: String,
+    },
+    Digivolve {
+        from: String,
+        using: String,
+    },
+    Attack {
+        attacker: String,
+        target: String,
+    },
     /// Activate a `[Main]` effect on a permanent ALREADY in play — the
     /// field-activation surface, distinct from `play`, which puts a `[Main]`
     /// Option onto the field from hand.
@@ -60,7 +73,9 @@ pub enum StepAction {
     /// `turn_count > placed_on_turn` and offers it on the SAME action bit, and
     /// DCGO's `CanDeclareOptionDelayEffect` gates its own on the same
     /// not-the-placing-turn rule.
-    Main { on: String },
+    Main {
+        on: String,
+    },
     /// Declare a DigiLink: the Appmon Link Digimon `card` at `from` activates
     /// its printed `<Link>` and plugs itself sideways into one of the
     /// controller's Digimon -- from either origin the keyword prints ("Plug
@@ -102,7 +117,10 @@ pub enum StepAction {
     /// `G-ENGINE-DIGIMON-LINK-FROM-HAND`: the only hand-side link was the
     /// Plug-In *Option* play mode. It closed in the same change that added
     /// this verb.)
-    Link { card: String, from: String },
+    Link {
+        card: String,
+        from: String,
+    },
     /// Declare a **DNA digivolution** (§8-2 / general_rule.pdf §6-5-1-2-2):
     /// two of the controller's own Digimon in the battle area are digivolved
     /// into one `[DNA Digivolve]` card in hand, which lands unsuspended with
@@ -306,7 +324,16 @@ pub enum SelectPayload {
 /// list this parser enforces, rather than keeping a second copy that could
 /// drift from it.
 pub const STEP_VERBS: &[&str] = &[
-    "hatch", "pass", "move", "play", "digivolve", "dna", "attack", "main", "link", "select",
+    "hatch",
+    "pass",
+    "move",
+    "play",
+    "digivolve",
+    "dna",
+    "attack",
+    "main",
+    "link",
+    "select",
 ];
 
 fn hand() -> String {
@@ -319,6 +346,13 @@ fn breeding() -> String {
 
 fn field() -> String {
     "field".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PassArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    sim_only: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -754,7 +788,10 @@ impl<'de> Deserialize<'de> for StepAction {
 
         Ok(match verb {
             "hatch" => StepAction::Hatch(args_of::<EmptyArgs, D::Error>(verb, args)?),
-            "pass" => StepAction::Pass(args_of::<EmptyArgs, D::Error>(verb, args)?),
+            "pass" => {
+                let a: PassArgs = args_of::<PassArgs, D::Error>(verb, args)?;
+                if a.sim_only.unwrap_or(false) { StepAction::PassSimOnly(EmptyArgs {}) } else { StepAction::Pass(EmptyArgs {}) }
+            },
             "move" => {
                 let a: MoveArgs = args_of::<MoveArgs, D::Error>(verb, args)?;
                 StepAction::Move { from: a.from }
@@ -851,6 +888,7 @@ impl Serialize for StepAction {
         match self {
             StepAction::Hatch(a) => map.serialize_entry("hatch", a)?,
             StepAction::Pass(a) => map.serialize_entry("pass", a)?,
+            StepAction::PassSimOnly(_) => map.serialize_entry("pass", &PassArgs { sim_only: Some(true) })?,
             StepAction::Move { from } => {
                 map.serialize_entry("move", &MoveArgs { from: from.clone() })?
             }
@@ -887,9 +925,7 @@ impl Serialize for StepAction {
                     target: target.clone(),
                 },
             )?,
-            StepAction::Main { on } => {
-                map.serialize_entry("main", &MainArgs { on: on.clone() })?
-            }
+            StepAction::Main { on } => map.serialize_entry("main", &MainArgs { on: on.clone() })?,
             StepAction::Link { card, from } => map.serialize_entry(
                 "link",
                 &LinkArgs {
@@ -919,7 +955,6 @@ impl Serialize for StepAction {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EmptyArgs {}
-
 
 /// The prompt the author expects DCGO to be asking at this step.
 ///
@@ -1103,7 +1138,84 @@ impl Scenario {
         }
     }
 
+    /// Assertion and publisher-ruling rows opt into otherwise absent measurements.
+    pub fn legal_option_plays_requested(&self, step: u32) -> [bool; 2] {
+        self.measurement_requested(step, "legal_option_plays")
+    }
+
+    pub fn selection_can_decline_requested(&self, step: u32) -> [bool; 2] {
+        self.measurement_requested(step, "selection_can_decline")
+    }
+
+    pub fn selection_candidates_requested(&self, step: u32) -> [bool; 2] {
+        self.measurement_requested(step, "selection_candidates")
+    }
+
+    pub fn movement_watch_ids_requested(
+        &self,
+        step: u32,
+    ) -> [std::collections::BTreeSet<String>; 2] {
+        let mut ids = [
+            std::collections::BTreeSet::new(),
+            std::collections::BTreeSet::new(),
+        ];
+        for row in self
+            .assertions
+            .iter()
+            .chain(self.expect_ruling.iter().flat_map(|r| r.assertions.iter()))
+            .filter(|r| r.at == step)
+        {
+            for seat in 0..2 {
+                if let Some(serde_yml::Value::Mapping(m)) =
+                    row.that.get(&format!("p{seat}.movement_observations"))
+                {
+                    ids[seat].extend(m.keys().filter_map(|k| k.as_str().map(str::to_owned)));
+                }
+            }
+        }
+        ids
+    }
+    fn measurement_requested(&self, step: u32, field: &str) -> [bool; 2] {
+        let mut requested = [false; 2];
+        for row in self
+            .assertions
+            .iter()
+            .chain(self.expect_ruling.iter().flat_map(|r| r.assertions.iter()))
+        {
+            if row.at == step {
+                requested[0] |= row.that.contains_key(&format!("p0.{field}"));
+                requested[1] |= row.that.contains_key(&format!("p1.{field}"));
+            }
+        }
+        requested
+    }
+
     fn validate(&self) -> Result<(), String> {
+        for row in self
+            .assertions
+            .iter()
+            .chain(self.expect_ruling.iter().flat_map(|r| r.assertions.iter()))
+        {
+            for seat in 0..2 {
+                if let Some(value) = row.that.get(&format!("p{seat}.movement_observations")) {
+                    let watches: std::collections::BTreeMap<
+                        String,
+                        digimon_engine::movement_observation::MovementWatch,
+                    > = serde_yml::from_value(value.clone())
+                        .map_err(|e| format!("invalid movement watch: {e}"))?;
+                    if watches.is_empty()
+                        || watches
+                            .iter()
+                            .any(|(id, w)| id.trim().is_empty() || !w.is_valid_claim())
+                    {
+                        return Err(
+                            "movement watch requires named complete version-1 entries".into()
+                        );
+                    }
+                }
+            }
+        }
+
         if self.steps.is_empty() {
             return Err("scenario has no steps: a line nobody drives hangs DCGO \
                         until the timeout, which is indistinguishable from a hung Unity"
@@ -1157,9 +1269,11 @@ impl Scenario {
             return Ok(());
         };
         if covers.is_empty() {
-            return Err("`covers: []` covers nothing; omit the key to cover exactly \
+            return Err(
+                "`covers: []` covers nothing; omit the key to cover exactly \
                         `clause:`, or list every clause the line exercises"
-                .to_string());
+                    .to_string(),
+            );
         }
         let mut seen = std::collections::BTreeSet::new();
         for id in covers {
@@ -1195,7 +1309,10 @@ impl Scenario {
             ));
         };
         if rest.is_empty() || rest.chars().any(char::is_whitespace) {
-            return Err(format!("interaction id '{}' has an empty or spaced name", i.id));
+            return Err(format!(
+                "interaction id '{}' has an empty or spaced name",
+                i.id
+            ));
         }
         match i.source {
             InteractionSource::Qa => {
@@ -1218,7 +1335,11 @@ impl Scenario {
                         "interaction '{}' is {} but `kind: {}`: a `:neg` probe is exactly a \
                          negative one",
                         i.id,
-                        if negative { "a `:neg` probe" } else { "not a `:neg` probe" },
+                        if negative {
+                            "a `:neg` probe"
+                        } else {
+                            "not a `:neg` probe"
+                        },
                         i.kind.as_str()
                     ));
                 }
@@ -1239,11 +1360,16 @@ impl Scenario {
         let Some(r) = &self.expect_ruling else {
             return Ok(());
         };
-        let Some(i) = self.interaction.as_ref().filter(|i| i.source == InteractionSource::Qa)
+        let Some(i) = self
+            .interaction
+            .as_ref()
+            .filter(|i| i.source == InteractionSource::Qa)
         else {
-            return Err("`expect_ruling:` encodes an official Q&A answer, so it needs \
+            return Err(
+                "`expect_ruling:` encodes an official Q&A answer, so it needs \
                         `interaction: { id: qa:<Q-number>, source: qa, ... }`"
-                .to_string());
+                    .to_string(),
+            );
         };
         if i.id != format!("qa:{}", r.q_id) {
             return Err(format!(
@@ -1252,9 +1378,11 @@ impl Scenario {
             ));
         }
         if r.assertions.is_empty() {
-            return Err("`expect_ruling.assert` is empty: a ruling with no observable \
+            return Err(
+                "`expect_ruling.assert` is empty: a ruling with no observable \
                         asserts nothing, so the three-way comparison would have no third leg"
-                .to_string());
+                    .to_string(),
+            );
         }
         for a in &r.assertions {
             if a.at as usize > self.steps.len() {
@@ -1340,19 +1468,15 @@ assert:
 
     #[test]
     fn empty_steps_is_rejected() {
-        let bad = GOOD.replace(
-            "steps:",
-            "steps: []\nunused:",
-        );
+        let bad = GOOD.replace("steps:", "steps: []\nunused:");
         assert!(Scenario::from_yaml(&bad).is_err());
     }
 
     #[test]
     fn move_verb_parses_with_a_pinned_breeding_slot() {
-        let s = Scenario::from_yaml(&GOOD.replace(
-            "do: { hatch: {} }",
-            "do: { move: { from: breeding.0 } }",
-        ))
+        let s = Scenario::from_yaml(
+            &GOOD.replace("do: { hatch: {} }", "do: { move: { from: breeding.0 } }"),
+        )
         .expect("move step should parse");
         assert_eq!(
             s.steps[0].act,
@@ -1380,10 +1504,9 @@ assert:
     fn move_verb_round_trips_through_yaml() {
         // The drafter serializes StepAction back to YAML; an asymmetric codec
         // would emit scenarios that fail to re-parse.
-        let s = Scenario::from_yaml(&GOOD.replace(
-            "do: { hatch: {} }",
-            "do: { move: { from: breeding.0 } }",
-        ))
+        let s = Scenario::from_yaml(
+            &GOOD.replace("do: { hatch: {} }", "do: { move: { from: breeding.0 } }"),
+        )
         .unwrap();
         let yaml = serde_yml::to_string(&s.steps[0].act).expect("serializes");
         let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
@@ -1394,10 +1517,9 @@ assert:
 
     #[test]
     fn main_verb_parses_with_a_pinned_field_slot() {
-        let s = Scenario::from_yaml(&GOOD.replace(
-            "do: { hatch: {} }",
-            "do: { main: { on: field.0 } }",
-        ))
+        let s = Scenario::from_yaml(
+            &GOOD.replace("do: { hatch: {} }", "do: { main: { on: field.0 } }"),
+        )
         .expect("main step should parse");
         assert_eq!(
             s.steps[0].act,
@@ -1412,10 +1534,9 @@ assert:
         // The breeding area's `<Training>` [Main] is encoded with the
         // BREEDING_TARGET sentinel — a place, not a slot — so the bare form
         // has to be expressible.
-        let s = Scenario::from_yaml(&GOOD.replace(
-            "do: { hatch: {} }",
-            "do: { main: { on: breeding } }",
-        ))
+        let s = Scenario::from_yaml(
+            &GOOD.replace("do: { hatch: {} }", "do: { main: { on: breeding } }"),
+        )
         .unwrap();
         assert_eq!(
             s.steps[0].act,
@@ -1429,11 +1550,8 @@ assert:
     fn main_verb_requires_on() {
         // A board can hold many permanents, so a defaulted `on:` would
         // silently mean "whichever one lowered first".
-        let err = Scenario::from_yaml(&GOOD.replace(
-            "do: { hatch: {} }",
-            "do: { main: {} }",
-        ))
-        .unwrap_err();
+        let err = Scenario::from_yaml(&GOOD.replace("do: { hatch: {} }", "do: { main: {} }"))
+            .unwrap_err();
         assert!(err.contains("main"), "got: {err}");
         assert!(err.contains("on"), "must name the missing field: {err}");
     }
@@ -1464,7 +1582,10 @@ assert:
     fn main_is_listed_among_the_verbs_an_author_is_offered() {
         let bad = GOOD.replace("do: { hatch: {} }", "do: { teleport: {} }");
         let err = Scenario::from_yaml(&bad).unwrap_err();
-        assert!(err.contains("main"), "the verb list must name `main`: {err}");
+        assert!(
+            err.contains("main"),
+            "the verb list must name `main`: {err}"
+        );
     }
 
     // -- dna: DNA digivolution declaration ------------------------------
@@ -1513,10 +1634,9 @@ assert:
     fn dna_verb_requires_materials() {
         // A defaulted or missing pair would silently digivolve Digimon the
         // scenario never named.
-        let err = Scenario::from_yaml(&GOOD.replace(
-            "do: { hatch: {} }",
-            "do: { dna: { card: BT8-084 } }",
-        ))
+        let err = Scenario::from_yaml(
+            &GOOD.replace("do: { hatch: {} }", "do: { dna: { card: BT8-084 } }"),
+        )
         .unwrap_err();
         assert!(err.contains("dna"), "got: {err}");
         assert!(err.contains("materials"), "must name the field: {err}");
@@ -1598,10 +1718,9 @@ assert:
         // `from:` may be omitted and means `field`. The bare form stays
         // AMBIGUOUS at lowering when two copies stand on the board, exactly
         // as `play: { from: hand }` is with two copies in hand.
-        let s = Scenario::from_yaml(&GOOD.replace(
-            "do: { hatch: {} }",
-            "do: { link: { card: BT21-071 } }",
-        ))
+        let s = Scenario::from_yaml(
+            &GOOD.replace("do: { hatch: {} }", "do: { link: { card: BT21-071 } }"),
+        )
         .expect("bare link step should parse");
         assert_eq!(
             s.steps[0].act,
@@ -1630,10 +1749,9 @@ assert:
 
     #[test]
     fn link_verb_requires_card() {
-        let err = Scenario::from_yaml(&GOOD.replace(
-            "do: { hatch: {} }",
-            "do: { link: { from: field.0 } }",
-        ))
+        let err = Scenario::from_yaml(
+            &GOOD.replace("do: { hatch: {} }", "do: { link: { from: field.0 } }"),
+        )
         .unwrap_err();
         assert!(err.contains("link"), "got: {err}");
         assert!(err.contains("card"), "must name the missing field: {err}");
@@ -1675,7 +1793,10 @@ assert:
             from: "field.2".to_string(),
         };
         let yaml = serde_yml::to_string(&act).expect("serializes");
-        assert!(!yaml.contains("into"), "the absent host key must be omitted: {yaml}");
+        assert!(
+            !yaml.contains("into"),
+            "the absent host key must be omitted: {yaml}"
+        );
         let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
         assert_eq!(back, act, "round trip of {yaml}");
     }
@@ -1684,7 +1805,10 @@ assert:
     fn link_is_listed_among_the_verbs_an_author_is_offered() {
         let bad = GOOD.replace("do: { hatch: {} }", "do: { teleport: {} }");
         let err = Scenario::from_yaml(&bad).unwrap_err();
-        assert!(err.contains("link"), "the verb list must name `link`: {err}");
+        assert!(
+            err.contains("link"),
+            "the verb list must name `link`: {err}"
+        );
         assert!(STEP_VERBS.contains(&"link"));
     }
 
@@ -1918,7 +2042,9 @@ assert:
     /// both is refused rather than silently preferring one.
     #[test]
     fn select_trigger_and_trigger_not_together_are_rejected() {
-        let err = select_payload_of("{ cards: [EX12-047], trigger: Ascension, trigger_not: Fortitude }").unwrap_err();
+        let err =
+            select_payload_of("{ cards: [EX12-047], trigger: Ascension, trigger_not: Fortitude }")
+                .unwrap_err();
         assert!(
             err.contains("trigger:") && err.contains("trigger_not:"),
             "the message must name BOTH keys so the author knows which to drop: {err}"
@@ -1929,7 +2055,8 @@ assert:
     /// as pairing the positive form with it.
     #[test]
     fn select_trigger_not_and_ordinal_together_are_rejected() {
-        let err = select_payload_of("{ cards: [EX12-047], trigger_not: Ascension, ordinal: 0 }").unwrap_err();
+        let err = select_payload_of("{ cards: [EX12-047], trigger_not: Ascension, ordinal: 0 }")
+            .unwrap_err();
         assert!(
             err.contains("trigger_not") && err.contains("ordinal"),
             "the message must name both: {err}"
@@ -1976,10 +2103,15 @@ assert:
         // keep: an ordinal is a per-engine POSITION, so it can name a
         // different trigger on the two sides; a keyword cannot.
         let err =
-            select_payload_of("{ cards: [EX12-065], trigger: Fortitude, ordinal: 1 }")
-                .unwrap_err();
-        assert!(err.contains("cannot be combined") || err.contains("two answers"), "got: {err}");
-        assert!(err.contains("Prefer `trigger:`"), "must say which to keep: {err}");
+            select_payload_of("{ cards: [EX12-065], trigger: Fortitude, ordinal: 1 }").unwrap_err();
+        assert!(
+            err.contains("cannot be combined") || err.contains("two answers"),
+            "got: {err}"
+        );
+        assert!(
+            err.contains("Prefer `trigger:`"),
+            "must say which to keep: {err}"
+        );
         assert!(err.contains("POSITION"), "must say why: {err}");
     }
 
@@ -2003,8 +2135,8 @@ assert:
         // spelling is preserved in the payload (so the YAML round-trips), and
         // the normalizer is what makes them one answer.
         for raw in ["fortitude", "Fortitude", "<Fortitude>", "  <Fortitude> "] {
-            let p = select_payload_of(&format!("{{ cards: [EX12-065], trigger: \"{raw}\" }}"))
-                .unwrap();
+            let p =
+                select_payload_of(&format!("{{ cards: [EX12-065], trigger: \"{raw}\" }}")).unwrap();
             let SelectPayload::Cards { trigger, .. } = p else {
                 panic!("expected a Cards payload");
             };
@@ -2054,14 +2186,26 @@ assert:
             trigger_not: None,
         });
         let yaml = serde_yml::to_string(&bare).expect("serializes");
-        assert!(!yaml.contains("trigger"), "absent must OMIT the key: {yaml}");
+        assert!(
+            !yaml.contains("trigger"),
+            "absent must OMIT the key: {yaml}"
+        );
     }
 
     #[test]
     fn select_value_yes_and_decline_forms_parse() {
-        assert_eq!(select_payload_of("{ value: 3 }").unwrap(), SelectPayload::Value(3));
-        assert_eq!(select_payload_of("{ value: -1 }").unwrap(), SelectPayload::Value(-1));
-        assert_eq!(select_payload_of("{ yes: true }").unwrap(), SelectPayload::Yes);
+        assert_eq!(
+            select_payload_of("{ value: 3 }").unwrap(),
+            SelectPayload::Value(3)
+        );
+        assert_eq!(
+            select_payload_of("{ value: -1 }").unwrap(),
+            SelectPayload::Value(-1)
+        );
+        assert_eq!(
+            select_payload_of("{ yes: true }").unwrap(),
+            SelectPayload::Yes
+        );
         assert_eq!(
             select_payload_of("{ decline: true }").unwrap(),
             SelectPayload::Decline
@@ -2132,7 +2276,10 @@ assert:
 
     #[test]
     fn actor_must_be_0_or_1() {
-        let bad = GOOD.replace("- actor: 0\n    do: { hatch: {} }", "- actor: 5\n    do: { hatch: {} }");
+        let bad = GOOD.replace(
+            "- actor: 0\n    do: { hatch: {} }",
+            "- actor: 5\n    do: { hatch: {} }",
+        );
         let err = Scenario::from_yaml(&bad).unwrap_err();
         assert!(err.contains("actor"), "got: {err}");
     }
@@ -2159,8 +2306,10 @@ mod dcgo_only_tests {
     /// `dcgo_only: true` selects the DCGO-ONLY carrier, not the shared one.
     #[test]
     fn dcgo_only_parses_into_its_own_variant() {
-        let s = Scenario::from_yaml(&step_yaml("{ cards: [EX12-076], ordinal: 1, dcgo_only: true }"))
-            .expect("dcgo_only step parses");
+        let s = Scenario::from_yaml(&step_yaml(
+            "{ cards: [EX12-076], ordinal: 1, dcgo_only: true }",
+        ))
+        .expect("dcgo_only step parses");
         match &s.steps[0].act {
             StepAction::SelectDcgoOnly(SelectPayload::Cards { ids, ordinal, .. }) => {
                 assert_eq!(ids, &vec!["EX12-076".to_string()]);
@@ -2194,10 +2343,15 @@ mod dcgo_only_tests {
     /// Round-trips, so a re-serialized scenario keeps the flag.
     #[test]
     fn dcgo_only_round_trips() {
-        let s = Scenario::from_yaml(&step_yaml("{ cards: [EX12-076], ordinal: 1, dcgo_only: true }"))
-            .expect("parses");
+        let s = Scenario::from_yaml(&step_yaml(
+            "{ cards: [EX12-076], ordinal: 1, dcgo_only: true }",
+        ))
+        .expect("parses");
         let yaml = serde_yml::to_string(&s.steps[0].act).expect("serializes");
-        assert!(yaml.contains("dcgo_only"), "flag survives serialization: {yaml}");
+        assert!(
+            yaml.contains("dcgo_only"),
+            "flag survives serialization: {yaml}"
+        );
         let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
         assert_eq!(back, s.steps[0].act);
     }
@@ -2247,8 +2401,12 @@ mod interaction_tests {
 
     #[test]
     fn covers_rejects_malformed_duplicate_and_empty_lists() {
-        assert!(with("covers: [BT7-056#effect#0, on_play]\n").unwrap_err().contains("on_play"));
-        assert!(with("covers: [BT7-056#effect#0, BT7-056#effect#0]\n").unwrap_err().contains("twice"));
+        assert!(with("covers: [BT7-056#effect#0, on_play]\n")
+            .unwrap_err()
+            .contains("on_play"));
+        assert!(with("covers: [BT7-056#effect#0, BT7-056#effect#0]\n")
+            .unwrap_err()
+            .contains("twice"));
         assert!(with("covers: []\n").unwrap_err().contains("covers nothing"));
     }
 
@@ -2263,14 +2421,17 @@ mod interaction_tests {
 
     #[test]
     fn an_interaction_id_must_carry_its_sources_prefix() {
-        let err = with("interaction: { id: \"qa:Q1601\", source: probe, kind: positive }\n")
-            .unwrap_err();
+        let err =
+            with("interaction: { id: \"qa:Q1601\", source: probe, kind: positive }\n").unwrap_err();
         assert!(err.contains("probe:"), "got: {err}");
     }
 
     #[test]
     fn an_interaction_block_rejects_unknown_keys_and_sources() {
-        assert!(with("interaction: { id: \"qa:Q1\", source: qa, kind: positive, gating: true }\n").is_err());
+        assert!(
+            with("interaction: { id: \"qa:Q1\", source: qa, kind: positive, gating: true }\n")
+                .is_err()
+        );
         assert!(with("interaction: { id: \"x:Q1\", source: forum, kind: positive }\n").is_err());
         assert!(with("interaction: { id: \"qa:Q1\", source: qa, kind: sideways }\n").is_err());
     }
@@ -2300,7 +2461,11 @@ mod interaction_tests {
 
     #[test]
     fn malformed_probe_ids_are_refused() {
-        for id in ["probe:BT7-056:scope", "probe:BT7-056#effect#0", "probe:BT7-056#effect#0:scope:pos"] {
+        for id in [
+            "probe:BT7-056:scope",
+            "probe:BT7-056#effect#0",
+            "probe:BT7-056#effect#0:scope:pos",
+        ] {
             let y = format!("interaction: {{ id: \"{id}\", source: probe, kind: positive }}\n");
             assert!(with(&y).is_err(), "{id} must be refused");
         }
@@ -2357,7 +2522,10 @@ mod interaction_tests {
 
     #[test]
     fn the_new_blocks_round_trip_through_yaml() {
-        let s = with(&format!("covers: [BT7-056#effect#0, BT7-056#inherited#0]\n{RULING}")).unwrap();
+        let s = with(&format!(
+            "covers: [BT7-056#effect#0, BT7-056#inherited#0]\n{RULING}"
+        ))
+        .unwrap();
         let yaml = serde_yml::to_string(&s).unwrap();
         let back = Scenario::from_yaml(&yaml).expect("re-parses");
         assert_eq!(back.covers, s.covers);
@@ -2365,10 +2533,10 @@ mod interaction_tests {
         assert_eq!(back.expect_ruling, s.expect_ruling);
     }
 
-    /// Every committed scenario must still parse, and every clause exam must
-    /// still cover exactly its own clause -- the schema extension is additive
-    /// (design D8). Interaction exams (an `interaction:` block) are the ones
-    /// allowed to use the new blocks.
+    /// Every committed scenario must still parse. Composed clause exams may
+    /// name several exercised clauses, just like interaction exams; both must
+    /// retain their primary clause. Legacy omitted-covers behavior is checked
+    /// separately above.
     #[test]
     fn every_committed_scenario_still_parses() {
         let root = std::env::var("DIGIMON_REPO_ROOT")
@@ -2387,15 +2555,18 @@ mod interaction_tests {
             }
         }
         files.sort();
-        assert!(files.len() > 100, "expected the committed corpus under {}", dir.display());
+        assert!(
+            files.len() > 100,
+            "expected the committed corpus under {}",
+            dir.display()
+        );
         let mut failures = Vec::new();
         for f in &files {
             let text = std::fs::read_to_string(f).unwrap();
             match Scenario::from_yaml(&text) {
-                Ok(s) if s.interaction.is_some() => {}
-                Ok(s) if s.covered_clauses() == vec![s.clause.clone()] => {}
+                Ok(s) if s.covered_clauses().contains(&s.clause) => {}
                 Ok(_) => failures.push(format!(
-                    "{}: a clause exam (no `interaction:`) covers more than its own clause",
+                    "{}: covered clauses omit the primary clause",
                     f.display()
                 )),
                 Err(e) => failures.push(format!("{}: {e}", f.display())),
@@ -2442,7 +2613,10 @@ mod materials_tests {
     fn materials_and_cards_together_are_refused() {
         let err = Scenario::from_yaml(&step_yaml("{ materials: [EX12-004], cards: [EX12-011] }"))
             .expect_err("two answer forms must be refused");
-        assert!(err.contains("materials"), "the message names the form: {err}");
+        assert!(
+            err.contains("materials"),
+            "the message names the form: {err}"
+        );
     }
 
     /// An empty declaration declares nothing -- refused rather than silently
@@ -2457,10 +2631,8 @@ mod materials_tests {
     /// A material declaration is a SHARED decision; it can never be DCGO-only.
     #[test]
     fn materials_with_dcgo_only_is_refused() {
-        let s = Scenario::from_yaml(&step_yaml(
-            "{ materials: [EX12-004], dcgo_only: true }",
-        ))
-        .expect("parses -- the clash is caught at lowering, with a fuller message");
+        let s = Scenario::from_yaml(&step_yaml("{ materials: [EX12-004], dcgo_only: true }"))
+            .expect("parses -- the clash is caught at lowering, with a fuller message");
         assert!(matches!(
             &s.steps[0].act,
             StepAction::SelectDcgoOnly(SelectPayload::Materials(_))
@@ -2469,8 +2641,8 @@ mod materials_tests {
 
     #[test]
     fn materials_round_trips() {
-        let s = Scenario::from_yaml(&step_yaml("{ materials: [EX12-004, EX12-011] }"))
-            .expect("parses");
+        let s =
+            Scenario::from_yaml(&step_yaml("{ materials: [EX12-004, EX12-011] }")).expect("parses");
         let yaml = serde_yml::to_string(&s.steps[0].act).expect("serializes");
         let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
         assert_eq!(back, s.steps[0].act);

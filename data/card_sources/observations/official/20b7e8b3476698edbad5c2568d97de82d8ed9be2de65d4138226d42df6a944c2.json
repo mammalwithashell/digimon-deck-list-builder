@@ -1,0 +1,68 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "P-149",
+    "card_type": "Digi-Egg",
+    "colors": [
+      "Purple"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "digi_egg",
+        "level": 2,
+        "name": "Minomon",
+        "play_cost": null,
+        "text_sections": [
+          {
+            "label": "Security Effect",
+            "text": "[When Attacking] [Once Per Turn] If this Digimon is multicolored, by trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon."
+          }
+        ]
+      }
+    ],
+    "form": "In-Training",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 2,
+    "name": "Minomon",
+    "play_cost": null,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522901",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-149.png?260529",
+      "printing_id": "P-149"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Security Effect",
+        "text": "[When Attacking] [Once Per Turn] If this Digimon is multicolored, by trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon."
+      }
+    ],
+    "type": "Larva"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "20b7e8b3476698edbad5c2568d97de82d8ed9be2de65d4138226d42df6a944c2",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "4163c69eeb2accbdaaf7fd53d0819dbe2822df97d5e385efc9b7a115f3f090d2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522901:P-149:P-149",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522901"
+}

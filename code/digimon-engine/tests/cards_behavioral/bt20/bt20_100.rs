@@ -79,6 +79,9 @@ impl CardEffect for CancelCostDeletion {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         vec![Effect::when_would_be_deleted(card)
             .name("Cancel cost deletion")
+            .replacement_condition(|ctx, _| {
+                ctx.replacement_cause() == Some(ReplacementCause::Cost)
+            })
             .replacement_process(|rctx| {
                 if matches!(rctx.cause, ReplacementCause::Cost) {
                     rctx.cancel();
@@ -332,6 +335,12 @@ fn bt20_100_unpaid_delay_cost_does_not_prevent_original_leave() {
 
     r.game
         .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+    let offered = r.pending_selection_view().expect("Delay must offer a decision");
+    assert_eq!(offered.selecting_player, 0);
+    assert!(offered.is_optional, "only Last Guardian is eligible on the original leave");
+    assert!(offered.valid_action_ids.contains(&REPLACEMENT_ACCEPT));
+    assert!(digimon_engine::action::mask::build_action_mask(&r.game, 0)
+        [REPLACEMENT_ACCEPT as usize] > 0.0);
     r.game
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("attempt BT20-100 Delay prevention");

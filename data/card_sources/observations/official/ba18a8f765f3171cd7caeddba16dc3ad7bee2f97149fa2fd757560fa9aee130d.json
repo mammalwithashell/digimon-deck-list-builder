@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Navi",
+    "card_id": "BT22-016",
+    "colors": "Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Stnd./Appmon",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [Entertainment] or [Awakening] trait among them to the hand. Return the rest to the bottom of the deck."
+      },
+      {
+        "label": "Link DP",
+        "text": "+2000 DP"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Linking] Trash any 1 digivolution card of 1 of your opponent's Digimon."
+      }
+    ],
+    "type": "Broadcasting"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "ba18a8f765f3171cd7caeddba16dc3ad7bee2f97149fa2fd757560fa9aee130d",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "986ef673f9ca6598d506b8862fff404d770ff68a1b088540d068ca1515958eb4",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT22-016",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT22-016"
+}

@@ -80,6 +80,10 @@ impl BatchedPolicyValueEvaluator {
             .map_err(|e| InferenceError::LoadFailed(e.to_string()))?
             .commit_from_file(path)
             .map_err(|e| InferenceError::LoadFailed(e.to_string()))?;
+        super::contract::validate_session_contract(
+            &session,
+            &crate::tensor_profiles::default_profile(),
+        )?;
         let output_names: Vec<String> = session
             .outputs()
             .iter()

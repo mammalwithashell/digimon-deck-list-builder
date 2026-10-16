@@ -381,6 +381,7 @@ fn digimon_with_text(card_id: &str, effect_text: &str) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         dual: None,
         effect_class_name: card_id.to_string(),
         index: 0,

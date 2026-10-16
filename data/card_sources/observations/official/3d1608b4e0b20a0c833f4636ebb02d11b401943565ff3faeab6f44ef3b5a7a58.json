@@ -1,0 +1,42 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "ST19-04",
+    "colors": "Yellow Black",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "dp": "2000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] By trashing 1 card with the [Puppet] trait in your hand, ＜Draw 2＞. (Draw 2 cards from your deck.)"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)"
+      }
+    ],
+    "type": "Puppet"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3d1608b4e0b20a0c833f4636ebb02d11b401943565ff3faeab6f44ef3b5a7a58",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "5a3f568c51bd58daca5bb9b9d57ffe2276b9a3859826799acd3d3322417d06de",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:ST19-04",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/ST19-04"
+}

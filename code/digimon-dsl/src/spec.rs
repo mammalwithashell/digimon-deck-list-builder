@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 pub struct CardSpec {
     /// Primary key — must match `cards.json` `card_id`.
     pub card: String,
+    /// Source-bound printed deck-copy rule; not a format restriction.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deck_rule: Option<crate::deck_rule::DeckCopyRule>,
     /// Authored name — cross-checked against `cards.json` `card_name_eng`.
     pub name: String,
     /// Card kind.

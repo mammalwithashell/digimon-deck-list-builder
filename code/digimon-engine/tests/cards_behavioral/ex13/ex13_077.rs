@@ -410,22 +410,33 @@ fn ex13_077_on_play_ally_attacks_without_suspending_then_one_effect_per_two_colo
         let v = runner.pending_selection_view().unwrap();
         runner.execute_action(v.selecting_player, v.valid_action_ids[0]).unwrap();
     }
-    assert_eq!(runner.security_count(1), opp_sec0 - 1, "the attack checked security");
+    assert_eq!(runner.security_count(1), opp_sec0, "the originating effect finishes before security checks");
+    assert!(runner.game.pending_attack.is_some(), "the declared attack waits for the effect tail");
     assert!(!runner.game.players[0].battle_area[ally.index as usize].is_suspended, "no suspend");
 
     // White + Red = 2 colors → exactly 1 effect.
     assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
-    let opp_trash0 = runner.trash_size(1); // 5 PAD + the checked security card
+    let opp_trash0 = runner.trash_size(1);
+    assert_eq!(opp_trash0, 5, "only the five preexisting PAD cards can pay this cost");
+    let mode_view = runner.pending_selection_view().unwrap();
+    let mode_mask = build_action_mask(&runner.game, mode_view.selecting_player);
+    assert!(mode_view.valid_action_ids.iter().all(|a| mode_mask[*a as usize] > 0.0));
     runner.execute_branch(1).expect("return-5 mode");
     assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice), "'by returning' yes/no");
     runner.execute_branch(0).expect("return");
     for _ in 0..5 {
         let v = runner.pending_selection_view().expect("return pick");
+        assert!(runner.game.pending_attack.is_some());
+        assert_eq!(runner.security_count(1), opp_sec0, "security cannot pay the unfinished effect cost");
         let a = non_pass(&runner)[0];
+        assert!(build_action_mask(&runner.game, v.selecting_player)[a as usize] > 0.0);
         runner.execute_action(v.selecting_player, a).unwrap();
     }
     assert!(runner.pending_selection_view().is_none(), "only one effect for 2 colors");
-    assert_eq!(runner.trash_size(1), opp_trash0 - 5);
+    assert!(runner.game.pending_attack.is_none(), "the attack finishes after the effect tail");
+    assert_eq!(runner.security_count(1), opp_sec0 - 1, "the attack checked security");
+    assert!(!runner.game.players[0].battle_area[ally.index as usize].is_suspended, "no suspend after the complete attack");
+    assert_eq!(runner.trash_size(1), opp_trash0 - 5 + 1, "return five, then trash the checked security card");
     assert_eq!(runner.deck_size(1), opp_deck0 + 5);
     assert_eq!(runner.security_count(0), own_sec0 + 1, "<Recovery +1>");
 }

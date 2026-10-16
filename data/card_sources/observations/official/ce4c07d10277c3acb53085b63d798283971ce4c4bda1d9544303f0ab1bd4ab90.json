@@ -1,0 +1,75 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "EX12-001",
+    "card_type": "Digi-Egg",
+    "colors": [
+      "Yellow"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "digi_egg",
+        "level": 2,
+        "name": "Nyaromon",
+        "play_cost": null,
+        "text_sections": [
+          {
+            "label": "Inherited Effect",
+            "text": "[End of Your Turn] This [VB] trait Digimon and any of your other Digimon may DNA digivolve into a [VB] trait Digimon card in the hand. Then, that DNA digivolved Digimon may attack."
+          }
+        ]
+      }
+    ],
+    "form": "In-Training",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 2,
+    "name": "Nyaromon",
+    "play_cost": null,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-001.png?260529",
+      "printing_id": "EX12-001"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "They trigger simultaneously, so you can choose their activation order.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6722",
+        "question": "I activate this card's inherited effect and DNA digivolve using two Digimon then attack with the digivolved Digimon.\nAt this time, in what order can I activate the [When Digivolving] and [When Attacking] effects on that DNA digivolved Digimon?"
+      }
+    ],
+    "rarity": "U",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[End of Your Turn] This [VB] trait Digimon and any of your other Digimon may DNA digivolve into a [VB] trait Digimon card in the hand. Then, that DNA digivolved Digimon may attack."
+      }
+    ],
+    "type": "Lesser/VB"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "ce4c07d10277c3acb53085b63d798283971ce4c4bda1d9544303f0ab1bd4ab90",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-001:EX12-001",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

@@ -1,0 +1,83 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "BT14-098",
+    "card_type": "Option",
+    "colors": [
+      "Black"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Black"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "option",
+        "level": null,
+        "name": "DCD Bomb",
+        "play_cost": 4,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Main] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, by returning 3 cards with the [D-Brigade] or [DigiPolice] trait from your trash to the top of the deck, delete up to 6 play cost's total worth of your opponent's Digimon."
+          },
+          {
+            "label": "Security Effect",
+            "text": "[Security] Activate this card's [Main] effect."
+          }
+        ]
+      }
+    ],
+    "form": "",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": null,
+    "name": "DCD Bomb",
+    "play_cost": 4,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522018",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT14-098.png?260529",
+      "printing_id": "BT14-098"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, it can.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2483",
+        "question": "Can this card's effect return the target cards to the top of the deck even when my opponent has no Digimon?"
+      }
+    ],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Main] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, by returning 3 cards with the [D-Brigade] or [DigiPolice] trait from your trash to the top of the deck, delete up to 6 play cost's total worth of your opponent's Digimon."
+      },
+      {
+        "label": "Security Effect",
+        "text": "[Security] Activate this card's [Main] effect."
+      }
+    ],
+    "type": ""
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "7c85c752a33797b2974a04ac3b2084475165df55733e9b8d9bd1020737ea5eb4",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "584d4d7e8b51b94ff3fd1355d7146332039728ba31da862154e4eb0e6fc638a9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522018:BT14-098:BT14-098",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522018"
+}

@@ -115,7 +115,13 @@ def _model(graph_bytes: bytes, opset_version: int = 11) -> bytes:
     opset = _field_str(1, "") + _field_varint(2, opset_version)
     opset_field = _field_bytes(8, opset)
     graph_field = _field_bytes(7, graph_bytes)
-    return ir_version + opset_field + graph_field
+    # This graph is created here under the actual compact contract, never
+    # retroactively relabelled from an old checkpoint or fixture on disk.
+    import json
+    from model_contract import current_contract
+    contract = current_contract("standard_compact_v1")
+    metadata = _field_str(1, "digimon_contract") + _field_str(2, json.dumps(contract, sort_keys=True))
+    return ir_version + opset_field + graph_field + _field_bytes(14, metadata)
 
 
 # ---------------------------------------------------------------------------
@@ -195,21 +201,21 @@ def _build_invalid_no_obs(path: Path) -> None:
 
 
 @pytest.fixture(scope="session")
-def valid_mlp_path() -> Path:
-    if not VALID_MLP.exists():
-        _build_valid_mlp(VALID_MLP)
-    return VALID_MLP
+def valid_mlp_path(tmp_path_factory) -> Path:
+    path = tmp_path_factory.mktemp("model-contract") / VALID_MLP.name
+    _build_valid_mlp(path)
+    return path
 
 
 @pytest.fixture(scope="session")
-def valid_lstm_path() -> Path:
-    if not VALID_LSTM.exists():
-        _build_valid_lstm(VALID_LSTM)
-    return VALID_LSTM
+def valid_lstm_path(tmp_path_factory) -> Path:
+    path = tmp_path_factory.mktemp("model-contract") / VALID_LSTM.name
+    _build_valid_lstm(path)
+    return path
 
 
 @pytest.fixture(scope="session")
-def invalid_no_obs_path() -> Path:
-    if not INVALID_NO_OBS.exists():
-        _build_invalid_no_obs(INVALID_NO_OBS)
-    return INVALID_NO_OBS
+def invalid_no_obs_path(tmp_path_factory) -> Path:
+    path = tmp_path_factory.mktemp("model-contract") / INVALID_NO_OBS.name
+    _build_invalid_no_obs(path)
+    return path

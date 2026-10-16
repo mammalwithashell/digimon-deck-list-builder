@@ -52,7 +52,7 @@
                   "at": {
                     "type": "integer",
                     "minimum": 0,
-                    "description": "Scenario step index the observable is checked after (same as assert:)."
+                    "description": "Zero-based scenario step index whose pre-decision projection is checked (same as assert:). Use a later observation step to check an earlier action's resolved outcome."
                   },
                   "that": {
                     "type": "array",
@@ -80,9 +80,17 @@
                             "p0.trash",
                             "p1.trash",
                             "p0.field",
-                            "p1.field"
+                            "p1.field",
+                            "p0.legal_option_plays",
+                            "p1.legal_option_plays",
+                            "p0.selection_can_decline",
+                            "p1.selection_can_decline",
+                            "p0.selection_candidates",
+                            "p1.selection_candidates",
+                            "p0.movement_observations",
+                            "p1.movement_observations"
                           ],
-                          "description": "A projection key the exam checker understands (exam::assertions::ASSERTION_KEYS). Security is a COUNT."
+                          "description": "A projection key the exam checker understands (exam::assertions::ASSERTION_KEYS). Security is a COUNT. legal_option_plays is a sorted multiset of legal Option card IDs in the actual Main decision actor's hand; request it only at that actor's Main boundary. Missing measurement fails, even when the expected list is empty. selection_can_decline is the live selecting actor's boolean capability to decline the current pending choice; request only at that actor's pending selection. Missing measurement never means false. selection_candidates is the exact multiset of offered card IDs at the live hand-selecting actor's prompt; physical copies stay duplicated. Unsupported prompt or missing measurement never means an empty list."
                         },
                         "value_json": {
                           "type": "string",

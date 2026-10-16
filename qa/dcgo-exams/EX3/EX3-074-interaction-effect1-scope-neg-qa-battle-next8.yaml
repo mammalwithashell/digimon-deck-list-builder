@@ -1,0 +1,128 @@
+# Source-derived draft; independent verification pending.
+card: EX3-074
+clause: EX3-074#effect#1
+interaction:
+  id: probe:EX3-074#effect#1:scope:neg
+  source: probe
+  kind: negative
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST2-11
+    - EX3-074
+    - EX3-018
+    - BT20-027
+    - BT1-090
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-05
+    rest: EX3-074-interaction-effect1-scope-neg-qa-battle-next8-p0
+  p1:
+    stack:
+    - ST1-11
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - ST2-03
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-05
+    rest: EX3-074-interaction-effect1-scope-neg-qa-battle-next8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST2-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: EX3-074
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX3-018
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert:
+- at: 11
+  that:
+    memory: -2
+    p0.field:
+    - card_id: EX3-074
+      sources:
+      - ST2-11
+      - EX3-018
+      suspended: false
+    p0.hand:
+    - BT20-027
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093

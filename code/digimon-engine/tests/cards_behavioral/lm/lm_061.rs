@@ -133,6 +133,25 @@ fn delayed_self_in_battle_area(runner: &DebugRunner, player: u8) -> bool {
         })
 }
 
+// Body-only fixtures model an Option already placed by its printed Main effect.
+// Keep the real placing turn: this is not permission to activate Delay early.
+fn place_delayed_fixture(
+    runner: &mut DebugRunner,
+    owner: u8,
+    card: &str,
+) -> digimon_engine::permanent::PermanentHandle {
+    let handle = runner.place_on_field(owner, card, Some(owner as u16));
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.player_mut(owner).battle_area[handle.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::MainPhaseActivated,
+            placed_on_turn,
+        };
+    handle
+}
+
 #[test]
 fn lm_061_is_black_red_option_cost_2_with_name_bypass() {
     let runner = builder().start();
@@ -178,7 +197,7 @@ fn lm_061_bypass_disabled_by_same_name_in_battle_area() {
         .memory(10)
         .start();
     runner.place_on_field(0, "OFF-TAMER", Some(0));
-    runner.place_on_field(0, CARD_ID, Some(0));
+    place_delayed_fixture(&mut runner, 0, CARD_ID);
     runner.game.enter_main_phase();
     assert_eq!(
         build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
@@ -307,7 +326,7 @@ fn delay_runner(hand: &[&str]) -> (DebugRunner, PermanentHandle) {
         .deck(1, &["FILL"; 6])
         .memory(5)
         .start();
-    let delay_perm = runner.place_on_field(0, CARD_ID, Some(0));
+    let delay_perm = place_delayed_fixture(&mut runner, 0, CARD_ID);
     (runner, delay_perm)
 }
 

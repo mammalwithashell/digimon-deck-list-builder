@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "EX11-022",
+    "colors": "Yellow Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "7000",
+    "form": "Ultimate",
+    "play_cost": "7",
+    "qa": [
+      "Yes, it's deleted upon the deletion timing."
+    ],
+    "special_digivolution_condition": "[Digivolve] Yellow/purple Lv.4 w/[Puppet] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Yellow/purple Lv.4 w/[Puppet] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Scapegoat＞ [On Play] [When Digivolving] You may play 1 [Puppet] trait Digimon card with 4000 DP or less from your hand or trash without paying the cost. At turn end, delete the Digimon this effect played."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, it doesn't leave."
+      }
+    ],
+    "type": "Puppet/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "316db7ff238f86c370e65184b1b70136c06a1fae3a81d9d6416b5d7c494b7d83",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "790fcc990f15afbb017805f1176f92a303ed9a26e3ffae40e53eedd4fca16f33",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX11-022",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX11-022"
+}

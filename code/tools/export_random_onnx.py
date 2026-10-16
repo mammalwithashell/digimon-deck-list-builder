@@ -32,6 +32,7 @@ CODE_ROOT = Path(__file__).resolve().parents[1]
 if str(CODE_ROOT) not in sys.path:
     sys.path.insert(0, str(CODE_ROOT))
 
+from model_contract import current_contract, embed_onnx_contract
 from digimon_gym.tensor_profiles import get_tensor_profile
 
 HIDDEN_SIZE = 256
@@ -93,15 +94,11 @@ def _inference_mode(model: nn.Module) -> nn.Module:
 def write_export_metadata(output_path: str | Path, observation_layout) -> None:
     """Write ONNX profile metadata next to the exported model."""
     metadata = {
-        "observation_profile": observation_layout.id,
-        "tensor_version": observation_layout.tensor_version,
-        "feature_schema_version": observation_layout.feature_schema_version,
-        "tensor_size": observation_layout.tensor_size,
-        "tensor_layout_hash": observation_layout.layout_hash,
-        "action_space_size": ACTION_SPACE_SIZE,
+        **current_contract(observation_layout.id),
         "card_registry_capacity": REGISTRY_CAPACITY,
         "embedding_dim": EMBEDDING_DIM,
     }
+    embed_onnx_contract(output_path, metadata)
     meta_path = Path(f"{output_path}.meta.json")
     meta_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n")
     print(f"Wrote ONNX metadata to {meta_path}")
@@ -131,8 +128,8 @@ def export_mlp(output_path: str, observation_layout=None) -> None:
         dynamo=False,
     )
     print(f"Exported random MLP model to {output_path}")
-    _verify_mlp(output_path, tensor_size)
     write_export_metadata(output_path, observation_layout)
+    _verify_mlp(output_path, tensor_size)
 
 
 def export_lstm(output_path: str, observation_layout=None) -> None:
@@ -164,8 +161,8 @@ def export_lstm(output_path: str, observation_layout=None) -> None:
         dynamo=False,
     )
     print(f"Exported random LSTM model to {output_path}")
-    _verify_lstm(output_path, tensor_size)
     write_export_metadata(output_path, observation_layout)
+    _verify_lstm(output_path, tensor_size)
 
 
 def _verify_mlp(onnx_path: str, tensor_size: int = TENSOR_SIZE) -> None:

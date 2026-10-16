@@ -22,6 +22,7 @@ fn digimon(id: &str, level: u8, dna_costs: Vec<DnaCost>, evo_costs: Vec<EvoCost>
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: id.replace('-', "_"),
@@ -98,8 +99,25 @@ effects:
             .is_some());
     }
 
-    assert_eq!(runner.game.memory, before + 5);
-    assert_eq!(runner.game.player(0).battle_area.len(), 1);
+    // Both timings arise from the same DNA procedure; neither resolves until
+    // the controller selects an order. Preserve the origin in both orders.
+    let pending = runner.pending_selection().expect("simultaneous DNA effects");
+    assert_eq!(
+        pending.kind,
+        digimon_engine::selection::SelectionKind::TriggerOrder
+    );
+    assert_eq!(pending.valid_action_ids.len(), 2);
+    assert_eq!(runner.game.memory, before);
+    for action in pending.valid_action_ids.clone() {
+        let mut branch = DebugRunner::wrap(runner.game.clone());
+        assert!(
+            digimon_engine::action::mask::build_action_mask(&branch.game, 0)[action as usize] > 0.5
+        );
+        branch.game.resolve_selection(0, action).unwrap();
+        assert_eq!(branch.game.memory, before + 5);
+        assert_eq!(branch.game.player(0).battle_area.len(), 1);
+        assert!(branch.pending_selection().is_none());
+    }
 }
 
 /// An optional [When Digivolving] waits on its accept/decline prompt while

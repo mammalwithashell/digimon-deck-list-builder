@@ -13,6 +13,40 @@
 //! -- before Unity is ever launched. That is the whole reason the exam lowers
 //! up front rather than letting each engine interpret the symbolic form itself.
 
+#[cfg(test)]
+mod dna_wire_order_rule_tests {
+    use super::*;
+    use digimon_engine::debug_runner::{make_test_card_with_level,make_test_dna_card,DebugRunner};
+    use digimon_engine::action::DNA_DIGIVOLVE_START;
+    fn fixture() -> Game {
+        let mut r=DebugRunner::builder()
+            .add_card(make_test_card_with_level("LEFT","Left",5))
+            .add_card(make_test_card_with_level("RIGHT","Right",6))
+            .add_card(make_test_dna_card("RESULT","Result",5,6,0))
+            .hand(0,&["RESULT"]).memory(5).start();
+        r.place_on_field(0,"LEFT",None);
+        r.place_on_field(0,"RIGHT",None);
+        r.game
+    }
+    #[test]
+    fn printed_order_is_native_wire_top_to_bottom_order() {
+        let g=fixture();
+        let refs=vec!["own.field.0".into(),"own.field.1".into()];
+        assert_eq!(dna_material_ids_for_wire(&g,0,DNA_DIGIVOLVE_START,&refs).unwrap(),["LEFT","RIGHT"]);
+    }
+    #[test]
+    fn reversed_authored_picks_still_emit_printed_top_to_bottom_order() {
+        let g=fixture();
+        let refs=vec!["own.field.1".into(),"own.field.0".into()];
+        for game in [g.clone(),g] {
+            assert_eq!(dna_material_ids_for_wire(&game,0,DNA_DIGIVOLVE_START,&refs).unwrap(),["LEFT","RIGHT"],
+                "DCGO consumes ordered material frames, not an unordered recipe pair");
+        }
+    }
+}
+
+#[path="native_play_tracking.rs"]
+mod native_play_tracking;
 use std::collections::HashMap;
 
 use digimon_engine::dcgo_recording::{FrameTarget, SelectionRow};
@@ -46,6 +80,11 @@ const SCENARIO_FIRST_PLAYER: PlayerId = 0;
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SelectWire {
     pub card_ids: Vec<String>,
+    pub permanent_targets: Vec<crate::exam::permanent_target::PermanentTarget>,
+    /// Supported selector captured at lowering; checked only at live emission.
+    pub permanent_prompt: Option<String>,
+    /// Offline actions remain resolvable; live emission must reject this reason.
+    pub unsupported_reason: Option<String>,
     /// Which of the SAME identity's candidates DCGO should take, 0-based.
     /// Only meaningful for DCGO's `MultipleSkills` prompt (our
     /// `TriggerOrder`), whose candidates are stacked TRIGGERS rather than
@@ -134,6 +173,7 @@ pub enum EotAttackTarget {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LoweredStep {
     Action(u16),
+    NativePlay { action_id:u16, bind_play_ref:String },
     Select(SelectWire),
     /// task_69f10a66 Family 1 — an action lowered while OUR engine is parked
     /// in `GamePhase::EndOfTurnAction`: the sim surface for the end-of-turn
@@ -233,6 +273,9 @@ pub enum LoweredStep {
 /// attack has no defender; only a digivolve has a digivolve target).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct FieldRefs {
+    pub attacker_permanent_target: Option<crate::exam::permanent_target::PermanentTarget>,
+    pub attack_permanent_target: Option<crate::exam::permanent_target::PermanentTarget>,
+    pub unsupported_reason: Option<String>,
     pub attacker: Option<String>,
     pub attack_target: Option<String>,
     /// The permanent whose `[Main]` / link effect is activated.
@@ -263,7 +306,7 @@ impl LoweredStep {
             // row (`InputDriver.BuildMainPhaseAction` -> the LinkEffect
             // `ActivatePermanentAction`). The host pick both engines then
             // park is the NEXT scenario step's row, not this one's.
-            LoweredStep::Action(_) => 1,
+            LoweredStep::Action(_) | LoweredStep::NativePlay { .. } => 1,
             // The same one `main_phase` row, with the named permanents'
             // identities riding beside the action id.
             LoweredStep::FieldAction { .. } => 1,
@@ -335,6 +378,8 @@ impl ScenarioAdapter {
         let mut game = construct(&deck_p0, &deck_p1, card_data, s.seed, first_player)
             .map_err(|e| format!("scenario game setup failed: {e}"))?;
 
+        game.enable_native_play_observation(true);
+        let mut native_plays=native_play_tracking::NativePlayTracking::default();
         let mut steps = Vec::with_capacity(s.steps.len());
         // Scenario-step index of each StepSpec. A step is usually one spec,
         // but a `materials:` / `dna:` declaration our engine splits into
@@ -352,6 +397,7 @@ impl ScenarioAdapter {
         let mut lowered_owner: Vec<usize> = Vec::with_capacity(s.steps.len());
 
         for (i, step) in s.steps.iter().enumerate() {
+            native_plays.collect(&mut game)?;
             let actor = step.actor as PlayerId;
             match &step.act {
                 // MULTI-PICK MATERIAL DECLARATION ([Assembly] / [DigiXros]).
@@ -385,7 +431,7 @@ impl ScenarioAdapter {
                         // once against the first element's prompt.
                         let expect_for_this = if n == 0 { step.expect.as_ref() } else { None };
                         let (row, mut wire) =
-                            build_selection_row(&game, i, actor, &one, expect_for_this)?;
+                            build_selection_row_tracked(&game, i, actor, &one, expect_for_this, &native_plays)?;
                         if n == 0 {
                             check_select_expectations(&game, i, decl, step.expect.as_ref())?;
                             // The single wire row carries the WHOLE declaration.
@@ -428,7 +474,7 @@ impl ScenarioAdapter {
                 StepAction::Select(payload) => {
                     select_sources.extend(select_source(&game, i));
                     let (row, wire) =
-                        build_selection_row(&game, i, actor, payload, step.expect.as_ref())?;
+                        build_selection_row_tracked(&game, i, actor, payload, step.expect.as_ref(), &native_plays)?;
                     check_select_expectations(&game, i, payload, step.expect.as_ref())?;
                     steps.push(StepSpec {
                         actor,
@@ -474,7 +520,7 @@ impl ScenarioAdapter {
                     }
                     select_sources.extend(select_source(&game, i));
                     let (row, wire) =
-                        build_selection_row(&game, i, actor, payload, step.expect.as_ref())?;
+                        build_selection_row_tracked(&game, i, actor, payload, step.expect.as_ref(), &native_plays)?;
                     let _ = wire;
                     check_select_expectations(&game, i, payload, step.expect.as_ref())?;
                     steps.push(StepSpec {
@@ -520,12 +566,8 @@ impl ScenarioAdapter {
                     })?;
 
                     let refs: Vec<String> = materials.iter().map(|m| own_field_ref(m)).collect();
-                    let mut material_ids = Vec::with_capacity(refs.len());
-                    for r in &refs {
-                        let (_, top) = resolve_target_ref(&game, actor, r)
-                            .map_err(|e| format!("step {i}: dna material {e}"))?;
-                        material_ids.push(top);
-                    }
+                    let material_ids = dna_material_ids_for_wire(&game, actor, action_id, &refs)
+                        .map_err(|e| format!("step {i}: dna material {e}"))?;
 
                     steps.push(StepSpec {
                         actor,
@@ -565,7 +607,7 @@ impl ScenarioAdapter {
                         ));
                     }
                     let payload = SelectPayload::Targets(refs);
-                    let (row, _wire) = build_selection_row(&game, i, actor, &payload, None)?;
+                    let (row, _wire) = build_selection_row_tracked(&game, i, actor, &payload, None, &native_plays)?;
                     steps.push(StepSpec {
                         actor,
                         action_id: 0,
@@ -635,7 +677,18 @@ impl ScenarioAdapter {
                         board_p1: None,
                     });
                     spec_owner.push(i);
-                    lowered.push(classify_lowered_action(&game, actor, action_id)?);
+                    let mut classified=classify_scenario_action(&game, i, actor, &step.act, action_id)?;
+                    attach_native_attack_targets(&game,actor,action_id,&native_plays,&mut classified);
+                    use digimon_engine::action::space::{PLAY_HAND_START,PLAY_HAND_END};
+                    let classified=if game.pending_selection.is_none()
+                        && game.current_phase==digimon_engine::enums::GamePhase::Main
+                        && (PLAY_HAND_START..PLAY_HAND_END).contains(&action_id) {
+                        let card=game.players[actor as usize].hand[(action_id-PLAY_HAND_START) as usize].handle();
+                        let bind_play_ref=format!("native-play-{i}");
+                        native_plays.begin(bind_play_ref.clone(),actor,card);
+                        LoweredStep::NativePlay {action_id,bind_play_ref}
+                    } else {classified};
+                    lowered.push(classified);
                     lowered_owner.push(i);
 
                     // `Game::decode_action` returns unit and SILENTLY IGNORES an
@@ -723,6 +776,7 @@ impl ScenarioAdapter {
             .iter()
             .filter_map(|l| match l {
                 LoweredStep::Action(id) => Some(*id),
+                LoweredStep::NativePlay {action_id,..} => Some(*action_id),
                 LoweredStep::FieldAction { action_id, .. } => Some(*action_id),
                 LoweredStep::DnaDeclaration { action_id, .. } => Some(*action_id),
                 LoweredStep::EndOfTurnGate { action_id, .. } => Some(*action_id),
@@ -1297,6 +1351,42 @@ fn kind_is_pick_shaped(kind: &SelectionKind) -> bool {
     )
 }
 
+
+/// An explicitly authored candidate multiset must be measured before choosing.
+/// Unknown identity is a failure, not an empty/partial candidate list.
+fn check_candidate_expectations(game: &Game, i: usize, expect: Option<&Expect>) -> Result<(), String> {
+    let Some(expected) = expect.map(|e| &e.candidates).filter(|c| !c.is_empty()) else {
+        return Ok(());
+    };
+    let pending = game.pending_selection.as_ref().ok_or_else(|| format!(
+        "step {i}: expect.candidates cannot be checked: our engine parks no selection"
+    ))?;
+    let mut actual: Vec<String> = if pending.kind == SelectionKind::TriggerOrder {
+        trigger_order_candidates(game).ok_or_else(|| format!(
+            "step {i}: expect.candidates cannot be checked: a trigger source identity is unmeasured"
+        ))?.into_iter().map(|c| c.card_id).collect()
+    } else {
+        if !matches!(pending.kind, SelectionKind::Hand | SelectionKind::Trash | SelectionKind::OwnField
+            | SelectionKind::OppField | SelectionKind::AnyField | SelectionKind::Reveal
+            | SelectionKind::RevealBucket { .. } | SelectionKind::UnionZone { .. }) {
+            return Err(format!("step {i}: expect.candidates has no faithful candidate mapping for {:?}", pending.kind));
+        }
+        pending.valid_action_ids.iter()
+            .filter(|&&id| id != digimon_engine::action::space::PASS)
+            .map(|&id| crate::exam::run::candidate_card(game, pending, id).ok_or_else(|| format!(
+                "step {i}: expect.candidates cannot be checked: action {id} has no measured card identity"
+            )))
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    let mut wanted = expected.clone();
+    wanted.sort();
+    actual.sort();
+    if actual != wanted {
+        return Err(format!("step {i}: expect.candidates is {wanted:?}, but our legal candidate multiset is {actual:?}"));
+    }
+    Ok(())
+}
+
 /// Sim-side `expect.prompt` on a select step: assert loosely against the
 /// parked prompt's kind where the kind->DCGO mapping is unambiguous, and say
 /// so out loud where it is not.
@@ -1306,6 +1396,7 @@ fn check_select_expectations(
     payload: &SelectPayload,
     expect: Option<&Expect>,
 ) -> Result<(), String> {
+    check_candidate_expectations(game, i, expect)?;
     let Some(want) = expect.and_then(|e| e.prompt.as_deref()) else {
         return Ok(());
     };
@@ -1760,16 +1851,43 @@ fn describe_candidates(candidates: &[TriggerCandidate]) -> String {
         .join(", ")
 }
 
-/// Normalize a `dna:` material reference to the `own.field.N` form
-/// `resolve_target_ref` / `SelectPayload::Targets` consume.
-///
-/// The verb's own grammar is the one the rest of the format uses for a board
-/// slot (`field.N`), and DNA materials are always the actor's own Digimon
-/// (general_rule.pdf §6-5-1-2-2 "digivolve multiple Digimon in YOUR battle
-/// area"), so a bare `field.N` means `own.field.N`. The parser has already
-/// refused an `opp.` reference (`DNA_MATERIALS_RULE`), so an explicit
-/// `own.field.N` passes through untouched and anything else is left alone to
-/// fail loudly in `resolve_target_ref` with its own message.
+/// DCGO's DNA frame list is top-to-bottom, while authored material selections
+/// may choose either side first. Reuse the engine's printed recipe orientation
+/// (including result-scoped identities), not the author's selection order.
+fn dna_material_ids_for_wire(
+    game: &Game,
+    actor: PlayerId,
+    action_id: u16,
+    refs: &[String],
+) -> Result<Vec<String>, String> {
+    use digimon_engine::action::space::{DNA_DIGIVOLVE_START, DNA_DIGIVOLVE_END};
+    use digimon_engine::permanent::PermanentHandle;
+    if refs.len() != 2 || !(DNA_DIGIVOLVE_START..DNA_DIGIVOLVE_END).contains(&action_id) {
+        return Err("DNA declaration requires exactly two materials and a DNA hand action".into());
+    }
+    let mut materials = refs.iter().map(|r| resolve_target_ref(game, actor, r)).collect::<Result<Vec<_>,_>>()?;
+    if materials.iter().any(|(f,_)| f.player != actor || f.frame < 0) || materials[0].0.frame == materials[1].0.frame {
+        return Err("DNA materials must be two distinct own permanents".into());
+    }
+    let result=game.player(actor).hand.get((action_id-DNA_DIGIVOLVE_START) as usize)
+        .ok_or("DNA result hand card missing")?;
+    let a=PermanentHandle{player:actor,index:materials[0].0.frame as u8};
+    let b=PermanentHandle{player:actor,index:materials[1].0.frame as u8};
+    let extras_a=game.dna_material_extras(a,result);
+    let extras_b=game.dna_material_extras(b,result);
+    let (first_is_top,_)=digimon_engine::dna_digivolve::get_dna_stacking_order_ext(
+        &game.card_data[result.data_index],
+        (&game.player(actor).battle_area[a.index as usize],&extras_a),
+        (&game.player(actor).battle_area[b.index as usize],&extras_b),
+        &game.card_data,
+    ).ok_or("DNA pair has no printed stacking orientation")?;
+    if !first_is_top { materials.swap(0,1); }
+    Ok(materials.into_iter().map(|(_,id)|id).collect())
+}
+
+/// Normalize a DNA material's bare `field.N` reference to `own.field.N`.
+/// The parser already excludes opponent materials; invalid references remain
+/// unchanged so `resolve_target_ref` can report the original input.
 fn own_field_ref(reference: &str) -> String {
     let r = reference.trim();
     if let Some(rest) = r.strip_prefix("field.") {
@@ -1788,6 +1906,9 @@ fn resolve_target_ref(
     actor: PlayerId,
     reference: &str,
 ) -> Result<(FrameTarget, String), String> {
+    if reference == "opp.security" {
+        return Ok((FrameTarget { player: (1 - actor) as u8, frame: -1 }, String::new()));
+    }
     let parts: Vec<&str> = reference.split('.').collect();
     let err = |why: &str| {
         format!(
@@ -1908,6 +2029,24 @@ fn select_source(game: &Game, step: usize) -> Option<SelectSource> {
     })
 }
 
+fn build_selection_row_tracked(
+    game:&Game,i:usize,actor:PlayerId,payload:&SelectPayload,expect:Option<&Expect>,
+    tracking:&native_play_tracking::NativePlayTracking,
+)->Result<(SelectionRow,SelectWire),String> {
+    let (row,mut wire)=build_selection_row(game,i,actor,payload,expect)?;
+    if let Some(frames)=row.targets.as_ref() {
+        if frames.len()==wire.permanent_targets.len() {
+            for (frame,descriptor) in frames.iter().zip(&mut wire.permanent_targets) {
+                if frame.frame<0{continue;}
+                let handle=digimon_engine::permanent::PermanentHandle {player:frame.player,index:frame.frame as u8};
+                if let Some(reference)=tracking.reference(game,handle) {
+                    descriptor.version=3;descriptor.play_ref=Some(reference);
+                }
+            }
+        }
+    }
+    Ok((row,wire))
+}
 fn build_selection_row(
     game: &Game,
     i: usize,
@@ -2095,6 +2234,12 @@ fn build_selection_row(
             }
         }
         SelectPayload::Targets(refs) => {
+            if refs.iter().any(|r| r == "opp.security") {
+                if refs.len() != 1 { return Err(format!("step {i}: opp.security must be the sole attack target")); }
+                if !game.pending_selection.as_ref().is_some_and(|p| p.kind == SelectionKind::Target) {
+                    return Err(format!("step {i}: opp.security requires a live attack Target prompt"));
+                }
+            }
             let mut frames = Vec::with_capacity(refs.len());
             let mut tops = Vec::with_capacity(refs.len());
             for r in refs {
@@ -2103,8 +2248,24 @@ fn build_selection_row(
                 frames.push(frame);
                 tops.push(top);
             }
+            if frames.iter().any(|f| f.frame == -1) {
+                // DCGO SelectAttackEffect uses -1 for the opponent player.
+                wire.value = Some(-1);
+                row.prompt = "SelectAttackEffect".to_string();
+            } else {
+                match frames.iter().map(|f| {
+                    crate::exam::permanent_target::snapshot(game,digimon_engine::permanent::PermanentHandle{player:f.player,index:f.frame as u8})
+                }).collect::<Result<_,_>>() {
+                    Ok(targets) => wire.permanent_targets = targets,
+                    Err(reason) => wire.unsupported_reason = Some(format!("step {i}: {reason}")),
+                }
+                wire.permanent_prompt = if wire.optional_gate_fold {
+                    game.pending_selection.as_ref().and_then(|p| dcgo_prompt_name_for(game, &p.kind, payload)).map(str::to_owned)
+                } else { Some(row.prompt.clone()) };
+                // Never send identity-only fallback for an explicit physical target.
+                let _ = tops;
+            }
             row.targets = Some(frames);
-            wire.card_ids = tops;
         }
         SelectPayload::Value(v) => {
             row.count = Some(*v);
@@ -2571,7 +2732,9 @@ steps:
         // own candidate list.
         match &a.lowered_steps()[5] {
             LoweredStep::Select(w) => {
-                assert_eq!(w.card_ids, vec!["ST1-03".to_string()]);
+                assert!(w.card_ids.is_empty());
+                assert_eq!(w.permanent_targets[0].card_id,"ST1-03");
+                assert_eq!(w.permanent_targets[0].owner,1);
                 assert_eq!(w.value, None);
                 assert_eq!(w.bool_answer, None);
                 assert!(!w.cancel);
@@ -3119,6 +3282,9 @@ steps:
     fn ours_present_is_false_only_for_a_wholly_dcgo_only_step() {
         let wire = SelectWire {
             card_ids: Vec::new(),
+            permanent_targets: Vec::new(),
+            permanent_prompt: None,
+            unsupported_reason: None,
             ordinal: None,
             trigger: None,
             trigger_not: None,
@@ -3244,12 +3410,24 @@ steps:
     }
 
     #[test]
+    fn native_hand_plays_carry_distinct_explicit_provenance_labels() {
+        let a=two_digimon_line("{ pass: {} }");
+        let mut labels=Vec::new();
+        for i in [3usize,4] {
+            let LoweredStep::NativePlay {action_id,bind_play_ref}= &a.lowered_steps()[i] else {panic!("native declaration lost provenance")};
+            assert!(!bind_play_ref.is_empty());assert_eq!(a.lowered_steps()[i].dcgo_wire_rows(),1);
+            assert!(*action_id<digimon_engine::action::space::PLAY_HAND_END);labels.push(bind_play_ref);
+        }
+        assert_ne!(labels[0],labels[1]);
+    }
+
+    #[test]
     fn actions_that_name_no_battle_permanent_stay_plain() {
         let a = two_digimon_line("{ pass: {} }");
         let steps = a.lowered_steps();
         // pass, pass, pass, play, play, pass, pass, pass, pass
-        assert!(matches!(steps[3], LoweredStep::Action(_)), "play-from-hand: {:?}", steps[3]);
-        assert!(matches!(steps[4], LoweredStep::Action(_)), "play-from-hand: {:?}", steps[4]);
+        assert!(matches!(steps[3], LoweredStep::NativePlay {..}), "play-from-hand: {:?}", steps[3]);
+        assert!(matches!(steps[4], LoweredStep::NativePlay {..}), "play-from-hand: {:?}", steps[4]);
         assert!(steps.iter().all(|s| !matches!(s, LoweredStep::FieldAction { .. })), "{steps:?}");
     }
 
@@ -3294,4 +3472,218 @@ steps:
         // False for PASS as the row's own first answer: (PASS, 0, 1).
         assert!(!is_driver_trailing_pass(PASS, 0, 1));
     }
+}
+
+#[cfg(test)]
+mod candidate_expectation_regression_tests {
+    use super::*;
+    use crate::exam::deckbook::{ordered_deck, DeckBook};
+
+    fn scramble_line(card: &str, qa: &str, candidates: &[&str], prompt: bool) -> Result<ScenarioAdapter, String> {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+        let stem = format!("qa/dcgo-exams/LM/{card}-interaction-{qa}");
+        let text = std::fs::read_to_string(root.join(format!("{stem}.yaml"))).unwrap();
+        let mut scenario = Scenario::from_yaml(&text).unwrap();
+        let expectation = scenario.steps[7].expect.as_mut().unwrap();
+        expectation.candidates = candidates.iter().map(|s| s.to_string()).collect();
+        if !prompt { expectation.prompt = None; }
+        let book = DeckBook::load(Some(root.join(format!("{stem}-pool.json")).as_path()), root.join("data/cards.json").as_path()).unwrap();
+        let p0 = ordered_deck(&scenario.decks.p0, &book).unwrap();
+        let p1 = ordered_deck(&scenario.decks.p1, &book).unwrap();
+        ScenarioAdapter::from_scenario(&scenario, p0, p1, &crate::exam::test_support::load_card_data())
+    }
+
+    #[test]
+    fn candidate_guard_accepts_the_exact_legal_scramble_hand_in_both_colors() {
+        scramble_line("LM-027", "Q4033", &["ST1-05"], true).unwrap();
+        scramble_line("LM-028", "Q4038", &["ST2-05"], true).unwrap();
+    }
+
+    #[test]
+    fn candidate_guard_rejects_an_extra_same_color_illegal_evolution() {
+        for (card,qa,legal,illegal) in [("LM-027","Q4033","ST1-05","ST1-09"), ("LM-028","Q4038","ST2-05","ST2-08")] {
+            let error = scramble_line(card,qa,&[legal,illegal],true).expect_err("an illegal level5 must not be claimed as offered");
+            assert!(error.contains("expect.candidates"), "{error}");
+        }
+    }
+
+    #[test]
+    fn candidate_guard_compares_multiplicity_not_just_card_identity_sets() {
+        let error = scramble_line("LM-027","Q4033",&["ST1-05","ST1-05"],true).expect_err("one offered physical copy is not two");
+        assert!(error.contains("expect.candidates"), "{error}");
+    }
+
+    #[test]
+    fn candidate_guard_is_enforced_without_an_expect_prompt_field() {
+        let error = scramble_line("LM-027","Q4033",&["ST1-09"],false).expect_err("candidate-only guards must not silently return early");
+        assert!(error.contains("expect.candidates"), "{error}");
+    }
+}
+
+#[cfg(test)]
+mod player_target_tests {
+ use super::*;
+ fn attack_choice() -> Game {
+  use digimon_engine::debug_runner::{DebugRunner,make_test_card};
+  use digimon_engine::effect_context::{EffectContext,AttackTargetRestriction};
+  let mut r=DebugRunner::builder().add_card(make_test_card("ATTACKER","Attacker"))
+   .add_card(make_test_card("DEFENDER","Defender")).deck(0,&["ATTACKER";8]).deck(1,&["DEFENDER";8]).start();
+  r.skip_mulligan();let h=r.place_on_field(0,"ATTACKER",Some(0));r.place_on_field(1,"DEFENDER",Some(0));
+  r.game.players[1].battle_area[0].is_suspended=true;r.game.enter_main_phase();
+  let c=r.game.players[0].battle_area[0].top_card().handle();
+  EffectContext::new(&mut r.game,c,Some(h),0).may_attack_now(h,AttackTargetRestriction::Any,false,"This Digimon attacks").unwrap();
+  r.game
+ }
+ #[test]
+ fn symbolic_player_target_discriminates_player_from_real_defender_and_emits_minus_one(){
+  let mut g=attack_choice();
+  assert!(g.pending_selection.as_ref().unwrap().valid_action_ids.len()>=2);
+  let (row,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.security".into()]),None).unwrap();
+  assert_eq!(wire.value,Some(-1));assert!(wire.card_ids.is_empty());
+  assert_eq!(row.prompt,"SelectAttackEffect");
+  let action=resolve_next(&g,&row,0).unwrap().unwrap();
+  assert_eq!(action,digimon_engine::action::space::ATTACK_START+digimon_engine::action::space::SECURITY_TARGET);
+  g.decode_action(action,0);
+  assert_eq!(g.players[1].battle_area.len(),1,"player attack must not select the real defender");
+ }
+ #[test]
+ fn symbolic_player_target_rejects_non_target_prompt_and_mixed_targets(){
+  let g=attack_choice();
+  assert!(build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.security".into(),"opp.field.0".into()]),None).is_err());
+  let mut g=g;g.pending_selection=None;
+  assert!(build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.security".into()]),None).is_err());
+ }
+}
+
+#[cfg(test)]
+mod physical_permanent_wire_tests {
+ use super::*;
+ use digimon_engine::{debug_runner::{DebugRunner,make_test_card},permanent::PermanentHandle,selection::{PendingAttack,AttackTarget,AttackState},enums::GamePhase};
+ fn fixture()->Game {
+  let mut r=DebugRunner::builder().add_card(make_test_card("ATTACKER","Attacker")).add_card(make_test_card("TWIN","Twin")).add_card(make_test_card("LOWER","Lower"))
+   .deck(0,&["ATTACKER";12]).deck(1,&["TWIN";12]).start();r.skip_mulligan();r.place_on_field(0,"ATTACKER",Some(0));r.place_on_field(1,"TWIN",Some(0));r.place_on_field(1,"TWIN",Some(0));
+  for p in &mut r.game.players[1].battle_area{p.is_suspended=true;}
+  let h=PermanentHandle{player:0,index:0};let target=AttackTarget::Digimon(PermanentHandle{player:1,index:0});
+  r.game.pending_attack=Some(PendingAttack{attacker:h,original_target:target,effective_target:target,effective_target_removed_by_dna:false,is_blocked:false,blocker:None,is_vortex:false,is_overclock:false,declaration_committed:true,cancelled:false,battle_occurred:false,battle_defender_deleted:false,effect_battle_piercing_pending:false,security_check_started:false,return_phase:GamePhase::Main,state:AttackState::CounterOpen,counter_depth:0});r.game
+ }
+ #[test] fn explicit_second_twin_keeps_attack_target_discriminator_on_wire(){
+  let g=fixture();let (_,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.1".into()]),None).unwrap();
+  assert!(wire.card_ids.is_empty(),"physical targets must not degrade to identity-only fallback");assert_eq!(wire.permanent_targets.len(),1);let t=&wire.permanent_targets[0];assert_eq!(t.owner,1);assert_eq!(t.card_id,"TWIN");assert!(!t.attack_target);assert!(t.suspended);
+  let (_,first)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.0".into()]),None).unwrap();assert!(first.permanent_targets[0].attack_target);
+ }
+ #[test] fn batch_descriptors_preserve_both_duplicate_objects_and_owner(){
+  let g=fixture();let(_,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.0".into(),"opp.field.1".into()]),None).unwrap();assert_eq!(wire.permanent_targets.len(),2);assert_ne!(wire.permanent_targets[0],wire.permanent_targets[1]);
+ }
+ #[test] fn descriptors_snapshot_sources_and_clone_without_exposing_native_handles(){
+  let mut g=fixture();let lower=g.players[0].battle_area[0].top_card().clone();g.players[1].battle_area[1].card_sources.insert(0,lower);let(_,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.1".into()]),None).unwrap();assert_eq!(wire.permanent_targets.len(),1);assert_eq!(wire.permanent_targets[0].sources,vec!["ATTACKER"]);let clone=g.clone();let(_,copy)=build_selection_row(&clone,0,0,&SelectPayload::Targets(vec!["opp.field.1".into()]),None).unwrap();assert_eq!(wire,copy);let json=serde_json::to_value(&wire.permanent_targets).unwrap();assert!(json[0].get("card_index").is_none());
+ }
+ #[test] fn facedown_sources_expose_only_public_position_not_hidden_identity(){
+  let mut g=fixture();let mut lower=g.players[0].battle_area[0].top_card().clone();lower.face_down=true;g.players[1].battle_area[1].card_sources.insert(0,lower);
+  let (_,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.1".into()]),None).unwrap();assert!(wire.unsupported_reason.is_none());assert_eq!(wire.permanent_targets[0].sources,vec!["<face-down>"]);assert!(wire.card_ids.is_empty());
+  let replacement=g.players[1].battle_area[0].top_card().data_index;g.players[1].battle_area[1].card_sources[0].data_index=replacement;
+  let (_,other)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.1".into()]),None).unwrap();assert_eq!(wire,other,"hidden identity must not affect descriptor");
+ }
+ #[test] fn opaque_faceup_sources_refuse_live_wire_but_preserve_offline_target(){
+  let mut g=fixture();let mut lower=g.players[0].battle_area[0].top_card().clone();lower.is_opaque_placeholder=true;g.players[1].battle_area[1].card_sources.insert(0,lower);
+  let (row,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.1".into()]),None).unwrap();assert!(row.targets.is_some());assert!(wire.unsupported_reason.as_deref().unwrap().contains("opaque face-up"));assert!(wire.permanent_targets.is_empty());assert!(wire.card_ids.is_empty());
+ }
+ #[test] fn tokens_refuse_live_wire_even_when_facedown(){
+  let mut g=fixture();let mut lower=g.players[0].battle_area[0].top_card().clone();lower.is_token=true;lower.face_down=true;g.players[1].battle_area[1].card_sources.insert(0,lower);
+  let (_,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.1".into()]),None).unwrap();assert!(wire.unsupported_reason.as_deref().unwrap().contains("token"));assert!(wire.permanent_targets.is_empty());assert!(wire.card_ids.is_empty());
+ }
+ #[test] fn identity_only_card_selection_remains_legacy(){
+  let g=fixture();let(_,wire)=build_selection_row(&g,0,0,&SelectPayload::Cards{ids:vec!["TWIN".into()],ordinal:None,trigger:None,trigger_not:None},None).unwrap();assert_eq!(wire.card_ids,vec!["TWIN"]);assert!(wire.permanent_targets.is_empty());
+ }
+}
+
+#[cfg(test)]
+#[path = "physical_target_capture_tests.rs"]
+mod physical_capture_controls;
+
+fn classify_scenario_action(game: &Game, i: usize, actor: PlayerId, act: &StepAction, action_id: u16) -> Result<LoweredStep, String> {
+    if !matches!(act, StepAction::PassSimOnly(_)) {
+        return classify_lowered_action(game, actor, action_id);
+    }
+    check_actor_is_decider(game, i, actor)?;
+    if game.game_over || game.current_phase != digimon_engine::enums::GamePhase::Main
+        || game.pending_selection.is_some() || actor != game.turn_player()
+        || action_id != digimon_engine::action::space::PASS {
+        return Err(format!("step {i}: pass sim_only requires the active actor in Main with no pending selection"));
+    }
+    // A missing identity cannot establish that no play/evolution/effect is available.
+    let player = game.player(actor);
+    for card in player.hand.iter().chain(player.battle_area.iter().flat_map(|p| p.card_sources.iter().chain(p.linked_cards.iter()))) {
+        if card.is_opaque_placeholder || card.is_token || game.card_data.get(card.data_index).is_none_or(|d| d.card_id.trim().is_empty()) {
+            return Err(format!("step {i}: pass sim_only cannot certify unknown or unsupported card identity"));
+        }
+    }
+    let mask = digimon_engine::action::mask::build_action_mask(game, actor);
+    let legal: Vec<_> = mask.iter().enumerate().filter_map(|(id, v)| (*v > 0.0).then_some(id)).collect();
+    if legal != vec![digimon_engine::action::space::PASS as usize] {
+        return Err(format!("step {i}: pass sim_only requires PASS to be the only legal action; got {legal:?}"));
+    }
+    Ok(LoweredStep::SimOnlyAction(action_id))
+}
+
+#[cfg(test)]
+#[path = "forced_main_pass_tests.rs"]
+mod forced_main_pass_tests;
+
+// Exact public endpoints are captured before declaration; unsupported snapshots
+// retain offline action resolution but fail closed at live job emission.
+fn attach_native_attack_targets(game:&Game,actor:PlayerId,action_id:u16,tracking:&native_play_tracking::NativePlayTracking,lowered:&mut LoweredStep) {
+ use digimon_engine::action::explain::{explain_action,ActionKind,ActionZone};
+ let LoweredStep::FieldAction{refs,..}=lowered else{return;};
+ let e=explain_action(game,actor,action_id);
+ if e.kind!=ActionKind::Attack{return;}
+ let capture=|owner,slot:Option<u16>|->Result<crate::exam::permanent_target::PermanentTarget,String>{
+  let index=slot.ok_or("native attack endpoint has no slot")?;
+  let index=u8::try_from(index).map_err(|_|"native attack endpoint slot overflow")?;
+  let handle=digimon_engine::permanent::PermanentHandle{player:owner,index};
+  let mut value=crate::exam::permanent_target::snapshot(game,handle)?;
+  if let Some(label)=tracking.reference(game,handle){value.version=3;value.play_ref=Some(label);}
+  Ok(value)
+ };
+ match capture(actor,e.source_index){Ok(v)=>refs.attacker_permanent_target=Some(v),Err(e)=>refs.unsupported_reason=Some(e)}
+ if e.target_zone==Some(ActionZone::Battle){match capture(1-actor,e.target_index){Ok(v)=>refs.attack_permanent_target=Some(v),Err(e)=>refs.unsupported_reason=Some(e)}}
+}
+
+
+#[cfg(test)] mod native_attack_endpoint_tests {
+ use super::*;
+ use digimon_engine::{debug_runner::{DebugRunner,make_test_card},action::{build_action_mask,space::{PLAY_HAND_START,encode_attack}},enums::GamePhase};
+ #[test] fn native_attack_endpoints_preserve_each_play_reference_before_declaration() {
+  for actor in [0,1] {
+   let mut card=make_test_card("ATTACK-TWIN","Twin");card.play_cost=0;
+   let mut r=DebugRunner::builder().add_card(card).hand(0,&["ATTACK-TWIN";2]).hand(1,&["ATTACK-TWIN";2]).deck(0,&["ATTACK-TWIN";10]).deck(1,&["ATTACK-TWIN";10]).memory(5).start();
+   r.game.enable_native_play_observation(true);let mut tracking=native_play_tracking::NativePlayTracking::default();
+   for (owner,label) in [(actor,"attacker"),(1-actor,"first"),(1-actor,"second")] {
+    r.game.turn_player_idx=owner as usize;r.game.current_phase=GamePhase::Main;
+    let physical=r.game.players[owner as usize].hand[0].handle();tracking.begin(label.into(),owner,physical);
+    assert_eq!(build_action_mask(&r.game,owner)[PLAY_HAND_START as usize],1.0);r.game.decode_action(PLAY_HAND_START,owner);tracking.collect(&mut r.game).unwrap();
+   }
+   r.game.turn_count+=1;r.game.turn_player_idx=actor as usize;r.game.current_phase=GamePhase::Main;
+   for p in &mut r.game.players[(1-actor) as usize].battle_area{p.is_suspended=true;}
+   let id=encode_attack(0,0);assert_eq!(build_action_mask(&r.game,actor)[id as usize],1.0);
+   for game in [&r.game,&r.game.clone()] {
+    let mut row=field_or_plain_action(game,actor,id).unwrap();attach_native_attack_targets(game,actor,id,&tracking,&mut row);
+    let LoweredStep::FieldAction{refs,..}=row else{panic!("native field action")};
+    assert!(refs.unsupported_reason.is_none());let a=refs.attacker_permanent_target.unwrap();let d=refs.attack_permanent_target.unwrap();
+    assert_eq!(a.play_ref.as_deref(),Some("attacker"));assert_eq!(d.play_ref.as_deref(),Some("first"));assert!(!a.attacker);assert!(!d.attack_target);assert_eq!(d.owner,1-actor);
+   }
+  }
+ }
+}
+
+#[cfg(test)] mod native_attack_opaque_tests {
+ use super::*;
+ use digimon_engine::{debug_runner::{DebugRunner,make_test_card},action::{build_action_mask,space::encode_attack},enums::GamePhase};
+ #[test] fn native_attack_opaque_endpoint_remains_legal_offline_but_marks_live_unsupported() {
+  let mut r=DebugRunner::builder().add_card(make_test_card("OPAQUE-ATTACK","Attacker")).deck(0,&["OPAQUE-ATTACK";10]).deck(1,&["OPAQUE-ATTACK";10]).memory(5).start();
+  r.place_on_field(0,"OPAQUE-ATTACK",Some(0));r.place_on_field(1,"OPAQUE-ATTACK",Some(0));r.game.current_phase=GamePhase::Main;r.game.turn_count=2;r.game.turn_player_idx=0;
+  r.game.players[1].battle_area[0].is_suspended=true;r.game.players[1].battle_area[0].card_sources.last_mut().unwrap().is_opaque_placeholder=true;
+  let id=encode_attack(0,0);assert_eq!(build_action_mask(&r.game,0)[id as usize],1.0,"opaque descriptor limitation does not remove gameplay legality");
+  let mut row=field_or_plain_action(&r.game,0,id).unwrap();attach_native_attack_targets(&r.game,0,id,&native_play_tracking::NativePlayTracking::default(),&mut row);
+  let LoweredStep::FieldAction{action_id,refs}=row else{panic!("offline native attack disappeared")};assert_eq!(action_id,id);assert!(refs.unsupported_reason.as_deref().is_some_and(|s|s.contains("opaque")));assert!(refs.attack_permanent_target.is_none());
+ }
 }

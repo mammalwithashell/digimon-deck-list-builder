@@ -16,6 +16,26 @@ use crate::selection::*;
 use crate::trigger_context::*;
 
 impl Game {
+    /// Rules names of one physical card. Only a current top card receives its
+    /// permanent's effective name overlay; another copy or lower source does not.
+    pub(crate) fn card_rules_name_contains(&self, card: CardHandle, needle: &str) -> bool {
+        self.card_rules_name_matches(card, |name| rules_name_contains(name, needle))
+    }
+
+    pub(crate) fn card_rules_name_matches(&self, card: CardHandle, matches: impl Fn(&str) -> bool) -> bool {
+        for (player, state) in self.players.iter().enumerate() {
+            for (index, permanent) in state.battle_area.iter().enumerate() {
+                if permanent.card_sources.last().is_some_and(|top| top.handle() == card) {
+                    let handle = PermanentHandle { player: player as PlayerId, index: index as u8 };
+                    return permanent.synth_identity(&self.card_data, &self.modifiers, handle)
+                        .card_names.iter().any(|name| matches(name));
+                }
+            }
+        }
+        self.card_source_for_handle(card)
+            .is_some_and(|source| source.card_names(&self.card_data).into_iter().any(matches))
+    }
+
     /// Resolve a `CardHandle` to its `&CardData` by scanning all zones —
     /// mirrors `card_kind_for_handle` but returns the full data record so
     /// callers can read name, traits, colors, etc. Used by the DSL predicate
@@ -93,6 +113,18 @@ impl Game {
                 return Some(&self.card_data[pending.card.data_index]);
             }
         }
+        // DigiXros leave windows retain the same physical objects outside
+        // ordinary zones until their immediate effects finish or extract them.
+        for (_, _, permanent) in &self.digixros_leaving_limbo {
+            if let Some(cs) = permanent
+                .card_sources
+                .iter()
+                .chain(permanent.linked_cards.iter())
+                .find(|c| c.card_index == target_index)
+            {
+                return Some(&self.card_data[cs.data_index]);
+            }
+        }
         None
     }
 
@@ -161,6 +193,18 @@ impl Game {
         if let Some(pending) = self.pending_security.as_ref() {
             if pending.card.card_index == target_index {
                 return Some(&pending.card);
+            }
+        }
+        // DigiXros leave windows retain the same physical objects outside
+        // ordinary zones until their immediate effects finish or extract them.
+        for (_, _, permanent) in &self.digixros_leaving_limbo {
+            if let Some(cs) = permanent
+                .card_sources
+                .iter()
+                .chain(permanent.linked_cards.iter())
+                .find(|c| c.card_index == target_index)
+            {
+                return Some(cs);
             }
         }
         None

@@ -122,7 +122,7 @@ effects:
           bind_as: trashed_sources
           prompt: "Trash any 2 of this Digimon's digivolution cards to gain Security A. +1 and +3000 DP"
           then:
-            - trash_selected_sources: { source_refs: trashed_sources }
+            - trash_selected_sources_as_cost: { source_refs: trashed_sources }
             # Security A. +1 until your turn ends.
             - add_modifier:
                 target: source

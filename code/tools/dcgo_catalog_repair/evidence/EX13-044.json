@@ -1,0 +1,150 @@
+{
+  "card_id": "EX13-044",
+  "printing": {
+    "printing_id": "EX13-044",
+    "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-044.png?260529",
+    "alternate_art": false,
+    "category_id": ""
+  },
+  "name": "Breakdramon",
+  "rarity": "R",
+  "card_type": "Digimon",
+  "level": 6,
+  "colors": [
+    "Green",
+    "Red"
+  ],
+  "play_cost": 12,
+  "dp": 12000,
+  "form": "Mega",
+  "attribute": "Virus",
+  "type": "Machine Dragon",
+  "evolution_routes": [
+    {
+      "slot": 1,
+      "colors": [
+        "Green",
+        "Red"
+      ],
+      "cost": 4,
+      "from_level": 5
+    }
+  ],
+  "grade_evolution_routes": [],
+  "tamer_evolution_routes": [],
+  "special_evolution_routes": [
+    "[Digivolve] [Groundramon]/[Wingdramon]: Cost 3"
+  ],
+  "text_sections": [
+    {
+      "label": "Special Digivolution Condition",
+      "text": "[Digivolve] [Groundramon]/[Wingdramon]: Cost 3"
+    },
+    {
+      "label": "Effect",
+      "text": "＜Piercing＞ ＜Blocker＞\n[On Play] [When Digivolving] You may suspend up to 2 Digimon or Tamers. Then, 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends.\n[All Turns] [Once Per Turn] When any of your Digimon suspend, 1 of your Digimon with [Dracomon] or [Examon] in its text may battle 1 of your opponent's Digimon."
+    },
+    {
+      "label": "Special Play Condition",
+      "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text"
+    },
+    {
+      "label": "Inherited Effect",
+      "text": "[All Turns] [Once Per Turn] When any of your Digimon suspend, 1 of your Digimon with [Dracomon] or [Examon] in its text may battle 1 of your opponent's Digimon."
+    }
+  ],
+  "rule_grants": {
+    "traits": [],
+    "attributes": []
+  },
+  "qa": [
+    {
+      "number": "Q7345",
+      "date": "Sep. 18, 2026",
+      "question": "What kind of card does \"a card with X in its text\" refer to?",
+      "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements.\nFor example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+    },
+    {
+      "number": "Q7346",
+      "date": "Sep. 18, 2026",
+      "question": "What kind of card does the text \"[AA] or [BB] in its text\" refer to?",
+      "answer": "It checks if that card has [AA] or [BB] in its text."
+    },
+    {
+      "number": "Q7347",
+      "date": "Sep. 18, 2026",
+      "question": "Can I use this card's [On Play] [When Digivolving] effect to suspend either my Digimon or Tamer or my opponent's Digimon or Tamer?",
+      "answer": "Yes, either can be suspended."
+    },
+    {
+      "number": "Q7348",
+      "date": "Sep. 18, 2026",
+      "question": "Can this card's [On Play] [When Digivolving] effect give \"can't unsuspend\" to a different card than the one it suspended?",
+      "answer": "Yes, it can."
+    },
+    {
+      "number": "Q7349",
+      "date": "Sep. 18, 2026",
+      "question": "What does \"may battle\" mean, exactly?",
+      "answer": "This effect immediately initiates a battle.\nIf this effect is activated, the chosen Digimon battle according to the standard rules."
+    },
+    {
+      "number": "Q7350",
+      "date": "Sep. 18, 2026",
+      "question": "If 2 Digimon including a Digimon that has an \"effects don't affect\" effect are chosen for a \"may battle\" effect, can those Digimon battle?",
+      "answer": "Yes, they can battle.\nA card that has an \"effects don't affect\" effect can still be chosen for an effect. In addition, a battle itself is a rule that compares DP, not an effect. Therefore, a Digimon that isn't affected by effects can be chosen, and then it can battle.\nIf it loses the battle, it will be deleted as normal according to the rules."
+    },
+    {
+      "number": "Q7351",
+      "date": "Sep. 18, 2026",
+      "question": "During an attack by my Digimon with , I activate this card's [All Turns] effect and the attacking Digimon battles one of my opponent's Digimon, deleting it in battle.\nThen, if my attacking Digimon's attack target successfully becomes one of my opponent's Digimon and it is also deleted in battle, can I use my Digimon's to perform two checks?",
+      "answer": "No, you only perform one security check for .\nOnly one security check can be performed during a single attack, even if activates multiple times.\nHowever, if the number of cards checked is modified by , that modified number of cards will be checked during a single security check."
+    },
+    {
+      "number": "Q7352",
+      "date": "Sep. 18, 2026",
+      "question": "During an attack by my Digimon with , I activate this card's [All Turns] effect and the attacking Digimon battles one of my opponent's Digimon, deleting it in battle.\nThen, if my attacking Digimon's attack target successfully becomes one of my opponent's Digimon, and that Digimon loses in battle but an effect prevents it from being deleted, can I still activate my attacking Digimon's effect?",
+      "answer": "Yes, you can.\nThe effect triggers and activates if the Digimon deletes one of the opponent's Digimon in battle while attacking, and it is resolved immediately before the end of attack timing.\nwill still trigger even if another battle occurred during the attack in which the Digimon with successfully attacked and battled a Digimon."
+    },
+    {
+      "number": "Q7353",
+      "date": "Sep. 18, 2026",
+      "question": "Do this card's Assembly requirements mean that each Lv.5/Lv.4/Lv.3 card must have [Dracoman] or [Examon] in its text?",
+      "answer": "Yes, they must each satisfy the requirements."
+    }
+  ],
+  "layout": "single",
+  "faces": [
+    {
+      "face_id": "primary",
+      "kind": "digimon",
+      "name": "Breakdramon",
+      "colors": [
+        "Green",
+        "Red"
+      ],
+      "play_cost": 12,
+      "level": 6,
+      "dp": 12000,
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Groundramon]/[Wingdramon]: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Piercing＞ ＜Blocker＞\n[On Play] [When Digivolving] You may suspend up to 2 Digimon or Tamers. Then, 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends.\n[All Turns] [Once Per Turn] When any of your Digimon suspend, 1 of your Digimon with [Dracomon] or [Examon] in its text may battle 1 of your opponent's Digimon."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When any of your Digimon suspend, 1 of your Digimon with [Dracomon] or [Examon] in its text may battle 1 of your opponent's Digimon."
+        }
+      ]
+    }
+  ],
+  "printing_field_gaps": []
+}

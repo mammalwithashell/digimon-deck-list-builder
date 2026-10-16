@@ -1,0 +1,51 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "ST19-10",
+    "colors": "Yellow Green",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "7000",
+    "form": "Ultimate",
+    "play_cost": "7",
+    "special_digivolution_condition": "[Digivolve] Lv.4 w/[Tyrannomon]/[Raremon] in name: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[Tyrannomon]/[Raremon] in name: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Armor Purge＞ (When this Digimon would be deleted, by trashing this Digimon's top stacked card, it isn't deleted.)"
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "DigiXros-2: Lv.4 w/[Tyrannomon]/[Raremon] in name×Lv.4 w/[Puppet] trait"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+      }
+    ],
+    "type": "Puppet"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "dfd8b9a4fc7ea98756bd5167d8eefe2c8bd697f084a200b66fd38e1de6f1a1cf",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "aca8c8190fa8247c9b2965299e48313dabb8b15f3a2ec729e6405df8586ced77",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:ST19-10",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/ST19-10"
+}

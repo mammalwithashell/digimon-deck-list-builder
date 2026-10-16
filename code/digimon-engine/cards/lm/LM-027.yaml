@@ -25,7 +25,7 @@ cost: 2
 #   - when: main_from_hand
 #   - optional: true     (DCGO canNoSelect: true at the SelectPermanentEffect level)
 #   - select_own_permanent (optional: true, filter: digimon + color_is: red)
-#   - select_hand (filter: digimon + color_is: red)
+#   - select_hand (optional; red Digimon with a legal route onto the chosen host)
 #   - effect_initiated_digivolve { cost: { reduce: 3 }, ignore_requirements: false }
 #
 # "Then, place this card in the battle area" — option-as-permanent placement.
@@ -104,7 +104,7 @@ effects:
     summary: "[Main] You may have 1 red Digimon digivolve into a red Digimon in hand, cost -3; place this in battle area"
     process:
       # Step 1: choose source Digimon (optional — "may").
-      # DCGO: SelectPermanentEffect with canNoSelect: true over battle area.
+      # DCGO: optional source pick, restricted to hosts with a compatible red hand card.
       - select_own_permanent:
           bind_as: target
           optional: true
@@ -112,19 +112,28 @@ effects:
             all_of:
               - kind: digimon
               - color_is: red
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - color_is: red
           prompt: "Choose 1 of your red Digimon to digivolve"
       # Step 2: choose the digivolve target from hand.
-      # DCGO: DigivolveIntoHandOrTrashCard(isHand: true) — hand only.
+      # DCGO: DigivolveIntoHandOrTrashCard(isHand: true, isOptional: true by default).
       - if:
           condition: { binding_exists: target }
           then:
             - select_hand:
                 of: you
                 bind_as: evo
+                optional: true
                 filter:
                   all_of:
                     - kind: digimon
                     - color_is: red
+                    - can_digivolve_onto: target
                 prompt: "Choose a red Digimon card to digivolve into"
             # Step 3: execute effect-initiated digivolve with cost -3.
             # DCGO: reduceCost: 3, payCost: true, ignore_requirements: false.

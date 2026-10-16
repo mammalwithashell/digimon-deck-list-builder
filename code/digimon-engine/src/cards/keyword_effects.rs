@@ -641,7 +641,9 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     }
                     let owner = subject.player;
                     if rctx.effect.trash_top_security(owner) {
-                        rctx.handled();
+                        // Barrier prevents this deletion; the interrupted cause
+                        // remains pending for other immediate effects (16-24-4).
+                        rctx.cancel();
                     }
                 }
             })
@@ -767,7 +769,10 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 let Some(perm) = ctx.source_permanent() else {
                     return false;
                 };
-                perm.card_sources.len() >= (n as usize) + 1
+                ctx.source_permanent.is_some_and(|host| perm.card_sources.iter()
+                    .take(perm.card_sources.len().saturating_sub(1))
+                    .filter(|source| !ctx.game.source_card_trash_blocked(host, source.handle(), ctx.player))
+                    .count() >= n as usize)
             })
             // Self-scope at CANDIDATE collection ("when THIS Digimon would be
             // deleted"), so a neighbour's deletion never parks a phantom
@@ -802,9 +807,10 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     .player(subject.player)
                     .battle_area
                     .get(subject.index as usize)
-                    .map(|p| p.card_sources.len())
+                    .map(|p| p.card_sources.iter().take(p.card_sources.len().saturating_sub(1))
+                        .filter(|source| !rctx.effect.game.source_card_trash_blocked(subject, source.handle(), rctx.effect.player)).count())
                     .unwrap_or(0);
-                if stack_len < n_usize + 1 {
+                if stack_len < n_usize {
                     return;
                 }
 
@@ -817,30 +823,18 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 let controller = subject.player;
                 let prov = resume_provenance(&rctx.effect);
 
-                rctx.effect.select_count_capped_multi(
+                rctx.effect.select_count_capped_multi_min(
                     controller,
                     CountCappedZone::Material(subject),
+                    n,
                     n,
                     "trash N digivolution cards",
                     /*is_optional_zero=*/ false,
                     /*distinct_by=*/ None,
-                    |_g, _src| true,
+                    move |game, src| !game.source_card_trash_blocked(subject, src.handle(), controller),
                     move |ctx, picks| {
-                        // Trash each picked source from the carrier's stack
-                        // into the controller's trash via the EffectContext
-                        // primitive (stays within the API boundary).
-                        for handle in picks {
-                            // Soft-fail bool discarded — picks are validated
-                            // by `select_count_capped_multi` upstream and the
-                            // `<Fragment>` flow is single-carrier (`subject`),
-                            // so a stale handle here would be an engine bug,
-                            // not a rules-natural fizzle. Discard for parity
-                            // with the new `trash_card_source` signature.
-                            let _ = ctx.trash_card_source(subject, handle);
-                        }
-                        // Cancel the original deletion — carrier survives
-                        // with its remaining sources + top.
-                        ctx.cancel_leave();
+                        let paid = picks.into_iter().filter(|handle| ctx.trash_card_source(subject, *handle)).count();
+                        if paid == n as usize { ctx.cancel_leave(); }
                     },
                 );
                 park_keyword_count_capped_frame(
@@ -848,7 +842,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     prov,
                     controller,
                     CountCappedZone::Material(subject),
-                    0,
+                    n,
                     n,
                     false,
                     NonDslCountCappedTerminal::KeywordFragment { subject },
@@ -1138,6 +1132,16 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // precedent; trait id is not stored in the keyword variant to keep
         // `Keyword: Copy`).
         Keyword::Decoy(color_mask) => vec![Effect::when_would_be_deleted(card)
+            .paid_self_prevention()
+            .paid_prevention_filter({
+                use digimon_dsl::compiled::{CompiledPredicate,CompiledCardKind,CompiledColor};
+                let colors = [CompiledColor::Red,CompiledColor::Blue,CompiledColor::Yellow,
+                    CompiledColor::Green,CompiledColor::White,CompiledColor::Black,CompiledColor::Purple];
+                let colors:Vec<_> = colors.into_iter().enumerate().filter(|(i,_)| color_mask & (1u8 << i) != 0)
+                    .map(|(_,c)|CompiledPredicate{color_is:Some(c),..Default::default()}).collect();
+                CompiledPredicate{kind:Some(CompiledCardKind::Digimon),
+                    any_of:if color_mask==0 {Vec::new()}else{colors},..Default::default()}
+            })
             .name(
                 if color_mask == 0 {
                     "<Decoy>".to_string()
@@ -1233,10 +1237,11 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     }
                 }
 
-                // Substitute: redirect deletion to self. Synchronous; the
-                // dispatcher's `Substituted` commit arm handles the
-                // re-deletion of the carrier in place of the ally.
-                rctx.substitute(ReplacementSubject::Permanent(me_perm));
+                rctx.effect.game.dsl_replacement_outcome = None;
+                crate::dsl_cards::step::replacement_outcome::delete_carrier_and_cancel_after_payment(rctx.effect);
+                if let Some(outcome) = rctx.effect.game.dsl_replacement_outcome.take() {
+                    rctx.outcome = outcome;
+                }
             })
             .build()],
 
@@ -1753,136 +1758,43 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
             })
             .build()],
 
-        // Phase F Task 1 — printed Scapegoat: "When this Digimon would be
-        // deleted [other than by your own effect], you may delete another
-        // of your **Digimon** to prevent it." DCGO `Scapegoat.cs`.
-        // RULES_CONTEXT 16-31 (Immediate-type, Optional).
-        //
-        // The substitute MUST be a Digimon — Tamers are not valid
-        // substitutes per printed text. Both the upstream candidate-
-        // existence gate and the inner pick filter consult
-        // `Permanent::is_tamer(&card_data)` to exclude Tamer permanents.
-        //
-        // ## Cause filter (UPSTREAM)
-        //
-        // `cause != OwnEffect` — RULES_CONTEXT 16-31: a player's own
-        // effect cannot trigger their Scapegoat. Battle, OpponentEffect,
-        // SecurityCheck, and Cost all DO trigger.
-        //
-        // Phase F migrated this from the in-body fallback to the
-        // upstream candidate filter via `.replacement_condition(...)`.
-        // The dispatcher consults this BEFORE installing the outer
-        // optional accept dialog, so the spurious-dialog UX divergence
-        // from Phase E is closed. (Phase E note: the cause filter ran
-        // in-body because `collect_candidates` did not yet thread `cause`
-        // into the effect-side filter; Task 1 added that substrate.)
-        //
-        // ## No-substitute filter (UPSTREAM)
-        //
-        // Mirrors DCGO `CanActivateScapegoat`'s `HasMatchConditionPermanent`
-        // gate: the keyword is inactive when the controller has no other
-        // own **Digimon** to substitute. Suppressed at candidate-collection
-        // time so the outer dialog never parks in this case. Tamers are
-        // excluded per printed text ("another of your **Digimon**" —
-        // RULES_CONTEXT 16-31).
-        //
-        // ## Selection chain
-        //
-        //   1. Outer optional accept dialog ("may"). PASS leaves the
-        //      original deletion to proceed.
-        //   2. On ACCEPT: parked own-permanent pick via
-        //      `rctx.effect.select_own_permanent(...)`. Filter: same-
-        //      controller, non-self, non-Tamer. Mandatory once accepted
-        //      (DCGO: once committed to substitute, must pick).
-        //   3. On pick: `ctx.substitute_replacement(Permanent(picked))`
-        //      writes `Substituted` to the parked slot. The dispatcher's
-        //      post-callback hook commits the substituted deletion.
-        //
-        // ## Self-scope
-        //
-        // `WhenWouldBeDeleted` enumerates only effects on the deletion
-        // subject's permanent, so this body is naturally self-scoped.
-        // The `subject == me_perm` guard is an explicit belt-and-suspenders
-        // defense against any future cross-permanent enumeration changes.
+        // Rules16-31: this carrier's deletion alone triggers Scapegoat.
+        // Deleting another own Digimon is an actual own-effect payment;
+        // prevention follows its successful receipt, never target substitution.
         Keyword::Scapegoat => vec![Effect::when_would_be_deleted(card)
             .name("<Scapegoat>")
             .optional()
-            .replacement_condition(|ctx, _subject| {
-                use crate::replacement::ReplacementCause;
-                // RULES_CONTEXT 16-31: skip own-effect deletions.
-                if matches!(ctx.replacement_cause(), Some(ReplacementCause::OwnEffect)) {
+            .replacement_condition(|ctx, subject| {
+                let Some(me) = ctx.source_permanent else { return false; };
+                if *subject != ReplacementSubject::Permanent(me)
+                    || matches!(ctx.replacement_cause(), Some(ReplacementCause::OwnEffect)) {
                     return false;
                 }
-                // DCGO HasMatchConditionPermanent: at least one other own
-                // **Digimon** must exist as a substitute candidate.
-                // Printed text restricts the substitute to "another of your
-                // Digimon" — Tamers are not valid candidates
-                // (RULES_CONTEXT 16-31).
-                let Some(me) = ctx.source_permanent else {
-                    return false;
-                };
-                let owner = me.player;
-                let battle = ctx.battle_area(owner);
-                battle
-                    .iter()
-                    .enumerate()
-                    .any(|(i, p)| i as u8 != me.index && !p.is_tamer(&ctx.game.card_data))
+                ctx.battle_area(me.player).iter().enumerate().any(|(i, _)| {
+                    let h = crate::permanent::PermanentHandle { player: me.player, index: i as u8 };
+                    h != me && ctx.game.permanent_is_digimon_for_rules(h)
+                })
             })
             .replacement_process(|rctx| {
-                use crate::replacement::ReplacementSubject;
-
-                // Self-scope guard (defense-in-depth — the candidate
-                // collector only enumerates the subject's own permanent
-                // for `WhenWouldBeDeleted`).
-                let me_perm = match rctx.effect.source_permanent {
-                    Some(h) => h,
-                    None => return,
-                };
-                let subject = match rctx.subject {
-                    ReplacementSubject::Permanent(h) => h,
-                    _ => return,
-                };
-                if subject != me_perm {
-                    return;
-                }
-
+                let Some(me_perm) = rctx.effect.source_permanent else { return; };
+                if rctx.subject != ReplacementSubject::Permanent(me_perm) { return; }
                 let owner = me_perm.player;
-
-                // Inner pick: another of own **Digimon**. Filter: same-
-                // controller, non-self, non-Tamer (printed text:
-                // "another of your Digimon" — RULES_CONTEXT 16-31).
-                // Mandatory once accepted (is_optional=false). The
-                // upstream `replacement_condition` already guarantees at
-                // least one Digimon candidate exists, so this
-                // select_own_permanent will always install a
-                // pending_selection.
                 let prov = resume_provenance(&rctx.effect);
                 rctx.effect.select_own_permanent(
-                    "select another of your Digimon to delete instead",
-                    /*is_optional=*/ false,
+                    "select another of your Digimon to delete for Scapegoat",
+                    false,
                     move |g, h| {
-                        if h.player != owner || h == me_perm {
-                            return false;
-                        }
-                        g.players[h.player as usize]
-                            .battle_area
-                            .get(h.index as usize)
-                            .is_some_and(|p| !p.is_tamer(&g.card_data))
+                        h.player == owner && h != me_perm
+                            && g.permanent_is_digimon_for_rules(h)
                     },
                     move |ctx, picked| {
-                        // Substitute the deletion subject to the picked
-                        // permanent. The dispatcher's Substituted commit
-                        // arm finalizes the redirected deletion.
-                        ctx.substitute_replacement(ReplacementSubject::Permanent(picked));
+                        crate::dsl_cards::step::replacement_outcome::delete_selected_and_cancel_after_payment(ctx, picked);
                     },
                 );
                 park_keyword_frame(
                     &mut rctx.effect,
                     ResumeFrame::KeywordScapegoatSelection(KeywordScapegoatSelectionState {
-                        prov,
-                        owner,
-                        self_perm: me_perm,
-                        outer_conts: Vec::new(),
+                        prov, owner, self_perm: me_perm, outer_conts: Vec::new(),
                     }),
                 );
             })
@@ -2113,6 +2025,16 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         Keyword::Guard => vec![Effect::when_would_leave_battle_area(card)
             .name("<Guard>")
             .optional()
+            // Guard pays once for all matching simultaneous departures. Keep
+            // the native cost process: cancellation still requires deletion.
+            .paid_self_prevention_all()
+            .paid_prevention_filter(digimon_dsl::compiled::CompiledPredicate {
+                owner: Some(digimon_dsl::compiled::CompiledPlayerRef::You),
+                kind: Some(digimon_dsl::compiled::CompiledCardKind::Digimon),
+                other: Some(true),
+                replacement_cause: Some(digimon_dsl::compiled::CompiledReplacementCause::OpponentEffect),
+                ..Default::default()
+            })
             .replacement_condition(|ctx, subject| {
                 use crate::replacement::{ReplacementCause, ReplacementSubject};
                 if !matches!(
@@ -2131,7 +2053,6 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     return false;
                 }
                 ctx.game.permanent_is_digimon_for_rules(*subject)
-                    && guard_carrier_can_be_deleted_for_cost(ctx.game, me)
             })
             .replacement_process(|rctx| {
                 use crate::replacement::ReplacementSubject;
@@ -2148,38 +2069,15 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 if !rctx.effect.game.permanent_is_digimon_for_rules(subject) {
                     return;
                 }
-                if !guard_carrier_can_be_deleted_for_cost(rctx.effect.game, me) {
-                    return;
+                // Use the same exact deletion receipt/finalizer as Decoy.
+                // Nested replacement choices must complete this payment;
+                // merely finding the payer in trash is not sufficient.
+                let previous_outcome = rctx.effect.game.dsl_replacement_outcome.take();
+                crate::dsl_cards::step::replacement_outcome::delete_carrier_and_cancel_after_payment(rctx.effect);
+                if let Some(outcome) = rctx.effect.game.dsl_replacement_outcome.take() {
+                    rctx.outcome = outcome;
                 }
-                // The carrier's top card identifies it across the deletion
-                // (handles shift; the card lands in its owner's trash).
-                let carrier_top = rctx
-                    .effect
-                    .game
-                    .player(me.player)
-                    .battle_area
-                    .get(me.index as usize)
-                    .and_then(|p| p.card_sources.last())
-                    .map(|c| c.handle());
-                let outcome = rctx
-                    .effect
-                    .game
-                    .delete_permanents_batch(vec![me], ReplacementCause::OwnEffect);
-                if outcome.completed.contains(&me) {
-                    rctx.cancel();
-                } else if rctx.effect.game.pending_selection.is_some() {
-                    // The cost deletion itself opened a replacement window on
-                    // the carrier (its own <Decode>/<Evade>/... prompt) and
-                    // is parked. Guard succeeds only if that deletion
-                    // completes (DCGO GuardProcess →
-                    // DeletePeremanentAndProcessAccordingToResult success
-                    // branch), so defer the cancel to the drain, which runs
-                    // after the carrier's event commits
-                    // (G-NESTED-PARKED-REPLACEMENT).
-                    if let Some(top) = carrier_top {
-                        rctx.cancel_if_card_deleted(me.player, top);
-                    }
-                }
+                rctx.effect.game.dsl_replacement_outcome = previous_outcome;
             })
             .build()],
 

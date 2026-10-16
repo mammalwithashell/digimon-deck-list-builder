@@ -26,8 +26,8 @@
 #
 # DSL: EX13-044 Assembly shape; `select_opponent_sources` with `min = max =
 # source_material_count` + `clamp_to_available` → `trash_selected_sources`;
-# yes/no `select_effect_choice` → BT24-030 fewest-materials `for_each`
-# deck-bottom; EX13-043 replacement idiom with a `select_own_permanent`
+# yes/no `select_effect_choice` → explicit simultaneous fewest-materials
+# `return_all_to_deck`; EX13-043 replacement idiom with a `select_own_permanent`
 # suspend cost, gated on a payable candidate existing.
 
 card: EX13-024
@@ -117,7 +117,7 @@ effects:
             - if:
                 condition: { equals: [bottom_choice, 0] }
                 then:
-                  - for_each:
+                  - return_all_to_deck:
                       over:
                         of: opponent
                         zone: [battle_area]
@@ -125,12 +125,9 @@ effects:
                         materials_count_matches_aggregate:
                           selector: fewest_materials
                           of: opponent
-                      bind_as: bottom_target
-                      body:
-                        - return_to_deck:
-                            target: bottom_target
-                            position: bottom
-                            include_sources: true
+                      position: bottom
+                      # Only each Digimon returns; lower sources go to trash.
+                      include_sources: false
 
   - kind: replacement
     trigger: when_would_leave_battle_area
@@ -148,6 +145,7 @@ effects:
             zone: [battle_area]
             kind: digimon
             is_unsuspended: true
+            can_change_orientation: true
             any_of:
               - in_text_contains: Dracomon
               - in_text_contains: Examon
@@ -155,16 +153,31 @@ effects:
     process:
       - select_own_permanent:
           bind_as: suspend_cost
+          optional: true
+          continue_on_decline: true
           filter:
             all_of:
               - kind: digimon
               - is_unsuspended: true
+              - can_change_orientation: true
               - any_of:
                   - in_text_contains: Dracomon
                   - in_text_contains: Examon
           prompt: "Suspend 1 of your [Dracomon]/[Examon]-text Digimon so they don't leave"
-      - suspend: { target: suspend_cost }
-      - cancel_replacement: {}
+      - if:
+          condition: { binding_exists: suspend_cost }
+          then:
+            - suspend_and_cancel_all_matching_leaves:
+                target: suspend_cost
+                filter:
+                  all_of:
+                    - replacement_subject_is_mine: true
+                    - kind: digimon
+                    - any_of:
+                        - in_text_contains: Dracomon
+                        - in_text_contains: Examon
+          else:
+            - refund_opt: {}
 
   - kind: replacement
     scope: inherited
@@ -183,6 +196,7 @@ effects:
             zone: [battle_area]
             kind: digimon
             is_unsuspended: true
+            can_change_orientation: true
             any_of:
               - in_text_contains: Dracomon
               - in_text_contains: Examon
@@ -190,13 +204,28 @@ effects:
     process:
       - select_own_permanent:
           bind_as: suspend_cost
+          optional: true
+          continue_on_decline: true
           filter:
             all_of:
               - kind: digimon
               - is_unsuspended: true
+              - can_change_orientation: true
               - any_of:
                   - in_text_contains: Dracomon
                   - in_text_contains: Examon
           prompt: "Suspend 1 of your [Dracomon]/[Examon]-text Digimon so they don't leave"
-      - suspend: { target: suspend_cost }
-      - cancel_replacement: {}
+      - if:
+          condition: { binding_exists: suspend_cost }
+          then:
+            - suspend_and_cancel_all_matching_leaves:
+                target: suspend_cost
+                filter:
+                  all_of:
+                    - replacement_subject_is_mine: true
+                    - kind: digimon
+                    - any_of:
+                        - in_text_contains: Dracomon
+                        - in_text_contains: Examon
+          else:
+            - refund_opt: {}

@@ -1,0 +1,121 @@
+# Interaction draft: actual eligible choice or deletion replacement; no oracle verdict.
+# Adapted from LM-027-tail-main-delay.yaml; changed outcome assertions await live observation.
+card: LM-027
+clause: LM-027#effect#1
+covers:
+- LM-027#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST1-03
+    - LM-027
+    - ST1-05
+    - ST1-02
+    - ST1-04
+    - ST1-12
+    - ST1-12
+    - ST1-12
+    - ST1-12
+    - ST1-10
+    - ST1-02
+    - ST1-04
+    - ST1-06
+    rest: LM-027-interaction-start-delay-decline-p0
+  p1:
+    stack:
+    - ST1-08
+    - ST1-02
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-12
+    - ST1-12
+    - ST1-12
+    - ST1-12
+    - ST1-10
+    - ST1-02
+    - ST1-04
+    rest: LM-027-interaction-start-delay-decline-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST1-03
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-08
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: LM-027
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 0
+  do:
+    select:
+      cards:
+      - ST1-05
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+interaction:
+  id: probe:LM-027#effect#1:optional_decline
+  source: probe
+  kind: positive

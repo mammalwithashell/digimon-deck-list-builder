@@ -1,0 +1,48 @@
+{
+  "extracted": {
+    "attribute": "Life",
+    "card_id": "BT24-057",
+    "colors": "Black",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Sup./Appmon",
+    "play_cost": "4",
+    "qa": [
+      "No, you can't activate it. If a Digimon is deleted and an [On Deletion] link effect is triggered, it will only be pending activation for the Digimon card with that link card. If a card with an effect that's pending activation leaves that area before the effect activates, the effect can no longer be activated. In this case, if this card and the linked Digimon are deleted and an [On Deletion] link effect is triggered, the effect will only be pending activation for the linked Digimon card. If the deleted Digimon card with the effect that's pending activation leaves the trash, the [On Deletion] link effect that was pending activation can no longer be activated. Related Cards"
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [On Deletion] Until your opponent's turn ends, 1 of their Digimon can't attack players."
+      },
+      {
+        "label": "Link DP",
+        "text": "DP+3000"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[On Deletion] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+      }
+    ],
+    "type": "Doctor"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "bb2f1c1ee73974ad27805ae9f2c24eb10ab9e296e8c622efb7a18934178d2d3f",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "be041ec996afbf753c5e19b1e58418dc6c24188146ec3f091ea5fd07c43b885d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-057",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-057"
+}

@@ -42,7 +42,7 @@ fn bt24_091_has_use_requirement_main_security_and_link_requirement() {
         .expect("MainFromHand clause");
     assert!(main.process.iter().any(|step| matches!(
         step,
-        CompiledStep::ForEach { over, .. }
+        CompiledStep::ReturnAllToHand { over, .. }
             if over.level_matches_aggregate.is_some()
     )));
     assert!(main.process.iter().any(|step| matches!(

@@ -151811,6 +151811,11 @@
         "card_color": 0,
         "level": 2,
         "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
       }
     ],
     "xros_req": "[Digivolve] [Gurimon]/Lv.2 w/[VB] trait: Cost 0"
@@ -151920,6 +151925,11 @@
     "evo_costs": [
       {
         "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
         "level": 3,
         "memory_cost": 3
       }
@@ -152033,6 +152043,11 @@
         "card_color": 0,
         "level": 3,
         "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] [Gammamon]/Lv.3 w/[VB] trait: Cost 2"
@@ -152068,6 +152083,11 @@
     "evo_costs": [
       {
         "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
         "level": 4,
         "memory_cost": 4
       }
@@ -152108,6 +152128,11 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
@@ -152146,6 +152171,11 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.4 w/[Greymon] in name or w/[ME]/[VB] trait: Cost 3"
@@ -152182,6 +152212,11 @@
     "evo_costs": [
       {
         "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
         "level": 5,
         "memory_cost": 4
       }
@@ -152244,6 +152279,11 @@
     "evo_costs": [
       {
         "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
         "level": 5,
         "memory_cost": 4
       }
@@ -152640,6 +152680,11 @@
         "card_color": 1,
         "level": 4,
         "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
@@ -152713,6 +152758,11 @@
     "evo_costs": [
       {
         "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
         "level": 4,
         "memory_cost": 4
       }
@@ -152899,6 +152949,11 @@
         "card_color": 1,
         "level": 5,
         "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
@@ -153001,6 +153056,11 @@
         "card_color": 1,
         "level": 5,
         "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.5 w/[Aquatic]/[Shambala] trait: Cost 3"
@@ -153038,6 +153098,16 @@
     "evo_costs": [
       {
         "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
         "level": 6,
         "memory_cost": 5
       }
@@ -153417,6 +153487,11 @@
     "evo_costs": [
       {
         "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
         "level": 4,
         "memory_cost": 4
       }
@@ -153824,6 +153899,11 @@
         "card_color": 5,
         "level": 4,
         "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
@@ -153861,6 +153941,11 @@
     "evo_costs": [
       {
         "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
         "level": 5,
         "memory_cost": 4
       }
@@ -154131,7 +154216,12 @@
       {
         "card_color": 6,
         "level": 4,
-        "memory_cost": 3
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"

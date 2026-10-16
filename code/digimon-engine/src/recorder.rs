@@ -19,7 +19,20 @@ use crate::enums::PlayerId;
 use crate::game::Game;
 
 pub const VERIFICATION_REPLAY_FORMAT_VERSION: u32 = 1;
-pub const VERIFICATION_ENGINE_SCHEMA_VERSION: u32 = 1;
+pub const VERIFICATION_ENGINE_SCHEMA_VERSION: u32 = 2;
+
+/// Verification digest protocol; independent of action and tensor versions.
+/// Schema 1 recordings retain their original v2 digest bytes. New recordings
+/// use schema 2/v3, which also discriminates pending reducer credit and order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VerificationDigestVersion { LegacyV2, V3 }
+impl VerificationDigestVersion {
+    pub const CURRENT: Self = Self::V3;
+    pub fn from_engine_schema(version: u32) -> Option<Self> {
+        match version { 1 => Some(Self::LegacyV2), 2 => Some(Self::V3), _ => None }
+    }
+}
+
 
 /// Deck references embedded in a canonical verification replay. Goldens may
 /// use stable decklist ids when available, or inline card-id lists for

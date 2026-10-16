@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT25-028",
+    "colors": "Blue Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "12",
+    "qa": [
+      "Yes, it triggers."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.5 w/[TS] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "When this card would be played, if your opponent has a level 6 or higher Digimon, reduce the cost by 5. [On Play] [When Digivolving] None of your opponent's Digimon with 1 or fewer digivolution cards can suspend until their turn ends. Then, delete 1 of your opponent's unsuspended Digimon. [All Turns] [Once Per Turn] When any Digimon are played or digivolve, you may trash any 4 digivolution cards from your opponent's Digimon. Then, 2 of your Digimon may DNA digivolve into [GraceNovamon] in the hand."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends."
+      }
+    ],
+    "type": "Shaman/Olympos XII/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "c9d2ad0a9999a1b9b59c970d67ccecf87091f4b99690f6e078ec2c2a7e9cb2d6",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "770c1b4285e9fb6105443be46563fd53bb66ef05ce995fe88a9e85ac230bc82d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-028",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-028"
+}

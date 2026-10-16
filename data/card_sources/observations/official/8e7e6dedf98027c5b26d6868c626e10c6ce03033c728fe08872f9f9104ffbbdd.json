@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Entertainment",
+    "card_id": "BT22-058",
+    "colors": "Black",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Sup./Appmon",
+    "play_cost": "4",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[All Turns] [Once Per Turn] When this Digimon gets linked, your opponent's effects can't return 1 of your Digimon to hands or decks until their turn ends."
+      },
+      {
+        "label": "Link DP",
+        "text": "+3000 DP"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Linking] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+      }
+    ],
+    "type": "Dream"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "8e7e6dedf98027c5b26d6868c626e10c6ce03033c728fe08872f9f9104ffbbdd",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "2c67b5a4e489df838714dc08142b20851b35dc6285e6731b96e291aeed0540d1",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT22-058",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT22-058"
+}

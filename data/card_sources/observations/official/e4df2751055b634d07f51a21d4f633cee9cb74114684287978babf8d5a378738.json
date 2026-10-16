@@ -1,0 +1,40 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT24-012",
+    "colors": "Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "qa": [
+      "Yes, all of those Digimon are prevented from leaving. This card's [All Turns] effect affects all Digimon without having to choose them."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "＜Blocker＞ [All Turns] When any of your other Digimon with the [Reptile] or [Dragonkin] trait would leave the battle area by your opponent's effects, by returning this Digimon to the hand, they don't leave."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory."
+      }
+    ],
+    "type": "Reptile/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "e4df2751055b634d07f51a21d4f633cee9cb74114684287978babf8d5a378738",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "4ac9db80e3c38a249e32454d9cc92aaf482dddb5505e11d90f1d2b7b5270a89e",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-012",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-012"
+}

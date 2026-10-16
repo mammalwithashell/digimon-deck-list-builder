@@ -501,9 +501,9 @@ fn bt17_078_has_face_up_blocker_grant_keyword() {
 
 /// Clause 3 (DNA-gated bottom-deck + delete) is shared by OnPlay and
 /// WhenDigivolving, with the printed "If DNA digivolving" antecedent modeled
-/// as an `active_when` gate.
+/// inside the process; official Q2851 leaves Then deletion outside it.
 #[test]
-fn bt17_078_has_on_play_when_digivolving_dna_gated_clause() {
+fn bt17_078_has_on_play_when_digivolving_clause_not_globally_dna_gated() {
     let c = compiled_bt17_078();
     let clause = c
         .effects
@@ -531,12 +531,11 @@ fn bt17_078_has_on_play_when_digivolving_dna_gated_clause() {
     );
     assert!(!t.once_per_turn, "Clause 3 has no [Once Per Turn] marker");
     assert!(
-        t.active_when
+        !t.active_when
             .as_ref()
             .map(|p| pred_any(p, |q| q.dna_origin == Some(true)))
             .unwrap_or(false),
-        "Clause 3 must be gated by `dna_origin: true` per the printed text \
-         antecedent \"If DNA digivolving\"."
+        "Official Q2851 forbids gating the whole clause on DNA"
     );
 }
 
@@ -546,21 +545,16 @@ fn bt17_078_has_on_play_when_digivolving_dna_gated_clause() {
 // condition gating to test.
 //
 #[test]
-fn bt17_078_on_play_dna_gate_blocks_when_played_normally_from_hand() {
-    // Negative: playing Omnimon from hand (no DNA digivolve in the trigger
-    // hashtable) must NOT install any pending selection from Clause 3.
-    let mut runner = omnimon_runner();
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("OPP-LV6", "OppLv6", 6, 8000));
-    let _opp = runner.place_on_field(1, "OPP-LV6", Some(0));
+fn bt17_078_on_play_without_dna_still_offers_mandatory_delete() {
+    let mut runner = DebugRunner::builder().from_dsl_yaml(YAML).unwrap()
+        .add_card(make_named_digimon("OPP-LV6", "OppLv6", 6, 8000)).start();
+    runner.place_on_field(1, "OPP-LV6", Some(0));
     let omni = runner.place_on_field(0, "BT17-078", None);
     runner.fire_on_play(0, omni.index as usize);
-    assert!(
-        runner.pending_selection().is_none(),
-        "[On Play] Clause 3 must skip when not DNA-digivolving (no IsJogress)."
-    );
+    let choice = runner.pending_selection().expect("Q2851 requires Then deletion");
+    assert_eq!(choice.kind, SelectionKind::OppField);
+    assert!(!choice.is_optional);
+    assert_eq!(choice.valid_action_ids.len(), 1);
 }
 
 // ─── SECTION 3 — Behavioral outcome (integrated Blast DNA route) ─────────────
@@ -641,8 +635,8 @@ fn bt17_078_counter_blast_dna_uses_wargreymon_and_metalgarurumon() {
         .collect();
     assert_eq!(
         stack_ids,
-        vec!["WAR", "METAL", "BT17-078"],
-        "Blast DNA must stack field WarGreymon, hand MetalGarurumon, then BT17-078"
+        vec!["METAL", "WAR", "BT17-078"],
+        "DNA rule 8-2-2-2 puts left requirement WarGreymon above MetalGarurumon (sources stored bottom-to-top)"
     );
 }
 

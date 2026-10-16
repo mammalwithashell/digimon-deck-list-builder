@@ -8,12 +8,16 @@ Usage:
 """
 
 import json
+import argparse
+import copy
+import hashlib
 import os
 import re
 import sys
 import time
 import urllib.request
 from dataclasses import asdict
+from pathlib import Path
 
 # Import the existing parsers and dataclasses so on-disk JSON matches the
 # shapes the runtime loader expects. These imports are local to avoid
@@ -715,7 +719,113 @@ def backfill_xros_costs(cards_path=None):
     return dna_count, digixros_count, len(cards), overrides_applied
 
 
+def _official_evolution_rows(observation, path):
+    """Strict source projection: never infer a circle from a card's own color."""
+    if observation.get("source") != "official" or observation.get("schema_version") != 1:
+        raise ValueError(f"unsupported official observation: {path}")
+    if observation.get("parser_version") != "official-html-v2" or observation.get("source_schema_version") != "world-card-list-html-v1":
+        raise ValueError(f"unsupported official parser/schema: {path}")
+    identity = {key: observation.get(key) for key in (
+        "raw_payload_digest", "parser_version", "source_schema_version", "extracted"
+    )}
+    # SourceObservation identity uses sorted, indented UTF-8 JSON plus newline.
+    encoded = (json.dumps(identity, sort_keys=True, ensure_ascii=False,
+                          indent=2, separators=(",", ": ")) + "\n").encode("utf-8")
+    digest = hashlib.sha256(encoded).hexdigest()
+    if (observation.get("observation_id") != digest or path.stem != digest
+            or not re.fullmatch(r"[0-9a-f]{64}", str(observation.get("raw_payload_digest")))):
+        raise ValueError(f"invalid observation identity: {path}")
+    extracted = observation.get("extracted")
+    if not isinstance(extracted, dict) or not isinstance(extracted.get("evolution_routes"), list):
+        raise ValueError(f"missing explicit evolution_routes: {path}")
+    rows = []
+    for route in extracted["evolution_routes"]:
+        if not isinstance(route, dict) or set(route) != {"slot", "colors", "from_level", "cost"}:
+            raise ValueError(f"unsupported evolution route shape: {path}")
+        colors = route["colors"]
+        level, cost, slot = route["from_level"], route["cost"], route["slot"]
+        if (type(level) is not int or not 0 <= level <= 255
+                or type(cost) is not int or not 0 <= cost <= 65535
+                or type(slot) is not int or slot < 1
+                or not isinstance(colors, list) or not colors
+                or any(not isinstance(color, str) or color not in COLOR_MAP for color in colors)):
+            raise ValueError(f"invalid printed evolution route: {path}")
+        for color in colors:
+            row = {"card_color": COLOR_MAP[color], "level": level, "memory_cost": cost}
+            if row not in rows:
+                rows.append(row)
+    return rows
+
+
+def build_official_evolution_candidate(cards_path, observations_dir, ids, output_dir):
+    """Generate a fresh scratch candidate; neither input nor production is written.
+
+    Only evo_costs may change. Every supplied printing of each requested ID must
+    agree; missing evidence, unknown schemas and ambiguous circles fail closed.
+    This scoped producer intentionally retains the existing legacy Dual ABI.
+    """
+    cards_path, observations_dir, output_dir = map(Path, (cards_path, observations_dir, output_dir))
+    if output_dir.exists():
+        raise ValueError("candidate output directory must not already exist")
+    scope = sorted(set(ids))
+    if not scope or len(scope) != len(ids):
+        raise ValueError("scope must contain distinct card IDs")
+    original_bytes = cards_path.read_bytes()
+    cards = json.loads(original_bytes)
+    for cid in scope:
+        if cid not in cards or cards[cid].get("card_id") != cid:
+            raise ValueError(f"requested card absent or inconsistent: {cid}")
+    observations = []
+    by_card = {}
+    for path in sorted(observations_dir.glob("*.json")):
+        raw = path.read_bytes()
+        doc = json.loads(raw)
+        cid = doc.get("extracted", {}).get("card_id")
+        if cid not in scope:
+            continue
+        rows = _official_evolution_rows(doc, path)
+        canonical_rows = sorted((r["card_color"], r["level"], r["memory_cost"]) for r in rows)
+        if cid in by_card and by_card[cid][1] != canonical_rows:
+            raise ValueError(f"conflicting official evolution printings: {cid}")
+        by_card.setdefault(cid, (rows, canonical_rows))
+        observations.append({"card_id": cid, "observation_id": doc["observation_id"],
+                             "source_url": doc.get("source_url"), "path": str(path.resolve()),
+                             "file_sha256": hashlib.sha256(raw).hexdigest()})
+    missing = sorted(set(scope) - by_card.keys())
+    if missing:
+        raise ValueError(f"missing official evolution observations: {missing}")
+    candidate = copy.deepcopy(cards)
+    changes = []
+    for cid in scope:
+        rows = by_card[cid][0]
+        if candidate[cid].get("evo_costs") != rows:
+            changes.append({"card_id": cid, "field": "evo_costs",
+                            "before": candidate[cid].get("evo_costs"), "after": rows})
+            candidate[cid]["evo_costs"] = rows
+    candidate_bytes = (json.dumps(candidate, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+    report = {"schema_version": 1, "producer": "ingest_cards.official_evolution",
+              "scope": scope, "input_path": str(cards_path.resolve()),
+              "input_sha256": hashlib.sha256(original_bytes).hexdigest(),
+              "candidate_sha256": hashlib.sha256(candidate_bytes).hexdigest(),
+              "observations": observations, "changes": changes}
+    output_dir.mkdir(parents=True, exist_ok=False)
+    (output_dir / "cards.json").write_bytes(candidate_bytes)
+    (output_dir / "provenance.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    return report
+
+
 def main():
+    if len(sys.argv) >= 2 and sys.argv[1] == "--official-evolution":
+        parser = argparse.ArgumentParser(description="Offline official evolution scratch candidate; never applies production data")
+        parser.add_argument("--cards-json", type=Path, required=True)
+        parser.add_argument("--observations-dir", type=Path, required=True)
+        parser.add_argument("--ids", nargs="+", required=True)
+        parser.add_argument("--output-dir", type=Path, required=True)
+        args = parser.parse_args(sys.argv[2:])
+        report = build_official_evolution_candidate(args.cards_json, args.observations_dir, args.ids, args.output_dir)
+        print(f"Generated scratch candidate: {len(report['changes'])} evolution tables; {len(report['observations'])} source observations")
+        return
+
     # --backfill mode: regenerate dna_costs / digixros_costs from existing xros_req
     if len(sys.argv) >= 2 and sys.argv[1] == "--backfill":
         dna_count, digixros_count, total, overrides_applied = backfill_xros_costs()

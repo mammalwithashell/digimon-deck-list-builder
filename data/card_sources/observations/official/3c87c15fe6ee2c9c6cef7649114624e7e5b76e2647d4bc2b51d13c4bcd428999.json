@@ -1,0 +1,54 @@
+{
+  "extracted": {
+    "attribute": "Social",
+    "card_id": "BT21-023",
+    "colors": "Red Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "10000",
+    "form": "Ult./Appmon",
+    "play_cost": "9",
+    "qa": [
+      "No, you can't."
+    ],
+    "special_digivolution_condition": "[App Fusion] [DoGatchmon] & [Timemon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [DoGatchmon] & [Timemon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Security A. +1＞ [On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost. [Your Turn] [Once Per Turn] When this Digimon gets linked, delete 1 of your opponent’s Digimon with as much or less DP as this Digimon."
+      },
+      {
+        "label": "Special Rule",
+        "text": "+4000 DP"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon."
+      }
+    ],
+    "type": "Global/Hero"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3c87c15fe6ee2c9c6cef7649114624e7e5b76e2647d4bc2b51d13c4bcd428999",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "1d760761a1456752872ccd986685290a68f2bc5c384f2a40e7dd56e8dbd14c7d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-023",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-023"
+}

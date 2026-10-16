@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "System",
+    "card_id": "BT24-056",
+    "colors": "Black",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "5000",
+    "form": "Sup./Appmon",
+    "play_cost": "5",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "＜Blocker＞ [On Play] [When Digivolving] Until your opponent's turn ends, their effects can't return 1 of your Digimon with the [System], [Life] or [Transmutation] trait to hands or decks."
+      },
+      {
+        "label": "Link DP",
+        "text": "DP+3000"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Linking] Delete 1 of your opponent's play cost 5 or lower Digimon."
+      }
+    ],
+    "type": "Zip/Unzip"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "275f0198ae8b9084a42b424887ad3d5e79a298170eb38a3c55c7aa73285506bd",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "4d21cd21fb92782b5877b9c8a021114da3ea11a6b8369d2e15915a275e555731",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-056",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-056"
+}

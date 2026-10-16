@@ -565,6 +565,7 @@ fn pending_selection_data(v: &PendingSelectionView, game: &Game) -> Value {
                         let card = c.source_card.map(|h| game.card(h));
                         json!({
                             "label": c.label,
+                            "countChoice": c.count_choice.map(crate::count_choice_wire::CountChoiceDto::from),
                             "actionId": c.action_id,
                             "cardId": card.map(|cd| cd.card_id.clone()),
                             "cardName": card.map(|cd| cd.card_name.clone()),

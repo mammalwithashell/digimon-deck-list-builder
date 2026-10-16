@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT17-078",
+    "colors": "White",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "15000",
+    "form": "Mega",
+    "play_cost": "9",
+    "qa": [
+      "Yes, you can process it. Even if this Digimon didn't DNA digivolve, this card's [On Play] [When Digivolving] effect will delete 1 of your opponent's Digimon."
+    ],
+    "special_digivolution_condition": "[DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "{Hand} [Counter] ＜Blast DNA Digivolve ([WarGreymon] + [MetalGarurumon])＞ (1 of your specified Digimon and 1 specified card in the hand may DNA digivolve into this card.) ＜Raid＞ ＜Blocker＞ [On Play] [When Digivolving] If DNA digivolving, choose 1 of your opponent's Digimon, and return all of their Digimon with the same level as it to the bottom of the deck. Then, delete 1 of their Digimon."
+      },
+      {
+        "label": "Special Rule",
+        "text": "＜Overflow (-5)＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)"
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "f54287c2cb180b7dc8c0b86010e15df3a979b056072fcd67bf9eea872e4ce8c5",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "bb4ffb3226d4491255bdfc85703d32d645a9bd30683d824fdee3d1ea4b0712b7",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT17-078",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT17-078"
+}

@@ -1,0 +1,96 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "P-070",
+    "card_type": "Digimon",
+    "colors": [
+      "Black"
+    ],
+    "dp": 2000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Black"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Black"
+        ],
+        "dp": 2000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Dorumon",
+        "play_cost": 4,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Security] At the end of the battle, reveal the top card of your deck. If it’s a black Digimon card with a play cost of 4 or less, you may play it without paying its memory cost. Add the remaining cards to your hand. Then, add this card to its owner’s hand."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Dorumon",
+    "play_cost": 4,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522901",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-070.png?260529",
+      "printing_id": "P-070"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, you can.\nThis effect reads \"you may play it without paying the cost,\" therefore you may choose to not play it. In such cases, because the effect reads \"add the remaining cards to your hand,\" you add the card to your hand.",
+        "date": "Mar. 28, 2024",
+        "number": "Q4171",
+        "question": "If this card's [Security] effect reveals a black Digimon card with a play cost of 4 or less from the top of my deck, can I add it to the hand without playing it?"
+      },
+      {
+        "answer": "Yes, you add it to your hand.",
+        "date": "Jun. 13, 2025",
+        "number": "Q4846",
+        "question": "Do I use the part of the effect after \"then\" in this card's [Security] effect to add this card to the hand even if the \"if\" condition in the 1st process isn't met?"
+      },
+      {
+        "answer": "The 1st process of this [Security] effect is \"At the end of the battle, reveal the top card of your deck. If it's a black Digimon card with a play cost of 4 or less, you may play it without paying the cost. Add the remaining cards to your hand.\"",
+        "date": "Jun. 13, 2025",
+        "number": "Q4847",
+        "question": "What part of this card's [Security] effect is its 1st process?"
+      }
+    ],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, reveal the top card of your deck. If it’s a black Digimon card with a play cost of 4 or less, you may play it without paying its memory cost. Add the remaining cards to your hand. Then, add this card to its owner’s hand."
+      }
+    ],
+    "type": "Beast/X Antibody"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "4b7e39240f026a0c18b2863957dd45cb3f512dba52b7147e1c0342d67d62a42b",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "4163c69eeb2accbdaaf7fd53d0819dbe2822df97d5e385efc9b7a115f3f090d2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522901:P-070:P-070",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522901"
+}

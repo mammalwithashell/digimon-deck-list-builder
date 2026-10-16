@@ -80,13 +80,41 @@ pub fn lower_with_raw(
     process: &[CompiledStep],
     raw: Arc<EngineRawRustRegistry>,
 ) -> Option<Effect> {
+    lower_with_raw_and_slot(card,scope,active_when,trigger,optional,once_per_turn,process,raw,None)
+}
+
+pub fn lower_with_raw_and_slot(
+    card: CardHandle,
+    scope: CompiledScope,
+    active_when: Option<&CompiledPredicate>,
+    trigger: &str,
+    optional: bool,
+    once_per_turn: bool,
+    process: &[CompiledStep],
+    raw: Arc<EngineRawRustRegistry>,
+    effect_slot: Option<u8>,
+) -> Option<Effect> {
     let timing = lookup_replacement_trigger(trigger)?;
     let label = format!("Replacement: {trigger}");
     let process: Arc<[CompiledStep]> = Arc::from(process);
-    let runtime = StepRuntime::new(raw);
+    let mut runtime = StepRuntime::new(raw);
 
     let mut builder = new_when_would_builder(card, timing)?;
     builder = builder.name(&label);
+    if process_has_paid_self_prevention(&process) {
+        builder = if process_has_paid_all_prevention(&process) {
+            builder.paid_self_prevention_all()
+        } else { builder.paid_self_prevention() };
+        builder = builder.paid_prevention_filter(active_when.cloned().unwrap_or_default());
+    }
+
+    let mut suspension_probe = PaidPreventionProbe::default();
+    serde::Serialize::serialize(process.as_ref(), &mut suspension_probe).expect("typed prevention probe");
+    if let Some(filter) = suspension_probe.suspend_filter {
+        builder = builder.prevention_all_matching().paid_prevention_filter(filter);
+        runtime = runtime.with_opt_key(if once_per_turn {effect_slot}else{None})
+            .with_opt_key_inherited(matches!(scope,CompiledScope::Inherited|CompiledScope::Linked));
+    }
 
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
@@ -111,8 +139,11 @@ pub fn lower_with_raw(
         .as_ref()
         .is_some_and(predicate_reads_replacement_subject);
     let preflight_process = process.clone();
+    let field_dna_flow = DelayFieldDnaDigivolveFlow::from_process(&process);
+    let requires_ready_delay = field_dna_flow.is_some();
     builder = builder.replacement_condition(move |ctx, subject| {
         source_permanent_is_still_active(ctx)
+            && (!requires_ready_delay || source_delay_is_ready(ctx))
             && (can_match_cross_permanent_subject || replacement_subject_is_source(ctx, *subject))
             && active_when.as_ref().is_none_or(|active_when| {
                 eval_predicate(
@@ -123,6 +154,39 @@ pub fn lower_with_raw(
             })
             && replacement_process_has_payable_required_selection(&preflight_process, ctx, *subject)
     });
+
+    if let Some(flow) = field_dna_flow {
+        builder = builder.replacement_process(move |rctx| {
+            if !source_delay_is_ready(&rctx.effect.as_read()) {
+                return;
+            }
+            let Some(source) = rctx.effect.source_permanent else {
+                return;
+            };
+            let Some(source_card) = rctx.effect.permanent_top_card_handle(source) else {
+                return;
+            };
+            let continuation = DelayFieldDnaContinuation {
+                source_player: source.player,
+                source_card,
+                subject_card: stable_replacement_subject_card(rctx.effect, rctx.subject),
+                player: resolve_player(rctx.effect, flow.of),
+                flow: flow.clone(),
+            };
+            match rctx.effect.trash_delay_source_status() {
+                DelayCostStatus::Paid => install_delay_field_dna_stage(
+                    rctx.effect,
+                    continuation,
+                    DelayFieldDnaStage::Result,
+                ),
+                DelayCostStatus::Pending => {
+                    arm_delay_field_dna_payment(rctx.effect.game, continuation)
+                }
+                DelayCostStatus::Unpaid => {}
+            }
+        });
+        return Some(builder.build());
+    }
 
     if DelaySelfCancelFlow::from_process(&process).is_some() {
         builder = builder.replacement_process(move |rctx| {
@@ -399,6 +463,7 @@ fn predicate_reads_replacement_subject(pred: &CompiledPredicate) -> bool {
         || pred.is_suspended.is_some()
         || pred.is_unsuspended.is_some()
         || pred.can_change_orientation.is_some()
+        || pred.can_unsuspend.is_some()
         || pred.can_attack.is_some()
         || pred.has_keyword.is_some()
         || !pred.zone.is_empty()
@@ -592,6 +657,7 @@ fn required_selection_step_has_candidate(
         // reaches the floor. EX13-016 Omnimon: only offer the save when a
         // same-level PAIR exists.
         CompiledStep::SelectMaterials {
+            named_groups,
             of_permanent,
             max,
             filter,
@@ -613,6 +679,15 @@ fn required_selection_step_has_candidate(
             let Some(perm) = resolve_step_permanent(of_permanent, ctx, bindings) else {
                 return false;
             };
+            if !named_groups.is_empty() {
+                return crate::dsl_cards::step::selections::named_material_candidate_count(
+                    ctx,
+                    perm,
+                    filter,
+                    bindings,
+                    named_groups,
+                ) >= floor as usize;
+            }
             let mode = match same_by {
                 Some(digimon_dsl::compiled::CompiledSameBy::Level) => {
                     Some(crate::effect_context::DistinctByMode::SameLevel)
@@ -686,15 +761,16 @@ fn required_selection_step_has_candidate(
             } else {
                 0
             };
-            let budget = bonus + formula_eval::evaluate_read_with_bindings(
-                dp_budget,
-                ctx,
-                ctx.source_permanent.unwrap_or(PermanentHandle {
-                    player: ctx.player,
-                    index: u8::MAX,
-                }),
-                Some(bindings),
-            );
+            let budget = bonus
+                + formula_eval::evaluate_read_with_bindings(
+                    dp_budget,
+                    ctx,
+                    ctx.source_permanent.unwrap_or(PermanentHandle {
+                        player: ctx.player,
+                        index: u8::MAX,
+                    }),
+                    Some(bindings),
+                );
             *min_picks == 0 || has_opponent_dp_budget_candidate(ctx, budget)
         }
         CompiledStep::SelectOpponentPlayCostBudget {
@@ -777,11 +853,14 @@ fn required_selection_step_has_candidate(
             .is_some_and(|perm| {
                 let n = perm.card_sources.len();
                 n > 1
-                    && perm
-                        .card_sources
-                        .iter()
-                        .take(n - 1)
-                        .any(|s| s.is_option(ctx.card_data()))
+                    && perm.card_sources.iter().take(n - 1).any(|s| {
+                        s.is_option(ctx.card_data())
+                            && !ctx.game.source_card_trash_blocked(
+                                ctx.source_permanent.unwrap(),
+                                s.handle(),
+                                ctx.player,
+                            )
+                    })
             }),
         // Non-selection first steps may mutate state before a later selection,
         // so this read-only preflight deliberately does not speculate.
@@ -1141,14 +1220,7 @@ fn source_permanent_is_still_active(ctx: &EffectReadContext<'_>) -> bool {
         return false;
     };
 
-    let permanent = if handle.index == crate::action::space::BREEDING_TARGET as u8 {
-        ctx.game.player(handle.player).breeding_area.as_ref()
-    } else {
-        ctx.game
-            .player(handle.player)
-            .battle_area
-            .get(handle.index as usize)
-    };
+    let permanent = crate::replacement::replacement_carrier(ctx.game, handle);
 
     permanent.is_some_and(|perm| {
         // The source card may live in the digivolution stack (normal /
@@ -1454,6 +1526,438 @@ impl DelayHandDigivolveFlow {
 ///   },
 ///   cancel_replacement ]
 /// ```
+/// Paid Delay followed by an optional, recipe-checked pair of field materials.
+/// Unlike hand-partner DNA, neither material is tied to the leave subject.
+#[derive(Clone, Debug)]
+struct DelayFieldDnaDigivolveFlow {
+    of: CompiledPlayerRef,
+    result_filter: CompiledPredicate,
+    result_prompt: String,
+    left_filter: CompiledPredicate,
+    right_filter: CompiledPredicate,
+    pair_prompt: String,
+}
+
+impl DelayFieldDnaDigivolveFlow {
+    fn from_process(process: &[CompiledStep]) -> Option<Self> {
+        let [CompiledStep::DeletePermanent { target }, CompiledStep::SelectHand {
+            of,
+            filter,
+            bind_as,
+            prompt,
+            optional,
+            cost: selection_cost,
+            then,
+            ..
+        }, CompiledStep::SelectDnaPair {
+            left_filter,
+            right_filter,
+            bind_left_as,
+            bind_right_as,
+            prompt: pair_prompt,
+            optional: pair_optional,
+            ..
+        }, CompiledStep::EffectInitiatedDnaDigivolve {
+            target_a,
+            target_b,
+            from_hand,
+            cost,
+            ignore_requirements,
+        }] = process
+        else {
+            return None;
+        };
+        if !matches!(target, CompiledBindingRef::Source)
+            || !matches!(of, CompiledPlayerRef::You)
+            || !*optional
+            || !*pair_optional
+            || *selection_cost
+            || !then.is_empty()
+            || !matches!(cost, CompiledCostDelta::Printed)
+            || *ignore_requirements
+            || !is_binding_ref_named(target_a, bind_left_as)
+            || !is_binding_ref_named(target_b, bind_right_as)
+            || !is_binding_ref_named(from_hand, bind_as.as_deref()?)
+        {
+            return None;
+        }
+        Some(Self {
+            of: *of,
+            result_filter: filter.clone(),
+            result_prompt: prompt.clone(),
+            left_filter: left_filter.clone(),
+            right_filter: right_filter.clone(),
+            pair_prompt: pair_prompt.clone(),
+        })
+    }
+}
+
+fn source_delay_is_ready(ctx: &EffectReadContext<'_>) -> bool {
+    ctx.source_permanent.and_then(|h| ctx.game.player(h.player).battle_area.get(h.index as usize))
+        .is_some_and(|p| matches!(p.option_state, OptionState::Delayed { placed_on_turn, .. } if placed_on_turn < ctx.game.turn_count))
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct DelayFieldDnaContinuation {
+    source_player: PlayerId,
+    source_card: CardHandle,
+    subject_card: Option<(PlayerId, CardHandle)>,
+    player: PlayerId,
+    flow: DelayFieldDnaDigivolveFlow,
+}
+
+#[derive(Clone, Debug)]
+enum DelayFieldDnaStage {
+    Result,
+    First {
+        result: CardHandle,
+    },
+    Second {
+        result: CardHandle,
+        first: CardHandle,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct DelayFieldDnaSelectionState {
+    continuation: DelayFieldDnaContinuation,
+    stage: DelayFieldDnaStage,
+    candidates: Vec<CardHandle>,
+    pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
+/// A field material's top-card snapshot follows index compaction, but never
+/// rebinds an already-consumed material to a new DNA stack containing it.
+fn delay_field_material(
+    ctx: &EffectContext<'_>,
+    player: PlayerId,
+    card: CardHandle,
+) -> Option<PermanentHandle> {
+    ctx.game
+        .player(player)
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().handle() == card)
+        .map(|index| PermanentHandle {
+            player,
+            index: index as u8,
+        })
+}
+
+/// Pair selection permits either presentation order. Normalize using the
+/// result's recipe, including the same result-scoped identity grants used by
+/// the main-action DNA path, before passing stacks to the merge primitive.
+fn delay_field_dna_material_order(
+    ctx: &EffectContext<'_>,
+    player: PlayerId,
+    result: CardHandle,
+    first: CardHandle,
+    second: CardHandle,
+) -> Option<(PermanentHandle, PermanentHandle)> {
+    let a = delay_field_material(ctx, player, first)?;
+    let b = delay_field_material(ctx, player, second)?;
+    let game = &ctx.game;
+    let result = game
+        .player(player)
+        .hand
+        .iter()
+        .find(|card| card.handle() == result)?;
+    let extras_a = game.dna_material_extras(a, result);
+    let extras_b = game.dna_material_extras(b, result);
+    let (first_is_top, _) = crate::dna_digivolve::get_dna_stacking_order_ext(
+        &game.card_data[result.data_index],
+        (
+            &game.player(player).battle_area[a.index as usize],
+            &extras_a,
+        ),
+        (
+            &game.player(player).battle_area[b.index as usize],
+            &extras_b,
+        ),
+        &game.card_data,
+    )?;
+    Some(if first_is_top { (a, b) } else { (b, a) })
+}
+
+fn delay_field_dna_pairs(
+    ctx: &EffectContext<'_>,
+    cont: &DelayFieldDnaContinuation,
+    result: CardHandle,
+) -> Vec<(CardHandle, CardHandle, i32)> {
+    let game = &ctx.game;
+    if !game
+        .player(cont.player)
+        .hand
+        .iter()
+        .any(|c| c.handle() == result)
+        || game
+            .modifiers
+            .player_has(cont.player, ModifierType::CannotDigivolveDigimonByEffect)
+        || !eval_predicate(
+            &cont.flow.result_filter,
+            &ctx.as_read(),
+            PredicateSubject::Card(result),
+        )
+    {
+        return Vec::new();
+    }
+    let materials: Vec<_> = game
+        .player(cont.player)
+        .battle_area
+        .iter()
+        .enumerate()
+        .filter_map(|(index, perm)| {
+            let handle = PermanentHandle {
+                player: cont.player,
+                index: index as u8,
+            };
+            (perm.is_digimon_for_rules(&game.card_data, &game.modifiers, handle)
+                && !game.modifiers.has(handle, ModifierType::CannotDigivolve)
+                && ctx.can_affect_permanent(handle))
+            .then_some((handle, perm.top_card().handle()))
+        })
+        .collect();
+    let read = ctx.as_read();
+    let mut pairs = Vec::new();
+    for &(left, left_card) in &materials {
+        if !eval_predicate(
+            &cont.flow.left_filter,
+            &read,
+            PredicateSubject::Permanent(left),
+        ) {
+            continue;
+        }
+        for &(right, right_card) in &materials {
+            if left == right
+                || !eval_predicate(
+                    &cont.flow.right_filter,
+                    &read,
+                    PredicateSubject::Permanent(right),
+                )
+            {
+                continue;
+            }
+            let Some(cost) = ctx.printed_dna_cost_for_pair(left, right, result) else {
+                continue;
+            };
+            let after = i32::from(game.memory)
+                + if cont.player == game.turn_player() {
+                    -cost
+                } else {
+                    cost
+                };
+            if after >= i32::from(game.rules.memory_range.0)
+                && after <= i32::from(game.rules.memory_range.1)
+            {
+                pairs.push((left_card, right_card, cost));
+            }
+        }
+    }
+    pairs
+}
+
+fn arm_delay_field_dna_payment(game: &mut Game, continuation: DelayFieldDnaContinuation) {
+    let Some(mut selection) = game.pending_selection.take() else {
+        continue_delay_field_dna_payment(game, continuation);
+        return;
+    };
+    if let Some(inner) = game.pending_selection_resume.take() {
+        game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::DelayFieldDnaAfterPayment {
+                inner: Box::new(inner),
+                continuation,
+                outer_conts: Vec::new(),
+            }],
+        });
+    } else {
+        let callback = selection.callback;
+        let after = continuation.clone();
+        selection.callback = Box::new(move |game, action| {
+            callback(game, action);
+            continue_delay_field_dna_payment(game, after);
+        });
+        let decline = selection.on_decline.take();
+        selection.on_decline = Some(Box::new(move |game| {
+            if let Some(decline) = decline {
+                decline(game);
+            }
+            continue_delay_field_dna_payment(game, continuation);
+        }));
+    }
+    game.pending_selection = Some(selection);
+}
+
+pub(crate) fn continue_delay_field_dna_payment(
+    game: &mut Game,
+    continuation: DelayFieldDnaContinuation,
+) {
+    if game.pending_selection.is_some() {
+        arm_delay_field_dna_payment(game, continuation);
+        return;
+    }
+    let mut ctx = EffectContext::new(game, continuation.source_card, None, continuation.player);
+    if ctx.delay_source_card_in_trash(continuation.source_player, continuation.source_card) {
+        install_delay_field_dna_stage(&mut ctx, continuation, DelayFieldDnaStage::Result);
+    }
+}
+
+fn install_delay_field_dna_stage(
+    ctx: &mut EffectContext<'_>,
+    continuation: DelayFieldDnaContinuation,
+    stage: DelayFieldDnaStage,
+) {
+    let mut candidates = match stage {
+        DelayFieldDnaStage::Result => matching_hand_candidates(
+            ctx,
+            continuation.player,
+            &continuation.flow.result_filter,
+            HAND_MAIN_LIMIT,
+        )
+        .into_iter()
+        .filter(|result| !delay_field_dna_pairs(ctx, &continuation, *result).is_empty())
+        .collect::<Vec<_>>(),
+        DelayFieldDnaStage::First { result } => delay_field_dna_pairs(ctx, &continuation, result)
+            .into_iter()
+            .map(|(a, _, _)| a)
+            .collect(),
+        DelayFieldDnaStage::Second { result, first } => {
+            delay_field_dna_pairs(ctx, &continuation, result)
+                .into_iter()
+                .filter(|(a, _, _)| *a == first)
+                .map(|(_, b, _)| b)
+                .collect()
+        }
+    };
+    let mut seen = std::collections::HashSet::new();
+    candidates.retain(|card| seen.insert(*card));
+    if candidates.is_empty() {
+        return;
+    }
+    let prompt = match stage {
+        DelayFieldDnaStage::Result => continuation.flow.result_prompt.clone(),
+        _ => continuation.flow.pair_prompt.clone(),
+    };
+    let state = DelayFieldDnaSelectionState {
+        continuation,
+        stage,
+        candidates,
+        outer_conts: Vec::new(),
+    };
+    let choices: Vec<_> = state
+        .candidates
+        .iter()
+        .enumerate()
+        .map(|(i, card)| EffectChoiceEntry {
+            count_choice: None,
+            label: ctx
+                .game
+                .card_data_for_handle(*card)
+                .map(|d| d.card_name.clone())
+                .unwrap_or_default(),
+            action_id: HAND_EFFECT_START + i as u16,
+            source_card: Some(*card),
+            source_kind: None,
+            timing: None,
+            is_optional: false,
+            keyword: None,
+            observation_metadata: Default::default(),
+        })
+        .collect();
+    let callback_state = state.clone();
+    let decline_state = state.clone();
+    let previous_phase = ctx.game.current_phase;
+    ctx.game.current_phase = GamePhase::EffectChoice;
+    ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind: SelectionKind::EffectChoice,
+        selecting_player: state.continuation.player,
+        previous_phase,
+        valid_action_ids: choices.iter().map(|c| c.action_id).collect(),
+        is_optional: true,
+        prompt,
+        effect_choices: Some(choices),
+        source_card: state.continuation.source_card,
+        source_permanent: None,
+        source_kind: ctx.source_kind(),
+        callback: Box::new(move |game, action| {
+            run_delay_field_dna_selection(game, callback_state, action, false)
+        }),
+        on_decline: Some(Box::new(move |game| {
+            run_delay_field_dna_selection(game, decline_state, crate::action::space::PASS, true)
+        })),
+    });
+    ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::DelayFieldDnaSelection(state)],
+    });
+}
+
+pub(crate) fn run_delay_field_dna_selection(
+    game: &mut Game,
+    state: DelayFieldDnaSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    let DelayFieldDnaSelectionState {
+        continuation,
+        stage,
+        candidates,
+        outer_conts,
+    } = state;
+    if !is_pass {
+        if let Some(chosen) = action_id
+            .checked_sub(HAND_EFFECT_START)
+            .and_then(|i| candidates.get(i as usize))
+            .copied()
+        {
+            let mut ctx =
+                EffectContext::new(game, continuation.source_card, None, continuation.player);
+            match stage {
+                DelayFieldDnaStage::Result => install_delay_field_dna_stage(
+                    &mut ctx,
+                    continuation,
+                    DelayFieldDnaStage::First { result: chosen },
+                ),
+                DelayFieldDnaStage::First { result } => install_delay_field_dna_stage(
+                    &mut ctx,
+                    continuation,
+                    DelayFieldDnaStage::Second {
+                        result,
+                        first: chosen,
+                    },
+                ),
+                DelayFieldDnaStage::Second { result, first } => {
+                    let pair = delay_field_dna_pairs(&ctx, &continuation, result)
+                        .into_iter()
+                        .find(|(a, b, _)| *a == first && *b == chosen);
+                    if let Some((_, _, cost)) = pair {
+                        if let Some((a, b)) = delay_field_dna_material_order(
+                            &ctx,
+                            continuation.player,
+                            result,
+                            first,
+                            chosen,
+                        ) {
+                            let consumed_subject =
+                                continuation.subject_card.is_some_and(|(player, card)| {
+                                    player == continuation.player
+                                        && (card == first || card == chosen)
+                                });
+                            if ctx
+                                .effect_initiated_dna_digivolve(a, b, result, cost, false)
+                                .is_some()
+                                && consumed_subject
+                            {
+                                ctx.cancel_current_replacement();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    crate::dsl_cards::step::selections::run_outer_conts(game, outer_conts);
+}
+
 struct DelayHandDnaDigivolveFlow {
     of: CompiledPlayerRef,
     result_filter: CompiledPredicate,
@@ -1648,6 +2152,7 @@ fn install_delay_hand_digivolve_selection(
         .iter()
         .enumerate()
         .map(|(idx, card)| EffectChoiceEntry {
+            count_choice: None,
             label: ctx
                 .game
                 .card_data_for_handle(*card)
@@ -1891,6 +2396,7 @@ fn install_delay_play_from_hand_selection(
         .iter()
         .enumerate()
         .map(|(idx, card)| EffectChoiceEntry {
+            count_choice: None,
             label: ctx
                 .game
                 .card_data_for_handle(*card)
@@ -2395,6 +2901,7 @@ fn install_delay_dna_card_selection(
         .iter()
         .enumerate()
         .map(|(idx, card)| EffectChoiceEntry {
+            count_choice: None,
             label: ctx
                 .game
                 .card_data_for_handle(*card)
@@ -2608,4 +3115,82 @@ pub(crate) fn run_delay_dna_card_selection_step(
         }
     }
     crate::dsl_cards::step::selections::run_outer_conts(game, outer_conts);
+}
+
+fn process_has_paid_self_prevention(process: &[CompiledStep]) -> bool {
+ let mut probe=PaidPreventionProbe::default();
+ serde::Serialize::serialize(process,&mut probe).expect("infallible typed probe");
+ probe.found
+}
+fn process_has_paid_all_prevention(process: &[CompiledStep]) -> bool {
+ let mut probe=PaidPreventionProbe::default();
+ serde::Serialize::serialize(process,&mut probe).expect("infallible typed probe");
+ probe.all_matching
+}
+#[derive(Default)]
+struct PaidPreventionProbe{found:bool,all_matching:bool,suspend_filter:Option<CompiledPredicate>,struct_names:Vec<&'static str>}
+impl PaidPreventionProbe {
+ fn variant(&mut self,name:&str,variant:&str){
+  self.found |= name=="CompiledStep" && matches!(variant,"DeleteSelfAndCancelLeave"|"DeleteSelfAndCancelAllMatchingLeaves");
+  self.all_matching |= name=="CompiledStep" && variant=="DeleteSelfAndCancelAllMatchingLeaves";
+ }
+}
+macro_rules! primitive {($($method:ident($ty:ty)),*)=>{$(fn $method(self,_v:$ty)->Result<(),Self::Error>{Ok(())})*};}
+impl<'a> serde::Serializer for &'a mut PaidPreventionProbe {
+ type Ok=();type Error=serde_json::Error;
+ type SerializeSeq=Self;type SerializeTuple=Self;type SerializeTupleStruct=Self;type SerializeTupleVariant=Self;
+ type SerializeMap=Self;type SerializeStruct=Self;type SerializeStructVariant=Self;
+ primitive!(serialize_bool(bool),serialize_i8(i8),serialize_i16(i16),serialize_i32(i32),serialize_i64(i64),serialize_u8(u8),serialize_u16(u16),serialize_u32(u32),serialize_u64(u64),serialize_f32(f32),serialize_f64(f64),serialize_char(char),serialize_str(&str),serialize_bytes(&[u8]));
+ fn serialize_none(self)->Result<(),Self::Error>{Ok(())}
+ fn serialize_some<T:serde::Serialize+?Sized>(self,v:&T)->Result<(),Self::Error>{v.serialize(self)}
+ fn serialize_unit(self)->Result<(),Self::Error>{Ok(())}
+ fn serialize_unit_struct(self,_n:&'static str)->Result<(),Self::Error>{Ok(())}
+ fn serialize_unit_variant(self,n:&'static str,_i:u32,v:&'static str)->Result<(),Self::Error>{self.variant(n,v);Ok(())}
+ fn serialize_newtype_struct<T:serde::Serialize+?Sized>(self,_n:&'static str,v:&T)->Result<(),Self::Error>{v.serialize(self)}
+ fn serialize_newtype_variant<T:serde::Serialize+?Sized>(self,n:&'static str,_i:u32,v:&'static str,x:&T)->Result<(),Self::Error>{self.variant(n,v);x.serialize(self)}
+ fn serialize_seq(self,_n:Option<usize>)->Result<Self,Self::Error>{Ok(self)}
+ fn serialize_tuple(self,_n:usize)->Result<Self,Self::Error>{Ok(self)}
+ fn serialize_tuple_struct(self,_s:&'static str,_n:usize)->Result<Self,Self::Error>{Ok(self)}
+ fn serialize_tuple_variant(self,n:&'static str,_i:u32,v:&'static str,_len:usize)->Result<Self,Self::Error>{self.variant(n,v);Ok(self)}
+ fn serialize_map(self,_n:Option<usize>)->Result<Self,Self::Error>{Ok(self)}
+ fn serialize_struct(self,s:&'static str,_n:usize)->Result<Self,Self::Error>{self.struct_names.push(s);Ok(self)}
+ fn serialize_struct_variant(self,n:&'static str,_i:u32,v:&'static str,_len:usize)->Result<Self,Self::Error>{self.variant(n,v);self.struct_names.push(if n=="CompiledStep" {v}else{n});Ok(self)}
+}
+macro_rules! sequence {($trait:ident,$method:ident)=>{impl serde::ser::$trait for &mut PaidPreventionProbe {
+ type Ok=();type Error=serde_json::Error;
+ fn $method<T:serde::Serialize+?Sized>(&mut self,v:&T)->Result<(),Self::Error>{v.serialize(&mut **self)}
+ fn end(self)->Result<(),Self::Error>{Ok(())}
+}};}
+sequence!(SerializeSeq,serialize_element);sequence!(SerializeTuple,serialize_element);
+sequence!(SerializeTupleStruct,serialize_field);sequence!(SerializeTupleVariant,serialize_field);
+impl serde::ser::SerializeMap for &mut PaidPreventionProbe {
+ type Ok=();type Error=serde_json::Error;
+ fn serialize_key<T:serde::Serialize+?Sized>(&mut self,v:&T)->Result<(),Self::Error>{v.serialize(&mut **self)}
+ fn serialize_value<T:serde::Serialize+?Sized>(&mut self,v:&T)->Result<(),Self::Error>{v.serialize(&mut **self)}
+ fn end(self)->Result<(),Self::Error>{Ok(())}
+}
+macro_rules! structure {($trait:ident)=>{impl serde::ser::$trait for &mut PaidPreventionProbe {
+ type Ok=();type Error=serde_json::Error;
+ fn serialize_field<T:serde::Serialize+?Sized>(&mut self,_k:&'static str,v:&T)->Result<(),Self::Error>{
+  if _k=="filter" && self.struct_names.last()==Some(&"SuspendAndCancelAllMatchingLeaves") {
+      let filter:CompiledPredicate=serde_json::from_value(serde_json::to_value(v)?)?;
+      if let Some(previous)=&self.suspend_filter { assert_eq!(previous,&filter,"one replacement must use one plural subject filter"); }
+      self.suspend_filter=Some(filter);
+  }
+  v.serialize(&mut **self)
+ }
+ fn end(self)->Result<(),Self::Error>{self.struct_names.pop();Ok(())}
+}};}
+
+structure!(SerializeStruct);structure!(SerializeStructVariant);
+
+#[cfg(test)]
+mod paid_prevention_probe_tests {
+ use super::*;
+ #[test]
+ fn probe_reads_typed_nested_steps_and_ignores_identical_prompt_text(){
+  assert!(process_has_paid_self_prevention(&[CompiledStep::DeleteSelfAndCancelLeave]));
+  assert!(process_has_paid_self_prevention(&[CompiledStep::If{condition:Default::default(),then:Vec::new(),else_branch:vec![CompiledStep::DeleteSelfAndCancelLeave]}]));
+  assert!(!process_has_paid_self_prevention(&[CompiledStep::SelectEffectChoice{labels:vec!["DeleteSelfAndCancelLeave".into()],legal_when:None,bind_as:Some("DeleteSelfAndCancelLeave".into()),prompt:"DeleteSelfAndCancelLeave".into(),prompt_key:None}]));
+ }
 }

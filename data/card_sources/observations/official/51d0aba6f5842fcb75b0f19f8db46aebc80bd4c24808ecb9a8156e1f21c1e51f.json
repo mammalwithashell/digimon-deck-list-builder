@@ -1,0 +1,115 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX12-034",
+    "card_type": "Digimon",
+    "colors": [
+      "Blue",
+      "Black"
+    ],
+    "dp": 12000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Blue",
+          "Black"
+        ],
+        "cost": 4,
+        "from_level": 5,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue",
+          "Black"
+        ],
+        "dp": 12000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 6,
+        "name": "Erlangmon",
+        "play_cost": 12,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] You may play 1 [Kotenken] Token. (Digimon/Black/9000 DP/＜Blocker＞)\n[All Turns] [Once Per Turn] When any of your Digimon are played, return 1 of your opponent's lowest level Digimon to the bottom of the deck.\n[All Turns] [Once Per Turn] When any of your Digimon would leave the battle area, you may play 1 level 5 or lower [SW] trait card from your hand or this Digimon's digivolution cards without paying the cost."
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 6,
+    "name": "Erlangmon",
+    "play_cost": 12,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-034_P1.png?260529",
+      "printing_id": "EX12-034_P1"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, it triggers.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6775",
+        "question": "Does this card's [All Turns] effect also trigger when this card itself is played?"
+      },
+      {
+        "answer": "The effects trigger simultaneously, so the player can choose the activation order.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6776",
+        "question": "Multiple effects trigger when this card is played. In what order do they activate?"
+      },
+      {
+        "answer": "You can activate the 2nd [All Turns] effect first.\nWhen [Kotenken] was played, this card's 1st [All Turns] effect triggered, but a rule check occurs before activation, and [Kotenken] becomes a target for deletion. The 2nd [All Turns] effect triggers immediately before this deletion, and you can interrupt and activate it.\nIn addition, if a Digimon with 10000 DP or less was played by this effect, a rule check will occur again and that Digimon will be deleted.\nOnce all of the rule checks are resolved, you then can activate this card's 1st [All Turns] effect.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6777",
+        "question": "All of my Digimon get -10000 DP. I used this card's [On Play] [When Digivolving] effect to play [Kotenken].\nAt such times, [Kotenken]'s DP will become 0 and it will be deleted. In what order can I activate this card's 1st [All Turns] effect and 2nd [All Turns] effect?"
+      },
+      {
+        "answer": "Yes, it's deleted.\nEven if it's deleted, you can activate this card's 1st [All Turns] effect.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6778",
+        "question": "All of my Digimon get -5000 DP. I used this card's [All Turns] effect to play a Digimon with 5000 DP or less.\nAt such times, is the played Digimon deleted before the 1st [All Turns] effect activates?"
+      }
+    ],
+    "rarity": "SR",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] You may play 1 [Kotenken] Token. (Digimon/Black/9000 DP/＜Blocker＞)\n[All Turns] [Once Per Turn] When any of your Digimon are played, return 1 of your opponent's lowest level Digimon to the bottom of the deck.\n[All Turns] [Once Per Turn] When any of your Digimon would leave the battle area, you may play 1 level 5 or lower [SW] trait card from your hand or this Digimon's digivolution cards without paying the cost."
+      }
+    ],
+    "type": "Shaman/Saneiketsu/Tentei Hachibushu/Shambala/SW"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "51d0aba6f5842fcb75b0f19f8db46aebc80bd4c24808ecb9a8156e1f21c1e51f",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-034:EX12-034_P1",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

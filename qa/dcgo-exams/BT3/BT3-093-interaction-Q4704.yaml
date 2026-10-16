@@ -1,0 +1,179 @@
+# Q4704 (2025-06-13): with BT8-053 Lighdramon (blue/green Digimon) and P-117 Veemon (blue Digimon)
+# revealed, the player MAY choose Lighdramon as the blue card and thereby not add Veemon.
+# P0 plays Davis from hand on turn 1 (cost 4 at memory 0); the reveal is
+# [BT8-053 Lighdramon, P-117 Veemon, ST1-05 Birdramon (red)]. Blue bucket: pick Lighdramon.
+# Green bucket: Lighdramon is already taken (mutualConditions / no_duplicate_cards) and nothing
+# else is green, so BOTH engines skip it silently. Veemon and Birdramon (2 cards) are bottomed via
+# ONE ordering prompt on both sides (RevealLibrary.cs:485-512; same shape as the confirmed
+# BT3-093-tail-single-hit step 7). Final-row observable: p0.hand holds BT8-053 and NOT P-117.
+# Only one bucket adds a card, so the multi-bucket intermediate-hand quirk does not arise here.
+# Sources: data/card_bundles/BT3-093.md; base DCGO BT3/Blue/BT3_093.cs + RevealLibrary.cs
+# RevealDeckTopCardsAndSelect (a picked card is removed from revealedCards, second bucket
+# maxCount = 0 -> no prompt); BT8/Green/BT8_053.cs and P/Blue/P_117.cs exist in DCGO.
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: BT3-093
+clause: BT3-093#effect#1
+covers: [BT3-093#effect#1]
+interaction: { id: "qa:Q4704", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: BT3-093, ST1-04 x3, ST1-06 | security bottom->top: ST1-02 x4, ST1-03 | deck top (the reveal): BT8-053, P-117, ST1-05 | then ST1-08, ST1-08
+    stack: [BT3-093, ST1-04, ST1-04, ST1-04, ST1-06, ST1-02, ST1-02, ST1-02, ST1-02, ST1-03, BT8-053, P-117, ST1-05, ST1-08, ST1-08]
+    rest: BT3-093-interaction-Q4704-p0
+  p1:
+    stack: [ST1-03, ST1-06, ST1-04, ST1-04, ST1-04, ST1-02, ST1-02, ST1-02, ST1-02, ST1-04, ST2-04]
+    rest: BT3-093-interaction-Q4704-p1
+steps:
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+# [On Play]: reveal BT8-053, P-117, ST1-05.
+- { actor: 0, do: { play: { card: BT3-093, from: hand } }, expect: { prompt: main_phase } }
+# Blue Digimon bucket: candidates BT8-053 and P-117. The ruling: choosing Lighdramon here is legal.
+- { actor: 0, do: { select: { cards: [BT8-053] } }, expect: { prompt: SelectCardEffect } }
+# Green bucket: no remaining green Digimon -> skipped on both sides, no step.
+# Remaining P-117 + ST1-05 -> one bottom-order prompt on both sides. Veemon is not added.
+- { actor: 0, do: { select: { cards: [P-117, ST1-05] } }, expect: { prompt: SelectCardEffect } }
+# Memory -4 handed the turn to P1; this row is the post-resolution observation.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+expect_ruling:
+  q_id: Q4704
+  assert:
+  - at: 4
+    that:
+      p0.hand:
+      - ST1-04
+      - ST1-04
+      - ST1-04
+      - ST1-06
+      - BT8-053
+assert:
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: -4
+    p0.field:
+    - card_id: BT3-093
+      dp: -1
+      suspended: false
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    p1.security: 5
+    p1.trash: []
+    turn: 1
+- at: 3
+  that:
+    _backfilled: true
+    memory: -4
+    p0.field:
+    - card_id: BT3-093
+      dp: -1
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT8-053
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    p1.security: 5
+    p1.trash: []
+    turn: 1
+- at: 4
+  that:
+    _backfilled: true
+    memory: -4
+    p0.field:
+    - card_id: BT3-093
+      dp: -1
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT8-053
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 2

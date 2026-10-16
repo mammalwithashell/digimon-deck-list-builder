@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Social",
+    "card_id": "BT25-007",
+    "colors": "Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "2000",
+    "form": "Stnd./Appmon",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Appmon] trait card and 1 [Social], [Tool], [Reboot] or [Creation] trait card among them to the hand. Return the rest to the bottom of the deck."
+      },
+      {
+        "label": "Link DP",
+        "text": "DP+2000"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Linking] Delete 1 of your opponent's Digimon with 3000 DP or less."
+      }
+    ],
+    "type": "Search"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "9986a69256e03c099385136f1ab6115e6f0102fe56efc770463285fc3d1f0e1a",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "0199fc835017a3e1dbda8ca31a13105697cd2dcab0bd3989e9c043c9498d4c14",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-007",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-007"
+}

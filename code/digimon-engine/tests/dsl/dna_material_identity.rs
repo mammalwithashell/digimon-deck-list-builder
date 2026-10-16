@@ -160,7 +160,10 @@ fn dna_material_identity_compiles_onto_the_aura() {
                 && d.name.as_deref() == Some("Slayerdramon")
         )
     });
-    assert!(found, "aura carries the compiled dna_material_identity payload");
+    assert!(
+        found,
+        "aura carries the compiled dna_material_identity payload"
+    );
 }
 
 fn compile_errors(yaml: &str) -> String {
@@ -236,9 +239,120 @@ fn extras_apply_only_for_the_named_result() {
     assert_eq!(for_exa.levels, vec![6]);
     assert_eq!(for_exa.names, vec!["Slayerdramon".to_string()]);
     assert!(
-        runner.game.dna_material_extras(handle(0), &other).is_empty(),
+        runner
+            .game
+            .dna_material_extras(handle(0), &other)
+            .is_empty(),
         "no treatment for a different DNA result"
     );
+}
+
+fn own_hand_runner() -> DebugRunner {
+    let scoped = WING.replace(
+        "      for_result: TestExa",
+        "      for_result: TestExa\n      result_scope: own_hand",
+    );
+    let mut b = DebugRunner::builder();
+    for yaml in [scoped.as_str(), GREEN6, EXA] {
+        b = b
+            .from_dsl_yaml(yaml)
+            .expect("own-hand DNA identity compiles");
+    }
+    let mut r = b
+        .hand(0, &["DMI-EXA", "DMI-EXA"])
+        .hand(1, &["DMI-EXA"])
+        .memory(10)
+        .start();
+    r.game.current_phase = GamePhase::Main;
+    r.place_on_field(0, "DMI-WING", Some(0));
+    r.place_on_field(0, "DMI-GREEN6", Some(0));
+    r.game.tick_declarative_effects();
+    r
+}
+
+#[test]
+fn dna_material_identity_own_hand_checks_actual_instance_and_current_zone() {
+    let mut r = own_hand_runner();
+    let own = r.game.players[0].hand[0].clone();
+    let other_copy = r.game.players[0].hand.remove(1);
+    r.game.players[0].trash.push(other_copy.clone());
+    let opponent = r.game.players[1].hand[0].clone();
+    assert_eq!(r.game.dna_material_extras(handle(0), &own).levels, vec![6]);
+    assert!(r
+        .game
+        .dna_material_extras(handle(0), &other_copy)
+        .is_empty());
+    assert!(r.game.dna_material_extras(handle(0), &opponent).is_empty());
+    let moved = r.game.players[0].hand.remove(0);
+    r.game.players[0].trash.push(moved);
+    assert!(r.game.dna_material_extras(handle(0), &own).is_empty());
+    let moved = r.game.players[0].trash.pop().unwrap();
+    r.game.players[0].hand.push(moved);
+    assert_eq!(r.game.dna_material_extras(handle(0), &own).levels, vec![6]);
+}
+
+#[test]
+fn dna_material_identity_own_hand_clone_and_dna_mask_follow_local_state() {
+    let r = own_hand_runner();
+    let own = r.game.players[0].hand[0].clone();
+    let mut fork = r.game.clone();
+    let moved = fork.players[0].hand.remove(0);
+    fork.players[0].trash.push(moved);
+    assert!(fork.dna_material_extras(handle(0), &own).is_empty());
+    assert_eq!(r.game.dna_material_extras(handle(0), &own).levels, vec![6]);
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&r.game, 0)[DNA_DIGIVOLVE_START as usize],
+        1.0
+    );
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&fork, 0)[DNA_DIGIVOLVE_START as usize],
+        1.0
+    );
+    fork.players[0].hand.clear();
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&fork, 0)[DNA_DIGIVOLVE_START as usize],
+        0.0
+    );
+}
+
+#[test]
+fn dna_material_identity_omitted_scope_remains_unrestricted() {
+    let mut r = main_runner(&["DMI-EXA"], &["DMI-WING"]);
+    let result = r.game.players[0].hand.remove(0);
+    r.game.players[0].trash.push(result.clone());
+    assert_eq!(
+        r.game.dna_material_extras(handle(0), &result).levels,
+        vec![6]
+    );
+}
+
+#[test]
+fn dna_material_identity_result_scope_rejects_unsupported_locations() {
+    let yaml = WING.replace(
+        "      for_result: TestExa",
+        "      for_result: TestExa\n      result_scope: own_trash",
+    );
+    let spec: CardSpec = serde_yml::from_str(&yaml).unwrap();
+    assert!(digimon_dsl::compile::compile(&spec).is_err());
+}
+
+#[test]
+fn dna_material_identity_result_scope_compiles_and_defaults_when_omitted() {
+    use digimon_dsl::compiled::{CompiledDnaMaterialIdentity, CompiledDnaMaterialResultScope};
+    let yaml = WING.replace(
+        "      for_result: TestExa",
+        "      for_result: TestExa\n      result_scope: own_hand",
+    );
+    let spec: CardSpec = serde_yml::from_str(&yaml).unwrap();
+    let card = digimon_dsl::compile::compile(&spec).unwrap();
+    assert!(card.effects.iter().any(|clause| matches!(clause,
+        CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
+            dna_material_identity: Some(identity), ..
+        }) if identity.result_scope == Some(CompiledDnaMaterialResultScope::OwnHand)
+    )));
+    let old: CompiledDnaMaterialIdentity =
+        serde_json::from_str(r#"{"for_result":"TestExa","level":6,"name":null}"#).unwrap();
+    assert_eq!(old.result_scope, None);
 }
 
 #[test]
@@ -262,10 +376,16 @@ fn lv5_carrier_is_a_lv6_material_for_the_named_result() {
         "Lv.5 blue carrier + Lv.6 green satisfy Green Lv.6 + Blue Lv.6 for TestExa"
     );
     let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
-    assert_eq!(mask[DNA_DIGIVOLVE_START as usize], 1.0, "DNA action is exposed");
+    assert_eq!(
+        mask[DNA_DIGIVOLVE_START as usize], 1.0,
+        "DNA action is exposed"
+    );
     assert!(runner.game.initiate_dna_digivolve(0, 0));
     runner.game.resolve_selection(0, 0).expect("first material");
-    runner.game.resolve_selection(0, 1).expect("second material");
+    runner
+        .game
+        .resolve_selection(0, 1)
+        .expect("second material");
     let field = &runner.game.players[0].battle_area;
     assert_eq!(field.len(), 1, "two materials merged into one permanent");
     let ids: Vec<&str> = field[0]
@@ -352,8 +472,12 @@ fn treated_name_satisfies_a_registered_blast_dna_field_material() {
         "Wing Test (as [Slayerdramon]) + Breakdramon in hand enable Blast DNA: {:?}",
         prompt.valid_action_ids
     );
-    runner.execute_action(1, DNA_DIGIVOLVE_START).expect("Blast DNA");
-    runner.execute_action(1, 0).expect("Wing Test as field material");
+    runner
+        .execute_action(1, DNA_DIGIVOLVE_START)
+        .expect("Blast DNA");
+    runner
+        .execute_action(1, 0)
+        .expect("Wing Test as field material");
     runner
         .execute_action(1, PLAY_HAND_START + 1)
         .expect("Breakdramon as hand material");

@@ -1,7 +1,7 @@
-//! EX8-070 Zofr Kabus — Option, Purple, Cost 2.
+//! EX8-070 Zofr Kabus — Option, Black, Cost 2.
 //! Traits: [LIBERATOR]
 //!
-//! # Card text (cards.json)
+//! # Card text (official observation + actual image)
 //!
 //! [Main] By trashing any 1 digivolution card of 1 of your Digimon with the
 //! [Mineral] or [Rock] trait, until the end of your opponent's turn, that
@@ -35,14 +35,13 @@
 //! - H7 Reboot keyword grant (procedural, temporary)
 //! - E2 Optional-by-cost: "By trashing" cost gate with select_own_permanent
 //!   (Mineral/Rock filter) + select_own_sources
-//! - F5-adjacent security delete lowest-play-cost Digimon (raw_rust workaround,
-//!   pending G-PLAY-COST-AGGREGATE from qa/dsl-vocab-gaps.md)
+//! - Security delete with native lowest-play-cost selection, including ties.
 
 use digimon_dsl::compiled::{
     CompiledClause, CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{Keyword, ModifierType};
+use digimon_engine::enums::{CardColor, CardKind, Keyword, ModifierType};
 use digimon_engine::selection::SelectionKind;
 use digimon_engine::CardData;
 
@@ -52,6 +51,7 @@ use digimon_engine::CardData;
 fn make_mineral_digimon(id: &str) -> CardData {
     let mut card = make_test_card(id, &format!("{id} Mineral Digi"));
     card.traits.push("Mineral".to_string());
+    card.colors = vec![CardColor::Black];
     card.level = Some(4);
     card.dp = Some(5000);
     card
@@ -61,6 +61,7 @@ fn make_mineral_digimon(id: &str) -> CardData {
 fn make_rock_digimon(id: &str) -> CardData {
     let mut card = make_test_card(id, &format!("{id} Rock Digi"));
     card.traits.push("Rock".to_string());
+    card.colors = vec![CardColor::Black];
     card.level = Some(4);
     card.dp = Some(5000);
     card
@@ -72,6 +73,35 @@ fn make_source_card(id: &str) -> CardData {
     card.level = Some(3);
     card.dp = Some(2000);
     card
+}
+
+fn black_provider() -> CardData {
+    let mut card = make_test_card("BLACK-PROVIDER", "BlackProvider");
+    card.colors = vec![digimon_engine::enums::CardColor::Black];
+    card
+}
+fn use_zofr_kabus(runner: &mut DebugRunner) {
+    use digimon_engine::action::{mask::build_action_mask, space::PLAY_HAND_START};
+    runner.skip_mulligan();
+    runner.place_in_breeding(0, "BLACK-PROVIDER");
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        1.0
+    );
+    runner.game.decode_action(PLAY_HAND_START, 0);
+    assert_eq!(runner.hand_size(0), 0);
+}
+fn reveal_security_option(runner: &mut DebugRunner) -> digimon_engine::card_source::CardHandle {
+    runner.add_to_hand(0, "EX8-070");
+    let card = runner.game.players[0].hand.pop().unwrap();
+    let handle = card.handle();
+    runner.game.pending_security = Some(digimon_engine::selection::PendingSecurity {
+        defender: 0,
+        card,
+        played: false,
+    });
+    handle
 }
 
 fn base_runner() -> DebugRunner {
@@ -244,6 +274,7 @@ fn ex8_070_main_prompts_selection_with_mineral_digimon() {
         .expect("EX8-070 YAML parses and compiles")
         .add_card(mineral_digi)
         .add_card(source_card)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -251,7 +282,7 @@ fn ex8_070_main_prompts_selection_with_mineral_digimon() {
     let host = runner.place_on_field(0, "MINERAL-TGT", None);
     runner.push_source(host, "SRC-M");
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
 
     // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
     // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
@@ -280,6 +311,7 @@ fn ex8_070_main_prompts_selection_with_rock_digimon() {
         .expect("EX8-070 YAML parses and compiles")
         .add_card(rock_digi)
         .add_card(source_card)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -287,7 +319,7 @@ fn ex8_070_main_prompts_selection_with_rock_digimon() {
     let host = runner.place_on_field(0, "ROCK-TGT", None);
     runner.push_source(host, "SRC-R");
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
 
     // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
     // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
@@ -310,11 +342,12 @@ fn ex8_070_main_no_selection_when_no_digimon() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX8-070")
         .expect("EX8-070 YAML parses and compiles")
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
 
     assert!(
         runner.pending_selection().is_none(),
@@ -327,6 +360,7 @@ fn ex8_070_main_no_selection_when_no_digimon() {
 #[test]
 fn ex8_070_main_no_selection_when_digimon_lacks_mineral_rock_trait() {
     let mut plain_digi = make_test_card("PLAIN-DIGI", "Plain Digi");
+    plain_digi.colors = vec![CardColor::Black];
     plain_digi.level = Some(4);
     plain_digi.dp = Some(5000);
     // traits: none matching Mineral or Rock
@@ -338,6 +372,7 @@ fn ex8_070_main_no_selection_when_digimon_lacks_mineral_rock_trait() {
         .expect("EX8-070 YAML parses and compiles")
         .add_card(plain_digi)
         .add_card(source_card)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -345,7 +380,7 @@ fn ex8_070_main_no_selection_when_digimon_lacks_mineral_rock_trait() {
     let host = runner.place_on_field(0, "PLAIN-DIGI", None);
     runner.push_source(host, "SRC-PLAIN");
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
 
     assert!(
         runner.pending_selection().is_none(),
@@ -363,6 +398,7 @@ fn ex8_070_main_no_selection_when_mineral_digimon_has_no_sources() {
         .dsl_card("EX8-070")
         .expect("EX8-070 YAML parses and compiles")
         .add_card(mineral_digi)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -370,7 +406,7 @@ fn ex8_070_main_no_selection_when_mineral_digimon_has_no_sources() {
     // Place the Digimon with no extra sources (single-card stack, no push_source).
     runner.place_on_field(0, "MINERAL-NO-SRC", None);
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
 
     // The Digimon has no digivolution sources (single card = stack_size_gte:2 fails),
     // so the select_own_permanent filter excludes it.
@@ -396,6 +432,7 @@ fn ex8_070_grants_collision_after_trash() {
         .expect("EX8-070 YAML parses and compiles")
         .add_card(mineral_digi)
         .add_card(source_card)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -403,7 +440,7 @@ fn ex8_070_grants_collision_after_trash() {
     let host = runner.place_on_field(0, "MINERAL-COL", None);
     runner.push_source(host, "SRC-COL");
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
 
     // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
     // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
@@ -439,6 +476,7 @@ fn ex8_070_grants_piercing_after_trash() {
         .expect("EX8-070 YAML parses and compiles")
         .add_card(mineral_digi)
         .add_card(source_card)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -446,7 +484,7 @@ fn ex8_070_grants_piercing_after_trash() {
     let host = runner.place_on_field(0, "MINERAL-PIE", None);
     runner.push_source(host, "SRC-PIE");
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
     // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
     // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
     // target selection. Accept it to reach the OwnField pick.
@@ -477,6 +515,7 @@ fn ex8_070_grants_reboot_after_trash() {
         .expect("EX8-070 YAML parses and compiles")
         .add_card(mineral_digi)
         .add_card(source_card)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -484,7 +523,7 @@ fn ex8_070_grants_reboot_after_trash() {
     let host = runner.place_on_field(0, "MINERAL-RBT", None);
     runner.push_source(host, "SRC-RBT");
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
     // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
     // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
     // target selection. Accept it to reach the OwnField pick.
@@ -515,6 +554,7 @@ fn ex8_070_grants_plus_3000_dp_to_target() {
         .expect("EX8-070 YAML parses and compiles")
         .add_card(mineral_digi)
         .add_card(source_card)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -524,7 +564,7 @@ fn ex8_070_grants_plus_3000_dp_to_target() {
 
     let dp_before = runner.dp_of(host).unwrap_or(0);
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
     // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
     // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
     // target selection. Accept it to reach the OwnField pick.
@@ -557,6 +597,7 @@ fn ex8_070_grants_cannot_be_returned_to_hand_modifier() {
         .expect("EX8-070 YAML parses and compiles")
         .add_card(mineral_digi)
         .add_card(source_card)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -564,7 +605,7 @@ fn ex8_070_grants_cannot_be_returned_to_hand_modifier() {
     let host = runner.place_on_field(0, "MINERAL-RTH", None);
     runner.push_source(host, "SRC-RTH");
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
     // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
     // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
     // target selection. Accept it to reach the OwnField pick.
@@ -598,6 +639,7 @@ fn ex8_070_grants_cannot_be_returned_to_deck_modifier() {
         .expect("EX8-070 YAML parses and compiles")
         .add_card(mineral_digi)
         .add_card(source_card)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -605,7 +647,7 @@ fn ex8_070_grants_cannot_be_returned_to_deck_modifier() {
     let host = runner.place_on_field(0, "MINERAL-RTD", None);
     runner.push_source(host, "SRC-RTD");
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
     // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
     // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
     // target selection. Accept it to reach the OwnField pick.
@@ -639,6 +681,7 @@ fn ex8_070_trashes_selected_source_card() {
         .expect("EX8-070 YAML parses and compiles")
         .add_card(mineral_digi)
         .add_card(source_card)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -656,7 +699,7 @@ fn ex8_070_trashes_selected_source_card() {
 
     let trash_before = runner.trash_size(0);
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
     // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
     // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
     // target selection. Accept it to reach the OwnField pick.
@@ -703,6 +746,7 @@ fn ex8_070_main_optional_cost_may_be_declined() {
         .expect("EX8-070 YAML parses and compiles")
         .add_card(mineral_digi)
         .add_card(source_card)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -716,7 +760,7 @@ fn ex8_070_main_optional_cost_may_be_declined() {
     let trash_before = runner.trash_size(0);
     let dp_before = runner.dp_of(host).unwrap_or(0);
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
 
     let view = runner
         .pending_selection_view()
@@ -795,6 +839,7 @@ fn ex8_070_buffs_persist_through_own_turn_end() {
         .expect("EX8-070 YAML parses and compiles")
         .add_card(mineral_digi)
         .add_card(source_card)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -802,7 +847,7 @@ fn ex8_070_buffs_persist_through_own_turn_end() {
     let host = runner.place_on_field(0, "MINERAL-EXP", None);
     runner.push_source(host, "SRC-EXP");
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
     // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
     // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
     // target selection. Accept it to reach the OwnField pick.
@@ -854,6 +899,7 @@ fn ex8_070_buffs_expire_after_opponents_turn_ends() {
         .add_card(mineral_digi)
         .add_card(source_card)
         .add_card(p1_filler)
+        .add_card(black_provider())
         .hand(0, &["EX8-070"])
         .deck(1, &["EXP2-PAD", "EXP2-PAD", "EXP2-PAD"])
         .memory(10)
@@ -863,7 +909,7 @@ fn ex8_070_buffs_expire_after_opponents_turn_ends() {
     let dp_base = runner.dp_of(host).unwrap_or(0);
     runner.push_source(host, "SRC-EXP2");
 
-    runner.play(0, 0);
+    use_zofr_kabus(&mut runner);
     // §15-7-1/§15-7-4: "By trashing any 1 digivolution card ..." is an OPTIONAL
     // PROCESSING CONDITION, so an outer accept/decline prompt now precedes the
     // target selection. Accept it to reach the OwnField pick.
@@ -957,7 +1003,7 @@ fn ex8_070_security_deletes_lowest_cost_digimon() {
 
     // For an Option card security test, use place_on_field + enqueue_triggered
     // with SecuritySkill timing (the engine timing for on_security effects).
-    let security_handle = runner.place_on_field(0, "EX8-070", None);
+    let security_handle = reveal_security_option(&mut runner);
     runner.place_on_field(1, "CHEAP-S", Some(0));
     runner.place_on_field(1, "EXPEN-S", Some(0));
 
@@ -965,7 +1011,10 @@ fn ex8_070_security_deletes_lowest_cost_digimon() {
 
     runner.game.enqueue_triggered(
         EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(security_handle),
+        TriggerSource::SecurityRevealed {
+            defender: 0,
+            card: security_handle,
+        },
     );
     runner.game.drain_effect_queue();
 
@@ -1011,14 +1060,17 @@ fn ex8_070_security_tie_exposes_player_choice() {
         .memory(10)
         .start();
 
-    let security_handle = runner.place_on_field(0, "EX8-070", None);
+    let security_handle = reveal_security_option(&mut runner);
     runner.place_on_field(1, "TIE-A", Some(0));
     runner.place_on_field(1, "TIE-B", Some(0));
     assert_eq!(runner.battle_area_size(1), 2);
 
     runner.game.enqueue_triggered(
         EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(security_handle),
+        TriggerSource::SecurityRevealed {
+            defender: 0,
+            card: security_handle,
+        },
     );
     runner.game.drain_effect_queue();
 
@@ -1051,11 +1103,14 @@ fn ex8_070_security_no_crash_when_opponent_has_no_digimon() {
         .memory(10)
         .start();
 
-    let security_handle = runner.place_on_field(0, "EX8-070", None);
+    let security_handle = reveal_security_option(&mut runner);
 
     runner.game.enqueue_triggered(
         EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(security_handle),
+        TriggerSource::SecurityRevealed {
+            defender: 0,
+            card: security_handle,
+        },
     );
     runner.game.drain_effect_queue();
 

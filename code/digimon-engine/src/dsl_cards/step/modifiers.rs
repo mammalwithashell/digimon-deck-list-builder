@@ -163,10 +163,10 @@ fn compiled_color_to_card_color(c: CompiledColor) -> crate::enums::CardColor {
 }
 
 /// Lower a compiled `synth_identity:` block to the engine's
-/// `ModifierPayload::SynthIdentity` (the data a `TreatAsDigimon` target is
+/// `ModifierPayload::AdditiveSynthIdentity` (the data a `TreatAsDigimon` target is
 /// treated as while the modifier is live).
 pub(crate) fn build_synth_payload(s: &CompiledSynthIdentity) -> crate::modifiers::ModifierPayload {
-    crate::modifiers::ModifierPayload::SynthIdentity {
+    crate::modifiers::ModifierPayload::AdditiveSynthIdentity {
         kind: compiled_kind_to_card_kind(s.kind),
         level: s.level,
         colors: s
@@ -255,7 +255,7 @@ pub fn try_run(
                 return true;
             };
             // `synth_identity:` (TreatAsDigimon) installs the structured
-            // `ModifierPayload::SynthIdentity` instead of a bare scalar.
+            // `ModifierPayload::AdditiveSynthIdentity` instead of a bare scalar.
             // `payload:` (name / colors / base DP / traits) installs the typed
             // identity payload (G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD).
             let payload = synth_identity.as_ref().map(build_synth_payload).or_else(|| {
@@ -299,7 +299,7 @@ pub fn try_run(
                             ctx.player,
                             expiry,
                             None,
-                            // Carry the TreatAsDigimon SynthIdentity into the
+                            // Carry the TreatAsDigimon AdditiveSynthIdentity into the
                             // continuous mass path (was dropped) — closes
                             // G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH (BT25-104).
                             payload.clone(),
@@ -335,6 +335,11 @@ pub fn try_run(
             };
             let player = resolve_player(ctx, *target_player);
             let n = resolve_player_modifier_value(value, ctx, bindings, runtime);
+            let pending_skips = crate::modifiers::pending_skips_for_install(
+                expiry,
+                ctx.player,
+                ctx.game.turn_player(),
+            );
             ctx.game.modifiers.add_player_modifier(
                 player,
                 PlayerModifierEntry::simple(
@@ -343,7 +348,8 @@ pub fn try_run(
                     expiry,
                     ctx.source_permanent,
                     ctx.player,
-                ),
+                )
+                .with_pending_skips(pending_skips),
             );
             true
         }

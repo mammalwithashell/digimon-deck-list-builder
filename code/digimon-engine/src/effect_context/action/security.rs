@@ -525,7 +525,13 @@ impl<'a> EffectContext<'a> {
             }
             perm.card_sources[len - 1].handle()
         };
-        self.security_place_stacked_card(carrier, source_card, target_player, position, face_up)
+        self.game.place_top_stacked_on_security(
+            target_player,
+            carrier,
+            position,
+            face_up,
+            self.player,
+        )
     }
 
     /// G-DSL-SECURITY-PLACE-VISIBLE-TOP-CARD (BT26-033 Jupitermon) — move the
@@ -559,7 +565,13 @@ impl<'a> EffectContext<'a> {
             }
             perm.card_sources[len - 1].handle()
         };
-        self.security_place_stacked_card(carrier, top_card, target_player, position, face_up)
+        self.game.place_top_stacked_on_security(
+            target_player,
+            carrier,
+            position,
+            face_up,
+            self.player,
+        )
     }
 
     /// (Track A) Move a battle-area permanent to a player's security stack

@@ -28,7 +28,9 @@
 #   - [OP][WD] attack: optional own-Digimon pick (`continue_on_decline` — a
 #     declined attack must not skip the "Then") + `may_attack_now
 #     { without_suspending: true }` (EX12-014 / BT21-072 idioms). The attack
-#     resolves inline, so the "Then" count reads the board after it.
+#     is declared inline; its triggers, battle and security checks wait until
+#     the complete effect (including the "Then" choices) finishes. Q7474 fixes
+#     the repeat count when the effect activates.
 #   - "for every 2 of your Digimon and Tamers' colors, activate 1 effect":
 #     `repeat_effect_choice` (EX12-037 / DCGO EX12_037.cs idiom: count read
 #     once, the same effect may be chosen again), count =

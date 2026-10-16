@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledCard {
     pub card: String,
+    pub deck_rule: Option<crate::deck_rule::DeckCopyRule>,
     pub name: String,
     pub kind: CompiledCardKind,
     pub level: Option<u8>,
@@ -433,6 +434,10 @@ pub struct CompiledPredicate {
     /// `can_digivolve_onto`. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
     #[serde(default)]
     pub can_digivolve_onto: Option<String>,
+    #[serde(default)]
+    pub can_play_from_effect_without_cost: Option<bool>,
+    #[serde(default)]
+    pub can_play_to_breeding_from_hand: Option<bool>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
     /// `dp_lte` is the DP maximum of a DELETION effect ("delete 1 Digimon with
@@ -475,6 +480,9 @@ pub struct CompiledPredicate {
     /// See `PredicateSpec::can_change_orientation` (EX13-023).
     #[serde(default)]
     pub can_change_orientation: Option<bool>,
+    /// Direction-specific legality; see PredicateSpec::can_unsuspend.
+    #[serde(default)]
+    pub can_unsuspend: Option<bool>,
     /// See `PredicateSpec::can_attack` (G-DSL-CAN-ATTACK-PREDICATE).
     #[serde(default)]
     pub can_attack: Option<CompiledCanAttack>,
@@ -646,6 +654,11 @@ pub struct CompiledPredicate {
     pub attacker_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
     pub event_card_name_contains: Option<String>,
+    /// Exact printed/rule-granted name of the immutable event card identity.
+    #[serde(default)]
+    pub event_card_name_is: Option<String>,
+    #[serde(default)]
+    pub event_card_kind: Option<CompiledCardKind>,
     /// Case-insensitive substring scan against the triggering event card's
     /// printed text (effect / inherited / security). G-DSL-EVENT-CARD-TEXT-CONTAINS.
     pub event_card_text_contains: Option<String>,
@@ -748,6 +761,10 @@ pub struct CompiledPredicate {
     /// actually deleted matches this permanent predicate. G-DSL-BATTLE-DELETER.
     #[serde(default)]
     pub event_battle_deleter: Option<Box<CompiledPredicate>>,
+    /// Actual battle deleter that was still the same Digimon when the battle
+    /// resolved after deletion replacements. Identity is captured at comparison.
+    #[serde(default)]
+    pub event_battle_surviving_deleter: Option<Box<CompiledPredicate>>,
     /// `on_discard_hand`: the trashing player (whose hand lost cards) must match.
     /// G-ENGINE-ON-DISCARD-HAND.
     pub event_discard_player: Option<CompiledPlayerRef>,
@@ -1232,10 +1249,13 @@ pub enum CompiledDeclarativeClause {
         /// G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
         #[serde(default)]
         dna_material_identity: Option<CompiledDnaMaterialIdentity>,
+        #[serde(default)]
+        source_card_trash_protection: Option<CompiledPredicate>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
     CostReduction {
+        set_cost: Option<u16>,
         scope: CompiledScope,
         active_when: Option<CompiledPredicate>,
         reduction_timing: Option<String>,
@@ -1435,6 +1455,7 @@ pub enum CompiledTiming {
     StartOfYourTurn,
     StartOfOpponentsTurn,
     StartOfYourMainPhase,
+    StartOfOpponentsMainPhase,
     EndOfYourTurn,
     EndOfOpponentsTurn,
     EndOfYourNextTurn,
@@ -1517,6 +1538,14 @@ pub struct CompiledDnaMaterialIdentity {
     pub for_result: String,
     pub level: Option<u8>,
     pub name: Option<String>,
+    /// None preserves unrestricted result locations for existing authors.
+    #[serde(default)]
+    pub result_scope: Option<CompiledDnaMaterialResultScope>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledDnaMaterialResultScope {
+    OwnHand,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -1561,6 +1590,15 @@ pub enum CompiledBattleCompare {
 #[strum_discriminants(derive(strum_macros::EnumIter, Hash))]
 #[strum_discriminants(name(CompiledStepDiscriminant))]
 pub enum CompiledStep {
+    /// Runtime-only success marker appended to a declaration-scoped pay_cost.
+    CompleteCostPayment {
+        receipt: u64,
+    },
+    PaySourcePrefix {
+        host_filter: CompiledPredicate,
+        minimum: u64,
+        optional: bool,
+    },
     GainMemory(i32),
     LoseMemory(i32),
     SetMemory(i32),
@@ -1892,6 +1930,9 @@ pub enum CompiledStep {
     /// `outcome: prevent` on a `when_would_leave_battle_area` replacement.
     /// `G-DSL-PROTECT-OTHER-BY-SELF-DELETE`.
     DeleteSelfAndCancelLeave,
+    /// Explicit printed-plural counterpart: one carrier payment protects all
+    /// eligible subjects of the same simultaneous leave event.
+    DeleteSelfAndCancelAllMatchingLeaves,
     PlaceSelectedCardUnderTamer {
         card: CompiledBindingRef,
         tamer: CompiledBindingRef,
@@ -1951,6 +1992,10 @@ pub enum CompiledStep {
         /// G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER (BT25-039).
         #[serde(default)]
         bind_as: Option<String>,
+    },
+    PlayToBreedingFromHand {
+        of: CompiledPlayerRef,
+        hand_index: CompiledBindingRef,
     },
     PlayFromHandFree {
         of: CompiledPlayerRef,
@@ -2072,6 +2117,7 @@ pub enum CompiledStep {
     },
     PlayFromSecurity,
     PlayFromMaterials {
+        suspended: bool,
         target: CompiledBindingRef,
         source_index: CompiledBindingRef,
         cost_delta: Option<CompiledCostDelta>,
@@ -2373,6 +2419,8 @@ pub enum CompiledStep {
     /// DCGO `AddSkillClass.cs` analog.
     GrantTriggeredEffect {
         target: CompiledModifierTarget,
+        #[serde(default)]
+        dynamic: bool,
         timing: String,
         expiry: String,
         body: Vec<CompiledStep>,
@@ -2480,6 +2528,10 @@ pub enum CompiledStep {
     /// Lowers to `EffectContext::select_count_capped_multi` with
     /// `CountCappedZone::Material`; `uniqueness` maps to `DistinctByMode`.
     SelectMaterials {
+        #[serde(default)]
+        named_groups: Vec<String>,
+        #[serde(default)]
+        require_max: bool,
         of_permanent: CompiledBindingRef,
         max: CompiledCountBound,
         filter: CompiledPredicate,
@@ -2600,6 +2652,12 @@ pub enum CompiledStep {
     },
     TrashSelectedSources {
         source_refs: String,
+    },
+    /// Pay the selected source-card cost, aborting the continuation if any removal fails.
+    TrashSelectedSourcesAsCost {
+        source_refs: String,
+        #[serde(default)]
+        min_count: Option<u8>,
     },
     /// Trash the `cards` card-list binding from `target`'s digivolution
     /// cards (`select_materials` sibling of `TrashSelectedSources`).
@@ -2880,6 +2938,8 @@ pub enum CompiledStep {
         source: CompiledBindingRef,
         timing: String,
         optional: bool,
+        #[serde(default)]
+        target_attribution: bool,
     },
     /// Foreign-card refire (BT15-102): activate a timing-filtered effect
     /// printed on a bound CARD OBJECT that is currently a digivolution source
@@ -2976,6 +3036,79 @@ pub enum CompiledStep {
         ignore_requirements: bool,
         optional: bool,
         prompt: Option<String>,
+    },
+    /// Engine-generated continuation only; never authored in card YAML.
+    SourcePlayCaptured {
+        player: u8,
+        host_identity: u64,
+        breeding: bool,
+        card: u16,
+        receipt: u64,
+        cost_delta: Option<CompiledCostDelta>,
+        suppress_on_play: bool,
+        suspended: bool,
+    },
+    /// Commit one explicitly simultaneous source-play event after every preparation.
+    SourcePlayBatchCommit { receipts: Vec<u64> },
+    /// Resume a DSL body using a player-selected physical simultaneous event member.
+    WithSimultaneousPlaySubject { binding: String, body: Vec<CompiledStep> },
+    /// Consume an actual commit receipt after any parked play choices.
+    SourcePlayFinalize {
+        receipt: u64,
+        card: u16,
+        bind_as: Option<String>,
+    },
+    /// Engine-generated simultaneous deletion followed by actual-result capture.
+    DeleteCapturedBatch {
+        receipt: u64,
+        targets: Vec<(u8, u64)>,
+    },
+    DeleteReceiptFinalize {
+        receipt: u64,
+    },
+    /// Engine-only paid prevention, matched to the carrier's actual physical deletion.
+    PaidDeletionPreventionFinalize {
+        receipt: u64,
+        payer: (u8, u16, u64),
+    },
+    PaidDeletionBatchPreventionFinalize {
+        receipt: u64,
+        payer: (u8, u16, u64),
+        members: Vec<(u8, u16, u64)>,
+        filter: CompiledPredicate,
+        protect_all: bool,
+        cause: CompiledReplacementCause,
+        cause_player: Option<u8>,
+    },
+    PreventDeletionMemberFinalize {
+        binding: String,
+        members: Vec<(u8, u16, u64)>,
+        filter: CompiledPredicate,
+        cause: CompiledReplacementCause,
+        cause_player: Option<u8>,
+    },
+    /// Engine-generated remaining sequential iterations after a parked body.
+    ForEachRemaining { members: Vec<(u8,u64)>, bind_as: String, body: Vec<CompiledStep> },
+    /// Explicit simultaneous departures; ordinary loops remain sequential.
+    ReturnAllToHand { over: CompiledPredicate, selector: Option<CompiledFieldSelector> },
+    ReturnAllToDeck { over: CompiledPredicate, selector: Option<CompiledFieldSelector>, position: CompiledStackPosition, include_sources: bool },
+    ReturnCapturedBatch { receipt: u64, targets: Vec<(u8,u64)>, position: Option<CompiledStackPosition>, include_sources: bool },
+    ReturnReceiptFinalize { receipt: u64 },
+    /// Successful suspend payment prevents every matching simultaneous subject.
+    SuspendAndCancelAllMatchingLeaves { target: CompiledBindingRef, filter: CompiledPredicate },
+    /// Engine-only field-top movement and actual-result continuation.
+    FieldSourceCaptured {
+        receipt: u64,
+        donor: (u8, u64),
+        target: (u8, u64),
+        target_breeding: bool,
+        face_down: bool,
+    },
+    FieldSourceFinalize {
+        receipt: u64,
+        bind_as: String,
+        source_anchor: Option<(u8, u64)>,
+        source_breeding: bool,
     },
 }
 
@@ -3089,6 +3222,8 @@ pub enum CompiledBindingRef {
     Permanent(String),
     Binding(String),
     OfPermanent(String),
+    /// Resolve a named permanent's current top physical card.
+    TopOf(String),
     /// Top card of a player's deck — resolves to `CardSourceRef::DeckTop`.
     /// Card-source binding only (never a permanent/card handle).
     DeckTop(CompiledPlayerRef),
@@ -3154,6 +3289,7 @@ mod tests {
 
     fn sample_card() -> CompiledCard {
         CompiledCard {
+            deck_rule: None,
             card: "ST2-13".into(),
             name: "Hammer Spark".into(),
             kind: CompiledCardKind::Option,
@@ -3214,6 +3350,7 @@ mod tests {
             ..Default::default()
         };
         let card = CompiledCard {
+            deck_rule: None,
             card: "X-1".into(),
             name: "Test".into(),
             kind: CompiledCardKind::Digimon,

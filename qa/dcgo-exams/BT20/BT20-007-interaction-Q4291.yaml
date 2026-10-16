@@ -1,0 +1,167 @@
+# New QA draft; static authoring only, no oracle verdict or assertions claimed.
+# T3 trash Unleash the Dragon Gene: a qualifying Option by effect text despite neither name
+# in its title. T5 trash EX3-018: special evolution/inherited text qualifies although main text
+# is just Evade. Each paid choice draws1 and gains1; no card-kind restriction may be invented.
+# These representative text sections do not prove every other text-section template.
+card: BT20-007
+clause: BT20-007#effect#1
+interaction:
+  id: qa:Q4291
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-007
+    - BT20-093
+    - EX3-018
+    - ST2-02
+    - ST2-03
+    - ST1-02
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST2-07
+    - ST2-08
+    - ST1-07
+    - ST1-08
+    - ST1-09
+    - ST2-09
+    - ST2-10
+    rest: BT20-007-interaction-Q4291-p0
+  p1:
+    stack:
+    - ST2-02
+    - ST2-03
+    - ST2-04
+    - ST2-05
+    - ST2-06
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-02
+    - ST2-07
+    - ST2-08
+    - ST1-07
+    - ST1-08
+    rest: BT20-007-interaction-Q4291-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-007
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    select:
+      cards:
+      - BT20-093
+  expect:
+    prompt: OptionalSkill
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX3-018
+  expect:
+    prompt: OptionalSkill
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+assert: []
+expect_ruling:
+  q_id: Q4291
+  assert:
+  - at: 5
+    that:
+      memory: 3
+      p0.hand:
+      - BT20-093
+      - EX3-018
+      - ST2-02
+      - ST2-03
+      - ST2-07
+      p0.trash: []
+  - at: 6
+    that:
+      memory: 4
+      p0.hand:
+      - EX3-018
+      - ST2-02
+      - ST2-03
+      - ST2-07
+      - ST2-08
+      p0.trash:
+      - BT20-093
+  - at: 10
+    that:
+      memory: 3
+      p0.hand:
+      - EX3-018
+      - ST2-02
+      - ST2-03
+      - ST2-07
+      - ST2-08
+      - ST1-07
+      p0.trash:
+      - BT20-093
+  - at: 11
+    that:
+      memory: 4
+      p0.hand:
+      - ST2-02
+      - ST2-03
+      - ST2-07
+      - ST2-08
+      - ST1-07
+      - ST1-08
+      p0.trash:
+      - BT20-093
+      - EX3-018

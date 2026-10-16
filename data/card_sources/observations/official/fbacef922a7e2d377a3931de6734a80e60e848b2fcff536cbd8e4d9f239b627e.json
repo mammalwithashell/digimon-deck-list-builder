@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT11-042",
+    "colors": "Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "6000",
+    "form": "Ultimate",
+    "play_cost": "7",
+    "qa": [
+      "You may look at all the cards in your security stack without revealing them to your opponent. Then, choose 1 card to add to your hand, reveal only that card to your opponent and add it to your hand."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] You may search your security stack for 1 card with [Angel], [Archangel], or [Fallen Angel] in its traits, reveal it, and add it to your hand. If you added a card, ＜Recovery +1 (Deck)＞. Then, shuffle your security stack. [Your Turn][Once Per Turn] When you play [LadyDevimon] or [Mirei Mikagura], gain 1 memory."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Opponent's Turn] While you have a purple Digimon in play, all of your Digimon with [Angel], [Archangel], or [Fallen Angel] in their traits gain ＜Blocker＞."
+      }
+    ],
+    "type": "Archangel"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "fbacef922a7e2d377a3931de6734a80e60e848b2fcff536cbd8e4d9f239b627e",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "51c148a81240c75b0116fb45da0fb8a44a414e643b167bb6585b6bffa77c5d7f",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT11-042",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT11-042"
+}

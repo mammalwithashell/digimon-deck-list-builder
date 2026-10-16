@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT12-031",
+    "colors": "Blue Green",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "Mega",
+    "play_cost": "13",
+    "qa": [
+      "No, it doesn't. This effect reads \"While it has 2 or more colors in its digivolution cards, it gains and ,\" so the gained effect doesn't change even if there are 3 or more colors in the digivolution cards."
+    ],
+    "special_digivolution_condition": "[Digivolve] 2 from [Imperialdramon: Dragon Mode]",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] 2 from [Imperialdramon: Dragon Mode]"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] Suspend all of your opponent's Digimon with no digivolution cards. Then, return 1 of your opponent's suspended Digimon to its owner's hand. By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's digivolution cards to its owner's hand, place all of your opponent's suspended Digimon at the bottom of their owners' decks instead. [All Turns] This Digimon gets +1000 DP for each color in its digivolution cards. While it has 2 or more colors in its digivolution cards, it gains ＜Security Attack +1＞ and ＜Blocker＞."
+      }
+    ],
+    "type": "Ancient Dragonkin"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "6ea668192a7e1d4de00efedbc4105581b578c61cef5dd2fc5c63e5660e92c66e",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "331627986bcebc4b3dbbcdac4bda8c7babc9a9a71fa21d9a6f8f411c4efa5d8b",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT12-031",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT12-031"
+}

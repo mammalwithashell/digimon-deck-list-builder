@@ -9,11 +9,9 @@
 //!   - `PlayToken`
 //!   - `PlaceOnSecurity`, `PlaceAsBottomSource`, `PlaceAsTopSource`, `TrashTopSource`
 //!
-//! All variants are synchronous (no selection prompts). Engine primitives
-//! return `Option<PermanentHandle>` / `bool` — Phase 2f1 v1 discards the
-//! return because the IR does not yet bind the resulting handle. Future
-//! phases adding `bind_handle_as: Option<String>` to the variant shapes
-//! will wire that here.
+//! Engine primitives may park a selection, including an effect digivolution
+//! cost choice. The outer step runner attaches the remaining DSL tail to its
+//! resume frame; result-sensitive follow-ups receive only committed results.
 //!
 //! Strictness convention (matches `modifiers::try_run`): if a binding
 //! cannot be resolved or has the wrong kind (e.g. `Permanent` where a
@@ -193,7 +191,7 @@ fn lower_dna_cost(
 /// source-zone owner to `ctx.player` (the effect controller) for hand/trash
 /// binding kinds. Returns `None` if the binding can't be resolved or has an
 /// unsupported kind. See I2 above for the owner-heuristic limitation.
-fn resolve_card_source_ref(
+pub(super) fn resolve_card_source_ref(
     source: &digimon_dsl::compiled::CompiledBindingRef,
     ctx: &EffectContext<'_>,
     bindings: &Bindings,
@@ -932,6 +930,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             true
         }
         CompiledStep::PlayFromMaterials {
+            suspended,
             target,
             source_index,
             cost_delta,
@@ -955,11 +954,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // removes the consumed source and shifts later indices down.
             match resolve_binding_ref(source_index, ctx, bindings) {
                 Some(ResolvedBinding::Literal(v)) if v >= 0 => {
-                    if let Some(played) = ctx.play_from_materials_suppress_on_play(
+                    if let Some(played) = ctx.play_from_materials_with_entry_options(
                         target_handle,
                         v as usize,
                         delta,
                         *suppress_on_play,
+                        *suspended,
                     ) {
                         bindings.record_played(played);
                         if let Some(name) = bind_as {
@@ -969,11 +969,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 }
                 Some(ResolvedBinding::Card(card)) => {
                     if let Some(idx) = source_index_of(ctx, target_handle, card) {
-                        if let Some(played) = ctx.play_from_materials_suppress_on_play(
+                        if let Some(played) = ctx.play_from_materials_with_entry_options(
                             target_handle,
                             idx,
                             delta,
                             *suppress_on_play,
+                            *suspended,
                         ) {
                             bindings.record_played(played);
                             if let Some(name) = bind_as {
@@ -995,11 +996,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                             // skip it; the remaining picks still play.
                             continue;
                         };
-                        if let Some(played) = ctx.play_from_materials_suppress_on_play(
+                        if let Some(played) = ctx.play_from_materials_with_entry_options(
                             target_handle,
                             idx,
                             delta,
                             *suppress_on_play,
+                            *suspended,
                         ) {
                             bindings.record_played(played);
                             last_played = Some(played);
@@ -1049,6 +1051,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let Some(source_ref) = resolve_card_source_ref(from_hand, ctx, bindings) else {
                 return true;
             };
+            let attempted_card = ctx.game.card_source_ref_peek(source_ref).map(|card| card.handle());
             let delta = lower_cost_delta(Some(cost), ctx, bindings);
             // The effect runs on the target's controller (the digivolve is
             // applied to `target`; the result card can now come from any
@@ -1081,6 +1084,34 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             };
             if success {
                 bindings.record_digivolved(target_handle);
+            } else {
+                let route_prompt = matches!(
+                    ctx.game
+                        .pending_selection_resume
+                        .as_ref()
+                        .and_then(|s| s.frames.last()),
+                    Some(crate::resume::ResumeFrame::EffectDigivolveCostChoice(state))
+                        if Some(state.result_card) == attempted_card
+                );
+                let owns_parked_declaration = ctx.game.pending_selection.is_some()
+                    && attempted_card.is_some_and(|card| {
+                        ctx.game.bind_effect_digivolve_clause_owner(card, ctx.source_card, ctx.player)
+                    });
+                // Cost-route prompts describe the initiating effect. Reducer
+                // prompts keep their own payer/source attribution (e.g. HPD).
+                if route_prompt && owns_parked_declaration {
+                    if let Some(pending) = ctx.game.pending_selection.as_mut() {
+                        pending.source_card = ctx.source_card;
+                        pending.source_permanent = ctx.source_permanent;
+                        pending.source_kind = ctx.source_kind;
+                        if let Some(entries) = pending.effect_choices.as_mut() {
+                            for entry in entries {
+                                entry.source_card = Some(ctx.source_card);
+                                entry.source_kind = Some(ctx.source_kind);
+                            }
+                        }
+                    }
+                }
             }
             true
         }
@@ -1279,20 +1310,22 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             face_down,
             bind_placed_as,
         } => {
-            let target_handle = match resolve_binding_ref(target, ctx, bindings) {
-                Some(ResolvedBinding::Permanent(h)) => h,
-                _ => return true,
+            // Resolve inputs before clearing the output: authors may reuse
+            // the same slot for the chosen card and successful placement.
+            let target_value = resolve_binding_ref(target, ctx, bindings);
+            let source_value = resolve_binding_ref(source, ctx, bindings);
+            let source_ref = resolve_card_source_ref(source, ctx, bindings);
+            if let Some(name) = bind_placed_as {
+                bindings.remove(name);
+            }
+            let Some(ResolvedBinding::Permanent(target_handle)) = target_value else {
+                return true;
             };
-            if let Some(ResolvedBinding::Permanent(source_handle)) =
-                resolve_binding_ref(source, ctx, bindings)
-            {
+            if let Some(ResolvedBinding::Permanent(source_handle)) = source_value {
                 let _ = ctx.place_permanent_as_bottom_sources(source_handle, target_handle);
-                // `bind_placed_as` is a card-object binding; the whole-
-                // permanent branch moves a stack, not one card, so nothing
-                // is bound here (no current YAML combines the two).
                 return true;
             }
-            let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
+            let Some(source_ref) = source_ref else {
                 return true;
             };
             // Peek the placed card's stable handle BEFORE the zone move so a

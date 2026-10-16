@@ -1,0 +1,76 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "P-217",
+    "card_type": "Tamer",
+    "colors": [
+      "Red"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "tamer",
+        "level": null,
+        "name": "Haru Shinkai",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Social] trait card and 1 [Creation], [Navi] or [Tool] trait card among them to the hand. Return the rest to the bottom of the deck.\n[Your Turn] When any of your Digimon get linked to a [Social], [Navi] or [Tool] trait card, by suspending this Tamer, gain 1 memory."
+          },
+          {
+            "label": "Security Effect",
+            "text": "[Security] Play this card without paying the cost."
+          }
+        ]
+      }
+    ],
+    "form": "",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": null,
+    "name": "Haru Shinkai",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522901",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-217.png?260529",
+      "printing_id": "P-217"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Social] trait card and 1 [Creation], [Navi] or [Tool] trait card among them to the hand. Return the rest to the bottom of the deck.\n[Your Turn] When any of your Digimon get linked to a [Social], [Navi] or [Tool] trait card, by suspending this Tamer, gain 1 memory."
+      },
+      {
+        "label": "Security Effect",
+        "text": "[Security] Play this card without paying the cost."
+      }
+    ],
+    "type": ""
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "8054c6ed1f52d3e8538760ffe85139b70a86f3b8c889b10a7515ab0037451a09",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "4163c69eeb2accbdaaf7fd53d0819dbe2822df97d5e385efc9b7a115f3f090d2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522901:P-217:P-217",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522901"
+}

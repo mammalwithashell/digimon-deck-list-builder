@@ -116,6 +116,7 @@ impl CardEffect for WwbdCancelCostDeletion {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         vec![Effect::when_would_be_deleted(card)
             .name("Cancel cost deletion")
+            .replacement_condition(|ctx, _| matches!(ctx.replacement_cause(), Some(ReplacementCause::Cost)))
             .replacement_process(|rctx| {
                 if matches!(rctx.cause, ReplacementCause::Cost) {
                     rctx.cancel();

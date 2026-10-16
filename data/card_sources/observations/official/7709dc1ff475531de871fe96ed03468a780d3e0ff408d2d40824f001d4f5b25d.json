@@ -1,0 +1,61 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX6-029",
+    "colors": "Yellow Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "Mega",
+    "play_cost": "8",
+    "special_digivolution_condition": "[DNA Digivolve] Yellow Lv.5 + purple Lv.5: Cost 0 Stack the 2 specified Digimon and digivolve unsuspended.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolve] Yellow Lv.5 + purple Lv.5: Cost 0 Stack the 2 specified Digimon and digivolve unsuspended."
+      },
+      {
+        "label": "Effect",
+        "text": "{Hand} [Counter] ＜Blast DNA Digivolve ([Angewomon] + [LadyDevimon])＞ (1 of your specified Digimon and 1 specified card in the hand may DNA digivolve into this card.) [On Play] [When Digivolving] You may play 1 level 5 or lower [Angel], [Archangel] or [Fallen Angel] trait Digimon card from your hand or trash without paying the cost. Then, if DNA digivolving, place 1 other Digimon as the bottom security card, and trash the top cards of your opponent's security stack so that it has 4 cards left."
+      },
+      {
+        "label": "Special Rule",
+        "text": "＜Overflow (-4)＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "-"
+      }
+    ],
+    "type": "Angel"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "7709dc1ff475531de871fe96ed03468a780d3e0ff408d2d40824f001d4f5b25d",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "1dd3b6bffc8b17abcce59499866e1e010d3a74c5a68971134a8d2d824d49d80d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX6-029",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX6-029"
+}

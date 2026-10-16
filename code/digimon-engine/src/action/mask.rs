@@ -136,6 +136,9 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                         continue;
                     }
                 } else {
+                    if game.card_play_is_prohibited(player_id, card) {
+                        continue;
+                    }
                     // Memory check: a non-Option card is affordable if
                     // memory - cost >= memory_min. An eligible `[Assembly]`
                     // alt-path (materials present in trash) reduces the cost,
@@ -143,6 +146,15 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     // (declare-then-pay — G-ASSEMBLY-PLAY-EXECUTION / judge
                     // quiz Q5). 0 when the card has no eligible assembly path.
                     let printed = card.play_cost(&game.card_data) as i16;
+                    let assigned = game
+                        .available_play_assignment_base(
+                            player_id,
+                            card.handle(),
+                            true,
+                            printed as u16,
+                        )
+                        .map(i32::from)
+                        .unwrap_or(printed as i32);
                     let assembly_reduction =
                         game.assembly_play_reduction_for_hand_card(player_id, i) as i16;
                     // Cast-time assembly (BT15-102): like `[Assembly]`, the
@@ -151,8 +163,9 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     // ChangeCostClass). 0 for every other card.
                     let cast_time_reduction =
                         game.cast_time_assembly_play_reduction_for_hand_card(player_id, i) as i16;
-                    let cost = (printed - assembly_reduction - cast_time_reduction).max(0);
-                    if (game.memory - cost) < game.rules.memory_range.0 {
+                    let cost =
+                        (assigned - assembly_reduction as i32 - cast_time_reduction as i32).max(0);
+                    if (game.memory as i32 - cost) < game.rules.memory_range.0 as i32 {
                         continue;
                     }
                     if me.battle_area.len() >= game.rules.field_slots as usize {
@@ -500,7 +513,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // the forced attacker(s)' attack bits. Mirrors Python
             // action_mask.py:227-280. Falls through to the normal mask
             // above when no forced attacker can act (e.g. all suspended).
-            apply_force_attack_mask_replacement(&mut mask, game, player_id, opp_id);
+            apply_force_attack_mask_replacement(&mut mask, game, player_id);
         }
 
         GamePhase::Breeding => {
@@ -508,9 +521,10 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             if me.breeding_area.is_none() && !me.digitama_deck.is_empty() {
                 mask[HATCH as usize] = 1.0;
             }
-            // Move from breeding (61): requires Digimon at level >= 3
+            // Rule 4-15-2: a breeding Digimon may move if it has DP.
+            // Level-less Digi-Eggs such as Mother D-Reaper qualify (Q3276).
             if let Some(ref perm) = me.breeding_area {
-                if perm.level(&game.card_data).unwrap_or(0) >= 3
+                if perm.top_card().digimon_dp(&game.card_data).is_some()
                     && me.battle_area.len() < game.rules.field_slots as usize
                 {
                     mask[MOVE_FROM_BREEDING as usize] = 1.0;
@@ -795,7 +809,9 @@ pub(crate) fn option_color_match_available(
     // Breeding area: only Digimon can be there (Tamers cannot). See the
     // breeding note above -- 3-4-5 puts the breeding area inside the field.
     if let Some(ref breeding) = me.breeding_area {
-        if breeding.is_digimon(card_data) {
+        // A hatched Digi-Egg is a Digimon on the field (rules 4-2-1/2),
+        // and therefore supplies its color for an Option under 4-19-2.
+        if breeding.is_digimon(card_data) || breeding.is_digi_egg(card_data) {
             covered.extend(breeding.top_card().digimon_colors(card_data));
         }
     }
@@ -931,7 +947,7 @@ fn can_basic_attack(
     if perm.is_suspended {
         return false;
     }
-    if !perm.is_digimon(card_data) {
+    if !perm.is_digimon_for_rules(card_data, &game.modifiers, handle) {
         return false;
     }
     // 11-2-5: "An attack declaration can't be made using a Digimon that
@@ -952,7 +968,7 @@ fn can_basic_attack(
     }
     // Summoning sickness: can't attack the turn it was played unless Rush
     // is present (native printed OR modifier-granted) — §2.1b.
-    let is_fresh = perm.turn_played == turn && perm.turn_digivolved != turn;
+    let is_fresh = perm.turn_played == turn;
     if is_fresh && !game.has_keyword(handle, Keyword::Rush) {
         return false;
     }
@@ -1092,114 +1108,28 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
 /// passed-in `mask` with a fresh all-zero mask populated only with those
 /// attackers' attack bits.
 ///
-/// Falls through (leaves `mask` untouched) when no forced Digimon can
-/// actually attack — matches Python's behavior at
-/// `action_mask.py:279-280`. Intentionally does not gate on memory:
-/// Python's forced-attack branch only checks `attacker.can_attack()`
-/// (summoning sickness), not memory.
+/// Falls through (leaves `mask` untouched) when no forced Digimon has a legal
+/// Main-phase attack. This restriction cannot grant an otherwise illegal attack.
 fn apply_force_attack_mask_replacement(
     mask: &mut [f32],
     game: &Game,
     player_id: PlayerId,
-    opp_id: PlayerId,
 ) {
-    let me = game.player(player_id);
-    let opp = game.player(opp_id);
-    let max_field = me.battle_area.len().min(FIELD_SLOTS);
-
-    // First pass: is any friendly Digimon forced to attack?
-    let has_any_forced = (0..max_field).any(|i| {
-        let handle = PermanentHandle {
-            player: player_id,
-            index: i as u8,
-        };
-        game.modifiers.has(handle, ModifierType::ForceAttack)
-    });
-    if !has_any_forced {
-        return;
-    }
-
-    // Build the replacement mask into a fresh buffer so we can fall through
-    // if no forced attacker can legally act this turn.
+    // A forced attack restricts the choices that are already legal in Main.
+    // Reuse the normal mask so memory/Blitz, player prohibitions, effective
+    // kind, freshness, suspension and target restrictions cannot drift apart.
     let mut replacement = vec![0.0f32; ACTION_SPACE_SIZE];
-    let mut any_attack_emitted = false;
-    let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
-
-    for i in 0..max_field {
-        let attacker = &me.battle_area[i];
-        let handle = PermanentHandle {
-            player: player_id,
-            index: i as u8,
-        };
+    for i in 0..game.player(player_id).battle_area.len().min(FIELD_SLOTS) {
+        let handle = PermanentHandle { player: player_id, index: i as u8 };
         if !game.modifiers.has(handle, ModifierType::ForceAttack) {
             continue;
         }
-        if !can_basic_attack(attacker, handle, game.turn_count, &game.card_data, game) {
-            continue;
-        }
-
-        // Security attack.
-        replacement[encode_attack(i as u16, SECURITY_TARGET) as usize] = 1.0;
-        any_attack_emitted = true;
-
-        // Digimon attacks — same Raid / CanAttackUnsuspended logic as the
-        // normal Main-phase attack block above.
-        let can_attack_unsuspended = game
-            .modifiers
-            .has(handle, ModifierType::CanAttackUnsuspended);
-        let has_raid = game.has_keyword(handle, Keyword::Raid);
-        let raid_max_dp = if has_raid && !can_attack_unsuspended {
-            let mut best: Option<i32> = None;
-            for j in 0..max_opp {
-                let t = &opp.battle_area[j];
-                let t_handle = PermanentHandle {
-                    player: opp_id,
-                    index: j as u8,
-                };
-                if t.is_suspended || !game.permanent_is_digimon_for_rules(t_handle) {
-                    continue;
-                }
-                if let Some(dp) = game.effective_dp(t_handle) {
-                    best = Some(best.map_or(dp, |b| b.max(dp)));
-                }
-            }
-            best
-        } else {
-            None
-        };
-
-        for j in 0..max_opp {
-            let t_handle = PermanentHandle {
-                player: opp_id,
-                index: j as u8,
-            };
-            let target = &opp.battle_area[j];
-            if !game.permanent_is_digimon_for_rules(t_handle) {
-                continue;
-            }
-            if game.attack_target_blocked_by_modifier(handle, t_handle) {
-                continue;
-            }
-            let action_bit = encode_attack(i as u16, j as u16) as usize;
-            if target.is_suspended {
-                replacement[action_bit] = 1.0;
-                continue;
-            }
-            if can_attack_unsuspended {
-                replacement[action_bit] = 1.0;
-                continue;
-            }
-            if let Some(max_dp) = raid_max_dp {
-                if let Some(dp) = game.effective_dp(t_handle) {
-                    if dp == max_dp {
-                        replacement[action_bit] = 1.0;
-                    }
-                }
-            }
+        for target in 0..=SECURITY_TARGET {
+            let action = encode_attack(i as u16, target) as usize;
+            replacement[action] = mask[action];
         }
     }
-
-    if any_attack_emitted {
+    if replacement.iter().any(|bit| *bit > 0.0) {
         mask.copy_from_slice(&replacement);
     }
 }

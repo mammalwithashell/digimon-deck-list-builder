@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "God",
+    "card_id": "BT22-039",
+    "colors": "Yellow White",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "God/Appmon",
+    "play_cost": "12",
+    "qa": [
+      "No, you can't."
+    ],
+    "special_digivolution_condition": "[App Fusion] [Entermon] & [Fakemon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Entermon] & [Fakemon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Alliance＞ ＜Link +1＞ (Add 1 to this Digimon's maximum links.) [When Digivolving] [When Attacking] [Once Per Turn] You may play 1 level 4 or lower [Appmon] trait Digimon card from your hand without paying the cost. [All Turns] [Once Per Turn] When any of your Digimon are played, you may link 1 [Appmon] trait Digimon card from this Digimon's digivolution cards to 1 of your Digimon without paying the cost."
+      }
+    ],
+    "type": "Awakening"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "faf8acebb45c83a275343407019c5346d3863b25b4b47d1890bd7e009e67e8c6",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "01b65ca665c132463edc9f73b3a0d748bfe4e33ec1d19294ddfeaf6336431de2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT22-039",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT22-039"
+}

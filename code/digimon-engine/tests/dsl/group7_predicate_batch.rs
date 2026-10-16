@@ -1407,10 +1407,7 @@ fn event_card_color_has_matches_when_any_listed_color_present() {
         .build();
     let source_card = runner.game.players[0].hand[0].handle();
     let event_card = runner.game.players[0].hand[1].handle();
-    runner.game.current_trigger_context = Some(digimon_engine::trigger_context::TriggerContext {
-        event_card: Some(event_card),
-        ..Default::default()
-    });
+    runner.game.current_trigger_context = Some({ let mut __fixture_trigger_context = digimon_engine::trigger_context::TriggerContext::default(); __fixture_trigger_context.event_card = Some(event_card); __fixture_trigger_context });
     let rctx = EffectReadContext::new(&runner.game, source_card, None, 0);
 
     let has_blue_green = CompiledPredicate {

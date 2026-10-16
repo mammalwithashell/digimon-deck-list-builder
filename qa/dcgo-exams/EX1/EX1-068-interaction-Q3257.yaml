@@ -1,0 +1,155 @@
+card: EX1-068
+clause: EX1-068#effect#0
+interaction:
+  id: qa:Q3257
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST2-03
+    - EX1-068
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-07
+    - ST2-08
+    - ST2-09
+    - ST2-10
+    rest: Q3257-supportnext-p0
+  p1:
+    stack:
+    - BT20-042
+    - BT20-044
+    - ST1-02
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-07
+    - ST2-08
+    - ST2-09
+    - ST2-10
+    rest: Q3257-supportnext-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST2-03
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: BT20-042
+      from: hand
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX1-068
+      from: hand
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-02
+      from: hand
+- actor: 1
+  do:
+    digivolve:
+      from: field.0
+      using: BT20-044
+- actor: 1
+  do:
+    select:
+      value: 3
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    select:
+      cards:
+      - BT20-042
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+expect_ruling:
+  q_id: Q3257
+  assert:
+  - at: 15
+    that:
+      memory: 2
+  - at: 16
+    that:
+      memory: 4
+      p1.field:
+      - card_id: BT20-044
+        suspended: true
+        sources:
+        - BT20-042
+      - card_id: ST1-02
+        suspended: false
+  - at: 17
+    that:
+      memory: 4
+      p0.field: []
+      p0.security: 4
+      p0.trash:
+      - EX1-068
+      - ST2-03
+      - ST1-07

@@ -280,6 +280,20 @@ fn attack_digivolve_setup() -> (DebugRunner, PermanentHandle) {
     runner.attack_player(rap, 1, false);
     // Raptordramon [When Attacking]: digivolve into Grademon from hand.
     pick_hand(&mut runner, 0, CARD_ID);
+    // Effect evolution exposes both legal printed costs; explicitly take the
+    // named route rather than assuming an automatic minimum-cost choice.
+    let choice = runner.pending_selection_view().expect("printed cost choice");
+    assert_eq!(choice.kind, SelectionKind::EffectChoice);
+    assert!(!choice.is_optional);
+    let choices = runner.game.pending_selection.as_ref().unwrap()
+        .effect_choices.as_ref().unwrap();
+    assert_eq!(choices.iter().map(|entry| entry.label.as_str()).collect::<Vec<_>>(),
+        vec!["Digivolve for cost 3", "Digivolve for cost 4"]);
+    let cost_three = choices.iter().find(|entry| entry.label == "Digivolve for cost 3")
+        .expect("Raptordramon route").action_id;
+    assert!(digimon_engine::action::build_action_mask(&runner.game, choice.selecting_player)
+        [cost_three as usize] > 0.5);
+    runner.execute_action(choice.selecting_player, cost_three).expect("choose printed cost 3");
     // Raptordramon's digivolve pays a printed cost: the [Raptordramon] route (3).
     assert_eq!(runner.memory(), 5, "8 - 3 (the [Raptordramon] route)");
     assert_eq!(top_id(&runner, rap), CARD_ID);

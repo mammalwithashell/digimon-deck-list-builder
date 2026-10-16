@@ -547,25 +547,35 @@ pub(crate) fn play_cards_free(ctx: &mut EffectContext<'_>, cards: &[CardHandle])
 /// Returns the host's handle afterwards (moving a whole battle-area Digimon
 /// shifts later permanent indices), or `None` if it left the field.
 pub(crate) fn place_cards_as_bottom_sources(
-    ctx: &mut EffectContext<'_>,
-    cards: &[CardHandle],
-    target: PermanentHandle,
+    ctx: &mut EffectContext<'_>, cards: &[CardHandle], target: PermanentHandle, target_binding: Option<String>,
 ) -> Option<PermanentHandle> {
-    let target_card = ctx
-        .game
-        .player(target.player)
-        .battle_area
-        .get(target.index as usize)
-        .map(|p| p.top_card().handle());
-    let target_card = target_card?;
-    for &card in cards {
-        // Re-resolve the target each time: moving a whole battle-area Digimon
-        // shifts later permanent indices.
-        let host = ctx.game.permanent_with_top_card(target_card)?;
-        let Some(src) = ctx.game.locate_card_source_ref(card) else {
-            continue;
-        };
-        let _ = ctx.place_as_bottom_source(src, host, false);
+    let target_anchor=ctx.game.source_move_anchor(target)?;
+    let source_anchor=ctx.source_permanent.and_then(|h|ctx.game.source_move_anchor(h));
+    let prov=crate::resume::ResumeProvenance {source_card:ctx.source_card,source_permanent:ctx.source_permanent,
+        source_kind:ctx.source_kind,controller:ctx.player,override_pin:ctx.override_selecting_player()};
+    continue_source_placement_batch(ctx.game,prov,source_anchor,target_anchor,cards.to_vec(),target_binding);
+    ctx.game.resolve_source_move_anchor(target_anchor,false)
+}
+
+pub(crate) fn continue_source_placement_batch(
+    game:&mut crate::game::Game, prov:crate::resume::ResumeProvenance,
+    source_anchor:Option<(PlayerId,u64)>, target:(PlayerId,u64), cards:Vec<CardHandle>, target_binding:Option<String>,
+) {
+    let mut next=0;
+    while game.pending_selection.is_none() && next<cards.len() {
+        let Some(host)=game.resolve_source_move_anchor(target,false) else{return;};
+        let card=cards[next];next+=1;
+        let Some(src)=game.locate_card_source_ref(card) else{continue;};
+        let source_permanent=source_anchor.and_then(|a|game.resolve_source_move_anchor(a,false));
+        let mut ctx=EffectContext::new_with_source_kind_and_override(game,prov.source_card,source_permanent,
+            prov.source_kind,prov.controller,prov.override_pin);
+        let _=ctx.place_as_bottom_source(src,host,false);
     }
-    ctx.game.permanent_with_top_card(target_card)
+    if game.pending_selection.is_some() {
+        // Include an empty remainder: it still pins the named target for the outer tail.
+        let inner=game.pending_selection_resume.take().expect("field-source movement selections are resumable");
+        game.pending_selection_resume=Some(crate::resume::ResumeStack { frames:vec![crate::resume::ResumeFrame::FieldTopSourceBatch {
+            inner:Box::new(inner),prov,source_anchor,target,remaining:cards[next..].to_vec(),target_binding,outer_conts:Vec::new(),
+        }]});
+    }
 }

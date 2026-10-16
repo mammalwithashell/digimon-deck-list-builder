@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT13-020",
+    "colors": "Red Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "15000",
+    "form": "Mega",
+    "play_cost": "15",
+    "qa": [
+      "It causes that card to also be treated as a Digimon with X000 DP. For example, if a Tamer is also treated as a Digimon, it can attack like a standard Digimon, and it will gain inherited effects from cards stacked under it. However, even if a Tamer is played and then treated as a Digimon in the same turn, it can't attack during that turn."
+    ],
+    "special_digivolution_condition": "[Burst Digivolve] 0 from [ShineGreymon] by returning 1 [Marcus Damon] to hand At the end of the burst digivolution turn, trash this Digimon’s top card",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Burst Digivolve] 0 from [ShineGreymon] by returning 1 [Marcus Damon] to hand At the end of the burst digivolution turn, trash this Digimon’s top card"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] You may play 1 [Marcus Damon] from your hand without paying the cost. For the turn, the Tamer played by this effect is also treated as a 12000 DP Digimon, can't digivolve, and gains ＜Rush＞. [Your Turn][Once Per Turn] When one of your Tamers becomes suspended, trash the top card of your opponent’s security stack."
+      }
+    ],
+    "type": "Light Dragon"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "15aa0217f6bdd6d36601b1eaf0454749cc9c9ea7c86232a72971b90b4fb6271d",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "1915c9e3b9f8956c165727d1a27ee078cb471be0aacdfd301a359e2123f784b1",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT13-020",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT13-020"
+}

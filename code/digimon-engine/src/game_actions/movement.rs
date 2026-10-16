@@ -158,19 +158,21 @@ impl Game {
                 let source_count = digisources.len();
                 let dp_now = self.effective_dp(handle);
                 let is_token = p.top_card().is_token;
+                let identity = p.synth_identity(&self.card_data, &self.modifiers, handle);
                 Some(crate::trigger_context::DeletedObjectSnapshot {
                     former_controller: handle.player,
                     top_card: top_handle,
-                    card_kind: data.card_kind,
-                    traits: data.traits.clone(),
-                    level: data.level,
+                    card_kind: identity.kind,
+                    retained_kind: identity.retained_kind,
+                    traits: identity.traits.clone(),
+                    level: identity.level,
                     dp: dp_now,
                     cause: crate::trigger_context::EventCause::Return,
                     dp_just_before: dp_now,
-                    level_just_before: data.level,
+                    level_just_before: identity.level,
                     cost_just_before: Some(data.play_cost),
-                    names_just_before: vec![data.card_name.clone()],
-                    traits_just_before: data.traits.clone(),
+                    names_just_before: identity.card_names.clone(),
+                    traits_just_before: identity.traits.clone(),
                     source_count_just_before: source_count,
                     digisources_just_before: digisources,
                     is_token,
@@ -188,6 +190,14 @@ impl Game {
         // `queued_effect_source_is_live` and its MANDATORY trigger is silently
         // dropped -- measured on EX12-036 Ryugumon, where the standing carrier
         // reported index 1 while the battle area held one permanent at index 0.
+        // Clear the departing identity and compact every surviving handle
+        // BEFORE overflow/source-trash callbacks can rebuild declarative state.
+        // A late clear at the former slot would erase the shifted survivor.
+        self.clear_permanent_full(handle);
+        self.modifiers.expire_player_on_permanent_leave(handle);
+        self.modifiers
+            .shift_after_battle_area_remove(handle.player, handle.index);
+        self.shift_pending_attack_after_battle_area_remove(handle.player, handle.index);
         self.shift_effect_queue_after_battle_area_remove(handle.player, handle.index);
 
         let mut sources = perm.card_sources;
@@ -202,7 +212,13 @@ impl Game {
         // Owner-routed: top card returns to its owner's hand, not the
         // controller's. Track E correctness rule. Identical when
         // `top_owner == handle.player` (the common case today).
-        self.player_mut(top_owner).hand.push(top);
+        let top_is_egg = top.card_kind(&self.card_data) == CardKind::DigiEgg;
+        if top_is_egg {
+            // Rule 3-1-3-9-2: a Digi-Egg cannot enter hand.
+            self.player_mut(top_owner).digitama_deck.insert(0, top);
+        } else {
+            self.player_mut(top_owner).hand.push(top);
+        }
 
         // Sources below the top go to each source's owner's trash and fire
         // OnDigivolutionCardTrashed (digivolution stack sources only — not
@@ -221,7 +237,7 @@ impl Game {
                 handle,
                 top_handle,
                 source_card,
-                crate::trigger_context::EventCause::Return,
+                crate::trigger_context::EventCause::Rule,
             );
         }
         let had_linked = !perm.linked_cards.is_empty();
@@ -242,9 +258,6 @@ impl Game {
             self.drain_effect_queue();
         }
 
-        self.clear_permanent_full(handle);
-        // Phase 6: expire any player-scoped modifiers sourced from this permanent.
-        self.modifiers.expire_player_on_permanent_leave(handle);
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
         // OnLeaveField: the permanent left the battle area by return-to-hand.
@@ -254,8 +267,12 @@ impl Game {
         // OnAddToHand: the returned top card entered its owner's hand by effect.
         // (Digivolution sources went to trash, not hand, so only the top card
         // counts as a hand gain.) See G-ON-ADD-TO-HAND-OBSERVER.
-        self.fire_on_add_to_hand_by_effect(top_owner);
-        Some(top_handle)
+        if top_is_egg {
+            None
+        } else {
+            self.fire_on_add_to_hand_by_effect(top_owner);
+            Some(top_handle)
+        }
     }
 
     /// Low-level source-attribution helper for tests and engine internals.
@@ -417,12 +434,14 @@ impl Game {
                 let source_count = digisources.len();
                 let dp_now = self.effective_dp(handle);
                 let is_token = p.top_card().is_token;
+                let identity = p.synth_identity(&self.card_data, &self.modifiers, handle);
                 Some(crate::trigger_context::DeletedObjectSnapshot {
                     former_controller: player_id,
                     top_card: top_handle,
-                    card_kind: data.card_kind,
-                    traits: data.traits.clone(),
-                    level: data.level,
+                    card_kind: identity.kind,
+                    retained_kind: identity.retained_kind,
+                    traits: identity.traits.clone(),
+                    level: identity.level,
                     dp: dp_now,
                     cause: match position {
                         crate::enums::StackPosition::Bottom => {
@@ -431,10 +450,10 @@ impl Game {
                         _ => crate::trigger_context::EventCause::Return,
                     },
                     dp_just_before: dp_now,
-                    level_just_before: data.level,
+                    level_just_before: identity.level,
                     cost_just_before: Some(data.play_cost),
-                    names_just_before: vec![data.card_name.clone()],
-                    traits_just_before: data.traits.clone(),
+                    names_just_before: identity.card_names.clone(),
+                    traits_just_before: identity.traits.clone(),
                     source_count_just_before: source_count,
                     digisources_just_before: digisources,
                     is_token,
@@ -452,6 +471,14 @@ impl Game {
         // `queued_effect_source_is_live` and its MANDATORY trigger is silently
         // dropped -- measured on EX12-036 Ryugumon, where the standing carrier
         // reported index 1 while the battle area held one permanent at index 0.
+        // Clear the departing identity and compact every surviving handle
+        // BEFORE overflow/source-trash callbacks can rebuild declarative state.
+        // A late clear at the former slot would erase the shifted survivor.
+        self.clear_permanent_full(handle);
+        self.modifiers.expire_player_on_permanent_leave(handle);
+        self.modifiers
+            .shift_after_battle_area_remove(handle.player, handle.index);
+        self.shift_pending_attack_after_battle_area_remove(handle.player, handle.index);
         self.shift_effect_queue_after_battle_area_remove(player_id, handle.index);
 
         let Some(top) = perm.card_sources.pop() else {
@@ -485,12 +512,7 @@ impl Game {
                     handle,
                     host_card,
                     source_card,
-                    match position {
-                        crate::enums::StackPosition::Bottom => {
-                            crate::trigger_context::EventCause::DeckBottom
-                        }
-                        _ => crate::trigger_context::EventCause::Return,
-                    },
+                    crate::trigger_context::EventCause::Rule,
                 );
             }
         }
@@ -513,9 +535,6 @@ impl Game {
             self.drain_effect_queue();
         }
 
-        self.clear_permanent_full(handle);
-        // Phase 6: expire any player-scoped modifiers sourced from this permanent.
-        self.modifiers.expire_player_on_permanent_leave(handle);
         // OnLeaveField: the permanent left the battle area by return-to-deck.
         if let Some(snapshot) = leave_snapshot {
             self.fire_on_leave_field(handle, snapshot);

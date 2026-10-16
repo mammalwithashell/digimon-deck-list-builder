@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT22-015",
+    "colors": "Red White Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "dp": "15000",
+    "form": "Mega",
+    "play_cost": "15",
+    "qa": [
+      "No, you can't. When this card would be removed from the battle area other than by a battle, you can play a combination of 1 red or black level 3 card from and 1 blue or yellow level 3 card from ."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.6 w/[CS] trait: Cost 5 [DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.6 w/[CS] trait: Cost 5 [DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Blocker＞ ＜Decode (Red/Black Lv.3)＞ ＜Decode (Blue/Yellow Lv.3)＞ [On Play] [When Attacking] Delete 1 of your opponent's Digimon with the lowest DP. [When Digivolving] For every 2 same-level cards this Digimon's stack has, return 1 of your opponent's Digimon to the bottom of the deck. Then, this Digimon may attack."
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight/CS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "7c6f6d2729efe3eeff7d9efe2c7ac25c73efeed806108e029ce73569d7d7b0e1",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "5e32dbb157880c496e6ed9dae6282fa17487aa72af73dfdcf7f93b2217a013e3",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT22-015",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT22-015"
+}

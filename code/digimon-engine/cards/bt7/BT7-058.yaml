@@ -1,0 +1,51 @@
+# Official current wording: observation 391a72287fad47217e8d513e91e3d2ad1b6f3fc666e321d066602b8274772728.
+# Q1606 distinguishes rule disposal of the donor's old stack from effect trashing.
+card: BT7-058
+name: SkullKnightmon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 3000
+form: Champion
+attribute: Virus
+traits: [Undead]
+alt_paths:
+  - kind: digivolve
+    from: {level_eq: 3, color_is: black}
+    cost: 2
+effects:
+  - when: when_attacking
+    process:
+      - select_own_permanent:
+          filter: {kind: digimon, name_is: DeadlyAxemon, is_source_permanent: false}
+          optional: true
+          bind_as: donor
+          prompt: Place 1 of your DeadlyAxemon as this Digimon's bottom digivolution card
+      - place_as_bottom_source:
+          source: {top_of: donor}
+          target: source
+          bind_placed_as: paid_donor
+      - if:
+          condition: {binding_present: paid_donor}
+          then:
+            - select_hand:
+                of: you
+                filter: {kind: digimon, name_is: DarkKnightmon, can_digivolve_onto: source}
+                optional: true
+                bind_as: evolution
+                prompt: Digivolve into a DarkKnightmon in your hand without paying the cost
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: evolution
+                cost: free
+  - kind: grant_keyword
+    scope: inherited
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_of:
+            - name_contains: Knightmon
+            - name_contains: Bagramon
+    keyword: SecurityAttackPlus
+    value: 1

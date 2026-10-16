@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT17-007",
+    "colors": "Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "No, you can't. Even if you have multiple Tamers with [Tai Kamiya] in their names, you can only return 1 card to the hand."
+    ],
+    "special_digivolution_condition": "[Digivolve] [Koromon]: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Koromon]: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[Start of Your Main Phase] If you have a Tamer with [Tai Kamiya] in its name, return 1 card with [Garurumon], [Greymon] or [Omnimon] in its name from your trash to the hand."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in the hand."
+      }
+    ],
+    "type": "Reptile"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3f02c3b4a65acfd6d65abc52e1d8172c40ac0ba5cdbadb490ae5bba3b630cf2e",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "a36b7e44b3e4091a1ea3bd67e62083f48850a64f520c2ad8d54d6b20568394a5",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT17-007",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT17-007"
+}

@@ -1,0 +1,125 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "EX12-029",
+    "card_type": "Digimon",
+    "colors": [
+      "Blue",
+      "Yellow"
+    ],
+    "dp": 7000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Blue",
+          "Yellow"
+        ],
+        "cost": 4,
+        "from_level": 4,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue",
+          "Yellow"
+        ],
+        "dp": 7000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 5,
+        "name": "Sagomon",
+        "play_cost": 7,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Blocker＞\n[On Play] [When Digivolving] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends. Then, 1 of your other [SW] trait Digimon may gain ＜Alliance＞ for the turn and attack."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "DigiXros -2: 1 Lv.5 or lower Digimon card w/[Gokuumon] in text or w/[SW] trait"
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with no digivolution cards can't suspend until their turn ends."
+          }
+        ]
+      }
+    ],
+    "form": "Ultimate",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 5,
+    "name": "Sagomon",
+    "play_cost": 7,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-029.png?260529",
+      "printing_id": "EX12-029"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements.\nFor example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6760",
+        "question": "What kind of card does \"a card with X in its text\" refer to?"
+      },
+      {
+        "answer": "No, you cannot.\nA Digimon that gains from this effect attacks if possible.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6761",
+        "question": "After a Digimon gains from this card's [On Play] [When Digivolving] effect, can I choose not to attack with it?"
+      },
+      {
+        "answer": "Yes, both have to be XX.\nFor example, \"1 level 4 or lower Digimon card with the [CS] trait or that is yellow or black\" means either \"1 level 4 or lower Digimon card with the [CS] trait\" or \"1 level 4 or lower Digimon card that is yellow or black.\" In both cases, the card must be level 4 or lower.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6762",
+        "question": "If a text says \"XX card with AA or BB,\" does that mean AA and BB both have to be XX?"
+      }
+    ],
+    "rarity": "U",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Blocker＞\n[On Play] [When Digivolving] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends. Then, 1 of your other [SW] trait Digimon may gain ＜Alliance＞ for the turn and attack."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "DigiXros -2: 1 Lv.5 or lower Digimon card w/[Gokuumon] in text or w/[SW] trait"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with no digivolution cards can't suspend until their turn ends."
+      }
+    ],
+    "type": "Wizard/Shambala/SW"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "42815c1d508dffae563145ee8afd520dbf072e73078423567bf0dcd40e0a0f25",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-029:EX12-029",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

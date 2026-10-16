@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT19-051",
+    "colors": "Green Black",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "7000",
+    "form": "Ultimate",
+    "play_cost": "7",
+    "qa": [
+      "No, you can't. This card is only treated as [Ballistamon] for a DigiXros. Related Cards"
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.4 w/[Xros Heart] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[Xros Heart] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "This card is also treated as [Ballistamon] for DigiXros. [On Play] [When Digivolving] Until the end of your opponent's turn, 1 of your Digimon can't be returned to hands or decks by your opponent's effects and gets +3000 DP. [On Deletion] You may place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under any of your Tamers."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Opponent's Turn] This Digimon with the [Xros Heart] trait gains ＜Blocker＞."
+      }
+    ],
+    "type": "Machine/Xros Heart"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "4c32ccc67098baba872acd8745a91d3c4014408cef8493785ae4f80ef58dffc5",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "1a0d543da79f5d309b07f3afdcb9529a7468ecbeae931c3e174fd4d323706a4e",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT19-051",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT19-051"
+}

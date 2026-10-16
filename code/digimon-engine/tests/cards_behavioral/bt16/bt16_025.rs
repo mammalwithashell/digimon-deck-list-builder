@@ -1,7 +1,7 @@
 //! BT16-025 Paildramon — Digimon, Lv.5, Blue/Green, DP 8000, Cost 8.
 //! Traits: Dragonkin
 //!
-//! # Card text (cards.json — printed)
+//! # Card text (official observation and inspected card image)
 //!
 //! ```text
 //! ＜Partition (Blue Lv.4 & Green Lv.4)＞
@@ -18,47 +18,20 @@
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/BT16/Blue/BT16_025.cs
 //!
-//! # Source priority
-//! Per CLAUDE.md: printed text > RULES_CONTEXT.md (§16-28 Partition) > fandom > DCGO.
+//! # Source authority and covered behavior
+//! Official Bandai observations and the inspected card image establish the
+//! printed clauses. Official rules and docs/digimon-rules/ establish timing;
+//! base-repository DCGO C# is a resolution-flow cross-check.
 //!
-//! # Patterns this test covers
-//! - Partition declarative (face-up scope) with level + color source predicates
-//! - Partition declarative (inherited scope) — same sources
-//! - DNA digivolve alt-path (Blue Lv.4 + Green Lv.4, cost 0)
-//! - [When Digivolving] triggered clause:
-//!     - Primary suspend-by-stack-size-comparison: IMPLEMENTED via
-//!       `materials_count_lte` + `source_material_count`
-//!     - WhenDigivolving clause is shipped in YAML
-//! - [On DNA Digivolve] CannotUnsuspend all opp Digimon: IMPLEMENTED
-//!     - Modeled as `on_dna_digivolve` timing rather than a conditional inside
-//!       `when_digivolving`, because the `dna_origin` predicate in process-step
-//!       `if` conditions is not evaluated by the engine (G-ENGINE-DNA-ORIGIN-PRED gap).
-//! - [When Attacking][OPT] triggered clause — IMPLEMENTED:
-//!     - Suspend 1 opp unsuspended Digimon: IMPLEMENTED
-//!     - Unsuspend-self fallback "if this effect didn't suspend": IMPLEMENTED
-//!       G-DSL-EFFECT-SUSPENDED-RESULT
-//!
-//! # Engine gaps that block full clause implementation
-//!
-//! ## G-DSL-STACK-SIZE-LTE-SOURCE
-//! The "suspend all opp Digimon with as many or fewer digivolution cards as this
-//! Digimon" step requires a `stack_size_lte` predicate that evaluates against the
-//! SOURCE permanent's current stack size at runtime. The DSL's `stack_size_lte` takes
-//! only a literal `u8`, not a source-relative reference.
-//! A new predicate leaf `stack_size_lte_source: bool` would resolve to
-//! `candidate.card_sources.len() <= ctx.source_permanent().card_sources.len()`.
-//! Tracked in: qa/dsl-vocab-gaps.md
-//!
-//! ## G-DSL-EFFECT-SUSPENDED-RESULT
-//! "If this effect didn't suspend, unsuspend this Digimon" requires branching on
-//! whether the current effect actually suspended an opponent/any Digimon. The DSL
-//! now has `binding_is_none` / `binding_absent`, but using selection absence would
-//! historically approximated the printed result check and missed cases where a selected target was
-//! not suspended. The current result-log predicate family includes
-//! `effect_suspended_any_own_digimon`; BT16-025 needs an opponent/any-Digimon
-//! suspend-result predicate before this fallback can be authored faithfully.
-//! Cross-reference: qa/dsl-vocab-gaps.md still carries the older
-//! G-DSL-IF-NO-TARGET wording for this card.
+//! - Face-up and inherited Partition: blue Lv.4 / green Lv.4 sources.
+//! - DNA evolution route: blue Lv.4 + green Lv.4, cost 0.
+//! - One complete When Digivolving clause suspends by material-count comparison,
+//!   then checks dna_origin before granting an opponent-player CannotUnsuspend
+//!   restriction through their turn, including Digimon that enter later.
+//! - When Attacking uses the recorded actual opponent-suspension result for its
+//!   unsuspend-self fallback, rather than inferring success from target choice.
+//! - Standalone bt16_025_dna_ordering_regression tests cover simultaneous timing,
+//!   cloned prompt DNA context, later entrants, Tamer exclusion, and expiry.
 
 #![allow(dead_code, unused_imports)]
 
@@ -337,39 +310,16 @@ fn bt16_025_has_dna_digivolve_blue_lv4_green_lv4_cost0() {
     );
 }
 
-/// [On DNA Digivolve] triggered clause must exist, implementing the "if DNA
-/// digivolving, none of their Digimon can unsuspend" branch of the printed text.
-/// Modeled as `on_dna_digivolve` timing rather than a `when_digivolving` clause
-/// with a `dna_origin` process-`if` condition, because that predicate is not
-/// evaluated by the engine's process-step `if` evaluator.
+/// The DNA-only rider belongs to the single printed WD effect, not a second trigger.
 #[test]
-fn bt16_025_has_on_dna_digivolve_cannot_unsuspend_clause() {
-    let runner = paildramon_runner();
-    let card = runner.compiled_card("BT16-025").expect("BT16-025 compiles");
-
-    let dna_clause = card
-        .effects
-        .iter()
-        .filter_map(|c| match c {
-            CompiledClause::Triggered(t) => Some(t),
-            _ => None,
-        })
-        .find(|t| t.when.contains(&CompiledTiming::OnDnaDigivolve));
-
-    assert!(
-        dna_clause.is_some(),
-        "BT16-025 must have an [On DNA Digivolve] triggered clause for CannotUnsuspend"
-    );
-    let clause = dna_clause.unwrap();
-    assert_eq!(
-        clause.scope,
-        CompiledScope::FaceUp,
-        "[On DNA Digivolve] clause must have FaceUp scope"
-    );
-    assert!(
-        !clause.optional,
-        "[On DNA Digivolve] CannotUnsuspend is mandatory when DNA digivolving (no 'you may')"
-    );
+fn bt16_025_dna_lock_is_inside_single_when_digivolving_clause() {
+    let runner=paildramon_runner();
+    let card=runner.compiled_card("BT16-025").unwrap();
+    let triggers:Vec<_>=card.effects.iter().filter_map(|c| match c {
+        CompiledClause::Triggered(t)=>Some(t), _=>None,
+    }).collect();
+    assert_eq!(triggers.iter().filter(|t|t.when.contains(&CompiledTiming::WhenDigivolving)).count(),1);
+    assert!(!triggers.iter().any(|t|t.when.contains(&CompiledTiming::OnDnaDigivolve)));
 }
 
 /// [When Attacking][Once Per Turn] triggered clause must exist and be OPT.
@@ -458,14 +408,14 @@ fn bt16_025_on_dna_digivolve_applies_cannot_unsuspend_to_all_opp_digimon() {
         runner
             .game
             .modifiers
-            .has(opp_perm_a, ModifierType::CannotUnsuspend),
+            .player_has(1, ModifierType::CannotUnsuspend),
         "opp_perm_a must have CannotUnsuspend after DNA digivolve"
     );
     assert!(
         runner
             .game
             .modifiers
-            .has(opp_perm_b, ModifierType::CannotUnsuspend),
+            .player_has(1, ModifierType::CannotUnsuspend),
         "opp_perm_b must have CannotUnsuspend after DNA digivolve"
     );
 }
@@ -503,7 +453,7 @@ fn bt16_025_non_dna_digivolve_does_not_apply_cannot_unsuspend() {
         !runner
             .game
             .modifiers
-            .has(opp, ModifierType::CannotUnsuspend),
+            .player_has(1, ModifierType::CannotUnsuspend),
         "non-DNA digivolve must NOT grant CannotUnsuspend to opp Digimon \
          (on_dna_digivolve timing does not fire for standard digivolves)"
     );
@@ -547,7 +497,7 @@ fn bt16_025_cannot_unsuspend_expires_at_end_of_opponents_turn() {
         runner
             .game
             .modifiers
-            .has(opp, ModifierType::CannotUnsuspend),
+            .player_has(1, ModifierType::CannotUnsuspend),
         "CannotUnsuspend must be active immediately after DNA digivolve"
     );
 
@@ -557,7 +507,7 @@ fn bt16_025_cannot_unsuspend_expires_at_end_of_opponents_turn() {
         runner
             .game
             .modifiers
-            .has(opp, ModifierType::CannotUnsuspend),
+            .player_has(1, ModifierType::CannotUnsuspend),
         "CannotUnsuspend must persist during the opponent's turn"
     );
 
@@ -567,7 +517,7 @@ fn bt16_025_cannot_unsuspend_expires_at_end_of_opponents_turn() {
         !runner
             .game
             .modifiers
-            .has(opp, ModifierType::CannotUnsuspend),
+            .player_has(1, ModifierType::CannotUnsuspend),
         "CannotUnsuspend must expire after the opponent's turn ends"
     );
 }

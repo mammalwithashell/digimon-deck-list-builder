@@ -1,0 +1,109 @@
+# Interaction draft for Q4182 (no oracle result claimed; no expect_ruling yet).
+# The INHERITED clause digivolves "without paying the cost" but does NOT print
+# "ignoring its digivolution requirements" (only the face effect does -- compare
+# P-092#effect#1). Dracomon (P-092, blue/green) is digivolved into the GREEN Lv.4
+# Kuwagamon (ST4-07, vanilla), so P-092 becomes an inherited source; the Wingdramon
+# held in hand (ST8-07) requires a BLUE Lv.4, so the requirement is unmet even
+# though the level matches. Playing Groundramon (BT1-020, vanilla) is the trigger.
+# DCGO: P_092.cs:123-134 gates the inherited optional trigger on "a [Wingdramon] in
+# hand" by NAME only, so DCGO opens an OptionalSkill yes/no; its legality filter
+# (CardEffectCommons.cs:859-885 + :1043-1069, ignoreDigivolutionRequirementFixedCost
+# = -1 at P_092.cs:144) then finds no legal card and opens no SelectHandEffect.
+# Ours: the inherited select_hand filter carries can_digivolve_from_source: true
+# (cards/p/P-092.yaml:48), so the pick has zero candidates and short-circuits with
+# no pending prompt. The yes row is therefore dcgo_only: a representational
+# difference in WHERE legality is checked, not a state divergence. Accepting it is
+# the stronger observation: the effect is used and still cannot digivolve.
+card: P-092
+clause: P-092#inherited#0
+covers:
+- P-092#inherited#0
+interaction:
+  id: qa:Q4182
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - P-092      # opening hand
+    - ST4-07
+    - BT1-020
+    - ST8-07
+    - ST2-02
+    - ST2-04     # security (stack[9] = top)
+    - ST2-04
+    - ST2-06
+    - ST2-06
+    - ST2-07
+    - ST2-08     # T3 turn draw
+    - ST2-08     # T3 digivolution draw
+    - ST1-02
+    - ST1-02
+    rest: P-092-interaction-Q4182-p0
+  p1:
+    stack:
+    - ST1-02     # opening hand
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST2-02     # security
+    - ST2-02
+    - ST2-03
+    - ST2-03
+    - ST2-04
+    - ST2-05     # T2 draw
+    - ST2-05     # T4 draw
+    - ST2-06
+    - ST2-06
+    rest: P-092-interaction-Q4182-p1
+steps:
+# T1 (P0, memory 0): play Dracomon (cost 3 -> -3); P1 starts with 3.
+- actor: 0
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+- actor: 0
+  do: { play: { card: P-092, from: hand } }
+  expect: { prompt: main_phase }
+# T2 (P1, memory 3): nothing; the pass hands P0 3 (6-5-1-7-1).
+- actor: 1
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+- actor: 1
+  do: { pass: {} }
+  expect: { prompt: main_phase }
+# T3 (P0, memory 3): Kuwagamon (green Lv.4, cost 2 -> 1) over Dracomon, so P-092 is
+# a digivolution source and its inherited clause is live. Then Groundramon
+# (cost 5 -> -4) is the trigger; the overshoot ends the turn after resolution.
+- actor: 0
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+- actor: 0
+  do: { digivolve: { from: field.0, using: ST4-07 } }
+  expect: { prompt: main_phase }
+- actor: 0
+  do: { play: { card: BT1-020, from: hand } }
+  expect: { prompt: main_phase }
+# THE RULING: DCGO asks the inherited "may digivolve into [Wingdramon]" yes/no
+# (hand holds ST8-07); accept it. ST8-07 needs a blue Lv.4 and the top card is a
+# green Lv.4, so no card is legal and nothing digivolves. Ours never parks here.
+- actor: 0
+  do: { select: { 'yes': true, dcgo_only: true } }
+  expect: { prompt: OptionalSkill }
+# T4 (P1): trailing decision so the post-trigger board is projected
+# (Kuwagamon over P-092 and Groundramon on P0's field, ST8-07 still in hand).
+- actor: 1
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+expect_ruling:
+  q_id: Q4182
+  assert:
+  - at: 8
+    that:
+      phase: Breeding
+      p0.field:
+      - card_id: ST4-07
+        sources:
+        - P-092
+      - card_id: BT1-020

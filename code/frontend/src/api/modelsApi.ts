@@ -1,3 +1,4 @@
+import type { ModelContract } from '@/utils/modelContract';
 import client from './client';
 
 export type ModelType = 'mlp' | 'lstm';
@@ -9,6 +10,7 @@ export interface AIModel {
   model_type: ModelType;
   tensor_size: number | null;
   action_space_size: number | null;
+  action_schema_version: number | null;
   engine_commit: string | null;
   trained_at: string | null;
   file_sha256: string | null;
@@ -25,7 +27,7 @@ export interface AIModel {
   deck_name: string | null;
 }
 
-export interface CreateModelInput {
+export interface CreateModelInput extends ModelContract {
   name: string;
   model_type: ModelType;
   engine_commit?: string | null;
@@ -48,6 +50,7 @@ export interface ConfirmModelResponse {
   file_size_bytes: number;
   tensor_size: number;
   action_space_size: number;
+  action_schema_version: number;
 }
 
 export interface UpdateModelInput {

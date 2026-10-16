@@ -29,7 +29,7 @@
 //! # Patterns this test covers
 //!
 //! - [On Play] reveal-3 / add-1-Digimon / trash-the-rest composite
-//!   (`reveal_top_deck` -> `select_reveal` (optional, `kind: digimon` filter)
+//!   (`reveal_top_deck` -> `select_reveal` (mandatory, `kind: digimon` filter)
 //!   -> `add_to_hand_from_reveal` -> `per_selected { selection: revealed }`
 //!   -> `trash_from_reveal`), same idiom as BT21-097 / BT25-098.
 //! - [All Turns] `on_any_deletion` observer scoped to the controller's OWN
@@ -687,4 +687,214 @@ fn ex1_066_all_turns_does_not_fire_when_source_already_suspended() {
         memory_before,
         "no memory gain when the cost cannot be paid"
     );
+}
+
+#[test]
+fn ex1_066_cannot_suspend_cost_never_grants_memory_or_hatches() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    let mut r = setup_deletion_runner("EX1066-EGG-LOCK");
+    let youth = r.place_on_field(0, CARD_ID, None);
+    r.game.modifiers.add(
+        youth,
+        ModifierEntry::simple(ModifierType::CannotSuspend, 0, Expiry::Permanent, 0),
+    );
+    let target = r.place_stack(0, &["EX1066-LV5-SRC", "EX1066-LV5-TOP"]);
+    let before = r.memory();
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OwnEffect);
+    assert!(
+        r.pending_selection().is_none(),
+        "DCGO CanActivateSuspendCostEffect excludes unpayable suspension: no legal accept prompt"
+    );
+    r.auto_resolve().unwrap();
+    assert_eq!(r.memory(), before);
+    assert!(!r.game.players[0].battle_area[youth.index as usize].is_suspended);
+    assert!(r.game.players[0].breeding_area.is_none());
+}
+
+#[test]
+fn ex1_066_opponent_turn_no_eggs_still_gains_memory_after_cloned_choice() {
+    let mut r = setup_deletion_runner("EX1066-EGG-NONE");
+    r.game.players[0].digitama_deck.clear();
+    r.game.turn_player_idx = 1;
+    let youth = r.place_on_field(0, CARD_ID, None);
+    let target = r.place_stack(0, &["EX1066-LV5-SRC", "EX1066-LV5-TOP"]);
+    let before = r.memory();
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+    let v = r
+        .pending_selection_view()
+        .expect("All Turns offers controller choice");
+    assert_eq!(v.selecting_player, 0);
+    assert!(v.is_optional);
+    let mut cloned = DebugRunner::wrap(r.game.clone());
+    for branch in [&mut r, &mut cloned] {
+        branch
+            .execute_action(v.selecting_player, v.valid_action_ids[0])
+            .unwrap();
+        branch.auto_resolve().unwrap();
+        assert_eq!(
+            branch.memory(),
+            before - 1,
+            "opponent-turn memory moves toward player 0"
+        );
+        assert!(branch.game.players[0].battle_area[youth.index as usize].is_suspended);
+        assert!(branch.game.players[0].breeding_area.is_none());
+    }
+}
+
+#[test]
+fn ex1_066_deletion_is_not_once_per_turn_but_each_activation_requires_payment() {
+    let mut r = setup_deletion_runner("EX1066-EGG-REPEAT");
+    r.game.players[0].digitama_deck.clear();
+    let youth = r.place_on_field(0, CARD_ID, None);
+    let before = r.memory();
+    for expected in 1..=2 {
+        // An independent unsuspend between events makes the cost payable again.
+        r.game.players[0].battle_area[youth.index as usize].is_suspended = false;
+        let target = r.place_stack(0, &["EX1066-LV5-SRC", "EX1066-LV5-TOP"]);
+        r.game
+            .delete_permanent_with_cause(target, ReplacementCause::OwnEffect);
+        let v = r.pending_selection_view().expect("no printed OPT");
+        r.execute_action(v.selecting_player, v.valid_action_ids[0])
+            .unwrap();
+        r.auto_resolve().unwrap();
+        assert_eq!(r.memory(), before + expected);
+    }
+    let target = r.place_stack(0, &["EX1066-LV5-SRC", "EX1066-LV5-TOP"]);
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OwnEffect);
+    assert!(r.pending_selection().is_none());
+    assert_eq!(r.memory(), before + 2);
+}
+
+#[test]
+fn ex1_066_security_plays_for_free_and_resolves_its_on_play_search() {
+    let mut attacker = make_test_card("EX1066-ATTACKER", "Attacker");
+    attacker.dp = Some(12000);
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .unwrap()
+        .add_card(attacker)
+        .deck(0, &["EX1066-ATTACKER"; 8])
+        .deck(1, &["EX1066-ATTACKER"; 8])
+        .security(1, &[CARD_ID])
+        .memory(3)
+        .start();
+    let attacker = r.place_on_field(0, "EX1066-ATTACKER", None);
+    r.game.players[0].battle_area[attacker.index as usize].turn_played = 0;
+    r.game.turn_count = 2;
+    let before = r.memory();
+    let hand_before = r.hand_size(1);
+    r.attack_player(attacker, 1, false);
+    r.auto_resolve().unwrap();
+    assert_eq!(r.memory(), before, "security play pays no two-memory cost");
+    assert_eq!(r.game.players[1].battle_area.len(), 1);
+    assert_eq!(r.hand_size(1), hand_before + 1);
+    assert_eq!(r.trash_size(1), 2, "only unchosen reveals are trashed");
+}
+
+#[test]
+fn ex1_066_reveal_exposes_each_digimon_choice_and_clone_preserves_remainder() {
+    let mut r = setup_deletion_runner("EX1066-EGG-PICK");
+    r.game.players[0].deck.clear();
+    stack_deck_top(&mut r, &[CARD_ID, "EX1066-LV5-SRC", "EX1066-LV5-TOP"]);
+    r.place_on_field(0, CARD_ID, None);
+    r.fire_play_event_triggers(0, 0, false, false);
+    let v = r.pending_selection_view().unwrap();
+    assert_eq!(v.valid_action_ids.len(), 2);
+    assert!(!v.is_optional);
+    let before = r.hand_size(0);
+    let mut clone = DebugRunner::wrap(r.game.clone());
+    for (branch, action) in [
+        (&mut r, v.valid_action_ids[0]),
+        (&mut clone, v.valid_action_ids[1]),
+    ] {
+        branch.execute_action(0, action).unwrap();
+        branch.auto_resolve().unwrap();
+        assert_eq!(branch.hand_size(0), before + 1);
+        assert_eq!(branch.trash_size(0), 2);
+        assert!(trash_ids(branch, 0).contains(&CARD_ID.to_owned()));
+    }
+    assert_ne!(
+        hand_ids(&r, 0),
+        hand_ids(&clone, 0),
+        "each legal Digimon is independently selectable"
+    );
+}
+
+#[test]
+fn ex1_066_deleted_tamer_with_level_and_sources_is_not_a_digimon() {
+    let mut tamer = make_test_card("EX1066-LEVEL-TAMER", "Level fixture Tamer");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.level = Some(5);
+    let source = make_test_card("EX1066-SOURCE", "Source");
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .unwrap()
+        .add_card(tamer)
+        .add_card(source)
+        .deck(0, &["EX1066-SOURCE"; 8])
+        .start();
+    r.place_on_field(0, CARD_ID, None);
+    let target = r.place_stack(0, &["EX1066-SOURCE", "EX1066-LEVEL-TAMER"]);
+    let before = r.memory();
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OwnEffect);
+    assert!(r.pending_selection().is_none());
+    assert_eq!(r.memory(), before);
+}
+
+#[test]
+fn ex1_066_short_deck_reveal_is_mandatory_and_empty_deck_is_safe() {
+    for count in 0..=2 {
+        let mut r = setup_deletion_runner("EX1066-EGG-SHORT");
+        r.game.players[0].deck.clear();
+        for _ in 0..count {
+            stack_deck_top(&mut r, &["EX1066-LV5-TOP"]);
+        }
+        r.place_on_field(0, CARD_ID, None);
+        let before = r.hand_size(0);
+        r.fire_play_event_triggers(0, 0, false, false);
+        if count == 0 {
+            assert!(r.pending_selection().is_none());
+        } else {
+            let v = r.pending_selection_view().expect("available cards are revealed");
+            assert!(!v.is_optional);
+            assert_eq!(v.valid_action_ids.len(), count);
+            let mask = digimon_engine::action::mask::build_action_mask(&r.game, 0);
+            for action in &v.valid_action_ids {
+                assert_eq!(mask[*action as usize], 1.0);
+            }
+            assert_eq!(mask[digimon_engine::action::PASS as usize], 0.0);
+            r.execute_action(0, v.valid_action_ids[0]).unwrap();
+        }
+        r.auto_resolve().unwrap();
+        assert_eq!(r.hand_size(0), before + usize::from(count > 0));
+        assert_eq!(r.trash_size(0), count.saturating_sub(1));
+        assert!(r.game.players[0].deck.is_empty());
+    }
+}
+
+#[test]
+fn ex1_066_departed_tamer_cannot_pay_cost_from_cloned_pending_choice() {
+    let mut r = setup_deletion_runner("EX1066-EGG-DEPARTED");
+    let youth = r.place_on_field(0, CARD_ID, None);
+    let target = r.place_stack(0, &["EX1066-LV5-SRC", "EX1066-LV5-TOP"]);
+    let before = r.memory();
+    r.game.delete_permanent_with_cause(target, ReplacementCause::OwnEffect);
+    let v = r.pending_selection_view().expect("legal optional payment before source departure");
+    let mut cloned = DebugRunner::wrap(r.game.clone());
+    // Fixture simulates intervening source removal without enqueueing another effect.
+    cloned.game.players[0].delete_permanent(youth.index as usize);
+    cloned.execute_action(0, v.valid_action_ids[0]).unwrap();
+    cloned.auto_resolve().unwrap();
+    assert_eq!(cloned.memory(), before);
+    assert!(cloned.game.players[0].breeding_area.is_none());
+    assert!(trash_ids(&cloned, 0).contains(&CARD_ID.to_owned()));
+    r.execute_action(0, v.valid_action_ids[0]).unwrap();
+    r.auto_resolve().unwrap();
+    assert_eq!(r.memory(), before + 1);
+    assert!(r.game.players[0].breeding_area.is_some());
 }

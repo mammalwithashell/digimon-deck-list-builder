@@ -58,6 +58,18 @@ pub struct ResumeContinuationHooks(pub Vec<AfterSelectionHook>);
 /// `Clone` data so `Game: Clone` carries armed continuations faithfully.
 #[derive(Debug, Clone)]
 pub enum AfterSelectionHook {
+    DeletionWindowContinue { window: Box<crate::replacement::ReplacementWindow> },
+    /// Resume a unified player/field digivolution reducer chain after a
+    /// parked field payment. Accumulated reductions and remaining choices
+    /// stay in this cloneable state rather than a transient local variable.
+    DigivolveReducerChain {
+        state: crate::game_actions::digivolve::DigivolveReducerState,
+        amount: i32,
+        /// False after a declined/aborted inner payment. Prior reductions in
+        /// `state` survive, but this payment contributes neither fixed nor
+        /// variable reduction credit.
+        paid: bool,
+    },
     /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST` — credit the digivolve
     /// reducer's reduction and re-enter the digivolve once the parked
     /// pay-cost selection settles (`game_actions/cost.rs`).
@@ -77,6 +89,7 @@ pub enum AfterSelectionHook {
     /// Play-from-hand cost-reduction pipeline — resume the reduction chain
     /// once the parked pay-cost selection settles (`game_actions/misc.rs`).
     PlayCostContinuation {
+        effect_controller: Option<PlayerId>,
         player_id: PlayerId,
         hand_index: usize,
         target: crate::game_actions::CostTargetContext,
@@ -84,7 +97,7 @@ pub enum AfterSelectionHook {
         source: crate::enums::PlaySource,
         origin: crate::game::PendingWouldPlayOrigin,
         suppress_on_play: bool,
-        accumulated_reduction: i32,
+        accumulated_reduction: crate::game_actions::PlayCostAdjustments,
         processed: Vec<crate::game_actions::CostReductionKey>,
     },
     /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST` — credit the Option-use
@@ -154,9 +167,13 @@ pub struct ResumeProvenance {
 #[derive(Debug, Clone)]
 pub enum ResumeSelectKind {
     /// `action_id - PLAY_HAND_START` → hand index of `of_player`.
-    Hand { of_player: PlayerId },
+    Hand {
+        of_player: PlayerId,
+    },
     /// `action_id - TRASH_EFFECT_START` → trash index of `of_player`.
-    Trash { of_player: PlayerId },
+    Trash {
+        of_player: PlayerId,
+    },
     /// `(action_id - ATTACK_START) % TARGETS_PER_ATTACKER` → battle-area index
     /// of `of_player`. Covers own- and opponent-field permanent selects (the
     /// `install_field_selection` decode); the resume arm mirrors that wrapper's
@@ -182,7 +199,9 @@ pub enum ResumeSelectKind {
     /// Own breeding-area permanent select. The single breeding permanent is
     /// reconstructed from game state (not decoded from `action_id`); binds a
     /// `BreedingPermanentSelectionRef`.
-    BreedingPermanent { of_player: PlayerId },
+    BreedingPermanent {
+        of_player: PlayerId,
+    },
     /// Both-battle-area permanent select (`select_any_permanent`). The
     /// candidate `(action_id, handle)` pairs are captured at install time
     /// (heterogeneous player domain), so the resume arm resolves by linear
@@ -197,11 +216,15 @@ pub enum ResumeSelectKind {
     /// `select_reveal` (bind only); `route: Some(..)` is `choose_from_reveal` —
     /// after binding, the picked card is routed to its destination
     /// (`route_chosen_reveal`) before `inner_tail` runs.
-    Reveal { route: Option<RevealRoute> },
+    Reveal {
+        route: Option<RevealRoute>,
+    },
     /// `action_id - material_zone_geometry(perm).range_start` → digivolution
     /// source index under carrier `perm` (battle- or breeding-area). Binds the
     /// resolved source `CardHandle` via `material_carrier_permanent`.
-    Material { perm: PermanentHandle },
+    Material {
+        perm: PermanentHandle,
+    },
     /// `action_id - HAND_EFFECT_START` → 0-based label index of a "choose one"
     /// prompt (`select_effect_choice`). Not optional (a branch must be picked).
     /// `post: None` is a plain choice: bind the index as a literal
@@ -213,6 +236,12 @@ pub enum ResumeSelectKind {
     /// `DnaPairLeft`); `inner_tail` is NOT run here — it becomes the
     /// permutation's tail. `outer_conts` transfer to the permutation frame via
     /// the shared post-match `run_outer_conts`.
+    CountChoice(crate::count_choice::CountChoicePage),
+    SourcePrefixHost(crate::dsl_cards::step::source_prefix_payment::SourcePrefixHostState),
+    SourcePrefixCount {
+        page: crate::count_choice::CountChoicePage,
+        state: crate::dsl_cards::step::source_prefix_payment::SourcePrefixCountState,
+    },
     EffectChoice {
         post: Option<EffectChoicePostAction>,
     },
@@ -249,7 +278,9 @@ pub enum ResumeSelectKind {
     /// `EffectRedirect(Some(prov.source_card))`. The substitution fires
     /// `OnAttackTargetChange` + drains (NOT atomic), so a nested park threads via
     /// the empty `inner_tail` + `outer_conts` (`run_outer_conts`). No `bind_as`.
-    AttackTarget { attacker: PermanentHandle },
+    AttackTarget {
+        attacker: PermanentHandle,
+    },
     /// Attack-open prompt (`may_attack_now_*` / `force_opponent_attack`). Carries
     /// the `begin_attack_open` parameters captured at install; the target is
     /// decoded from the resolving `action_id` like `AttackTarget`. The arm runs
@@ -390,6 +421,16 @@ pub struct OuterContinuation {
 /// `Copy`/`Clone` data.
 #[derive(Debug, Clone)]
 pub enum ResumeFrame {
+    /// Finish each selected field-card movement before advancing the ordered batch.
+    FieldTopSourceBatch {
+        inner: Box<ResumeStack>,
+        prov: ResumeProvenance,
+        source_anchor: Option<(PlayerId, u64)>,
+        target: (PlayerId, u64),
+        remaining: Vec<CardHandle>,
+        target_binding: Option<String>,
+        outer_conts: Vec<OuterContinuation>,
+    },
     /// ~95% of DSL selection sites (Shapes A+B): bind the chosen value into a
     /// slot, run the inner step tail, then drain the outer tail. `decline`
     /// carries the optional-decline behavior (none / run-a-tail / cost-abort).
@@ -484,10 +525,13 @@ pub enum ResumeFrame {
     /// `Game::run_digivolve_cost_choice_step` decodes the chosen route index,
     /// pins it, and re-enters the digivolve. See [`crate::game_actions::digivolve::DigivolveCostChoiceState`].
     DigivolveCostChoice(crate::game_actions::digivolve::DigivolveCostChoiceState),
+    /// Effect-driven route choice retains its source, cost delta and DSL tails.
+    EffectDigivolveCostChoice(crate::game_actions::digivolve::EffectDigivolveCostChoiceState),
     /// Player-scoped digivolve cost-reducer accept/decline prompt
     /// (`G-COST-REDUCE-ALLY-DIGIVOLVE`). PASS declines (re-enter at full cost),
     /// accept runs `player_digivolve_reducer_accept`. A player-digivolve action,
-    /// never nested in a DSL clause. See [`crate::game_actions::digivolve::DigivolveReducerState`].
+    /// or an effect declaration carrying its DSL continuations. See
+    /// [`crate::game_actions::digivolve::DigivolveReducerState`].
     DigivolveReducerPrompt(crate::game_actions::digivolve::DigivolveReducerState),
     /// The suspend-cost pick that the reducer accept path chains into: decode the
     /// suspend target, suspend it, consume the reducer, credit the reduction,
@@ -535,6 +579,11 @@ pub enum ResumeFrame {
     /// parked replacement process and commits its outcome; PASS commits the
     /// original event with no replacement.
     OptionalReplacement(crate::replacement::OptionalReplacementState),
+    /// The replacement body's own decisions finish before the enclosing effect tail.
+    ReplacementBody {
+        inner: Box<ResumeStack>,
+        outer_conts: Vec<OuterContinuation>,
+    },
     /// A Delay replacement paid its trash-self cost by resolving another
     /// selection first (usually a replacement window around the cost trash).
     /// Resolve that inner selection as data, then continue the Delay self-cancel
@@ -568,6 +617,14 @@ pub enum ResumeFrame {
     /// Delay-cost two-stage hand-DNA reward prompt. The same frame type covers
     /// both the result-card and partner-card stages.
     DelayDnaCardSelection(crate::dsl_cards::lower_replacement::DelayDnaCardSelectionState),
+    /// Paid Delay field-pair DNA: resume nested payment before the reward.
+    DelayFieldDnaAfterPayment {
+        inner: Box<ResumeStack>,
+        continuation: crate::dsl_cards::lower_replacement::DelayFieldDnaContinuation,
+        outer_conts: Vec<OuterContinuation>,
+    },
+    /// Result, first material, and second material share one data-driven frame.
+    DelayFieldDnaSelection(crate::dsl_cards::lower_replacement::DelayFieldDnaSelectionState),
     /// ST20-14 Delay replacement paid its trash-self cost by resolving another
     /// selection first. Resolve that inner selection as data, then continue the
     /// hand-PLAY reward flow.
@@ -813,6 +870,7 @@ pub struct RefireEffectChoiceState {
 
 #[derive(Debug, Clone)]
 pub struct DigiXrosMaterialSelectionState {
+    pub(crate) effect_controller: Option<PlayerId>,
     pub(crate) player_id: PlayerId,
     pub(crate) hand_index: usize,
     pub(crate) target_card: CardHandle,
@@ -820,7 +878,7 @@ pub struct DigiXrosMaterialSelectionState {
     pub(crate) source: PlaySource,
     pub(crate) origin: crate::game::PendingWouldPlayOrigin,
     pub(crate) suppress_on_play: bool,
-    pub(crate) total_reduction: i32,
+    pub(crate) total_reduction: crate::game_actions::PlayCostAdjustments,
     pub(crate) candidates: Vec<(u16, crate::digixros::DigiXrosMaterialOrigin)>,
     pub(crate) outer_conts: Vec<OuterContinuation>,
 }
@@ -1288,7 +1346,15 @@ pub struct RemainderPlacement {
 /// Re-parked once per pick; the data terminal fires when the count is satisfied
 /// (or candidates exhausted, or the player passes at/above the floor).
 #[derive(Debug, Clone)]
+pub struct NamedSourceGroups {
+    pub role_count: usize,
+    pub members: Vec<(CardHandle, Vec<usize>)>,
+}
+
+#[derive(Debug, Clone)]
 pub struct MultiPickState {
+    /// Effective-name memberships captured for this physical candidate pool.
+    pub named_groups: Option<NamedSourceGroups>,
     pub prov: ResumeProvenance,
     pub of_player: PlayerId,
     pub selecting_player: PlayerId,
@@ -2057,6 +2123,7 @@ mod tests {
         let prev_phase = runner.game_mut().current_phase;
         // Install the initial count_capped step: min 0, max 2, Hand zone, 3 candidates.
         let state = MultiPickState {
+            named_groups: None,
             prov: ResumeProvenance {
                 source_card,
                 source_permanent: None,

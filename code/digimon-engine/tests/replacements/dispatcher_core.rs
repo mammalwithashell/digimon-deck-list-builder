@@ -181,8 +181,7 @@ fn optional_replacement_emits_pending_selection() {
 }
 
 /// Test 7: Accept path — `resolve_selection` with `REPLACEMENT_ACCEPT` fires
-/// the replacement process and writes the outcome into
-/// `game.replacement_pending_outcome`.
+/// the replacement process and completes the owned cancellation window.
 #[test]
 fn optional_replacement_accept_path_applies_outcome() {
     let mut r = DebugRunner::builder()
@@ -199,10 +198,8 @@ fn optional_replacement_accept_path_applies_outcome() {
     r.game
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("resolve_selection should accept REPLACEMENT_ACCEPT");
-    assert_eq!(
-        r.game.replacement_pending_outcome,
-        Some(ReplacementOutcome::Cancelled),
-    );
+    assert_eq!(r.battle_area_size(0), 1, "accepted cancellation preserves the subject");
+    assert!(r.game.player(0).trash.is_empty(), "cancelled deletion does not move any card");
     assert!(r.game.pending_selection.is_none());
 }
 
@@ -254,25 +251,20 @@ fn depth_guard_caps_recursion() {
     );
 }
 
-/// Test 10: Controller-owned candidates fire before opponent-owned ones.
-///
-/// We set up two cards whose processes set *different* outcomes, and the
-/// v1 dispatcher composes mandatory candidates with "last non-None wins".
-/// Therefore the final outcome tells us which candidate ran *last* — the
-/// opponent's. We verify that by placing:
-///   - P0's TEST-P7-CANCEL (sets Cancelled)   — subject's controller
-///   - P1's TEST-P7-CANCEL2 (sets CustomHandled) — opponent
-/// Subject is P0's permanent → layering puts P0's card first, P1's last,
-/// so the final outcome is CustomHandled.
+/// Test 10: Later mandatory processing still activates after prevention.
+/// The synthetic handled marker does not revoke remembered cancellation.
 #[test]
-fn controller_owned_candidates_fire_before_opponent_owned() {
+fn turn_player_prevention_keeps_opponent_immediate_effect_available() {
     let mut r = DebugRunner::builder()
         .add_card(card("TEST-P7-CANCEL"))
         .add_card(card("TEST-P7-CANCEL2"))
+        .deck(1, &["TEST-P7-CANCEL2"; 20])
         .start();
     let handle = r.place_on_field(0, "TEST-P7-CANCEL", Some(0));
     let _opp = r.place_on_field(1, "TEST-P7-CANCEL2", Some(0));
 
+    let saved = r.game.clone();
+    let hand_before = r.hand_size(1);
     let outcome = r.game.try_replace(
         EffectTiming::WhenWouldBeDeleted,
         ReplacementSubject::Permanent(handle),
@@ -281,7 +273,20 @@ fn controller_owned_candidates_fire_before_opponent_owned() {
     );
     assert_eq!(
         outcome,
-        ReplacementOutcome::CustomHandled,
-        "opponent's card ran after P0's, overwriting the outcome"
+        ReplacementOutcome::Cancelled,
+        "the mandatory handled body retains previously remembered prevention"
     );
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.hand_size(1), hand_before + 1, "the later mandatory body must actually activate");
+    let digest = r.game.verification_digest();
+    r.game = saved;
+    let cloned_outcome = r.game.try_replace(
+        EffectTiming::WhenWouldBeDeleted,
+        ReplacementSubject::Permanent(handle),
+        ReplacementCause::OwnEffect,
+        None,
+    );
+    assert_eq!(cloned_outcome, outcome);
+    assert_eq!(r.hand_size(1), hand_before + 1);
+    assert_eq!(r.game.verification_digest(), digest);
 }

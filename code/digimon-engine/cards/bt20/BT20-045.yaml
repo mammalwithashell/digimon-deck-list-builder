@@ -13,6 +13,12 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: green }
     cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 5
   # Standard DNA Digivolve: Green Lv.6 + Blue Lv.6, cost 0 (card face DNA box;
   # cards.json dna_costs; DCGO BT20_045.cs #region DNA Digivolution).
   - kind: dna_digivolve
@@ -47,8 +53,8 @@ effects:
   #
   # DCGO BT20_045.cs OnEnterField body is gated by CardEffectCommons.IsJogress
   # (the DNA-origin antecedent). The highest_dp aggregate returns EVERY opponent
-  # Digimon tied for the highest DP. `for_each` snapshots stable top-card
-  # CardHandles up front, so mid-sweep removals do not shift the highest-DP set.
+  # Digimon tied for the highest DP. The explicit grouped return snapshots
+  # physical members before opening the simultaneous leave event.
   #
   # Printed timing is [When Digivolving] only (NOT [On Play]) — Blast DNA / DNA
   # digivolve both flow through when_digivolving with current_dna_origin set, so
@@ -65,7 +71,7 @@ effects:
             zone: [battle_area]
             kind: digimon
     process:
-      - for_each:
+      - return_all_to_deck:
           over:
             all_of:
               - of: opponent
@@ -75,11 +81,7 @@ effects:
                   aggregate:
                     selector: highest_dp
                     scope: opponent
-          bind_as: returnee
-          body:
-            - return_to_deck:
-                target: returnee
-                position: bottom
+          position: bottom
 
   # ─── [All Turns][Once Per Turn] when any Digimon suspends → may unsuspend ─────
   # Printed text:

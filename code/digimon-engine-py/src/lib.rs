@@ -243,6 +243,9 @@ pub struct PyCard {
     pub dp: Option<i32>,
     #[pyo3(get)]
     pub play_cost: u16,
+    /// Intrinsic printed copy limit shared with Rust deck validation.
+    #[pyo3(get)]
+    pub max_count_in_deck: u32,
     /// String form of each `CardColor` (e.g. "Red", "Blue", ...).
     #[pyo3(get)]
     pub colors: Vec<String>,
@@ -270,6 +273,10 @@ impl PyCard {
             level: card.level,
             dp: card.dp,
             play_cost: card.play_cost,
+            max_count_in_deck: deck_tools::card_database()
+                .get(&card.card_id)
+                .map(|entry| entry.max_count_in_deck)
+                .unwrap_or(4),
             colors: card.colors.iter().map(|c| format!("{:?}", c)).collect(),
             traits: card.traits.clone(),
             evo_costs: card
@@ -592,6 +599,54 @@ fn profile_to_pydict(py: Python<'_>, profile: &RustTensorProfile) -> PyResult<Py
         sections.append(sd)?;
     }
     d.set_item("sections", sections)?;
+    if profile.section("pending_choice_features").is_some() {
+        use ::digimon_engine::tensor_profiles::standard::v2_lite as count_layout;
+        let count = PyDict::new_bound(py);
+        count.set_item("encoding", "u64_le_u16_normalized")?;
+        count.set_item("limb_count", count_layout::PENDING_COUNT_LIMBS)?;
+        count.set_item(
+            "limb_denominator",
+            count_layout::PENDING_COUNT_LIMB_DENOMINATOR,
+        )?;
+        let offsets = PyDict::new_bound(py);
+        offsets.set_item("commit_count", count_layout::PENDING_COUNT_COMMIT_OFFSET)?;
+        offsets.set_item("previous_page", count_layout::PENDING_COUNT_PREVIOUS_OFFSET)?;
+        offsets.set_item("next_page", count_layout::PENDING_COUNT_NEXT_OFFSET)?;
+        offsets.set_item(
+            "declared_count_limbs",
+            count_layout::PENDING_COUNT_DECLARED_OFFSET,
+        )?;
+        offsets.set_item(
+            "payable_count_limbs",
+            count_layout::PENDING_COUNT_PAYABLE_OFFSET,
+        )?;
+        offsets.set_item(
+            "page_index_limbs",
+            count_layout::PENDING_COUNT_PAGE_INDEX_OFFSET,
+        )?;
+        offsets.set_item(
+            "page_count_limbs",
+            count_layout::PENDING_COUNT_PAGE_COUNT_OFFSET,
+        )?;
+        offsets.set_item(
+            "host_identity_limbs",
+            count_layout::PENDING_COUNT_HOST_ID_OFFSET,
+        )?;
+        offsets.set_item(
+            "host_relative_player",
+            count_layout::PENDING_COUNT_HOST_PLAYER_OFFSET,
+        )?;
+        offsets.set_item(
+            "host_field_slot",
+            count_layout::PENDING_COUNT_HOST_SLOT_OFFSET,
+        )?;
+        offsets.set_item(
+            "host_present",
+            count_layout::PENDING_COUNT_HOST_PRESENT_OFFSET,
+        )?;
+        count.set_item("row_offsets", offsets)?;
+        d.set_item("count_choice", count)?;
+    }
 
     Ok(d.into_py(py))
 }
@@ -1785,6 +1840,7 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_models_dir, m)?)?;
     m.add_function(wrap_pyfunction!(load_implemented_card_ids, m)?)?;
     m.add("ACTION_SPACE_SIZE", ACTION_SPACE_SIZE)?;
+    m.add("ACTION_SCHEMA_VERSION", ::digimon_engine::action::space::SCHEMA_VERSION)?;
     // Source-selection sub-range boundaries — Python callers (digimon_gym)
     // pin ACTION_SOURCE_END to SOURCE_SELECT_END - 1, and use the breeding
     // constants for the appended breeding-carrier source-select range.

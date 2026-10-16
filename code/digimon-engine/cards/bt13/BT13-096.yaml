@@ -1,0 +1,52 @@
+# Official observation d56c63ca7e328fce784da58990735fe50d591f111325169cb8035b006c26978b;
+# printed image and Q2342. Suspended cost can be paid after the played subject leaves.
+card: BT13-096
+name: Homer Yushima
+kind: tamer
+color: [blue]
+cost: 3
+effects:
+  - when: on_play
+    summary: "May play a blue level 3 Digimon from one of your Digimon's digivolution cards free"
+    process:
+      - select_own_sources:
+          filter: { kind: digimon, color_is: blue, level_eq: 3, host_kind_is: digimon, can_play_from_effect_without_cost: true }
+          min: 0
+          max: 1
+          bind_as: rookie
+          prompt: "Play a blue level 3 digivolution card"
+          then:
+            - play_selected_sources_free: { source_refs: rookie }
+  - when: on_ally_played
+    optional: true
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_card_kind: digimon
+            - event_card_kind: token
+        - event_card_color_has: [blue]
+        - source_is_unsuspended: true
+        - any_permanent: { of: you, is_source: true, can_change_orientation: true }
+    summary: "[All Turns] When you play a blue Digimon, by suspending this Tamer, may tuck a blue level 4 or lower Digimon from hand under that Digimon"
+    process:
+      - suspend: { target: source }
+      - if:
+          condition:
+            all_of:
+              - any_permanent: { of: you, is_source: true, is_suspended: true }
+              # The paid cost survives departure, but only a live non-token
+              # Digimon can receive a digivolution card.
+              - event_target_kind: digimon
+              - not: { event_target_kind: token }
+          then:
+            - select_hand:
+                of: you
+                filter: { kind: digimon, color_is: blue, level_lte: 4 }
+                optional: true
+                bind_as: tucked
+                prompt: "Place a blue level 4 or lower Digimon under the played Digimon"
+            - place_as_bottom_source: { source: tucked, target: event_target }
+  - when: on_security
+    process:
+      - play_from_security: {}

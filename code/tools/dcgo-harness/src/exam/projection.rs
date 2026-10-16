@@ -139,17 +139,58 @@ impl PartialEq for PermanentProjection {
 }
 
 /// One player's visible state.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SeatProjection {
     /// A count, never the contents — security is hidden information.
     pub security: usize,
     pub hand: Vec<String>,
     pub trash: Vec<String>,
     pub field: Vec<PermanentProjection>,
+    /// None means not measured; only an actual Main decision can measure this.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub legal_option_plays: Option<Vec<String>>,
+    /// None means no live selection was measured for this seat.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selection_can_decline: Option<bool>,
+    /// Exact offered card multiset; None means no supported live observation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selection_candidates: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub movement_observations: Option<
+        std::collections::BTreeMap<String, digimon_engine::movement_observation::MovementWatch>,
+    >,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub movement_audit: Vec<digimon_engine::movement_observation::MovementAudit>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub movement_observation_at: Option<u32>,
+}
+
+impl PartialEq for SeatProjection {
+    fn eq(&self, other: &Self) -> bool {
+        // Recorder handles and native decision indices are checked for continuity
+        // within each trace; they have no shared identity across engines.
+        self.security == other.security
+            && self.hand == other.hand
+            && self.trash == other.trash
+            && self.field == other.field
+            && self.legal_option_plays == other.legal_option_plays
+            && self.selection_can_decline == other.selection_can_decline
+            && self.selection_candidates == other.selection_candidates
+            && self.movement_observations == other.movement_observations
+    }
 }
 
 impl SeatProjection {
     fn normalize(&mut self) {
+        if let Some(watches) = &mut self.movement_observations {
+            watches.retain(|_, v| v.is_valid_claim());
+        }
+        if let Some(ids) = &mut self.legal_option_plays {
+            ids.sort();
+        }
+        if let Some(ids) = &mut self.selection_candidates {
+            ids.sort();
+        }
         self.hand.sort();
         self.trash.sort();
         for perm in &mut self.field {
@@ -161,7 +202,7 @@ impl SeatProjection {
         self.field.sort_by(|a, b| a.sort_key().cmp(&b.sort_key()));
     }
 
-    fn from_game(game: &Game, pid: PlayerId, measure_keywords: bool) -> Self {
+    fn from_game(game: &Game, pid: PlayerId, measure_keywords: bool, step: u32) -> Self {
         let data: &[CardData] = &game.card_data;
         let player = game.player(pid);
 
@@ -214,6 +255,14 @@ impl SeatProjection {
                 .map(|src| src.card_id(data).to_string())
                 .collect(),
             field,
+            legal_option_plays: None,
+            selection_can_decline: None,
+            movement_observations: Some(
+                game.observe_public_movement_at(step)[pid as usize].clone(),
+            ),
+            movement_audit: game.movement_audit(pid),
+            movement_observation_at: Some(step),
+            selection_candidates: None,
         };
         seat.normalize();
         seat
@@ -268,9 +317,236 @@ impl StateProjection {
                 game.memory_pair.0,
                 0,
             )),
-            p0: SeatProjection::from_game(game, 0, measure_keywords),
-            p1: SeatProjection::from_game(game, 1, measure_keywords),
+            p0: SeatProjection::from_game(game, 0, measure_keywords, step),
+            p1: SeatProjection::from_game(game, 1, measure_keywords, step),
         }
+    }
+
+    /// Opt-in exam observation. Legality comes exclusively from the real mask;
+    /// phase alone is insufficient because pending prompts can retain Main.
+    pub fn measure_legal_option_plays(&mut self, game: &Game, requested: [bool; 2]) {
+        use digimon_engine::action::{
+            mask::build_action_mask,
+            space::{PLAY_HAND_END, PLAY_HAND_START},
+        };
+        use digimon_engine::enums::{CardKind, GamePhase};
+        if game.game_over
+            || game.current_phase != GamePhase::Main
+            || game.pending_selection.is_some()
+            || game.mulligan_current_player().is_some()
+        {
+            return;
+        }
+        let actor = digimon_engine::policies::current_decision_player(game);
+        if !requested[actor as usize] {
+            return;
+        }
+        let mask = build_action_mask(game, actor);
+        let mut ids: Vec<String> = game
+            .player(actor)
+            .hand
+            .iter()
+            .enumerate()
+            .filter(|(i, card)| {
+                let action = PLAY_HAND_START as usize + i;
+                action < PLAY_HAND_END as usize
+                    && mask[action] > 0.5
+                    && card.card_kind(&game.card_data) == CardKind::Option
+            })
+            .map(|(_, card)| card.card_id(&game.card_data).to_string())
+            .collect();
+        ids.sort();
+        let seat = if actor == 0 {
+            &mut self.p0
+        } else {
+            &mut self.p1
+        };
+        seat.legal_option_plays = Some(ids);
+    }
+
+    /// Observe the actual pending choice's PASS capability, never the nominal
+    /// turn phase or merely the selection's optional flag (PASS may be explicit).
+    pub fn measure_selection_can_decline(&mut self, game: &Game, requested: [bool; 2]) {
+        self.p0.selection_can_decline = None;
+        self.p1.selection_can_decline = None;
+        use digimon_engine::action::{mask::build_action_mask, space::PASS};
+        if game.game_over {
+            return;
+        }
+        let Some(selection) = game.pending_selection.as_ref() else {
+            return;
+        };
+        let actor = selection.selecting_player;
+        if !requested[actor as usize] {
+            return;
+        }
+        let mask = build_action_mask(game, actor);
+        let seat = if actor == 0 {
+            &mut self.p0
+        } else {
+            &mut self.p1
+        };
+        seat.selection_can_decline = Some(mask[PASS as usize] > 0.5);
+    }
+
+    /// Exact single source choices use the installed physical snapshot, never
+    /// action-range guesses about owner or host. Unsupported/stale is unknown.
+    fn single_source_candidate_ids(game: &Game) -> Option<Vec<String>> {
+        use digimon_engine::action::{
+            mask::build_action_mask,
+            space::{encode_source_select, PASS},
+        };
+        use digimon_engine::resume::ResumeFrame;
+        use digimon_engine::selection::SelectionKind;
+        use std::collections::HashSet;
+        let pending = game.pending_selection.as_ref()?;
+        let SelectionKind::SourceMulti {
+            min,
+            max: 1,
+            picked: 0,
+        } = pending.kind
+        else {
+            return None;
+        };
+        let ResumeFrame::SourceMultiStep(state) =
+            game.pending_selection_resume.as_ref()?.frames.last()?
+        else {
+            return None;
+        };
+        if pending.selecting_player > 1
+            || state.of_player > 1
+            || state.selecting_player != pending.selecting_player
+            || state.min != min
+            || state.max != 1
+            || !state.picked.is_empty()
+            || state.target_resolution_failed
+        {
+            return None;
+        }
+        let advertised: Vec<_> = pending
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|a| *a != PASS)
+            .collect();
+        let advertised_set: HashSet<_> = advertised.iter().copied().collect();
+        let snapshot_set: HashSet<_> = state.candidates.iter().map(|(a, _)| *a).collect();
+        if advertised.len() != advertised_set.len()
+            || state.candidates.len() != snapshot_set.len()
+            || advertised_set != snapshot_set
+        {
+            return None;
+        }
+        let mask = build_action_mask(game, pending.selecting_player);
+        let mut identities = Vec::new();
+        let mut physical = HashSet::new();
+        for action in advertised {
+            let legal = *mask.get(action as usize)?;
+            let (_, source) = state.candidates.iter().find(|(a, _)| *a == action)?;
+            if source.permanent.player != state.of_player
+                || source.permanent.index != source.field_index
+                || encode_source_select(source.field_index as u16, source.source_index as u16)
+                    != Some(action)
+                || !physical.insert(source.card)
+            {
+                return None;
+            }
+            let host = game
+                .players
+                .get(source.permanent.player as usize)?
+                .battle_area
+                .get(source.permanent.index as usize)?;
+            // A top card is not a digivolution source; physical identity must still match.
+            if source.source_index as usize + 1 >= host.card_sources.len() {
+                return None;
+            }
+            let card = host.card_sources.get(source.source_index as usize)?;
+            if card.handle() != source.card {
+                return None;
+            }
+            let data = game.card_data.get(card.data_index)?;
+            if data.card_id.trim().is_empty() {
+                return None;
+            }
+            if legal > 0.5 {
+                identities.push(data.card_id.clone());
+            }
+        }
+        identities.sort();
+        Some(identities)
+    }
+
+    /// Supports Hand and captured single-source picks only. A requested unsupported prompt
+    /// or undecodable candidate stays unknown, never an inferred empty list.
+    pub fn measure_selection_candidates(&mut self, game: &Game, requested: [bool; 2]) {
+        self.p0.selection_candidates = None;
+        self.p1.selection_candidates = None;
+        use digimon_engine::action::{
+            mask::build_action_mask,
+            space::{PASS, PLAY_HAND_END, PLAY_HAND_START},
+        };
+        use digimon_engine::selection::SelectionKind;
+        if game.game_over {
+            return;
+        }
+        let Some(pending) = game.pending_selection.as_ref() else {
+            return;
+        };
+        if matches!(pending.kind, SelectionKind::SourceMulti { .. }) {
+            let actor = pending.selecting_player;
+            if actor > 1 || !requested[actor as usize] {
+                return;
+            }
+            let ids = Self::single_source_candidate_ids(game);
+            let seat = if actor == 0 {
+                &mut self.p0
+            } else {
+                &mut self.p1
+            };
+            seat.selection_candidates = ids;
+            return;
+        }
+        if pending.kind != SelectionKind::Hand {
+            return;
+        }
+        let actor = pending.selecting_player;
+        if !requested[actor as usize] {
+            return;
+        }
+        let mask = build_action_mask(game, actor);
+        let hand = &game.player(pending.zone_owner.unwrap_or(actor)).hand;
+        let mut ids = Vec::new();
+        for &id in &pending.valid_action_ids {
+            if id == PASS {
+                continue;
+            }
+            let Some(&legal) = mask.get(id as usize) else {
+                return;
+            };
+            if legal <= 0.5 {
+                continue;
+            }
+            if !(PLAY_HAND_START..PLAY_HAND_END).contains(&id) {
+                return;
+            }
+            let Some(card) = hand.get((id - PLAY_HAND_START) as usize) else {
+                return;
+            };
+            let Some(data) = game.card_data.get(card.data_index) else {
+                return;
+            };
+            if data.card_id.trim().is_empty() {
+                return;
+            }
+            ids.push(data.card_id.clone());
+        }
+        ids.sort();
+        let seat = if actor == 0 {
+            &mut self.p0
+        } else {
+            &mut self.p1
+        };
+        seat.selection_candidates = Some(ids);
     }
 
     /// Parse one `.state.jsonl` row. Trailing content after the JSON value is
@@ -319,8 +595,8 @@ pub fn align_to_scenario_origin(
         if line.is_empty() {
             continue;
         }
-        let row: serde_json::Value = serde_json::from_str(line)
-            .map_err(|e| format!("malformed recording row: {e}"))?;
+        let row: serde_json::Value =
+            serde_json::from_str(line).map_err(|e| format!("malformed recording row: {e}"))?;
         if row.get("type").and_then(|v| v.as_str()) == Some("action")
             && row.get("source").and_then(|v| v.as_str()) == Some("mulligan")
         {
@@ -551,42 +827,55 @@ mod tests {
         assert_ne!(a, b, "suspended is semantics, not representation");
     }
 
-
     #[test]
     fn align_drops_leading_mulligan_rows_and_reindexes() {
         // The live shape: DCGO records two mulligan actions at steps 0-1, and
         // the sidecar dumps state at those steps. Our scenario trace has no
         // counterpart, so without alignment every scenario "diverges at step 0".
         let rec = concat!(
-            r#"{"type":"action","step":0,"actor":0,"action_id":0,"source":"mulligan"}"#, "
+            r#"{"type":"action","step":0,"actor":0,"action_id":0,"source":"mulligan"}"#,
+            "
 ",
-            r#"{"type":"action","step":1,"actor":1,"action_id":0,"source":"mulligan"}"#, "
+            r#"{"type":"action","step":1,"actor":1,"action_id":0,"source":"mulligan"}"#,
+            "
 ",
-            r#"{"type":"action","step":2,"actor":0,"action_id":62,"source":"breeding"}"#, "
+            r#"{"type":"action","step":2,"actor":0,"action_id":62,"source":"breeding"}"#,
+            "
 ",
         );
         let side = concat!(
-            r#"{"step":0,"turn":0,"phase":"Active","memory":0,"p0":{"security":0,"hand":[],"trash":[],"field":[]},"p1":{"security":0,"hand":[],"trash":[],"field":[]}}"#, "
+            r#"{"step":0,"turn":0,"phase":"Active","memory":0,"p0":{"security":0,"hand":[],"trash":[],"field":[]},"p1":{"security":0,"hand":[],"trash":[],"field":[]}}"#,
+            "
 ",
-            r#"{"step":1,"turn":0,"phase":"Active","memory":0,"p0":{"security":0,"hand":[],"trash":[],"field":[]},"p1":{"security":0,"hand":[],"trash":[],"field":[]}}"#, "
+            r#"{"step":1,"turn":0,"phase":"Active","memory":0,"p0":{"security":0,"hand":[],"trash":[],"field":[]},"p1":{"security":0,"hand":[],"trash":[],"field":[]}}"#,
+            "
 ",
-            r#"{"step":2,"turn":1,"phase":"Breeding","memory":0,"p0":{"security":5,"hand":[],"trash":[],"field":[]},"p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#, "
+            r#"{"step":2,"turn":1,"phase":"Breeding","memory":0,"p0":{"security":5,"hand":[],"trash":[],"field":[]},"p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#,
+            "
 ",
         );
         let out = align_to_scenario_origin(parse_sidecar(side).unwrap(), rec).unwrap();
         assert_eq!(out.len(), 1, "both mulligan rows must be dropped");
-        assert_eq!(out[0].step, 0, "the survivor must be re-indexed to the origin");
-        assert_eq!(out[0].p0.security, 5, "and it must be the post-mulligan row");
+        assert_eq!(
+            out[0].step, 0,
+            "the survivor must be re-indexed to the origin"
+        );
+        assert_eq!(
+            out[0].p0.security, 5,
+            "and it must be the post-mulligan row"
+        );
     }
 
     #[test]
     fn align_is_a_no_op_without_mulligan_rows() {
         let rec = concat!(
-            r#"{"type":"action","step":0,"actor":0,"action_id":62,"source":"breeding"}"#, "
+            r#"{"type":"action","step":0,"actor":0,"action_id":62,"source":"breeding"}"#,
+            "
 ",
         );
         let side = concat!(
-            r#"{"step":0,"turn":1,"phase":"Breeding","memory":0,"p0":{"security":5,"hand":[],"trash":[],"field":[]},"p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#, "
+            r#"{"step":0,"turn":1,"phase":"Breeding","memory":0,"p0":{"security":5,"hand":[],"trash":[],"field":[]},"p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#,
+            "
 ",
         );
         let out = align_to_scenario_origin(parse_sidecar(side).unwrap(), rec).unwrap();
@@ -613,7 +902,10 @@ mod tests {
         // materializes, and comparing it can only manufacture a divergence.
         let p = pair_by_wire_rows(&[1, 2, 1], 4);
         assert_eq!(p.pairs, vec![(0, 0), (1, 1), (2, 3)]);
-        assert_eq!(p.dcgo_unpairable, 1, "the fold's second row is accounted, not erased");
+        assert_eq!(
+            p.dcgo_unpairable, 1,
+            "the fold's second row is accounted, not erased"
+        );
         assert_eq!(p.ours_unpairable, 0);
     }
 
@@ -636,7 +928,10 @@ mod tests {
         // step.
         let p = pair_by_wire_rows(&[1, 1, 1], 1);
         assert_eq!(p.pairs, vec![(0, 0)]);
-        assert_eq!(p.ours_unpairable, 0, "an absent partner is a shortfall, not a deliberate drop");
+        assert_eq!(
+            p.ours_unpairable, 0,
+            "an absent partner is a shortfall, not a deliberate drop"
+        );
     }
 
     #[test]
@@ -751,5 +1046,481 @@ mod tests {
         // The keyword-measuring variant actually measures.
         let kw = StateProjection::from_game_with_keywords(&game, 0);
         assert!(kw.p0.field.iter().all(|f| f.keywords.is_some()));
+    }
+}
+
+#[cfg(test)]
+mod legal_option_measurement_runtime_tests {
+    use super::*;
+    use digimon_engine::debug_runner::DebugRunner;
+    use digimon_engine::enums::{EffectSourceKind, Expiry, GamePhase, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+
+    fn runner() -> DebugRunner {
+        let mut r = DebugRunner::builder()
+            .with_card_data(crate::exam::test_support::load_card_data())
+            .hand(0, &["ST1-16", "ST1-02", "ST1-16"])
+            .memory(3)
+            .build();
+        r.game.mulligan_pending.clear();
+        r.game.game_over = false;
+        r.game.current_phase = GamePhase::Main;
+        r
+    }
+    fn observe(r: &DebugRunner) -> StateProjection {
+        let mut p = StateProjection::from_game(&r.game, 0);
+        p.measure_legal_option_plays(&r.game, [true, true]);
+        p
+    }
+    #[test]
+    fn legal_option_measurement_uses_mask_for_breeding_color_memory_and_prohibition() {
+        let mut r = runner();
+        assert_eq!(observe(&r).p0.legal_option_plays, Some(vec![]));
+        r.place_in_breeding(0, "ST1-01");
+        assert_eq!(
+            observe(&r).p0.legal_option_plays,
+            Some(vec!["ST1-16".into(), "ST1-16".into()])
+        );
+        assert!(
+            observe(&r).p1.legal_option_plays.is_none(),
+            "opponent is not deciding"
+        );
+        r.game.memory = -3;
+        assert_eq!(
+            observe(&r).p0.legal_option_plays,
+            Some(vec![]),
+            "8-cost Option exceeds remaining memory"
+        );
+        r.game.memory = 3;
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(
+                ModifierType::CannotPlayFromHand,
+                1,
+                Expiry::Permanent,
+                None,
+                0,
+            ),
+        );
+        assert_eq!(observe(&r).p0.legal_option_plays, Some(vec![]));
+    }
+    #[test]
+    fn legal_option_measurement_requires_opt_in_and_follows_actual_turn_seat() {
+        let mut r = runner();
+        r.add_to_hand(1, "ST1-16");
+        r.place_in_breeding(1, "ST1-01");
+        r.game.turn_player_idx = 1;
+        r.game.memory_pair = (1, 0);
+        let mut p = StateProjection::from_game(&r.game, 0);
+        p.measure_legal_option_plays(&r.game, [false, false]);
+        assert!(p.p0.legal_option_plays.is_none() && p.p1.legal_option_plays.is_none());
+        p.measure_legal_option_plays(&r.game, [true, true]);
+        assert!(p.p0.legal_option_plays.is_none());
+        assert_eq!(p.p1.legal_option_plays, Some(vec!["ST1-16".into()]));
+    }
+    #[test]
+    fn legal_option_measurement_never_samples_selection_even_when_phase_is_main() {
+        use digimon_engine::selection::{PendingSelection, SelectionKind};
+        let mut r = runner();
+        r.place_in_breeding(0, "ST1-01");
+        r.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Hand,
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: vec![0],
+            is_optional: false,
+            prompt: "test".into(),
+            effect_choices: None,
+            source_card: r.game.player(0).hand[0].handle(),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Option,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            zone_owner: Some(0),
+        });
+        assert!(observe(&r).p0.legal_option_plays.is_none());
+        assert!(observe(&r).p1.legal_option_plays.is_none());
+        r.game.pending_selection = None;
+        r.game.current_phase = GamePhase::Breeding;
+        assert!(observe(&r).p0.legal_option_plays.is_none());
+        r.game.current_phase = GamePhase::Main;
+        r.game.game_over = true;
+        assert!(observe(&r).p0.legal_option_plays.is_none());
+    }
+}
+
+#[cfg(test)]
+mod selection_decline_observation_runtime_tests {
+    use super::*;
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::debug_runner::DebugRunner;
+    use digimon_engine::enums::{EffectSourceKind, GamePhase};
+    use digimon_engine::selection::{PendingSelection, SelectionKind};
+
+    fn runner(optional: bool, explicit_pass: bool, actor: u8) -> DebugRunner {
+        let mut r = DebugRunner::builder()
+            .with_card_data(crate::exam::test_support::load_card_data())
+            .hand(0, &["ST1-16"])
+            .memory(3)
+            .build();
+        r.game.mulligan_pending.clear();
+        r.game.game_over = false;
+        r.game.current_phase = GamePhase::Main;
+        r.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Hand,
+            selecting_player: actor,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: if explicit_pass {
+                vec![0, PASS]
+            } else {
+                vec![0]
+            },
+            is_optional: optional,
+            prompt: "live test choice".into(),
+            effect_choices: None,
+            source_card: r.game.player(0).hand[0].handle(),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Option,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            zone_owner: Some(0),
+        });
+        r
+    }
+    fn observe(r: &DebugRunner, request: [bool; 2]) -> StateProjection {
+        let mut p = StateProjection::from_game(&r.game, 0);
+        p.measure_selection_can_decline(&r.game, request);
+        p
+    }
+    #[test]
+    fn selection_decline_observation_runtime_uses_actual_pass_mask() {
+        for (optional, explicit_pass, expected) in [
+            (false, false, false),
+            (true, false, true),
+            (false, true, true),
+        ] {
+            let r = runner(optional, explicit_pass, 0);
+            let p = observe(&r, [true, true]);
+            assert_eq!(p.p0.selection_can_decline, Some(expected));
+            assert!(p.p1.selection_can_decline.is_none());
+        }
+    }
+    #[test]
+    fn selection_decline_observation_runtime_follows_selecting_actor_not_turn_player() {
+        let r = runner(false, false, 1);
+        assert_eq!(r.game.turn_player(), 0);
+        let p = observe(&r, [true, true]);
+        assert!(p.p0.selection_can_decline.is_none());
+        assert_eq!(p.p1.selection_can_decline, Some(false));
+        let p = observe(&r, [true, false]);
+        assert!(p.p0.selection_can_decline.is_none() && p.p1.selection_can_decline.is_none());
+    }
+    #[test]
+    fn selection_decline_observation_runtime_requires_live_choice_and_opt_in() {
+        let mut r = runner(true, false, 0);
+        let p = observe(&r, [false, false]);
+        assert!(p.p0.selection_can_decline.is_none());
+        r.game.game_over = true;
+        assert!(observe(&r, [true, true]).p0.selection_can_decline.is_none());
+        r.game.game_over = false;
+        r.game.pending_selection = None;
+        assert!(
+            observe(&r, [true, true]).p0.selection_can_decline.is_none(),
+            "Main alone is not a selection"
+        );
+    }
+}
+
+#[cfg(test)]
+mod selection_candidate_runtime_tests {
+    use super::*;
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::debug_runner::DebugRunner;
+    use digimon_engine::enums::{EffectSourceKind, GamePhase};
+    use digimon_engine::selection::{PendingSelection, SelectionKind};
+
+    fn runner(actor: u8) -> DebugRunner {
+        let mut r = DebugRunner::builder()
+            .with_card_data(crate::exam::test_support::load_card_data())
+            .hand(0, &["ST1-05", "ST1-05", "ST1-09"])
+            .hand(1, &["ST2-05"])
+            .memory(3)
+            .build();
+        r.game.mulligan_pending.clear();
+        r.game.game_over = false;
+        r.game.current_phase = GamePhase::Main;
+        r.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Hand,
+            selecting_player: actor,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: vec![0, 1, PASS],
+            is_optional: true,
+            prompt: "choose legal level4".into(),
+            effect_choices: None,
+            source_card: r.game.player(0).hand[0].handle(),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Option,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            zone_owner: Some(0),
+        });
+        r
+    }
+    fn observe(r: &DebugRunner, request: [bool; 2]) -> StateProjection {
+        let mut p = StateProjection::from_game(&r.game, 0);
+        p.measure_selection_candidates(&r.game, request);
+        p
+    }
+    #[test]
+    fn selection_candidates_runtime_preserves_copies_excludes_unoffered_card_and_pass() {
+        let r = runner(0);
+        let p = observe(&r, [true, true]);
+        assert_eq!(
+            p.p0.selection_candidates,
+            Some(vec!["ST1-05".into(), "ST1-05".into()])
+        );
+        assert!(p.p1.selection_candidates.is_none());
+    }
+    #[test]
+    fn selection_candidates_runtime_missing_or_empty_card_identity_is_unknown() {
+        let mut r = runner(0);
+        // Construct the ordinary projection before deliberately corrupting identity;
+        // exercise this observer's fail-closed boundary, not unrelated serializers.
+        let mut p = StateProjection::from_game(&r.game, 0);
+        let index = r.game.player(0).hand[0].data_index;
+        r.game.player_mut(0).hand[0].data_index = usize::MAX;
+        p.measure_selection_candidates(&r.game, [true, false]);
+        assert!(p.p0.selection_candidates.is_none());
+        r.game.player_mut(0).hand[0].data_index = index;
+        r.game.card_data[index].card_id.clear();
+        p.measure_selection_candidates(&r.game, [true, false]);
+        assert!(p.p0.selection_candidates.is_none());
+    }
+    #[test]
+    fn selection_candidates_runtime_uses_zone_owner_and_selecting_actor() {
+        let r = runner(1);
+        let p = observe(&r, [true, true]);
+        assert!(p.p0.selection_candidates.is_none());
+        assert_eq!(
+            p.p1.selection_candidates,
+            Some(vec!["ST1-05".into(), "ST1-05".into()])
+        );
+        assert!(observe(&r, [true, false]).p1.selection_candidates.is_none());
+    }
+    #[test]
+    fn selection_candidates_runtime_empty_is_measured_but_invalid_or_unsupported_is_unknown() {
+        let mut r = runner(0);
+        r.game.pending_selection.as_mut().unwrap().valid_action_ids = vec![PASS];
+        assert_eq!(
+            observe(&r, [true, false]).p0.selection_candidates,
+            Some(vec![])
+        );
+        r.game.pending_selection.as_mut().unwrap().valid_action_ids = vec![4];
+        assert!(observe(&r, [true, false]).p0.selection_candidates.is_none());
+        r.game.pending_selection.as_mut().unwrap().kind = SelectionKind::Reveal;
+        assert!(observe(&r, [true, false]).p0.selection_candidates.is_none());
+        r.game.pending_selection = None;
+        assert!(observe(&r, [true, false]).p0.selection_candidates.is_none());
+    }
+    #[test]
+    fn selection_candidates_runtime_not_requested_or_game_over_is_unknown() {
+        let mut r = runner(0);
+        assert!(observe(&r, [false, false])
+            .p0
+            .selection_candidates
+            .is_none());
+        r.game.game_over = true;
+        assert!(observe(&r, [true, true]).p0.selection_candidates.is_none());
+    }
+}
+
+#[cfg(test)]
+mod source_candidate_runtime_tests {
+    use super::*;
+    use digimon_engine::action::{
+        mask::build_action_mask,
+        space::{FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS},
+    };
+    use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+    use digimon_engine::enums::GamePhase;
+    use digimon_engine::resume::{ResumeFrame, SourceMultiState};
+    use digimon_engine::selection::SelectionKind;
+
+    fn runner() -> DebugRunner {
+        let mut r = DebugRunner::builder()
+            .dsl_card("BT4-072")
+            .unwrap()
+            .dsl_card("BT9-109")
+            .unwrap()
+            .add_card(make_test_card("ORDINARY", "Ordinary source"))
+            .memory(3)
+            .build();
+        r.game.mulligan_pending.clear();
+        r.game.game_over = false;
+        r.game.current_phase = GamePhase::Main;
+        r.set_first_player(0);
+        r.place_stack(0, &["BT9-109", "ORDINARY", "ORDINARY", "BT4-072"]);
+        r.game.tick_declarative_effects();
+        let action = FIELD_EFFECT_START + FIELD_EFFECT_SLOT_FOR_MAIN;
+        assert!(
+            build_action_mask(&r.game, 0)[action as usize] > 0.5,
+            "real Digi-Burst Main is legal"
+        );
+        r.game.decode_action(action, 0);
+        assert!(matches!(
+            r.game.pending_selection.as_ref().unwrap().kind,
+            SelectionKind::SourceMulti {
+                min: 1,
+                max: 1,
+                picked: 0
+            }
+        ));
+        r
+    }
+    fn state(game: &mut Game) -> &mut SourceMultiState {
+        match game
+            .pending_selection_resume
+            .as_mut()
+            .unwrap()
+            .frames
+            .last_mut()
+            .unwrap()
+        {
+            ResumeFrame::SourceMultiStep(s) => s,
+            _ => panic!("real source resume expected"),
+        }
+    }
+    fn observe(game: &Game, requested: [bool; 2]) -> StateProjection {
+        let mut p = StateProjection::from_game(game, 0);
+        p.measure_selection_candidates(game, requested);
+        p
+    }
+    fn expected() -> Option<Vec<String>> {
+        Some(vec!["ORDINARY".into(), "ORDINARY".into()])
+    }
+    #[test]
+    fn source_candidates_runtime_real_burst_excludes_protected_option_and_preserves_copies() {
+        let r = runner();
+        assert_eq!(
+            observe(&r.game, [true, true]).p0.selection_candidates,
+            expected()
+        );
+        assert!(observe(&r.game, [true, true])
+            .p1
+            .selection_candidates
+            .is_none());
+    }
+    #[test]
+    fn source_candidates_runtime_clone_preserves_physical_snapshot() {
+        let r = runner();
+        let cloned = r.game.clone();
+        assert_eq!(
+            observe(&cloned, [true, false]).p0.selection_candidates,
+            expected()
+        );
+        assert_eq!(
+            observe(&r.game, [true, false]).p0.selection_candidates,
+            observe(&cloned, [true, false]).p0.selection_candidates
+        );
+    }
+    #[test]
+    fn source_candidates_runtime_actor_can_differ_from_source_owner() {
+        let mut r = runner();
+        r.game.pending_selection.as_mut().unwrap().selecting_player = 1;
+        state(&mut r.game).selecting_player = 1;
+        let p = observe(&r.game, [true, true]);
+        assert!(p.p0.selection_candidates.is_none());
+        assert_eq!(p.p1.selection_candidates, expected());
+    }
+    #[test]
+    fn source_candidates_runtime_pass_is_not_a_source() {
+        let mut r = runner();
+        r.game.pending_selection.as_mut().unwrap().is_optional = true;
+        r.game
+            .pending_selection
+            .as_mut()
+            .unwrap()
+            .valid_action_ids
+            .push(PASS);
+        assert_eq!(
+            observe(&r.game, [true, false]).p0.selection_candidates,
+            expected()
+        );
+    }
+    #[test]
+    fn source_candidates_runtime_requires_requested_live_supported_frame() {
+        let mut r = runner();
+        assert!(observe(&r.game, [false, false])
+            .p0
+            .selection_candidates
+            .is_none());
+        r.game.game_over = true;
+        assert!(observe(&r.game, [true, false])
+            .p0
+            .selection_candidates
+            .is_none());
+        r.game.game_over = false;
+        r.game.pending_selection.as_mut().unwrap().kind = SelectionKind::SourceMulti {
+            min: 1,
+            max: 2,
+            picked: 0,
+        };
+        assert!(observe(&r.game, [true, false])
+            .p0
+            .selection_candidates
+            .is_none());
+        r.game.pending_selection.as_mut().unwrap().kind = SelectionKind::SourceMulti {
+            min: 1,
+            max: 1,
+            picked: 0,
+        };
+        state(&mut r.game).selecting_player = 1;
+        assert!(observe(&r.game, [true, true])
+            .p0
+            .selection_candidates
+            .is_none());
+        r.game.pending_selection_resume = None;
+        assert!(observe(&r.game, [true, false])
+            .p0
+            .selection_candidates
+            .is_none());
+    }
+    #[test]
+    fn source_candidates_runtime_stale_physical_source_is_unknown() {
+        let mut r = runner();
+        r.game.players[0].battle_area[0].card_sources.remove(1);
+        assert!(observe(&r.game, [true, false])
+            .p0
+            .selection_candidates
+            .is_none());
+    }
+    #[test]
+    fn source_candidates_runtime_unmapped_or_duplicate_action_is_unknown() {
+        let mut r = runner();
+        state(&mut r.game).candidates.pop();
+        assert!(observe(&r.game, [true, false])
+            .p0
+            .selection_candidates
+            .is_none());
+        let mut r = runner();
+        let x = state(&mut r.game).candidates[0];
+        state(&mut r.game).candidates.push(x);
+        assert!(observe(&r.game, [true, false])
+            .p0
+            .selection_candidates
+            .is_none());
+    }
+    #[test]
+    fn source_candidates_runtime_unknown_identity_is_not_empty() {
+        let mut r = runner();
+        let mut p = StateProjection::from_game(&r.game, 0);
+        let index = r.game.players[0].battle_area[0].card_sources[1].data_index;
+        r.game.players[0].battle_area[0].card_sources[1].data_index = usize::MAX;
+        p.measure_selection_candidates(&r.game, [true, false]);
+        assert!(p.p0.selection_candidates.is_none());
+        r.game.players[0].battle_area[0].card_sources[1].data_index = index;
+        r.game.card_data[index].card_id.clear();
+        p.measure_selection_candidates(&r.game, [true, false]);
+        assert!(p.p0.selection_candidates.is_none());
     }
 }

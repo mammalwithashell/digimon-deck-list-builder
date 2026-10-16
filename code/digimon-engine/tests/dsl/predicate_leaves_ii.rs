@@ -245,12 +245,7 @@ fn event_target_trait_contains_tolerates_plural_and_compound_traits() {
     ] {
         let event_card = runner.game.players[0].hand[idx as usize].handle();
         let mut game = runner.game.clone();
-        game.current_trigger_context = Some(TriggerContext {
-            event_card: Some(event_card),
-            event_permanent: None,
-            target_card: Some(event_card),
-            ..Default::default()
-        });
+        game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = Some(event_card); __fixture_trigger_context.event_permanent = None; __fixture_trigger_context.target_card = Some(event_card); __fixture_trigger_context });
         let rctx = EffectReadContext::new(&game, source_card, None, 0);
         assert_eq!(
             eval_predicate_with_bindings(&pred, &rctx, PredicateSubject::None, None),
@@ -280,11 +275,11 @@ fn event_target_trait_contains_reads_deletion_snapshot_traits() {
     };
 
     let mut game = runner.game.clone();
-    game.current_trigger_context = Some(TriggerContext {
-        deleted_object: Some(DeletedObjectSnapshot {
+    game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.deleted_object = Some(DeletedObjectSnapshot {
             former_controller: 1,
             top_card: victim_handle,
             card_kind: CardKind::Digimon,
+            retained_kind: None,
             traits: vec!["Holy Beast Sovereign".to_string()],
             level: Some(6),
             dp: Some(12000),
@@ -297,9 +292,7 @@ fn event_target_trait_contains_reads_deletion_snapshot_traits() {
             source_count_just_before: 2,
             digisources_just_before: Vec::new(),
             is_token: false,
-        }),
-        ..Default::default()
-    });
+        }); __fixture_trigger_context });
     let rctx = EffectReadContext::new(&game, source_card, None, 0);
     assert!(
         eval_predicate_with_bindings(&pred, &rctx, PredicateSubject::None, None),
@@ -369,6 +362,7 @@ fn event_target_has_digivolution_cards_reads_deletion_snapshot_source_count() {
         former_controller: 0,
         top_card: victim_handle,
         card_kind: CardKind::Digimon,
+            retained_kind: None,
         traits: Vec::new(),
         level: Some(5),
         dp: Some(6000),
@@ -385,10 +379,7 @@ fn event_target_has_digivolution_cards_reads_deletion_snapshot_source_count() {
 
     // 1 source below top → stack size 2 → has a digivolution card.
     let mut game = runner.game.clone();
-    game.current_trigger_context = Some(TriggerContext {
-        deleted_object: Some(make_snapshot(1)),
-        ..Default::default()
-    });
+    game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.deleted_object = Some(make_snapshot(1)); __fixture_trigger_context });
     let rctx = EffectReadContext::new(&game, source_card, None, 0);
     assert!(
         eval_predicate_with_bindings(&has_pred, &rctx, PredicateSubject::None, None),
@@ -401,10 +392,7 @@ fn event_target_has_digivolution_cards_reads_deletion_snapshot_source_count() {
 
     // 0 sources → lone top card → no digivolution card.
     let mut game0 = runner.game.clone();
-    game0.current_trigger_context = Some(TriggerContext {
-        deleted_object: Some(make_snapshot(0)),
-        ..Default::default()
-    });
+    game0.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.deleted_object = Some(make_snapshot(0)); __fixture_trigger_context });
     let rctx0 = EffectReadContext::new(&game0, source_card, None, 0);
     assert!(
         !eval_predicate_with_bindings(&has_pred, &rctx0, PredicateSubject::None, None),
@@ -413,10 +401,7 @@ fn event_target_has_digivolution_cards_reads_deletion_snapshot_source_count() {
 
     // 2 sources below top → stack size 3 → stack_size_gte: 3 satisfied.
     let mut game2 = runner.game.clone();
-    game2.current_trigger_context = Some(TriggerContext {
-        deleted_object: Some(make_snapshot(2)),
-        ..Default::default()
-    });
+    game2.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.deleted_object = Some(make_snapshot(2)); __fixture_trigger_context });
     let rctx2 = EffectReadContext::new(&game2, source_card, None, 0);
     assert!(
         eval_predicate_with_bindings(&stack_gte_3, &rctx2, PredicateSubject::None, None),
@@ -467,10 +452,7 @@ fn event_target_has_digivolution_cards_reads_live_permanent_stack() {
         ..Default::default()
     };
     let mut game = runner.game.clone();
-    game.current_trigger_context = Some(TriggerContext {
-        event_permanent: Some(stacked),
-        ..Default::default()
-    });
+    game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(stacked); __fixture_trigger_context });
     let rctx = EffectReadContext::new(&game, source_card, None, 0);
     assert!(
         eval_predicate_with_bindings(&has_pred, &rctx, PredicateSubject::None, None),
@@ -752,11 +734,11 @@ fn play_cost_eq_binding_reads_event_target_deletion_cost() {
     };
 
     let mut game = runner.game.clone();
-    game.current_trigger_context = Some(TriggerContext {
-        deleted_object: Some(DeletedObjectSnapshot {
+    game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.deleted_object = Some(DeletedObjectSnapshot {
             former_controller: 0,
             top_card: victim_handle,
             card_kind: CardKind::Digimon,
+            retained_kind: None,
             traits: Vec::new(),
             level: Some(6),
             dp: Some(12000),
@@ -769,9 +751,7 @@ fn play_cost_eq_binding_reads_event_target_deletion_cost() {
             source_count_just_before: 0,
             digisources_just_before: Vec::new(),
             is_token: false,
-        }),
-        ..Default::default()
-    });
+        }); __fixture_trigger_context });
     let rctx = EffectReadContext::new(&game, source_card, None, 0);
     assert!(
         eval_predicate_with_bindings(

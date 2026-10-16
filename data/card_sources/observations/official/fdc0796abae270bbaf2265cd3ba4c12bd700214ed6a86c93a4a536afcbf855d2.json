@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "God",
+    "card_id": "EX10-073",
+    "colors": "Black White",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "God/Appmon",
+    "play_cost": "13",
+    "qa": [
+      "No, it doesn't trigger."
+    ],
+    "special_digivolution_condition": "[App Fusion] [Warudamon] & [Cometmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Warudamon] & [Cometmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+      },
+      {
+        "label": "Effect",
+        "text": "＜Security A. +1＞ ＜Link +1＞ (Add 1 to this Digimon's maximum links.) [When Digivolving] [End of Opponent’s Turn] You may link 1 Digimon card from your hand to this Digimon without paying the cost. Then, you may link 1 Digimon card from this Digimon's digivolution cards to this Digimon without paying the cost. [All Turns] [Once Per Turn] When effects trash any of this Digimon's link cards, delete 1 of your opponent’s Digimon with the lowest play cost."
+      }
+    ],
+    "type": "Omnipotence/Leviathan"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "fdc0796abae270bbaf2265cd3ba4c12bd700214ed6a86c93a4a536afcbf855d2",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "15f8317e881c613ae448675a47e02d0d96fccebbfc650966b3357620acd30b90",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX10-073",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX10-073"
+}

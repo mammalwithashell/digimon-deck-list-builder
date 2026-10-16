@@ -117,11 +117,14 @@ fn st22_08_runner() -> DebugRunner {
         .start()
 }
 
-/// Enqueue + drain ST22-08's [Security] effect for the given permanent handle.
-fn fire_security(runner: &mut DebugRunner, handle: PermanentHandle) {
+/// Enqueue and drain ST22-08's effect using its revealed security provenance.
+fn fire_security(runner: &mut DebugRunner, handle: digimon_engine::card_source::CardHandle) {
     runner.game.enqueue_triggered(
         EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(handle),
+        TriggerSource::SecurityRevealed {
+            defender: 0,
+            card: handle,
+        },
     );
     runner.game.drain_effect_queue();
 }
@@ -419,7 +422,7 @@ fn st22_08_security_offers_only_lowest_dp_opponent_digimon() {
         .start();
 
     // Seat ST22-08 on P0's field so we can fire its [Security] effect.
-    let st22 = runner.place_on_field(0, "ST22-08", Some(0));
+    let st22 = prepare_security_option(&mut runner, "ST22-08");
     runner.place_on_field(1, "OPP-LOW", None);
     runner.place_on_field(1, "OPP-HIGH", None);
 
@@ -448,7 +451,7 @@ fn st22_08_security_offers_all_tied_lowest_dp_digimon() {
         .memory(20)
         .start();
 
-    let st22 = runner.place_on_field(0, "ST22-08", Some(0));
+    let st22 = prepare_security_option(&mut runner, "ST22-08");
     runner.place_on_field(1, "OPP-A", None);
     runner.place_on_field(1, "OPP-B", None);
     runner.place_on_field(1, "OPP-BIG", None);
@@ -475,7 +478,7 @@ fn st22_08_security_no_selection_when_no_opp_digimon() {
         .memory(20)
         .start();
 
-    let st22 = runner.place_on_field(0, "ST22-08", Some(0));
+    let st22 = prepare_security_option(&mut runner, "ST22-08");
     fire_security(&mut runner, st22);
 
     assert!(
@@ -495,7 +498,7 @@ fn st22_08_security_delete_is_mandatory_when_candidate_exists() {
         .memory(20)
         .start();
 
-    let st22 = runner.place_on_field(0, "ST22-08", Some(0));
+    let st22 = prepare_security_option(&mut runner, "ST22-08");
     runner.place_on_field(1, "OPP-D", None);
 
     fire_security(&mut runner, st22);
@@ -1409,4 +1412,20 @@ fn st22_08_main_play_costs_only_printed_use_cost() {
         before - 4,
         "ST22-08 played as a [Main] Option must cost exactly its printed use cost of 4"
     );
+}
+
+// A SecurityRevealed card is outside the battle area while its security effect resolves.
+fn prepare_security_option(
+    runner: &mut DebugRunner,
+    id: &str,
+) -> digimon_engine::card_source::CardHandle {
+    runner.add_to_hand(0, id);
+    let card = runner.game.players[0].hand.pop().unwrap();
+    let handle = card.handle();
+    runner.game.pending_security = Some(digimon_engine::selection::PendingSecurity {
+        defender: 0,
+        card,
+        played: false,
+    });
+    handle
 }

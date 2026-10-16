@@ -1,0 +1,155 @@
+# Interaction draft for Q2342 (no oracle result claimed; no expect_ruling yet).
+# Homer Yushima's [All Turns] "When you play a blue Digimon, by suspending this
+# Tamer, you may ..." when the played Digimon is deleted by the 0-DP rule check at
+# the moment it is played (general_rule 17-1-3-1) because an OPPONENT'S effect that
+# had already activated gives all of P0's Digimon -5000 DP.
+# Opponent effect: ShineGreymon: Ruin Mode (EX4-074) "[On Deletion] Until the end of
+# your opponent's next turn, all of your opponent's Digimon get -5000DP". P1
+# hard-plays it (cost 14 needs 4 memory: both engines floor memory at -10 --
+# mask.rs:155, Player.cs:1131 MaxMemoryCost), attacks P0's security on its next
+# turn, and its own [End of Attack] deletes it, firing [On Deletion]. DCGO installs
+# that as a player-level ChangeDigimonDPPlayerEffect with a live permanentCondition
+# (EX4_074.cs:92-104), ours as a continuous ChangeDp modifier (cards/ex4/EX4-074.yaml
+# clause 1), so a Digimon ENTERING during the window is debuffed on both sides.
+# P0 then plays Gabumon (ST2-03, blue Lv.3, 2000 DP): DP <= 0, deleted as played.
+# The ruling observation is the trigger itself: Homer's optional-cost yes/no is
+# asked and accepting it suspends the Tamer (15-7-4: the cost may be paid even
+# though the placement can no longer execute). P0's hand holds no blue Lv.4-or-
+# lower card at that point, so neither engine has a placement pick to ask.
+# Ikkakumon (ST2-05, vanilla, cost 4) is P0's T1 play only to hand P1 the 4 memory
+# the 14-cost hard play needs; Ruin Mode's [End of Attack] "delete 1 of your
+# opponent's Digimon" then takes it (P1's pick).
+card: BT13-096
+clause: BT13-096#effect#1
+covers:
+- BT13-096#effect#1
+interaction:
+  id: qa:Q2342
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST2-05     # opening hand
+    - BT13-096
+    - ST2-03
+    - ST2-08
+    - ST1-05
+    - ST2-06     # security (bottom)
+    - ST2-06
+    - ST2-07
+    - ST2-07
+    - ST2-02     # security TOP: checked by Ruin Mode's attack (vanilla 3000 DP)
+    - ST2-08     # T3 draw
+    - ST1-05     # T5 draw
+    - ST1-02
+    - ST1-02
+    rest: BT13-096-interaction-Q2342-p0
+  p1:
+    stack:
+    - EX4-074    # opening hand
+    - ST1-02
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-03     # security
+    - ST1-03
+    - ST1-07
+    - ST1-07
+    - ST1-08
+    - ST2-04     # T2 draw
+    - ST2-05     # T4 draw
+    - ST2-06     # T4 <Recovery +1 (Deck)>
+    - ST2-06     # T6 draw
+    rest: BT13-096-interaction-Q2342-p1
+steps:
+# T1 (P0, memory 0): Ikkakumon, cost 4 -> -4; P1 starts with 4.
+- actor: 0
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+- actor: 0
+  do: { play: { card: ST2-05, from: hand } }
+  expect: { prompt: main_phase }
+# T2 (P1, memory 4): hard-play Ruin Mode (cost 14; memory floors at -10). P0 starts with 10.
+- actor: 1
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+- actor: 1
+  do: { play: { card: EX4-074, from: hand } }
+  expect: { prompt: main_phase }
+# T3 (P0, memory 10): Homer (cost 3 -> 7). Its [On Play] has no Digimon with
+# digivolution cards to pick from: DCGO's CanActivate is false (BT13_096.cs:66-80,
+# AutoProcessing.cs:1086), ours has no candidates, so nothing is asked.
+# Pass: P1 starts with 3 (6-5-1-7-1).
+- actor: 0
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+- actor: 0
+  do: { play: { card: BT13-096, from: hand } }
+  expect: { prompt: main_phase }
+- actor: 0
+  do: { pass: {} }
+  expect: { prompt: main_phase }
+# T4 (P1, memory 3): Ruin Mode attacks P0's security (15000 beats the vanilla
+# Gomamon security Digimon). [End of Attack]: it deletes itself, P1 picks P0's
+# Ikkakumon to delete, <Recovery +1 (Deck)>, no Tamer so no hatch. Its [On Deletion]
+# then installs the -5000 DP window over P0's Digimon until the end of P0's next turn.
+- actor: 1
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+- actor: 1
+  do: { attack: { attacker: field.0, target: security } }
+  expect: { prompt: main_phase }
+- actor: 1
+  do: { select: { targets: [opp.field.0] } }
+  expect: { prompt: SelectPermanentEffect }
+- actor: 1
+  do: { pass: {} }
+  expect: { prompt: main_phase }
+# T5 (P0, memory 3): THE RULING. Gabumon (blue Lv.3, 2000 DP, cost 3 -> 0) enters at
+# -3000 DP and is deleted by the rule check as it is played. Homer's [All Turns]
+# still triggers: accept the "by suspending this Tamer" gate -> Homer suspends; the
+# placement has no live subject (and no blue Lv.4-or-lower card is in hand), so
+# no further prompt on either side.
+- actor: 0
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+- actor: 0
+  do: { play: { card: ST2-03, from: hand } }
+  expect: { prompt: main_phase }
+- actor: 0
+  do: { select: { 'yes': true } }
+  expect: { prompt: OptionalSkill }
+# Memory is 0, still P0's turn: this decision projects the post-trigger board
+# (Homer suspended, Gabumon in P0's trash). Pass hands P1 3.
+- actor: 0
+  do: { pass: {} }
+  expect: { prompt: main_phase }
+# T6 (P1): trailing decision.
+- actor: 1
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+expect_ruling:
+  q_id: Q2342
+  assert:
+  - at: 13
+    that:
+      memory: 0
+      p0.field:
+      - card_id: BT13-096
+        suspended: false
+      p0.trash:
+      - ST2-02
+      - ST2-05
+      - ST2-03
+  - at: 14
+    that:
+      memory: 0
+      p0.field:
+      - card_id: BT13-096
+        suspended: true
+      p0.trash:
+      - ST2-02
+      - ST2-05
+      - ST2-03

@@ -247,3 +247,33 @@ describe('SelectionPanel card-zone selection (hand + trash, any phase)', () => {
     expect(onAction).toHaveBeenCalledWith(2001);
   });
 });
+
+describe('numeric count choices', () => {
+  it('dispatches engine count and page actions and preserves exact displayed values', () => {
+    const onAction = vi.fn();
+    const pending = makeEffectChoiceSelection();
+    const metadata = { declared_count: '9007199254740993', payable_count: '9007199254740992',
+      page_index: '10', page_count: '11', host: null };
+    pending.effectChoices = [
+      { index: 0, cardId: '', cardName: '', label: 'count', actionId: 30,
+        countChoice: { ...metadata, operation: 'commit_count' } },
+      { index: 1, cardId: '', cardName: '', label: 'next', actionId: 59,
+        countChoice: { ...metadata, operation: 'next_page', declared_count: null, payable_count: null } },
+    ];
+    const mask = new Array(2192).fill(0); mask[30] = 1; mask[59] = 1;
+    renderPanel({ pendingSelection: pending, actionMask: mask, onAction });
+    fireEvent.click(screen.getByRole('button', { name: 'Count 9007199254740993 (payable 9007199254740992)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(onAction.mock.calls).toEqual([[30], [59]]);
+  });
+  it('keeps masked page navigation disabled', () => {
+    const onAction = vi.fn(); const pending = makeEffectChoiceSelection();
+    pending.effectChoices = [{ index: 0, cardId: '', cardName: '', label: 'next', actionId: 59,
+      countChoice: { operation: 'next_page', declared_count: null, payable_count: null,
+        page_index: '0', page_count: '2', host: null } }];
+    renderPanel({ pendingSelection: pending, actionMask: new Array(2192).fill(0), onAction });
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(onAction).not.toHaveBeenCalled();
+  });
+});

@@ -255,13 +255,14 @@ impl<'a> EffectContext<'a> {
         target: PermanentHandle,
         cost_delta: crate::enums::CostDelta,
     ) -> bool {
-        self.game.effect_initiated_digivolve_from_source_ignore_level(
-            player,
-            source,
-            target,
-            cost_delta,
-            PlaySource::ByEffect,
-        )
+        self.game
+            .effect_initiated_digivolve_from_source_ignore_level(
+                player,
+                source,
+                target,
+                cost_delta,
+                PlaySource::ByEffect,
+            )
     }
 
     /// Merge two existing battle-area permanents into a single permanent
@@ -275,9 +276,11 @@ impl<'a> EffectContext<'a> {
     ///
     /// ## Stacking order
     ///
-    /// `target_a.card_sources ++ target_b.card_sources ++ [from_hand]`.
-    /// `target_a` corresponds to `DnaCost::requirement1`. See
-    /// `Game::dna_digivolve_inner` for the canonical contract.
+    /// The printed left DNA requirement is stacked above the right, preserving
+    /// each material's internal order. The surviving carrier remains
+    /// `target_a` even when its material block belongs below `target_b`.
+    /// With no matching printed recipe, explicit A-then-B order is retained.
+    /// See `Game::dna_digivolve_inner` for the canonical contract.
     ///
     /// ## Triggers
     ///
@@ -641,7 +644,12 @@ impl<'a> EffectContext<'a> {
                 let _ = field_perm;
                 return self
                     .game
-                    .matching_dna_cost_for_handle_and_card(result, result_meta, target, partner_meta)
+                    .matching_dna_cost_for_handle_and_card(
+                        result,
+                        result_meta,
+                        target,
+                        partner_meta,
+                    )
                     .map(|c| c.memory_cost as i32);
             }
         }
@@ -875,10 +883,23 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
+        // A material is selectable only if the pair can satisfy a target's
+        // printed DNA requirements (rules 8-2-3-1). Checking the two sides
+        // independently exposes partners that cannot complete the action.
+        let controller = self.player;
+        let partner_target_filter = std::sync::Arc::clone(&target_filter);
+        let partner_filter = std::sync::Arc::new(move |game: &Game, partner| {
+            partner_filter(game, partner)
+                && (0..game.player(controller).hand.len()).any(|i| {
+                    partner_target_filter(game, i)
+                        && (ignore_requirements
+                            || dna_pair_can_reach_hand_card(game, controller, anchor, partner, i))
+                })
+        });
+
         // Quick install-time eligibility checks. If either side has zero
         // candidates the step is a silent no-op (matches DCGO's
         // `CanActivateCondition` returning false).
-        let controller = self.player;
         let has_partner = {
             let battle_len = self.game.player(controller).battle_area.len();
             (0..battle_len).any(|i| {

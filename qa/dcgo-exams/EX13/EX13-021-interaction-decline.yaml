@@ -1,0 +1,119 @@
+card: EX13-021
+clause: EX13-021#inherited#0
+interaction:
+  id: probe:EX13-021#inherited#0:optional_decline
+  source: probe
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX13-021
+    - BT20-044
+    - BT1-090
+    - BT1-090
+    - ST2-03
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-05
+    rest: EX13-021-interaction-Q7261-qa-battle-next8-p0
+  p1:
+    stack:
+    - BT20-042
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - ST2-03
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-05
+    rest: EX13-021-interaction-Q7261-qa-battle-next8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX13-021
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: BT20-044
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      value: 3
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+assert:
+- at: 9
+  that:
+    p0.field:
+    - card_id: BT20-044
+      suspended: true
+      sources:
+      - EX13-021
+- at: 10
+  that:
+    p0.field:
+    - card_id: BT20-044
+      suspended: true
+      sources:
+      - EX13-021
+    p1.security: 4

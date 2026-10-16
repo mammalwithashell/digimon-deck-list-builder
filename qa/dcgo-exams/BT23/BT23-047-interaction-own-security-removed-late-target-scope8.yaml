@@ -1,0 +1,200 @@
+card: BT23-047
+clause: BT23-047#effect#6
+interaction:
+  id: probe:BT23-047#effect#6:scope:neg
+  source: probe
+  kind: negative
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST1-03
+    - ST1-11
+    - BT23-047
+    - BT1-090
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: BT23-047-interaction-own-security-removed-late-target-scope8-p0-repair-v2
+  p1:
+    stack:
+    - BT20-042
+    - LM-030
+    - ST4-13
+    - ST1-02
+    - BT1-090
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: BT23-047-interaction-own-security-removed-late-target-scope8-p1-repair-v2
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST1-03
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: BT20-042
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST1-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: LM-030
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 1
+  do:
+    select:
+      cards:
+      - ST4-13
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.1
+      using: BT23-047
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 1
+  do:
+    select:
+      decline: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: field.0
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    select:
+      decline: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert:
+- at: 22
+  that:
+    memory: 3
+    p0.field:
+    - card_id: BT23-047
+      suspended: false
+      sources:
+      - ST1-11
+    p0.security: 4
+    p0.trash:
+    - ST1-03
+    - ST1-06
+    p1.field:
+    - card_id: ST4-13
+      suspended: true
+      sources:
+      - BT20-042
+    - LM-030
+    p1.security: 5
+    p1.trash: []

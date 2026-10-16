@@ -149,6 +149,7 @@ pub enum StepSpec {
     /// reduce the in-flight cost by the deleted permanent's printed play cost.
     /// `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST` (BT13-103).
     DeleteForCostReduction(TargetArg),
+    PaySourcePrefix(PaySourcePrefixArgs),
     DeleteBoundPermanents(DeleteBoundPermanentsArgs),
     /// `delete_permanents: { targets: [<binding>, ...] }` — delete several
     /// SEPARATELY-bound single permanents SIMULTANEOUSLY through the batched
@@ -176,9 +177,13 @@ pub enum StepSpec {
     /// batch delete (EX9-074 Kimeramon Branch B).
     DeleteOnePerOpponentColor(DeleteOnePerOpponentColorArgs),
     TrashBreedingPermanent(TrashBreedingPermanentArgs),
+    ReturnAllToHand(DeleteAllPermanentsArgs),
+    ReturnAllToDeck(ReturnAllToDeckArgs),
     ReturnToHand(TargetArg),
     ReturnToDeck(ReturnPermanentArgs),
     Suspend(TargetArg),
+    /// Pay one actual suspension, then prevent all matching members of this event.
+    SuspendAndCancelAllMatchingLeaves(SuspendAllPreventionArgs),
     Unsuspend(TargetArg),
     DeDigivolve(DeDigivolveArgs),
     PlaceOnSecurity(PlaceOnSecurityArgs),
@@ -206,6 +211,8 @@ pub enum StepSpec {
     TrashBottomSources(TrashBottomSourcesArgs),
     TrashAllSources(TargetArg),
     TrashSelectedSources(TrashSelectedSourcesArgs),
+    /// Explicit source-trash payment: full successful removal is required for the tail.
+    TrashSelectedSourcesAsCost(TrashSelectedSourcesCostArgs),
     /// Trash each `select_materials`-bound card (a card-list binding) from
     /// `target`'s digivolution cards. Card-list sibling of
     /// `TrashSelectedSources` (which takes `select_own_sources` source refs);
@@ -284,6 +291,7 @@ pub enum StepSpec {
 
     // Play / digivolve
     PlayFromHand(PlayFromHandArgs),
+    PlayToBreedingFromHand(PlayToBreedingFromHandArgs),
     PlayFromHandFree(PlayFromHandFreeArgs),
     UseOptionFromHand(UseOptionFromHandArgs),
     /// Effect-driven Option USE from the controller's trash with a cost delta
@@ -610,6 +618,7 @@ impl Serialize for StepSpec {
             StepSpec::OrderRemainder(v) => kv!(s, "order_remainder", v),
             // Field / permanent
             StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
+            StepSpec::PaySourcePrefix(v) => kv!(s, "pay_source_prefix", v),
             StepSpec::DeleteForCostReduction(v) => kv!(s, "delete_for_cost_reduction", v),
             StepSpec::DeleteBoundPermanents(v) => kv!(s, "delete_bound_permanents", v),
             StepSpec::DeletePermanents(v) => kv!(s, "delete_permanents", v),
@@ -618,9 +627,12 @@ impl Serialize for StepSpec {
                 kv!(s, "delete_one_per_opponent_color", v)
             }
             StepSpec::TrashBreedingPermanent(v) => kv!(s, "trash_breeding_permanent", v),
+            StepSpec::ReturnAllToHand(v) => kv!(s, "return_all_to_hand", v),
+            StepSpec::ReturnAllToDeck(v) => kv!(s, "return_all_to_deck", v),
             StepSpec::ReturnToHand(v) => kv!(s, "return_to_hand", v),
             StepSpec::ReturnToDeck(v) => kv!(s, "return_to_deck", v),
             StepSpec::Suspend(v) => kv!(s, "suspend", v),
+            StepSpec::SuspendAndCancelAllMatchingLeaves(v) => kv!(s, "suspend_and_cancel_all_matching_leaves", v),
             StepSpec::Unsuspend(v) => kv!(s, "unsuspend", v),
             StepSpec::DeDigivolve(v) => kv!(s, "de_digivolve", v),
             StepSpec::PlaceOnSecurity(v) => kv!(s, "place_on_security", v),
@@ -632,6 +644,7 @@ impl Serialize for StepSpec {
             StepSpec::TrashBottomSources(v) => kv!(s, "trash_bottom_sources", v),
             StepSpec::TrashAllSources(v) => kv!(s, "trash_all_sources", v),
             StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
+            StepSpec::TrashSelectedSourcesAsCost(v) => kv!(s, "trash_selected_sources_as_cost", v),
             StepSpec::TrashSelectedMaterials(v) => kv!(s, "trash_selected_materials", v),
             StepSpec::PlaceSelectedCardUnderTamer(v) => {
                 kv!(s, "place_selected_card_under_tamer", v)
@@ -667,6 +680,7 @@ impl Serialize for StepSpec {
             StepSpec::MoveFromBreeding(v) => kv!(s, "move_from_breeding", v),
             // Play / digivolve
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
+            StepSpec::PlayToBreedingFromHand(v) => kv!(s, "play_to_breeding_from_hand", v),
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
             StepSpec::UseOptionFromHand(v) => kv!(s, "use_option_from_hand", v),
             StepSpec::UseOptionFromTrash(v) => kv!(s, "use_option_from_trash", v),
@@ -906,6 +920,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Field / permanent
             "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
+            "pay_source_prefix" => StepSpec::PaySourcePrefix(map.next_value()?),
             "delete_for_cost_reduction" => StepSpec::DeleteForCostReduction(map.next_value()?),
             "delete_bound_permanents" => StepSpec::DeleteBoundPermanents(map.next_value()?),
             "delete_permanents" => StepSpec::DeletePermanents(map.next_value()?),
@@ -914,9 +929,12 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                 StepSpec::DeleteOnePerOpponentColor(map.next_value()?)
             }
             "trash_breeding_permanent" => StepSpec::TrashBreedingPermanent(map.next_value()?),
+            "return_all_to_hand" => StepSpec::ReturnAllToHand(map.next_value()?),
+            "return_all_to_deck" => StepSpec::ReturnAllToDeck(map.next_value()?),
             "return_to_hand" => StepSpec::ReturnToHand(map.next_value()?),
             "return_to_deck" => StepSpec::ReturnToDeck(map.next_value()?),
             "suspend" => StepSpec::Suspend(map.next_value()?),
+            "suspend_and_cancel_all_matching_leaves" => StepSpec::SuspendAndCancelAllMatchingLeaves(map.next_value()?),
             "unsuspend" => StepSpec::Unsuspend(map.next_value()?),
             "de_digivolve" => StepSpec::DeDigivolve(map.next_value()?),
             "place_on_security" => StepSpec::PlaceOnSecurity(map.next_value()?),
@@ -928,6 +946,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_bottom_sources" => StepSpec::TrashBottomSources(map.next_value()?),
             "trash_all_sources" => StepSpec::TrashAllSources(map.next_value()?),
             "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
+            "trash_selected_sources_as_cost" => {
+                StepSpec::TrashSelectedSourcesAsCost(map.next_value()?)
+            }
             "trash_selected_materials" => StepSpec::TrashSelectedMaterials(map.next_value()?),
             "place_selected_card_under_tamer" => {
                 StepSpec::PlaceSelectedCardUnderTamer(map.next_value()?)
@@ -962,6 +983,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Play / digivolve
             "play_from_hand" => StepSpec::PlayFromHand(map.next_value()?),
+            "play_to_breeding_from_hand" => StepSpec::PlayToBreedingFromHand(map.next_value()?),
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
             "use_option_from_hand" => StepSpec::UseOptionFromHand(map.next_value()?),
             "use_option_from_trash" => StepSpec::UseOptionFromTrash(map.next_value()?),
@@ -1169,9 +1191,12 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "delete_permanents",
                         "delete_one_per_opponent_color",
                         "trash_breeding_permanent",
+                        "return_all_to_hand",
+                        "return_all_to_deck",
                         "return_to_hand",
                         "return_to_deck",
                         "suspend",
+                        "suspend_and_cancel_all_matching_leaves",
                         "unsuspend",
                         "de_digivolve",
                         "place_on_security",
@@ -1193,6 +1218,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "bind_permanent_property",
                         "hatch",
                         "play_from_hand",
+                        "play_to_breeding_from_hand",
                         "play_from_hand_free",
                         "use_option_from_hand",
                         "use_option_from_trash",
@@ -1480,6 +1506,10 @@ pub struct StructuredBindingRef {
     pub zone: Option<Zone>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub of_permanent: Option<String>,
+    /// The top physical card of a selected permanent, without selecting a
+    /// source index. YAML: `{ top_of: donor }`. Does not move its lower stack.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub top_of: Option<String>,
     /// Top card of a player's deck — a card-source binding (not a permanent).
     /// Used by card-source steps such as `place_as_bottom_source` to stash
     /// the deck top under a Tamer. YAML: `{ deck_top: you }`.
@@ -1750,6 +1780,14 @@ pub struct TargetArg {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub struct SuspendAllPreventionArgs {
+    pub target: BindingRef,
+    /// Subject qualification only; exclude activation-cost availability.
+    pub filter: PredicateSpec,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct TrashBottomSourcesArgs {
     pub target: BindingRef,
     pub count: u8,
@@ -1912,6 +1950,10 @@ pub struct RefireEffectArgs {
     pub timing: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// Activate as the target's own effect, retaining its card and source kind.
+    /// Default false preserves effects explicitly attributed to the grantor.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub target_attribution: bool,
 }
 
 /// Args for `refire_card_effect` — see [`StepSpec::RefireCardEffect`].
@@ -1995,6 +2037,17 @@ pub struct ReturnToDeckArgs {
     pub of: PlayerRef,
     pub card: BindingRef,
     pub position: StackPosition,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnAllToDeckArgs {
+    pub over: PredicateSpec,
+    pub position: StackPosition,
+    #[serde(default)]
+    pub include_sources: bool,
+    #[serde(default)]
+    pub selector: Option<FieldSelector>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2452,6 +2505,17 @@ pub struct TrashSelectedSourcesArgs {
     pub source_refs: String,
 }
 
+/// Source-card payment with an optional successful-removal floor.
+/// Omitted means every selected card must be paid. Use zero for printed
+/// up-to/per-card costs; the binding becomes the cards actually trashed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashSelectedSourcesCostArgs {
+    pub source_refs: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_count: Option<u8>,
+}
+
 /// Args for `trash_selected_materials` — trash the `cards` card-list binding
 /// (from `select_materials`) out of `target`'s digivolution cards.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2565,6 +2629,15 @@ pub struct PlayFromHandArgs {
 /// handle can be referenced by subsequent steps (e.g. `schedule_delayed`
 /// returning the played card at next opponent end turn).
 /// G-PLAY-FROM-HAND-FREE-BIND-AS (Phase 2 Track H closure).
+/// Play the selected physical hand Digimon into its owner's empty breeding area.
+/// This is not a battle-area play: it pays no memory and does not activate On Play.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayToBreedingFromHandArgs {
+    pub of: PlayerRef,
+    pub hand_index: BindingRef,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayFromHandFreeArgs {
@@ -2832,6 +2905,9 @@ pub struct PlayUnderTamerSourceArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayFromMaterialsArgs {
+    /// Enter suspended before entry observers; this is not a suspend event.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub suspended: bool,
     pub target: BindingRef,
     pub source_index: BindingRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3175,10 +3251,9 @@ pub struct DigixrosWildcardArgs {
 /// effect entry on each, whose body executes `body` (a step list) when
 /// the carrier's matching `timing` event drains. DCGO reference:
 /// `AddSkillClass.cs` — grantor publishes a per-timing closure that
-/// returns granted effects; here we install once per match instead of
-/// re-evaluating per fire (acceptable for printed-text fidelity since
-/// most cards install at a specific event then leave the carrier set
-/// frozen until expiry).
+/// returns granted effects. The default snapshots current recipients;
+/// `dynamic: true` instead re-evaluates a predicate at each trigger, including
+/// future entrants. Dynamic grants require a turn-bound expiry.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GrantTriggeredEffectArgs {
@@ -3186,6 +3261,10 @@ pub struct GrantTriggeredEffectArgs {
     /// players' battle areas and grants to every match; a binding target grants
     /// to exactly the previously-selected permanent.
     pub target: ModifierTarget,
+    /// Re-evaluate the predicate for current and future carriers until expiry.
+    /// False retains the ordinary one-time recipient snapshot.
+    #[serde(default)]
+    pub dynamic: bool,
     /// The carrier-side timing that triggers the granted body. String
     /// form (snake_case) matching the engine's `EffectTiming` map —
     /// e.g. `when_attacking`, `on_deletion`, `on_suspend`,
@@ -3199,9 +3278,8 @@ pub struct GrantTriggeredEffectArgs {
     /// Step list executed when the granted body fires. Runs with
     /// `EffectContext::source_card` = grantor (DCGO
     /// `EffectSourceCard`) and `source_permanent` = carrier (DCGO
-    /// `EffectSourcePermanent`). v1: bodies are non-selection — they
-    /// run inline after the printed-observer queue drains. Selection-
-    /// driving bodies are tracked as a separate gap.
+    /// `EffectSourcePermanent`). The body uses the normal triggered queue,
+    /// including resumable player selections, with the carrier's controller.
     pub body: Vec<StepSpec>,
 }
 
@@ -3431,6 +3509,14 @@ pub struct SelectMaterialArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectMaterialsArgs {
+    /// Match each physical source to a different effective card name; aliases
+    /// participate, but one dual-name card still occupies only one role.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub named_groups: Vec<String>,
+    /// Require the largest feasible named-group set up to max (or zero when
+    /// optional_zero permits declining). Requires named_groups.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub require_max: bool,
     /// Carrier permanent whose digivolution sources are the candidate pool.
     pub of_permanent: BindingRef,
     /// Upper bound on the number of sources the player may pick.
@@ -4161,4 +4247,13 @@ pub struct RawRustStep {
     pub consumes: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub binds: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PaySourcePrefixArgs {
+    pub host_filter: crate::predicate::PredicateSpec,
+    pub minimum: u64,
+    #[serde(default)]
+    pub optional: bool,
 }

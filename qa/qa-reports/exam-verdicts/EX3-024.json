@@ -1,0 +1,111 @@
+{
+  "version": 2,
+  "last_updated": "2026-10-11T15:12:55.848167400+00:00",
+  "clauses": {
+    "EX3-024#effect#0": {
+      "clause_id": "EX3-024#effect#0",
+      "card_id": "EX3-024",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "e542ec1397f0fb9327d40904fa3fffc49d1c11f158b7cec40b4a9c68be818ad0",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\repair-20261011T000734Z-2952af641a\\EX3-024-effect1-repair-20261011T000734Z-2952af641a.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-024-effect1-repair-20261011T000734Z-2952af641a",
+      "recorded_at": "2026-10-11T00:12:25.465084+00:00"
+    },
+    "EX3-024#effect#1": {
+      "clause_id": "EX3-024#effect#1",
+      "card_id": "EX3-024",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e294883bafb935f8966faebd3a24ce1a6d75818aeb4cf296dec23860903f4528",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\repair-20261011T000734Z-2952af641a\\EX3-024-effect1-repair-20261011T000734Z-2952af641a.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-024-effect1-repair-20261011T000734Z-2952af641a",
+      "recorded_at": "2026-10-11T00:12:25.465084+00:00"
+    },
+    "EX3-024#inherited#0": {
+      "clause_id": "EX3-024#inherited#0",
+      "card_id": "EX3-024",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "9ee1f660f948fc1f547ff28938f39a670e8182b17d435a0a0b41f878c4536727",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\repair-20261011T000734Z-2952af641a\\EX3-024-inherited0-repair-20261011T000734Z-2952af641a.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-024-inherited0-repair-20261011T000734Z-2952af641a",
+      "recorded_at": "2026-10-11T00:13:14.762184+00:00"
+    }
+  },
+  "interactions": {
+    "probe:EX3-024#effect#1:scope:neg": {
+      "interaction_id": "probe:EX3-024#effect#1:scope:neg",
+      "card_ids": [
+        "EX3-024"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "e294883bafb935f8966faebd3a24ce1a6d75818aeb4cf296dec23860903f4528",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T145700Z-2fe130bfe3\\EX3-024-interaction-other-ally-suspends-identity-self-scope7-20261011T145700Z-2fe130bfe3.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-024-interaction-other-ally-suspends-identity-self-scope7-20261011T145700Z-2fe130bfe3",
+      "recorded_at": "2026-10-11T15:12:55.848167400+00:00"
+    },
+    "qa:Q3394": {
+      "interaction_id": "qa:Q3394",
+      "card_ids": [
+        "EX3-024"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "dd1e6d81b2efba7ed4edac3933de5dce5f2895d16148247ab98717e5fa4717dc",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T092847Z-55c77ff39c\\EX3-024-interaction-Q3394-20261011T092847Z-55c77ff39c.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-024-interaction-Q3394-20261011T092847Z-55c77ff39c",
+      "recorded_at": "2026-10-11T09:43:58.213327800+00:00"
+    },
+    "qa:Q3395": {
+      "interaction_id": "qa:Q3395",
+      "card_ids": [
+        "EX3-024"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "5452209934a538560568fb54cb2c4d7d8ab2ca1be09770200e58a8a2083c9760",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T092847Z-55c77ff39c\\EX3-024-interaction-Q3395-20261011T092847Z-55c77ff39c.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-024-interaction-Q3395-20261011T092847Z-55c77ff39c",
+      "recorded_at": "2026-10-11T09:44:44.247988300+00:00"
+    },
+    "qa:Q3396": {
+      "interaction_id": "qa:Q3396",
+      "card_ids": [
+        "EX3-024"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "348775977187bef36981131d273a6543dda6e1ab7fce73441bcfd2571da083a2",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T105521Z-280ef52776\\EX3-024-interaction-Q3396-ex13-qa-endbattle8-20261011T105521Z-280ef52776.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-024-interaction-Q3396-ex13-qa-endbattle8-20261011T105521Z-280ef52776",
+      "recorded_at": "2026-10-11T10:59:30.426208700+00:00"
+    },
+    "qa:Q3398": {
+      "interaction_id": "qa:Q3398",
+      "card_ids": [
+        "EX3-024"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "25828834704300f99c3d343ef6247fba7f02092d628400326342aff1a0aacf76",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T110850Z-f4fd891f7d\\EX3-024-interaction-Q3398-ex13-qa-endbattle8-20261011T110850Z-f4fd891f7d.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-024-interaction-Q3398-ex13-qa-endbattle8-20261011T110850Z-f4fd891f7d",
+      "recorded_at": "2026-10-11T11:09:32.871417600+00:00"
+    }
+  }
+}

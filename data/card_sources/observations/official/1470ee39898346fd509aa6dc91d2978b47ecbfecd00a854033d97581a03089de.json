@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "ST20-10",
+    "colors": "Black",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "It refers to when a card has as many or more total colors than the number specified."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[ADVENTURE]/[Hero] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[ADVENTURE]/[Hero] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[Your Turn] While your opponent has a Digimon with 10000 DP or more, or your Tamers have 3 or more total colors, this Digimon can digivolve into [WarGreymon] in the hand for a digivolution cost of 4, ignoring digivolution requirements."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)"
+      }
+    ],
+    "type": "Reptile/ADVENTURE/Hero"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "1470ee39898346fd509aa6dc91d2978b47ecbfecd00a854033d97581a03089de",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "afc2798551573ecc2dbf4014e546d66dfe75e73d71d64a6488259146726262ea",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:ST20-10",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/ST20-10"
+}

@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT13-012",
+    "colors": "Red Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "5000",
+    "form": "Champion",
+    "play_cost": "5",
+    "qa": [
+      "It means you can look at all of the cards in your security stack, without revealing them to your opponent. If a card that can be played by the effect is among them, you may reveal that card and play it."
+    ],
+    "special_digivolution_condition": "[Digivolve] 2 from Lv.3 w/[Agumon] in name and [Dinosaur] trait",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] 2 from Lv.3 w/[Agumon] in name and [Dinosaur] trait"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] Search your security stack, and you may play 1 red or yellow Tamer card among it without paying the cost. If you did, ＜Recovery +1 (Deck)＞. (Place the top card of your deck on top of your security stack.) Then, shuffle your security stack."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn][Once Per Turn] When one of your red or yellow Tamers becomes suspended, you may delete 1 of your opponent's Digimon with 3000 DP or less."
+      }
+    ],
+    "type": "Dinosaur"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "de898fd9fdddeb56caa491af2b22746331a0e59c8d3c8560906fbd3393bf530c",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "6e88aea02d7203d8aad56941d13c93eef3b79d7d2d3f01726ad487d8c32b0745",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT13-012",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT13-012"
+}

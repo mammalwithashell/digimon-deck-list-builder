@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT25-063",
+    "colors": "Black Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "dp": "2000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] [Missimon]/Lv.2 w/[ACCEL] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Missimon]/Lv.2 w/[ACCEL] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Chaosmon] in its name or the [D-Brigade] or [ACCEL] trait among them to the hand. Return the rest to the top or bottom of the deck."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] This Digimon gets +1000 DP."
+      }
+    ],
+    "type": "Cyborg/D-Brigade/ACCEL"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "63ec3f70cf220f0ada55543961e0da8ac4e56a897405bfe9183a9656d7f9b25c",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "b47b7a9a896f7ed67f21642ecde206d4337936544eb2d7c696dfacb9bde3e7fc",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-063",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-063"
+}

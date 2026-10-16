@@ -1,0 +1,89 @@
+{
+  "extracted": {
+    "attribute": "X Antibody",
+    "card_id": "BT9-106",
+    "card_type": "Option",
+    "colors": [
+      "Purple"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "option",
+        "level": null,
+        "name": "DeathXDigivolution!",
+        "play_cost": 0,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "While you have a Digimon with [X Antibody] in its traits in play, you may use this card without meeting its color requirements.\n[Main] You may digivolve 1 of your Digimon into a Digimon card with [Dex] or [DeathX] in its name from your trash for its memory cost."
+          },
+          {
+            "label": "Security Effect",
+            "text": "[Security] Add this card to its owner's hand."
+          }
+        ]
+      }
+    ],
+    "form": "",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": null,
+    "name": "DeathXDigivolution!",
+    "play_cost": 0,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522010",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT9-106.png?260529",
+      "printing_id": "BT9-106"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "No, this effect does not allow ignoring digivolution requirements, so you can only digivolve into a card from your trash that meets the digivolution requirements and has [Dex]/[DeathX] in its name.",
+        "date": "Mar. 28, 2024",
+        "number": "Q1913",
+        "question": "Can I use this card's [Main] effect to digivolve into any Digimon card from my trash as long as it has [Dex]/[DeathX] in its name?"
+      },
+      {
+        "answer": "Yes, as long as the activation conditions are met.",
+        "date": "Mar. 28, 2024",
+        "number": "Q1914",
+        "question": "Can I activate an effect that reduces the digivolution cost when digivolving using this card's [Main] effect?"
+      }
+    ],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "While you have a Digimon with [X Antibody] in its traits in play, you may use this card without meeting its color requirements.\n[Main] You may digivolve 1 of your Digimon into a Digimon card with [Dex] or [DeathX] in its name from your trash for its memory cost."
+      },
+      {
+        "label": "Security Effect",
+        "text": "[Security] Add this card to its owner's hand."
+      }
+    ],
+    "type": ""
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "cb3113d80c1b17852d1b25ff3c2a269887f1ab2c9b65ec7d5f48b276323caf90",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "b67ad9373be4eff41538e8e353461c86b5b1687476e811643033ff30d5b91058",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522010:BT9-106:BT9-106",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522010"
+}

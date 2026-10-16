@@ -272,3 +272,95 @@ fn ex13_051_one_activation_saves_every_simultaneously_leaving_blocker() {
     let n = field_ids(&r, 0).iter().filter(|c| *c == "ALLY-BLK").count();
     assert_eq!(n, 2, "both Blocker allies stay");
 }
+
+
+// Official Q7372: one payment protects every matching member, not nonmembers.
+#[test]
+fn ex13_051_group_accept_and_decline_preserve_nonmatching_scope_and_clone() {
+    let mut r = start();
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    let a = r.place_on_field(0, "ALLY-BLK", Some(0));
+    let b = r.place_on_field(0, "ALLY-BLK", Some(0));
+    let plain = r.place_on_field(0, "ALLY-PLAIN", Some(0));
+    r.game.delete_permanents_batch(vec![a, b, plain], ReplacementCause::OpponentEffect);
+    assert_replacement_prompt(&r);
+    let mut accepted_clone = DebugRunner::wrap(r.game.clone());
+    let mut declined = DebugRunner::wrap(r.game.clone());
+    for game in [&mut r, &mut accepted_clone] {
+        accept(game);
+        let _ = game.auto_resolve();
+        assert_eq!(field_ids(game, 0), vec![CARD_ID, "ALLY-BLK", "ALLY-BLK"]);
+        assert!(is_suspended(game, me));
+        assert_eq!(game.game.players[0].trash.len(), 1);
+        assert_eq!(game.game.players[0].trash[0].card_id(&game.game.card_data), "ALLY-PLAIN");
+        assert!(game.pending_selection().is_none());
+    }
+    // A declined non-OPT replacement can be offered again for the second
+    // matching victim. Explicitly decline every bounded offer; auto_resolve
+    // would accept it and turn this into a mixed-decision case.
+    let mut declines = 0;
+    for _ in 0..2 {
+        if declined.pending_selection().is_none() { break; }
+        assert_replacement_prompt(&declined);
+        decline(&mut declined);
+        declines += 1;
+    }
+    assert!((1..=2).contains(&declines));
+    assert!(declined.pending_selection().is_none(), "two matching victims exhaust decline offers");
+    assert_eq!(field_ids(&declined, 0), vec![CARD_ID]);
+    assert!(!is_suspended(&declined, me));
+    assert_eq!(declined.game.players[0].trash.len(), 3);
+}
+
+#[test]
+fn ex13_051_group_does_not_protect_own_effect_or_unpayable_cost() {
+    for own_effect in [true, false] {
+        let mut r = start();
+        let me = r.place_on_field(0, CARD_ID, Some(0));
+        if !own_effect { set_suspended(&mut r, me, true); }
+        let a = r.place_on_field(0, "ALLY-BLK", Some(0));
+        let b = r.place_on_field(0, "ALLY-BLK", Some(0));
+        let cause = if own_effect { ReplacementCause::OwnEffect } else { ReplacementCause::OpponentEffect };
+        r.game.delete_permanents_batch(vec![a, b], cause);
+        assert!(r.pending_selection().is_none());
+        assert_eq!(field_ids(&r, 0), vec![CARD_ID]);
+        assert_eq!(r.game.players[0].trash.len(), 2);
+        assert_eq!(is_suspended(&r, me), !own_effect);
+    }
+}
+
+// Q7372 plural protection retains the printed "other" restriction even when
+// the paying Guardromon is itself included in the same removal event.
+#[test]
+fn ex13_051_group_protects_other_blockers_but_not_its_paying_carrier() {
+    for reverse_members in [false, true] {
+        let mut r = start();
+        let me = r.place_on_field(0, CARD_ID, Some(0));
+        let ally = r.place_on_field(0, "ALLY-BLK", Some(0));
+        let second = r.place_on_field(0, "ALLY-BLK", Some(0));
+        let plain = r.place_on_field(0, "ALLY-PLAIN", Some(0));
+        let payer_card = r.game.players[0].battle_area[me.index as usize].top_card().handle();
+        let ally_card = r.game.players[0].battle_area[ally.index as usize].top_card().handle();
+        let second_card = r.game.players[0].battle_area[second.index as usize].top_card().handle();
+        let plain_card = r.game.players[0].battle_area[plain.index as usize].top_card().handle();
+        let mut members = vec![me, ally, second, plain];
+        if reverse_members { members.reverse(); }
+        r.game.delete_permanents_batch(members, ReplacementCause::OpponentEffect);
+        assert_replacement_prompt(&r);
+        let mut cloned = DebugRunner::wrap(r.game.clone());
+        for branch in [&mut r, &mut cloned] {
+            accept(branch);
+            let _ = branch.auto_resolve();
+            assert!(branch.pending_selection().is_none());
+            let field: Vec<_> = branch.game.players[0].battle_area.iter()
+                .map(|p| p.top_card().handle()).collect();
+            assert_eq!(field, vec![ally_card, second_card]);
+            let trash: Vec<_> = branch.game.players[0].trash.iter()
+                .map(|c| c.handle()).collect();
+            assert_eq!(trash.len(), 2);
+            assert_eq!(trash.iter().filter(|&&c| c == payer_card).count(), 1);
+            assert_eq!(trash.iter().filter(|&&c| c == plain_card).count(), 1);
+            assert!(!trash.contains(&ally_card) && !trash.contains(&second_card));
+        }
+    }
+}

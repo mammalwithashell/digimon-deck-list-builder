@@ -354,3 +354,45 @@ fn bless_corpus_dir_rewrites_changed_replays_and_retires_unreplayable_files() {
 
     fs::remove_dir_all(root).expect("clean temp bless dir");
 }
+
+#[test]
+fn legacy_schema_rehash_stays_legacy_and_replays_cleanly() {
+    use digimon_engine::recorder::VerificationDigestVersion;
+    let db = test_card_db();
+    let mut legacy = generated_recording(6, 801);
+    legacy.engine_schema_version = 1;
+    let mut session = ReplaySession::from_verification_recording(legacy.clone(), &db, false).unwrap();
+    let mut expected = Vec::new();
+    while !session.is_complete() {
+        session.step();
+        assert!(!session.is_paused());
+        expected.push(session.game.verification_digest_with_version(VerificationDigestVersion::LegacyV2));
+    }
+    legacy.digests = expected.clone(); legacy.final_digest = *expected.last().unwrap();
+    let report = ReplaySession::verify_verification_recording("legacy-positive", legacy.clone(), &db).unwrap();
+    assert!(report.divergence.is_none(), "{report:?}");
+    legacy.digests.fill(0); legacy.final_digest = 0;
+    let BlessOutcome::Blessed(blessed) = bless_verification_recording(legacy, &db).unwrap() else { panic!("legacy should stay replayable"); };
+    assert_eq!(blessed.engine_schema_version, 1);
+    assert_eq!(blessed.digests, expected);
+    assert_eq!(blessed.final_digest, *expected.last().unwrap());
+    assert!(ReplaySession::verify_verification_recording("legacy-rehash", blessed, &db).unwrap().divergence.is_none());
+}
+
+#[test]
+fn unsupported_versions_never_retire_or_rewrite_corpus_files() {
+    let db = test_card_db();
+    for (format, schema) in [(1, 3), (2, 2), (1, 999)] {
+        let root = std::env::temp_dir().join(format!("digimon_unknown_protocol_{}_{}_{}_{}", std::process::id(), format, schema, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let goldens = root.join("goldens"); let retired = root.join("retired");
+        fs::create_dir_all(&goldens).unwrap();
+        let mut recording = generated_recording(6, 802);
+        recording.format_version = format; recording.engine_schema_version = schema;
+        let bytes = serde_json::to_vec_pretty(&recording).unwrap();
+        let file = goldens.join("future.replay.json"); fs::write(&file, &bytes).unwrap();
+        assert!(bless_replay_corpus_dir(&goldens, &retired, &db).is_err());
+        assert_eq!(fs::read(&file).unwrap(), bytes);
+        assert!(!retired.join("future.retired.json").exists());
+        fs::remove_dir_all(root).unwrap();
+    }
+}

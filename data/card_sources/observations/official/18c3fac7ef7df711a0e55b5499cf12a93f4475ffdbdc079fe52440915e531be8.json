@@ -1,0 +1,51 @@
+{
+  "extracted": {
+    "attribute": "Unknown",
+    "card_id": "BT12-057",
+    "colors": "Green",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 4,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "dp": "15000",
+    "form": "Mega",
+    "play_cost": "16",
+    "qa": [
+      "Count the total number of you and your opponent's suspended Digimon and suspended Tamers, then gain 1 memory for every 2. For example, if you have 1 suspended Digimon and 1 suspended Tamer while your opponent has 2 suspended Digimon, the total would be 4 and you gain 2 memory."
+    ],
+    "special_digivolution_condition": "[Digivolve] 9 from Lv.5 w/＜Save＞ in text",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] 9 from Lv.5 w/＜Save＞ in text"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] Suspend all other Digimon and all Tamers. Then, for every 2 suspended Digimon and/or Tamers, gain 1 memory. [All Turns] Other than this Digimon, all Digimon and Tamers don't unsuspend. [When Attacking] Suspend 1 of your opponent's Digimon or Tamers. Then, trash the top card of your opponent’s security stack for every 5 suspended Digimon and/or Tamers."
+      }
+    ],
+    "type": "Unidentified"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "18c3fac7ef7df711a0e55b5499cf12a93f4475ffdbdc079fe52440915e531be8",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "8816f00394f78cf524b3c3997160a90adac4897c68fb2dcc45b07ca9212d1896",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT12-057",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT12-057"
+}

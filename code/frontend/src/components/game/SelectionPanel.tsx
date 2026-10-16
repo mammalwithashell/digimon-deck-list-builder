@@ -1,3 +1,4 @@
+import type { CountChoice } from '@/types/countChoice';
 import { Card } from '@/components/shared/Card';
 import { GamePhase, type PendingSelection, type PermanentInfo } from '@/types/game';
 import { SELECTION } from '@/utils/constants';
@@ -42,6 +43,7 @@ const PANEL_PHASES = new Set<GamePhase>([
 ]);
 
 interface CardEntry {
+  countChoice?: CountChoice | null;
   cardId: string;
   actionId: number;
   isValid: boolean;
@@ -145,6 +147,7 @@ export function SelectionPanel({
           actionId,
           isValid: actionMask[actionId] === 1,
           label: choice.label,
+          countChoice: choice.countChoice,
         };
       });
     } else {
@@ -228,6 +231,8 @@ export function SelectionPanel({
               {cards.map((entry) => (
                 <button
                   key={entry.actionId}
+                  type="button"
+                  disabled={!entry.isValid}
                   onClick={() => entry.isValid ? onAction(entry.actionId) : undefined}
                   className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all ${
                     entry.isValid
@@ -235,12 +240,16 @@ export function SelectionPanel({
                       : 'border-[var(--ib-line)] opacity-40 cursor-not-allowed'
                   }`}
                 >
-                  <Card
-                    cardId={entry.cardId}
-                    size="md"
-                    onContextMenu={inspectOnRightClick(entry.cardId)}
-                  />
-                  {entry.label && (
+                  {entry.countChoice ? (
+                    <span className="text-base font-semibold">
+                      {entry.countChoice.operation === 'commit_count'
+                        ? `Count ${entry.countChoice.declared_count} (payable ${entry.countChoice.payable_count})`
+                        : entry.countChoice.operation === 'previous_page' ? 'Previous page' : 'Next page'}
+                    </span>
+                  ) : (
+                    <Card cardId={entry.cardId} size="md" onContextMenu={inspectOnRightClick(entry.cardId)} />
+                  )}
+                  {entry.label && !entry.countChoice && (
                     <span className="text-xs text-[var(--ib-bone-d)] text-center max-w-[120px] leading-tight">
                       {entry.label}
                     </span>
