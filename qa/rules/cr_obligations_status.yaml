@@ -665,8 +665,8 @@
   note: "Overwrite: the card is not in the trash at the decision and never reaches it when accepted. Matrix row ArtsDigivolve (optional) agrees."
 "4-6-1":
   status: proven
-  tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information", "ch16_new_keywords::dual_traits_belong_to_both_informations"]
-  note: "In the hand a DUAL is offered both as an Option (use) and as a Digimon (digivolve), and matches both 'Digimon card' and 'Option card' trait searches."
+  tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information", "ch16_new_keywords::dual_traits_belong_to_both_informations", "ch16_new_keywords::dual_unqualified_colour_reference_matches_either_information"]
+  note: "In the hand a DUAL is offered both as an Option (use) and as a Digimon (digivolve), and matches both 'Digimon card' and 'Option card' trait searches; an unqualified color reference (no category named) matches if either information has the color (ruling W5 reading (a))."
 "4-6-2":
   status: proven
   tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information"]
@@ -696,11 +696,9 @@
   tests: ["ch16_new_keywords::dual_traits_belong_to_both_informations"]
   note: "The trait is matched when the hand card is referenced as an Option card."
 "4-6-6-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH
+  status: proven
   tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information", "ch16_new_keywords::dual_option_information_referenced_as_option_card"]
-  note: "Option USE reads the Option information (purple color requirement, use cost 2: proven). Card-search predicates read the top-level (Digimon information) colors: 'purple Option card' misses the DUAL (Option information purple) and 'red Option card' wrongly offers it (Digimon information red); 'purple Digimon card' correctly misses it. The test pins both directions, so a both-faces-union fix fails it. dual_option_information_referenced_as_option_card is #[ignore]d."
+  note: "Option USE reads the Option information (purple color requirement, use cost 2). Card-zone searches now reference the Option information when the search is for an Option card: 'purple Option card' finds the DUAL, 'red Option card' and 'purple Digimon card' don't (both directions pinned, so a both-faces-union fix fails)."
 "4-6-6-3":
   status: proven
   tests: ["ch16_new_keywords::dual_effects_are_digimon_or_option_effects_by_information"]
@@ -1177,11 +1175,9 @@
   tests: ["ch16_processing_keywords::blast_dna_kind_matches_rule"]
   note: "One DNA digivolution, stacked per 8-2-2-2, at no cost."
 "16-31-5":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-BLAST-DNA-IGNORES-DNA-REQUIREMENTS
+  status: proven
   tests: ["ch16_processing_keywords::blast_dna_cannot_ignore_dna_requirements"]
-  note: "A same-named level 4 field Digimon (DNA requirement: Lv.5) is offered. #[ignore]d."
+  note: "A same-named level 4 field Digimon (DNA requirement: Lv.5) is not offered; the level 5 control is."
 "16-31-6":
   status: proven
   tests: ["ch16_processing_keywords::blast_dna_kind_matches_rule"]
