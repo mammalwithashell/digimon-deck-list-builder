@@ -4932,7 +4932,7 @@ impl Game {
         // Take the selection, restore phase, invoke the appropriate callback.
         let sel = self.pending_selection.take().expect("checked Some above");
         let resume = self.pending_selection_resume.take();
-        self.current_phase = sel.previous_phase;
+        self.set_current_phase(sel.previous_phase);
         // G-ENGINE-TURN-END-MID-EFFECT: the callback and every post-callback
         // continuation below (pay-cost tails, parked security removals,
         // scheduled drains, pending-attack resume, ...) are the rest of the

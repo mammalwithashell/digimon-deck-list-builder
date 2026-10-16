@@ -1179,7 +1179,7 @@ impl RustDebugGame {
     /// Set the current phase from a phase string (Main/Breeding/...).
     fn set_phase(&mut self, phase: &str) -> PyResult<()> {
         let p = parse_stage_phase(phase).map_err(PyValueError::new_err)?;
-        self.inner.game.current_phase = p;
+        self.inner.game.set_current_phase(p);
         Ok(())
     }
 

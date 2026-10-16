@@ -422,7 +422,7 @@ fn step_or_finish(game: &mut crate::game::Game, state: ZoneCardPickState) {
             },
         )
     };
-    game.current_phase = phase;
+    game.set_current_phase(phase);
     game.pending_selection = Some(PendingSelection {
         zone_owner: state.zone_owner,
         kind,

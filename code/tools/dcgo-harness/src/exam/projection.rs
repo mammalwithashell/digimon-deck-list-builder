@@ -225,7 +225,16 @@ impl SeatProjection {
 pub struct StateProjection {
     pub step: u32,
     pub turn: u64,
+    /// The **turn** phase. On our side that is `Game::turn_phase()`: while a
+    /// selection is open it is still the phase the selection interrupted
+    /// (`Breeding`, `Main`, ...), never the prompt kind.
     pub phase: String,
+    /// The open selection's prompt kind -- our engine's selection pseudo-phase,
+    /// e.g. `SelectPermutation` -- when one is open, else `None`. DCGO rows
+    /// never carry it: DCGO's `TurnPhase` has no such state. The differ reads
+    /// it to leave `phase` uncompared at those steps (`phase_is_compared`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selection: Option<String>,
     /// Memory **from player 0's perspective**: positive favors p0.
     ///
     /// Our engine stores the seesaw relative to `memory_pair.0`, which flips
@@ -262,7 +271,11 @@ impl StateProjection {
         StateProjection {
             step,
             turn: u64::from(game.turn_count),
-            phase: game.current_phase.py_name().to_string(),
+            phase: game.turn_phase().py_name().to_string(),
+            selection: game
+                .current_phase
+                .is_selection_phase()
+                .then(|| game.current_phase.py_name().to_string()),
             memory: i64::from(memory_from_recording_perspective(
                 game.memory,
                 game.memory_pair.0,
@@ -729,7 +742,8 @@ mod tests {
         let p = StateProjection::from_game(&game, 0);
         assert_eq!(p.step, 0);
         assert_eq!(p.turn, u64::from(game.turn_count));
-        assert_eq!(p.phase, game.current_phase.py_name());
+        assert_eq!(p.phase, game.turn_phase().py_name());
+        assert_eq!(p.selection, None, "no selection is open at the opening position");
         assert_eq!(p.p0.security, game.player(0).security.len());
         assert_eq!(p.p0.hand.len(), game.player(0).hand.len());
         assert!(!p.p0.hand.is_empty(), "an opening hand should be dealt");

@@ -182,6 +182,7 @@ impl Game {
             n_digivolve_driven_attacks: [0u32, 0u32],
             digimon_attacks_this_turn: [0u32, 0u32],
             current_phase: GamePhase::Mulligan,
+            last_turn_phase: GamePhase::Mulligan,
             memory: 0,
             memory_pair,
             turn_order,
@@ -346,7 +347,7 @@ impl Game {
         self.n_dna_digivolutions = [0u32, 0u32];
         self.n_digivolve_driven_attacks = [0u32, 0u32];
         self.digimon_attacks_this_turn = [0u32, 0u32];
-        self.current_phase = GamePhase::Mulligan;
+        self.set_current_phase(GamePhase::Mulligan);
         self.memory = 0;
         let turn_order: Vec<PlayerId> = (0..self.rules.player_count).collect();
         self.memory_pair = if turn_order.len() >= 2 {

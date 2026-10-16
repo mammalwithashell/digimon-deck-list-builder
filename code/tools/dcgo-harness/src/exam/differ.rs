@@ -257,7 +257,10 @@ impl fmt::Display for DiffReport {
 /// `downstream`, and always reports the full denominator.
 /// True for our engine's selection-interlude phases -- phases DCGO does not
 /// represent at all (its TurnPhase stays on the interrupted phase while a
-/// selection UI is open).
+/// selection UI is open). Our projection now reports an open selection in
+/// `selection` and keeps the turn phase in `phase`, so on a current row this
+/// catches the combat-interrupt windows (which ARE our turn phase while open)
+/// and `SelectPlayOrder`; a `Select*` `phase` survives only in older traces.
 fn is_selection_phase(phase: &str) -> bool {
     // Combat-interrupt windows are the same representation class: DCGO's
     // TurnPhase stays on the interrupted phase while its block/counter/
@@ -295,12 +298,19 @@ fn is_equivalent_phase_pair(ours: &str, dcgo: &str) -> bool {
     ours == "EndOfTurnAction" && dcgo == "Main"
 }
 
-/// Whether the differ compares `phase` for this pair of rows -- false for our
-/// selection-interlude phases ([`is_selection_phase`]) and the one equivalent
-/// spelling pair ([`is_equivalent_phase_pair`]). Backfill uses it to leave out a
-/// phase the oracle never confirmed.
-pub fn phase_is_compared(ours: &str, dcgo: &str) -> bool {
-    !is_selection_phase(ours) && !is_equivalent_phase_pair(ours, dcgo)
+/// Whether the differ compares `phase` for this pair of rows -- false when our
+/// side has a selection open (`selection`), for our selection-interlude phases
+/// ([`is_selection_phase`]) and for the one equivalent spelling pair
+/// ([`is_equivalent_phase_pair`]). Backfill uses it to leave out a phase the
+/// oracle never confirmed.
+///
+/// The `selection` arm keeps the comparison exactly where it was before our
+/// `phase` became the turn phase: every step it skips used to read `Select*`
+/// there.
+pub fn phase_is_compared(ours: &StateProjection, dcgo: &StateProjection) -> bool {
+    ours.selection.is_none()
+        && !is_selection_phase(&ours.phase)
+        && !is_equivalent_phase_pair(&ours.phase, &dcgo.phase)
 }
 
 pub fn diff(ours: &[StateProjection], dcgo: &[StateProjection]) -> DiffReport {
@@ -406,11 +416,13 @@ fn diff_projection(ours: &StateProjection, dcgo: &StateProjection) -> Vec<FieldD
     // phase the selection interrupted ("Main", "Attack"...). Which engine
     // parks a phase marker is REPRESENTATION; whether the selection resolved
     // to the same board state is the semantics, and every other field still
-    // compares. So a Select*/EffectChoice phase on our side never diffs
-    // against DCGO's phase -- observed live on the ST1-15 gate: step 12 read
+    // compares. So a step with a selection open on our side never diffs
+    // `phase` against DCGO's -- observed live on the ST1-15 gate: step 12 read
     // `phase: ours=SelectBudgeted dcgo=Main` with every state field equal,
-    // turning a CLEAN selection round-trip into a false divergence.
-    if phase_is_compared(&ours.phase, &dcgo.phase) {
+    // turning a CLEAN selection round-trip into a false divergence. (Our row
+    // now carries the turn phase there and names the prompt in `selection`;
+    // the skip is unchanged.)
+    if phase_is_compared(ours, dcgo) {
         push_ne(&mut diffs, "phase", ours.phase.as_str(), dcgo.phase.as_str());
     }
     push_ne(&mut diffs, "memory", &ours.memory, &dcgo.memory);
@@ -547,6 +559,25 @@ mod tests {
         // state fields equal -> must be CLEAN.
         let ours = StateProjection::from_sidecar_line(
             r#"{"step":0,"turn":1,"phase":"SelectBudgeted","memory":0,
+                "p0":{"security":5,"hand":[],"trash":[],"field":[]},
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+        let dcgo = StateProjection::from_sidecar_line(
+            r#"{"step":0,"turn":1,"phase":"Main","memory":0,
+                "p0":{"security":5,"hand":[],"trash":[],"field":[]},
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+        let r = diff(&[ours], &[dcgo]);
+        assert!(r.is_clean(), "{:?}", r.divergences);
+    }
+
+    #[test]
+    fn an_open_selection_leaves_phase_uncompared_whatever_turn_phase_ours_reports() {
+        // Our row now projects the turn phase the selection interrupted and
+        // names the selection separately. `phase` is still skipped exactly
+        // where it was when it read `SelectBudgeted`: which label each engine
+        // parks during a selection is representation, and comparing it now
+        // would change every DCGO sidecar comparison on record.
+        let ours = StateProjection::from_sidecar_line(
+            r#"{"step":0,"turn":1,"phase":"Breeding","selection":"SelectBudgeted","memory":0,
                 "p0":{"security":5,"hand":[],"trash":[],"field":[]},
                 "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
         let dcgo = StateProjection::from_sidecar_line(

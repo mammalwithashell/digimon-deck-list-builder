@@ -33,11 +33,38 @@ impl Game {
     /// EffectChoice, …), which set `current_phase` directly and are not
     /// turn-phase changes. `player` is the current turn player.
     fn set_turn_phase(&mut self, phase: GamePhase) {
-        self.current_phase = phase;
+        self.set_current_phase(phase);
         let seq = self.next_event_seq();
         let player = self.turn_player();
         self.events
             .push(crate::events::GameEvent::PhaseChange { seq, player, phase });
+    }
+
+    /// The phase the turn is in, which an open selection does not hide:
+    /// `current_phase` unless that is a selection phase
+    /// ([`GamePhase::is_selection_phase`]), else the phase the selection
+    /// interrupted. An effect triggered by a breeding-area move resolves "during
+    /// the breeding phase" (Q2669, BT16-082), so its prompts report `Breeding`
+    /// here while `current_phase` reads `SelectReveal`. Combat timings
+    /// (`BlockTiming`, …) are not selection phases and report themselves.
+    pub fn turn_phase(&self) -> GamePhase {
+        if self.current_phase.is_selection_phase() {
+            self.last_turn_phase
+        } else {
+            self.current_phase
+        }
+    }
+
+    /// Set `current_phase`, recording a non-selection phase as the turn phase
+    /// [`Game::turn_phase`] reports. Every write of a non-selection phase goes
+    /// through here (a lint test enforces it inside this crate); a selection
+    /// phase may still be written directly, since it must leave the record
+    /// alone.
+    pub fn set_current_phase(&mut self, phase: GamePhase) {
+        if !phase.is_selection_phase() {
+            self.last_turn_phase = phase;
+        }
+        self.current_phase = phase; // turn-phase-record: the one raw write
     }
 
     /// Begin a new turn for the current turn player.
@@ -417,7 +444,7 @@ impl Game {
         // checked here (Python doesn't either): it's enforced at the
         // Main-phase mask (§4.7d) before the turn reaches `end_turn`.
         if self.has_end_of_turn_keywords(ending_player) {
-            self.current_phase = GamePhase::EndOfTurnAction;
+            self.set_current_phase(GamePhase::EndOfTurnAction);
             return;
         }
 
@@ -1550,5 +1577,212 @@ impl Game {
             }
         }
         None
+    }
+}
+
+#[cfg(test)]
+mod turn_phase_tests {
+    //! `Game::turn_phase` — the turn phase a selection interrupts stays
+    //! observable while the selection is open. Q2669 (BT16-082): an effect
+    //! triggered in the breeding phase "activates during the breeding phase",
+    //! and its prompts are answered there, not in some "SelectReveal" phase.
+
+    use crate::action::space::PASS;
+    use crate::card_data::CardData;
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    use crate::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword};
+
+    fn digimon(id: &str, level: u8, dp: i32) -> CardData {
+        let mut card = make_test_card(id, id);
+        card.card_kind = CardKind::Digimon;
+        card.level = Some(level);
+        card.dp = Some(dp);
+        card.play_cost = 3;
+        card.colors = vec![CardColor::Red];
+        card
+    }
+
+    #[test]
+    fn a_selection_opened_in_the_breeding_phase_reports_breeding() {
+        // BT16-082 Ukkomon: "[Your Turn] When any of your Digimon move from
+        // the breeding area to the battle area, reveal the top 3 cards ..."
+        let mut r = DebugRunner::builder()
+            .dsl_card("BT16-082")
+            .expect("BT16-082 compiles")
+            .add_card(digimon("MOVER", 3, 2000))
+            .add_card(digimon("FILL", 3, 2000))
+            .deck(0, &["FILL"; 8])
+            .deck(1, &["FILL"; 8])
+            .start();
+        r.place_on_field(0, "BT16-082", Some(0));
+        r.place_in_breeding(0, "MOVER");
+
+        // Reach p0's breeding phase through the real turn machine: it parks
+        // there on the movable Lv.3.
+        r.end_turn();
+        r.end_turn();
+        assert_eq!(
+            (r.turn_player(), r.current_phase()),
+            (0, GamePhase::Breeding)
+        );
+
+        assert!(r.move_from_breeding(0), "MOVER leaves the breeding area");
+        assert!(
+            r.game.pending_selection.is_some(),
+            "Ukkomon's reveal pick is open"
+        );
+        assert!(
+            r.current_phase().is_selection_phase(),
+            "{:?}",
+            r.current_phase()
+        );
+        assert_eq!(r.game.turn_phase(), GamePhase::Breeding);
+    }
+
+    #[test]
+    fn a_closed_combat_window_does_not_stand_in_for_a_later_turn_phase() {
+        let mut r = DebugRunner::builder()
+            .add_card(digimon("ATK", 5, 5000))
+            .add_card(digimon("DEF", 5, 3000))
+            .add_card(digimon("BLK", 5, 9000))
+            .add_card(make_test_card("TEST-012", "ChoicePilot"))
+            .hand(0, &["TEST-012"])
+            .memory(5)
+            .start();
+        let atk = r.place_on_field(0, "ATK", Some(0));
+        let def = r.place_on_field(1, "DEF", Some(0));
+        let blk = r.place_on_field(1, "BLK", Some(0));
+        r.game
+            .modifiers
+            .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+
+        // The block window is a combat timing, not a selection phase, so it
+        // is itself the turn phase while it is open.
+        r.attack_digimon(atk, def, false);
+        assert_eq!(r.current_phase(), GamePhase::BlockTiming);
+        assert_eq!(r.game.turn_phase(), GamePhase::BlockTiming);
+        r.game
+            .resolve_selection(1, PASS)
+            .expect("decline the block");
+        assert_eq!(r.current_phase(), GamePhase::Main);
+
+        // TEST-012's [On Play] branch pick opens in Main, after the window
+        // closed: the turn phase is Main, not the stale BlockTiming.
+        r.play(0, 0);
+        assert_eq!(r.current_phase(), GamePhase::EffectChoice);
+        assert_eq!(r.game.turn_phase(), GamePhase::Main);
+    }
+
+    /// Every `GamePhase`. A write naming a variant missing here fails the lint
+    /// below until it is added.
+    const ALL_PHASES: &[GamePhase] = &[
+        GamePhase::Mulligan,
+        GamePhase::Unsuspend,
+        GamePhase::Draw,
+        GamePhase::Breeding,
+        GamePhase::Main,
+        GamePhase::EndTurn,
+        GamePhase::SelectTarget,
+        GamePhase::SelectMaterial,
+        GamePhase::SelectTrash,
+        GamePhase::SelectSource,
+        GamePhase::SelectHand,
+        GamePhase::SelectReveal,
+        GamePhase::SelectSecurity,
+        GamePhase::EffectChoice,
+        GamePhase::BlockTiming,
+        GamePhase::CounterTiming,
+        GamePhase::AllianceTiming,
+        GamePhase::EndOfTurnAction,
+        GamePhase::GameOver,
+        GamePhase::SelectUnion,
+        GamePhase::SelectPermutation,
+        GamePhase::SelectBudgeted,
+        GamePhase::SelectBreedingPermanent,
+        GamePhase::SelectPlayOrder,
+    ];
+
+    fn rust_files(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        for entry in std::fs::read_dir(dir).expect("readable src dir") {
+            let path = entry.expect("dir entry").path();
+            if path.is_dir() {
+                rust_files(&path, out);
+            } else if path.extension().is_some_and(|e| e == "rs") {
+                out.push(path);
+            }
+        }
+    }
+
+    /// `current_phase` stays a plain field (the mask, tensor and serialization
+    /// read it), so nothing stops a raw write. The only raw writes allowed are
+    /// of a SELECTION phase: those leave the recorded turn phase alone, which
+    /// is the point. Any other phase written raw would leave `turn_phase()`
+    /// reporting a phase the game already left once the next selection opens;
+    /// it must go through `Game::set_current_phase`.
+    #[test]
+    fn only_selection_phases_are_written_to_current_phase_directly() {
+        let selection: Vec<String> = ALL_PHASES
+            .iter()
+            .filter(|p| p.is_selection_phase())
+            .map(|p| format!("{p:?}"))
+            .collect();
+        let known: Vec<String> = ALL_PHASES.iter().map(|p| format!("{p:?}")).collect();
+
+        let mut files = Vec::new();
+        rust_files(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+            &mut files,
+        );
+        let mut offenders = Vec::new();
+        for path in &files {
+            let text = std::fs::read_to_string(path).expect("readable source file");
+            let lines: Vec<&str> = text.lines().collect();
+            for (n, raw) in lines.iter().enumerate() {
+                if raw.contains("turn-phase-record:") {
+                    continue; // the helper's own write
+                }
+                // A write is a field access (`self.`, `game.`, `self.game.`).
+                const WRITE: &str = ".current_phase =";
+                let code = raw.split("//").next().unwrap_or("");
+                let Some(at) = code.find(WRITE) else {
+                    continue;
+                };
+                // Inside a string literal (this test's own patterns), or a
+                // comparison rather than a write.
+                if code[..at].matches('"').count() % 2 == 1
+                    || code[at..].starts_with(".current_phase ==")
+                {
+                    continue;
+                }
+                let mut rhs = code[at + WRITE.len()..].trim().to_string();
+                if rhs.is_empty() {
+                    rhs = lines
+                        .get(n + 1)
+                        .map(|l| l.trim().to_string())
+                        .unwrap_or_default();
+                }
+                let rhs = rhs.trim_end_matches(';').trim();
+                let variant = rhs.rsplit_once("GamePhase::").map(|(_, v)| v);
+                let ok = match variant {
+                    Some(v) if !known.iter().any(|k| k == v) => {
+                        panic!(
+                            "{}:{}: unknown GamePhase `{v}` -- add it to ALL_PHASES",
+                            path.display(),
+                            n + 1
+                        )
+                    }
+                    Some(v) => selection.iter().any(|s| s == v),
+                    None => false,
+                };
+                if !ok {
+                    offenders.push(format!("{}:{}: {}", path.display(), n + 1, raw.trim()));
+                }
+            }
+        }
+        assert!(
+            offenders.is_empty(),
+            "write these through Game::set_current_phase:\n{}",
+            offenders.join("\n")
+        );
     }
 }

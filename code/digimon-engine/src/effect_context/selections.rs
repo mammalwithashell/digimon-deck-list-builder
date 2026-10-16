@@ -2117,7 +2117,7 @@ impl<'a> EffectContext<'a> {
             Box::new(callback);
 
         let previous_phase = self.game.current_phase;
-        self.game.current_phase = phase;
+        self.game.set_current_phase(phase);
         self.game.pending_selection = Some(PendingSelection {
             zone_owner: None,
             kind,

@@ -553,7 +553,7 @@ impl ReplayRunner {
 
         self.game.turn_count = 1;
         self.game.memory = 0;
-        self.game.current_phase = GamePhase::Unsuspend;
+        self.game.set_current_phase(GamePhase::Unsuspend);
 
         // Fire start-of-turn triggers etc. v1 limitation: if begin_turn
         // installs a pending selection, the replayed action stream may
@@ -942,7 +942,7 @@ impl RecordingSource for NativeAdapter {
         };
         game.turn_count = 1;
         game.memory = 0;
-        game.current_phase = GamePhase::Unsuspend;
+        game.set_current_phase(GamePhase::Unsuspend);
         game.begin_turn();
         Ok(())
     }
@@ -1351,7 +1351,7 @@ fn apply_dcgo_initial_state(
     };
     game.turn_count = 1;
     game.memory = 0;
-    game.current_phase = GamePhase::Unsuspend;
+    game.set_current_phase(GamePhase::Unsuspend);
     game.begin_turn();
     Ok(())
 }
