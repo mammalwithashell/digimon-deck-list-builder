@@ -1,0 +1,46 @@
+# OD_RETURN_KIMERA_MACHINE_PLAY_MILLENNIUM -- Digimon, Lv.5, red, 5000 DP,
+# play cost 5, named [Millenniummon].
+# The §15-7-3 example text:
+#   [On Deletion] By returning 1 [Kimeramon] and 1 [Machinedramon] from your
+#   trash to the bottom of the deck, you may play 1 [Millenniummon] from your
+#   trash without paying the cost.
+# Authored with the production idiom of BT18-019 (the same printed text): two
+# sequential trash picks, the first optional with `cost: true`, each followed
+# by its return; then the optional free play. Payability of the compound
+# condition is not hand-authored (see WA_TRASH_SEC_MINUS5000).
+card: OD_RETURN_KIMERA_MACHINE_PLAY_MILLENNIUM
+name: Millenniummon
+kind: digimon
+level: 5
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - when: on_deletion
+    optional: true
+    summary: "[On Deletion] By returning 1 [Kimeramon] and 1 [Machinedramon] from your trash to the bottom of the deck, you may play 1 [Millenniummon] from your trash without paying the cost."
+    process:
+      - select_trash:
+          of: you
+          bind_as: kim
+          optional: true
+          cost: true
+          filter: { name_is: "Kimeramon" }
+          prompt: "Return 1 [Kimeramon] from your trash to the bottom of the deck"
+      - return_trash_list_to_deck_bottom: { of: you, cards: kim }
+      - select_trash:
+          of: you
+          bind_as: mach
+          filter: { name_is: "Machinedramon" }
+          prompt: "Return 1 [Machinedramon] from your trash to the bottom of the deck"
+      - return_trash_list_to_deck_bottom: { of: you, cards: mach }
+      - select_trash:
+          of: you
+          bind_as: millen
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "Millenniummon"
+          prompt: "You may play 1 [Millenniummon] from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: millen }

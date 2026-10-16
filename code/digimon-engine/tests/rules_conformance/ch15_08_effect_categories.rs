@@ -24,9 +24,7 @@
 use crate::fixtures;
 use crate::support::*;
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::{
-    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
-};
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::parse_printed_keywords;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{GamePhase, Keyword};
@@ -626,9 +624,7 @@ fn activation_type_declarable_only_when_optional_condition_payable() {
     if r.current_phase() != GamePhase::Main {
         r.game.enter_main_phase();
     }
-    let action = FIELD_EFFECT_START
-        + train.index as u16 * EFFECTS_PER_PERMANENT
-        + FIELD_EFFECT_SLOT_FOR_MAIN;
+    let action = field_main_action(train);
 
     set_suspended(&mut r, train, true);
     assert_eq!(

@@ -5,7 +5,10 @@
 //! Infrastructure, not a chapter: it holds no `#[test]`, is excluded from
 //! `meta::CHAPTER_SOURCES`, and is counted in `meta::INFRA_FILES`.
 
-use digimon_engine::action::space::{ATTACK_START, PLAY_HAND_START};
+use digimon_engine::action::space::{
+    ATTACK_START, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
+    PLAY_HAND_START,
+};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::PlayerId;
@@ -257,4 +260,10 @@ pub fn set_suspended(r: &mut DebugRunner, h: PermanentHandle, suspended: bool) {
 
 pub fn is_suspended(r: &DebugRunner, h: PermanentHandle) -> bool {
     r.game.players[h.player as usize].battle_area[h.index as usize].is_suspended
+}
+
+/// Action id that declares the [Main] activated effect of the battle-area
+/// permanent `h` (its `FIELD_EFFECT` slot for [Main]).
+pub fn field_main_action(h: PermanentHandle) -> u16 {
+    FIELD_EFFECT_START + h.index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN
 }

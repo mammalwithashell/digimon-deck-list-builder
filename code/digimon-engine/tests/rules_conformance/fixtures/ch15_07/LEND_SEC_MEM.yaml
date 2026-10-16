@@ -1,0 +1,20 @@
+# LEND_SEC_MEM -- Digimon, Lv.3, red, 3000 DP, play cost 3. Trait [Lender].
+#   [On Play] By trashing your top security card, gain 1 memory.
+# A borrowed effect of the §15-15-7-4 test: its "by" clause is an optional
+# processing condition (§15-7-1) whose first step is not itself a declinable
+# pick, so its decision is the clause-level optional prompt.
+card: LEND_SEC_MEM
+name: Lendmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+traits: [Lender]
+effects:
+  - when: on_play
+    optional: true
+    summary: "[On Play] By trashing your top security card, gain 1 memory."
+    process:
+      - trash_top_security: { of: you }
+      - gain_memory: 1

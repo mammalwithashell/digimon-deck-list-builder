@@ -127,9 +127,11 @@
   tests: ["ch15_08_effect_categories::removal_trigger_processing_condition_uses_trigger_state"]
   note: "The rule's example text: deleted with a digivolution card it may play itself from the trash; deleted alone it can't."
 "15-8-4-4-1":
-  status: proven
-  tests: ["ch15_08_effect_categories::activation_type_declarable_only_when_optional_condition_payable"]
-  note: "Printed <Training> (parsed from the printed text; the DSL grant_keyword: Training clause is declaration-only by design): not in the action mask while suspended; declared while unsuspended, it suspends with no skip prompt and places the deck top face down."
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED
+  tests: ["ch15_08_effect_categories::activation_type_declarable_only_when_optional_condition_payable", "ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen"]
+  note: "Printed <Training> (parsed from the printed text; the DSL grant_keyword: Training clause is declaration-only by design) is correct and its test passes: not in the action mask while suspended; declared while unsuspended, it suspends with no skip prompt and places the deck top face down. The general case is not: '[Main] By trashing your top security card, <Draw 1>' is in the action mask with 0 security cards and declaring it draws for free (ch15_07 test, #[ignore]d). Only self-cost activation_cost kinds and <Digi-Burst> gate the mask."
 "15-8-5-2":
   status: proven
   tests: ["ch15_08_effect_categories::immediate_effect_interrupts_before_cause"]
@@ -145,3 +147,39 @@
   status: proven
   tests: ["ch15_08_effect_categories::immediate_effect_with_condition_met_later_can_activate"]
   note: "Two would-be-deleted effects on one card: 'if you have 4 or more security cards, it isn't deleted' (unmet at 3) and '<Recovery +1 (Deck)>'; after the recovery the first activates. Control: empty deck, Digimon deleted."
+
+# ── ch15-07 Optional Processing Conditions (§15-7, §15-1-2, §15-15-7-4) — tests/rules_conformance/ch15_07_optional_conditions.rs ──
+"15-7-1":
+  status: proven
+  tests: ["ch15_07_optional_conditions::optional_condition_is_a_choice_then_mandatory_payload"]
+  note: "The rule's example '[On Deletion] By trashing 1 card in the hand, gain 1 memory': an optional hand pick (PASS legal); picking trashes the card and the memory gain follows with no second prompt; declining performs nothing."
+"15-7-2":
+  status: proven
+  tests: ["ch15_07_optional_conditions::declining_condition_skips_everything_after_it"]
+  note: "The rule's example (trash 2 → unsuspend; After, if [WereGarurumon] in sources, may return a [Garurumon]): declining leaves the Digimon suspended and never offers the 'After' return; control: trashing 2 unsuspends and the return is offered and performed."
+"15-7-3":
+  status: gap
+  blocks_training: false
+  gap_id: G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK
+  tests: ["ch15_07_optional_conditions::partial_payment_of_compound_condition_is_impossible"]
+  note: "DSL vocabulary gap (controller ruling, task 9 review): the rule's example in BT18-019's production idiom authors the compound condition as two independent picks, so with only [Kimeramon] in the trash it is returned alone and the [Millenniummon] play is still offered; the engine has no way to know the second pick belongs to the condition. BT18-019 is affected (qa/dsl-vocab-gaps.md). Control (both present) passes. Test is #[ignore]d."
+"15-7-4":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED
+  tests: ["ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen"]
+  note: "Ver. 4.3 REVERSED 3.6 (3.6: the player could choose an unpayable condition; 4.3: can't). Owner ruling 2026-10-10 #6. The rule's example with 0 security cards: the engine parks the optional prompt, and accepting trashes nothing yet applies the -5000 DP. [Main] mirror: '[Main] By trashing your top security card, <Draw 1>' is in the action mask at 0 security. Production cards avoid it only by hand-authoring a payability condition per card. Test is #[ignore]d."
+"15-7-5":
+  status: proven
+  tests: ["ch15_07_optional_conditions::payable_condition_offered_even_when_payload_has_no_target"]
+  note: "The rule's example: opponent has no Digimon; the decision is still offered, accepting trashes the top security card and nothing else is asked; the attack then proceeds to the security check."
+"15-1-2":
+  status: proven
+  tests: ["ch15_07_optional_conditions::optional_condition_decided_before_processing_effect"]
+  note: "Ver. 4.3 wording. '[When Attacking] By trashing your top security card, 1 of your opponent's Digimon gets -5000 DP' with two candidate targets: the first prompt is the optional yes/no (security untouched); the OppField target pick comes after it, with the security card already trashed."
+"15-15-7-4":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION
+  tests: ["ch15_07_optional_conditions::mandatory_invoker_does_not_force_invoked_optional_condition"]
+  note: "Ver. 4.3 rewrite. The DSL expresses borrowing (refire_card_effect, BT15-102 idiom). A mandatory '[When Attacking] Place 1 [Lender] card from your trash under this Digimon; activate 1 of its [On Play] effects as an effect of this Digimon' runs a borrowed 'By trashing your top security card, gain 1 memory' with no decision (security trashed, memory gained); a borrowed hand-pick condition keeps its PASS. Test is #[ignore]d."

@@ -1,0 +1,9 @@
+# KIMERAMON -- Digimon, Lv.5, red, 7000 DP, play cost 7. No text.
+# A card named [Kimeramon] for the §15-7-3 example's compound condition.
+card: KIMERAMON
+name: Kimeramon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000

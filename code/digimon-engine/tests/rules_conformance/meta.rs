@@ -16,6 +16,10 @@ const CHAPTER_SOURCES: &[(&str, &str)] = &[
         include_str!("ch15_04_effect_states.rs"),
     ),
     (
+        "ch15_07_optional_conditions.rs",
+        include_str!("ch15_07_optional_conditions.rs"),
+    ),
+    (
         "ch15_08_effect_categories.rs",
         include_str!("ch15_08_effect_categories.rs"),
     ),

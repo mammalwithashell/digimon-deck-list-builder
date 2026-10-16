@@ -19,6 +19,7 @@ use digimon_engine::debug_runner::{DebugRunner, DebugRunnerBuilder};
 
 /// Cards shared by several chapters.
 const COMMON: &[&str] = &[
+    include_str!("common/LV5_PLAIN.yaml"),
     include_str!("common/OD_MEM.yaml"),
     include_str!("common/OPP_WA_OBS.yaml"),
     include_str!("common/OP_PLAY_LV3.yaml"),
@@ -46,6 +47,23 @@ const CH15_04: &[&str] = &[
     include_str!("ch15_04/WOULD_DEL_STRIKE.yaml"),
 ];
 
+/// §15-7 "Optional Processing Conditions" chapter cards
+/// (`ch15_07_optional_conditions.rs`).
+const CH15_07: &[&str] = &[
+    include_str!("ch15_07/GARU_LV4.yaml"),
+    include_str!("ch15_07/KIMERAMON.yaml"),
+    include_str!("ch15_07/LEND_HAND_MEM.yaml"),
+    include_str!("ch15_07/LEND_SEC_MEM.yaml"),
+    include_str!("ch15_07/MACHINEDRAMON.yaml"),
+    include_str!("ch15_07/MAIN_TRASH_SEC_DRAW.yaml"),
+    include_str!("ch15_07/OD_RETURN_KIMERA_MACHINE_PLAY_MILLENNIUM.yaml"),
+    include_str!("ch15_07/OD_TRASH_HAND_MEM.yaml"),
+    include_str!("ch15_07/WA_BORROW_OP.yaml"),
+    include_str!("ch15_07/WA_TRASH_SEC_MINUS5000.yaml"),
+    include_str!("ch15_07/WD_TRASH2_UNSUSPEND_THEN.yaml"),
+    include_str!("ch15_07/WEREGARU_LV5.yaml"),
+];
+
 /// §15-8 "Effect Categories" chapter cards (`ch15_08_effect_categories.rs`).
 const CH15_08: &[&str] = &[
     include_str!("ch15_08/EOT_MEM.yaml"),
@@ -54,7 +72,6 @@ const CH15_08: &[&str] = &[
     include_str!("ch15_08/IMM_TWO_MAY.yaml"),
     include_str!("ch15_08/INH_OD_MEM.yaml"),
     include_str!("ch15_08/LV4_PLAIN.yaml"),
-    include_str!("ch15_08/LV5_PLAIN.yaml"),
     include_str!("ch15_08/MAIN_DEL1.yaml"),
     include_str!("ch15_08/MAIN_DEL2.yaml"),
     include_str!("ch15_08/MAIN_DEL_ALL.yaml"),
@@ -86,6 +103,11 @@ pub fn common_cards() -> &'static [&'static str] {
 /// Every `ch15_04/` card's YAML source.
 pub fn ch15_04_cards() -> &'static [&'static str] {
     CH15_04
+}
+
+/// Every `ch15_07/` card's YAML source.
+pub fn ch15_07_cards() -> &'static [&'static str] {
+    CH15_07
 }
 
 /// Every `ch15_08/` card's YAML source.
@@ -128,6 +150,7 @@ fn every_fixture_file_is_listed() {
     for (dir, listed) in [
         ("common", COMMON.len()),
         ("ch15_04", CH15_04.len()),
+        ("ch15_07", CH15_07.len()),
         ("ch15_08", CH15_08.len()),
     ] {
         let on_disk = std::fs::read_dir(format!("{root}/{dir}"))

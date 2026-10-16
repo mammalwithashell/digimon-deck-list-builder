@@ -1907,9 +1907,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Ver. 4.3 wording. '[When Attacking] By trashing your top security card, 1 of your opponent's Digimon gets -5000 DP' with two candidate targets: the first prompt is the optional yes/no (security untouched); the OppField target pick comes after it, with the security card already trashed.",
+      "status": "proven",
+      "tests": [
+        "ch15_07_optional_conditions::optional_condition_decided_before_processing_effect"
+      ],
       "text": "A single effect is processed in the order shown in the text on the card. However, if that single effect has optional processing conditions that affect it, decide whether or not to perform them before processing the effect."
     },
     "15-1-3": {
@@ -3265,16 +3267,18 @@
       "text": "If an effect that activates another effect has text such as \"activate as this card's effect,\" the card that activated this effect will be considered to have activated the effect."
     },
     "15-15-7-4": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 15,
       "fingerprint": "dfbb74f72cbbf179b325e51c074de8561efa8fba4c696d24501e848805b2752d",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "Ver. 4.3 rewrite. The DSL expresses borrowing (refire_card_effect, BT15-102 idiom). A mandatory '[When Attacking] Place 1 [Lender] card from your trash under this Digimon; activate 1 of its [On Play] effects as an effect of this Digimon' runs a borrowed 'By trashing your top security card, gain 1 memory' with no decision (security trashed, memory gained); a borrowed hand-pick condition keeps its PASS. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_07_optional_conditions::mandatory_invoker_does_not_force_invoked_optional_condition"
+      ],
       "text": "Even if the effect activating another effect is mandatory, the player can still choose whether or not to processes that other effect's optional processing conditions. (Example: When activating another effect with the effect \"[When Attacking] [Once Per Turn] Activate 1 [On Play] effect on a face-up [Zaxon] trait Digimon card in your security stack as an effect of this Digimon\" and that other effect has optional processing conditions, the player can choose whether or not to process them.)"
     },
     "15-16": {
@@ -4388,9 +4392,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example '[On Deletion] By trashing 1 card in the hand, gain 1 memory': an optional hand pick (PASS legal); picking trashes the card and the memory gain follows with no second prompt; declining performs nothing.",
+      "status": "proven",
+      "tests": [
+        "ch15_07_optional_conditions::optional_condition_is_a_choice_then_mandatory_payload"
+      ],
       "text": "If an effect has optional processing conditions, its text will show the conditions for processing the effect. If the player chooses to execute the processing for the conditions and is successful, the processing after the conditions is performed. Optional processing conditions include text such as \"by X, Y.\" (Example: If an effect reads \"[On Deletion] By trashing 1 card in the hand, gain 1 memory,\" The \"by trashing 1 card in the hand\" part is an optional processing condition."
     },
     "15-7-2": {
@@ -4401,35 +4407,41 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example (trash 2 → unsuspend; After, if [WereGarurumon] in sources, may return a [Garurumon]): declining leaves the Digimon suspended and never offers the 'After' return; control: trashing 2 unsuspends and the return is offered and performed.",
+      "status": "proven",
+      "tests": [
+        "ch15_07_optional_conditions::declining_condition_skips_everything_after_it"
+      ],
       "text": "If the content of the optional processing conditions isn't executed, the processing after the conditions can't be27 executed. (Examples: If an effect reads \"[When Digivolving] By trashing 2 cards in your hand, this Digimon unsuspends. After, if [WereGarurumon] or [X Antibody] is in this Digimon's digivolution cards, you may return 1 Digimon card with [Garurumon] or [X Antibody] in its name from your trash to the hand,\" unless the player trashes 2 cards in their hand, \"this Digimon unsuspends\" and the content after \"After\" can't be executed.)"
     },
     "15-7-3": {
       "blocks_training": false,
       "chapter": 15,
       "fingerprint": "6fec437e69b9e804b0e88f485422acc9a753dbef3820933d7774817b35686d30",
-      "gap_id": null,
+      "gap_id": "G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "DSL vocabulary gap (controller ruling, task 9 review): the rule's example in BT18-019's production idiom authors the compound condition as two independent picks, so with only [Kimeramon] in the trash it is returned alone and the [Millenniummon] play is still offered; the engine has no way to know the second pick belongs to the condition. BT18-019 is affected (qa/dsl-vocab-gaps.md). Control (both present) passes. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_07_optional_conditions::partial_payment_of_compound_condition_is_impossible"
+      ],
       "text": "It isn't possible to only perform some of the optional processing conditions. (Example: If an effect reads \"[On Deletion] By returning 1 [Kimeramon] and 1 [Machinedramon] from your trash to the bottom of the deck, you may play 1 [Millenniummon] from your trash without paying the cost,\" a player can't just return 1 [Kimeramon] or 1 [Machinedramon] to the bottom of their deck."
     },
     "15-7-4": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 15,
       "fingerprint": "210ce11e09b84d8a05b2b4861fcbff3ad5d398894a7da5879d8c869dc6446b14",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "Ver. 4.3 REVERSED 3.6 (3.6: the player could choose an unpayable condition; 4.3: can't). Owner ruling 2026-10-10 #6. The rule's example with 0 security cards: the engine parks the optional prompt, and accepting trashes nothing yet applies the -5000 DP. [Main] mirror: '[Main] By trashing your top security card, <Draw 1>' is in the action mask at 0 security. Production cards avoid it only by hand-authoring a payability condition per card. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen"
+      ],
       "text": "If executing an optional processing condition's contents isn't possible, then the player can't choose to execute them. (Example: If an effect reads \"[When Attacking] By trashing your top security card, 1 of your opponent's Digimon gets -5000 DP for the turn,\" and the player doesn't have even 1 security card, then they can't choose to execute that condition's contents.)"
     },
     "15-7-5": {
@@ -4440,9 +4452,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example: opponent has no Digimon; the decision is still offered, accepting trashes the top security card and nothing else is asked; the attack then proceeds to the security check.",
+      "status": "proven",
+      "tests": [
+        "ch15_07_optional_conditions::payable_condition_offered_even_when_payload_has_no_target"
+      ],
       "text": "A player can choose to execute the content of optional processing conditions, regardless of whether or not the content after the conditions can be executed. (Example: If an effect reads \"[When Attacking] By trashing your top security card, 1 of your opponent's Digimon gets - 5000 DP for the turn,\" a player can choose to trash their top security card even when the opponent doesn't have any Digimon in the battle area.)"
     },
     "15-8": {
@@ -4867,17 +4881,18 @@
       "text": "Activation-Type Effects With Optional Processing Conditions"
     },
     "15-8-4-4-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 15,
       "fingerprint": "0e89941fdf078b6f25cc2ef1a3b55a9599c8d919038ff4109430d7112a2fabdd",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Printed <Training> (parsed from the printed text; the DSL grant_keyword: Training clause is declaration-only by design): not in the action mask while suspended; declared while unsuspended, it suspends with no skip prompt and places the deck top face down.",
-      "status": "proven",
+      "note": "Printed <Training> (parsed from the printed text; the DSL grant_keyword: Training clause is declaration-only by design) is correct and its test passes: not in the action mask while suspended; declared while unsuspended, it suspends with no skip prompt and places the deck top face down. The general case is not: '[Main] By trashing your top security card, <Draw 1>' is in the action mask with 0 security cards and declaring it draws for free (ch15_07 test, #[ignore]d). Only self-cost activation_cost kinds and <Digi-Burst> gate the mask.",
+      "status": "gap",
       "tests": [
-        "ch15_08_effect_categories::activation_type_declarable_only_when_optional_condition_payable"
+        "ch15_08_effect_categories::activation_type_declarable_only_when_optional_condition_payable",
+        "ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen"
       ],
       "text": "If an activation-type effect has optional processing conditions, a player can only declare activation while the optional processing conditions can be performed. In addition, once declared, the optional processing conditions must be performed. (Example: Activation of <Training> can be declared if suspending is possible. Once declared, suspending must be performed.)"
     },
@@ -14662,9 +14677,9 @@
         "total": 10
       },
       "15": {
-        "gap": 156,
+        "gap": 153,
         "not_testable": 66,
-        "proven": 22,
+        "proven": 25,
         "total": 244
       },
       "16": {
@@ -14734,15 +14749,15 @@
         "total": 13
       }
     },
-    "gap": 850,
+    "gap": 847,
     "mechanics": {
-      "gap_blocking": 5,
-      "gap_nonblocking": 535,
+      "gap_blocking": 8,
+      "gap_nonblocking": 529,
       "not_testable": 152,
-      "proven": 23
+      "proven": 26
     },
     "not-testable": 246,
-    "proven": 23
+    "proven": 26
   },
   "version": 1
 }

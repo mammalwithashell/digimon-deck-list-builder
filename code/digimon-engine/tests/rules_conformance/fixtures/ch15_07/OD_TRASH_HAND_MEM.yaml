@@ -1,0 +1,27 @@
+# OD_TRASH_HAND_MEM -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+# The §15-7-1 example text:
+#   [On Deletion] By trashing 1 card in the hand, gain 1 memory.
+# "By trashing 1 card in the hand" is the optional processing condition: the
+# optional hand pick (`cost: true` -- declining aborts the rest, the BT18-013
+# idiom) is the decision; "gain 1 memory" is the processing after it.
+card: OD_TRASH_HAND_MEM
+name: Tributemon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_deletion
+    optional: true
+    summary: "[On Deletion] By trashing 1 card in the hand, gain 1 memory."
+    process:
+      - select_hand:
+          of: you
+          bind_as: paid
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "By trashing 1 card in the hand, gain 1 memory"
+      - trash_from_hand_by_index: { of: you, hand_index: paid }
+      - gain_memory: 1
