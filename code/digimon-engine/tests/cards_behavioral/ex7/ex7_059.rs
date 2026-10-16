@@ -454,7 +454,7 @@ fn ex7_059_blast_digivolve_offered_in_counter_window() {
     );
 }
 
-/// <Blast Digivolve> is a digivolution (16-25-4: "an effect that digivolves
+/// <Blast Digivolve> is a digivolution (16-26-4: "an effect that digivolves
 /// the chosen Digimon"), and the digivolution procedure draws 1 card
 /// (general_rule.pdf 8-1-3-3). DCGO's `PlayCardClass` draws for ANY
 /// digivolution (`if (isEvolution) ... new DrawClass(card.Owner, 1, null)`,

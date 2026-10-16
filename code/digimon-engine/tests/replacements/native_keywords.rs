@@ -7,7 +7,7 @@
 //! hand-authored `CardEffect` script.
 //!
 //! `Decode` is the deliberate exception (task_69f10a66 Family 2): its rule
-//! 16-35 behavior is per-card parameterized (play a matching Digimon from the
+//! 16-36 behavior is per-card parameterized (play a matching Digimon from the
 //! carrier's own digivolution cards on a non-battle leave), so no
 //! keyword-generic auto-effect exists — real Decode lives in each card's
 //! self-scoped YAML replacement clauses, and a bare `Keyword::Decode` marker
@@ -193,7 +193,7 @@ fn printed_evade_keyword_suspends_and_cancels_deletion() {
 
 /// task_69f10a66 Family 2 — printed `<Decode>` installs NO keyword-generic
 /// auto-effect. The retired legacy pair ("would be returned to deck/hand →
-/// return to hand instead") was not rule 16-35 Decode: per §16-35-1 Decode
+/// return to hand instead") was not rule 16-36 Decode: per §16-36-1 Decode
 /// triggers on the CARRIER's own non-battle leave and plays a per-card-
 /// parameterized Digimon from the carrier's digivolution cards — the
 /// parameter is unknowable at the keyword layer, so real Decode is authored
@@ -217,7 +217,7 @@ fn printed_decode_keyword_installs_no_generic_replacement() {
     assert!(ok, "return_to_deck commits with no replacement window");
     assert!(
         r.game.pending_selection.is_none(),
-        "bare Keyword::Decode must not park any replacement prompt (16-35 \
+        "bare Keyword::Decode must not park any replacement prompt (16-36 \
          Decode is per-card YAML, not a keyword-generic redirect)"
     );
     assert_eq!(r.battle_area_size(0), 0, "Digimon left the battle area");

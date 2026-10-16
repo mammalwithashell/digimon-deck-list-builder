@@ -320,7 +320,7 @@ fn bt3_096_option_user_may_trash_the_option_before_their_trigger() {
 fn bt3_096_no_order_prompt_when_the_user_has_no_pending_trigger() {
     let mut runner = base().hand(0, &[OPTION_ID]).memory(5).start();
     // No Mimi on P0's field — nothing of P0's is pending beside the trash.
-    // FILL is purple, so P0 still meets the Option's colour requirement (4-19).
+    // FILL is purple, so P0 still meets the Option's colour requirement (4-22).
     runner.place_on_field(0, "FILL", Some(0));
     assert_ne!(
         runner.game.play_option_from_hand(0, 0),

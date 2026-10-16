@@ -649,7 +649,7 @@ pub enum ResumeFrame {
         continuation: crate::dsl_cards::lower_replacement::DelayPlayFromUnionContinuation,
         outer_conts: Vec<OuterContinuation>,
     },
-    /// A turn-scheduled / event / `[Main]` `<Delay>` body whose 16-16-1
+    /// A turn-scheduled / event / `[Main]` `<Delay>` body whose 16-17-1
     /// trash-this-card cost parked a selection first. Resolve that inner
     /// selection as data, then run the body iff the carrier reached the trash.
     DelayBodyAfterCost {
@@ -1095,7 +1095,7 @@ pub enum NonDslCountCappedTerminal {
         subject: PermanentHandle,
     },
     /// Slot-enforced `<Partition (A & B)>`: ONE pick toward the printed slot
-    /// set (general_rule.pdf §16-28-5/-6 — one card per parenthetical,
+    /// set (general_rule.pdf §16-3 / §16-29-4 — one card per parenthetical,
     /// all-or-nothing). Every pick must keep a complete slot assignment
     /// reachable; the terminal chains to the next pick, or plays
     /// `picked_so_far` once one card is held for every slot. Mirrors the

@@ -62,6 +62,15 @@ KEYWORD_ID_MAP = {
     "`<Progress>`": ["Progress"],
     "`<Link +x>`": ["Link"],
     "`<Training>`": ["Training"],
+    # 4.x keywords (Comprehensive Rules Ver. 4.3 §16-42 … §16-47). Those with no
+    # engine `Keyword` variant yet still get a rules row so the matrix is the
+    # full §16 denominator; the completeness gate only checks engine -> matrix.
+    "`<Use Req.>`": ["UseReq"],
+    "`<Ascension>`": ["Ascension"],
+    "`<Engage>`": ["Engage"],
+    "`<Guard>`": ["Guard"],
+    "`<Detach (…)>`": ["Detach"],
+    "`<Succession (…)>`": ["Succession"],
 }
 
 PARAMETERIZED_KEYWORDS = {
@@ -80,55 +89,27 @@ PARAMETERIZED_KEYWORDS = {
     "Decode",
     "Fragment",
     "Link",
+    "Detach",
+    "Succession",
 }
 
+# Rows for engine `Keyword` variants that are NOT §16 keyword effects in the
+# Comprehensive Rules. Since Ver. 4.3 made <Engage>/<Guard>/<Ascension> real §16
+# rules (16-44 / 16-45 / 16-43) they come from the table above; only Arts
+# Digivolve remains an extension: the manual defines it as a DUAL-card *rule*
+# (§4-20, §2-11), not a keyword effect, but the engine models it as a Keyword.
 EXTENSION_ROWS = [
-    {
-        "keyword_id": "Engage",
-        "display": "<Engage>",
-        "kind": "optional",
-        "type_when": "End of your turn",
-        "semantics": (
-            "At the end of the controller's turn, this Digimon may attack "
-            "using normal attack legality."
-        ),
-        "rule": "engine-extension:engage",
-        "source": "engine_extension",
-    },
-    {
-        "keyword_id": "Guard",
-        "display": "<Guard>",
-        "kind": "optional_cost_then_mandatory",
-        "type_when": "Another own Digimon would leave by an opponent's effect",
-        "semantics": (
-            "By deleting this Digimon, prevent that other Digimon from "
-            "leaving the battle area."
-        ),
-        "rule": "engine-extension:guard",
-        "source": "engine_extension",
-    },
     {
         "keyword_id": "ArtsDigivolve",
         "display": "<Arts Digivolve>",
         "kind": "optional",
-        "type_when": "DUAL Option-use keyword",
+        "type_when": "DUAL card used as an Option; replaces the post-use trash (§4-20, overwrite processing per §18-1)",
         "semantics": (
-            "Optional digivolution of a used DUAL Option card onto a legal "
-            "Digimon target; modeled by the engine as a card-specific keyword."
+            "Instead of the pending-processing trash after using the DUAL card as "
+            "an Option, one of your cards on the field may digivolve into it "
+            "without paying the cost; modeled by the engine as a card-specific keyword."
         ),
-        "rule": "engine-extension:arts-digivolve",
-        "source": "engine_extension",
-    },
-    {
-        "keyword_id": "Ascension",
-        "display": "<Ascension>",
-        "kind": "optional",
-        "type_when": "On deletion",
-        "semantics": (
-            "When this Digimon is deleted, the controller may place this card "
-            "as the top security card; modeled from DCGO/card-specific text."
-        ),
-        "rule": "engine-extension:ascension",
+        "rule": "4-20",
         "source": "engine_extension",
     },
 ]

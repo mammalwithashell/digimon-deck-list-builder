@@ -469,9 +469,9 @@ fn perm_data(
 
     let linked_card_ids: Vec<&str> = perm.linked_cards.iter().map(|c| c.card_id(data)).collect();
 
-    // ── Link effects conferred by linked cards (general_rule.pdf 4-2-6) ──
+    // ── Link effects conferred by linked cards (general_rule.pdf 4-3-5) ──
     // A link card's link effect applies to this Digimon only while the card is
-    // linked; as one of the digivolution cards it confers nothing (4-7-2).
+    // linked; as one of the digivolution cards it confers nothing (4-9-2).
     let link_effects: Vec<Value> = perm
         .linked_cards
         .iter()

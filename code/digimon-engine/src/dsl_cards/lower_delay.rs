@@ -3,7 +3,7 @@
 //!
 //! Trigger mapping:
 //! - `CompiledTiming::Delayed` → `DelayTrigger::MainPhaseActivated`. This is
-//!   the standard printed `<Delay>` (RULES_CONTEXT 16-16) — a player-visible
+//!   the standard printed `<Delay>` (RULES_CONTEXT 16-17) — a player-visible
 //!   `[Main]`-phase activation action. The body never auto-fires; the
 //!   controller trashes the Option to activate it on a later main phase.
 //! - `CompiledTiming::EndOfYourTurn` → `DelayTrigger::EndOfThisTurn`.
@@ -69,7 +69,7 @@ pub fn lower_with_raw(
 ) -> Effect {
     let delay_trigger = match trigger {
         // Standard printed `<Delay>` — player-visible `[Main]`-phase
-        // activation action (PUPPETS-G009, RULES_CONTEXT 16-16).
+        // activation action (PUPPETS-G009, RULES_CONTEXT 16-17).
         CompiledTiming::Delayed => DelayTrigger::MainPhaseActivated,
         CompiledTiming::EndOfYourTurn => DelayTrigger::EndOfThisTurn,
         CompiledTiming::StartOfYourTurn => DelayTrigger::StartOfYourNextTurn,
@@ -86,7 +86,7 @@ pub fn lower_with_raw(
         // wrong: any event timing outside the list was lowered into a
         // turn-scheduled auto-fire at the end of the controller's next turn —
         // a different trigger, at a different time, with (before 2026-08-24)
-        // no §16-16-2 decline. It caught BT21-093, whose printed trigger is
+        // no §16-17-2 decline. It caught BT21-093, whose printed trigger is
         // "[All Turns] When your opponent's security stack is removed from"
         // and whose `on_opponent_security_removed` timing has existed in
         // `CompiledTiming` and `timing_map` all along, and LM-055
@@ -103,7 +103,7 @@ pub fn lower_with_raw(
     let process_arc: Arc<[CompiledStep]> = Arc::from(process_steps);
     let runtime = StepRuntime::new(raw);
     let active_when = active_when.cloned();
-    // §16-16-1: "While a card with this effect is in the battle area, BY
+    // §16-17-1: "While a card with this effect is in the battle area, BY
     // TRASHING THAT CARD, the effect specified in <Delay> will activate." The
     // trash is the processing condition (§15-7), so it is paid FIRST and the
     // body runs only if the card actually reached the trash. DCGO does the
@@ -141,7 +141,7 @@ pub fn lower_with_raw(
             let mut bindings = Bindings::new();
             let _ = run_steps_with_runtime(&process_arc, ctx, &mut bindings, &runtime);
         });
-    // Rules manual 16-16-2: "The processing from <Delay> is optional." An
+    // Rules manual 16-17-2: "The processing from <Delay> is optional." An
     // event-gated `<Delay>` (P-228 / P-229 / BT22-098 / BT23-096 / BT24-089 /
     // EX10-069) reaches its timing when the gating event is observed
     // — at that point the CONTROLLER chooses whether to activate (trash the
@@ -163,11 +163,11 @@ pub fn lower_with_raw(
     // used to be excluded on the grounds that they "fire through
     // `resolve_delayed_options_matching` (game_phases.rs), which bypasses the
     // queue's optional machinery" — a description of the bug, not a reason for
-    // it. §16-16-2 makes `<Delay>` optional however its window arrives, so the
+    // it. §16-17-2 makes `<Delay>` optional however its window arrives, so the
     // scan auto-paid the trash-this-card cost and auto-resolved the body with
     // no decline anywhere in the action space (rule 17 violation). The scan
     // now honours the outer prompt and, on a decline, leaves the Option on the
-    // field and RESCHEDULES it to its next window — §16-16-1 keeps the Delay
+    // field and RESCHEDULES it to its next window — §16-17-1 keeps the Delay
     // available "while a card with this effect is in the battle area", and
     // these are recurring printed windows ([Start of Your Turn] on LM-027/029/
     // 030/031/032, [End of Your Turn] on BT21-097), not one-shot forfeits.
@@ -269,7 +269,7 @@ fn arm_pending_delay_body_continuation(game: &mut Game, continuation: DelayBodyC
 }
 
 /// The `<Delay>` cost's parked selection resolved. Run the body only if the
-/// carrier actually reached the trash (§16-16-1: the body activates BY
+/// carrier actually reached the trash (§16-17-1: the body activates BY
 /// trashing the card; a replaced/prevented trash activates nothing).
 pub(crate) fn continue_delay_body_after_selection(
     game: &mut Game,

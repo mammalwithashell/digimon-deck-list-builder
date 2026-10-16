@@ -424,7 +424,7 @@ fn st23_15_main_plays_beatbreak_free_and_persists_in_battle_area() {
 /// real `[Start of Your Main Phase]` clause. The marker sits on
 /// `end_of_your_next_turn`, which is the window the turn scan
 /// (`resolve_delayed_options_matching`) drives — and that scan trashes a Delay
-/// carrier after running its body, because the trash is the §16-16-2 cost.
+/// carrier after running its body, because the trash is the §16-17-2 cost.
 ///
 /// Nothing on the printed card trashes e-Pulse at end of turn: its only exit is
 /// "By placing this card from the battle area face down under any of your

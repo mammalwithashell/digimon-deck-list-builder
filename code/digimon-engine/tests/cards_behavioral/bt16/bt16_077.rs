@@ -261,10 +261,10 @@ fn bt16_077_rush_pick_attacks_the_player_immediately() {
 // (the Lv.5 Dinobeemon itself, under an inherited copy) or play only ONE of
 // the two specified cards.
 //
-// general_rule.pdf §16-28-5 — "the 'specified cards' refers to the cards that
+// general_rule.pdf §16-3 — "the 'specified cards' refers to the cards that
 // meet the conditions shown in parentheses in the <Partition> icon text";
-// §16-28-6 — "1 of each of the specified cards is played ... A player can't
-// choose to only play one or some of the specified cards"; §16-28-1 — the
+// §16-29-4 — "1 of each of the specified cards is played ... A player can't
+// choose to only play one or some of the specified cards"; §16-29-1 — the
 // trigger itself needs "1 of each of the specified cards in its digivolution
 // cards". DCGO builds one filtered candidate list per `PartitionCondition`
 // (`CardEffectFactory/KeyWordEffects/Partition.cs:66-119`), refuses to
@@ -348,7 +348,7 @@ fn bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest() {
         .expect("the <Partition> source pick must surface");
     assert!(
         !pending.is_optional && !pending.valid_action_ids.contains(&PASS),
-        "§16-28-6: once <Partition> is accepted the picks are mandatory — a \
+        "§16-29-4: once <Partition> is accepted the picks are mandatory — a \
          player can't choose to play only one or some of the specified cards"
     );
     assert_eq!(
@@ -357,7 +357,7 @@ fn bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest() {
             encode_source_select(0, 0).unwrap(),
             encode_source_select(0, 2).unwrap()
         ],
-        "§16-28-5: only the purple Lv.4 and the red Lv.4 are 'specified \
+        "§16-3: only the purple Lv.4 and the red Lv.4 are 'specified \
          cards'; the green Lv.3 source is never offered"
     );
 
@@ -375,14 +375,14 @@ fn bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest() {
     assert_eq!(
         on_field,
         vec!["PURPLE-LV4".to_string(), "RED-LV4".to_string()],
-        "§16-28-6: exactly 1 of EACH specified card is played; the \
+        "§16-29-4: exactly 1 of EACH specified card is played; the \
          non-specified source is not"
     );
     let trash = trash_ids(&r, 0);
     assert!(
         trash.contains(&"BT16-077".to_string()) && trash.contains(&"GREEN-LV3".to_string()),
         "the carrier and the non-specified source still leave: <Partition> is \
-         interruptive, not preventive (§16-28-2). trash = {trash:?}"
+         interruptive, not preventive (§16-29-2). trash = {trash:?}"
     );
 }
 
@@ -440,7 +440,7 @@ fn bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set() {
             encode_source_select(0, 2).unwrap(),
             encode_source_select(0, 3).unwrap()
         ],
-        "§16-28-6 is ONE of EACH: after a purple Lv.4 is taken the other          purple can no longer fill the red parenthetical and is masked out"
+        "§16-29-4 is ONE of EACH: after a purple Lv.4 is taken the other          purple can no longer fill the red parenthetical and is masked out"
     );
 
     r.game
@@ -497,7 +497,7 @@ fn bt16_077_inherited_partition_never_plays_a_source_no_slot_admits() {
             .valid_action_ids
             .contains(&encode_source_select(0, 2).unwrap()),
         "the Lv.5 Dinobeemon source matches no parenthetical and must never \
-         be offered: it is not one of the 'specified cards' (§16-28-5)"
+         be offered: it is not one of the 'specified cards' (§16-3)"
     );
 
     r.game

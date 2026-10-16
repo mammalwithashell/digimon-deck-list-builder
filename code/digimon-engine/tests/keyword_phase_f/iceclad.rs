@@ -1,6 +1,6 @@
 //! Phase F §F2 — `Keyword::Iceclad` combat-resolution branch tests.
 //!
-//! Iceclad (RULES_CONTEXT 16-34): when a Digimon with Iceclad is in a
+//! Iceclad (RULES_CONTEXT 16-35): when a Digimon with Iceclad is in a
 //! Digimon-vs-Digimon battle, both sides compare digivolution-card stack
 //! lengths (`card_sources.len()`) instead of effective DP. Higher count
 //! wins; equal count = mutual destruction. Security-Digimon battles are

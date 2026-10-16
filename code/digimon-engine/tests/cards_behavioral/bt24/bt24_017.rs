@@ -34,7 +34,7 @@
 //!
 //! "Then, **by returning 2 cards** from their trash to the bottom of the deck,
 //! they play 2 [Petrification] Tokens" is an OPTIONAL PROCESSING CONDITION
-//! (§15-7-1 "text such as 'by X, Y'"). §15-7-4 lets the player refuse it and
+//! (§15-7-1 "text such as 'by X, Y'"). §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] lets the player refuse it and
 //! §15-7-2 then blocks everything after it (no cards returned, no tokens, no
 //! DP boost). The refusal is surfaced as a sub-clause accept/decline
 //! `select_effect_choice`, NOT as a clause-level `optional: true` — the
@@ -133,7 +133,7 @@ fn accept_return_two_cost(runner: &mut DebugRunner) {
         view.valid_action_ids.len(),
         2,
         "the \"by returning 2 cards\" condition must offer accept AND decline \
-         (§15-7-4)"
+         (§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md])"
     );
     runner
         .execute_action(view.selecting_player, view.valid_action_ids[0])
@@ -150,7 +150,7 @@ fn decline_return_two_cost(runner: &mut DebugRunner) {
         view.valid_action_ids.len(),
         2,
         "the \"by returning 2 cards\" condition must offer accept AND decline \
-         (§15-7-4)"
+         (§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md])"
     );
     runner
         .execute_action(view.selecting_player, view.valid_action_ids[1])
@@ -786,7 +786,7 @@ fn bt24_017_exactly_two_trash_pays_cost_and_fires_tail() {
 ///
 /// §15-7-1: "Optional processing conditions include text such as 'by X, Y.'" —
 /// "by returning 2 cards from their trash to the bottom of the deck, they play
-/// 2 [Petrification] Tokens" is exactly that shape. §15-7-4: "A player can
+/// 2 [Petrification] Tokens" is exactly that shape. §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can
 /// choose whether or not to execute the content of optional processing
 /// conditions." §15-7-2: when the content isn't executed, "the processing
 /// after the conditions can't be executed".

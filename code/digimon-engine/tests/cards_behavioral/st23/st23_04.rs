@@ -39,7 +39,7 @@ const CARD_ID: &str = "ST23-04";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/// A high-DP opponent Digimon (so -5000 DP never deletes it — rule 17-1-3-1).
+/// A high-DP opponent Digimon (so -5000 DP never deletes it — rule 17-1-3-1-1).
 fn opp_digimon(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Digimon;

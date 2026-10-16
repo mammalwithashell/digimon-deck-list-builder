@@ -744,7 +744,7 @@ impl Game {
         self.observe_deletion_dispatch_batch(&kill_list);
         for (handle, snapshot) in kill_list.iter().zip(snapshots.iter()) {
             let queue_start = self.effect_queue.len();
-            // 16-12: capture WHO this carrier battled now, while the attack is
+            // 16-13: capture WHO this carrier battled now, while the attack is
             // live and the carrier is still in its slot -- see
             // `TriggerContext::battle_opponent_card`.
             let battle_opponent_card = (snapshot.cause

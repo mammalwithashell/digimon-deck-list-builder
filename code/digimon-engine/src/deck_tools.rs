@@ -756,7 +756,7 @@ pub struct CardMeta {
     pub main_effect: String,
     pub inherited_effect: String,
     pub security_effect: String,
-    /// A link card's link effect (general_rule.pdf 2-3-12-6); empty otherwise.
+    /// A link card's link effect (general_rule.pdf 2-3-11-4-6); empty otherwise.
     pub link_effect: String,
 }
 

@@ -994,7 +994,7 @@ fn try_run_link_step(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
         // effects" — the card is then the one resolving from security
         // (`Game::pending_security`), not a `pending_option`. DCGO links it
         // straight out of the security stack (`Permanent.AddLinkCard` →
-        // `RemoveFromAllArea`), and §13-1-7-4 trashes a checked security
+        // `RemoveFromAllArea`), and §13-1-8-4 trashes a checked security
         // card only "unless it belongs to an area", so the link is legal.
         // G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON (BT25-100 / BT25-093).
         return try_run_link_step_from_security(ctx, *optional, filter);

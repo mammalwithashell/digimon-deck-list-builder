@@ -295,7 +295,7 @@ fn drive_on_deletion_replays_chuumon_which_retutors_sukamon(runner: &mut DebugRu
 /// (deck), opponent ST1-05 Birdramon (5000 DP).
 ///
 /// Expected mechanical outcome: on the opponent's turn Birdramon attacks;
-/// Sukamon (<Blocker>, 16-4) blocks and loses the battle 2000 vs 5000. A battle
+/// Sukamon (<Blocker>, 16-5) blocks and loses the battle 2000 vs 5000. A battle
 /// deletion is "other than by your effects", so Chuumon's inherited [All
 /// Turns][OPT] replacement is offered; its cost offers ONLY the other Sukamon
 /// (never the carrier itself). Paying it keeps the blocker on the field. The
@@ -305,7 +305,7 @@ fn drive_on_deletion_replays_chuumon_which_retutors_sukamon(runner: &mut DebugRu
 /// untouched (the attack was blocked), Birdramon survives.
 ///
 /// Sources: `data/card_bundles/EX13-027.md`, `EX13-028.md`; `general_rule.pdf`
-/// 16-4 (<Blocker>).
+/// 16-5 (<Blocker>).
 #[test]
 fn c1_blocker_wall_protected_sukamon_survives_and_sacrifice_refills_board() {
     let mut runner = start(builder().deck(0, YELLOW_CHAIN_DECK));
@@ -377,7 +377,7 @@ fn c1_blocker_wall_protected_sukamon_survives_and_sacrifice_refills_board() {
 /// Chuumon free and Chuumon re-tutors a Sukamon — the line keeps a body and
 /// gains a card even when the wall breaks.
 ///
-/// Sources: `EX13-027.md`, `EX13-028.md`; `general_rule.pdf` 16-4.
+/// Sources: `EX13-027.md`, `EX13-028.md`; `general_rule.pdf` 16-5.
 #[test]
 fn c2_lone_sukamon_is_not_protected_but_on_deletion_replays_chuumon() {
     let mut runner = start(builder().deck(0, YELLOW_CHAIN_DECK));

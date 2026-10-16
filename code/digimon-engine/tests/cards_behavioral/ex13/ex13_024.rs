@@ -261,7 +261,7 @@ fn ex13_024_zero_source_opponent_digimon_count_as_fewest() {
 #[test]
 fn ex13_024_bottom_deck_trashes_remaining_digivolution_cards_including_egg() {
     // Official EX13-024 image/observation: return the Digimon, not its stack.
-    // general_rule.pdf p8, 4-2-8: move only the top card; trash its sources.
+    // general_rule.pdf p.10, 4-7-8: move only the top card; trash its sources.
     let mut egg = named("EGG", "Egg", CardColor::Red, 2, 0);
     egg.card_kind = digimon_engine::enums::CardKind::DigiEgg;
     let mut r = builder()

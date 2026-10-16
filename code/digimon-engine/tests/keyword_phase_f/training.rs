@@ -1,6 +1,6 @@
 //! Phase F Task 6 — `Keyword::Training` auto-install behavioral tests.
 //!
-//! `<Training>` is a `[Main]` active skill (RULES_CONTEXT 16-40 / DCGO
+//! `<Training>` is a `[Main]` active skill (RULES_CONTEXT 16-41 / DCGO
 //! `Training.cs`):
 //!   - Activatable from BATTLE area OR BREEDING area.
 //!   - Cost: suspend self (must be unsuspended; gate
@@ -41,7 +41,7 @@
 //! a slot in `battle_area`. Phase F Task 6 adds a Training-only emitter and
 //! activator under field index `BREEDING_TARGET (=14)` so the action mask can
 //! surface it and the decoder can route to a dedicated activator. We restrict
-//! to Training-bearing carriers only — RULES_CONTEXT 16-40 specifies that
+//! to Training-bearing carriers only — RULES_CONTEXT 16-41 specifies that
 //! ONLY `<Training>` activates from breeding; surfacing all `MainOnField`
 //! effects from breeding would inadvertently expose Save/MaterialSave/MindLink
 //! from breeding too (which is wrong).

@@ -97,7 +97,7 @@ fn base_runner() -> DebugRunner {
 /// §15-7-1: "Optional processing conditions include text such as 'by X, Y.'" —
 /// EX10-028's "By trashing any 1 card with the [Mineral] or [Rock] trait ...,
 /// 1 of your Digimon ... gains ＜Reboot＞, ＜Blocker＞ and +3000 DP" is exactly
-/// that shape, and §15-7-4 gives the player the choice of whether to execute
+/// that shape, and §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] gives the player the choice of whether to execute
 /// it. So clause 1 installs a `SelectionKind::Replacement` accept/decline
 /// prompt BEFORE the SourceMulti cost selection. DCGO does the same:
 /// EX10_028.cs:20 ([On Play]) and :159 ([When Digivolving]) both pass
@@ -283,7 +283,7 @@ fn ex10_028_on_play_prompts_source_multi_with_mineral_source() {
 
     runner.play(0, 0).expect("play EX10-028 from hand");
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition, so the accept/decline prompt precedes the cost selection.
     // This assertion previously read `pending_kind()` straight after the play
     // and expected SourceMulti — pinning the auto-pay bug, in which the source
@@ -321,7 +321,7 @@ fn ex10_028_on_play_prompts_source_multi_with_rock_source() {
 
     runner.play(0, 0).expect("play EX10-028 from hand");
 
-    // §15-7-1/§15-7-4: accept/decline precedes the cost selection (see
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: accept/decline precedes the cost selection (see
     // `accept_optional_cost`). This assertion used to expect SourceMulti here.
     accept_optional_cost(&mut runner);
 
@@ -356,7 +356,7 @@ fn ex10_028_on_play_after_source_selection_prompts_own_field() {
 
     runner.play(0, 0).expect("play EX10-028 from hand");
 
-    // Step 0: accept the optional processing condition (§15-7-1/§15-7-4).
+    // Step 0: accept the optional processing condition (§15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]).
     accept_optional_cost(&mut runner);
 
     // Step 1: SourceMulti(1,1) — manually pick the source card at slot 0
@@ -544,7 +544,7 @@ fn ex10_028_on_play_can_buff_different_digimon_than_source_host() {
 
     runner.play(0, 0).expect("play EX10-028");
 
-    // Step 0: accept the optional processing condition (§15-7-1/§15-7-4).
+    // Step 0: accept the optional processing condition (§15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]).
     accept_optional_cost(&mut runner);
 
     // Step 1: SourceMulti(1,1) — manually pick the source from HOST-DIGI's stack.
@@ -624,7 +624,7 @@ fn ex10_028_when_digivolving_prompts_source_multi() {
     );
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: accept/decline precedes the cost selection on the
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: accept/decline precedes the cost selection on the
     // [When Digivolving] timing too — DCGO's own WhenDigivolving ActivateClass
     // (EX10_028.cs:159) likewise passes isOptional=true.
     accept_optional_cost(&mut runner);
@@ -701,7 +701,7 @@ fn ex10_028_when_digivolving_grants_all_buffs() {
 /// Negative: no Mineral/Rock source available → the cost cannot be paid, so
 /// no cost selection installs and no buffs are granted.
 ///
-/// The accept/decline prompt itself still installs: §15-7-4 gives the player
+/// The accept/decline prompt itself still installs: §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] gives the player
 /// the choice "regardless of whether or not the content of the conditions can
 /// be executed", and the lowering deliberately attaches no candidate guard to
 /// a `select_own_sources` first step (see `first_step_candidate_guard`'s NOTE
@@ -739,7 +739,7 @@ fn ex10_028_on_play_no_selection_when_no_mineral_rock_source() {
 /// Negative: source host has only a plain (non-Mineral/non-Rock) source
 /// → the filter excludes it, SourceMulti silently skips.
 ///
-/// As above, the §15-7-4 accept/decline prompt still installs (no candidate
+/// As above, the §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] accept/decline prompt still installs (no candidate
 /// guard exists for a `select_own_sources` first step); the assertion is that
 /// nothing follows the accept.
 #[test]
@@ -795,7 +795,7 @@ fn ex10_028_on_play_source_selected_but_no_buff_target_means_no_keywords() {
 
     runner.play(0, 0).expect("play EX10-028");
 
-    // Step 0: accept the optional processing condition (§15-7-1/§15-7-4).
+    // Step 0: accept the optional processing condition (§15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]).
     accept_optional_cost(&mut runner);
 
     // SourceMulti must appear — the source IS Mineral.
@@ -1134,10 +1134,10 @@ fn ex10_028_yaml_compiles_without_error() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 8 — Clause 1: the §15-7-4 decline branch
+// Section 8 — Clause 1: the §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] decline branch
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// §15-7-4: "A player can choose whether or not to execute the content of
+/// §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose whether or not to execute the content of
 /// optional processing conditions, regardless of whether or not the content of
 /// the conditions can be executed." Declining "By trashing any 1 card with the
 /// [Mineral] or [Rock] trait from your Digimon's digivolution cards" must leave

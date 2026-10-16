@@ -648,7 +648,7 @@ fn collect_candidates_inner(
                     continue;
                 }
                 // A link effect (`.linked()`) applies to the Digimon this card
-                // is linked to (general_rule.pdf 4-2-6) — `push_linked_from_perm`
+                // is linked to (general_rule.pdf 4-3-5) — `push_linked_from_perm`
                 // offers it there — never to the card's own permanent. Mirrors
                 // the top-card skip in `enqueue_from_permanent`.
                 if effect.linked {
@@ -694,7 +694,7 @@ fn collect_candidates_inner(
                 // Phase F Task 1: cause-aware candidate filter for WhenWouldBe*
                 // timings. Runs AFTER `condition`. Used by `<Scapegoat>` to drop
                 // the candidate before the outer accept dialog parks on
-                // `ReplacementCause::OwnEffect` (RULES_CONTEXT 16-31) and on the
+                // `ReplacementCause::OwnEffect` (RULES_CONTEXT 16-32) and on the
                 // no-substitute case (DCGO `HasMatchConditionPermanent`).
                 if let Some(rcond) = &effect.replacement_condition {
                     let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)

@@ -1,4 +1,4 @@
-//! Official general_rule.pdf p21, 13-1-7-3 and 14-2: security Digimon
+//! Official general_rule.pdf pp.23-24, 13-1-8-3 and 14-2: security Digimon
 //! participate in battles, but losing security Digimon are never deleted.
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;

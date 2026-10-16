@@ -1,4 +1,4 @@
-//! A field top becomes a source: rule 4-5-7 removes its permanent, not just a card.
+//! A field top becomes a source: rule 4-7-7 removes its permanent, not just a card.
 use super::*;
 use crate::game::PendingFieldTopSourceMove;
 use crate::replacement::{ReplacementCause, ReplacementOutcome, ReplacementSubject};

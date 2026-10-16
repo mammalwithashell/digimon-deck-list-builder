@@ -1179,10 +1179,10 @@ impl Game {
             // `card.Owner.Enemy.GetBattleAreaDigimons().Count >= 1` for the
             // printed "If your opponent has a Digimon, <Delay>". When that
             // printed gate is FALSE the Delay is simply not activatable this
-            // turn, and §16-16-1 makes the trash of the carrier the
+            // turn, and §16-17-1 makes the trash of the carrier the
             // ACTIVATION ("by trashing that card, the effect specified in
             // <Delay> will activate") — so an un-activated Delay must not pay
-            // it. The carrier STAYS in the battle area, where §16-16-1 keeps
+            // it. The carrier STAYS in the battle area, where §16-17-1 keeps
             // the Delay available, and its window moves to the next one.
             //
             // Before this guard the scan enqueued a body that the queue's
@@ -1251,14 +1251,14 @@ impl Game {
         }
     }
 
-    /// If the just-resolved turn-scheduled `<Delay>` at `key` had its §16-16-2
+    /// If the just-resolved turn-scheduled `<Delay>` at `key` had its §16-17-2
     /// cost DECLINED, leave the carrier alone and move its window forward.
     ///
     /// Returns `true` when the caller must NOT delete the carrier.
     ///
     /// Rescheduling is not optional politeness: the scan matches on
     /// `trash_on_turn == turn`, so an Option left at its spent turn number
-    /// would sit on the field forever, never offered again. §16-16-1 keeps the
+    /// would sit on the field forever, never offered again. §16-17-1 keeps the
     /// Delay available "while a card with this effect is in the battle area",
     /// and these are recurring printed windows ([Start of Your Turn],
     /// [End of Your Turn]), so the next window is the controller's next turn —
@@ -1276,7 +1276,7 @@ impl Game {
     /// its next printed occurrence.
     ///
     /// Shared by the two ways a scheduled window can close without the Delay
-    /// activating: the controller DECLINED its §16-16-2 cost, or the clause's
+    /// activating: the controller DECLINED its §16-17-2 cost, or the clause's
     /// printed condition was FALSE so the window never opened
     /// (DCGO `CanUseCondition`). Both leave the carrier in the battle area,
     /// and the scan matches on `trash_on_turn == turn`, so a carrier left at
@@ -1311,7 +1311,7 @@ impl Game {
     ///
     /// Returns `false` only when every `DelayEffect` clause matching this
     /// scan's `triggers` is gated by a condition that is currently false —
-    /// i.e. the window does not open, so the §16-16-1 activation (and with it
+    /// i.e. the window does not open, so the §16-17-1 activation (and with it
     /// the trash of the carrier) must not happen.
     ///
     /// Conservative in every ambiguous case (carrier gone, effects missing, no

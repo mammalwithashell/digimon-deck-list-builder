@@ -25,7 +25,7 @@ pub type ConditionFn = Arc<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 's
 /// timings, with cause/source/subject replacement context attached to the
 /// read context. Returns `true` to keep the candidate in the dispatch list,
 /// `false` to skip — used by `<Scapegoat>` to suppress the outer "may" dialog
-/// when the deletion cause is `OwnEffect` (RULES_CONTEXT 16-31) and to
+/// when the deletion cause is `OwnEffect` (RULES_CONTEXT 16-32) and to
 /// suppress the dialog when there are no substitute candidates (mirrors DCGO
 /// `CanActivateScapegoat`'s `HasMatchConditionPermanent` gate).
 ///
@@ -1133,7 +1133,7 @@ impl EffectBuilder {
     /// Evaluated in `replacement::collect_candidates` after `condition`.
     /// See `EffectReplacementConditionFn` doc for the full contract; primary
     /// use is `<Scapegoat>` suppressing the outer "may" dialog on
-    /// `ReplacementCause::OwnEffect` per RULES_CONTEXT 16-31, and on the
+    /// `ReplacementCause::OwnEffect` per RULES_CONTEXT 16-32, and on the
     /// no-substitute case mirroring DCGO `HasMatchConditionPermanent`.
     pub fn replacement_condition(
         mut self,
@@ -1540,14 +1540,14 @@ pub trait CardEffect: Send + Sync {
     fn effects(&self, card: CardHandle) -> Vec<Effect>;
 
     /// The per-slot `<Partition (A & B)>` source specs this card prints, in
-    /// printed order — general_rule.pdf §16-28-5: "the 'specified cards'
+    /// printed order — general_rule.pdf §16-3: "the 'specified cards'
     /// refers to the cards that meet the conditions shown in parentheses in
     /// the <Partition> icon text".
     ///
     /// The synthesized `Keyword::Partition` body
     /// ([`crate::cards::keyword_effects::keyword_to_auto_effect`]) consults
-    /// this at fire time so it can enforce §16-28-1 (the trigger needs 1 of
-    /// EACH specified card in the stack) and §16-28-6 (exactly 1 of each is
+    /// this at fire time so it can enforce §16-29-1 (the trigger needs 1 of
+    /// EACH specified card in the stack) and §16-29-4 (exactly 1 of each is
     /// played — "a player can't choose to only play one or some"). DCGO's
     /// analogue is `CardEffectFactory/KeyWordEffects/Partition.cs`'s
     /// `List<PartitionCondition>`, which filters the digivolution cards into

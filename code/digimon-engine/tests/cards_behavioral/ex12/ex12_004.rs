@@ -42,7 +42,7 @@ fn ex12_004_inherited_grants_execute_to_tb_carrier_on_your_turn() {
 /// §4.6 mask offers the attack and PASS declines.
 ///
 /// Rules: 16-37-2 (<Execute> is a trigger-type effect that triggers at the
-/// end of your turn) + 16-37-3 ("The processing from <Execute> is optional")
+/// end of your turn) + 16-38-3 ("The processing from <Execute> is optional")
 /// + 15-9-2-2 (the player CAN choose to execute optional processing — which
 /// requires the choice to be surfaced at all). DCGO: `EX12_004.cs` registers
 /// `ExecuteSelfEffect` at `OnEndTurn` gated on owner-turn + top-card TB;
@@ -85,7 +85,7 @@ fn ex12_004_granted_execute_fires_at_end_of_your_turn() {
     );
 
     // End the controller's turn: 16-37-2 says the trigger fires NOW, and the
-    // optional processing (16-37-3) must be the player's choice — surfaced
+    // optional processing (16-38-3) must be the player's choice — surfaced
     // here as the EndOfTurnAction park (attack via the mask, or PASS).
     runner.game.end_turn();
 
@@ -105,7 +105,7 @@ fn ex12_004_granted_execute_fires_at_end_of_your_turn() {
         runner.game.current_phase,
         GamePhase::EndOfTurnAction,
         "end_turn must park so the player can choose the Execute attack or PASS \
-         (rule 16-37-3 optional processing; no-approximations rule 17)"
+         (rule 16-38-3 optional processing; no-approximations rule 17)"
     );
 }
 
@@ -130,7 +130,7 @@ fn ex12_004_inherited_does_not_grant_execute_to_non_tb_carrier() {
 //
 // `ex12_004_granted_execute_fires_at_end_of_your_turn` (above) stops at the
 // park. Nothing downstream of it was pinned for the GRANTED path: whether the
-// widened defender condition actually reaches the mask, and whether 16-37-1's
+// widened defender condition actually reaches the mask, and whether 16-38-1's
 // "At the end of the attack, this Digimon is deleted" fires when the grant —
 // not a printed keyword — is what put the Digimon in that window.
 //
@@ -143,7 +143,7 @@ fn ex12_004_inherited_does_not_grant_execute_to_non_tb_carrier() {
 //
 // Rules: 16-37-1 (may attack at end of your turn; also allows attacking an
 // opponent's UNSUSPENDED Digimon; at the end of that attack this Digimon is
-// deleted), 16-37-3 (optional). DCGO: `CardEffectCommons/KeyWordEffects/
+// deleted), 16-38-3 (optional). DCGO: `CardEffectCommons/KeyWordEffects/
 // Execute.cs` — `ExecuteProcess` adds the `!defender.IsSuspended` defender
 // condition, runs `SelectAttackEffect`, then queues `DeleteSelfEffect` on
 // `EffectTiming.OnEndAttack`; `CardEffectFactory.ExecuteEffect` is what
@@ -178,7 +178,7 @@ fn ex12_004_granted_execute_attacks_unsuspended_then_self_deletes() {
 
     assert!(
         !runner.game.players[1].battle_area[defender.index as usize].is_suspended,
-        "precondition: the defender is UNSUSPENDED — only 16-37-1's widened \
+        "precondition: the defender is UNSUSPENDED — only 16-38-1's widened \
          target set makes it attackable at all"
     );
     assert!(
@@ -212,7 +212,7 @@ fn ex12_004_granted_execute_attacks_unsuspended_then_self_deletes() {
     assert_eq!(
         mask[bit], 1.0,
         "granted <Execute> must offer the attack bit against the UNSUSPENDED \
-         defender (16-37-1 'also allows for attacking an opponent's \
+         defender (16-38-1 'also allows for attacking an opponent's \
          unsuspended Digimon')"
     );
 
@@ -226,7 +226,7 @@ fn ex12_004_granted_execute_attacks_unsuspended_then_self_deletes() {
     assert_eq!(
         runner.game.players[0].battle_area.len(),
         0,
-        "16-37-1: at the end of THAT attack the <Execute> Digimon is deleted — \
+        "16-38-1: at the end of THAT attack the <Execute> Digimon is deleted — \
          even though it won its battle"
     );
     let trash: Vec<String> = runner.game.players[0]
@@ -245,7 +245,7 @@ fn ex12_004_granted_execute_attacks_unsuspended_then_self_deletes() {
     );
 }
 
-/// The other half of 16-37-3: this is the path 8 of the 10 exam scenarios
+/// The other half of 16-38-3: this is the path 8 of the 10 exam scenarios
 /// actually take (they DECLINE the granted gate to reach some other clause).
 /// PASS at the park must leave the carrier untouched and expire the grant's
 /// end-of-turn modifiers.

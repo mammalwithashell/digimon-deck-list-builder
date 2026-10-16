@@ -1,10 +1,10 @@
 //! Link cards in production card data (data/cards.json): a link box is not an
 //! inherited effect.
 //!
-//! general_rule.pdf 4-2-4: a Digimon gains the inherited effects of the
-//! digivolution cards under it; 4-2-6: it gains the link effects of its link
-//! card; 4-7-2: a link card isn't a stacked card; 2-3-12: link requirements,
-//! link DP and link effects are card information of their own, and 2-3-4-2:
+//! general_rule.pdf 4-3-3: a Digimon gains the inherited effects of the
+//! digivolution cards under it; 4-3-5: it gains the link effects of its link
+//! card; 4-9-2: a link card isn't a stacked card; 2-3-11-4: link requirements,
+//! link DP and link effects are card information of their own, and 2-3-11-2-2:
 //! "a card without an inherited effect section can't be referenced" as having
 //! one. Until 2026-10-05 cards.json held every link card's link effect in its
 //! inherited text, so a Digimon with a link card among its digivolution cards
@@ -99,7 +99,7 @@ fn gatchmon_as_a_link_card_gives_raid() {
 /// BT24-067 Hackmon's link box is <Retaliation>, which its DSL YAML also grants
 /// (`scope: linked`). With the printed link text loaded as well, the Digimon it
 /// is linked to retaliates exactly once: a second trigger would open an
-/// ordering prompt (general_rule.pdf 16-12).
+/// ordering prompt (general_rule.pdf 16-13).
 #[test]
 fn hackmon_as_a_link_card_retaliates_once() {
     let mut big = make_test_card("BIG-DGM", "Big Digimon");
@@ -133,7 +133,7 @@ fn hackmon_as_a_link_card_retaliates_once() {
 // ─── A link box's replacement keyword (BT22-075 Fakemon: <Scapegoat>) ──────
 //
 // Fakemon has no DSL YAML, so its link-box <Scapegoat> exists in production
-// only as printed link text. general_rule.pdf 16-31: when the Digimon would be
+// only as printed link text. general_rule.pdf 16-32: when the Digimon would be
 // deleted other than by your effects, by deleting 1 of your other Digimon, it
 // isn't deleted (an optional replacement).
 

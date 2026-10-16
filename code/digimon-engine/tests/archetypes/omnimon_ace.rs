@@ -199,7 +199,7 @@ fn delay_option_present(runner: &DebugRunner, player: u8, card_id: &str) -> bool
 fn combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay() {
     // ST1-04 Dracomon + ST2-04 Bearmon — real Red / Blue Lv3 colour anchors
     // (together they satisfy BT17-095's Red+Blue colour requirement at
-    // Option-play time; 4-19-3 requires ALL of a multicolour Option's colours,
+    // Option-play time; 4-22-3 requires ALL of a multicolour Option's colours,
     // DCGO CardSource.cs `colorsToCheck.Every(...)`). ST1-02 Biyomon — vanilla
     // deck filler.
     let mut runner = DebugRunner::builder()
@@ -302,7 +302,7 @@ fn combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay() {
 /// [Agumon]/[Gabumon] union pick is declined. This test is active and green.
 #[test]
 fn combo1_mega_knight_declining_recursion_still_seats_delay() {
-    // ST1-04 Dracomon + ST2-04 Bearmon Red/Blue colour anchors (4-19-3: ALL of
+    // ST1-04 Dracomon + ST2-04 Bearmon Red/Blue colour anchors (4-22-3: ALL of
     // BT17-095's colours) + ST1-02 Biyomon deck filler (all real).
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-095")

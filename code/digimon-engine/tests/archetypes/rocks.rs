@@ -871,7 +871,7 @@ fn c4_close_already_suspended_offers_no_refuel() {
 ///   battle area as a Delay Option. Diff: hand −1 (Sunarizamon enters play free),
 ///   Gravel Hearts → battle area as an `OnSuspend`-gated Delay.
 /// - Rules/keyword basis: free-play + Delay placement. The `<Delay>` cannot
-///   activate the turn it is placed (§16-16-3) — exercised in the unhappy path
+///   activate the turn it is placed (§16-17-3) — exercised in the unhappy path
 ///   below. DCGO C#: `$BASE_DCGO/.../EX10/Black/EX10_069.cs`.
 ///
 /// This pins the cheat-play half of the combo as a board diff (free body in
@@ -975,7 +975,7 @@ fn c5_gravel_hearts_main_free_plays_sunarizamon_and_arms_delay() {
     );
 }
 
-/// C5 unhappy path (§16-16-3): the `<Delay>` cannot activate on the turn Gravel
+/// C5 unhappy path (§16-17-3): the `<Delay>` cannot activate on the turn Gravel
 /// Hearts is placed. Suspending a [Close] the SAME turn must NOT fire the Delay
 /// — Gravel Hearts stays parked in the battle area and no digivolve is offered.
 #[test]
@@ -1029,7 +1029,7 @@ fn c5_gravel_hearts_delay_does_not_fire_on_placing_turn() {
 
     assert!(
         runner.pending_selection().is_none(),
-        "the Gravel Hearts <Delay> must NOT fire on its placing turn (§16-16-3)"
+        "the Gravel Hearts <Delay> must NOT fire on its placing turn (§16-17-3)"
     );
     let gh_parked = runner.game.players[0].battle_area.iter().any(|p| {
         p.top_card().card_id(&runner.game.card_data) == "EX10-069"

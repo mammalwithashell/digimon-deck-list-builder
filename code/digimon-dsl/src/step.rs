@@ -1715,7 +1715,7 @@ pub struct ActivationCostArgs {
     pub return_self_to_deck_bottom: bool,
     /// "by trashing this card ..." — pays the cost by trashing the source
     /// permanent (the `<Delay>` Option). Declinable, per Comprehensive Rules
-    /// 16-16-2. G-ACTIVATION-COST-TRASH-SELF.
+    /// 16-17-2. G-ACTIVATION-COST-TRASH-SELF.
     #[serde(default, skip_serializing_if = "is_false")]
     pub trash_self: bool,
     /// "by placing this Digimon as the bottom security card ..." — pays the

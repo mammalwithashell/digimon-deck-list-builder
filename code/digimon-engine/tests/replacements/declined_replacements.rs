@@ -4,21 +4,21 @@
 //! `<Barrier>`, `<Evade>`, `<Decode (...)>`. When an opponent's effect
 //! deletes it (EX12-047 On Play), the engine's deletion batch fires
 //! `WhenWouldLeaveBattleArea` (Decode) first, then `WhenWouldBeDeleted`
-//! (Evade; Barrier's `replacement_condition` is battle-only per §16-24-1 so
+//! (Evade; Barrier's `replacement_condition` is battle-only per §16-25-1 so
 //! it doesn't apply to effect deletions). Declining Decode's prompt resolved
 //! the deletion straight to trash — Evade's yes/no was never offered.
 //!
-//! Rules basis (general_rule.pdf Ver.3.6):
+//! Rules basis (general_rule.pdf Ver.4.3):
 //! - §15-8-5-3: "Immediate-type effects will only trigger simultaneously
-//!   with other immediate-type effects." Evade (§16-21-2, would be deleted)
-//!   and Decode (§16-35-2, would leave other than by battle) both trigger
+//!   with other immediate-type effects." Evade (§16-22-2, would be deleted)
+//!   and Decode (§16-36-2, would leave other than by battle) both trigger
 //!   on the same effect-deletion.
 //! - §15-8-5-4: "Each immediate-type effect can be activated one at a time
 //!   until the cause that first interrupted the immediate-type effect is
 //!   resolved." Only "the already activated" effect can't activate again —
 //!   an effect that was offered and DECLINED was never activated, so the
 //!   remaining simultaneous immediate effects must still get their window.
-//! - §16-35-1 Decode plays 1 specified card from the leaver's digivolution
+//! - §16-36-1 Decode plays 1 specified card from the leaver's digivolution
 //!   cards; it does NOT prevent the leave — so even an ACCEPTED Decode
 //!   leaves the deletion in progress and Evade must still be offered.
 //!
@@ -51,7 +51,7 @@ use digimon_engine::selection::SelectionKind;
 /// `<Evade>` plus the per-card `<Decode>` replacement at
 /// `when_would_leave_battle_area` (optional, non-battle causes only).
 /// `<Barrier>` is intentionally omitted: under an effect-deletion cause its
-/// battle-only `replacement_condition` (§16-24-1) filters it out anyway, and
+/// battle-only `replacement_condition` (§16-25-1) filters it out anyway, and
 /// keeping Evade as the sole `WhenWouldBeDeleted` candidate mirrors the
 /// EX12-047-deletes-EX12-036 repro exactly.
 const DECODE_EVADE_CARRIER: &str = r#"
@@ -292,7 +292,7 @@ fn accepted_decode_with_declined_material_pick_still_offers_evade() {
     assert_eq!(r.game.replacement_depth, 0);
 }
 
-/// §16-35 Decode does not prevent the leave: even a fully USED Decode (source
+/// §16-36 Decode does not prevent the leave: even a fully USED Decode (source
 /// extracted and played) leaves the deletion in progress, so Evade's window
 /// still opens (§15-8-5-4 — the deletion cause is not yet resolved). Declining
 /// Evade then trashes the carrier while the Decode-played Digimon stays.

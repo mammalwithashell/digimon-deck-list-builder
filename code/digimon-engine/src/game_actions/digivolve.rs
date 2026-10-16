@@ -3036,7 +3036,7 @@ impl Game {
         // effect-initiated digivolve draws exactly like the main-phase action
         // — and it lands here, after the stack mutation and BEFORE the
         // WhenDigivolving fan-out, mirroring the player-action path above.
-        // (§8-1-2-10 covers the empty-deck case: digivolution still happens,
+        // (§8-1-2-8 covers the empty-deck case: digivolution still happens,
         // just "without drawing a card" — which `draw()` already models.)
         self.player_mut(player_id).draw();
 

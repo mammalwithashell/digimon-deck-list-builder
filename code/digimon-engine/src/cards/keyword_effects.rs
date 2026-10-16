@@ -56,7 +56,7 @@
 //! consumed directly in `combat::resolve_battle`, which swaps the DP compare
 //! for a `card_sources.len()` compare when either combatant has the keyword.
 //! Security battles route through a different path (`resolve_player_security_loop`)
-//! and are unaffected, matching the RULES_CONTEXT 16-34 exception.
+//! and are unaffected, matching the RULES_CONTEXT 16-35 exception.
 //!
 //! ## Replacement-condition substrate (Phase F)
 //!
@@ -226,7 +226,7 @@ fn park_keyword_count_capped_frame(
 
 // ── <Partition> per-slot source enforcement ─────────────────────────────────
 //
-// general_rule.pdf §16-28:
+// general_rule.pdf §16-29:
 //   -1  "When a Digimon with this effect AND 1 OF EACH of the specified cards
 //        in its digivolution cards would be removed from the battle area
 //        other than by one of your effects or a battle, you may play 1 of
@@ -320,10 +320,10 @@ fn partition_source_matches(
 /// Is there an assignment of one DISTINCT stack source to EVERY slot that
 /// uses every card in `picked`?
 ///
-/// §16-28-6 is all-or-nothing, so a pick that strands a slot is not a legal
+/// §16-29-4 is all-or-nothing, so a pick that strands a slot is not a legal
 /// partial answer — it is masked out — and a stack that cannot fill every
-/// slot does not trigger at all (§16-28-1). Slot ORDER is deliberately not
-/// imposed on the picks: §16-28-6 plays the specified cards as one
+/// slot does not trigger at all (§16-29-1). Slot ORDER is deliberately not
+/// imposed on the picks: §16-29-4 plays the specified cards as one
 /// simultaneous action (judge-quiz Q30 — "played out simultaneously", which
 /// our sequential play linearizes in the controller's chosen order), so the
 /// constraint is a perfect matching, not a fixed sequence. This is the same
@@ -393,7 +393,7 @@ fn partition_pick_candidates(
 }
 
 /// Whether the carrier's live stack satisfies the printed `<Partition>` gate
-/// (§16-28-1: "a Digimon with this effect AND 1 of each of the specified
+/// (§16-29-1: "a Digimon with this effect AND 1 of each of the specified
 /// cards in its digivolution cards"). DCGO refuses to activate when any
 /// `PartitionCondition`'s filtered list is empty (`Partition.cs:145-159`).
 fn partition_gate_satisfied(
@@ -413,7 +413,7 @@ fn partition_gate_satisfied(
 /// Take the next `<Partition>` pick and chain: a single remaining candidate is
 /// taken silently (DCGO `Partition.cs:89,117` — a slot with one candidate is
 /// never prompted, because there is no choice to expose), more than one parks
-/// a MANDATORY 1-pick (no PASS: §16-28-6 forbids playing only some of the
+/// a MANDATORY 1-pick (no PASS: §16-29-4 forbids playing only some of the
 /// specified cards), and once one card is held for every slot they are played.
 pub(crate) fn drive_partition_picks(
     game: &mut crate::game::Game,
@@ -438,7 +438,7 @@ pub(crate) fn drive_partition_picks(
         let candidates = partition_pick_candidates(game, prov, subject, &slots, &picked);
         match candidates.len() {
             // The gate is re-checked at process time, so an empty candidate
-            // set here means the stack changed under us mid-chain: §16-28-6
+            // set here means the stack changed under us mid-chain: §16-29-4
             // forbids a partial <Partition>, so nothing is played and the
             // carrier's departure proceeds with whatever is left.
             0 => return,
@@ -514,7 +514,7 @@ fn install_partition_pick_selection(
 /// judge's "played out simultaneously" observable, judge-quiz Q30). Later
 /// plays are chained through `queue_partition_second_play` so each starts only
 /// after the previous play's interrupt chain settles. No `cancel_leave()`:
-/// <Partition> is interruptive, not preventive (§16-28-2).
+/// <Partition> is interruptive, not preventive (§16-29-2).
 pub(crate) fn partition_extract_and_play(
     ctx: &mut EffectContext<'_>,
     subject: crate::permanent::PermanentHandle,
@@ -642,7 +642,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     let owner = subject.player;
                     if rctx.effect.trash_top_security(owner) {
                         // Barrier prevents this deletion; the interrupted cause
-                        // remains pending for other immediate effects (16-24-4).
+                        // remains pending for other immediate effects (16-24-4 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md]).
                         rctx.cancel();
                     }
                 }
@@ -743,7 +743,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // When the gate fails, the auto-install body returns early without
         // parking and the original deletion proceeds.
         //
-        // Optional ("by [Effect]") per RULES_CONTEXT 16-36 ("Processing:
+        // Optional ("by [Effect]") per RULES_CONTEXT 16-37 ("Processing:
         // Optional (choosing and trashing digi cards); if executed, prevention
         // is mandatory") and DCGO `Fragment.cs:37`
         // `SetUpActivateClass(..., isOptional=true, ...)`. The outer accept
@@ -853,11 +853,11 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // `<Decode (...)>` — NO auto-effect (task_69f10a66 Family 2).
         //
         // The retired legacy pair here ("would be returned to deck/hand →
-        // return to hand instead") was NOT rule 16-35 Decode at all. Per
-        // §16-35-1 Decode triggers when "the Digimon WITH THIS EFFECT would
+        // return to hand instead") was NOT rule 16-36 Decode at all. Per
+        // §16-36-1 Decode triggers when "the Digimon WITH THIS EFFECT would
         // leave the battle area other than by a battle" and plays a Digimon
         // card matching the keyword's PER-CARD parameter from THAT Digimon's
-        // digivolution cards (§16-35-2: immediate-type, on its own leave).
+        // digivolution cards (§16-36-2: immediate-type, on its own leave).
         // Two structural reasons a keyword-generic auto-effect cannot exist:
         //   1. The parameter (`<Decode (Lv.4 or lower Aqua/Sea Animal/TB)>`)
         //      differs per card — the play filter is unknowable here.
@@ -881,7 +881,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // deleted, by trashing the top card of this Digimon, it isn't
         // deleted." DCGO `ArmorPurge.cs:40-78`.
         //
-        // Optional ("by [cost]") per RULES_CONTEXT 16-18 ("Processing:
+        // Optional ("by [cost]") per RULES_CONTEXT 16-19 ("Processing:
         // Optional ('by trashing the top card of the Digimon')"). The outer
         // accept dialog represents the printed "by trashing" optional cost —
         // declining proceeds with the original deletion. Once accepted, the
@@ -1117,7 +1117,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // otherwise a deletion Decoy cannot protect parked a phantom accept
         // prompt (G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED class).
         //   4. Cause gate: the deletion must be caused by an OPPONENT's
-        //      effect (rules 16-17, keyword-semantics.md; DCGO
+        //      effect (rules 16-18, keyword-semantics.md; DCGO
         //      `Decoy.cs:55-61` `IsByEffect(... EffectSourceCard.Owner ==
         //      card.Owner.Enemy)`). The cause is subject-relative and the
         //      subject is always the Decoy controller's, so
@@ -1281,7 +1281,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         //
         // ## Mandatory semantics
         //
-        // DCGO Fortitude has no "may" clause (RULES_CONTEXT 16-26). The
+        // DCGO Fortitude has no "may" clause (RULES_CONTEXT 16-27). The
         // trigger fires unconditionally when the gate passes; this matches
         // a non-`.optional()` `OnDeletion` process (no PASS dialog).
         //
@@ -1467,7 +1467,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 {
                     return false;
                 }
-                // Slot gate (§16-28-1): the stack must hold 1 of EACH
+                // Slot gate (§16-29-1): the stack must hold 1 of EACH
                 // specified card. DCGO refuses to activate when any
                 // `PartitionCondition`'s filtered list is empty
                 // (`CardEffectFactory/.../Partition.cs:145-159`). A card that
@@ -1514,7 +1514,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 let controller = subject.player;
                 let prov = resume_provenance(&rctx.effect);
 
-                // Slot-enforced path (§16-28-5/-6): one pick per printed
+                // Slot-enforced path (§16-3 / §16-29-4): one pick per printed
                 // parenthetical, all-or-nothing, a lone candidate taken
                 // without a prompt. Only a card that publishes no slot specs
                 // falls through to the historical slot-blind pick below.
@@ -1642,7 +1642,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         //
         // ## Cause filter
         //
-        //   - `deletion_cause() == Some(Battle)` only — RULES_CONTEXT 16-12
+        //   - `deletion_cause() == Some(Battle)` only — RULES_CONTEXT 16-13
         //     specifies battle deletion. Effect, SecurityCheck, and Cost
         //     causes do NOT trigger Retaliation.
         //
@@ -1657,7 +1657,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         //
         // ## Mandatory semantics
         //
-        // No "may" clause (RULES_CONTEXT 16-12). The trigger fires
+        // No "may" clause (RULES_CONTEXT 16-13). The trigger fires
         // unconditionally when the Battle cause gate passes; no
         // `.optional()` call on the builder.
         //
@@ -1668,7 +1668,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // Retaliation on this carrier). The `source_permanent` guard in
         // the body is belt-and-suspenders.
         //
-        // ## Mutual destruction (RULES_CONTEXT 16-12-4 multi-instance hint)
+        // ## Mutual destruction (RULES_CONTEXT 16-12-4 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md] multi-instance hint)
         //
         // When both combatants have Retaliation and tie in DP, both die in
         // battle (`combat::resolve_battle::MutualDestruction` path). The
@@ -1697,7 +1697,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // `ctx.player` (the loser's controller) is the correct acting player.
         Keyword::Retaliation => vec![Effect::on_deletion(card)
             .name("<Retaliation>")
-            // Cause gate: Battle only (16-12), evaluated as the CONDITION so
+            // Cause gate: Battle only (16-13), evaluated as the CONDITION so
             // the trigger scan never queues it on a non-battle deletion.
             //
             // This used to live in `process` below, which runs only after the
@@ -1803,7 +1803,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // Phase F Task 3 — printed Execute: "At end of your turn, this
         // Digimon may attack — including unsuspended Digimon — and when
         // the attack ends it is deleted." DCGO `Execute.cs:18-87`.
-        // RULES_CONTEXT 16-37 (Trigger-type, Optional).
+        // RULES_CONTEXT 16-38 (Trigger-type, Optional).
         //
         // ## Two-effect install
         //
@@ -1828,7 +1828,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         //    matches the keyword being the carrier's own triggered
         //    effect (cf. Retaliation's same cause-labeling rationale).
         //
-        // ## Optionality (RULES_CONTEXT 16-37: Optional)
+        // ## Optionality (RULES_CONTEXT 16-38: Optional)
         //
         // The printed "may" surfaces at the EOT-action phase PASS
         // exit, not at the EndOfYourTurn trigger — see "Where the
@@ -1942,7 +1942,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                         return;
                     };
                     // Gate 1 (task_69f10a66): only the END-OF-TURN attack is
-                    // "that attack" in §16-37's "At the end of that attack,
+                    // "that attack" in §16-38's "At the end of that attack,
                     // delete this Digimon" — the printed text scopes the
                     // self-delete to the attack Execute itself granted, and
                     // DCGO registers the delete inside `ExecuteProcess`
@@ -2187,7 +2187,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
             .build()],
 
         // Phase F §F4 — printed Training: `[Main]` active skill, usable from
-        // BATTLE area OR BREEDING area (RULES_CONTEXT 16-40 / DCGO
+        // BATTLE area OR BREEDING area (RULES_CONTEXT 16-41 / DCGO
         // `Training.cs`). Cost: suspend self (must be unsuspended). Effect:
         // place top deck card at the BOTTOM of self's digivolution stack,
         // FACE-DOWN (DCGO `isFacedown: true`).
@@ -2228,7 +2228,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // unchanged. Breeding-area Training requires a parallel mask emitter
         // and dispatcher path (Phase F §F4 substrate work) under the field
         // index `BREEDING_TARGET (=14)` — which is gated to Training-bearing
-        // carriers only, since RULES_CONTEXT 16-40 specifies that ONLY
+        // carriers only, since RULES_CONTEXT 16-41 specifies that ONLY
         // `<Training>` activates from breeding (surfacing all `MainOnField`
         // effects from breeding would inadvertently expose Save / MaterialSave
         // / MindLink from breeding too, which would be wrong).

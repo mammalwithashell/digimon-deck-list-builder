@@ -437,7 +437,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 // placing turn has passed exposes a player-visible
                 // FIELD_EFFECT activation (slot `+2`) — "By trashing this
                 // card after the placing turn, activate the effect below"
-                // (RULES_CONTEXT 16-16). The choice is optional, so PASS
+                // (RULES_CONTEXT 16-17). The choice is optional, so PASS
                 // remains legal alongside it (emitted below).
                 if game.delayed_option_main_activation_available(perm_handle) {
                     let bit = FIELD_EFFECT_START
@@ -465,7 +465,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // `FIELD_EFFECT_SLOT_FOR_MAIN (=2)` → action_id 1142. This bit
             // is reserved for the breeding-area Training activation; no
             // other `MainOnField` effect surfaces from breeding (RULES_CONTEXT
-            // 16-40 specifies that ONLY `<Training>` activates from breeding
+            // 16-41 specifies that ONLY `<Training>` activates from breeding
             // — surfacing all `MainOnField` effects from breeding would
             // inadvertently expose Save/MaterialSave/MindLink from breeding
             // too, which is wrong).
@@ -521,7 +521,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             if me.breeding_area.is_none() && !me.digitama_deck.is_empty() {
                 mask[HATCH as usize] = 1.0;
             }
-            // Rule 4-15-2: a breeding Digimon may move if it has DP.
+            // Rule 4-17-2: a breeding Digimon may move if it has DP.
             // Level-less Digi-Eggs such as Mother D-Reaper qualify (Q3276).
             if let Some(ref perm) = me.breeding_area {
                 if perm.top_card().digimon_dp(&game.card_data).is_some()
@@ -740,31 +740,31 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
-/// 4-19 — can this player meet an Option card's COLOR REQUIREMENTS?
+/// 4-22 — can this player meet an Option card's COLOR REQUIREMENTS?
 ///
-/// 4-19-2: "To meet color requirements, you must have a Digimon or Tamer on
+/// 4-22-2: "To meet color requirements, you must have a Digimon or Tamer on
 /// your field that's the same color as the Option card you want to use."
-/// 4-19-3: "An Option card with multiple colors can't be used unless the color
+/// 4-22-3: "An Option card with multiple colors can't be used unless the color
 /// requirements are met for ALL of its colors."
-/// 4-19-4: "A multicolor Digimon or multicolor Tamer can meet the color
+/// 4-22-4: "A multicolor Digimon or multicolor Tamer can meet the color
 /// requirements for multiple colors."
 ///
 /// So the test is: for EVERY color the Option prints, SOME qualifying permanent
 /// carries that color. Different colors may be covered by different permanents,
-/// and one multicolor permanent may cover several (4-19-4) -- hence a per-color
+/// and one multicolor permanent may cover several (4-22-4) -- hence a per-color
 /// existence check rather than any per-permanent test.
 ///
 /// This used to ask whether any SINGLE permanent shared any ONE of the Option's
-/// colors, which let a mono-color board pay for a multicolor Option -- 4-19-3
+/// colors, which let a mono-color board pay for a multicolor Option -- 4-22-3
 /// says it cannot. 63 Option cards in data/cards.json print more than one
 /// color, so this was reachable, not theoretical. DCGO agrees with the manual:
 /// CardSource.cs:307-310 uses `colorsToCheck.Every(...)`.
 ///
 /// BREEDING AREA COUNTS, and this is SETTLED -- all three sources agree.
-/// 3-4-5: "The field is divided into the breeding area and the battle area",
-/// so a breeding Digimon is literally "on your field" as 4-19-2 words it. The
-/// restrictions on breeding cards (3-4-6-3 "can't be affected by effects",
-/// 3-4-6-5 "can't be chosen for effects") are scoped to EFFECTS; a color
+/// 3-4-6: "The field is divided into the breeding area and the battle area",
+/// so a breeding Digimon is literally "on your field" as 4-22-2 words it. The
+/// restrictions on breeding cards (3-4-7-3 "can't be affected by effects",
+/// 3-4-7-5 "can't be chosen for effects") are scoped to EFFECTS; a color
 /// requirement is a rules gate on USING a card, not an effect targeting the
 /// breeding Digimon.
 ///
@@ -792,7 +792,7 @@ pub(crate) fn option_color_match_available(
     }
 
     // Every color a qualifying permanent contributes. Collected once, because
-    // 4-19-4 lets a single multicolor permanent cover several of the Option's
+    // 4-22-4 lets a single multicolor permanent cover several of the Option's
     // colors and lets different colors come from different permanents.
     let mut covered: Vec<crate::enums::CardColor> = Vec::new();
     for perm in &me.battle_area {
@@ -807,16 +807,16 @@ pub(crate) fn option_color_match_available(
         covered.extend(perm_colors);
     }
     // Breeding area: only Digimon can be there (Tamers cannot). See the
-    // breeding note above -- 3-4-5 puts the breeding area inside the field.
+    // breeding note above -- 3-4-6 puts the breeding area inside the field.
     if let Some(ref breeding) = me.breeding_area {
-        // A hatched Digi-Egg is a Digimon on the field (rules 4-2-1/2),
-        // and therefore supplies its color for an Option under 4-19-2.
+        // A hatched Digi-Egg is a Digimon on the field (rules 4-3-1/2),
+        // and therefore supplies its color for an Option under 4-22-2.
         if breeding.is_digimon(card_data) || breeding.is_digi_egg(card_data) {
             covered.extend(breeding.top_card().digimon_colors(card_data));
         }
     }
 
-    // 4-19-3: ALL of the Option's colors, not any.
+    // 4-22-3: ALL of the Option's colors, not any.
     option_colors.iter().all(|c| covered.contains(c))
 }
 

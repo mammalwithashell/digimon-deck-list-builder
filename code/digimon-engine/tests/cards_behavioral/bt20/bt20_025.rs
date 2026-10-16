@@ -1,5 +1,5 @@
 //! Official BT20-025 observation 22da842eebcac8dc27cb5ed7cd43ff4d9b45c3022b9b92e554bf7af718ff137f, image and Q4314.
-//! Rules: DNA requirements 8-2-3-1, Security A. 16-3-1.
+//! Rules: DNA requirements 8-2-3-1, Security A. 16-4-1.
 use digimon_engine::action::space::{encode_digivolve, ATTACK_START, DNA_DIGIVOLVE_START, PASS};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, GamePhase, Keyword};

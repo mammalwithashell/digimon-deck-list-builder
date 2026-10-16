@@ -123,7 +123,7 @@ fn ex12_046_inherited_end_of_attack_plays_low_dp_tb_from_hand_for_free() {
 /// The draw is part of the digivolution PROCEDURE, so it applies to an
 /// effect-initiated digivolve exactly as it does to the main-phase action --
 /// the engine used to skip it on the effect path, reasoning that the draw was
-/// "a player-action benefit, not an effect mechanic". §8-1-2-10 settles it the
+/// "a player-action benefit, not an effect mechanic". §8-1-2-8 settles it the
 /// other way: digivolution is possible when a draw isn't, and only then "is
 /// performed without drawing a card", which presumes the draw otherwise.
 ///

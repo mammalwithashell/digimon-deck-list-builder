@@ -183,7 +183,7 @@ impl<'a> EffectContext<'a> {
         // This fallback used to be `EndOfYourNextTurn`, which invented a
         // turn-scheduled auto-trash the printed card never prints: 16-16-1
         // (`general_rule.pdf` p.35) bounds a `<Delay>`'s availability by
-        // presence in the battle area and nothing else, and 16-16-2 makes the
+        // presence in the battle area and nothing else, and 16-17-2 makes the
         // processing optional, so the engine was silently taking a printed
         // option away one turn after placement. DCGO agrees — its Delay gate
         // (`CardEffectCommons.CanDeclareOptionDelayEffect`) is

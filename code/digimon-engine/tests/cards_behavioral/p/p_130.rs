@@ -162,7 +162,7 @@ fn p_130_on_move_clause_shape() {
 
     // §15-7-1 names this exact shape: "Optional processing conditions
     // include text such as 'by X, Y.'" -- and its worked example is literally
-    // "[On Deletion] By trashing 1 card in the hand, gain 1 memory". §15-7-4:
+    // "[On Deletion] By trashing 1 card in the hand, gain 1 memory". §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]:
     // "A player can choose whether or not to execute the content of optional
     // processing conditions." So "by suspending this Tamer, gain 1 memory" is
     // declinable, and rule 17 requires the decline to reach the action space.
@@ -173,7 +173,7 @@ fn p_130_on_move_clause_shape() {
     // DCGO agrees with the manual: P_130.cs passes isOptional=true.
     assert!(
         on_move_clause.optional,
-        "Clause 2 is an optional processing condition (§15-7-1/§15-7-4): the player may decline to suspend"
+        "Clause 2 is an optional processing condition (§15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]): the player may decline to suspend"
     );
     assert!(
         on_move_clause.active_when.is_some(),
@@ -568,7 +568,7 @@ fn accept_optional_cost(runner: &mut DebugRunner) {
         .expect("accept the suspend cost");
 }
 
-/// §15-7-4: "A player can choose whether or not to execute the content of
+/// §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose whether or not to execute the content of
 /// optional processing conditions." Declining "by suspending this Tamer" must
 /// leave BOTH halves undone -- the Tamer stays unsuspended and no memory is
 /// gained -- because §15-7-2 says that if the optional condition's content

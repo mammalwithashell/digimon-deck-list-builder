@@ -1,4 +1,4 @@
-//! Rules4-2-8/4-5-8: sources of a leaving permanent are disposed by rule.
+//! Rules4-2-8/4-7-8: sources of a leaving permanent are disposed by rule.
 use digimon_engine::debug_runner::{DebugRunner,make_test_card};
 use digimon_engine::effect::{CardEffect,Effect};
 use digimon_engine::card_source::CardHandle;

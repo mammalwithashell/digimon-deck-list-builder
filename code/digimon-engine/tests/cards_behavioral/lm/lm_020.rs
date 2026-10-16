@@ -13,7 +13,7 @@
 //! These tests cover clause 2 (the [Start of Opponent's Turn] declare-category
 //! conditional immunity, which underpins judge-quiz Q18) and clause 1 (the
 //! [When Digivolving] "By placing 1 Digimon …" OPTIONAL PROCESSING CONDITION,
-//! §15-7-1/§15-7-4 — accept and decline paths both).
+//! §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] — accept and decline paths both).
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/LM/Yellow/LM_020.cs — clause 1's
@@ -202,7 +202,7 @@ fn lm_020_when_digivolving_places_cost_and_moves_one_opponent_security_to_deck()
     );
 }
 
-/// §15-7-4: "A player can choose whether or not to execute the content of
+/// §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose whether or not to execute the content of
 /// optional processing conditions, regardless of whether or not the content of
 /// the conditions can be executed." Quantumon's own always-payable placement
 /// cost is exactly the "regardless of whether it can be executed" case — being

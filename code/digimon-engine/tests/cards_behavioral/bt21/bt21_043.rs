@@ -30,7 +30,7 @@
 //! - scope: linked kind: aura dp_modifier: 3000 (G-LINK-INHERITED-ESS / DigiLink Shape-B)
 //! - scope: linked when: when_linked → mandatory -2000 DP to opponent
 //! - alt_path digivolve from { trait_has: "Stnd." } cost: 2 (no level gate per DCGO)
-//! - DP-to-zero deletion (project memory dp_zero_deletion / rule 17-1-3-1)
+//! - DP-to-zero deletion (project memory dp_zero_deletion / rule 17-1-3-1-1)
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -340,7 +340,7 @@ fn bt21_043_on_play_no_selection_when_no_opponent_digimon() {
     );
 }
 
-/// Behavioral: -2000 DP to a 2000 DP Digimon brings it to 0 → deleted (rule 17-1-3-1).
+/// Behavioral: -2000 DP to a 2000 DP Digimon brings it to 0 → deleted (rule 17-1-3-1-1).
 #[test]
 fn bt21_043_on_play_deletes_2000dp_opponent_digimon() {
     let mut runner = base()
@@ -358,7 +358,7 @@ fn bt21_043_on_play_deletes_2000dp_opponent_digimon() {
     assert_eq!(
         runner.battle_area_size(1),
         0,
-        "a 2000 DP Digimon debuffed by -2000 must reach 0 DP and be deleted (rule 17-1-3-1)"
+        "a 2000 DP Digimon debuffed by -2000 must reach 0 DP and be deleted (rule 17-1-3-1-1)"
     );
 }
 

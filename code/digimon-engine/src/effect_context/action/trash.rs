@@ -394,7 +394,7 @@ impl<'a> EffectContext<'a> {
     /// `delete_permanent` step. Returns `false` if the source permanent has
     /// already left the field.
     ///
-    /// No-approximations note: per Comprehensive Rules 16-16-2 the processing
+    /// No-approximations note: per Comprehensive Rules 16-17-2 the processing
     /// of a `<Delay>` is optional; the player's accept/decline prompt belongs
     /// to [`crate::effect::EffectBuilder::optional`] and runs BEFORE this cost.
     pub fn trash_self_as_cost(&mut self) -> bool {

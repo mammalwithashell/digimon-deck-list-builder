@@ -79,7 +79,7 @@ fn dsl_on_dna_digivolve_fires_from_user_action_path() {
 /// `WhenDigivolving` -> `OnDnaDigivolve` -> `OnDigivolve` (global), so the
 /// likely cause is the clause matching BOTH the OnDnaDigivolve pass and the
 /// global OnDigivolve pass — a double fire, the same defect class as
-/// `2aa3bfa94` (`<Decode>` offered its optional processing TWICE, 16-35-3).
+/// `2aa3bfa94` (`<Decode>` offered its optional processing TWICE, 16-36-3).
 ///
 /// Asserting 2 here would launder that into a permanent guard: a card printing
 /// one [On DNA Digivolving] effect must resolve it once. Ignored with the

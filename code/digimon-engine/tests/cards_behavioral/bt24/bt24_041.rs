@@ -305,7 +305,7 @@ fn bt24_041_opponent_turn_aura_grants_reboot_and_blocker_to_own_iliad_digimon_on
 
 /// G-ENGINE-AURA-REBOOT-NOT-APPLIED: the `[Opponent's Turn]` aura-granted
 /// `<Reboot>` must be live at the START of the opponent's unsuspend phase, so a
-/// suspended [Iliad] Digimon unsuspends there (rules 16-10) without any manual
+/// suspended [Iliad] Digimon unsuspends there (rules 16-11) without any manual
 /// declarative re-tick.
 #[test]
 fn bt24_041_aura_granted_reboot_unsuspends_in_opponents_unsuspend_phase() {

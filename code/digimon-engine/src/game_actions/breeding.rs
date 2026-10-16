@@ -218,7 +218,7 @@ impl Game {
     /// Activates the `<Training>` `[Main]` effect on the controller's
     /// breeding-area permanent. Restricted to the `<Training>` effect by
     /// `effect.name == "<Training>"` so this dispatcher cannot leak any
-    /// other `MainOnField` effect from breeding (RULES_CONTEXT 16-40 —
+    /// other `MainOnField` effect from breeding (RULES_CONTEXT 16-41 —
     /// only Training activates from breeding).
     ///
     /// Independent gate re-check (matches the mask emitter):

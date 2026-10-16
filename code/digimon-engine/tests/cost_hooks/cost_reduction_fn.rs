@@ -454,8 +454,8 @@ fn digivolve_onto_breeding_applies_before_pay_cost_reduction() {
 fn breeding_area_card_own_cost_reduction_does_not_apply() {
     // Regression for the Elizamon (BT23-005) bug: a non-[Breeding] effect on a
     // card sitting in the breeding area must NOT activate (general_rule.pdf
-    // 3-4-6-4: "Effects on cards can't trigger or activate unless the effect
-    // explicitly specifies/references breeding areas"; 3-4-6-7). Elizamon's
+    // 3-4-7-4: "Effects on cards can't trigger or activate unless the effect
+    // explicitly specifies/references breeding areas"; 3-4-7-7). Elizamon's
     // "[Your Turn] reduce digivolution cost by 1" is a continuous effect — it
     // applies only while Elizamon is in the BATTLE area, never while it raises
     // in breeding.
@@ -504,7 +504,7 @@ fn breeding_area_card_own_cost_reduction_does_not_apply() {
     assert_eq!(
         r.memory(),
         memory_before - 3,
-        "breeding-area card's own cost reduction must NOT apply (general_rule.pdf 3-4-6-4/3-4-6-7); effective cost = full 3"
+        "breeding-area card's own cost reduction must NOT apply (general_rule.pdf 3-4-7-4/3-4-7-7); effective cost = full 3"
     );
 }
 

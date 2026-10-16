@@ -252,7 +252,7 @@ pub(crate) struct LinkOptionHostSelectionState {
 /// Unlike [`LinkOptionHostSelectionState`] — which is installed while the
 /// Option is already mid-resolution, after its use cost was paid — this one is
 /// installed BEFORE anything is paid or removed from the hand, because
-/// `general_rule.pdf` (Ver.3.6) §10-1-3 pays the link cost only after the host
+/// `general_rule.pdf` (Ver.4.3) §10-1-3 pays the link cost only after the host
 /// is chosen. The resolved pick re-enters `play_option_core` with the host
 /// pinned on `Game::pending_option_link_host`.
 #[derive(Debug, Clone)]
@@ -1058,7 +1058,7 @@ impl Game {
             modes.retain(|m| !m.is_link());
         }
         // `G-ENGINE-OPTION-LINK-FROM-HAND`. From the HAND the Link mode is not
-        // a mode of this action at all. general_rule.pdf (Ver.3.6) §6-5-1 lists
+        // a mode of this action at all. general_rule.pdf (Ver.4.3) §6-5-1 lists
         // "use an Option card from the hand" (§6-5-1-3) and "link a card from
         // the hand or battle area" (§6-5-1-4) as two SEPARATE main-phase
         // actions, and §10-1-1 says a card is linked from the hand "by paying
@@ -1402,13 +1402,13 @@ impl Game {
         // sources) before rule processing reads their effective DP. Callers
         // already restrict this check to completed resolution boundaries.
         self.tick_declarative_effects();
-        // Per-permanent rule-check action. Both §17-1-3-1 and §17-1-3-2 are
+        // Per-permanent rule-check action. Both §17-1-3-1-1 and §17-1-3-2-1 are
         // evaluated in one scan; they target disjoint permanents (a ≤0-DP
         // Digimon has a DP value, a DP-less top has none).
         enum RuleAction {
-            /// §17-1-3-1 — a Digimon at ≤0 DP is DELETED (fires OnDeletion).
+            /// §17-1-3-1-1 — a Digimon at ≤0 DP is DELETED (fires OnDeletion).
             DeleteZeroDp,
-            /// §17-1-3-2 — a DP-less card (a Digi-Egg) exposed as the live top
+            /// §17-1-3-2-1 — a DP-less card (a Digi-Egg) exposed as the live top
             /// of a battle-area permanent "is considered to not be in any area
             /// and is trashed." This is a TRASH of the whole permanent, NOT a
             /// deletion-from-battle-area, so it fires no OnDeletion observers.
@@ -1431,17 +1431,17 @@ impl Game {
                     player: pid as PlayerId,
                     index: idx as u8,
                 };
-                // §17-1-3-2 — "A Digimon without DP in the battle area is
+                // §17-1-3-2-1 — "A Digimon without DP in the battle area is
                 // considered to not be in any area and is trashed." The rule
                 // keys on the ABSENCE of a DP value (general_rule.pdf
-                // §17-1-3-2; DCGO `Permanent.HasDP` likewise only fails for
+                // §17-1-3-2-1; DCGO `Permanent.HasDP` likewise only fails for
                 // a top that lacks DP), NOT on the Digi-Egg card type: the
                 // canonical case is a stack peeled/de-digivolved down to its
                 // egg (every printed Digi-Egg has no DP), while a
                 // Digimon-presenting top WITH a DP value is a legal
                 // battle-area Digimon. A legitimately-played Tamer/Option
                 // permanent is NOT caught (its top kind is Tamer/Option,
-                // governed by §17-1-3-3/-4 instead).
+                // governed by §17-1-3-2-2/-3 instead).
                 let presents_as_digimon = matches!(
                     self.players[pid].battle_area[idx]
                         .top_card()
@@ -1479,7 +1479,7 @@ impl Game {
         for (handle, action) in actions.into_iter().rev() {
             if let RuleAction::TrashDpLess = action {
                 let movement_snapshot = self.movement_snapshot(handle);
-                // §17-1-3-2 trash: route every stacked card to the owner's trash
+                // §17-1-3-2-1 trash: route every stacked card to the owner's trash
                 // with no deletion/leave triggers ("not considered trashing from
                 // the battle area").
                 // Overflow observes physical movement even though this is not
@@ -2019,7 +2019,7 @@ impl Game {
             // action, not a turn-keyed auto-trash scan. `OnEvent` likewise
             // has no scheduled turn, and `ExternallyGated` hands the whole
             // window to another clause (a `kind: replacement` on the same
-            // card) — all three park indefinitely, per 16-16-1's
+            // card) — all three park indefinitely, per 16-17-1's
             // "while a card with this effect is in the battle area".
             DelayTrigger::MainPhaseActivated
             | DelayTrigger::OnEvent(_)
@@ -2399,7 +2399,7 @@ impl Game {
         )
     }
 
-    /// Rule 4-18-3: a token cannot receive stacked cards.
+    /// Rule 4-21-3: a token cannot receive stacked cards.
     /// Check before extracting the proposed source or opening movement events.
     pub(crate) fn is_token_source_destination(&self, target: PermanentHandle) -> bool {
         let Some(player) = self.players.get(target.player as usize) else { return false; };
@@ -2836,7 +2836,7 @@ impl Game {
 
     /// Push BeforePayCost cost-reduction sources from a player's breeding area.
     ///
-    /// Per general_rule.pdf 3-4-6-4 ("Effects on cards can't trigger or
+    /// Per general_rule.pdf 3-4-7-4 ("Effects on cards can't trigger or
     /// activate unless the effect explicitly specifies/references breeding
     /// areas"), a Digimon being *raised* in the breeding area does NOT have its
     /// battle-area effects active there (e.g. BT23-005 Elizamon's "[Your Turn]
@@ -2988,7 +2988,7 @@ impl Game {
     }
 
     /// Breeding-area BeforePayCostObserve sources — same Digi-Egg-only gate as
-    /// `push_breeding_cost_sources` (general_rule.pdf 3-4-6-4).
+    /// `push_breeding_cost_sources` (general_rule.pdf 3-4-7-4).
     fn push_breeding_observer_sources(
         &self,
         player_id: PlayerId,

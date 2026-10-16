@@ -299,7 +299,7 @@ impl<'a> EffectContext<'a> {
     }
 
     /// Battle without declaring an attack. A participating active attacker can
-    /// earn pending Piercing; a nonattacking Digimon cannot (16-6-2/4).
+    /// earn pending Piercing; a nonattacking Digimon cannot (16-7-2/4).
     pub fn battle_digimon(
         &mut self,
         attacker: PermanentHandle,
@@ -515,7 +515,7 @@ impl<'a> EffectContext<'a> {
         cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
     ) -> Result<(), AttackError> {
         // A forced attack affects its selected attacker (EX3-024;
-        // general_rule.pdf 15-15-6-1). Selection can still include immune
+        // general_rule.pdf 15-15-5-1). Selection can still include immune
         // Digimon, but they do not perform this effect's attack. Check the
         // originating controller/source kind, never the player choosing the
         // attacker or target, which may be the opponent.

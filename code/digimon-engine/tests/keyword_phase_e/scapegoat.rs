@@ -8,7 +8,7 @@
 //! Mirrors DCGO `Scapegoat.cs` — Immediate-type, optional, picks
 //! another own permanent.
 //!
-//! RULES_CONTEXT 16-31. Cause filter: deletion_cause() != OwnEffect.
+//! RULES_CONTEXT 16-32. Cause filter: deletion_cause() != OwnEffect.
 
 use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;

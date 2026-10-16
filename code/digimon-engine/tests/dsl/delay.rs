@@ -30,7 +30,7 @@ use std::sync::Arc;
 /// battle area for their real clause). A marker is deliberately not activatable
 /// and therefore not optional.
 ///
-/// Tests about `<Delay>`'s §16-16-2 optionality need an ACTIVATABLE Delay, so
+/// Tests about `<Delay>`'s §16-17-2 optionality need an ACTIVATABLE Delay, so
 /// they use this instead. Trigger-mapping tests also require an activatable
 /// body; structural marker tests retain `fixture_delay`.
 fn fixture_delay_activatable(scope: CompiledScope, trigger: CompiledTiming) -> CompiledCard {
@@ -146,7 +146,7 @@ fn delay_other_timing_is_event_gated() {
     assert_eq!(
         effects[0].delay_trigger,
         Some(DelayTrigger::OnEvent(EffectTiming::OnPlay)),
-        "a non-turn-scheduled timing must be event-gated, not silently          turned into a turn-scheduled auto-fire (16-16-1)"
+        "a non-turn-scheduled timing must be event-gated, not silently          turned into a turn-scheduled auto-fire (16-17-1)"
     );
 }
 
@@ -230,12 +230,12 @@ fn delay_event_trigger_lowers_to_on_event_delay() {
         effects[0].condition.is_some(),
         "Delay active_when should lower to a runtime condition"
     );
-    // Rules manual 16-16-2: "The processing from <Delay> is optional." The
+    // Rules manual 16-17-2: "The processing from <Delay> is optional." The
     // event-gated Delay must queue as an OPTIONAL trigger with the outer
     // accept/decline activation prompt (declining leaves the Option parked).
     assert!(
         effects[0].optional,
-        "event-gated <Delay> must be optional (16-16-2)"
+        "event-gated <Delay> must be optional (16-17-2)"
     );
     assert!(
         effects[0].needs_outer_optional_prompt,
@@ -287,7 +287,7 @@ fn delay_attack_triggers_lower_to_on_event_delay() {
         );
         assert!(
             effects[0].optional && effects[0].needs_outer_optional_prompt,
-            "{compiled:?}: event-gated <Delay> must be optional with an outer prompt (16-16-2)"
+            "{compiled:?}: event-gated <Delay> must be optional with an outer prompt (16-17-2)"
         );
     }
 }
