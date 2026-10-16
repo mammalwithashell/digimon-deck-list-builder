@@ -235,7 +235,8 @@ fn counter_redirect_into_collision_forced_block_end_to_end() {
     //
     // After the Counter window closes the state machine advances to
     // BlockOpen. Attacker has <Collision> AND the defender has DEF_A /
-    // DEF_B as candidates, so the selection is MANDATORY.
+    // DEF_B on the field. Only DEF_A may block the current DEF_B target,
+    // so the nonempty selection is MANDATORY.
     assert_eq!(r.current_phase(), GamePhase::BlockTiming);
     let sel = r
         .game
@@ -247,15 +248,15 @@ fn counter_redirect_into_collision_forced_block_end_to_end() {
         "Collision + non-empty candidate pool ⇒ MUST-block"
     );
     assert_eq!(sel.selecting_player, 1);
-    // Defender has DEF_A @ slot 0 and DEF_B @ slot 1 — both are candidates.
+    // Defender has DEF_A @ slot0 and current target DEF_B @ slot1; only0 may block.
     assert!(
         sel.valid_action_ids.contains(&encode_attack(0, 0)),
         "DEF_A must be a blocker candidate (got {:?})",
         sel.valid_action_ids
     );
     assert!(
-        sel.valid_action_ids.contains(&encode_attack(0, 1)),
-        "DEF_B must be a blocker candidate (got {:?})",
+        !sel.valid_action_ids.contains(&encode_attack(0, 1)),
+        "current target DEF_B must not be a blocker candidate (got {:?})",
         sel.valid_action_ids
     );
     // Defender's action mask drops PASS.

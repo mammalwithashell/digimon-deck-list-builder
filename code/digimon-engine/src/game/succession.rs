@@ -153,6 +153,9 @@ impl crate::game::Game {
         adopted: bool,
         effect: &Effect,
     ) -> bool {
+        if effect.linked {
+            return false;
+        }
         let is_top = source_index + 1 == stack_size;
         if is_top {
             return !effect.inherited;

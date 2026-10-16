@@ -1,0 +1,429 @@
+# Official observation 183f4c89f487eb44051d189b1ff8807b7c522f7ab65a0b83f244bc0277bb5ab2 and P-035.webp checked.
+# Base DCGO P/Red/P_035.cs; draft pending oracle.
+card: P-035
+seed: 424242
+clause: P-035#effect#0
+covers: [P-035#effect#0, P-035#effect#1]
+decks:
+  p0:
+    stack: [ST1-03, P-035, ST1-04, ST1-04, ST1-04, ST1-02, ST1-02, ST1-02, ST1-02, ST1-04, ST2-04, ST2-03, ST1-05, ST2-05, ST2-06, ST2-07]
+    rest: p-035-tail-p0
+  p1:
+    stack: [ST1-03, ST1-06, ST1-04, ST1-04, ST1-04, ST1-02, ST1-02, ST1-02, ST1-02, P-035, ST2-04, ST2-03]
+    rest: p-035-tail-p1
+steps:
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: ST1-03, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: P-035, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { select: { cards: [ST1-05] } } }
+- { actor: 0, do: { select: { cards: [ST2-03, ST2-05, ST2-06] } } }
+- { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { main: { on: field.1 } }, expect: { prompt: main_phase } }
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+assert:
+- at: 8
+  that:
+    memory: 0
+- at: 13
+  that:
+    memory: 5
+    p0.trash:
+    - P-035
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - P-035
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - P-035
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - P-035
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 2
+- at: 3
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - P-035
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 4
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - P-035
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST2-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 3
+- at: 5
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - P-035
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST2-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 6
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST2-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    turn: 3
+- at: 7
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST2-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    turn: 3
+- at: 8
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field:
+    - card_id: P-035
+      dp: -1
+      suspended: false
+      sources: []
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST2-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 9
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: P-035
+      dp: -1
+      suspended: false
+      sources: []
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST2-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    - ST2-03
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 4
+- at: 10
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: P-035
+      dp: -1
+      suspended: false
+      sources: []
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST2-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    - ST2-03
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 4
+- at: 11
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: P-035
+      dp: -1
+      suspended: false
+      sources: []
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST2-04
+    - ST2-07
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    - ST2-03
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 5
+- at: 12
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: P-035
+      dp: -1
+      suspended: false
+      sources: []
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST2-04
+    - ST2-07
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-04
+    - ST1-04
+    - ST1-06
+    - ST2-03
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 5

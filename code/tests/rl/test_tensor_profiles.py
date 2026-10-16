@@ -48,7 +48,7 @@ def test_get_standard_lite_v2_tensor_profile_from_rust():
     # Task S1.4: PERM_MAX_SOURCES 11 -> 12; tensor_size 8320 -> 8410.
     assert profile.tensor_size == 8410
     assert profile.tensor_version == 2
-    assert profile.feature_schema_version == "standard_lite_v2.2"
+    assert profile.feature_schema_version == "standard_lite_v2.3"
     assert profile.card_id_slot_count == 572
     assert profile.scalar_slot_count == 7838
     assert profile.layout_hash.startswith("sha256:")
@@ -71,7 +71,7 @@ def test_get_standard_full_v2_tensor_profile_from_rust():
     assert profile.id == "standard_full_v2"
     assert profile.tensor_size == 43482
     assert profile.tensor_version == 2
-    assert profile.feature_schema_version == "standard_full_v2.3"
+    assert profile.feature_schema_version == "standard_full_v2.4"
     assert profile.card_id_slot_count == 572
     assert profile.scalar_slot_count == 42910
 
@@ -101,7 +101,7 @@ def test_get_standard_lite_deck_v2_tensor_profile_from_rust():
     assert profile.id == "standard_lite_deck_v2"
     assert profile.tensor_size == 8850
     assert profile.tensor_version == 2
-    assert profile.feature_schema_version == "standard_lite_deck_v2.1"
+    assert profile.feature_schema_version == "standard_lite_deck_v2.2"
     assert profile.card_id_slot_count == 627
     assert profile.scalar_slot_count == 8223
     assert len(profile.card_id_positions) == 627

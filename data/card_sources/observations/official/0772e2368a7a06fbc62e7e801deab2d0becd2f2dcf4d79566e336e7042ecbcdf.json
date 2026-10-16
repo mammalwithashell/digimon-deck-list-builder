@@ -1,0 +1,97 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "RB1-036",
+    "card_type": "Digimon",
+    "colors": [
+      "Red",
+      "Purple"
+    ],
+    "dp": 15000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red",
+          "Purple"
+        ],
+        "cost": 5,
+        "from_level": 6,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Purple"
+        ],
+        "dp": 15000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 7,
+        "name": "Proximamon",
+        "play_cost": 15,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] 3 from [Siriusmon] w/[Arcturusmon] digivolution card"
+          },
+          {
+            "label": "Effect",
+            "text": "[All Turns][Once Per Turn] When another Digimon is deleted, you may play 1 level 4 or lower Digimon card with [Gammamon] in its name from your trash without paying the cost.\n[End of Your Turn][Once Per Turn] By placing 1 Digimon card with [Gammamon] in its text from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP."
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 7,
+    "name": "Proximamon",
+    "play_cost": 15,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522017",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/RB1-036.png?260529",
+      "printing_id": "RB1-036"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "If that inherited effect is an effect such as a [Your Turn] [All Turns] effect that increases DP upon activation after being placed in digivolution cards, you can delete 1 of your opponent's Digimon with DP less than or equal to the DP after it was increased.",
+        "date": "Mar. 28, 2024",
+        "number": "Q4112",
+        "question": "I used this card's [End of Your Turn] effect to place a Digimon card with an inherited effect that increases DP in this Digimon’s digivolution cards. In such cases, can I use \"delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP\" to delete 1 of my opponent's Digimon with DP less than or equal to the DP after it was increased?"
+      }
+    ],
+    "rarity": "SEC",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] 3 from [Siriusmon] w/[Arcturusmon] digivolution card"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] 3 from [Siriusmon] w/[Arcturusmon] digivolution card"
+      },
+      {
+        "label": "Effect",
+        "text": "[All Turns][Once Per Turn] When another Digimon is deleted, you may play 1 level 4 or lower Digimon card with [Gammamon] in its name from your trash without paying the cost.\n[End of Your Turn][Once Per Turn] By placing 1 Digimon card with [Gammamon] in its text from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP."
+      }
+    ],
+    "type": "Unique"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "0772e2368a7a06fbc62e7e801deab2d0becd2f2dcf4d79566e336e7042ecbcdf",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "8682c54e392dd4b85c877c28d4c5fbd28ecae9f638fae396af5d0f590c71bbfd",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522017:RB1-036:RB1-036",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522017"
+}

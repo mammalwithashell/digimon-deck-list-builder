@@ -22,6 +22,7 @@ fn digimon(id: &str, traits: &[&str]) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: id.replace('-', "_"),

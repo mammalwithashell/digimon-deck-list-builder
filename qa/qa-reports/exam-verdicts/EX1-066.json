@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "last_updated": "2026-08-23T22:11:43.910179300+00:00",
+  "version": 2,
+  "last_updated": "2026-10-11T09:40:18.571511100+00:00",
   "clauses": {
     "EX1-066#effect#0": {
       "clause_id": "EX1-066#effect#0",
@@ -8,8 +8,10 @@
       "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "6ef2a72b9af483b07b1d6dfc91e82390a94b9f143915bd2947b5730a121c64d0",
-      "scenario_path": "qa/dcgo-exams/EX12/EX1-066-effect0.yaml",
-      "recorded_at": "2026-08-23T22:11:38.925909100+00:00"
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\dcgo-exams\\EX12\\EX1-066-effect0.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX1-066-effect0",
+      "recorded_at": "2026-10-10T18:47:11.303875600+00:00"
     },
     "EX1-066#effect#1": {
       "clause_id": "EX1-066#effect#1",
@@ -18,7 +20,7 @@
       "label": "Effect",
       "text_sha256": "db914dc64761b53ef147ceba156c24a72b8865807447ee20eef634744281e5b5",
       "scenario_path": "qa/dcgo-exams/EX12/EX1-066-effect1.yaml",
-      "recorded_at": "2026-08-23T22:11:41.495590300+00:00"
+      "recorded_at": "2026-10-10T18:54:45.556835200+00:00"
     },
     "EX1-066#security#0": {
       "clause_id": "EX1-066#security#0",
@@ -27,7 +29,23 @@
       "label": "Security Effect",
       "text_sha256": "321051d9d40d4dc4b6c89186837ddc5f03489dd105085bce198cd347da35809d",
       "scenario_path": "qa/dcgo-exams/EX12/EX1-066-effect2.yaml",
-      "recorded_at": "2026-08-23T22:11:43.910179300+00:00"
+      "recorded_at": "2026-10-10T18:54:48.812159200+00:00"
+    }
+  },
+  "interactions": {
+    "qa:Q3254": {
+      "interaction_id": "qa:Q3254",
+      "card_ids": [
+        "EX1-066"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "b524290b18cb2440eebe1d19613624053651b942cac64a6969a7e6c2fe8e75e6",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T091925Z-8b2f64bcc1\\EX1-066-interaction-Q3254-20261011T091925Z-8b2f64bcc1.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX1-066-interaction-Q3254-20261011T091925Z-8b2f64bcc1",
+      "recorded_at": "2026-10-11T09:40:18.571511100+00:00"
     }
   }
 }

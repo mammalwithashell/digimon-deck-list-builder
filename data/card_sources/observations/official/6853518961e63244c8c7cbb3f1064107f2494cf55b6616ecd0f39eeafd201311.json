@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Game",
+    "card_id": "BT25-045",
+    "colors": "Green",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "2000",
+    "form": "Stnd./Appmon",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[Your Turn] [Once Per Turn] When a [Social], [Tool] or [Game] trait card would link to this Digimon, you may reduce the cost by 1."
+      },
+      {
+        "label": "Link DP",
+        "text": "DP+2000"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Linking] Suspend 1 of your opponent's Digimon."
+      }
+    ],
+    "type": "Online"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "6853518961e63244c8c7cbb3f1064107f2494cf55b6616ecd0f39eeafd201311",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "7e258358edd0d78fc4899811b0d439f2ea16f7439115cf18cdadd2d5a0598377",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-045",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-045"
+}

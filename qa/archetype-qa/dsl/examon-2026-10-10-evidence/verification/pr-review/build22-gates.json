@@ -1,0 +1,36 @@
+{
+  "approved_bounded_build22_gate_completion": true,
+  "root_full10_session": 60987,
+  "root_reported_exit_code": 0,
+  "combined_gates": {
+    "original_pipeline_passed": 24,
+    "refreshed_golden_corpus": 10,
+    "separate_ladder_wheel_passed": 11,
+    "carried_focused_tests": 198,
+    "carried_full_ex13_tests": 1081
+  },
+  "golden_verification": {
+    "path": "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-refreshed-all10-goldens-root-v1\\result.json",
+    "sha256": "e6bcaa6965cc5987f96885b4106070cecb59b912873eacf4b71ee5f7b18de149"
+  },
+  "promotion_receipt": {
+    "path": "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\two-golden-refresh-root-apply-v1.json",
+    "sha256": "b89cabf2ef49e25af8ca6045fa74c73f6e08eb3331e0fc3e901e3ad96295e6ad"
+  },
+  "verified": {
+    "active10_byte_equal_tested_corpus": true,
+    "other8_unchanged": true,
+    "two_originals_archived_exact": true,
+    "only_current_input_hash_changes": [
+      "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\replay-goldens\\refresh_v2_generated_greedy_008_digilab_1509ed7da6be_vs_digilab_155d30601167_seed_40521432.replay.json",
+      "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\replay-goldens\\refresh_v2_generated_greedy_009_digilab_155d30601167_vs_digilab_1682f0098d48_seed_40521435.replay.json"
+    ],
+    "production_engine_sources_unchanged": true,
+    "original18158STOP_preserved": true
+  },
+  "scope": "Combined separately captured build22 gates completed after reviewed two-fixture semantic expectation migration; original18158 remained a failed run, not retroactively relabeled. No whole-card or all-DCGO fidelity claim.",
+  "retained155": "Previously accepted151clean+4known diagnostic cohort comparisons; no rerun required from digest-fixture-only migration.",
+  "new_live": false,
+  "canonical_card_verdict_promotion": false,
+  "runtime_executed_by_reviewer": false
+}

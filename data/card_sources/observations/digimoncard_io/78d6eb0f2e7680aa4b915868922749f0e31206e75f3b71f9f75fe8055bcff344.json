@@ -1,0 +1,97 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Data"
+      ],
+      "card_colors": [
+        "Green"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Zephagamon",
+      "dp": 13000,
+      "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon in battle, it checks security before the attack ends.)\r\n＜Vortex＞ (At the end of your turn, this Digimon may attack an opponent's Digimon. With this effect, it can attack the turn it was played.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may unsuspend 1 Digimon. Then, this Digimon may battle 1 of your opponent's Digimon.\r\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by suspending 1 Digimon, it doesn't leave.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "When this card would be used, by suspending 2 Digimon, reduce the cost by 2.\r\n[Main] 1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends. Then, for every 2 suspended Digimon, return 1 of their Digimon to the bottom of the deck.",
+      "level": 6,
+      "play_cost": 6,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Magic Knight",
+        "Vortex Warriors",
+        "LIBERATOR"
+      ]
+    },
+    "card_id": "LM-066",
+    "derived_diagnostics": [
+      {
+        "authoritative": false,
+        "candidate": {
+          "color": "Green",
+          "cost": 4,
+          "level": 5,
+          "ordinal": 1
+        },
+        "derived": true,
+        "field_path": "evolution_routes",
+        "reason": "digimoncard.io omitted explicit evolution route components"
+      }
+    ],
+    "explicit_evolution_routes": [],
+    "faces": [],
+    "source_record": {
+      "alt_effect": "[Digivolve] Play cost 11 or higher w/[Vortex Warriors] trait: Cost 2",
+      "artist": null,
+      "attribute": "Data",
+      "color": "Green",
+      "color2": null,
+      "date_added": "2026-05-13 01:00:34",
+      "digi_type": "Magic Knight",
+      "digi_type2": "Vortex Warriors",
+      "digi_type3": "LIBERATOR",
+      "digi_type4": null,
+      "dp": 13000,
+      "evolution_color": null,
+      "evolution_cost": 4,
+      "evolution_level": null,
+      "form": null,
+      "id": "LM-066",
+      "level": 6,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon in battle, it checks security before the attack ends.)\r\n＜Vortex＞ (At the end of your turn, this Digimon may attack an opponent's Digimon. With this effect, it can attack the turn it was played.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may unsuspend 1 Digimon. Then, this Digimon may battle 1 of your opponent's Digimon.\r\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by suspending 1 Digimon, it doesn't leave.",
+      "name": "Zephagamon",
+      "play_cost": 6,
+      "pretty_url": "LM-066-zephagamon",
+      "rarity": "p",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "LM-09: LIMITED CARD PACK DISTANCIA CERO"
+      ],
+      "source_effect": "When this card would be used, by suspending 2 Digimon, reduce the cost by 2.\r\n[Main] 1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends. Then, for every 2 suspended Digimon, return 1 of their Digimon to the bottom of the deck.",
+      "stage": null,
+      "tcgplayer_id": null,
+      "tcgplayer_name": null,
+      "type": "Dual",
+      "xros_req": "[Digivolve] Play cost 11 or higher w/[Vortex Warriors] trait: Cost 2"
+    },
+    "structural_diagnostics": [
+      {
+        "authoritative": false,
+        "derived": false,
+        "field_path": "faces.1.colors",
+        "reason": "digimoncard.io omitted the explicit Option-face color"
+      }
+    ]
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "78d6eb0f2e7680aa4b915868922749f0e31206e75f3b71f9f75fe8055bcff344",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "LM-066",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

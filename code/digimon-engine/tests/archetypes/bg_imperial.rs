@@ -260,9 +260,11 @@ fn dna_lockdown_suspends_and_locks_opponent() {
         opp_is_suspended(&runner, opp),
         "[When Digivolving] must suspend the opp Digimon with ≤ digivolution cards"
     );
-    // on_dna_digivolve: the DNA-only lock is applied.
+    // The same When Digivolving effect installs a player-wide DNA-only lock.
+    // Exercise the public operation so player and permanent restrictions count.
+    runner.game.unsuspend_with_cause(opp, true);
     assert!(
-        runner.modifiers().has(opp, ModifierType::CannotUnsuspend),
+        opp_is_suspended(&runner, opp),
         "the DNA path must apply CannotUnsuspend to the opp Digimon"
     );
 }
@@ -296,8 +298,9 @@ fn regular_digivolve_into_meta_paildramon_suspends_but_does_not_lock() {
         opp_is_suspended(&runner, opp),
         "[When Digivolving] suspend fires on a regular digivolve too"
     );
+    runner.game.unsuspend_with_cause(opp, true);
     assert!(
-        !runner.modifiers().has(opp, ModifierType::CannotUnsuspend),
+        !opp_is_suspended(&runner, opp),
         "the CannotUnsuspend lock must NOT apply off a regular (non-DNA) digivolve"
     );
 }

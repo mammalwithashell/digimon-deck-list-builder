@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT25-044",
+    "colors": "Yellow Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "12",
+    "qa": [
+      "[Security] effects take precedence for activation. Upon a check, a [Security] effect will immediately activate without pending activation. For other triggered effects, the turn player activates their effects first."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.5 w/[Angel]/[Archangel]/[TS] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[Angel]/[Archangel]/[TS] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "When this card would be played, if there are 6 or fewer total cards in both players' security stacks, reduce the cost by 5. [On Play] [When Digivolving] By placing 1 other Digimon as the top security card, trash both players' top security cards. [All Turns] [Once Per Turn] When your security stack is removed from, you may play 1 play cost 8 or lower [Angel], [Archangel] or [Iliad] trait card from your hand or trash without paying the cost."
+      }
+    ],
+    "type": "Shaman/Olympos XII/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "efe4679d524dc361371a94572e4e99693be016fce7a3f987dfbb76bee6e2c0fa",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "88c4925a2f3b47698e7744600476f3a1c0f0d2697d7a327390b96b83e2486ead",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-044",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-044"
+}

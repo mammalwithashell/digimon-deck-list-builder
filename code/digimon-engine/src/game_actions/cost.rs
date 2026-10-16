@@ -22,6 +22,59 @@ use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
 impl Game {
+    /// Resumed declarations no longer have the origin caller on the stack to
+    /// roll back a failed play. Restore the captured physical card exactly once.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn continue_resumed_play_cost_chain(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target: CostTargetContext,
+        cost_delta: CostDelta,
+        source: PlaySource,
+        origin: PendingWouldPlayOrigin,
+        suppress_on_play: bool,
+        accumulated_reduction: crate::game_actions::PlayCostAdjustments,
+        processed: Vec<CostReductionKey>,
+    ) -> PlayFromHandCostResult {
+        let controller = self.effect_source_player.unwrap_or(player_id);
+        let result = self.continue_play_from_hand_cost_reduction_chain(
+            player_id,
+            hand_index,
+            target,
+            cost_delta,
+            source,
+            origin,
+            suppress_on_play,
+            accumulated_reduction,
+            processed,
+        );
+        if matches!(result, PlayFromHandCostResult::Failed) {
+            self.restore_pending_would_play_origin(crate::game::PendingWouldPlayResume {
+                player: player_id,
+                card: target.card,
+                effective_cost: 0,
+                origin,
+                effect_initiated: source == PlaySource::ByEffect,
+                play_controller: controller,
+                suppress_on_play,
+            });
+        }
+        result
+    }
+
+    pub(crate) fn with_play_declaration_controller<T>(
+        &mut self,
+        controller: Option<PlayerId>,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        let previous = self.effect_source_player;
+        self.effect_source_player = controller;
+        let result = f(self);
+        self.effect_source_player = previous;
+        result
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn continue_play_from_hand_cost_reduction_chain(
         &mut self,
@@ -32,9 +85,10 @@ impl Game {
         source: PlaySource,
         origin: PendingWouldPlayOrigin,
         suppress_on_play: bool,
-        mut accumulated_reduction: i32,
+        mut accumulated_reduction: crate::game_actions::PlayCostAdjustments,
         mut processed: Vec<CostReductionKey>,
     ) -> PlayFromHandCostResult {
+        let effect_controller = self.effect_source_player;
         loop {
             let candidates = self.collect_before_pay_cost_reducers(
                 player_id,
@@ -42,7 +96,44 @@ impl Game {
                 &processed,
                 CostReductionKind::Play,
             );
-            let Some(candidate) = candidates.into_iter().next() else {
+            let preferred = self
+                .preferred_play_cost_effect
+                .take()
+                .filter(|key| candidates.iter().any(|c| c.key == *key));
+            let any_assignment = candidates.iter().any(|c| {
+                self.effects_for_card(&c.key.card_id, c.key.source_card)
+                    .and_then(|v| {
+                        v.get(c.key.effect_slot as usize)
+                            .and_then(|e| e.cost_assignment)
+                    })
+                    .is_some()
+            });
+            if candidates.len() > 1 && any_assignment && preferred.is_none() {
+                let key = candidates[0].key.clone();
+                self.install_play_cost_order(PlayFromHandCostReductionPromptState {
+                    order: Some(play_cost_assignment::PlayCostOrder {
+                        choices: candidates,
+                        page: 0,
+                    }),
+                    effect_controller,
+                    player_id,
+                    hand_index,
+                    target,
+                    cost_delta,
+                    source,
+                    origin,
+                    suppress_on_play,
+                    accumulated_reduction,
+                    processed,
+                    key,
+                    outer_conts: Vec::new(),
+                });
+                return PlayFromHandCostResult::Pending;
+            }
+            let selected = preferred
+                .and_then(|k| candidates.iter().position(|c| c.key == k))
+                .unwrap_or(0);
+            let Some(candidate) = candidates.into_iter().nth(selected) else {
                 // All generic cost reducers resolved. Before committing the
                 // play, offer the Assembly alt-path (G-ASSEMBLY-PLAY-EXECUTION,
                 // change `fix-ad1-025-assembly-data`) when the played card has
@@ -80,9 +171,7 @@ impl Game {
             // surfaces the Shoutmon preattach as an optional "you may".
             if !candidate.optional && (!candidate.has_pay_cost || candidate.pay_cost_self_gated) {
                 let key = candidate.key.clone();
-                if let Some(amount) = self.apply_cost_reduction_candidate(&key, target, true) {
-                    accumulated_reduction += amount;
-                }
+                self.apply_play_cost_candidate(&key, target, &mut accumulated_reduction);
                 processed.push(key);
                 if self.pending_selection.is_some() {
                     self.wrap_pending_play_cost_continuation(
@@ -109,19 +198,21 @@ impl Game {
             let decline_processed = processed.clone();
             let on_decline = candidate.optional.then(|| {
                 Box::new(move |game: &mut Game| {
-                    let mut processed = decline_processed;
-                    processed.push(decline_key);
-                    let _ = game.continue_play_from_hand_cost_reduction_chain(
-                        player_id,
-                        hand_index,
-                        target,
-                        cost_delta,
-                        source,
-                        origin,
-                        suppress_on_play,
-                        accumulated_reduction,
-                        processed,
-                    );
+                    game.with_play_declaration_controller(effect_controller, |game| {
+                        let mut processed = decline_processed;
+                        processed.push(decline_key);
+                        let _ = game.continue_resumed_play_cost_chain(
+                            player_id,
+                            hand_index,
+                            target,
+                            cost_delta,
+                            source,
+                            origin,
+                            suppress_on_play,
+                            accumulated_reduction,
+                            processed,
+                        );
+                    });
                 }) as crate::selection::DeclineCallback
             });
             let previous_phase = self.current_phase;
@@ -133,9 +224,16 @@ impl Game {
                 previous_phase,
                 valid_action_ids: vec![crate::action::space::HAND_EFFECT_START],
                 is_optional: candidate.optional,
-                prompt: format!("Use {} to reduce play cost?", candidate.label),
+                prompt: match candidate.assignment {
+                    Some(value) => format!("Set play cost to {value} using {}?", candidate.label),
+                    None => format!("Use {} to reduce play cost?", candidate.label),
+                },
                 effect_choices: Some(vec![crate::selection::EffectChoiceEntry {
-                    label: format!("{} (-{})", candidate.label, candidate.amount),
+                    count_choice: None,
+                    label: match candidate.assignment {
+                        Some(value) => format!("{} (set play cost to {value})", candidate.label),
+                        None => format!("{} (-{})", candidate.label, candidate.amount),
+                    },
                     action_id: crate::action::space::HAND_EFFECT_START,
                     source_card: Some(key.source_card),
                     source_kind: Some(source_kind),
@@ -148,16 +246,26 @@ impl Game {
                 source_permanent: key.source_permanent,
                 source_kind,
                 callback: Box::new(move |game: &mut Game, _action_id: u16| {
-                    let mut processed = accept_processed;
-                    let mut reduction = accumulated_reduction;
-                    if let Some(amount) =
-                        game.apply_cost_reduction_candidate(&accept_key, target, true)
-                    {
-                        reduction += amount;
-                    }
-                    processed.push(accept_key);
-                    if game.pending_selection.is_some() {
-                        game.wrap_pending_play_cost_continuation(
+                    game.with_play_declaration_controller(effect_controller, |game| {
+                        let mut processed = accept_processed;
+                        let mut reduction = accumulated_reduction;
+                        game.apply_play_cost_candidate(&accept_key, target, &mut reduction);
+                        processed.push(accept_key);
+                        if game.pending_selection.is_some() {
+                            game.wrap_pending_play_cost_continuation(
+                                player_id,
+                                hand_index,
+                                target,
+                                cost_delta,
+                                source,
+                                origin,
+                                suppress_on_play,
+                                reduction,
+                                processed,
+                            );
+                            return;
+                        }
+                        let _ = game.continue_resumed_play_cost_chain(
                             player_id,
                             hand_index,
                             target,
@@ -168,25 +276,15 @@ impl Game {
                             reduction,
                             processed,
                         );
-                        return;
-                    }
-                    let _ = game.continue_play_from_hand_cost_reduction_chain(
-                        player_id,
-                        hand_index,
-                        target,
-                        cost_delta,
-                        source,
-                        origin,
-                        suppress_on_play,
-                        reduction,
-                        processed,
-                    );
+                    });
                 }),
                 on_decline,
             });
             self.pending_selection_resume = Some(crate::resume::ResumeStack {
                 frames: vec![crate::resume::ResumeFrame::PlayFromHandCostReductionPrompt(
                     PlayFromHandCostReductionPromptState {
+                        order: None,
+                        effect_controller,
                         player_id,
                         hand_index,
                         target,
@@ -207,10 +305,51 @@ impl Game {
 
     pub(crate) fn run_play_from_hand_cost_reduction_prompt_step(
         &mut self,
+        mut state: PlayFromHandCostReductionPromptState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        if let Some(order) = state.order.take() {
+            let Some(index) = action_id
+                .checked_sub(30)
+                .filter(|i| *i < 28)
+                .map(|i| order.page * 28 + i as usize)
+            else {
+                return;
+            };
+            let Some(choice) = order.choices.get(index) else {
+                return;
+            };
+            let previous = self.preferred_play_cost_effect.replace(choice.key.clone());
+            self.with_play_declaration_controller(state.effect_controller, |game| {
+                let _ = game.continue_resumed_play_cost_chain(
+                    state.player_id,
+                    state.hand_index,
+                    state.target,
+                    state.cost_delta,
+                    state.source,
+                    state.origin,
+                    state.suppress_on_play,
+                    state.accumulated_reduction,
+                    state.processed,
+                );
+            });
+            self.preferred_play_cost_effect = previous;
+            return;
+        }
+        self.with_play_declaration_controller(state.effect_controller, |game| {
+            game.run_play_from_hand_cost_reduction_prompt_step_scoped(state, is_pass)
+        });
+    }
+
+    fn run_play_from_hand_cost_reduction_prompt_step_scoped(
+        &mut self,
         state: PlayFromHandCostReductionPromptState,
         is_pass: bool,
     ) {
         let PlayFromHandCostReductionPromptState {
+            order: _,
+            effect_controller: _,
             player_id,
             hand_index,
             target,
@@ -226,7 +365,7 @@ impl Game {
 
         if is_pass {
             processed.push(key);
-            let _ = self.continue_play_from_hand_cost_reduction_chain(
+            let _ = self.continue_resumed_play_cost_chain(
                 player_id,
                 hand_index,
                 target,
@@ -241,9 +380,7 @@ impl Game {
         }
 
         let mut reduction = accumulated_reduction;
-        if let Some(amount) = self.apply_cost_reduction_candidate(&key, target, true) {
-            reduction += amount;
-        }
+        self.apply_play_cost_candidate(&key, target, &mut reduction);
         processed.push(key);
         if self.pending_selection.is_some() {
             self.wrap_pending_play_cost_continuation(
@@ -259,7 +396,7 @@ impl Game {
             );
             return;
         }
-        let _ = self.continue_play_from_hand_cost_reduction_chain(
+        let _ = self.continue_resumed_play_cost_chain(
             player_id,
             hand_index,
             target,
@@ -272,103 +409,232 @@ impl Game {
         );
     }
 
-    /// G-COST-REDUCE-ALLY-DIGIVOLVE — consult `Game::player_digivolve_cost_reducers`
-    /// for a reducer that qualifies for the digivolution of `target` by
-    /// `acting_player`. When one qualifies AND its (suspend) cost is payable,
-    /// install an interactive accept/decline `PendingSelection` and return
-    /// `true` (the caller must abort and let the callbacks re-enter the
-    /// digivolve). Returns `false` if no reducer qualifies, or the reducer's
-    /// suspend cost is unpayable — in which case the reducer stays armed and
-    /// the digivolve proceeds at the unreduced cost.
-    ///
-    /// Only the FIRST qualifying reducer is offered per digivolution (a
-    /// second qualifying reducer would be offered on a subsequent
-    /// digivolution after this one resolves; BT3-103's `single_fire` means
-    /// a player rarely has more than one armed at once).
+    /// Snapshot every reducer triggered by this legal digivolution. Mask and
+    /// route-availability queries never call this execution-only path.
+    /// Free reductions accumulate; paid reducers expose their resolution order
+    /// and suspend choices before the caller pays the final digivolution cost.
     pub(crate) fn try_prompt_player_digivolve_cost_reducer(
         &mut self,
         acting_player: PlayerId,
         target: PermanentHandle,
         hand_index: usize,
-        field_index: usize,
         source: PlaySource,
-    ) -> bool {
-        if self.player_digivolve_cost_reducers.is_empty() {
-            return false;
-        }
-        // The flood-gates that suppress field-hosted digivolve reducers must
-        // also suppress the player-scoped reducer (see
-        // `collect_before_pay_cost_reducers`).
-        if self
-            .modifiers
-            .player_has(acting_player, ModifierType::CannotReduceCost)
-            || self
-                .modifiers
-                .player_has(acting_player, ModifierType::CannotReduceDigivolveCost)
-            || self.modifiers.any_other_player_has(
-                acting_player,
-                ModifierType::OpponentCannotReduceDigivolveCost,
-            )
-        {
-            return false;
-        }
-        // Top-card colors of the digivolving permanent (the permanent is the
-        // SOURCE of the digivolution — BT3-103 keys on "your green Digimon").
-        let top_colors: Vec<crate::enums::CardColor> = match self
+    ) -> Option<bool> {
+        let card = self.player(acting_player).hand.get(hand_index)?.handle();
+        self.try_prompt_digivolve_reducer_chain(
+            acting_player,
+            target,
+            CostTargetContext {
+                card,
+                from_hand: true,
+                is_digivolve: true,
+                target_permanents: [Some(target), None],
+            },
+            source,
+            None,
+        )
+    }
+
+    pub(crate) fn try_prompt_digivolve_reducer_chain(
+        &mut self,
+        acting_player: PlayerId,
+        target: PermanentHandle,
+        cost_target: CostTargetContext,
+        source: PlaySource,
+        effect: Option<super::digivolve::EffectDigivolveCostChoiceState>,
+    ) -> Option<bool> {
+        self.try_prompt_digivolve_reducer_chain_mode(
+            acting_player,
+            target,
+            cost_target,
+            source,
+            effect,
+            false,
+        )
+    }
+
+    pub(crate) fn try_prompt_digivolve_reducer_chain_mode(
+        &mut self,
+        acting_player: PlayerId,
+        target: PermanentHandle,
+        cost_target: CostTargetContext,
+        source: PlaySource,
+        effect: Option<super::digivolve::EffectDigivolveCostChoiceState>,
+        affordability_probe: bool,
+    ) -> Option<bool> {
+        let top_colors = self
             .player(target.player)
             .battle_area
-            .get(target.index as usize)
-        {
-            Some(perm) => perm.top_card().digimon_colors(&self.card_data).to_vec(),
-            None => return false,
-        };
-        let Some(reducer_idx) = self
+            .get(target.index as usize)?
+            .top_card()
+            .digimon_colors(&self.card_data)
+            .to_vec();
+        use super::digivolve::{DigivolveReducerChoice, DigivolveReducerState};
+        let mut remaining: Vec<_> = self
             .player_digivolve_cost_reducers
             .iter()
-            .position(|r| r.qualifies(acting_player, target, &top_colors))
-        else {
-            return false;
-        };
-        let reducer = self.player_digivolve_cost_reducers[reducer_idx].clone();
-
-        // G-DELAY-NEXT-DIGIVOLVE-COST-REDUCTION — a FREE reducer
-        // (`suspend_cost == false`) carries no player choice: the rules apply
-        // the reduction unconditionally (DCGO ST12_15.cs installs an
-        // unconditional `Cost -= 1` with no accept/decline gate). Auto-apply
-        // it synchronously instead of parking a spurious optional prompt
-        // (which would over-expose an illegal PASS — see
-        // reference_dsl_optional_mandatory_selection_pitfall). Consume it if
-        // single-fire, stage the reduction, and return `false` so the caller's
-        // existing cost math (`digivolve_from_hand_inner` consumes
-        // `pending_player_digivolve_reduction`) applies the -N with no parked
-        // selection. The paid path (`suspend_cost == true`, BT3-103) is
-        // unchanged below.
-        if !reducer.suspend_cost {
-            let amount = reducer.amount;
-            self.consume_player_digivolve_reducer(reducer_idx, &reducer, reducer.single_fire);
-            self.pending_player_digivolve_reduction = amount;
-            let _ = (hand_index, field_index, source);
-            return false;
-        }
-
-        // Verify the suspend cost is payable: the player must have at least
-        // one unsuspended Digimon to suspend. If not, the reducer cannot
-        // fire — leave it armed (per the gap's single-fire rule: a
-        // cost-impossible attempt does NOT consume the reducer) and let the
-        // digivolution proceed at the unreduced cost.
-        if self.suspendable_own_digimon(acting_player).is_empty() {
-            return false;
-        }
-
-        self.install_player_digivolve_reducer_prompt(
-            reducer_idx,
-            reducer,
+            .enumerate()
+            .filter(|(_, reducer)| reducer.qualifies(acting_player, target, &top_colors))
+            .map(|(index, reducer)| DigivolveReducerChoice::Player {
+                index,
+                reducer: reducer.clone(),
+            })
+            .collect();
+        let field_candidates = self.collect_before_pay_cost_reducers(
             acting_player,
-            hand_index,
-            field_index,
-            source,
+            Some(cost_target),
+            &[],
+            CostReductionKind::Digivolve,
         );
-        true
+        for candidate in field_candidates {
+            // These are exactly the field classes excluded by the final
+            // synchronous scan, so a payment can never be applied twice.
+            if candidate.has_pay_cost
+                && (candidate.pay_cost_interactive
+                    || (candidate.optional
+                        && candidate.amount > 0
+                        && self.cost_reducer_pay_cost_payable(&candidate.key)))
+            {
+                remaining.push(DigivolveReducerChoice::Field(candidate));
+            }
+        }
+        if remaining.is_empty() {
+            return None;
+        }
+        let host_identity = self.capture_digivolve_host_identity(target);
+        Some(
+            self.finish_player_digivolve_reducer_chain(DigivolveReducerState {
+                current: None,
+                acting_player,
+                host_identity,
+                source,
+                target: cost_target,
+                remaining,
+                reduction: 0,
+                choosing_order: false,
+                affordability_probe,
+                effect,
+            }),
+        )
+    }
+
+    /// Execute one field payment within the shared chain. Keep its original
+    /// controller, source handle and cost target, including arbitrary DSL
+    /// selections. The chain resumes only after the entire payment settles.
+    pub(crate) fn run_digivolve_reducer_chain_payment(
+        &mut self,
+        mut state: super::digivolve::DigivolveReducerState,
+        candidate: CostReductionCandidate,
+    ) -> Option<super::digivolve::DigivolveReducerState> {
+        let key = candidate.key;
+        let Some(amount) = self.inspect_cost_reduction_candidate(&key, Some(state.target)) else {
+            return Some(state);
+        };
+        let Some(mut effects) = self.effects_for_card_owned(&key.card_id, key.source_card) else {
+            return Some(state);
+        };
+        let Some(effect) = effects.get_mut(key.effect_slot as usize) else {
+            return Some(state);
+        };
+        let max_per_turn = effect.max_per_turn;
+        let Some(pay_cost) = effect.pay_cost_fn.take() else {
+            return Some(state);
+        };
+        let pending_before = self.pending_selection.is_some();
+        let (paid, unpayable) = {
+            let mut ctx = EffectContext::new_with_cost_target(
+                self,
+                key.source_card,
+                key.source_permanent,
+                key.controller,
+                state.target.card,
+                state.target.from_hand,
+            );
+            ctx.cost_is_digivolve = true;
+            ctx.cost_target_permanents = state.target.target_permanents_vec();
+            let paid = pay_cost(&mut ctx);
+            (paid, ctx.cost_unpayable)
+        };
+        if !pending_before && self.pending_selection.is_some() {
+            if max_per_turn > 0 {
+                self.record_cost_reducer_activation(&key);
+            }
+            self.wrap_digivolve_reducer_chain_payment(state, amount, true);
+            return None;
+        }
+        let variable = self
+            .pending_cost_reduction_amount_override
+            .take()
+            .unwrap_or(0);
+        if paid && !unpayable {
+            if max_per_turn > 0 {
+                self.record_cost_reducer_activation(&key);
+            }
+            state.reduction += amount + variable;
+        }
+        Some(state)
+    }
+
+    /// Data hook for DSL payments; legacy raw callbacks retain the same
+    /// recursive wrapping behavior as the original interactive reducer path.
+    fn wrap_digivolve_reducer_chain_payment(
+        &mut self,
+        state: super::digivolve::DigivolveReducerState,
+        amount: i32,
+        paid: bool,
+    ) {
+        let Some(mut pending) = self.pending_selection.take() else {
+            return;
+        };
+        if self.pending_selection_resume.is_some() {
+            self.pending_selection = Some(pending);
+            self.after_selection_resume_hooks.0.push(
+                crate::resume::AfterSelectionHook::DigivolveReducerChain {
+                    state,
+                    amount,
+                    paid,
+                },
+            );
+            return;
+        }
+        let callback = pending.callback;
+        let accepted = state.clone();
+        pending.callback = Box::new(move |game, action| {
+            callback(game, action);
+            game.resume_digivolve_reducer_chain_after_payment(
+                accepted.clone(),
+                amount,
+                paid && !game.dsl_clause_aborted,
+            );
+        });
+        pending.on_decline = pending.on_decline.take().map(|decline| {
+            Box::new(move |game: &mut Game| {
+                decline(game);
+                // A declined self-gated payment contributes no reduction.
+                game.resume_digivolve_reducer_chain_after_payment(state.clone(), amount, false);
+            }) as crate::selection::DeclineCallback
+        });
+        self.pending_selection = Some(pending);
+    }
+
+    pub(crate) fn resume_digivolve_reducer_chain_after_payment(
+        &mut self,
+        mut state: super::digivolve::DigivolveReducerState,
+        amount: i32,
+        paid: bool,
+    ) {
+        if self.pending_selection.is_some() {
+            self.wrap_digivolve_reducer_chain_payment(state, amount, paid);
+            return;
+        }
+        let variable = self
+            .pending_cost_reduction_amount_override
+            .take()
+            .unwrap_or(0);
+        if paid {
+            state.reduction += amount + variable;
+        }
+        self.resume_player_digivolve_reducers(state);
     }
 
     /// G-COST-REDUCTION-INTERACTIVE-PAY-COST (digivolve half) — consult the
@@ -453,6 +719,7 @@ impl Game {
                 is_optional: true,
                 prompt: format!("Use {} to reduce digivolution cost?", label),
                 effect_choices: Some(vec![crate::selection::EffectChoiceEntry {
+                    count_choice: None,
                     label: format!("{} (-{})", label, amount),
                     action_id: crate::action::space::HAND_EFFECT_START,
                     source_card: Some(key.source_card),
@@ -538,7 +805,7 @@ impl Game {
     /// suspend-self idiom). A reducer without a declared cost shape is assumed
     /// payable (its pay_cost reports failure at resolution instead).
     /// `G-COST-REDUCTION-OPTIONAL-SYNC-PAY-COST-DIGIVOLVE`.
-    fn cost_reducer_pay_cost_payable(&self, key: &CostReductionKey) -> bool {
+    pub(super) fn cost_reducer_pay_cost_payable(&self, key: &CostReductionKey) -> bool {
         let Some(effects) = self.effects_for_card(&key.card_id, key.source_card) else {
             return false;
         };
@@ -815,8 +1082,72 @@ impl Game {
     ) -> i32 {
         let candidates =
             self.collect_before_pay_cost_reducers(acting_player, cost_target, &[], cost_kind);
+        // Synchronous payments can compact or remove the declared host and
+        // later reducer sources. Pin these stacks before running any payment.
+        let target_identities = cost_target
+            .filter(|target| target.is_digivolve)
+            .map(|target| {
+                target.target_permanents.map(|handle| {
+                    handle
+                        .filter(|handle| {
+                            handle.index != crate::action::space::BREEDING_TARGET as u8
+                        })
+                        .map(|handle| (handle.player, self.capture_digivolve_host_identity(handle)))
+                })
+            });
+        let candidates: Vec<_> = candidates
+            .into_iter()
+            .map(|candidate| {
+                let source_identity = if target_identities.is_some() {
+                    candidate
+                        .key
+                        .source_permanent
+                        .filter(|handle| {
+                            handle.index != crate::action::space::BREEDING_TARGET as u8
+                        })
+                        .map(|handle| (handle.player, self.capture_digivolve_host_identity(handle)))
+                } else {
+                    None
+                };
+                (candidate, source_identity)
+            })
+            .collect();
         let mut total = 0;
-        for candidate in candidates {
+        for (mut candidate, source_identity) in candidates {
+            let mut cost_target = cost_target;
+            if let (Some(identities), Some(target)) = (target_identities, cost_target.as_mut()) {
+                if target.from_hand
+                    && !self
+                        .player(acting_player)
+                        .hand
+                        .iter()
+                        .any(|card| card.handle() == target.card)
+                {
+                    break;
+                }
+                for (index, identity) in identities.into_iter().enumerate() {
+                    if let Some((player, identity)) = identity {
+                        let Some(handle) = self.resolve_digivolve_host_identity(player, identity)
+                        else {
+                            return total;
+                        };
+                        target.target_permanents[index] = Some(handle);
+                    }
+                }
+            }
+            if let Some((player, identity)) = source_identity {
+                let Some(handle) = self.resolve_digivolve_host_identity(player, identity) else {
+                    continue;
+                };
+                if !self.player(player).battle_area[handle.index as usize]
+                    .card_sources
+                    .iter()
+                    .any(|card| card.handle() == candidate.key.source_card)
+                {
+                    continue;
+                }
+                candidate.key.source_permanent = Some(handle);
+            }
             // An INTERACTIVE pay_cost reducer (its `pay_cost` installs a
             // selection — e.g. `trash_bottom_face_down_source_under_tamer`)
             // cannot be resolved by this SYNCHRONOUS scan: a park would leave a
@@ -872,7 +1203,7 @@ impl Game {
         processed: &[CostReductionKey],
         cost_kind: CostReductionKind,
     ) -> Vec<CostReductionCandidate> {
-        if self
+        let reductions_blocked = self
             .modifiers
             .player_has(acting_player, ModifierType::CannotReduceCost)
             || (cost_kind == CostReductionKind::Play
@@ -887,10 +1218,7 @@ impl Game {
                 && self.modifiers.any_other_player_has(
                     acting_player,
                     ModifierType::OpponentCannotReduceDigivolveCost,
-                ))
-        {
-            return Vec::new();
-        }
+                ));
 
         let mut candidates = Vec::new();
         // `when_playing_this` reducers are scoped to "when THIS card would be
@@ -930,10 +1258,18 @@ impl Game {
             let Some(effect) = effects.get(key.effect_slot as usize) else {
                 continue;
             };
-            if amount <= 0 && effect.pay_cost_fn.is_none() {
+            if effect.cost_assignment.is_some() {
+                if cost_kind != CostReductionKind::Play {
+                    continue;
+                }
+            } else if reductions_blocked {
+                continue;
+            }
+            if amount <= 0 && effect.pay_cost_fn.is_none() && effect.cost_assignment.is_none() {
                 continue;
             }
             candidates.push(CostReductionCandidate {
+                assignment: effect.cost_assignment,
                 key,
                 label: if effect.name.is_empty() {
                     "cost reducer".to_string()
@@ -951,7 +1287,7 @@ impl Game {
     }
 
     pub(crate) fn inspect_cost_reduction_candidate(
-        &mut self,
+        &self,
         key: &CostReductionKey,
         cost_target: Option<CostTargetContext>,
     ) -> Option<i32> {
@@ -1044,6 +1380,9 @@ impl Game {
         let amount = self.inspect_cost_reduction_candidate(key, Some(cost_target))?;
         let effects = self.effects_for_card(&key.card_id, key.source_card)?;
         let effect = effects.get(key.effect_slot as usize)?;
+        if effect.cost_assignment.is_some() {
+            return None;
+        }
         if let Some(pay_cost_fn) = &effect.pay_cost_fn {
             let pending_before = self.pending_selection.is_some();
             let mut ctx = EffectContext::new_with_cost_target(
@@ -1055,6 +1394,7 @@ impl Game {
                 cost_target.from_hand,
             );
             ctx.cost_is_digivolve = cost_target.is_digivolve;
+            ctx.cost_target_permanents = cost_target.target_permanents_vec();
             if !pay_cost_fn(&mut ctx) {
                 // The pay_cost did not complete synchronously. Distinguish a
                 // PARK (it installed a fresh PendingSelection — the cost will be

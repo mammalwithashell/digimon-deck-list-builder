@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT24-037",
+    "colors": "Yellow Red",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "8000",
+    "form": "Ultimate",
+    "play_cost": "8",
+    "qa": [
+      "No, it isn't deleted yet. Once all of the processing for the activated effect has resolved, a rule check will occur, then all of the Digimon with 0 DP are deleted at the same time."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.4 w/[TS] trait: Cost 3 [DNA Digivolve] Yellow Lv.4 + red/green Lv.4: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[TS] trait: Cost 3 [DNA Digivolve] Yellow Lv.4 + red/green Lv.4: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -5000 DP for the turn. Then, 1 of your Digimon may attack. If DNA digivolving, 1 of your Digimon gains ＜Security A. +1＞ and +5000 DP for the turn. [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost."
+      }
+    ],
+    "type": "Beastkin/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "188015649763cf541f3908573bd8dfd7d16cd3ee8518668ccac0f1df4054dade",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "1835de34ad50f7ebbd9ea845ff21e0db24e47ec04492a81a83d1fddd5565f56c",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-037",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-037"
+}

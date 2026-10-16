@@ -6,10 +6,13 @@
 pub mod as_selecting_player;
 pub mod combat;
 pub mod control_flow;
+mod deletion_results;
+mod return_results;
 pub mod digixros_transaction;
 pub mod dna_digivolve;
 pub mod draw;
 pub mod effects;
+mod field_source_results;
 pub mod grant_triggered;
 pub mod iteration;
 pub mod link_cards;
@@ -21,6 +24,9 @@ pub mod play_digivolve;
 pub mod replacement_outcome;
 pub mod schedule_delayed;
 pub mod selections;
+mod source_play_batch;
+pub(crate) mod simultaneous_play;
+pub(crate) mod source_prefix_payment;
 pub mod zone_cards;
 pub mod zone_moves;
 
@@ -154,6 +160,32 @@ fn park_outer_tail(
     if outer_tail.is_empty() {
         return;
     }
+    // A typed selection already owns its inner continuation. Append the
+    // enclosing control-flow tail after it rather than placing it in the
+    // legacy ambient slot, which inner RunTail drains before outer_conts.
+    // A plain RunTail with no already-composed outer tail can safely drain
+    // the legacy slot after its own inner steps. Preserve that established
+    // representation (including recorded pending-state digests). Frames with
+    // existing composed work, and nested controls with an occupied legacy
+    // slot, need the typed sequence to retain inner-before-outer ordering.
+    let plain_tail = matches!(
+        ctx.game.pending_selection_resume.as_ref().and_then(|s| s.frames.last()),
+        Some(crate::resume::ResumeFrame::RunTail { outer_conts, decline, .. })
+            if outer_conts.is_empty()
+                && !(ctx.game.pending_selection.as_ref().is_some_and(|p| p.is_optional)
+                    && matches!(decline, crate::resume::ResumeDecline::None))
+    ) && ctx.game.dsl_outer_tail.is_none();
+    if ctx.game.pending_selection.is_some()
+        && ctx.game.pending_selection_resume.is_some()
+        && !plain_tail
+    {
+        let trigger_context = ctx.game.current_trigger_context.clone();
+        wrap_pending_selection_with_tail(
+            ctx.game, ctx.source_card, ctx.source_permanent, ctx.player,
+            outer_tail, bindings.clone(), runtime.clone(), trigger_context,
+        );
+        return;
+    }
     if ctx.game.dsl_outer_tail.is_some() {
         // Always-fire (not gated on debug_assertions): silently
         // overwriting a parked outer continuation corrupts game state
@@ -228,8 +260,19 @@ pub(crate) fn drain_or_rewrap_pending_tail(
     // G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT.
     let previous = game.current_trigger_context.clone();
     game.current_trigger_context = tail_trigger_context;
-    let mut ctx = EffectContext::new(game, source_card, source_permanent, player);
+    // Deferred processing retains the original effect controller. Resolve
+    // its physical carrier again so compaction cannot attribute a new slot.
+    let previous_source = (game.effect_source_player, game.effect_source_card, game.effect_source_permanent);
+    let live_source = source_permanent.and_then(|_| match game.resolve_provenance_token(crate::trigger_context::ProvenanceToken::from(source_card)) {
+        Some(crate::trigger_context::EventSubject::Permanent(handle)) => Some(handle),
+        _ => None,
+    });
+    game.effect_source_player = Some(player);
+    game.effect_source_card = Some(source_card);
+    game.effect_source_permanent = live_source;
+    let mut ctx = EffectContext::new(game, source_card, live_source, player);
     run_steps_with_runtime(&outer_tail, &mut ctx, &mut bindings, &runtime);
+    (game.effect_source_player, game.effect_source_card, game.effect_source_permanent) = previous_source;
     game.current_trigger_context = previous;
 }
 
@@ -247,6 +290,29 @@ fn wrap_pending_selection_with_tail(
     let Some(mut pending) = game.pending_selection.take() else {
         return;
     };
+
+    // A native callback-only replacement body has no VM stack to wrap. Its
+    // enclosing DSL continuation belongs to the event, not the body callback:
+    // run it only after the body and all remaining immediate effects finish.
+    if game.pending_selection_resume.is_none() {
+        if let Some(parked) = game.parked_replacement.iter_mut().rev().find(|p| {
+            p.window
+                .as_ref()
+                .is_some_and(|w| w.owns_outer_tail(source_card, player))
+        }) {
+            parked.outer_conts.push(crate::resume::OuterContinuation {
+                tail: std::sync::Arc::new(outer_tail),
+                bindings,
+                runtime,
+                trigger_context: tail_trigger_context,
+                source_card,
+                source_permanent,
+                player,
+            });
+            game.pending_selection = Some(pending);
+            return;
+        }
+    }
 
     // make-engine-cloneable coexistence (Batch 1). This helper composes an outer
     // tail onto the selection's CLOSURE callback/on_decline. A selection ported to
@@ -266,6 +332,16 @@ fn wrap_pending_selection_with_tail(
             source_permanent,
             player,
         };
+        // An effect evolution can be parked in the reducer chain, including
+        // behind a field payment's own RunTail. Only its initiating clause's
+        // continuation belongs to that chain; do not capture the payment tail.
+        if let Some(effect) = game.effect_digivolve_declaration_for_clause_mut(source_card, player) {
+            if effect.result_clause == Some((source_card, player)) {
+                effect.outer_conts.push(cont);
+                game.pending_selection = Some(pending);
+                return;
+            }
+        }
         // Compose onto whatever frame is active. RunTail runs its conts after the
         // inner/decline tail; multi-pick frames run theirs at the TERMINAL (after
         // the final pick), so a wrap mid-accumulation still fires exactly once
@@ -287,9 +363,11 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::UseOptionFromTrashStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkPickStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ZoneCardPickStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::EffectDigivolveCostChoice(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::DigivolveReducerPrompt(s))
+            | Some(ResumeFrame::DigivolveReducerSuspend(s)) => s.effect.as_mut()
+                .expect("only effect reducer declarations can carry DSL tails").outer_conts.push(cont),
             Some(ResumeFrame::DigivolveCostChoice(_))
-            | Some(ResumeFrame::DigivolveReducerPrompt(_))
-            | Some(ResumeFrame::DigivolveReducerSuspend(_))
             | Some(ResumeFrame::DnaDigivolveFirstMaterial(_))
             | Some(ResumeFrame::DnaDigivolveSecondMaterial(_)) => unreachable!(
                 "digivolve prompts are a top-level player action, never nested in a DSL clause"
@@ -301,6 +379,8 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::TriggerOrderSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::OptionTrashOrder(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::OptionalReplacement(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::ReplacementBody {outer_conts,..}) => outer_conts.push(cont),
+            Some(ResumeFrame::FieldTopSourceBatch { outer_conts, .. }) => outer_conts.push(cont),
             Some(ResumeFrame::DelayCancelAfterSelection { outer_conts, .. }) => {
                 outer_conts.push(cont)
             }
@@ -310,6 +390,8 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::DelayDnaAfterSelection { outer_conts, .. }) => outer_conts.push(cont),
             Some(ResumeFrame::DelayHandDigivolveSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DelayDnaCardSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::DelayFieldDnaAfterPayment { outer_conts, .. }) => outer_conts.push(cont),
+            Some(ResumeFrame::DelayFieldDnaSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DelayPlayFromHandAfterSelection { outer_conts, .. }) => {
                 outer_conts.push(cont)
             }
@@ -568,6 +650,9 @@ fn run_steps_with_runtime_inner(
         );
         return RunOutcome::Parked;
     }
+    if let Some(expanded) = simultaneous_play::expand_body(steps, ctx, bindings) {
+        return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+    }
     let mut i = 0;
     while i < steps.len() {
         // Cost-pay abort short-circuit (G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE).
@@ -580,10 +665,59 @@ fn run_steps_with_runtime_inner(
         // The flag is scoped to the `on_decline` invocation by
         // `effect_queue::resolve_generic_selection` (save+restore).
         if ctx.game.dsl_clause_aborted {
+            for remaining in &steps[i..] {
+                if let CompiledStep::ReturnReceiptFinalize {receipt} = remaining { ctx.game.return_receipts.retain(|(id,_)|id!=receipt); }
+                if let CompiledStep::FieldSourceFinalize { receipt, .. } = remaining {
+                    ctx.game
+                        .field_source_receipts
+                        .retain(|(id, _)| id != receipt);
+                }
+                if let CompiledStep::DeleteReceiptFinalize { receipt } | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. } | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } = remaining {
+                    ctx.game.deletion_receipts.retain(|(id, _)| id != receipt);
+                }
+                if let CompiledStep::SourcePlayFinalize { receipt, .. } = remaining {
+                    ctx.game.cancel_prepared_source_play(*receipt);
+                    ctx.game
+                        .source_play_receipts
+                        .retain(|(id, _, _)| id != receipt);
+                }
+            }
             return RunOutcome::Synchronous;
         }
         let step = &steps[i];
+        if let CompiledStep::DeleteReceiptFinalize { receipt } | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. } | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } = step {
+            ctx.game
+                .resume_deletion_batch_rest_for_receipt(Some(*receipt));
+            if ctx.game.pending_selection.is_some() {
+                // Keep THIS finalizer behind the newly parked member as well.
+                // Resuming only steps[i+1..] would lose its actual deletion log.
+                return run_steps_with_runtime(&steps[i..], ctx, bindings, runtime);
+            }
+        }
+        // Expand in the current lexical slice, so results and named bindings
+        // from each resumed play reach the original outer tail unchanged.
+        if let Some(mut expanded) = field_source_results::expand(step, ctx, bindings) {
+            expanded.extend_from_slice(&steps[i + 1..]);
+            return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        }
+        if let Some(mut expanded) = return_results::expand(step, ctx, bindings) {
+            expanded.extend_from_slice(&steps[i + 1..]);
+            return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        }
+        if let Some(mut expanded) = deletion_results::expand(step, ctx, bindings) {
+            expanded.extend_from_slice(&steps[i + 1..]);
+            return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        }
+        if let Some(mut expanded) = source_play_batch::expand(step, ctx, bindings) {
+            expanded.extend_from_slice(&steps[i + 1..]);
+            return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        }
 
+        if let Some(outcome) = simultaneous_play::try_run(step, ctx, bindings, runtime) {
+            if matches!(outcome, RunOutcome::Parked) { park_outer_tail(ctx, bindings, steps, i, runtime); return outcome; }
+            i += 1;
+            continue;
+        }
         if let Some(outcome) = control_flow::try_run(step, ctx, bindings, runtime) {
             if matches!(outcome, RunOutcome::Parked) {
                 park_outer_tail(ctx, bindings, steps, i, runtime);
@@ -645,12 +779,16 @@ fn run_steps_with_runtime_inner(
                 return RunOutcome::Synchronous;
             }
             selections::InstallResult::Parked => {
+                simultaneous_play::annotate_selection(step, ctx);
                 return RunOutcome::Parked;
             }
         }
 
         // Synchronous families — execute and advance.
         run_step_with_runtime(step, ctx, bindings, runtime);
+        if ctx.cost_unpayable {
+            return RunOutcome::Synchronous;
+        }
         if ctx.game.pending_selection.is_some() {
             park_pending_selection_tail(ctx, bindings, steps, i, runtime);
             return RunOutcome::Parked;
@@ -672,6 +810,44 @@ pub fn run_step_with_runtime(
     bindings: &mut Bindings,
     runtime: &StepRuntime,
 ) {
+    if let Some(expanded) = simultaneous_play::expand_body(std::slice::from_ref(step), ctx, bindings) {
+        run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        return;
+    }
+    if let CompiledStep::CompleteCostPayment { receipt } = step {
+        if !ctx.cost_unpayable && !ctx.game.dsl_clause_aborted {
+            if let Some(r) = ctx
+                .game
+                .cost_payment_receipts
+                .iter_mut()
+                .find(|r| r.id == *receipt)
+            {
+                r.completed = true;
+            }
+        }
+        return;
+    }
+    if let Some(expanded) = field_source_results::expand(step, ctx, bindings) {
+        run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        return;
+    }
+    if field_source_results::try_run(step, ctx, bindings) {
+        return;
+    }
+    if let Some(expanded) = return_results::expand(step, ctx, bindings) {
+        run_steps_with_runtime(&expanded, ctx, bindings, runtime); return;
+    }
+    if return_results::try_run(step,ctx,bindings) { return; }
+    if let Some(expanded) = deletion_results::expand(step, ctx, bindings) {
+        run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        return;
+    }
+    if deletion_results::try_run(step, ctx, bindings) {
+        return;
+    }
+    if source_play_batch::try_run(step, ctx, bindings, runtime) {
+        return;
+    }
     if let CompiledStep::RawRust { fn_name, .. } = step {
         if let Some(f) = runtime.raw().step_fn(fn_name) {
             f(ctx, bindings);
@@ -706,9 +882,17 @@ pub fn run_step_with_runtime(
             {
                 // Keep a named target binding pointing at the host after
                 // indices shift (a moved battle-area Digimon leaves the field).
-                if let Some(host) =
-                    zone_cards::place_cards_as_bottom_sources(ctx, &list, target_handle)
-                {
+                if let Some(host) = zone_cards::place_cards_as_bottom_sources(
+                    ctx,
+                    &list,
+                    target_handle,
+                    match target_ref {
+                        digimon_dsl::compiled::CompiledBindingRef::Named(name) => {
+                            Some(name.clone())
+                        }
+                        _ => None,
+                    },
+                ) {
                     if let digimon_dsl::compiled::CompiledBindingRef::Named(name) = target_ref {
                         bindings.insert_permanent(name, host);
                     }
@@ -940,4 +1124,77 @@ fn resolve_card_list(
         ResolvedBinding::CardList(v) => Some(v),
         _ => None,
     }
+}
+
+#[cfg(test)]
+mod typed_control_tail_orphan_tests {
+ use super::*;
+ use crate::debug_runner::{DebugRunner,make_test_card};
+ #[test]
+ fn resume_without_pending_selection_preserves_enclosing_tail() {
+  let mut r=DebugRunner::builder().add_card(make_test_card("SRC","SRC")).add_card(make_test_card("TGT","TGT")).hand(0,&["SRC"]).start();r.place_on_field(1,"TGT",None);let c=r.game.players[0].hand[0].handle();
+  let select=CompiledStep::SelectOpponentPermanent {then:vec![],filter:Default::default(),bind_as:Some("picked".into()),selector:None,prompt:"pick".into(),prompt_key:None,optional:false,continue_on_decline:false};
+  let mut ctx=EffectContext::new(&mut r.game,c,None,0);run_steps(&[select],&mut ctx,&mut Bindings::new());assert!(ctx.game.pending_selection_resume.is_some());ctx.game.pending_selection=None;
+  park_outer_tail(&mut ctx,&Bindings::new(),&[CompiledStep::GainMemory(0),CompiledStep::GainMemory(2)],0,&StepRuntime::default());
+  assert!(ctx.game.dsl_outer_tail.is_some(),"an orphan resume must not silently discard a continuation");
+ }
+}
+
+#[cfg(test)]
+mod review22_typed_binding_tests {
+ use super::*;
+ use crate::debug_runner::{DebugRunner,make_test_card};
+ use crate::action::{build_action_mask,space::PASS};
+ fn setup()->DebugRunner {DebugRunner::builder().add_card(make_test_card("SRC","SRC")).add_card(make_test_card("TGT","TGT")).hand(0,&["SRC"]).security(0,&["TGT"]).deck(0,&["SRC";20]).deck(1,&["SRC";10]).memory(5).start()}
+ fn gated(n:u8)->CompiledStep {CompiledStep::If{condition:digimon_dsl::compiled::CompiledPredicate{binding_exists:Some("picked".into()),..Default::default()},then:vec![CompiledStep::Draw{of:digimon_dsl::compiled::CompiledPlayerRef::You,count:n}],else_branch:vec![]}}
+ #[test]
+ fn two_typed_outer_continuations_both_receive_inner_binding_and_clone() {
+  let mut r=setup();r.place_on_field(1,"TGT",None);let c=r.game.players[0].hand[0].handle();let initial=r.game.players[0].hand.len();
+  let pick=CompiledStep::SelectOpponentPermanent{then:vec![],filter:Default::default(),bind_as:Some("picked".into()),selector:None,prompt:"pick".into(),prompt_key:None,optional:false,continue_on_decline:false};
+  {let mut ctx=EffectContext::new(&mut r.game,c,None,0);run_steps(&[pick],&mut ctx,&mut Bindings::new());}
+  for n in [1,2] {wrap_pending_selection_with_tail(&mut r.game,c,None,0,vec![gated(n)],Bindings::new(),StepRuntime::default(),None);}
+  assert!(r.game.dsl_outer_tail.is_none());
+  match r.game.pending_selection_resume.as_ref().unwrap().frames.last().unwrap(){crate::resume::ResumeFrame::RunTail{outer_conts,..}=>assert_eq!(outer_conts.len(),2),other=>panic!("unexpected frame {other:?}")}
+  let parked=r.game.clone();for _ in 0..2 {r.game=parked.clone();let v=r.pending_selection_view().unwrap();let action=v.valid_action_ids.iter().copied().find(|a|*a!=PASS).unwrap();assert_eq!(build_action_mask(&r.game,v.selecting_player)[action as usize],1.0);r.execute_action(v.selecting_player,action).unwrap();assert_eq!(r.game.players[0].hand.len(),initial+3,"both enclosing typed tails must see the inner selected binding");assert!(r.game.pending_selection.is_none());}
+ }
+ #[test]
+ fn optional_security_decline_does_not_leave_legacy_tail_for_unrelated_selection() {
+  let mut r=setup();let c=r.game.players[0].hand[0].handle();let initial=r.game.players[0].hand.len();
+  let pick=CompiledStep::SelectSecurity{of:digimon_dsl::compiled::CompiledPlayerRef::You,filter:Default::default(),bind_as:Some("picked".into()),prompt:"optional security".into(),prompt_key:None,optional:true,then:vec![]};
+  let steps=vec![CompiledStep::If{condition:Default::default(),then:vec![pick],else_branch:vec![]},CompiledStep::Draw{of:digimon_dsl::compiled::CompiledPlayerRef::You,count:3}];
+  {let mut ctx=EffectContext::new(&mut r.game,c,None,0);run_steps(&steps,&mut ctx,&mut Bindings::new());}
+  let v=r.pending_selection_view().unwrap();assert_eq!(build_action_mask(&r.game,v.selecting_player)[PASS as usize],1.0);r.execute_action(v.selecting_player,PASS).unwrap();assert!(r.game.pending_selection.is_none());assert!(r.game.dsl_outer_tail.is_none(),"declined no-continuation selection must not leave a stale global tail");assert_eq!(r.game.players[0].hand.len(),initial);
+ }
+}
+
+#[cfg(test)] mod review22_empty_chain_control {
+ use super::*;
+ #[test] fn empty_typed_continuation_chain_does_not_consume_published_bindings() {let mut r=crate::debug_runner::DebugRunner::builder().start();r.game.dsl_resolved_tail_bindings=Some(Bindings::new());selections::run_outer_conts(&mut r.game,Vec::new());assert!(r.game.dsl_resolved_tail_bindings.is_some());}
+}
+
+#[cfg(test)]
+mod review26_typed_repark_tests {
+ use super::*;
+ use crate::debug_runner::{DebugRunner,make_test_card};
+ use crate::action::{build_action_mask,space::PASS};
+ fn setup()->DebugRunner {DebugRunner::builder().add_card(make_test_card("SRC","SRC")).add_card(make_test_card("TGT","TGT")).hand(0,&["SRC"]).security(0,&["TGT"]).deck(0,&["SRC";20]).deck(1,&["SRC";10]).memory(5).start()}
+ fn gated(n:u8)->CompiledStep {CompiledStep::If{condition:digimon_dsl::compiled::CompiledPredicate{binding_exists:Some("picked".into()),..Default::default()},then:vec![CompiledStep::Draw{of:digimon_dsl::compiled::CompiledPlayerRef::You,count:n}],else_branch:vec![]}}
+
+ fn pick(name:&str)->CompiledStep {CompiledStep::SelectOpponentPermanent{then:vec![],filter:Default::default(),bind_as:Some(name.into()),selector:None,prompt:format!("pick {name}"),prompt_key:None,optional:false,continue_on_decline:false}}
+ fn has(name:&str,then:Vec<CompiledStep>)->CompiledStep {CompiledStep::If{condition:digimon_dsl::compiled::CompiledPredicate{binding_exists:Some(name.into()),..Default::default()},then,else_branch:vec![]}}
+ fn choose(r:&mut DebugRunner) {let v=r.pending_selection_view().expect("actual selection");let a=v.valid_action_ids.iter().copied().find(|a|*a!=PASS).unwrap();assert_eq!(build_action_mask(&r.game,v.selecting_player)[a as usize],1.0);r.execute_action(v.selecting_player,a).unwrap();}
+ #[test]
+ fn first_typed_tail_reparks_then_second_sees_both_bindings_in_clones() {
+  let mut r=setup();r.place_on_field(1,"TGT",None);let c=r.game.players[0].hand[0].handle();let initial=r.game.players[0].hand.len();
+  {let mut ctx=EffectContext::new(&mut r.game,c,None,0);run_steps(&[pick("picked")],&mut ctx,&mut Bindings::new());}
+  wrap_pending_selection_with_tail(&mut r.game,c,None,0,vec![has("picked",vec![pick("second")])],Bindings::new(),StepRuntime::default(),None);
+  wrap_pending_selection_with_tail(&mut r.game,c,None,0,vec![has("picked",vec![has("second",vec![CompiledStep::Draw{of:digimon_dsl::compiled::CompiledPlayerRef::You,count:3}])])],Bindings::new(),StepRuntime::default(),None);
+  let original=r.game.clone();for _ in 0..2 {r.game=original.clone();choose(&mut r);assert!(r.game.pending_selection.is_some(),"first enclosing continuation must ask its own selection");assert_eq!(r.game.players[0].hand.len(),initial,"second continuation cannot resolve before new selection");let second=r.game.clone();for _ in 0..2 {r.game=second.clone();choose(&mut r);assert_eq!(r.game.players[0].hand.len(),initial+3,"second enclosing continuation needs both selected bindings after repark");assert!(r.game.pending_selection.is_none());}}
+ }
+ #[test]
+ fn optional_security_accept_executes_bound_enclosing_tail_in_clones() {
+  let mut r=setup();let c=r.game.players[0].hand[0].handle();let initial=r.game.players[0].hand.len();let pick=CompiledStep::SelectSecurity{of:digimon_dsl::compiled::CompiledPlayerRef::You,filter:Default::default(),bind_as:Some("picked".into()),prompt:"optional security".into(),prompt_key:None,optional:true,then:vec![]};let steps=vec![CompiledStep::If{condition:Default::default(),then:vec![pick],else_branch:vec![]},gated(3)];
+  {let mut ctx=EffectContext::new(&mut r.game,c,None,0);run_steps(&steps,&mut ctx,&mut Bindings::new());}
+  let original=r.game.clone();for _ in 0..2 {r.game=original.clone();choose(&mut r);assert!(r.game.pending_selection.is_none());assert_eq!(r.game.players[0].hand.len(),initial+3,"accepted security selection publishes binding to enclosing clause");}
+ }
 }

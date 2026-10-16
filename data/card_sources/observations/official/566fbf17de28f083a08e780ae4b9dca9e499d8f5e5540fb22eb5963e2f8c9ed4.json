@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Tool",
+    "card_id": "BT21-041",
+    "colors": "Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Stnd./Appmon",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, play this card without paying the cost."
+      },
+      {
+        "label": "Special Rule",
+        "text": "+2000 DP"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [Your Turn] All of your opponent's Security Digimon get -3000 DP."
+      }
+    ],
+    "type": "Calendar"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "566fbf17de28f083a08e780ae4b9dca9e499d8f5e5540fb22eb5963e2f8c9ed4",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "ec3392f425091e591498a26bb6ea1112d9d62c85b6f3cd02d7ea86bd084ff2bd",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-041",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-041"
+}

@@ -1,3 +1,4 @@
+import type { CountChoice } from '@/types/countChoice';
 // DTOs returned by the native desktop game engine bridge.
 
 // ─── DTO types ────────────────────────────────────────────────────────
@@ -101,6 +102,7 @@ export interface PlayerDto {
 }
 
 export interface EffectChoiceDto {
+  count_choice?: CountChoice | null;
   index: number;
   label: string;
   action_id: number;

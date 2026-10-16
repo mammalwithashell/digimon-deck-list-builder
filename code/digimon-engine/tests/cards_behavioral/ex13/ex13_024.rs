@@ -258,6 +258,47 @@ fn ex13_024_zero_source_opponent_digimon_count_as_fewest() {
     assert_eq!(field_ids(&r, 1), vec!["OPP-A".to_string()], "OPP-B (0 sources) returned");
 }
 
+#[test]
+fn ex13_024_bottom_deck_trashes_remaining_digivolution_cards_including_egg() {
+    // Official EX13-024 image/observation: return the Digimon, not its stack.
+    // general_rule.pdf p8, 4-2-8: move only the top card; trash its sources.
+    let mut egg = named("EGG", "Egg", CardColor::Red, 2, 0);
+    egg.card_kind = digimon_engine::enums::CardKind::DigiEgg;
+    let mut r = builder()
+        .add_card(egg)
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
+        .memory(10)
+        .start();
+    r.place_stack(1, &["EGG", "OPP-S", "OPP-A"]);
+    r.place_stack(1, &["OPP-S", "OPP-S", "OPP-S", "OPP-B"]);
+    let returned_top = r.game.players[1].battle_area[0].top_card().handle();
+    r.game.decode_action(PLAY_HAND_START, 0);
+    assert_eq!(r.pending_kind(), Some(SelectionKind::EffectChoice));
+    let mut decline = DebugRunner::wrap(r.game.clone());
+    let mut accepted_clone = DebugRunner::wrap(r.game.clone());
+    decline.execute_branch(1).unwrap();
+    assert_eq!(field_ids(&decline, 1), vec!["OPP-A", "OPP-B"]);
+    assert!(decline.game.players[1].trash.is_empty());
+    // Both branches pass turn and perform the same ordinary draw. Compare
+    // against the declined branch so that draw does not obscure the return.
+    let unchanged_deck = &decline.game.players[1].deck;
+    for game in [&mut r, &mut accepted_clone] {
+        game.execute_branch(0).unwrap();
+        assert_eq!(field_ids(game, 1), vec!["OPP-B"]);
+        let trash: Vec<_> = game.game.players[1].trash.iter()
+            .map(|c| c.card_id(&game.game.card_data)).collect();
+        assert_eq!(trash, vec!["EGG", "OPP-S"], "all remaining sources go to trash");
+        let deck = &game.game.players[1].deck;
+        assert_eq!(deck.len(), unchanged_deck.len() + 1, "only the top Digimon returns");
+        assert_eq!(deck[0].handle(), returned_top);
+        assert_eq!(deck[1..].iter().map(|c| c.handle()).collect::<Vec<_>>(),
+            unchanged_deck.iter().map(|c| c.handle()).collect::<Vec<_>>());
+        assert_eq!(source_count(game, handle_of(game, 1, "OPP-B")), 3);
+    }
+}
+
 // ─── Section 2/3/5 — replacement ─────────────────────────────────────────────
 
 #[test]
@@ -334,4 +375,49 @@ fn ex13_024_inherited_replacement_works_from_a_source() {
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"DRACO".to_string()));
     assert!(is_suspended(&r, handle_of(&r, 0, "DRACO")));
+}
+
+#[test]
+fn ex13_024_assembly_preserves_exact_physical_recipe_order() {
+    let mut r = start(&[CARD_ID], 10);
+    r.inject_trash(0, "MAT-L5");
+    r.inject_trash(0, "MAT-L4");
+    r.inject_trash(0, "MAT-L3");
+    let material_handles: Vec<_> = r.game.players[0].trash.iter().map(|c| c.handle()).collect();
+    assert_eq!(material_handles.len(), 3);
+    let played_handle = r.game.players[0].hand[hand_index(&r, 0, CARD_ID)].handle();
+    r.place_stack(1, &["OPP-S", "OPP-S", "OPP-S", "OPP-S", "OPP-A"]);
+    let slot = hand_index(&r, 0, CARD_ID) as u16;
+    let play_action = PLAY_HAND_START + slot;
+    assert!(digimon_engine::action::mask::build_action_mask(&r.game, 0)[play_action as usize] > 0.0);
+    r.game.decode_action(play_action, 0);
+    for _ in 0..3 {
+        let v = r.pending_selection_view().expect("Assembly material prompt");
+        assert_eq!(v.selecting_player, 0);
+        let candidates: Vec<_> = v.valid_action_ids.iter().copied()
+            .filter(|&a| a >= TRASH_EFFECT_START && a != PASS).collect();
+        assert_eq!(candidates.len(), 1, "exactly one physical material has the required level");
+        let a = candidates[0];
+        assert!(digimon_engine::action::mask::build_action_mask(&r.game, v.selecting_player)[a as usize] > 0.0);
+        r.execute_action(v.selecting_player, a).expect("pick material");
+    }
+    let me = handle_of(&r, 0, CARD_ID);
+    assert_eq!(source_count(&r, me), 3);
+    let stack = &r.game.players[0].battle_area[me.index as usize].card_sources;
+    // Rust stores bottom-to-top; official 7-3-2-6 puts the leftmost
+    // Assembly requirement (Lv.5) nearest the played card.
+    assert_eq!(stack.iter().map(|c| c.handle()).collect::<Vec<_>>(),
+        vec![material_handles[2], material_handles[1], material_handles[0], played_handle]);
+    assert!(stack.iter().all(|c| c.owner == 0));
+    assert!(r.game.players[0].trash.is_empty());
+    assert_eq!(stack.iter().map(|c| c.card_id(&r.game.card_data)).collect::<Vec<_>>(),
+        vec!["MAT-L3", "MAT-L4", "MAT-L5", CARD_ID]);
+    assert!(!r.game.players[0].hand.iter().any(|c| c.handle() == played_handle));
+    for material in &material_handles {
+        assert_eq!(stack.iter().filter(|c| c.handle() == *material).count(), 1);
+        assert!(!r.game.players[0].hand.iter().any(|c| c.handle() == *material));
+    }
+    // Observe immediately after placement, before the parked On Play source-trash choice.
+    assert_eq!(opp_source_total(&r), 4);
+    assert!(matches!(r.pending_kind(), Some(SelectionKind::SourceMulti { .. })));
 }

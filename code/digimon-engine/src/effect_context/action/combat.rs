@@ -174,6 +174,7 @@ impl<'a> EffectContext<'a> {
         };
         let attacker = pa.attacker;
         let current_target = pa.effective_target;
+        let current_target_removed = pa.effective_target_removed_by_dna;
         let opponent = self.game.next_clockwise(attacker.player);
         let mut valid_action_ids = Vec::new();
 
@@ -182,7 +183,7 @@ impl<'a> EffectContext<'a> {
             AttackTargetRestriction::Any | AttackTargetRestriction::PlayerOnly
         ) {
             let target = AttackTarget::Player(opponent);
-            if target != current_target
+            if (current_target_removed || target != current_target)
                 && self
                     .game
                     .validate_attack_redirect_target(attacker, target)
@@ -201,7 +202,7 @@ impl<'a> EffectContext<'a> {
                     player: opponent,
                     index: index as u8,
                 });
-                if target != current_target
+                if (current_target_removed || target != current_target)
                     && self
                         .game
                         .validate_attack_redirect_target(attacker, target)
@@ -297,6 +298,8 @@ impl<'a> EffectContext<'a> {
         self.game.open_counter_window_from_effect_checked()
     }
 
+    /// Battle without declaring an attack. A participating active attacker can
+    /// earn pending Piercing; a nonattacking Digimon cannot (16-6-2/4).
     pub fn battle_digimon(
         &mut self,
         attacker: PermanentHandle,
@@ -511,6 +514,14 @@ impl<'a> EffectContext<'a> {
         prompt: &str,
         cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
     ) -> Result<(), AttackError> {
+        // A forced attack affects its selected attacker (EX3-024;
+        // general_rule.pdf 15-15-6-1). Selection can still include immune
+        // Digimon, but they do not perform this effect's attack. Check the
+        // originating controller/source kind, never the player choosing the
+        // attacker or target, which may be the opponent.
+        if !self.can_affect_permanent(attacker) {
+            return Ok(());
+        }
         let previous_override = self.override_selecting_player;
         self.override_selecting_player = Some(attacker.player);
         let result = self.may_attack_now_optional_with_upgrade(

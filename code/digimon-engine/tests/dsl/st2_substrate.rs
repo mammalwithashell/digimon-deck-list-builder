@@ -310,6 +310,7 @@ effects:
             optional: false,
         },
         CompiledStep::PlayFromMaterials {
+            suspended: false,
             target: CompiledBindingRef::Named("host".to_string()),
             source_index: CompiledBindingRef::Named("picked_source".to_string()),
             cost_delta: Some(digimon_dsl::compiled::CompiledCostDelta::Free),

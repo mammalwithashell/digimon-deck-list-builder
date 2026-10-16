@@ -1,0 +1,176 @@
+{
+  "approved_for_bounded_offline_compatibility": true,
+  "root_session": 3803,
+  "root_reported_exit_code": 0,
+  "count": 26,
+  "clean": 23,
+  "diagnostics": [
+    {
+      "id": "qa:Q1123",
+      "expected_difference": {
+        "step": 3,
+        "field": "p0.hand",
+        "ours": "[ST1-04, ST1-04, ST1-04, ST1-06]",
+        "dcgo": "[ST1-04, ST1-04, ST1-04, ST1-06, ST2-03]"
+      },
+      "ruling_checks": 1,
+      "comparison": {
+        "status": "retained-expected-divergence",
+        "denominator": "compared 5 of 6 ours / 5 dcgo steps (1 sim-only row(s) with no DCGO prompt)",
+        "differences": [
+          {
+            "step": 3,
+            "field": "p0.hand",
+            "ours": "[ST1-04, ST1-04, ST1-04, ST1-06]",
+            "dcgo": "[ST1-04, ST1-04, ST1-04, ST1-06, ST2-03]"
+          }
+        ],
+        "no_current_live_claim": true,
+        "terminal_outcome_approval": false
+      }
+    },
+    {
+      "id": "qa:Q1923",
+      "expected_difference": {
+        "step": 53,
+        "field": "p0.field[0].dp",
+        "ours": "15000",
+        "dcgo": "22000"
+      },
+      "ruling_checks": 4,
+      "comparison": {
+        "status": "retained-expected-divergence",
+        "denominator": "compared 50 of 54 ours / 53 dcgo steps (4 sim-only row(s) with no DCGO prompt + 3 DCGO intermediate row(s) not comparable)",
+        "differences": [
+          {
+            "step": 53,
+            "field": "p0.field[0].dp",
+            "ours": "15000",
+            "dcgo": "22000"
+          }
+        ],
+        "no_current_live_claim": true,
+        "terminal_outcome_approval": false
+      }
+    },
+    {
+      "id": "qa:Q3414",
+      "expected_difference": {
+        "step": 3,
+        "field": "p0.hand",
+        "ours": "[BT20-044, BT23-047, BT23-047, BT23-047]",
+        "dcgo": "[BT20-044, BT23-047, BT23-047, BT23-047, EX3-018]"
+      },
+      "ruling_checks": 2,
+      "comparison": {
+        "status": "retained-expected-divergence",
+        "denominator": "compared 6 of 6 ours / 6 dcgo steps",
+        "differences": [
+          {
+            "step": 3,
+            "field": "p0.hand",
+            "ours": "[BT20-044, BT23-047, BT23-047, BT23-047]",
+            "dcgo": "[BT20-044, BT23-047, BT23-047, BT23-047, EX3-018]"
+          }
+        ],
+        "no_current_live_claim": true,
+        "terminal_outcome_approval": false
+      }
+    }
+  ],
+  "artifact": {
+    "path": "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-pinned\\dcgo-harness.exe",
+    "sha256": "66becb673b1fb306d2590309961e86771ce63b1e5189bace9a412afe45a09f56"
+  },
+  "input_pins_checked": 9448,
+  "source_closure_unchanged": true,
+  "resolved_context208": "All208 logical source and resolved operational pins equal actual hashes",
+  "scope": "Current build22 compatibility against exact retained historical raw pairs and currently pinned inputs; capture-time mutable input/build provenance remains limited",
+  "new_live": false,
+  "terminal_outcome_approval": false,
+  "canonical_promotion": false,
+  "pipeline_completion_not_implied": true,
+  "output_pins": {
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\00\\command.json": "849c49e04390afd6b7437165874f03c6d5c8b40e5985e7437575e149d19b2c30",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\00\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\00\\stdout.log": "6fe0601ee17a48b13448e3168834cdde3b7ff162908d54d0960dc4f3da6544d4",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\01\\command.json": "abc14a81b3b0465d34b66d8857f8a3d1f261fc1140ed63328b49aee55b5135bd",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\01\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\01\\stdout.log": "6f25b2258d4183cf66a19e2a0b1342fe42e7ded578ce6a192bab7c43d3938fd9",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\02\\command.json": "8f214d5cec8ed16368247be7dcbb098acfa3ad3b05bf7a7704d0601326e8c4d2",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\02\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\02\\stdout.log": "b3874332d716ee1c421e20d701bc6c7fa735edeb630c5c5ef973f7e47911d1ba",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\03\\command.json": "8eb32e9b589b4151182cda6fa7773da5fa0a3e623cd0ebf6ebdd02e49c44d5c7",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\03\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\03\\stdout.log": "2627db3ce85b1791712020812418390315950948a6d145150a4a19cb10a3281a",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\04\\command.json": "b403dc372690441de303a4fe7ba65dc08560479bf707c37b0b160903e67eac36",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\04\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\04\\stdout.log": "7ac18af465bc2f1269501b910a2fbbeeddf9416caa1455355eccddfa49090be3",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\05\\command.json": "6136f37a7e829e383d5d4708b0430ba6a8428076b262132fdf32293b1d7a960e",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\05\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\05\\stdout.log": "4208f68f19711a11ffeec29ab88ac6a9ed0f64a0ce70c2834c39bf1e3bf20fb4",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\06\\command.json": "8351775471b88fde203d4ac64f25d9cd86d65fe2e2ba24ea9fefbf4ad1467a48",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\06\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\06\\stdout.log": "dd0606609f237ec33a0dbe8a41ecb3646a72286a34b8b1a2cd9027a54818bda8",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\07\\command.json": "a28163f7d11b42c7c7b503ebd7d1652438ba6bd5ac89b6e46ca81a6ecb23f24c",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\07\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\07\\stdout.log": "245d3671018ab82c7f3532df97d9b8eb0f11d154a3e6476005eb32132f95392b",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\08\\command.json": "fc7963431ff18634c8244c9a2ccb6cb543df0ffdfe24c8df7be7afcdbe15c8a9",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\08\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\08\\stdout.log": "2b03a54f79ccaa6d423d6b10ea8c193b532018acd72a1a0ac13796ba14eb7187",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\09\\command.json": "5d4cac6f939278903cd2bd256d31fd57d06cdc543d3961d71b79f8f9539cefdb",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\09\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\09\\stdout.log": "fca374d11738b74ccbac5d8641f903b9d0d2ee8aa4e0d0ec87d60c0667ccf1ea",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\10\\command.json": "a1e7132d86622d659a1f8f5bbe489606d37e8afeffbfe2add40ea41441966847",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\10\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\10\\stdout.log": "6f9636119a1404c5502214f0b3e3a9ad5479baef747a6314ec47f128442b66cd",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\11\\command.json": "43be5c4aacc060bc3b8beecbecff25318ac58ed67ae6f58ae010337e99b984b9",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\11\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\11\\stdout.log": "8880d78dd57ff286c283ac591ef96ebe52636b1d26abcd632215c8a4d06b4be4",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\12\\command.json": "0602e5826fde24680add7cdc29bcae23a1bc643c23b3ea4d1851c8b7ca9002ba",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\12\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\12\\stdout.log": "f7dbfce9708d0f4d646b4edd091b86bf84d28508ee25c2c6a19b753b14206cd6",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\13\\command.json": "92d7e5f7e44bd3a9652c4ca10ca0255fa1964b19dcccbac0e5c7cc449ac958ef",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\13\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\13\\stdout.log": "e268bae3d47d3ac2d1c254e214ecf5b84f8000361163af1a4da9e12e16f281f1",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\14\\command.json": "327c8daf11b894cd2dc10e7b7770d42f77b2b9c7ce519b156a0f3cf4a795eb1e",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\14\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\14\\stdout.log": "ab3461294314779350eba6971af98d25766fa513f38d601fd8cd203950faeb7f",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\15\\command.json": "0579339222ef0876229cb992baa942dab50e039967f0c07df0565ab60959c8b6",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\15\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\15\\stdout.log": "59c9d43a1f3b3f535a0ac224a910f752cffd4f090753f1d62e0a4111c8a3e001",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\16\\command.json": "35a52cfe701679e3e9652ea6157b880f006a683f465d7566855a29483c8f3318",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\16\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\16\\stdout.log": "98a700272d5e1ae8af1a91ec484398308e8beec27c190b7e13742d590b26de9b",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\17\\command.json": "7a06683d191d2fa2e40840659df8b88880addb07c91185b3436d19c750d87790",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\17\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\17\\stdout.log": "1c28c2ff22faca24fa6ba490ffc726bd058721c99f3a284e916263c823608ef1",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\18\\command.json": "acc6ff87d8b3b97f0e409e0a0d880267565be224f03d16b4a63fa60dc3cfb000",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\18\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\18\\stdout.log": "5f22230ced2a1d979ad018d8b04631dcc9606911698e172b2fa3c379c8819b32",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\19\\command.json": "998350a3eb88f755a65205a039c4cfcffa6ac6b6793b2e2c769cd002c4d71242",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\19\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\19\\stdout.log": "75d6eeeedecaa44471f554e9f8f10c91c4c32604feb1fbe6089fdba9309b1f9e",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\20\\command.json": "4569342c91676d6f1912bbb99082f14762fe7e05813ac6ea8b1b900bf490616a",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\20\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\20\\stdout.log": "eb57335b593f480a6cb23b79c6da2a95da8313c600ecdaf2a4cb43e2c73147c5",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\21\\command.json": "777636bd5b7ec6c7b5ceb0f0ef08f5606a3c4f2ca57bf585be8284a877a72c25",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\21\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\21\\stdout.log": "685f7da0709b3117ff61736f3595fb0ed97333a926778041bea647c8dd4edbe3",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\22\\command.json": "bd71d219d6005e8c280654197bce5acf81abe0cbdae3c1d1e5db30a45585edf6",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\22\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\22\\stdout.log": "e270d7c116719aea8fc7e5d51994902a20e1cff4163ae785cc50ef8cb7229976",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\23\\command.json": "78522a63c38464d77e79ab51f4d2ebd25f39761526ef76836eb77a35f00e631e",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\23\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\23\\stdout.log": "67088791e225e914ff6cbbb744bb787fa3e8c4a0be00ae83b38dadc1217f33b4",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\24\\command.json": "38e7604425a2c943ab8ef47da4846be263ce57b6860aec7f2552944d7aee4acf",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\24\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\24\\stdout.log": "743bca8481f2a2f87af29b5983babfcf08affdcc6397b832c4dc1d665dedbfb7",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\25\\command.json": "a8fe8f1f466627f5e37e23a1c943815532e0646108108f65432d26439dc37af5",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\25\\stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\25\\stdout.log": "fc76f4f2a52cf414cb8216a114fe22508032cc9d9523d7a567902a2aa9f9346f",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\results.json": "ae0b4712573d6e5324c6d99631ac7f1dac56d9f429485669d994107e2dac0fe7",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-outside-ex13-retained-run-v1\\closure.json": "f1e37c4e1e6e93e78e866d33fe05e9774c25f265facbcd4c106f31fd432aceeb"
+  },
+  "runtime_executed_by_reviewer": false
+}

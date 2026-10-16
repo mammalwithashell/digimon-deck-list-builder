@@ -14,9 +14,9 @@ pub const TENSOR_VERSION: u16 = 2;
 // BREEDING_SOURCE_SELECT) so the RL agent never picks a slot blind.
 // This grows each permanent slot by 3 floats (96 -> 99), shifting every
 // section after `permanent_slots` and bumping tensor_size 8320 -> 8410.
-pub const FEATURE_SCHEMA_VERSION: &str = "standard_lite_v2.2";
+pub const FEATURE_SCHEMA_VERSION: &str = "standard_lite_v2.3";
 pub const LAYOUT_HASH: &str =
-    "sha256:e9cef3987168ea77bd7e99fee731cb66ec365245cb9ec1df3d12636f5c00d823";
+    "sha256:c2ff377e261fe572163179e32d97414d68e2fd8d89c5441dae586b4a2caa691b";
 
 pub const GLOBAL_FEATURES_SIZE: usize = 64;
 pub const PLAYER_SUMMARY_PLAYERS: usize = 2;
@@ -68,6 +68,21 @@ pub const PERM_SOURCE_DP_CONTRIBUTION_OFFSET: usize = 2;
 pub const OWN_HAND_CARD_ID_OFFSET: usize = 1;
 pub const KNOWN_ZONE_CARD_ID_OFFSET: usize = 1;
 pub const PENDING_SOURCE_CARD_ID_OFFSET: usize = 44;
+
+// Dedicated count-choice contract: explicitly allocated reserved fields.
+pub const PENDING_COUNT_COMMIT_OFFSET: usize = 60;
+pub const PENDING_COUNT_PREVIOUS_OFFSET: usize = 61;
+pub const PENDING_COUNT_NEXT_OFFSET: usize = 62;
+pub const PENDING_COUNT_DECLARED_OFFSET: usize = 63;
+pub const PENDING_COUNT_PAYABLE_OFFSET: usize = 67;
+pub const PENDING_COUNT_PAGE_INDEX_OFFSET: usize = 71;
+pub const PENDING_COUNT_PAGE_COUNT_OFFSET: usize = 75;
+pub const PENDING_COUNT_HOST_ID_OFFSET: usize = 79;
+pub const PENDING_COUNT_HOST_PLAYER_OFFSET: usize = 83;
+pub const PENDING_COUNT_HOST_SLOT_OFFSET: usize = 84;
+pub const PENDING_COUNT_HOST_PRESENT_OFFSET: usize = 85;
+pub const PENDING_COUNT_LIMBS: usize = 4;
+pub const PENDING_COUNT_LIMB_DENOMINATOR: f32 = 65535.0;
 
 pub const SHAPE_GLOBAL_FEATURES: &[usize] = &[GLOBAL_FEATURES_SIZE];
 pub const SHAPE_PLAYER_SUMMARY: &[usize] = &[PLAYER_SUMMARY_PLAYERS, PLAYER_SUMMARY_ROW_SIZE];

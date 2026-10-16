@@ -1,0 +1,58 @@
+# Official observation 5c58900cf18621cc31ca25e3246c1156070682a88947b01fd7dd5921a95e721b,
+# actual card image, Q3413/Q3414; DCGO EX3_037.cs behavior cross-check.
+card: EX3-037
+name: Dracomon
+kind: digimon
+level: 3
+color: [green, blue]
+cost: 3
+dp: 2000
+traits: [Dragon]
+form: Rookie
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 1
+  - kind: digivolve
+    from: { name_is: Bebydomon }
+    cost: 0
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 4; add 1 green or blue [Dramon]-name card and 1 [Examon]-name card; bottom-deck the rest in any order"
+    process:
+      - reveal_search:
+          of: you
+          count: 4
+          buckets:
+            - filter:
+                all_of:
+                  - name_contains: Dramon
+                  - any_of:
+                      - color_is: green
+                      - color_is: blue
+              to: hand
+              max: 1
+              prompt: "Add 1 green or blue card with [Dramon] in its name"
+            - filter: { name_contains: Examon }
+              to: hand
+              max: 1
+              prompt: "Add 1 card with [Examon] in its name"
+          remainder: bottom
+  - when: on_suspend
+    scope: inherited
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_name_contains: Dramon
+            - event_target_name_contains: Examon
+    summary: "[Inherited][All Turns][Once Per Turn] When one of your [Dramon] or [Examon]-name Digimon suspends, this Digimon gets +1000 DP for the turn"
+    process:
+      - add_dp_modifier: { target: source, value: 1000, expiry: end_of_turn }

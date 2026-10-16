@@ -1,0 +1,21 @@
+# Official observation 6eaef7e67a6025d49b130da627b2cbef3204b9b289ec95ac6106be9770940cba,
+# printed image, Q4281/Q4282 and DCGO BT20/Blue/BT20_002.cs verified.
+card: BT20-002
+name: Bebydomon
+kind: digi_egg
+level: 2
+color: [blue]
+cost: 0
+traits: [Baby Dragon]
+form: In-Training
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      any_of:
+        - in_text_contains: Dracomon
+        - in_text_contains: Examon
+    summary: "[When Attacking] [Once Per Turn] If this Digimon has Dracomon or Examon in its text, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

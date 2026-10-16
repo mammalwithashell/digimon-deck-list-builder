@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "EX9-032",
+    "colors": "Yellow Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "7000",
+    "form": "Ultimate",
+    "play_cost": "7",
+    "special_digivolution_condition": "[Digivolve] Lv.4 w/[Puppet] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[Puppet] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] By deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon may digivolve into a Digimon card with the [Puppet] trait in the hand without paying the cost."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, it doesn't leave."
+      }
+    ],
+    "type": "Puppet/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "e2b5183092faa389ddfc1b3dde53e82b3e4381116d202322bb6ef53e6687653e",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "b934fb84aa8fb41bad40b862868f5e907510c01673bd0e60301f2a75f650c645",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX9-032",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX9-032"
+}

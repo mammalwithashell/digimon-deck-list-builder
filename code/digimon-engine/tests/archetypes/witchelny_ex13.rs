@@ -401,14 +401,26 @@ fn c4_two_source_saves_each_trash_security_and_the_first_feeds_mistymon() {
         .delete_permanent_with_cause(misty, ReplacementCause::OpponentEffect);
     let mut picks = OppPicks::new(&[MAGNADRAMON, MAGNADRAMON]);
     let mut saves = 0;
+    let mut save_offers = 0;
     drive(&mut r, |r, v| match v.kind {
         SelectionKind::Replacement => {
-            saves += 1;
-            accept(v)
+            save_offers += 1;
+            assert!(v.is_optional, "each inherited payment is optional");
+            assert!(digimon_engine::action::mask::build_action_mask(&r.game, v.selecting_player)[PASS as usize] > 0.0,
+                "optional decline must be mask-legal");
+            if save_offers == 1 {
+                saves += 1;
+                accept(v)
+            } else {
+                // Both immediate effects triggered. Preserve the other OPT by
+                // explicitly declining its payment after the first save.
+                Some(PASS)
+            }
         }
         SelectionKind::OppField => picks.pick(r, v),
         _ => None,
     });
+    assert_eq!(save_offers, 2, "cancellation does not discard the other triggered save");
     assert_eq!(saves, 1);
     assert_eq!(top_id(&r, misty), MISTYMON, "it doesn't leave");
     assert_eq!(r.security_count(0), 3);
@@ -446,6 +458,47 @@ fn c4_two_source_saves_each_trash_security_and_the_first_feeds_mistymon() {
     });
     assert!(field_ids(&r, 0).is_empty(), "third removal goes through");
     assert_eq!(r.security_count(0), 2);
+}
+
+// General rule 15-8-5 permits the remaining triggered immediate effect;
+// each physical inherited source has its own optional once-per-turn payment.
+#[test]
+fn c4_both_triggered_source_saves_may_pay_on_one_removal_and_spend_both_opts() {
+    let mut r = start(builder(4));
+    let misty = r.place_stack(0, &[CANDLEMON, FLAMEWIZ, MISTYMON]);
+    r.place_on_field(1, MAGNADRAMON, Some(0));
+    r.game.delete_permanent_with_cause(misty, ReplacementCause::OpponentEffect);
+    let mut picks = OppPicks::new(&[MAGNADRAMON, MAGNADRAMON]);
+    let mut payments = 0;
+    drive(&mut r, |r, v| match v.kind {
+        SelectionKind::Replacement => {
+            assert!(v.is_optional);
+            assert!(digimon_engine::action::mask::build_action_mask(&r.game, v.selecting_player)[PASS as usize] > 0.0);
+            payments += 1;
+            accept(v)
+        }
+        SelectionKind::OppField => picks.pick(r, v),
+        _ => None,
+    });
+    assert_eq!(payments, 2);
+    assert_eq!(field_ids(&r, 0), vec![MISTYMON.to_string()]);
+    assert_eq!(r.security_count(0), 2, "each accepted source pays one security");
+    assert_eq!(picks.answered, vec![MAGNADRAMON, MAGNADRAMON]);
+    assert!(field_ids(&r, 1).is_empty());
+    let saved = r.game.clone();
+    for branch_index in 0..2 {
+        if branch_index == 1 {
+            r.game = saved.clone();
+        }
+        let branch = &mut r;
+        branch.game.delete_permanent_with_cause(misty, ReplacementCause::OpponentEffect);
+        drive(branch, |_, v| {
+            assert_ne!(v.kind, SelectionKind::Replacement, "both source OPTs were spent");
+            None
+        });
+        assert!(field_ids(branch, 0).is_empty());
+        assert_eq!(branch.security_count(0), 2);
+    }
 }
 
 // ─── C5 Candlemon start-of-main + Mistymon + recycle ─────────────────────────

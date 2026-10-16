@@ -116,7 +116,24 @@ fn start_carrier_over_tb_source() -> (DebugRunner, digimon_engine::permanent::Pe
     (r, carrier)
 }
 
-fn expect_decode_prompt(r: &DebugRunner) {
+fn expect_decode_prompt(r: &mut DebugRunner) {
+    // Both immediate timing families belong to the same deletion. Choose
+    // Decode first explicitly; the engine must not silently choose its order.
+    let order = r.game.pending_selection.as_ref().expect("immediate effect ordering");
+    assert_eq!(order.kind, SelectionKind::EffectChoice);
+    assert_eq!(order.selecting_player, 0);
+    assert!(!order.is_optional);
+    let rows = order.effect_choices.as_ref().expect("named immediate effects");
+    assert_eq!(rows.len(), 2);
+    assert!(rows.iter().any(|row| row.label.contains("<Evade>")));
+    let matches: Vec<_> = rows.iter().filter(|row|
+        row.label.contains("when_would_leave_battle_area") || row.label.contains("Decode")
+    ).collect();
+    assert_eq!(matches.len(), 1, "exactly one Decode ordering choice");
+    let action = matches[0].action_id;
+    assert!(order.valid_action_ids.contains(&action));
+    assert!(digimon_engine::action::build_action_mask(&r.game, 0)[action as usize] > 0.0);
+    r.game.resolve_selection(0, action).expect("choose Decode first");
     let sel = r
         .game
         .pending_selection
@@ -160,7 +177,7 @@ fn declined_decode_still_offers_evade_then_evade_saves() {
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
 
-    expect_decode_prompt(&r);
+    expect_decode_prompt(&mut r);
     r.game.resolve_selection(0, PASS).expect("decline Decode");
 
     expect_evade_prompt(&r, "after declining Decode");
@@ -202,7 +219,7 @@ fn declining_decode_then_evade_deletes_exactly_once() {
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
 
-    expect_decode_prompt(&r);
+    expect_decode_prompt(&mut r);
     r.game.resolve_selection(0, PASS).expect("decline Decode");
 
     expect_evade_prompt(&r, "after declining Decode");
@@ -243,7 +260,7 @@ fn accepted_decode_with_declined_material_pick_still_offers_evade() {
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
 
-    expect_decode_prompt(&r);
+    expect_decode_prompt(&mut r);
     r.game
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("accept Decode");
@@ -286,7 +303,7 @@ fn used_decode_still_offers_evade_and_decline_trashes_carrier() {
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
 
-    expect_decode_prompt(&r);
+    expect_decode_prompt(&mut r);
     r.game
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("accept Decode");

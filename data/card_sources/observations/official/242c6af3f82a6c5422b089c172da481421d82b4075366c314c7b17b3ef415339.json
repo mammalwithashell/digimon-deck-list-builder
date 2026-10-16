@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "AD1-013",
+    "colors": "Blue Black",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "11000",
+    "form": "Mega",
+    "play_cost": "11",
+    "qa": [
+      "Yes, you can."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.5 w/[Blue Flare]/[Xros Heart] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[Blue Flare]/[Xros Heart] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Reboot＞ ＜Blocker＞ [On Play] [When Digivolving] Delete 1 of your opponent's Digimon with the fewest digivolution cards. [All Turns] When this Digimon would leave the battle area other than by DigiXros, you may play 1 level 5 or lower [Blue Flare] or [Xros Heart] trait Digimon card from its digivolution cards without paying the cost. (Rule) Trait: Has [Xros Heart]."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] For each color in this [Blue Flare] or [Xros Heart] trait Digimon's digivolution cards, it gets +1000 DP."
+      }
+    ],
+    "type": "Cyborg/Blue Flare"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "242c6af3f82a6c5422b089c172da481421d82b4075366c314c7b17b3ef415339",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "c607f9695f257435fef5c3489c5e552dfd21e674bf9ddb1fda4e1c5eec8dbe43",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:AD1-013",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/AD1-013"
+}

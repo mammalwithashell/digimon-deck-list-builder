@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT22-008",
+    "colors": "Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] [Koromon]/Lv.2 w/[CS] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Koromon]/Lv.2 w/[CS] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] You may return 1 Digimon card with [Greymon], [Garurumon] or [Omnimon] in its name from your trash to the hand."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+      }
+    ],
+    "type": "Reptile/CS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "baba766124892b3be42d322e7dcf109f10bcacdc6d85e785933610fb7065740d",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "7bd4ef9741b4da2cefee69e77c60ba036e898bddd68139e724c6888448b9d7eb",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT22-008",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT22-008"
+}

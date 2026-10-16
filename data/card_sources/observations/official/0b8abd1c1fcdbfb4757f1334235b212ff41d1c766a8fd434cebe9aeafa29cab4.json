@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT25-038",
+    "colors": "Yellow Black",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "8000",
+    "form": "Ultimate",
+    "play_cost": "8",
+    "qa": [
+      "[Security] effects take precedence for activation. Upon a check, a [Security] effect will immediately activate without pending activation. For other triggered effects, the turn player activates their effects first."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.4 w/[TS] trait: Cost 3 [DNA Digivolve] Yellow Lv.4 + blue/black Lv.4: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[TS] trait: Cost 3 [DNA Digivolve] Yellow Lv.4 + blue/black Lv.4: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] You may place 1 [Angel], [Archangel], [Three Great Angels] or [Iliad] trait Digimon card from your hand or your Digimon's digivolution cards as the top or bottom security card. Then, if DNA digivolving, trash both players' top security cards. [All Turns] [Once Per Turn] When your security stack is added to, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Rule) Trait: Has [Angel] Type."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your opponent's Digimon gets -4000 DP for the turn."
+      }
+    ],
+    "type": "Mutant/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "0b8abd1c1fcdbfb4757f1334235b212ff41d1c766a8fd434cebe9aeafa29cab4",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "35fde8afca33bd44d2a2ee7074a3f49ab04ea0ca8dc7a7153388f6551a89cac9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-038",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-038"
+}

@@ -1,5 +1,95 @@
 # Engine Gaps Tracker
 
+## DNA material state and attack-target identity [G-ENGINE-DNA-NEW-OBJECT-STATE] — focused repair verified; broader validation pending
+
+DNA previously retained old material suspension, linked cards, and gained state,
+and a pending attack could battle the new DNA result through the old field slot.
+The shared successful-commit reset now applies to native/effect field pairs,
+field plus hand/trash, and Counter Blast DNA. It clears old object state and
+queued material effects, routes links to their physical owners with simultaneous
+Overflow ordering, and preserves physical sources and ownership. Ordinary
+evolution and rejected DNA do not use the reset. Official rules 8-2-2-1 and
+15-4-4-3 govern these distinctions.
+
+Pending attacks track when DNA removed their effective target. The marker is
+preserved through cloning and only cleared by an accepted explicit redirect;
+Raid candidate collection and nested effect battles respect the new identity.
+No action or tensor layout changed. The public Rust `PendingAttack` struct gains
+`effective_target_removed_by_dna`; literal constructors must initialize it.
+Its Debug representation retains historical bytes when the marker is false.
+
+Captured focused runs pass eight `dna_new_object_state` tests, four
+`dna_target_identity` tests, and two `dna_target_followup_controls` tests after
+semantic failures were reproduced before their respective fixes. These are
+engine regressions, not DCGO confirmation. The resumable checkpoint at
+`qa/archetype-qa/dsl/examon-2026-10-10-evidence/verification/followup-checkpoint-20261011.json`
+pins the applied changes and raw RED/GREEN logs. Existing-card, historical
+replay, and broader combat checks remain separate gates.
+
+## Pending observer costs after event-target departure — focused repair and live branch verified
+
+EX3-065 used a live event-target-kind predicate at resolution, pruning a surviving Hina when the evolved Digimon had left. The card now uses the captured event-card-kind predicate, consistent with its captured event traits. Hina must still be live, unsuspended and able to pay its cost. The identity-bound refire target remains unchanged, so the departed Digimon cannot refire and a new same-slot occupant is never substituted. This reuses existing DSL vocabulary and leaves actions/tensors unchanged.
+
+Six standalone regressions in tests/hina_pending_target_departure.rs passed after the one-line card repair. The original run had three expected cost-choice failures and three passing exclusion controls. Tests cover accepted/declined costs, two observers, clone branches, departed/suspended observer sources, opponent-turn exclusion and printed-identical slot reuse. Independent static review approved the change. Evidence is verification/hina-pending-target-{red,green}.log and hina-pending-target-independent-review.json. The original DCGO mismatch is retained. The strengthened Q3430 source-leaves case confirms on build12 in `oracle/interaction-20261011T101650Z-72bf924981`: both Hina costs are paid through shared choices while the departed target produces no extra payout. Mainline Q3430 also confirms in `oracle/interaction-20261011T100843Z-85cc3c0eb3`. These branch results do not establish complete card parity.
+
+## Return movement preserves compacted survivor state [G-ENGINE-RETURN-MOVEMENT-AURA-IDENTITY] — targeted repair verified; broader validation pending
+
+The full invariant run found a real stale declarative-output failure at seed
+`20260708000`, step 105, while BT24-091 returned the opponent's lowest-level
+Digimon. Both return-to-hand and return-to-deck compacted the battle-area Vec,
+fired source-trash callbacks (which refresh declaratives), and then cleared
+the departing permanent's former index. That late cleanup erased freshly
+rebuilt BT25-075 Rush/Link +1 grants on the survivor shifted into that index.
+Both routes also omitted survivor modifier rekeying. Separately, destructive
+registry clear/rekey operations could leave the input-fingerprint memo valid
+after removing derived output.
+
+The repair clears the departing identity and rekeys surviving modifiers,
+pending attack handles, and queued effects before overflow/source-trash
+callbacks. Registry clear/rekey operations invalidate the declarative memo.
+The incremental fast path and debug full-rebuild comparison remain enabled;
+source-trash timing, owner routing, and leave-event identity snapshots remain.
+No new DSL vocabulary or observation/action contract change was required.
+
+Four standalone movement regressions failed before repair and pass afterward:
+hand/deck returns preserve both derived Rush/Link +1 and an independent
+nonmaterialized +1000 DP modifier, with original and cloned game state.
+A fifth isolated memo-clear regression also failed before repair and passes.
+Evidence: `qa/archetype-qa/dsl/examon-2026-10-10-evidence/verification/return-movement-regression-red.log`,
+`memo-clear-regression-red.log`, and `movement-memo-green.log` in that directory.
+The original failure and diagnostic traces remain preserved. The exact seed now passes 120 legal steps, including the original step 105,
+as recorded in `invariant-fuzz-seed105-green.log`. Broader default invariant
+validation remains a separate pending gate; these results do not establish
+full-suite or DCGO parity.
+
+### Single triggered clause with conditional DNA rider [G-AUTHOR-DNA-RIDER-CLAUSE-ATOMICITY] — repaired 2026-10-11; broader validation pending
+
+BT16-025 consumer repair (2026-10-11): one printed When Digivolving clause
+must finish its suspend instruction and its conditional DNA rider together.
+The previous YAML split the rider into `on_dna_digivolve`, creating an artificial
+ordering choice after the shared simultaneous-trigger repair. It now uses one
+`when_digivolving` body with `if: { condition: { dna_origin: true } }` for the rider.
+The rider uses existing `add_player_modifier` / `CannotUnsuspend` with
+`end_of_opponents_turn`; a snapshot of current permanents incorrectly omitted
+later arrivals. No new engine primitive, DSL vocabulary, action, or tensor
+contract was required. Official observation
+`4d8eb841c3f9b024416779ddff8f0d21e96f9e79476257bf794b02ed05565eea`
+(Q2622), the inspected card image, and base DCGO `BT16_025.cs` establish the
+single clause and opponent-player restriction.
+
+Three standalone regressions in `tests/bt16_025_dna_ordering_regression.rs`
+failed before the YAML repair and pass afterward: no artificial self-order
+prompt; exactly two real WD/Tamer effects with WD-first original and cloned
+prompt resolution retaining DNA origin; and later-entering Digimon protection,
+Tamer exclusion, turn-start enforcement, and opponent-turn expiry. They test
+actual attempted unsuspension, independently of modifier storage. Evidence:
+`qa/archetype-qa/dsl/examon-2026-10-10-evidence/verification/bt16-025-ordering-regression-red.log`
+and `qa/archetype-qa/dsl/examon-2026-10-10-evidence/verification/bt16-025-ordering-regression-green.log`
+(3/3 GREEN). This is a scoped YAML correction; focused existing-card reruns,
+the remaining full suite, and fresh DCGO comparison are separate gates. It does
+not establish full card/campaign parity or all simultaneous-effect orderings.
+
+
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
 Last updated: 2026-06-11
@@ -1301,6 +1391,10 @@ G-code below until fixed.
 
 ### §Nested parked replacement (single-park boundary) (G-NESTED-PARKED-REPLACEMENT) — RESOLVED 2026-10-01
 
+- **2026-10-15 payment follow-up:** the historical paragraph below describes Guard's former `cancel_if_card_deleted` trash-membership path. Current Guard uses the shared deletion-receipt continuation, with plural paid-prevention metadata, matching-member filtering, nested-choice/clone handling and source attribution preserved. Scapegoat uses the same continuation with an explicit other-own-Digimon payer and carrier-only replacement eligibility. Rules-level payer kinds include tokens, battle-area Digi-Eggs and effective Tamer/Digimon identities. Failed payment never cancels departure; protected-carrier optional attempts follow official 15-7-4 despite the inspected DCGO Guard activation prefilter. Historical pre-boundary evidence: 122 focused tests passed. Build21 main126, supplemental3 and outside26 retained comparisons subsequently completed on the pre-boundary artifact; they do not validate the new receipt-boundary repair. The current focused boundary gate passed 198 tests; full EX13 and build22 verification/replays remain pending at this checkpoint. This supersedes only the payment implementation description, not the historical evidence or unrelated gap dispositions.
+
+
+- **2026-10-15 nested-body correction, focused verification complete:** accepted Decode material/body choices require the payment receipt finalizer between payer commit and parent departure. The bounded typed-window ownership repair has a 3-fail/2-pass baseline; focused GREEN passed 198 tests across six targets with source unchanged. Full EX13 verification remains pending at this checkpoint. Tests cover Guard, selected Scapegoat, failed payment, further body parking, ordinary deletion results and clones. The historical resolved heading does not close the source-inspected missing-subject continuation-loss path (not newly runtime-tested here). Arbitrary multiple-owner/non-leading-tail cases remain untested boundaries, not established additional defects.
 - **RESOLVED 2026-10-01 (engine).** `Game::parked_replacement` is now a `Vec<ParkedReplacement>` stack (plain data, clone-safe) plus a scope floor `Game::parked_replacement_floor`. `replacement::run_effect_inner` sets the floor to the stack depth while a process runs (so a process running while an OUTER replacement is parked never writes its outcome into the outer entry — all outcome writers go through `Game::active_parked_replacement_mut` / `has_active_parked_replacement`) and, when the process leaves a selection pending, INSERTS its entry at the depth it started at — beneath any entry its own nested event pushed — instead of tripping the old single-park `debug_assert`. `try_drain_parked_replacement_with_guard` drains LIFO until a commit opens a new selection (rule 15-8-5-4 one-at-a-time; the inner event commits before the outer outcome). New `ReplacementContext::cancel_if_card_deleted(owner, card)` / `ParkedReplacement.cancel_if_deleted`: a "by deleting X, it doesn't leave" cost whose deletion parks is committed as `Cancelled` only if X actually ended in trash (DCGO `Guard.cs` → `DeletePeremanentAndProcessAccordingToResult` success branch); `<Guard>` uses it. Accept paths locate their own park by stack position. Regressions: `keyword_phase_f::guard::{guard_cost_deletion_with_evade_declined_deletes_carrier_and_saves_ally, guard_cost_deletion_prevented_by_evade_does_not_save_ally, guard_cost_deletion_prevented_by_fragment_pick_does_not_save_ally (two-deep stack), nested_guard_evade_park_clones_faithfully}`; EX13-065 `ex13_065_guard_deletion_then_decode_plays_sistermon_blanc` un-ignored + `ex13_065_guard_deletion_with_decode_declined_still_saves_ally`. EX13-065 IMPLEMENTED. Verify: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_phase_f guard` and `RUST_MIN_STACK=134217728 cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- "ex13::ex13_065" --test-threads=3`. Not re-pinned: the judge-quiz Q30 line still declines Medieval's trailing re-activation (`judge_quiz/c_declare_then_pay.rs`); that path should now be reachable.
 - *(original entry follows)*
 
@@ -1471,3 +1565,23 @@ G-code below until fixed.
 - **G-DECLARATIVE-TICK-ZOMBIE-CARRIER — RESOLVED.** `Game::materialize_declaratives_full` (`src/game/triggers.rs`) called `top_card()` on every battle-area permanent, but the extraction paths fire observers before the emptied carrier is soft-removed (`trash_card_source` → `fire_digivolution_card_trashed` → `tick_declarative_effects`; `play_from_materials` → would-play replacement → `try_replace` tick), so the transient empty slot (`G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION`) panicked. Empty battle-area / breeding slots now contribute no declarative source. Tests (were failing): `effect_context` `play_from_materials::play_from_materials_emptying_source_does_not_leave_zombie_permanent`, `…_emptying_lower_indexed_carrier_shifts_neighbor_index`, `trash_card_source::trash_card_source_emptying_carrier_removes_slot`.
 - **G-PENDING-SECURITY-ADD-WRONG-CARD — RESOLVED.** Since G-ENGINE-SECURITY-REMOVED-OBSERVER-MID-EFFECT (15-8-3-2 deferral), a security card removed INSIDE another removal's effect completes its own removal before its trigger resolves, so `pending_security` holds the OUTER parked card when the inner trigger's "add this card to the hand" runs — `add_pending_security_to_hand` moved the unrelated OUTER card. It now only acts when the pending card is the effect's own source card (DCGO `AddThisCardToHand(card1)` names this card). `effect_context` `security_stack_operations::nested_deferred_security_removals_resume_outer_after_inner_selection` re-pinned to the 15-8-3-2 order (inner removal no longer stacks; OUTER stays out of the hand; both end in trash).
 - **G-ENGINE-TURN-END-MID-EFFECT — RESOLVED.** See docs/RUST_ENGINE_GAPS.md. `check_turn_end` no longer rotates the turn while an effect / selection resolution / attack is still in progress or during the End phase (6-1-4-1); the deferred check re-runs once processing settles. Also `use_option_from_hand_without_paying_cost` now lifts the Main-phase gate (it returned `Invalid` in the End phase, dropping BT24-085's may-attack). Driver: BT24-085.
+
+### Hand-to-breeding effect play [G-DSL-HAND-TO-BREEDING-EFFECT-PLAY] — focused repair (2026-10-11)
+
+DSL `play_to_breeding_from_hand: { of: you, hand_index: chosen }` and predicate `can_play_to_breeding_from_hand: true` share actual physical hand-owner, Digimon/Dual, empty-breeding and effect-controller prohibition validation. Battle-area capacity does not block this destination. Hand choices retain physical identity through index shifts and clone/resume; removed copies are never replaced by same-ID cards. Breeding entry does not activate On Play. Nine primitive tests and 17 BT20-053 tests pass. Supporting Grademon/Q6238 require separate live oracle evidence and do not expand the 52-card campaign denominator. Pack format 0.9.0 requires rebuilt packs and generated DSL docs; action/tensor contracts are unchanged.
+
+### Effect evolution player reducers [G-COST-REDUCE-ALLY-DIGIVOLVE] — Q1140 extension (2026-10-11)
+
+Supported effect evolution now uses the player/field reducer chain with explicit route and optional payment choices, physical source/host identities, cloned continuations and nested result bindings. Affordability explores real payment choices on clones, preserving competition for resources. Probe-only selection resolution and an entire-search deferred-drain scope prevent waiting siblings or enclosing attack/security/Option/turn processing from funding payment, including synchronous suspend-self costs. Ten cost/continuation tests plus two independent boundary regressions pass after observed RED. Generic payment-created immediate replacement completion and arbitrary nested replacement/payment combinations remain unproven, with no observed failure asserted. This is not live Q1140 confirmation or full effect-evolution parity.
+
+### Printed evolution-cost cache identity [G-CARD-STORE-EVOLUTION-COST-CONTENT] — resolved slice (2026-10-11)
+
+The shared card-store fingerprint now hashes every ordered evolution route's color, level and memory cost alongside route count. Equal-length same-ID updates therefore expose new data while existing games retain their original immutable store. Three direct regressions failed before repair and pass afterward. Other length-only text/alias fields and omitted Dual metadata remain outside this closure; no broad cache-correctness claim is made.
+
+Evidence for these scoped repairs: `qa/archetype-qa/dsl/examon-2026-10-10-evidence/verification/breeding-q1140-cache-independent-review.md` and adjacent JSON source/log hashes. These tracker entries do not change oracle ledger verdicts.
+
+### Exposed Option rule trash with identity cleanup and Overflow [G-ENGINE-EXPOSED-OPTION-RULE-TRASH] — focused repair (2026-10-11)
+
+Q1921 exposed a reusable rule-processing gap: De-Digivolve could leave a Standard Option top in the battle area. At the completed-resolution rule boundary, such a DP-less Option now uses whole-stack rule trash without deletion events. Existing Delay/Training/ordinary field/linked Option lifecycle states remain outside this predicate. The shared branch snapshots remaining physical stack and linked cards, clears/removes/rekeys the old permanent before memory callbacks, then applies owner-relative Overflow once. Source authority is official Q1921 plus rules 17-1-2-1, 17-1-3-2 and 4-17; DCGO's rule-trash path independently corroborates Overflow for both source and linked cards.
+
+Five substantive regressions failed before repair; eight focused tests now pass, covering clone/no-deletion dispatch, lower cards, valid Tamer/Option controls, modifier rekey, source/link Overflow and surviving aura identity. The first purported Tamer control mistakenly used Option BT1-090 and was corrected to visually verified Tamer BT1-085; failed logs remain preserved. Evidence: `qa/archetype-qa/dsl/examon-2026-10-10-evidence/verification/q1921-rule-trash-implementation/`. Live Q1921 and broader full-suite validation remain separate/pending; no action/tensor change or oracle-verdict promotion is claimed.

@@ -1,0 +1,43 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "AD1-016",
+    "colors": "Yellow Red",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "12",
+    "special_digivolution_condition": "[Digivolve] Lv.5 w/[RizeGreymon] in name or w/[DATA SQUAD] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[RizeGreymon] in name or w/[DATA SQUAD] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Alliance＞ ＜Blocker＞ [When Digivolving] [When Attacking] [Once Per Turn] You may play 1 [Marcus Damon] from your hand or trash without paying the cost. Then, to 1 of your opponent's Digimon, give -3000 DP for each of your Digimon and Tamers until their turn ends. [All Turns] [Once Per Turn] When any of your [Marcus Damon]s are played or suspend, you may delete 1 of your opponent's Digimon with as much or less DP as this Digimon."
+      }
+    ],
+    "type": "Light Dragon/DATA SQUAD"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "4de37a5bf39755bfa9efbcb6f64a9ad2d3c3e30d90ef1b659fc3a462b03e139e",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "818bacee924e660b00b47091f103ac5bd343330203a8aae1efd7d7615d9e8796",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:AD1-016",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/AD1-016"
+}

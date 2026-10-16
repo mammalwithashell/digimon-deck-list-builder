@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT25-013",
+    "colors": "Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "5000",
+    "form": "Champion",
+    "play_cost": "4",
+    "qa": [
+      "Yes, you can."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[TS] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[TS] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] By trashing 1 card in your hand, you may return 1 red or blue [Iliad] trait Digimon card from your trash to the hand. [Your Turn] When your Digimon are played or digivolve, if any of them are blue, this Digimon may digivolve into [Flaremon] in the hand with the cost reduced by 1."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon gets +2000 DP."
+      }
+    ],
+    "type": "Beast/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "dd1c0c18f8d33ee8c1c7d48e7c3df5c751b3ca54886f3069d9d5b5d8fb838df4",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "eccea939ecb9db8cbbb06eec37e2ed6fa65d5e093ef3cbc5bb2c96513a1238ef",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-013",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-013"
+}

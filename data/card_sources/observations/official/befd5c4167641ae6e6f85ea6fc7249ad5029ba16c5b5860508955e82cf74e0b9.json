@@ -1,0 +1,25 @@
+{
+  "extracted": {
+    "attribute": "Social",
+    "card_id": "BT21-005",
+    "colors": "Green",
+    "digivolve_costs": [],
+    "form": "Appmon",
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, ＜Draw 1＞."
+      }
+    ],
+    "type": "Swipe"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "befd5c4167641ae6e6f85ea6fc7249ad5029ba16c5b5860508955e82cf74e0b9",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "cc2d717b7b313649f1132d720591b192fb8fa2bd11c46a9812000b54a47fea1a",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-005",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-005"
+}

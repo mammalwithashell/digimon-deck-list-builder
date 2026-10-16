@@ -92,7 +92,7 @@ effects:
           prompt: "Trash any 3 [Mineral] or [Rock] digivolution cards from your Digimon to unsuspend and gain Security A. +1"
           then:
             # Step 1: Trash the selected source cards.
-            - trash_selected_sources: { source_refs: cost_sources }
+            - trash_selected_sources_as_cost: { source_refs: cost_sources }
             # Step 2: Unsuspend this Digimon.
             - unsuspend: { target: source }
             # Step 3: SecurityAttackChange +1 until end of this turn.

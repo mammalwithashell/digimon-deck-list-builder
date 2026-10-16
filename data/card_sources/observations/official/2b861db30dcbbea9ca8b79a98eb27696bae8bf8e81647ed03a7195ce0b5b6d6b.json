@@ -1,0 +1,75 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "EX12-004",
+    "card_type": "Digi-Egg",
+    "colors": [
+      "Purple"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "digi_egg",
+        "level": 2,
+        "name": "Onibimon",
+        "play_cost": null,
+        "text_sections": [
+          {
+            "label": "Inherited Effect",
+            "text": "[Your Turn] This Digimon with the [TB] trait gains ＜Execute＞."
+          }
+        ]
+      }
+    ],
+    "form": "In-Training",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 2,
+    "name": "Onibimon",
+    "play_cost": null,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-004.png?260529",
+      "printing_id": "EX12-004"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "The player can resolve them in any order.\nHowever, if the Digimon is deleted by first, then the [End of Attack] effect can't be activated.\nRelated Cards",
+        "date": "Jun. 19, 2026",
+        "number": "Q6728",
+        "question": "If a Digimon with this card and [EX12-046 Shishimamon] in its digivolution cards attacks with , at the end of that attack, in what order can the Execute's delete effect and the [End of Attack] effect be resolved?"
+      }
+    ],
+    "rarity": "U",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon with the [TB] trait gains ＜Execute＞."
+      }
+    ],
+    "type": "Ghost/Shambala/TB"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "2b861db30dcbbea9ca8b79a98eb27696bae8bf8e81647ed03a7195ce0b5b6d6b",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-004:EX12-004",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT19-035",
+    "colors": "Yellow Red",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "5000",
+    "form": "Champion",
+    "play_cost": "5",
+    "qa": [
+      "No, you can't. This card is only treated as [Starmons] for a DigiXros. Related Cards"
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Xros Heart] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Xros Heart] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "This card is also treated as [Starmons] for DigiXros. [All Turns] [Once Per Turn] When any of your [Xros Heart] trait Digimon are played, until the end of your opponent's turn, give 1 of their Digimon ＜Security A. -1＞ and it gets -3000 DP. [On Deletion] You may place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under any of your Tamers."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] If this Digimon has the [Xros Heart] trait, 1 of your opponent's Digimon gets -2000 DP for the turn."
+      }
+    ],
+    "type": "Super Major/Xros Heart"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "9767510213947ebbe3ef15cb74ce1bd8f8b6272c7ad087809d83098cee78138a",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "238f7587f11bf629d6d7905ac850cfcdbe2dac5a6ef63a93195077a875ad0337",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT19-035",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT19-035"
+}

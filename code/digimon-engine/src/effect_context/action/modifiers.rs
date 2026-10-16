@@ -289,6 +289,58 @@ impl<'a> EffectContext<'a> {
         );
     }
 
+    /// Grant a turn-bound triggered body to every current/future matching carrier.
+    /// The grant survives its source leaving play. Immunity and the predicate
+    /// are checked when a carrier would trigger, rather than at installation.
+    pub fn grant_dynamic_triggered_effect<P, F>(
+        &mut self,
+        timing: EffectTiming,
+        expiry: Expiry,
+        predicate: P,
+        body: F,
+    ) where
+        P: Fn(&EffectReadContext<'_>, PermanentHandle) -> bool + Send + Sync + 'static,
+        F: Fn(&mut EffectContext<'_>) + Send + Sync + 'static,
+    {
+        assert!(
+            matches!(
+                expiry,
+                Expiry::EndOfTurn
+                    | Expiry::EndOfYourTurn
+                    | Expiry::EndOfOpponentsTurn
+                    | Expiry::EndOfYourNextTurn
+                    | Expiry::EndOfOpponentsNextTurn
+            ),
+            "dynamic grants require a turn-bound expiry"
+        );
+        self.game.next_granted_effect_id = self.game.next_granted_effect_id.saturating_add(1);
+        let body_id = self.game.next_granted_effect_id;
+        let body: GrantedEffectBody = std::sync::Arc::new(body);
+        self.game
+            .granted_effect_bodies
+            .insert(body_id, body.clone());
+        self.game
+            .modifiers
+            .dynamic_triggered
+            .push(DynamicTriggeredGrant {
+                grant: GrantedTriggeredEffect {
+                    timing,
+                    source_card: self.source_card,
+                    source_player: self.player,
+                    expiry,
+                    body_id,
+                    body,
+                },
+                source_kind: self.source_kind,
+                pending_skips: pending_skips_for_install(
+                    expiry,
+                    self.player,
+                    self.game.turn_player(),
+                ),
+                predicate: std::sync::Arc::new(predicate),
+            });
+    }
+
     /// Declarative-tick variant of `add_effect_immunity_modifier` — installs
     /// a MATERIALIZED filtered `CannotBeAffected` entry that
     /// `tick_declarative_effects` clears and re-installs each tick. Used by

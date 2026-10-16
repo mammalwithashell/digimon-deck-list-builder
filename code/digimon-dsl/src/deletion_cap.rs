@@ -110,6 +110,7 @@ fn child_bodies(step: &CompiledStep) -> Vec<&Vec<CompiledStep>> {
         S::GrantTriggeredEffect { body, .. }
         | S::RepeatEffectChoice { body, .. }
         | S::RepeatEffectChoiceRemaining { body, .. }
+        | S::ForEachRemaining { body, .. }
         | S::AsSelectingPlayer { body, .. }
         | S::ForEach { body, .. }
         | S::PerSelected { body, .. }
@@ -152,6 +153,7 @@ fn child_bodies_mut(step: &mut CompiledStep) -> Vec<&mut Vec<CompiledStep>> {
         S::GrantTriggeredEffect { body, .. }
         | S::RepeatEffectChoice { body, .. }
         | S::RepeatEffectChoiceRemaining { body, .. }
+        | S::ForEachRemaining { body, .. }
         | S::AsSelectingPlayer { body, .. }
         | S::ForEach { body, .. }
         | S::PerSelected { body, .. }

@@ -804,8 +804,6 @@ fn bt20_016_all_turns_offers_dna_into_imperialdramon_and_deletion_still_commits(
     runner.place_on_field(0, "TST-DINOBEEMON", Some(0));
     runner.place_on_field(0, "TST-PURPLE-MAT", Some(0));
 
-    let victim_index = victim.index;
-
     runner
         .game
         .delete_permanent_with_cause(victim, ReplacementCause::OpponentEffect);
@@ -813,20 +811,31 @@ fn bt20_016_all_turns_offers_dna_into_imperialdramon_and_deletion_still_commits(
     // The observer offers an optional accept/decline prompt; drive through
     // every selection accepting the DNA digivolve.
     let mut steps = 0;
+    let mut material_pick = 0;
     while runner.game.pending_selection.is_some() && steps < 40 {
         let sel = runner.game.pending_selection.as_ref().unwrap();
         let player = sel.selecting_player;
-        // Prefer a non-PASS action so the DNA digivolve is actually taken.
-        let action = sel
-            .valid_action_ids
-            .iter()
-            .copied()
-            .find(|&a| a != PASS)
-            .unwrap_or(PASS);
-        let _ = runner.game.resolve_selection(player, action);
+        // Select the two stated bystanders, not whichever permanent happens
+        // to occupy the first action slot (which can consume the victim).
+        let action = if sel.kind == SelectionKind::AnyField {
+            let material = ["TST-DINOBEEMON", "TST-PURPLE-MAT"][material_pick];
+            material_pick += 1;
+            let index = runner.game.players[0].battle_area.iter()
+                .position(|p| p.top_card().card_id(&runner.game.card_data) == material)
+                .expect("chosen DNA material remains on field");
+            encode_attack(0, index as u16)
+        } else {
+            sel.valid_action_ids.iter().copied().find(|&a| a != PASS)
+                .expect("non-decline choice")
+        };
+        assert!(sel.valid_action_ids.contains(&action), "chosen material is legal");
+        runner.game.resolve_selection(player, action).expect("selection resolves");
         runner.game.drain_effect_queue();
         steps += 1;
     }
+
+    assert_eq!(material_pick, 2);
+    assert!(runner.game.pending_selection.is_none());
 
     // The victim [Paildramon] is gone — the non-cancelling observer let the
     // deletion commit.
@@ -859,7 +868,12 @@ fn bt20_016_all_turns_offers_dna_into_imperialdramon_and_deletion_still_commits(
         imp_on_field,
         "Imperialdramon: Dragon Mode must be on the field after the DNA digivolve"
     );
-    let _ = victim_index;
+    assert!(runner.game.players[0].trash.iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "TST-PAILDRAMON"));
+    let merged = runner.game.players[0].battle_area.iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "TST-IMP-DM").unwrap();
+    let materials: Vec<_> = merged.card_sources.iter().map(|c| c.card_id(&runner.game.card_data)).collect();
+    assert!(materials.contains(&"TST-DINOBEEMON") && materials.contains(&"TST-PURPLE-MAT"));
 }
 
 // ─── Section 7: Inherited Security A.+1 ─────────────────────────────────────

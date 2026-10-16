@@ -1,0 +1,58 @@
+{
+  "extracted": {
+    "attribute": "Game",
+    "card_id": "BT23-021",
+    "colors": "Blue Green",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "6000",
+    "form": "Sup./Appmon",
+    "play_cost": "6",
+    "qa": [
+      "App Fusion is possible with the following combinations. ●[Dokamon] with [Perorimon] link card ●[Dokamon] with [Musclemon] link card ●[Perorimon] with [Dokamon] link card ●[Perorimon] with [Musclemon] link card ●[Musclemon] with [Dokamon] link card ●[Musclemon] with [Perorimon] link card"
+    ],
+    "special_digivolution_condition": "[App Fusion] [Dokamon] & [Perorimon] & [Musclemon] : Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Dokamon] & [Perorimon] & [Musclemon] : Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] [When Attacking] [Once Per Turn] You may link 1 level 3 Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost. [Your Turn] [Once Per Turn] When this Digimon gets linked, it can't be deleted in battle until your opponent's turn ends."
+      },
+      {
+        "label": "Link DP",
+        "text": "+3000 DP"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Linking] This Digimon can't be deleted in battle until your opponent's turn ends."
+      }
+    ],
+    "type": "Fighting"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "ee9e236639bf0ac6cdbfd417694c762c5ceeb57e5d177817a0fb092089c5a5f4",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "ef406b7764d8bcffba4b037f6ba8d67633a488e89a8ecfcd749af8a80065d801",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT23-021",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT23-021"
+}

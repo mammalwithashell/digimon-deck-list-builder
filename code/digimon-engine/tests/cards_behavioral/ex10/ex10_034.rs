@@ -108,6 +108,7 @@ fn ex10_034_clause_a_has_on_play_when_digivolving_grant_triggered_effect() {
                 timing,
                 expiry,
                 body,
+                ..
             } => Some((target, timing, expiry, body)),
             _ => None,
         })

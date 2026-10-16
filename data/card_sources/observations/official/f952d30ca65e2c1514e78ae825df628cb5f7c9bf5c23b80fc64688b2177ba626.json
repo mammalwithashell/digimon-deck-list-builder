@@ -1,0 +1,101 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT10-086",
+    "card_type": "Digimon",
+    "colors": [
+      "White"
+    ],
+    "dp": 16000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red",
+          "Blue"
+        ],
+        "cost": 7,
+        "from_level": 6,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "White"
+        ],
+        "dp": 16000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 6,
+        "name": "Omnimon (X Antibody)",
+        "play_cost": 16,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] 3 from [Omnimon]"
+          },
+          {
+            "label": "Effect",
+            "text": "When a Digimon with [X Antibody] in its digivolution cards would digivolve into this card, reduce the digivolution cost by 2.\n[When Digivolving] Return all of your opponent's Digimon with the highest level to the bottom of their owners' decks in any order.\n[When Digivolving][When Attacking][Once Per Turn] By placing 1 [X Antibody] or level 6 card from this Digimon's digivolution cards at the bottom of its owner's deck, reveal all of your opponent's security cards, and trash 1 of them. Place the rest in your opponent's security stack face down. Then, your opponent shuffles their security stack."
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 6,
+    "name": "Omnimon (X Antibody)",
+    "play_cost": 16,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522011",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT10-086.png?260529",
+      "printing_id": "BT10-086"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "The player that activated this effect chooses.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2009",
+        "question": "Which player chooses which of my opponent's security cards is trashed by this card's [When Digivolving][When Attacking] effect?"
+      },
+      {
+        "answer": "Yes, you can activate it.\nWhen a revealed card is trashed from the deck or security stack, it is not considered to be trashed from the deck or security stack, but it is considered that a card was removed from the security stack, so [BT4-097 Kari Kamiya]'s effect can be activated.\nRelated Cards",
+        "date": "Mar. 28, 2024",
+        "number": "Q2010",
+        "question": "My security cards were revealed due to the [When Digivolving] effect of this opponent's card, and 1 of them was trashed.\nCan I treat this as \"when a card is removed from your security stack\" and activate [BT4-097 Kari Kamiya]'s effect?"
+      }
+    ],
+    "rarity": "SR",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] 3 from [Omnimon]"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] 3 from [Omnimon]"
+      },
+      {
+        "label": "Effect",
+        "text": "When a Digimon with [X Antibody] in its digivolution cards would digivolve into this card, reduce the digivolution cost by 2.\n[When Digivolving] Return all of your opponent's Digimon with the highest level to the bottom of their owners' decks in any order.\n[When Digivolving][When Attacking][Once Per Turn] By placing 1 [X Antibody] or level 6 card from this Digimon's digivolution cards at the bottom of its owner's deck, reveal all of your opponent's security cards, and trash 1 of them. Place the rest in your opponent's security stack face down. Then, your opponent shuffles their security stack."
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight/X Antibody"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "f952d30ca65e2c1514e78ae825df628cb5f7c9bf5c23b80fc64688b2177ba626",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "e66bdb43d60572f62872dfdc44a41074d6abccfa7e3f191898730e71b7a70295",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522011:BT10-086:BT10-086",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522011"
+}

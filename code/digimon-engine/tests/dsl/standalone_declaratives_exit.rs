@@ -22,6 +22,7 @@ use digimon_engine::enums::{DelayTrigger, EffectTiming};
 
 fn base_card(id: &str, clauses: Vec<CompiledClause>) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: id.into(),
         name: "Fixture".into(),
         kind: CompiledCardKind::Digimon,
@@ -73,7 +74,10 @@ fn delay_clause() -> CompiledClause {
         scope: CompiledScope::FaceUp,
         active_when: None,
         trigger: CompiledTiming::EndOfYourTurn,
-        process: vec![],
+        process: vec![digimon_dsl::compiled::CompiledStep::Draw {
+            of: digimon_dsl::compiled::CompiledPlayerRef::You,
+            count: 1,
+        }],
         summary: None,
         summary_key: None,
     })

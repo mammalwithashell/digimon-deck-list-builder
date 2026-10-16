@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX10-034",
+    "colors": "Black Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "Mega",
+    "play_cost": "13",
+    "qa": [
+      "You can give that effect to such Digimon, but if the Digimon isn't affected by effects upon the trigger timing, the gained effect won't trigger."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "＜Collision＞ ＜Fragment《3》＞ ＜Blocker＞ [On Play] [When Digivolving] Until your opponent's turn ends, give 1 of their Digimon \"[Start of Your Main Phase] This Digimon attacks.\" [All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of this Digimon's digivolution cards, this Digimon gains ＜Security A. +1＞ and +3000 DP until your turn ends."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "DigiXros -2: 3 Digimon cards w/[Bagra Army] trait When this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+      }
+    ],
+    "type": "Mineral/Bagra Army"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "34733d16b8f00159c3d2702ae68657c5a6695d2da05a2aa9e4ef99950ae18325",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "24c9154b78cedd72f700e184022795c44038a1024473ddb7ce23f6865f0d968c",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX10-034",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX10-034"
+}

@@ -1,0 +1,84 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX3-029",
+    "card_type": "Digimon",
+    "colors": [
+      "Yellow"
+    ],
+    "dp": 4000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "cost": 2,
+        "from_level": 3,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 4000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 4,
+        "name": "Airdramon",
+        "play_cost": 5,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[On Play] Search your security stack, reveal 1 card from it, and add it to your hand. If it's a yellow card, ＜Recovery +1 (Deck)＞. (Place the top card of your deck on top of your security stack.) Then, shuffle your security stack."
+          }
+        ]
+      }
+    ],
+    "form": "Champion",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 4,
+    "name": "Airdramon",
+    "play_cost": 5,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522012",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX3-029.png?260529",
+      "printing_id": "EX3-029"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "It means you can look at all of the cards in your security stack, without revealing them to your opponent. You then choose 1 card to add to your hand, and you reveal that card to your opponent.",
+        "date": "Mar. 28, 2024",
+        "number": "Q3405",
+        "question": "What does \"search your security stack\" in this card's [On Play] effect mean, exactly?"
+      }
+    ],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] Search your security stack, reveal 1 card from it, and add it to your hand. If it's a yellow card, ＜Recovery +1 (Deck)＞. (Place the top card of your deck on top of your security stack.) Then, shuffle your security stack."
+      }
+    ],
+    "type": "Mythical Beast"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "3cc094d66b725f4949369a14c065837ac3c55d1e15d5b1387e0f9ee0889eaaf1",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "de7126ba449fa54b50832bfbb560a028ebcf86d092956f0a2f3f8dabe85947f7",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522012:EX3-029:EX3-029",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522012"
+}

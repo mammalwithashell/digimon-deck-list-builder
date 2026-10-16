@@ -1,0 +1,105 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Vaccine"
+      ],
+      "card_colors": [
+        "White"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Omnimon (X Antibody)",
+      "dp": 16000,
+      "effect_description_eng": "When a Digimon with [X Antibody] in its digivolution cards would digivolve into this card, reduce the digivolution cost by 2.\r\n[When Digivolving] Return all of your opponent's Digimon with the highest level to the bottom of their owners' decks in any order.\r\n[When Digivolving] [When Attacking] [Once Per Turn] By placing 1 [X Antibody] or level 6 card from this Digimon's digivolution cards at the bottom of its owner's deck, reveal all of your opponent's security cards, and trash 1 of them. Place the rest in your opponent's security stack face down. Then, your opponent shuffles their security stack.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "",
+      "level": 7,
+      "play_cost": 16,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Holy Warrior",
+        "Royal Knight",
+        "X Antibody"
+      ]
+    },
+    "card_id": "BT10-086",
+    "derived_diagnostics": [
+      {
+        "authoritative": false,
+        "candidate": {
+          "color": "Red",
+          "cost": 7,
+          "level": 6,
+          "ordinal": 1
+        },
+        "derived": true,
+        "field_path": "evolution_routes",
+        "reason": "digimoncard.io omitted explicit evolution route components"
+      }
+    ],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "White"
+        ],
+        "dp": 16000,
+        "effect_text": "When a Digimon with [X Antibody] in its digivolution cards would digivolve into this card, reduce the digivolution cost by 2.\r\n[When Digivolving] Return all of your opponent's Digimon with the highest level to the bottom of their owners' decks in any order.\r\n[When Digivolving] [When Attacking] [Once Per Turn] By placing 1 [X Antibody] or level 6 card from this Digimon's digivolution cards at the bottom of its owner's deck, reveal all of your opponent's security cards, and trash 1 of them. Place the rest in your opponent's security stack face down. Then, your opponent shuffles their security stack.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 7,
+        "play_cost": 16,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "[Digivolve] [Omnimon]: Cost 3",
+      "artist": null,
+      "attribute": "Vaccine",
+      "color": "White",
+      "color2": null,
+      "date_added": "2025-12-08 10:21:59",
+      "digi_type": "Holy Warrior",
+      "digi_type2": "Royal Knight",
+      "digi_type3": "X Antibody",
+      "digi_type4": null,
+      "dp": 16000,
+      "evolution_color": "Red",
+      "evolution_cost": 7,
+      "evolution_level": null,
+      "form": null,
+      "id": "BT10-086",
+      "level": 7,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "When a Digimon with [X Antibody] in its digivolution cards would digivolve into this card, reduce the digivolution cost by 2.\r\n[When Digivolving] Return all of your opponent's Digimon with the highest level to the bottom of their owners' decks in any order.\r\n[When Digivolving] [When Attacking] [Once Per Turn] By placing 1 [X Antibody] or level 6 card from this Digimon's digivolution cards at the bottom of its owner's deck, reveal all of your opponent's security cards, and trash 1 of them. Place the rest in your opponent's security stack face down. Then, your opponent shuffles their security stack.",
+      "name": "Omnimon (X Antibody)",
+      "play_cost": 16,
+      "pretty_url": "omnimon-x-antibody-bt10-086",
+      "rarity": "sr",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-10: Booster Xros Encounter",
+        "Revision Pack 2023"
+      ],
+      "source_effect": "",
+      "stage": null,
+      "tcgplayer_id": 493717,
+      "tcgplayer_name": "Omnimon (X Antibody)",
+      "type": "Digimon",
+      "xros_req": "[Digivolve] [Omnimon]: Cost 3"
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "8c31389bab840bd29c73728aabc9b87445448739a89201807b5d17f5daa3818b",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "BT10-086",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

@@ -1,0 +1,103 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Data"
+      ],
+      "card_colors": [
+        "Red"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Shoutmon (King Version)",
+      "dp": 4000,
+      "effect_description_eng": "[On Play] You may return 1 card with a DigiXros requirement from your trash to your hand. When you would DigiXros this turn, this Digimon may replace 1 of the DigiXros requirements.\r\n＜Material Save 1＞ (When this Digimon would be deleted, you may place 1 card in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Shoutmon] in its name, it gets +2000 DP.",
+      "level": 4,
+      "play_cost": 5,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Mini Dragon",
+        "Xros Heart"
+      ]
+    },
+    "card_id": "BT10-111",
+    "derived_diagnostics": [
+      {
+        "authoritative": false,
+        "candidate": {
+          "color": "Red",
+          "cost": 2,
+          "level": 3,
+          "ordinal": 1
+        },
+        "derived": true,
+        "field_path": "evolution_routes",
+        "reason": "digimoncard.io omitted explicit evolution route components"
+      }
+    ],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": 4000,
+        "effect_text": "[On Play] You may return 1 card with a DigiXros requirement from your trash to your hand. When you would DigiXros this turn, this Digimon may replace 1 of the DigiXros requirements.\r\n＜Material Save 1＞ (When this Digimon would be deleted, you may place 1 card in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)",
+        "face_id": "primary",
+        "inherited_text": "[Your Turn] While this Digimon has [Shoutmon] in its name, it gets +2000 DP.",
+        "kind": "digimon",
+        "level": 4,
+        "play_cost": 5,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "DigiXros Requirements [DigiXros -2] 1 Digimon card w/[Xros Heart] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+      "artist": null,
+      "attribute": "Data",
+      "color": "Red",
+      "color2": null,
+      "date_added": "2025-11-25 10:12:18",
+      "digi_type": "Mini Dragon",
+      "digi_type2": "Xros Heart",
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 4000,
+      "evolution_color": null,
+      "evolution_cost": 2,
+      "evolution_level": null,
+      "form": null,
+      "id": "BT10-111",
+      "level": 4,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[On Play] You may return 1 card with a DigiXros requirement from your trash to your hand. When you would DigiXros this turn, this Digimon may replace 1 of the DigiXros requirements.\r\n＜Material Save 1＞ (When this Digimon would be deleted, you may place 1 card in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)",
+      "name": "Shoutmon (King Version)",
+      "play_cost": 5,
+      "pretty_url": "shoutmon-king-version-bt10-111",
+      "rarity": "sec",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-10: Booster Xros Encounter"
+      ],
+      "source_effect": "[Your Turn] While this Digimon has [Shoutmon] in its name, it gets +2000 DP.",
+      "stage": null,
+      "tcgplayer_id": 286450,
+      "tcgplayer_name": "Shoutmon (King Version)",
+      "type": "Digimon",
+      "xros_req": "DigiXros Requirements [DigiXros -2] 1 Digimon card w/[Xros Heart] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "2ad06c6d750db9a7f2f6f564fc627fff9af077235d08e8f38eca5899fc7c2b1b",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "BT10-111",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

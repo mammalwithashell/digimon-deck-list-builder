@@ -54,6 +54,7 @@ use std::sync::Arc;
 
 fn fixture_grant_keyword(keyword: &str, value: Option<i32>) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: "F-GK".into(),
         name: "Fixture".into(),
         kind: CompiledCardKind::Digimon,
@@ -106,6 +107,7 @@ use digimon_dsl::compiled::{CompiledGrantKeywordValue, CompiledPlayerRef, Compil
 
 fn fixture_aura_self_dp(amount: i32) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: "F-AURA-SELF".into(),
         name: "Fixture".into(),
         kind: CompiledCardKind::Digimon,
@@ -145,6 +147,7 @@ fn fixture_aura_self_dp(amount: i32) -> CompiledCard {
                 effect_immunity: None,
                 modifier_from: None,
                 dna_material_identity: None,
+                source_card_trash_protection: None,
                 summary: None,
                 summary_key: None,
             },
@@ -170,6 +173,7 @@ fn fixture_aura_filtered(
     dp: Option<i32>,
 ) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: "F-AURA-FILT".into(),
         name: "Fixture".into(),
         kind: CompiledCardKind::Tamer,
@@ -209,6 +213,7 @@ fn fixture_aura_filtered(
                 effect_immunity: None,
                 modifier_from: None,
                 dna_material_identity: None,
+                source_card_trash_protection: None,
                 summary: None,
                 summary_key: None,
             },
@@ -237,6 +242,7 @@ fn filtered_aura_emits_declarative_with_process_but_no_static_dp() {
 
 fn fixture_cost_reduction(amount: i32, condition: Option<CompiledPredicate>) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: "F-CR".into(),
         name: "Fixture".into(),
         kind: CompiledCardKind::Digimon,
@@ -256,6 +262,7 @@ fn fixture_cost_reduction(amount: i32, condition: Option<CompiledPredicate>) -> 
         alt_paths: vec![],
         effects: vec![CompiledClause::Declarative(
             CompiledDeclarativeClause::CostReduction {
+                set_cost: None,
                 scope: CompiledScope::FaceUp,
                 active_when: None,
                 reduction_timing: Some("before_pay_cost".into()),
@@ -303,6 +310,7 @@ fn cost_reduction_without_literal_amount_skips_emission() {
 
 fn fixture_flood_gate(modifier: &str, target: CompiledPredicate) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: "F-FG".into(),
         name: "Fixture".into(),
         kind: CompiledCardKind::Digimon,
@@ -357,6 +365,7 @@ fn flood_gate_emits_declarative_with_process_closure() {
 
 fn fixture_player_flood_gate(modifier: &str, target_player: CompiledPlayerRef) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: "F-PFG".into(),
         name: "Player Fixture".into(),
         kind: CompiledCardKind::Digimon,

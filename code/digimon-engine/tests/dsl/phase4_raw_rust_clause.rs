@@ -20,6 +20,7 @@ fn whole_clause_raw_rust_dispatches_registered_function() {
     });
 
     let compiled = CompiledCard {
+        deck_rule: None,
         card: "RAW-CLAUSE".into(),
         name: "Raw Clause".into(),
         kind: CompiledCardKind::Digimon,

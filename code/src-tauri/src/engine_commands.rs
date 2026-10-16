@@ -344,6 +344,8 @@ pub struct PendingSelectionDto {
 /// One branch of an `EffectChoice` prompt.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EffectChoiceDto {
+    #[serde(default)]
+    pub count_choice: Option<digimon_engine::count_choice_wire::CountChoiceDto>,
     /// Position in the `effect_choices` array — frontend uses this as a
     /// stable index key.
     pub index: u8,
@@ -493,6 +495,7 @@ fn card_dto(card: &digimon_engine::card_source::CardSource, data: &[CardData]) -
         inherited_text: _,
         security_text: _,
         link_text: _,
+        requirement_text: _,
         effect_class_name: _,
         index: _,
         norm_id: _,
@@ -756,6 +759,9 @@ fn pending_selection_dto(game: &Game) -> Option<PendingSelectionDto> {
                 .map(|(i, entry)| {
                     let card = entry.source_card.map(|h| game.card(h));
                     EffectChoiceDto {
+                        count_choice: entry
+                            .count_choice
+                            .map(digimon_engine::count_choice_wire::CountChoiceDto::from),
                         index: i as u8,
                         label: entry.label.clone(),
                         action_id: entry.action_id,
@@ -832,6 +838,7 @@ fn synth_card(id: &str, name: &str, kind: CardKind, dp: Option<i32>, cost: u16) 
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
@@ -2323,8 +2330,15 @@ mod tests {
             .hand(0, &["ST1-15"])
             .memory(10)
             .start();
+        runner.skip_mulligan();
+        runner.set_phase(digimon_engine::enums::GamePhase::Main);
+        runner.place_on_field(0, "OPP-SMALL", Some(0)); // red Option requirement
         runner.place_on_field(1, "OPP-SMALL", Some(0));
-        runner.play(0, 0).expect("play Giga Destroyer from hand");
+        assert_eq!(
+            digimon_engine::action::build_action_mask(&runner.game, 0)[0],
+            1.0
+        );
+        runner.game.decode_action(0, 0);
 
         let dto = pending_selection_dto(&runner.game)
             .expect("Giga Destroyer installs an opponent-field selection");
@@ -2388,7 +2402,11 @@ mod tests {
         assert_eq!(link.card_id, "LNK");
         assert_eq!(link.card_name, "LinkMon");
         assert_eq!(link.text, "[When Linking] Gain 1 memory.");
-        assert!(dto.inherited_effects.is_empty(), "{:?}", dto.inherited_effects);
+        assert!(
+            dto.inherited_effects.is_empty(),
+            "{:?}",
+            dto.inherited_effects
+        );
     }
 
     /// The desktop DTO previously omitted per-permanent runtime data (keyword
@@ -3159,11 +3177,7 @@ mod tests {
         let mut game = started_game(42);
         let resp = perform_surrender(&mut game, 1).unwrap();
 
-        let types: Vec<&str> = resp
-            .events
-            .iter()
-            .map(|e| e.event_type.as_str())
-            .collect();
+        let types: Vec<&str> = resp.events.iter().map(|e| e.event_type.as_str()).collect();
         let concede_pos = types
             .iter()
             .position(|t| *t == "Concede")
@@ -3177,7 +3191,10 @@ mod tests {
             "rule 16: Concede must precede GameOver, got {types:?}"
         );
         // Event DTOs are in the Python/frontend 1-based convention.
-        assert_eq!(resp.events[concede_pos].player, 1, "conceder is frontend player 1");
+        assert_eq!(
+            resp.events[concede_pos].player, 1,
+            "conceder is frontend player 1"
+        );
         assert_eq!(
             resp.events[game_over_pos].meta["winner"], 2,
             "winner in the GameOver event is frontend player 2 (the opponent)"

@@ -183,7 +183,7 @@ effects:
           prompt: "Choose 1 [Mineral] or [Rock] trait card from your Digimon's digivolution cards to trash"
 
       # Step 2: Trash the chosen source card.
-      - trash_selected_sources: { source_refs: chosen_source }
+      - trash_selected_sources_as_cost: { source_refs: chosen_source }
 
       # Step 3: Select 1 of your Mineral/Rock Digimon to receive the buffs.
       - select_own_permanent:

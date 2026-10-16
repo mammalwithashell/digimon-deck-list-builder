@@ -1,0 +1,119 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX12-046",
+    "card_type": "Digimon",
+    "colors": [
+      "Yellow",
+      "Red"
+    ],
+    "dp": 7000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Yellow",
+          "Red"
+        ],
+        "cost": 4,
+        "from_level": 4,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Yellow",
+          "Red"
+        ],
+        "dp": 7000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 5,
+        "name": "Shishimamon",
+        "play_cost": 7,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends.\n[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -2: Lv.4 or lower [TB] trait card"
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost."
+          }
+        ]
+      }
+    ],
+    "form": "Ultimate",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 5,
+    "name": "Shishimamon",
+    "play_cost": 7,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-046.png?260529",
+      "printing_id": "EX12-046"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "[Security] effects take precedence for activation.\nUpon a check, a [Security] effect will immediately activate without pending activation.\nFor other triggered effects, the turn player activates their effects first.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6813",
+        "question": "In what order do a [Security] effect, \"when [...] performs a security check\" effect, and \"when a card is removed from [...] security stack\" effect activate when they trigger simultaneously upon a security check?"
+      },
+      {
+        "answer": "Yes, it triggers.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6814",
+        "question": "During an attack by this card, I used its [Your Turn] effect to digivolve it. Does this card's [End of Attack] inherited effect trigger at the end of the attack?"
+      }
+    ],
+    "rarity": "R",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends.\n[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "Assembly -2: Lv.4 or lower [TB] trait card"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost."
+      }
+    ],
+    "type": "Holy Beast/Shambala/TB"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "18bb784122d81185113d21bf8d20b2f1349e565eb50777ab752bea3b73d714e7",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-046:EX12-046",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

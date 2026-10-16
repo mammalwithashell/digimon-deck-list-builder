@@ -1,0 +1,122 @@
+# Interaction draft: independently measured oracle comparison still required.
+# Adapted from LM-055-tail-main.yaml; no invented assertions or verdict.
+card: LM-055
+clause: LM-055#effect#2
+covers:
+- LM-055#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+    - LM-055
+    - ST1-06
+    - ST1-09
+    - ST1-04
+    - ST1-05
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST2-03
+    - ST4-03
+    - ST1-03
+    - ST2-04
+    - ST2-05
+    - ST2-06
+    rest: LM-055-interaction-delay-decline-p0
+  p1:
+    stack:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST2-03
+    - ST2-04
+    - ST2-05
+    - ST2-06
+    rest: LM-055-interaction-delay-decline-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: LM-055
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      cards:
+      - ST4-03
+- actor: 0
+  do:
+    select:
+      cards:
+      - ST1-03
+      sim_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST1-06
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    main:
+      'on': field.0
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+interaction:
+  id: probe:LM-055#effect#2:optional_decline
+  source: probe
+  kind: positive

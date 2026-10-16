@@ -1270,3 +1270,74 @@ fn lm_028_delay_decline_keeps_option_parked() {
         "declined Delay must not return the blue Digimon"
     );
 }
+
+// Tail audit: actual paid Option action, optional decisions, and route clones.
+fn lm028_audit_main() -> DebugRunner {
+    use digimon_engine::action::space::PLAY_HAND_START;
+    let mut evo = blue_evo("AUDIT-EVO");
+    evo.evo_costs.push(EvoCost { card_color: CardColor::Blue as u8, level: 3, memory_cost: 3 });
+    let mut r = DebugRunner::builder().from_dsl_yaml(YAML).unwrap()
+        .add_card(blue_small("AUDIT-BASE")).add_card(evo)
+        .add_card(filler("FILL")).hand(0, &["LM-028", "AUDIT-EVO"])
+        .deck(0, &["FILL"; 8]).deck(1, &["FILL"; 8]).memory(10).start();
+    r.skip_mulligan();
+    r.place_on_field(0, "AUDIT-BASE", Some(0));
+    r.game.enter_main_phase();
+    assert_eq!(build_action_mask(&r.game, 0)[PLAY_HAND_START as usize], 1.0);
+    r.game.decode_action(PLAY_HAND_START, 0);
+    assert_eq!(r.memory(), 8, "actual Option use pays printed cost 2");
+    r
+}
+
+#[test]
+fn lm_028_paid_main_host_decline_finishes_without_hand_prompt() {
+    use digimon_engine::action::space::PASS;
+    let mut r = lm028_audit_main();
+    assert_eq!(r.pending_kind(), Some(SelectionKind::OwnField));
+    assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 1.0);
+    r.execute_action(0, PASS).unwrap();
+    assert_eq!(r.pending_kind(), None, "declining the host must skip the dependent hand choice");
+    assert!(lm_028_is_delayed_option(&r));
+    assert_eq!(r.memory(), 8);
+    assert_eq!(r.hand_size(0), 1);
+}
+
+#[test]
+fn lm_028_paid_main_hand_decline_finishes_and_places_delay() {
+    use digimon_engine::action::space::PASS;
+    let mut r = lm028_audit_main();
+    let host = r.pending_selection_view().unwrap().valid_action_ids[0];
+    r.execute_action(0, host).unwrap();
+    assert_eq!(r.pending_kind(), Some(SelectionKind::Hand));
+    assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 1.0, "DCGO hand selection can decline the optional evolution");
+    r.execute_action(0, PASS).unwrap();
+    assert_eq!(r.pending_kind(), None);
+    assert!(lm_028_is_delayed_option(&r));
+    assert_eq!(r.memory(), 8);
+    assert_eq!(r.hand_size(0), 1);
+}
+
+#[test]
+fn lm_028_paid_main_both_reduced_routes_remain_choices_after_clone() {
+    let mut r = lm028_audit_main();
+    let host = r.pending_selection_view().unwrap().valid_action_ids[0];
+    r.execute_action(0, host).unwrap();
+    let hand = r.pending_selection_view().unwrap().valid_action_ids[0];
+    r.execute_action(0, hand).unwrap();
+    let routes = r.pending_selection_view().expect("native costs 3 and 4 must offer reduced costs 0 and 1");
+    assert_eq!(routes.kind, SelectionKind::EffectChoice);
+    assert_eq!(routes.valid_action_ids.len(), 2);
+    let saved = r.game.clone();
+    for cost in [0, 1] {
+        r.game = saved.clone();
+        let route = routes.effect_choices.as_ref().unwrap().iter()
+            .find(|c| c.label.contains(&format!("{cost}"))).expect("both reduced costs are exposed");
+        assert_eq!(build_action_mask(&r.game, 0)[route.action_id as usize], 1.0);
+        r.execute_action(0, route.action_id).unwrap();
+        assert_eq!(r.pending_kind(), None);
+        assert_eq!(r.memory(), 8 - cost);
+        assert_eq!(r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data), "AUDIT-EVO");
+        assert!(lm_028_is_delayed_option(&r));
+        assert_eq!(r.hand_size(0), 1, "evolution draws one card");
+    }
+}

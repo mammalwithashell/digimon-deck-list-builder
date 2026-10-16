@@ -716,6 +716,7 @@ impl Game {
                 is_optional: true,
                 prompt: format!("Use {} to reduce Option-use cost?", label),
                 effect_choices: Some(vec![crate::selection::EffectChoiceEntry {
+                count_choice: None,
                     label: format!("{} (-{})", label, amount),
                     action_id: crate::action::space::HAND_EFFECT_START,
                     source_card: Some(key.source_card),
@@ -1003,6 +1004,7 @@ impl Game {
                 _ => "Play as a [Main] Option".to_string(),
             };
             choices.push(crate::selection::EffectChoiceEntry {
+                count_choice: None,
                 label,
                 action_id,
                 source_card: Some(card_handle),

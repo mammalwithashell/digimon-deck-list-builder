@@ -1,0 +1,77 @@
+{
+  "extracted": {
+    "attribute": "Beast",
+    "card_id": "P-060",
+    "card_type": "Digimon",
+    "colors": [
+      "Green"
+    ],
+    "dp": 3000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "dp": 3000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Angoramon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking][Once Per Turn] If you have a [Ruri Tsukiyono] in play, gain 1 memory."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Angoramon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522903",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-060_P1.png?260529",
+      "printing_id": "P-060_P1"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking][Once Per Turn] If you have a [Ruri Tsukiyono] in play, gain 1 memory."
+      }
+    ],
+    "type": "Vaccine"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "cc84a7cee5c800a6cbe5ea53e7bf16619827bf5c70e788ee89916b6f6522b4f6",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "14e72bad86becadc2682c601e9cf12576a19648e5ffc438e48c14cf51a2c7e6a",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522903:P-060:P-060_P1",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522903"
+}

@@ -244,9 +244,10 @@ fn bt20_060_dna_origin_trashes_security_and_recovers() {
         .add_card(make_test_card("P0-SEC-BOTTOM", "P0 Security Bottom"))
         .add_card(make_test_card("P0-SEC-TOP", "P0 Security Top"))
         .add_card(make_test_card("P1-RECOVER", "P1 Recover"))
+        .add_card(make_test_card("P1-DRAW", "P1 DNA Draw"))
         .hand(1, &["BT20-060", "BT20-018"])
         .security(0, &["P0-SEC-BOTTOM", "P0-SEC-TOP"])
-        .deck(1, &["P1-RECOVER"])
+        .deck(1, &["P1-RECOVER", "P1-DRAW"])
         .start();
 
     let attacking = runner.place_on_field(0, "ATTACKER", Some(0));
@@ -269,6 +270,8 @@ fn bt20_060_dna_origin_trashes_security_and_recovers() {
         .execute_action(1, encode_attack(0, 0))
         .expect("resolve BT20-060's When Digivolving target selection");
 
+    assert!(runner.game.players[1].hand.iter().any(|c| c.card_id(&runner.game.card_data)=="P1-DRAW"),
+        "Blast DNA bonus draw happens before its WD recovery");
     assert_eq!(
         runner.security_count(0),
         1,

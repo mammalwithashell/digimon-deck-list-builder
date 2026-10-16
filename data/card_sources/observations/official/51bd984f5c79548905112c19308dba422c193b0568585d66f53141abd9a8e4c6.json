@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT16-025",
+    "colors": "Blue Green",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "8000",
+    "form": "Ultimate",
+    "play_cost": "8",
+    "qa": [
+      "The \"suspend all of your opponent's Digimon with as many or fewer digivolution cards as this Digimon\" part activates even if not DNA digivolving. The \"none of their Digimon can unsuspend until the end of their turn\" part only activates if DNA digivolving."
+    ],
+    "special_digivolution_condition": "[DNA Digivolution] Blue Lv.4 + green Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolution] Blue Lv.4 + green Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+      },
+      {
+        "label": "Effect",
+        "text": "＜Partition (blue Lv.4 & green Lv.4)＞ [When Digivolving] Suspend all of your opponent's Digimon with as many or fewer digivolution cards as this Digimon. Then, if DNA digivolving, none of their Digimon can unsuspend until the end of their turn. [When Attacking] [Once Per Turn] Suspend 1 of your opponent's unsuspended Digimon. If this effect didn't suspend, unsuspend this Digimon."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Partition (blue Lv.4 & green Lv.4)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your effects or a battle, you may play 1 each of the specified cards without paying the costs.)"
+      }
+    ],
+    "type": "Dragonkin"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "51bd984f5c79548905112c19308dba422c193b0568585d66f53141abd9a8e4c6",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "f1efe215803e46536c01855e234aaefaacc8057bfb24a05cc8f860d8a8ae9bb7",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT16-025",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT16-025"
+}

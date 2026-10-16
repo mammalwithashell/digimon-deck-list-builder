@@ -1,0 +1,128 @@
+# Negative scope interaction draft: real carrier/event; oracle comparison still required.
+# Adapted from BT20-023-routes-repair.yaml; no new assertions/verdict.
+card: BT20-023
+clause: BT20-023#inherited#0
+covers:
+- BT20-023#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-007
+    - BT20-023
+    - BT20-025
+    - BT1-090
+    - BT1-090
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST2-03
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    - ST2-04
+    rest: BT20-023-interaction-opponent-turn-scope-p0
+  p1:
+    stack:
+    - ST2-09
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST2-03
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    - ST2-04
+    rest: BT20-023-interaction-opponent-turn-scope-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-007
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: BT20-023
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      value: 2
+  expect:
+    prompt: SelectCountEffect
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: BT20-025
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      value: 3
+  expect:
+    prompt: SelectCountEffect
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+interaction:
+  id: probe:BT20-023#inherited#0:scope:neg
+  source: probe
+  kind: negative

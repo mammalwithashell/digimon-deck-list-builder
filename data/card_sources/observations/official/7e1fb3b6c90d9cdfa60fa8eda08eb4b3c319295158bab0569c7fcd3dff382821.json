@@ -1,0 +1,77 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "P-071",
+    "card_type": "Digimon",
+    "colors": [
+      "Purple"
+    ],
+    "dp": 2000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "dp": 2000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Impmon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Security] At the end of the battle, you may play 1 purple level 3 Digimon card from your trash without paying the cost."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Impmon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522903",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-071_P1.png?260529",
+      "printing_id": "P-071_P1"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, you may play 1 purple level 3 Digimon card from your trash without paying the cost."
+      }
+    ],
+    "type": "Evil"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "7e1fb3b6c90d9cdfa60fa8eda08eb4b3c319295158bab0569c7fcd3dff382821",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "14e72bad86becadc2682c601e9cf12576a19648e5ffc438e48c14cf51a2c7e6a",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522903:P-071:P-071_P1",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522903"
+}

@@ -1,0 +1,44 @@
+card: EX2-007
+name: Mother D-Reaper
+kind: digi_egg
+color: [white]
+dp: 15000
+form: D-Reaper
+traits: [Ability Synthesis Agent]
+
+# Primary official observation f746c065884756dc98c9f9fdbc9406cb02745f702b96a6a8a9a23f4967e7b31d.
+# No printed level, play cost, evolution condition, inherited or Security clause.
+effects:
+  - kind: aura
+    active_when: { not: { in_breeding: true } }
+    modifier: CannotAttack
+  - kind: aura
+    active_when: { not: { in_breeding: true } }
+    effect_immunity:
+      source_controller: opponent
+  - when: main_on_field
+    once_per_turn: true
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], name_is: Mother D-Reaper }
+        n: 1
+    process:
+      - select_zone_cards:
+          zones: [hand, battle_area]
+          filter: { name_is: ADR-02 Searcher }
+          min: 1
+          max: 1
+          bind_as: searcher
+          prompt: Place 1 ADR-02 Searcher from your hand or battle area under this Digimon
+      - place_cards_as_bottom_sources: { cards: searcher, target: source }
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    once_per_turn: true
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - not: { in_breeding: true }
+    condition: { cost_target_from_hand: true }
+    when_any_ally_played: { trait_has: D-Reaper }
+    amount_fn: { source_material_count: {} }

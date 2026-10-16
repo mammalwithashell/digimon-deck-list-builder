@@ -1,0 +1,153 @@
+card: EX3-037
+clause: EX3-037#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX3-037
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - BT20-044
+    - BT20-027
+    - BT20-027
+    - BT20-044
+    - BT20-044
+    - BT13-096
+    - BT13-096
+    - EX3-018
+    - BT20-045
+    - BT20-027
+    - BT20-093
+    rest: examon-sanchez-20260207
+  p1:
+    stack: []
+    rest: examon-sanchez-20260207
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX3-037
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX3-018
+# Official observation 5c58900c (Q3413/Q3414): the two mandatory picks
+# implement one "Add 1 ... and 1 ..." instruction from the revealed set.
+# Rule 15-8-3-2 prevents trigger activation during effect processing. Here,
+# neither choice depends on hand state and both engines choose the same cards.
+# DCGO transfers the first pick early; ours stages it until both are selected.
+# Comparisons are PRE-action, so pair the second pick to omit only that staging
+# state. Both engines execute this explicit pick; remainder and final state
+# remain shared comparisons after both selected cards have reached the hand.
+- actor: 0
+  do:
+    select:
+      sim_only: true
+      cards:
+      - BT20-045
+- actor: 0
+  do:
+    select:
+      dcgo_only: true
+      cards:
+      - BT20-045
+- actor: 0
+  do:
+    select:
+      cards:
+      - BT20-027
+      - BT13-096
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert:
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT20-044
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - EX3-037
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT20-044
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - EX3-037
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: EX3-037
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT20-044
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.security: 5
+    p1.trash: []
+    turn: 1
+- at: 5
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: EX3-037
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT20-044
+    - BT20-045
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - EX3-018
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.security: 5
+    p1.trash: []
+    turn: 1

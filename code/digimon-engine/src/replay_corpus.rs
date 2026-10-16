@@ -282,6 +282,16 @@ pub fn bless_verification_recording(
     recording: VerificationReplayRecording,
     card_data: &HashMap<String, CardData>,
 ) -> Result<BlessOutcome, ReplayCorpusError> {
+    // Unsupported versions are not gameplay divergences. In particular they
+    // must never become retirement instructions that remove a corpus file.
+    if recording.format_version != crate::recorder::VERIFICATION_REPLAY_FORMAT_VERSION
+        || crate::recorder::VerificationDigestVersion::from_engine_schema(recording.engine_schema_version).is_none()
+    {
+        return Err(ReplayCorpusError::Engine(format!(
+            "unsupported verification protocol: format {}, engine schema {}",
+            recording.format_version, recording.engine_schema_version
+        )));
+    }
     let mut replayable = recording.clone();
     if replayable.actions.len() != replayable.digests.len() {
         replayable.digests = vec![0; replayable.actions.len()];
@@ -297,6 +307,10 @@ pub fn bless_verification_recording(
         }
     };
 
+    // Preserve this recording's explicit protocol; refreshing a corpus must
+    // not silently migrate archival hashes to a different engine schema.
+    let digest_version = crate::recorder::VerificationDigestVersion::from_engine_schema(recording.engine_schema_version)
+        .expect("recording schema validated by ReplaySession");
     let mut digests = Vec::with_capacity(recording.actions.len());
     while !session.is_complete() && !session.is_game_over() && !session.is_paused() {
         let result = session.step();
@@ -310,7 +324,7 @@ pub fn bless_verification_recording(
                 divergence,
             ))));
         }
-        digests.push(session.game.verification_digest());
+        digests.push(session.game.verification_digest_with_version(digest_version));
     }
 
     if let Some(divergence) = session.divergences().first() {
@@ -347,7 +361,7 @@ pub fn bless_verification_recording(
         .digests
         .last()
         .copied()
-        .unwrap_or_else(|| session.game.verification_digest());
+        .unwrap_or_else(|| session.game.verification_digest_with_version(digest_version));
     Ok(BlessOutcome::Blessed(blessed))
 }
 

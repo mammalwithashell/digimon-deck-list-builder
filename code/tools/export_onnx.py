@@ -31,6 +31,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
+from model_contract import validate_contract, validate_checkpoint, embed_onnx_contract
 from digimon_gym.tensor_profiles import get_tensor_profile
 
 
@@ -152,16 +153,11 @@ class LstmValueWrapper(nn.Module):
 # ---------------------------------------------------------------------------
 
 def write_export_metadata(
-    output_path: str | Path, observation_layout, value_head: str | None = None
+    output_path: str | Path, observation_layout, *, training_contract, value_head: str | None = None
 ) -> None:
     """Write ONNX profile metadata next to the exported model."""
     metadata = {
-        "observation_profile": observation_layout.id,
-        "tensor_version": observation_layout.tensor_version,
-        "feature_schema_version": observation_layout.feature_schema_version,
-        "tensor_size": observation_layout.tensor_size,
-        "tensor_layout_hash": observation_layout.layout_hash,
-        "action_space_size": ACTION_SPACE_SIZE,
+        **validate_contract(training_contract, observation_layout.id),
         "card_registry_capacity": REGISTRY_CAPACITY,
         "embedding_dim": EMBEDDING_DIM,
     }
@@ -169,6 +165,8 @@ def write_export_metadata(
         # "inline" (MLP: `value` output on the main graph) or the companion
         # filename (LSTM: separate graph threading critic state).
         metadata["value_head"] = value_head
+    validate_contract(metadata, observation_layout.id)
+    embed_onnx_contract(output_path, metadata)
     meta_path = Path(f"{output_path}.meta.json")
     meta_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n")
     print(f"Wrote ONNX metadata to {meta_path}")
@@ -176,6 +174,7 @@ def write_export_metadata(
 
 def validate_checkpoint_observation_profile(model, observation_layout) -> None:
     """Ensure an SB3 checkpoint's observation shape matches the export profile."""
+    validate_checkpoint(model, observation_layout.id)
     observation_space = getattr(model, "observation_space", None)
     shape = getattr(observation_space, "shape", None)
     profile_id = observation_layout.id
@@ -268,8 +267,8 @@ def export_mlp(sb3_zip_path: str, output_path: str, observation_layout=None) -> 
     print(f"Exported MLP model to {output_path}")
 
     # Verify round-trip
+    write_export_metadata(output_path, observation_layout, training_contract=validate_checkpoint(model, observation_layout.id), value_head="inline")
     _verify_mlp(policy, wrapper, output_path, tensor_size)
-    write_export_metadata(output_path, observation_layout, value_head="inline")
 
 
 def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) -> None:
@@ -337,9 +336,10 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
     print(f"Exported LSTM value head to {value_path}")
 
     # Verify round-trip
+    write_export_metadata(output_path, observation_layout, training_contract=validate_checkpoint(model, observation_layout.id), value_head=value_path.name)
+    write_export_metadata(value_path, observation_layout, training_contract=validate_checkpoint(model, observation_layout.id))
     _verify_lstm(policy, wrapper, output_path, tensor_size)
     _verify_lstm_value(value_wrapper, str(value_path), policy, tensor_size)
-    write_export_metadata(output_path, observation_layout, value_head=value_path.name)
 
 
 # ---------------------------------------------------------------------------

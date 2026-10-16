@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "acquired_at": "2026-10-10T22:48:28.867051+00:00",
+  "parser_version": "official-html-v2",
+  "records": [
+    {
+      "card_id": "EX13-005",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&card_no=EX13-005",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-005.png?260529",
+      "hashes": {
+        "EX13-005.html": "d073eed34be32e1808a4eea2b1c852da2653bfb387dbac76c5c67807d7df426a",
+        "EX13-005.png": "0b9dae2b2f3786106f84400c697dc6f01f8e9434de96e01f098b9dab328200db",
+        "EX13-005.json": "0ac342e57d23696ab6ae65ba8fa7ce87512c6569ce0524ded65d555e0015309b"
+      }
+    },
+    {
+      "card_id": "EX13-008",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&card_no=EX13-008",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-008.png?260529",
+      "hashes": {
+        "EX13-008.html": "130ac868b43b526f05d7820fe8862dbbbbe51f9beae3d43857c755075a1b0ecb",
+        "EX13-008.png": "5e498d96b7d4b7463ab5ab926880e03eba68712d24ec287402cf2ca5584dced1",
+        "EX13-008.json": "3f74252e00f5fd4617514717b04d0e52c91fbaeba2699ece69f8b449408dd9e2"
+      }
+    },
+    {
+      "card_id": "EX13-018",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&card_no=EX13-018",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-018.png?260529",
+      "hashes": {
+        "EX13-018.html": "e01a4c3c981729ca03c5ccebbe7371eba629bdb48ad319d6b79ecc1f50a7f6b4",
+        "EX13-018.png": "22ab07d116434669a0a0f852f2ad6d37cb043b9deef801f1af243cfc3a8bc442",
+        "EX13-018.json": "5e1f79e09e015351b99f68330fb6a44d9492bdf9dc5e651067a7c42298f35706"
+      }
+    },
+    {
+      "card_id": "EX13-021",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&card_no=EX13-021",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-021.png?260529",
+      "hashes": {
+        "EX13-021.html": "0448698fc4bd8041083d97fb75ec5960e04ee2c54add4e826e38217f6fab7abd",
+        "EX13-021.png": "78554a422dd6d62d8b2baff8cb7f3f5a08e5099e91561dbd74fc482c5dcdcdd9",
+        "EX13-021.json": "9b74914ac19b2db2fbc9ad22daad8a4402c1a023b285221117d0dea4b306d7cb"
+      }
+    },
+    {
+      "card_id": "EX13-024",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&card_no=EX13-024",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-024.png?260529",
+      "hashes": {
+        "EX13-024.html": "8ac7b9362bd251b703dcfa3b6a2fc3552629bf1655191637711990d1b60b8c11",
+        "EX13-024.png": "668f15c19e953526879a9bda58e75fda6a7ac9c1df26f9ebf47ebf9f726d210d",
+        "EX13-024.json": "62ba01ddcd05c97088e050047332259ba6793ebbccf71b47ac2a806a524e254d"
+      }
+    },
+    {
+      "card_id": "EX13-039",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&card_no=EX13-039",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-039.png?260529",
+      "hashes": {
+        "EX13-039.html": "153a5484efe9012d6fce9d46e289033db6267fff5e1961bc692da74ae163de53",
+        "EX13-039.png": "da081e4624dfb933345abe6097989acc2a59c48de3378fe2441482c4b7551903",
+        "EX13-039.json": "fb1f2f52b7fceeed2d743bf5ab218ea4063fa6b88e15ea47ba690b810b4d4fd9"
+      }
+    },
+    {
+      "card_id": "EX13-041",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&card_no=EX13-041",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-041.png?260529",
+      "hashes": {
+        "EX13-041.html": "7f5e05725124fa7d5acbe65e579407e963e4c64d508d1afeeb5f6b8a3b7f189b",
+        "EX13-041.png": "8e95f3c6898bfd7bce1da0521b6caf3d9e0a0700553e704e7d8706ae9b2136c2",
+        "EX13-041.json": "d55f4eac2d4d7b9aace03a0adb6acc8bc084af284705a224963b7b8f3404ec25"
+      }
+    },
+    {
+      "card_id": "EX13-044",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&card_no=EX13-044",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-044.png?260529",
+      "hashes": {
+        "EX13-044.html": "65adfc39c6556d116e648b5af4ba3997bf3f80d410e5dea81d1ba553ceb2ea9c",
+        "EX13-044.png": "6ed9889758cde98c808abec1d8798d5f89db645fac2217d9b5970345513a6c41",
+        "EX13-044.json": "1466a10a648db4a503ed30ed36daf7cdb69885574a9a12498ca42b590af9180a"
+      }
+    },
+    {
+      "card_id": "EX13-045",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&card_no=EX13-045",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-045.png?260529",
+      "hashes": {
+        "EX13-045.html": "5f8b563b3dcad1b6aac1af01b1bd84e48841cbac5af298e2884f17f8e30e5876",
+        "EX13-045.png": "3f560d5b6aaa84fc35eef4c97ccf9ed356eacced79d290ed212abbb59f7f509e",
+        "EX13-045.json": "cce1a901ccd1b989f9a4376bec944fee884fd328d3363509f4fea0d4ec53a579"
+      }
+    }
+  ],
+  "correction_ledger_sha256": "396a39d7e81ed753f35eba477f291993b2be85f6181d56e61124af83a3e7fd97",
+  "applicable_corrections": [],
+  "image_reviewed": true,
+  "image_review_note": "All nine primary official PNG images visually inspected against extracted identity, costs, colors, evolution circles, traits, main and inherited text on 2026-10-10. No discrepancy found.",
+  "parser_file_sha256": "07e0e155ed82ef100f80d902065062f628025e926375ca87d3c1887d43318cbd"
+}

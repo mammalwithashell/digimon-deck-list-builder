@@ -1,0 +1,37 @@
+{
+  "owner": "root",
+  "source_change": "two replay fixture digest streams only",
+  "review_sha256": "08fee072d6015caf1a923db861026c2a4ecf9fdb74798c53dd203d8feb3cfb52",
+  "full10_result_sha256": "e6bcaa6965cc5987f96885b4106070cecb59b912873eacf4b71ee5f7b18de149",
+  "changes": [
+    {
+      "name": "refresh_v2_generated_greedy_008_digilab_1509ed7da6be_vs_digilab_155d30601167_seed_40521432.replay.json",
+      "changed_steps_one_based": [
+        62,
+        63
+      ],
+      "before_sha256": "a4fc509c5ad5c4f8796efe6b93f0d0ec2e8a29501dcc5181d85b0177632173e6",
+      "candidate_sha256": "fb07ef30dbb0c4cf539d5f02b6d67388ccea58051fd5c4c3a5c140eb9a6fb3df",
+      "final_digest_changed": false
+    },
+    {
+      "name": "refresh_v2_generated_greedy_009_digilab_155d30601167_vs_digilab_1682f0098d48_seed_40521435.replay.json",
+      "changed_steps_one_based": [
+        47,
+        48,
+        49,
+        50,
+        62,
+        63,
+        64
+      ],
+      "before_sha256": "cb93ed96e14a9b778be39810357be57d7c6a2466ce596155437b7bb76ad26770",
+      "candidate_sha256": "771c498fbe7fb05506be4225aeb908c28143d0e77caf5fde3933fe6ea45a31e7",
+      "final_digest_changed": true
+    }
+  ],
+  "archive": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\verification\\replay-goldens-attribution-before",
+  "active10_byte_equal_tested_corpus": true,
+  "production_engine_changed": false,
+  "historical_failed_run_preserved": true
+}

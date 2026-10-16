@@ -140,6 +140,17 @@ pub fn try_run(
     runtime: &StepRuntime,
 ) -> bool {
     match step {
+        CompiledStep::PlayToBreedingFromHand { of, hand_index } => {
+            let player = resolve_player(ctx, *of);
+            // Only an actual selected hand binding is meaningful here. Resolve
+            // its pinned identity again after any intervening prompt.
+            if let Some(ResolvedBinding::HandIndex(owner, index)) = resolve_binding_ref(hand_index, ctx, bindings) {
+                if owner == player {
+                    let _ = ctx.play_to_breeding_from_hand(player, index as usize);
+                }
+            }
+            true
+        }
         CompiledStep::BounceSelf => {
             let _ = ctx.bounce_self();
             true
@@ -259,6 +270,32 @@ pub fn try_run(
             for h in resolved_cards(resolved) {
                 ctx.trash_from_reveal(p, h);
             }
+            true
+        }
+
+        CompiledStep::TrashSelectedSourcesAsCost {
+            source_refs,
+            min_count,
+        } => {
+            let Some(selected) = bindings.get_source_refs(source_refs) else {
+                ctx.cost_unpayable = true;
+                return true;
+            };
+            let required = min_count.map(usize::from).unwrap_or(selected.len());
+            // A declared short payment (e.g. optional 0/1 picks for a cost of
+            // two) is a decline; do not move even those selected cards.
+            if selected.len() < required {
+                ctx.cost_unpayable = true;
+                return true;
+            }
+            let paid: Vec<_> = selected
+                .into_iter()
+                .filter(|source| ctx.trash_card_source(source.permanent, source.card))
+                .collect();
+            ctx.cost_unpayable = paid.len() < required;
+            // Publish actual removals for per-card effects, formulas, and
+            // outer continuations. The binding never claims a refused trash.
+            bindings.insert_source_refs(source_refs, paid);
             true
         }
 

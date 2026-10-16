@@ -1,0 +1,98 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX12-010",
+    "card_type": "Digimon",
+    "colors": [
+      "Red",
+      "Black"
+    ],
+    "dp": 5000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red",
+          "Black"
+        ],
+        "cost": 3,
+        "from_level": 3,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Black"
+        ],
+        "dp": 5000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 4,
+        "name": "Greymon",
+        "play_cost": 5,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.3 w/[Agumon] in name or w/[ME]/[VB] trait: Cost 2"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Raid＞\n[On Play] [When Digivolving] You may return 1 Digimon card with [Greymon] in its name or the [ME] or [VB] trait from your trash to the hand."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+          }
+        ]
+      }
+    ],
+    "form": "Champion",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 4,
+    "name": "Greymon",
+    "play_cost": 5,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-010.png?260529",
+      "printing_id": "EX12-010"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "U",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.3 w/[Agumon] in name or w/[ME]/[VB] trait: Cost 2"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Agumon] in name or w/[ME]/[VB] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Raid＞\n[On Play] [When Digivolving] You may return 1 Digimon card with [Greymon] in its name or the [ME] or [VB] trait from your trash to the hand."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+      }
+    ],
+    "type": "Dinosaur/ME/VB"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "a4df268693e2da2b50833256a5390d3c3383e717ad58953fd4d1d839ab185e57",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-010:EX12-010",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

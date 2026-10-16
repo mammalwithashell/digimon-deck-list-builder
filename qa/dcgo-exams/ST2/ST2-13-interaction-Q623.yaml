@@ -1,0 +1,72 @@
+# qa:Q623 (2024-03-28) -- "If the security effect of this card causes the memory counter to move to 1 or
+# higher on my side, does my opponent's turn end?" -> "Yes, it does. However, this only happens after any
+# attacks end. If there are any attacks that are still continuing due to [Security Attack] or other effects,
+# those must resolve before it becomes your turn."
+# Sources: data/card_bundles/ST2-13.md + official observation 83e84236... + card image ST2-13.webp
+# ([Security] Gain 2 memory); DCGO ST2/Blue/ST2_13.cs (SecuritySkill: card.Owner.AddMemory(2)); general_rule.pdf
+# 6-1-4-1 (turn ends when memory is >= 1 on the opponent's side AND all processing for the current phase has
+# resolved), 6-6-2 / 6-6-3 (the phase continues until all processing resolves, then the non-turn player's turn
+# begins), 11-1-3 / 11-1-5 (once declared, every attack timing occurs), 13 (security checks), 16-3
+# (<Security A. +1> checks 1 additional card).
+# Line: P0's LONE Agumon ST1-03 (T1) digivolves into Greymon ST1-07 (T3; inherited <Security A. +1>) and then
+# MetalGreymon ST1-09 (T5, memory 3 -> 0) and attacks P1's security at 0 memory. P1's top security card
+# (stack[9]) is Hammer Spark ST2-13: its [Security] gives P1 +2, so memory is 2 on P1's side MID-attack.
+# Discriminator: the attack CONTINUES to its second security check (Greymon's inherited SA+1): P1's second card
+# Biyomon ST1-02 (3000) battles MetalGreymon (7000, +1000 from Agumon's inherited on P0's turn) and is trashed;
+# only THEN does P0's turn end. The last row is P1's breeding_action on turn 6 with p1.security 3 and p1.trash
+# [ST2-13, ST1-02]. An engine that ended the turn the instant memory crossed would leave p1.security at 4; an
+# engine that ignored the flip would keep P0 in main_phase (the actor-1 row then refuses to lower).
+# Slot safety: P0 keeps exactly ONE Digimon, so field.0 is the same permanent on both wires (README "Slot
+# safety"). P1 never fields a Digimon, so no block window opens. No selection prompt is expected anywhere.
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: ST2-13
+clause: ST2-13#security#0
+covers: [ST2-13#security#0]
+interaction: { id: "qa:Q623", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: ST1-03, ST1-07, ST1-09, ST1-02 x2 | security bottom->top: ST1-04 x4, ST1-05 | draws (T3 draw, T3 digivolve-draw, T5 draw, T5 digivolve-draw): ST1-05, ST1-05, ST1-06, ST1-06
+    stack: [ST1-03, ST1-07, ST1-09, ST1-02, ST1-02, ST1-04, ST1-04, ST1-04, ST1-04, ST1-05, ST1-05, ST1-05, ST1-06, ST1-06]
+    rest: ST2-13-interaction-Q623-p0
+  p1:
+    # hand: ST2-04 x2, ST2-03, ST1-06, ST1-08 | security bottom->top: ST1-02 x4, ST2-13 (top = Hammer Spark, flipped first; 2nd check = Biyomon 3000) | draws (T2, T4, T6): ST1-04 x3
+    stack: [ST2-04, ST2-04, ST2-03, ST1-06, ST1-08, ST1-02, ST1-02, ST1-02, ST1-02, ST2-13, ST1-04, ST1-04, ST1-04]
+    rest: ST2-13-interaction-Q623-p1
+steps:
+# T1 P0 (0): Agumon ST1-03 (3) -> -3.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: ST1-03, from: hand } }, expect: { prompt: main_phase } }
+# T2 P1 (3): nothing.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T3 P0 (3): Agumon -> Greymon ST1-07 (2) -> 1; pass.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { digivolve: { from: field.0, using: ST1-07 } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+# T4 P1 (3): nothing.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T5 P0 (3): Greymon -> MetalGreymon ST1-09 (3) -> 0; attack P1's security at 0 memory.
+# Check 1 = ST2-13 [Security] Gain 2 memory for P1 (memory 2 on P1's side); check 2 (SA+1) = Biyomon battle;
+# the attack ends; the turn ends (6-1-4-1).
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { digivolve: { from: field.0, using: ST1-09 } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { attack: { attacker: field.0, target: security } }, expect: { prompt: main_phase } }
+# T6 P1: the observation row -- P0's turn ended only after the whole attack resolved.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+expect_ruling:
+  q_id: Q623
+  assert:
+  - at: 11
+    that:
+      memory: 0
+      p1.security: 5
+  - at: 12
+    that:
+      memory: -2
+      phase: Breeding
+      p1.security: 3
+      p1.trash:
+      - ST2-13
+      - ST1-02

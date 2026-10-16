@@ -129,6 +129,25 @@ fn process_contains_place_self_as_delay_option(process: &[CompiledStep]) -> bool
 
 // ─── §1 Structural assertions ─────────────────────────────────────────────────
 
+// Body-only fixtures model an Option already placed by its printed Main effect.
+// Keep the real placing turn: this is not permission to activate Delay early.
+fn place_delayed_fixture(
+    runner: &mut DebugRunner,
+    owner: u8,
+    card: &str,
+) -> digimon_engine::permanent::PermanentHandle {
+    let handle = runner.place_on_field(owner, card, Some(owner as u16));
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.player_mut(owner).battle_area[handle.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::MainPhaseActivated,
+            placed_on_turn,
+        };
+    handle
+}
+
 #[test]
 fn p_235_yaml_parses_and_compiles() {
     let _runner = DebugRunner::builder()
@@ -434,7 +453,7 @@ fn p_235_delay_body_gains_two_memory() {
         .start();
 
     // Place P-235 as a Delay permanent (as if placed by the Main clause).
-    let delay_perm = runner.place_on_field(0, "P-235", Some(0));
+    let delay_perm = place_delayed_fixture(&mut runner, 0, "P-235");
 
     let mem_before = runner.game.memory;
 

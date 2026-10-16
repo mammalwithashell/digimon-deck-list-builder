@@ -1,0 +1,78 @@
+# qa:Q1139 (2024-03-28) -- "During the same turn I used this card, I digivolve a green Digimon into a
+# non-green Digimon. Can I use this card's effect to reduce the digivolution cost?" -> "Yes, you can. As long
+# as you're digivolving from a green Digimon, the effect applies."
+# Sources: data/card_bundles/BT3-103.md + official observation 013e0883... + card image; DCGO
+# BT3/Green/BT3_103.cs (PermanentCondition reads the DIGIVOLVING permanent's TopCard.CardColors at
+# BeforePayCost -- Kunemon = green -- never the result card; optional ActivateClass -> SelectPermanentEffect
+# Mode.Tap canNoSelect true -> Cost -= 5); ours BT3-103.yaml `arm_digivolve_cost_reducer target_color: green`.
+# Coredramon EX3-018: data/card_bundles/EX3-018.md (BLUE Lv.4; circles Blue Lv.3 / cost 3, GREEN Lv.3 / cost 3,
+# [Dracomon] name cost 2 -- from Kunemon only the green circle applies, so no cost-choice prompt), DCGO
+# EX3/Blue/EX3_018.cs, ours EX3-018.yaml (<Evade> keyword only; no trigger on digivolving).
+# Line: Biyomon ST1-02 (T1), Agumon ST1-03 + Kunemon ST4-05 (T3; Kunemon = the GREEN Lv.3 that digivolves,
+# third-entered -> index 2 on both wires, README "Slot safety"). T5 (3): BT3-103, then Kunemon (field.2)
+# digivolves into Coredramon EX3-018 -- a GREEN Digimon into a NON-green one. The reducer prompt IS offered
+# and accepted; the suspend pick names Biyomon (own.field.0, identity ST1-02), a Digimon other than the
+# digivolving one. Discriminator: Coredramon (blue) ends on P0's third slot with sources [ST4-05],
+# unsuspended; Biyomon is suspended; memory is still 3 (printed cost 3 - 5 floors at 0). Without the
+# reduction the cost would read 3 -> 0 memory and no Digimon would be suspended.
+# Prompt shape: both engines ask accept/decline then the suspend pick (DCGO OptionalSkill +
+# SelectPermanentEffect; ours accept/decline + OwnField) -- the oracle-confirmed BT3-103-tail-main shape, so no
+# expect is pinned on those rows. P1 never acts.
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: BT3-103
+clause: BT3-103#effect#0
+covers: [BT3-103#effect#0]
+interaction: { id: "qa:Q1139", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: ST1-02, ST1-03, ST4-05, BT3-103, EX3-018 | security bottom->top: ST1-04 x4, ST1-05 | draws (T3, T5, T5 digivolve-draw): ST2-04, ST2-04, ST2-03
+    stack: [ST1-02, ST1-03, ST4-05, BT3-103, EX3-018, ST1-04, ST1-04, ST1-04, ST1-04, ST1-05, ST2-04, ST2-04, ST2-03]
+    rest: BT3-103-interaction-Q1139-p0
+  p1:
+    # hand: ST1-03, ST1-04, ST2-03, ST2-04, ST1-05 | security bottom->top: ST1-02 x4, ST1-03 | draws (T2, T4, T6): ST1-04 x3
+    stack: [ST1-03, ST1-04, ST2-03, ST2-04, ST1-05, ST1-02, ST1-02, ST1-02, ST1-02, ST1-03, ST1-04, ST1-04, ST1-04]
+    rest: BT3-103-interaction-Q1139-p1
+steps:
+# T1 P0 (0): Biyomon ST1-02 (2) -> -2.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: ST1-02, from: hand } }, expect: { prompt: main_phase } }
+# T2 P1 (3): nothing.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T3 P0 (3): Agumon ST1-03 (3) -> 0; Kunemon ST4-05 (4) -> -4 (green Lv.3, third-entered Digimon).
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: ST1-03, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { play: { card: ST4-05, from: hand } }, expect: { prompt: main_phase } }
+# T4 P1 (3): nothing.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T5 P0 (3): BT3-103 (0); GREEN Kunemon (field.2) -> BLUE Coredramon EX3-018 (green Lv.3 circle, cost 3):
+# the reducer applies -- accept it and suspend Biyomon (not the digivolving Digimon).
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: BT3-103, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { digivolve: { from: field.2, using: EX3-018 } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { select: { yes: true } } }
+- { actor: 0, do: { select: { targets: [own.field.0] } } }
+# Coredramon (sources [ST4-05]) on the field, Biyomon suspended, memory still 3.
+- { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+# T6 P1: post-turn observation.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+expect_ruling:
+  q_id: Q1139
+  assert:
+  - at: 11
+    that:
+      memory: 3
+  - at: 14
+    that:
+      memory: 3
+      p0.field:
+      - card_id: ST1-02
+        suspended: true
+      - card_id: ST1-03
+        suspended: false
+      - card_id: EX3-018
+        suspended: false
+        sources:
+        - ST4-05

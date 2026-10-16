@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "EX8-074",
+    "colors": "Green Red",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "11000",
+    "form": "Mega",
+    "play_cost": "11",
+    "qa": [
+      "Yes, you can suspend either player's Digimon."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "When this card would be played, by suspending 2 Digimon, reduce the play cost by 4. ＜Alliance＞ ＜Vortex＞ [When Digivolving] You may suspend 1 Digimon. Then, you may delete 1 of your opponent's 8000 DP or lower Digimon. For each other suspended Digimon, add 3000 to this DP deletion effect's maximum. [All Turns] [Once Per Turn] When Digimon are played, you may activate 1 of this Digimon's [When Digivolving] effects."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "-"
+      }
+    ],
+    "type": "Warrior/Witchelny/Vortex Warriors"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "f0836ec7a44151f61489feeeb7eb17f62e4b60d2d9b47c5585240b43cf253cff",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "44e8374d30a399153ea74f44cadd7d034e6c21ce716a08716e8633d7df9e04c2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX8-074",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX8-074"
+}

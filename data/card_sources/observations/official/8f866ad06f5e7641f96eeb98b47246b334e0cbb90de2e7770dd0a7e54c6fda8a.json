@@ -1,0 +1,89 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "P-146",
+    "card_type": "Option",
+    "colors": [
+      "Yellow"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "option",
+        "level": null,
+        "name": "Recharge Plug-In Q",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "While you have a Tamer, you may ignore this card's color requirements.\n[Security] Give 1 of your opponent's Digimon ＜Security A. -1＞ for the turn.\n[Main] Place this card as 1 of your non-white Digimon's bottom digivolution card."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[All Turns] When this Digimon would be deleted in battle, by placing 1 [Recharge Plug-In Q] from its digivolution cards as the bottom security card, it isn't deleted."
+          }
+        ]
+      }
+    ],
+    "form": "",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": null,
+    "name": "Recharge Plug-In Q",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522201",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-146_P2.png?260529",
+      "printing_id": "P-146_P2"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, you can.",
+        "date": "Mar. 28, 2024",
+        "number": "Q4261",
+        "question": "If my Digimon with 2 copies of this card in its digivolution cards would be deleted, can I activate both instances of this card's inherited effect and place both copies at the bottom of my security stack?"
+      },
+      {
+        "answer": "Yes, you can.",
+        "date": "Mar. 28, 2024",
+        "number": "Q4262",
+        "question": "If my Digimon with and this card in its digivolution cards would be deleted, can I activate both this card's inherited effect and ?"
+      }
+    ],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "While you have a Tamer, you may ignore this card's color requirements.\n[Security] Give 1 of your opponent's Digimon ＜Security A. -1＞ for the turn.\n[Main] Place this card as 1 of your non-white Digimon's bottom digivolution card."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] When this Digimon would be deleted in battle, by placing 1 [Recharge Plug-In Q] from its digivolution cards as the bottom security card, it isn't deleted."
+      }
+    ],
+    "type": ""
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "8f866ad06f5e7641f96eeb98b47246b334e0cbb90de2e7770dd0a7e54c6fda8a",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "2c3d9d4def5e8c31c9775c4a027e0062881234aca9f2ef23ff33e34bee979f6f",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522201:P-146:P-146_P2",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522201"
+}

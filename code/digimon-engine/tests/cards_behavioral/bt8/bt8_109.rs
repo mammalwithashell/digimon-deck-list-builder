@@ -27,6 +27,28 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
 use digimon_engine::selection::SelectionKind;
 
+fn option_color_provider() -> digimon_engine::card_data::CardData {
+    let mut card =
+        digimon_engine::debug_runner::make_test_card("OPTION-PROVIDER", "OptionProvider");
+    card.colors = vec![CardColor::Purple, CardColor::Yellow];
+    card
+}
+fn use_printed_option(runner: &mut DebugRunner) {
+    use digimon_engine::action::{mask::build_action_mask, space::PLAY_HAND_START};
+    runner.skip_mulligan();
+    runner.place_in_breeding(0, "OPTION-PROVIDER");
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        1.0
+    );
+    runner.game.decode_action(PLAY_HAND_START, 0);
+    assert!(!runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "BT8-109"));
+}
+
 // ─── Card-data helpers ──────────────────────────────────────────────────────
 
 fn digimon(id: &str, color: CardColor, level: u8, dp: i32) -> digimon_engine::card_data::CardData {
@@ -82,6 +104,7 @@ fn hellscythe_runner() -> DebugRunner {
         .add_card(digimon("GREEN-3000", CardColor::Green, 3, 3000)) // wrong color — filtered
         .add_card(digimon("OPP-BIG", CardColor::Blue, 6, 11000)) // survives -6000
         .add_card(digimon("OPP-SMALL", CardColor::Blue, 4, 5000)) // dies to -6000 (Q6)
+        .add_card(option_color_provider())
         .hand(0, &["BT8-109"])
         .deck(0, &["PURPLE-6000", "PURPLE-6000", "PURPLE-6000"])
         .memory(10)
@@ -132,7 +155,7 @@ fn bt8_109_main_prompts_to_target_an_opponent_digimon() {
     let mut runner = hellscythe_runner();
     runner.place_on_field(1, "OPP-BIG", Some(0));
 
-    runner.play(0, 0).expect("play BT8-109");
+    use_printed_option(&mut runner);
 
     let sel = runner
         .pending_selection_view()
@@ -147,7 +170,7 @@ fn bt8_109_main_applies_minus_6000_for_the_turn() {
     let opp = runner.place_on_field(1, "OPP-BIG", Some(0)); // 11000
     assert_eq!(runner.effective_dp(opp), Some(11000));
 
-    runner.play(0, 0).expect("play BT8-109");
+    use_printed_option(&mut runner);
     runner
         .execute_action(0, encode_attack(0, opp.index as u16))
         .expect("target the opponent Digimon");
@@ -178,7 +201,7 @@ fn bt8_109_main_minus_6000_deletes_small_digimon_via_rules_check() {
     let mut runner = hellscythe_runner();
     let opp = runner.place_on_field(1, "OPP-SMALL", Some(0)); // 5000
 
-    runner.play(0, 0).expect("play BT8-109");
+    use_printed_option(&mut runner);
     runner
         .execute_action(0, encode_attack(0, opp.index as u16))
         .expect("target the small opponent Digimon");
@@ -198,7 +221,7 @@ fn bt8_109_main_no_target_prompt_when_opponent_has_no_digimon() {
     let mut runner = hellscythe_runner();
     seed_trash(&mut runner, 0, "PURPLE-6000"); // ensure the trash-play arm still has a candidate
 
-    runner.play(0, 0).expect("play BT8-109");
+    use_printed_option(&mut runner);
 
     // No opponent Digimon → the mandatory opp-target select installs nothing and
     // the effect proceeds straight to the (independent) optional trash-play.
@@ -223,7 +246,7 @@ fn bt8_109_main_trash_play_offers_only_purple_or_yellow_dp6000_or_less() {
     seed_trash(&mut runner, 0, "PURPLE-7000"); // DP too high
     seed_trash(&mut runner, 0, "GREEN-3000"); // wrong color
 
-    runner.play(0, 0).expect("play BT8-109");
+    use_printed_option(&mut runner);
     runner
         .execute_action(0, encode_attack(0, opp.index as u16))
         .expect("apply -6000");
@@ -246,7 +269,7 @@ fn bt8_109_main_decline_trash_play_plays_nothing() {
     let opp = runner.place_on_field(1, "OPP-BIG", Some(0));
     seed_trash(&mut runner, 0, "PURPLE-6000");
 
-    runner.play(0, 0).expect("play BT8-109");
+    use_printed_option(&mut runner);
     runner
         .execute_action(0, encode_attack(0, opp.index as u16))
         .expect("apply -6000");
@@ -273,7 +296,7 @@ fn bt8_109_main_plays_chosen_card_from_trash_free() {
     let opp = runner.place_on_field(1, "OPP-BIG", Some(0));
     seed_trash(&mut runner, 0, "YELLOW-5000");
 
-    runner.play(0, 0).expect("play BT8-109");
+    use_printed_option(&mut runner);
     let mem_after_option = runner.memory();
     runner
         .execute_action(0, encode_attack(0, opp.index as u16))
@@ -314,7 +337,7 @@ fn bt8_109_main_played_card_on_play_fires() {
     let opp = runner.place_on_field(1, "OPP-BIG", Some(0));
     seed_trash(&mut runner, 0, "ONPLAY-PURPLE");
 
-    runner.play(0, 0).expect("play BT8-109");
+    use_printed_option(&mut runner);
     runner
         .execute_action(0, encode_attack(0, opp.index as u16))
         .expect("apply -6000");

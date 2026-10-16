@@ -1,0 +1,191 @@
+card: EX13-024
+clause: EX13-024#effect#5
+interaction:
+  id: qa:Q7270
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-007
+    - EX3-018
+    - EX3-020
+    - EX13-024
+    - BT1-090
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST2-03
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    - ST2-04
+    rest: EX13-024-interaction-Q7270-ex13-qa-endbattle8-p0
+  p1:
+    stack:
+    - ST2-09
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT20-045
+    - BT20-045
+    - BT20-045
+    - BT20-045
+    - EX13-045
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    - ST2-04
+    rest: EX13-024-interaction-Q7270-ex13-qa-endbattle8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-007
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    play:
+      card: EX3-018
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    play:
+      card: EX3-020
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+      sim_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    play:
+      card: EX13-024
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX3-020
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX3-018
+- actor: 0
+  do:
+    select:
+      cards:
+      - BT20-007
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert: []
+expect_ruling:
+  q_id: Q7270
+  assert:
+  - at: 22
+    that:
+      memory: -4
+      p0.field:
+      - card_id: EX13-024
+        suspended: false
+        sources:
+        - EX3-020
+        - EX3-018
+        - BT20-007
+      p0.trash: []
+      p1.security: 2

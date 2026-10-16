@@ -17,6 +17,7 @@ Requires: pip install stable-baselines3 sb3-contrib tensorboard
 """
 
 import os
+from model_contract import current_contract, validate_checkpoint, validate_contract
 import argparse
 import json
 import logging
@@ -331,6 +332,7 @@ def _validate_checkpoint_contract(
     if not meta_path.exists():
         raise ValueError(f"Checkpoint metadata sidecar not found: {meta_path}")
     metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+    validate_contract(metadata, observation_layout.id)
     checks = {
         "observation_profile": observation_layout.id,
         "tensor_layout_hash": observation_layout.layout_hash,
@@ -407,10 +409,19 @@ def _onnx_opponent_enabled() -> bool:
     return os.environ.get(_ONNX_OPPONENT_ENV, "0").strip().lower() not in ("0", "", "false", "no")
 
 
+def _validate_opponent_inputs(contract, env, obs, mask):
+    if getattr(env, "tensor_profile", None) != contract["observation_profile"]:
+        raise ValueError("Opponent observation profile differs from the game environment")
+    if np.asarray(obs).size != contract["tensor_size"] or np.asarray(mask).size != contract["action_space_size"]:
+        raise ValueError("Opponent inputs differ from its training contract")
+
+
 def _export_mlp_policy_onnx(model, onnx_path: str) -> None:
     """Trace a loaded MaskablePPO policy's actor path (obs -> action logits) to
     ONNX. Mirrors tools/export_onnx.py's MlpActorWrapper so the graph matches the
     proven catalog export (input 'obs', output 'logits')."""
+    from model_contract import validate_checkpoint, embed_onnx_contract
+    contract = validate_checkpoint(model)
     import torch
     import torch.nn as nn
 
@@ -446,6 +457,7 @@ def _export_mlp_policy_onnx(model, onnx_path: str) -> None:
             dynamo=False,  # legacy TorchScript exporter (needs `onnx`, not `onnxscript`);
                            # torch>=2.x defaults dynamo=True which requires onnxscript.
         )
+    embed_onnx_contract(tmp, contract)
     os.replace(tmp, onnx_path)  # atomic publish; readers never see a partial file
 
 
@@ -460,16 +472,20 @@ def _make_onnx_mlp_opponent(weights_path: str) -> Callable[[DigimonEnv], int]:
     onnx_path = re.sub(r"\.zip$", "", str(weights_path)) + ".opponent.onnx"
     if not os.path.isfile(onnx_path):
         model = MaskablePPO.load(weights_path, device="cpu")
+        validate_checkpoint(model)
         _export_mlp_policy_onnx(model, onnx_path)
         del model
     so = ort.SessionOptions()
     so.intra_op_num_threads = 1   # one ORT thread per subproc -> no Nx oversubscription
     so.inter_op_num_threads = 1
     sess = ort.InferenceSession(onnx_path, sess_options=so, providers=["CPUExecutionProvider"])
+    from model_contract import validate_session
+    contract = validate_session(sess)
 
     def _onnx_mlp_policy(env: DigimonEnv) -> int:
         mask = np.asarray(env.action_mask())
         obs = np.asarray(env.runner.get_board_tensor(2), dtype=np.float32).reshape(1, -1)
+        _validate_opponent_inputs(contract, env, obs, mask)
         logits = sess.run(["logits"], {"obs": obs})[0][0]
         masked = np.where(mask > 0, logits, -np.inf)
         return int(np.argmax(masked))
@@ -504,12 +520,14 @@ def make_agent_opponent_fn(
         # SubprocVecEnv setup. Opponents only do inference (forward pass for action
         # selection), which is fine on CPU — and matches the MLP/ONNX paths below.
         model = MaskableRecurrentPPO.load(weights_path, device="cpu")
+        contract = validate_checkpoint(model)
         # LSTM state must persist across steps within a single episode.
         lstm_states: list = [None]  # mutable container for closure
 
         def _lstm_policy(env: DigimonEnv) -> int:
             mask = env.action_mask()
             obs = env.runner.get_board_tensor(2)
+            _validate_opponent_inputs(contract, env, obs, mask)
             action, lstm_states[0] = model.predict(
                 obs,
                 state=lstm_states[0],
@@ -536,10 +554,12 @@ def make_agent_opponent_fn(
         # high n_envs / parallel specialists. (Normally unreached when
         # DIGIMON_ONNX_OPPONENT is on, but the torch fallback must be safe too.)
         model = MaskablePPO.load(weights_path, device="cpu")
+        contract = validate_checkpoint(model)
 
         def _mlp_policy(env: DigimonEnv) -> int:
             mask = env.action_mask()
             obs = env.runner.get_board_tensor(2)
+            _validate_opponent_inputs(contract, env, obs, mask)
             action, _ = model.predict(obs, action_masks=mask, deterministic=True)
             return int(action)
 
@@ -2439,6 +2459,7 @@ def save_model(model: Union[MaskablePPO, MaskableRecurrentPPO],
     else:
         suffix = datetime.now().strftime("%Y%m%d_%H%M%S")
     path = os.path.join(models_dir, f"pilot_ppo_{suffix}")
+    validate_checkpoint(model)
     model.save(path)
     return path
 
@@ -2913,8 +2934,10 @@ def train(total_timesteps: int = 100_000,
     if cfg.resume_from:
         if use_lstm:
             model = MaskableRecurrentPPO.load(cfg.resume_from, env=env, device=device)
+            validate_checkpoint(model)
         else:
             model = MaskablePPO.load(cfg.resume_from, env=env, device=device)
+            validate_checkpoint(model)
         # SB3's load() restores the checkpoint's original tensorboard_log path.
         # Override it so the new run logs under this run's configured --log-dir
         # rather than polluting the source checkpoint's TB directory.
@@ -2924,8 +2947,10 @@ def train(total_timesteps: int = 100_000,
     elif cfg.init_from:
         if use_lstm:
             model = MaskableRecurrentPPO.load(cfg.init_from, env=env, device=device)
+            validate_checkpoint(model)
         else:
             model = MaskablePPO.load(cfg.init_from, env=env, device=device)
+            validate_checkpoint(model)
         model.tensorboard_log = tensorboard_log
         if verbose:
             print(f"  [init] loaded base checkpoint from {cfg.init_from}")
@@ -2976,6 +3001,11 @@ def train(total_timesteps: int = 100_000,
             policy_kwargs={**extractor_kwargs, "net_arch": _head_arch},
         )
 
+    if cfg.resume_from or cfg.init_from:
+        validate_checkpoint(model, observation_layout.id)
+    else:
+        model.digimon_contract = current_contract(observation_layout.id)
+
     # Partial warm-start: transfer ONLY the features-extractor weights (the
     # CardEmbeddingExtractor — embeddings + projection) from a checkpoint into
     # this freshly-built model, leaving the policy/value heads random. Enables a
@@ -2992,6 +3022,8 @@ def train(total_timesteps: int = 100_000,
         _src_algo = meta_algorithm(cfg.init_extractor_from)
         _src_cls = MaskableRecurrentPPO if _src_algo == "lstm" else MaskablePPO
         _src = _src_cls.load(cfg.init_extractor_from, device=device)
+        validate_checkpoint(_src)
+        validate_checkpoint(_src, observation_layout.id)
         _src_sd = _src.policy.state_dict()
         _dst_sd = model.policy.state_dict()
         _fe = {
@@ -3214,6 +3246,7 @@ def train(total_timesteps: int = 100_000,
     if config_driven:
         run_dir.mkdir(parents=True, exist_ok=True)
         final_path = run_dir / "final.zip"
+        validate_checkpoint(model, observation_layout.id)
         model.save(str(final_path))
         model_path = str(final_path)
     else:
@@ -3265,6 +3298,7 @@ def train(total_timesteps: int = 100_000,
         tensor_size=observation_layout.tensor_size,
         tensor_layout_hash=observation_layout.layout_hash,
         action_space_size=ACTION_SPACE_SIZE,
+        action_schema_version=model.digimon_contract["action_schema_version"],
         card_registry_capacity=REGISTRY_CAPACITY,
         embedding_dim=EMBEDDING_DIM,
         training_mode=training_mode,

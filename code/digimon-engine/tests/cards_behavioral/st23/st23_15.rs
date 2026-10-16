@@ -130,6 +130,20 @@ fn process_contains_move_self_option(steps: &[CompiledStep]) -> bool {
 // Section 1 — Structural
 // ════════════════════════════════════════════════════════════════════════════
 
+// Exercise the paid Option-use path with a genuine color provider in breeding.
+// The breeding provider does not alter battle-field slots or target assertions.
+fn use_fixture_option(runner: &mut DebugRunner, provider: &str) {
+    runner.place_in_breeding(0, provider);
+    runner.game.enter_main_phase();
+    let action = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 0)[action as usize],
+        1.0,
+        "fixture Option must be legal before Main action dispatch"
+    );
+    runner.game.decode_action(action, 0);
+}
+
 #[test]
 fn st23_15_is_white_beatbreak_option() {
     let card = compiled(CARD_ID);
@@ -225,6 +239,8 @@ fn setup_field_option(
     }
     // e-Pulse as a field Option (placed last so its index is known).
     let option = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.player_mut(0).battle_area[option.index as usize].option_state =
+        digimon_engine::permanent::OptionState::OrdinaryFieldOption;
     (runner, option)
 }
 
@@ -382,7 +398,7 @@ fn st23_15_main_plays_beatbreak_free_and_persists_in_battle_area() {
 
     let mem_before = runner.memory();
     // Play e-Pulse (the Option) from hand.
-    runner.play(0, 0);
+    use_fixture_option(&mut runner, "FILLER");
     // Resolve the [Main] play-or-use (pick the BEATBREAK Digimon to play free).
     let _ = runner.auto_resolve();
 
@@ -428,7 +444,7 @@ fn st23_15_marker_delay_does_not_trash_it_at_end_of_next_turn() {
         .memory(10)
         .start();
     runner.set_first_player(0);
-    runner.play(0, 0);
+    use_fixture_option(&mut runner, "FILLER");
     let _ = runner.auto_resolve();
     assert!(
         runner.game.players[0]

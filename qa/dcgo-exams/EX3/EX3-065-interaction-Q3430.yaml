@@ -1,0 +1,120 @@
+# qa:Q3430 (2024-03-28) -- "One of my Digimon digivolved into a Digimon with [Rock Dragon], [Earth Dragon],
+# [Machine Dragon], or [Sky Dragon] in its traits when I had 2 copies of this card in play. Can I suspend both
+# copies of this card and activate the digivolved Digimon's [On Play] effects twice?" -> "Yes, you can.
+# However, you can't activate 2 effects at the same time, so you must activate them 1 at a time. After you
+# suspend the first card and activate 1 of the digivolved Digimon's [On Play] effects, then you may suspend the
+# second card and activate the second [On Play] effect. Note that if the first effect ... deletes the
+# digivolved Digimon ..., the second effect doesn't activate."
+# Sources: data/card_bundles/EX3-065 + official observation b391510f... + card image ("you may suspend this
+# Tamer"); DCGO EX3/White/EX3_065.cs (OnEnterFieldAnyone, isOptional true: Tap self, then candidates = the
+# digivolved permanent's OnEnterFieldAnyone effects with IsOnPlay -- ICardEffect.cs: description starts with
+# "[On Play]" -- a single candidate is activated without a pick); Wingdramon BT20-025: data/card_bundles/
+# BT20-025.md ([Sky Dragon]; [On Play] [When Digivolving] Delete 1 opp Digimon with 6000 DP or less; circles
+# Blue Lv.4 / Red Lv.4 cost 4, [Coredramon] cost 3), DCGO BT20/Blue/BT20_025.cs (separate "[On Play]" and
+# "[When Digivolving]" ActivateClasses, each SelectPermanentEffect Mode.Destroy canNoSelect false), ours
+# EX3-065.yaml (optional on_digivolve observer: suspend source, refire_effect timing on_play) and
+# BT20-025.yaml (when: [on_play, when_digivolving]). general_rule.pdf 15-4-4-2 (pending effects activate 1 at
+# a time), 15-4-3-4 (the next pending effect is chosen after each resolves), 7-1-2-1 (a card played this turn
+# can't UNsuspend -- it may still be suspended as a cost).
+# Line: Birdramon ST1-05 (T1, P0's only Digimon -> field.0 on both wires), Hina #1 (T3). P1 fields Agumon (T2),
+# Biyomon + Dracomon (T4) = three <= 6000 DP delete targets. T5: Hina #2 (3 -> 1), then Birdramon digivolves
+# into Wingdramon BT20-025 (Red Lv.4 / cost 4, the only circle Birdramon satisfies; 1 -> -3, so the turn ends
+# once every trigger resolves). THREE triggers stack for P0 at once: Wingdramon's own [When Digivolving] and
+# both Tamers' "When one of your Digimon digivolves into a [Sky Dragon] ..." (ours: one trigger_batch ->
+# TriggerOrder of 3, effect_queue.rs fire_digivolve_event_triggers; DCGO: one OnEnterFieldAnyone stack ->
+# MultipleSkills of 3). Scripted order: Wingdramon's own effect first (delete Dracomon), then Hina #1 (ordinal 0
+# of the two identical Tamers; suspend -> [On Play] deletes Biyomon), then Hina #2 (the lone remaining optional
+# trigger: accept; suspend -> [On Play] deletes Agumon). Discriminator: the final rows show BOTH Tamers
+# suspended and ALL THREE of P1's Digimon in P1's trash -- two [On Play] activations beyond the natural
+# [When Digivolving], one at a time, each paid with its own suspend; the turn-6 P1 breeding row then proves
+# P0's turn ended only after all of it resolved.
+# Prompt-topology notes (source-cited representational differences, not state-hiding):
+#  * the FIRST Hina's yes row is `dcgo_only`: DCGO activates a MultipleSkills pick through
+#    Activate_Optional_Effect_Execute (OptionalSkill, isOptional true), whereas our TriggerOrder callback runs
+#    the picked trigger directly (effect_queue.rs install_trigger_order_selection -> run_queued_effect; the
+#    outer accept/decline is installed only for a lone optional bundle, G-OUTER-OPTIONAL-NOT-INSTALLED). Both
+#    engines then park the same delete pick, and the state after it agrees. If sim-only lowering reports a
+#    pending selection at the Biyomon pick, our engine did ask -- drop `dcgo_only` on that row.
+#  * the SECOND Hina is a lone optional trigger on both engines (ours: outer accept/decline; DCGO: OptionalSkill)
+#    -> one shared `yes` row.
+#  * `ordinal: 0` is required because both candidates carry the same id; each engine resolves it against its
+#    own list, and either copy is observationally identical (both end suspended).
+# Delete picks travel by identity (ST1-04 / ST1-02 / ST1-03 are distinct) and are taken highest-index first so
+# later slot references are stable whether or not the field compacts after a deletion.
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: EX3-065
+clause: EX3-065#effect#1
+covers: [EX3-065#effect#1, EX3-065#effect#0]
+interaction: { id: "qa:Q3430", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: ST1-05, EX3-065 x2, BT20-025, ST1-02 | security bottom->top: ST1-04 x4, ST1-03 | draws (T3, T5, T5 digivolve-draw): ST2-04, ST2-04, ST2-03
+    stack: [ST1-05, EX3-065, EX3-065, BT20-025, ST1-02, ST1-04, ST1-04, ST1-04, ST1-04, ST1-03, ST2-04, ST2-04, ST2-03]
+    rest: EX3-065-interaction-Q3430-p0
+  p1:
+    # hand: ST1-03, ST1-02, ST1-04, ST2-03, ST2-04 | security bottom->top: ST1-05 x4, ST1-06 | draws (T2, T4, T6): ST2-04, ST2-04, ST2-03
+    stack: [ST1-03, ST1-02, ST1-04, ST2-03, ST2-04, ST1-05, ST1-05, ST1-05, ST1-05, ST1-06, ST2-04, ST2-04, ST2-03]
+    rest: EX3-065-interaction-Q3430-p1
+steps:
+# T1 P0 (0): Birdramon ST1-05 (4) -> -4 (P0's only Digimon all line long).
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: ST1-05, from: hand } }, expect: { prompt: main_phase } }
+# T2 P1 (4): Agumon ST1-03 (3) -> 1; pass.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { play: { card: ST1-03, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T3 P0 (3): Hina Kurihara #1 (3) -> 0 (first of two identical copies in hand -> hand.0); pass.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: EX3-065, from: hand.0 } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+# T4 P1 (3): Biyomon ST1-02 (2) -> 1; Dracomon ST1-04 (3) -> -2.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { play: { card: ST1-02, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { play: { card: ST1-04, from: hand } }, expect: { prompt: main_phase } }
+# T5 P0 (3, +1 from Hina #1's [Start of Your Turn] while P1 has a Digimon): Hina #2 (3); then Birdramon
+# (field.0) -> Wingdramon BT20-025 (4): three triggers stack for P0.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: EX3-065, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { digivolve: { from: field.0, using: BT20-025 } }, expect: { prompt: main_phase } }
+# Order pick 1 of 3: Wingdramon's own [When Digivolving] first -> delete Dracomon.
+- { actor: 0, do: { select: { cards: [BT20-025] } }, expect: { prompt: MultipleSkills, count: 1, candidates: [BT20-025, EX3-065, EX3-065] } }
+- { actor: 0, do: { select: { targets: [opp.field.2] } }, expect: { prompt: SelectPermanentEffect } }
+# Order pick 2 (two identical Tamers remain): Hina #1 -> (DCGO asks its optional gate here) -> suspend ->
+# Wingdramon's [On Play] activated: delete Biyomon.
+- { actor: 0, do: { select: { cards: [EX3-065], ordinal: 0 } }, expect: { prompt: MultipleSkills, count: 1, candidates: [EX3-065, EX3-065] } }
+- { actor: 0, do: { select: { yes: true, dcgo_only: true } }, expect: { prompt: OptionalSkill } }
+- { actor: 0, do: { select: { targets: [opp.field.1] } }, expect: { prompt: SelectPermanentEffect } }
+# Hina #2, the lone remaining optional trigger: accept -> suspend -> Wingdramon's [On Play] a second time:
+# delete Agumon. Memory is negative, so P0's turn ends once this resolves.
+- { actor: 0, do: { select: { yes: true } }, expect: { prompt: OptionalSkill } }
+- { actor: 0, do: { select: { targets: [opp.field.0] } }, expect: { prompt: SelectPermanentEffect } }
+# T6 P1: observation -- both Hina suspended, P1's field empty, P1's trash [ST1-04, ST1-02, ST1-03].
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+expect_ruling:
+  q_id: Q3430
+  assert:
+  - at: 16
+    that:
+      p1.field:
+      - ST1-03
+      - ST1-02
+  - at: 19
+    that:
+      p1.field:
+      - ST1-03
+      p0.field:
+      - card_id: BT20-025
+      - card_id: EX3-065
+        suspended: true
+      - card_id: EX3-065
+        suspended: false
+  - at: 21
+    that:
+      p1.field: []
+      p0.field:
+      - card_id: BT20-025
+      - card_id: EX3-065
+        suspended: true
+      - card_id: EX3-065
+        suspended: true

@@ -1,0 +1,84 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "EX3-038",
+    "card_type": "Digimon",
+    "colors": [
+      "Green"
+    ],
+    "dp": 1000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "dp": 1000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Pomumon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Your Turn] When an effect suspends this Digimon, suspend 1 of your opponent's Digimon."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Pomumon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522012",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX3-038.png?260529",
+      "printing_id": "EX3-038"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, it activates.",
+        "date": "Mar. 28, 2024",
+        "number": "Q3415",
+        "question": "Does this card's \"when an effect suspends this Digimon\" also activate when it's suspended by an effect?"
+      }
+    ],
+    "rarity": "U",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Your Turn] When an effect suspends this Digimon, suspend 1 of your opponent's Digimon."
+      }
+    ],
+    "type": "Vegetation"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "ff17bb55555d83fcd33c54147f9a58a9181de9dce022ff860432ee1831a85b7a",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "de7126ba449fa54b50832bfbb560a028ebcf86d092956f0a2f3f8dabe85947f7",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522012:EX3-038:EX3-038",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522012"
+}

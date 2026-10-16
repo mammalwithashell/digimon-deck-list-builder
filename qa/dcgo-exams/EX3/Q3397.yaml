@@ -1,0 +1,149 @@
+card: EX3-024
+clause: EX3-024#effect#1
+interaction:
+  id: qa:Q3397
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX13-041
+    - EX3-024
+    - ST2-14
+    - ST1-04
+    - ST1-05
+    - ST1-03
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-04
+    - ST2-04
+    - ST1-05
+    - ST2-06
+    - ST1-06
+    rest: Q3397-blind-v2-p0
+  p1:
+    stack:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST2-04
+    - ST2-05
+    - ST1-03
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-04
+    - ST2-04
+    - ST1-05
+    - ST2-06
+    - ST1-06
+    rest: Q3397-blind-v2-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX13-041
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-03
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX3-024
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST2-14
+      from: hand
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.1
+- actor: 1
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+expect_ruling:
+  q_id: Q3397
+  assert:
+  - at: 17
+    that:
+      p0.field:
+      - card_id: EX13-041
+        suspended: false
+      - card_id: EX3-024
+        suspended: false
+      p1.field:
+      - card_id: ST1-03
+        suspended: false
+      p0.security: 5
+      p1.security: 5

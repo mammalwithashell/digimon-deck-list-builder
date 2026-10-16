@@ -1,0 +1,55 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT20-045",
+    "colors": "Green Red Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "15000",
+    "form": "Mega",
+    "play_cost": "9",
+    "qa": [
+      "Yes, it triggers."
+    ],
+    "special_digivolution_condition": "[DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "{Hand} [Counter] ＜Blast DNA Digivolve ([Breakdramon] + [Slayerdramon])＞ ＜Raid＞ ＜Piercing＞ ＜Blocker＞ ＜Evade＞ [When Digivolving] If DNA digivolving, return all of your opponent's Digimon with the highest DP to the bottom of the deck. [All Turns] [Once Per Turn] When any Digimon suspend, this Digimon may unsuspend."
+      },
+      {
+        "label": "Special Rule",
+        "text": "＜Overflow (-5)＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)"
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "24b7a7dea4080ecd1b786da0f5a55b825afc6e3461f35f4f42fba14fff0dcdbc",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "12bc64ce8e5aa82026444f3c36644da4714cac073e57276acfee48f303bb9ab7",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT20-045",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT20-045"
+}

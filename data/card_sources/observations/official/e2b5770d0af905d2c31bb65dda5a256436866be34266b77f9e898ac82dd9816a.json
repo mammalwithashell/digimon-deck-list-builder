@@ -1,0 +1,89 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "ST12-15",
+    "card_type": "Option",
+    "colors": [
+      "Red"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "option",
+        "level": null,
+        "name": "From Master to Disciple",
+        "play_cost": 2,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Main] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] in its traits among them to your hand. Trash the rest. Then, place this card in your Battle Area.\n[Main] ＜Delay＞ (Trash this card in your battle area to activate the effect below. You can't activate this effect the turn this card enters play.)\n・The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1."
+          },
+          {
+            "label": "Security Effect",
+            "text": "[Security] Reveal 3 cards from the top of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] in its traits among them to your hand. Trash the rest. Then, place this card in your Battle Area."
+          }
+        ]
+      }
+    ],
+    "form": "",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": null,
+    "name": "From Master to Disciple",
+    "play_cost": 2,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522902",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/ST12-15_P1.png?260529",
+      "printing_id": "ST12-15_P1"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, regardless of the cards revealed, after trashing the rest of the cards revealed, place this card in your Battle Area.",
+        "date": "Mar. 28, 2024",
+        "number": "Q762",
+        "question": "If none of the cards revealed from the deck with this card's effect include [Huckmon] or [Sistermon] in their names or the [Royal Knight] trait among them, is this card still placed in the Battle Area?"
+      },
+      {
+        "answer": "Yes, you can.",
+        "date": "Mar. 28, 2024",
+        "number": "Q763",
+        "question": "After activating this card's , can I still reduce the digivolution cost if one of my Digimon would digivolve due to an effect?"
+      }
+    ],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Main] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] in its traits among them to your hand. Trash the rest. Then, place this card in your Battle Area.\n[Main] ＜Delay＞ (Trash this card in your battle area to activate the effect below. You can't activate this effect the turn this card enters play.)\n・The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1."
+      },
+      {
+        "label": "Security Effect",
+        "text": "[Security] Reveal 3 cards from the top of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] in its traits among them to your hand. Trash the rest. Then, place this card in your Battle Area."
+      }
+    ],
+    "type": ""
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "e2b5770d0af905d2c31bb65dda5a256436866be34266b77f9e898ac82dd9816a",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "21a0bd2f0ac472bf751dcaad6c79231ead53bfebf72afc5fdbc64e961501c104",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522902:ST12-15:ST12-15_P1",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522902"
+}

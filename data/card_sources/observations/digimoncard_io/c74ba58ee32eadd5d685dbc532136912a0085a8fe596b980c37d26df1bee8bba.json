@@ -1,0 +1,89 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [],
+      "card_colors": [
+        "White"
+      ],
+      "card_kind": "Option",
+      "card_name_eng": "X Antibody",
+      "effect_description_eng": "While you have a Digimon, you can ignore this card's color requirements.\r\n[Security] Gain 1 memory, and add this card to its owner's hand.\r\n[Main] Place this card under 1 of your Digimon without [X Antibody] in its digivolution cards as its bottom digivolution card.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "[All Turns] Effects can't trash [X Antibody] in this Digimon's digivolution cards.\r\n[When Attacking] This Digimon can digivolve into a Digimon card with the [X Antibody] trait in your hand by paying its digivolution cost.",
+      "level": null,
+      "play_cost": 0,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "X Antibody"
+      ]
+    },
+    "card_id": "BT9-109",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "White"
+        ],
+        "dp": null,
+        "effect_text": "While you have a Digimon, you can ignore this card's color requirements.\r\n[Security] Gain 1 memory, and add this card to its owner's hand.\r\n[Main] Place this card under 1 of your Digimon without [X Antibody] in its digivolution cards as its bottom digivolution card.",
+        "face_id": "primary",
+        "inherited_text": "[All Turns] Effects can't trash [X Antibody] in this Digimon's digivolution cards.\r\n[When Attacking] This Digimon can digivolve into a Digimon card with the [X Antibody] trait in your hand by paying its digivolution cost.",
+        "kind": "option",
+        "level": null,
+        "play_cost": 0,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": null,
+      "color": "White",
+      "color2": null,
+      "date_added": "2025-11-25 15:15:44",
+      "digi_type": "X Antibody",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": null,
+      "evolution_color": null,
+      "evolution_cost": null,
+      "evolution_level": null,
+      "form": null,
+      "id": "BT9-109",
+      "level": null,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "While you have a Digimon, you can ignore this card's color requirements.\r\n[Security] Gain 1 memory, and add this card to its owner's hand.\r\n[Main] Place this card under 1 of your Digimon without [X Antibody] in its digivolution cards as its bottom digivolution card.",
+      "name": "X Antibody",
+      "play_cost": 0,
+      "pretty_url": "x-antibody-bt9-109",
+      "rarity": "u",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "2025 Evolution Cup Season 1",
+        "AD-01: ADVANCED BOOSTER DIGIMON GENERATION",
+        "BT-09: Booster X Record",
+        "ST-14: Advanced Deck Set Beelzemon"
+      ],
+      "source_effect": "[All Turns] Effects can't trash [X Antibody] in this Digimon's digivolution cards.\r\n[When Attacking] This Digimon can digivolve into a Digimon card with the [X Antibody] trait in your hand by paying its digivolution cost.",
+      "stage": null,
+      "tcgplayer_id": 277764,
+      "tcgplayer_name": "X Antibody",
+      "type": "Option",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "c74ba58ee32eadd5d685dbc532136912a0085a8fe596b980c37d26df1bee8bba",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "BT9-109#3",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

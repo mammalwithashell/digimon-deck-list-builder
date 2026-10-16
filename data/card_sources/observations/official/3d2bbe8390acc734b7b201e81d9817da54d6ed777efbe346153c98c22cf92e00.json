@@ -1,0 +1,51 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT24-062",
+    "colors": "Black Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "7000",
+    "form": "Ultimate",
+    "play_cost": "7",
+    "special_digivolution_condition": "[Digivolve] Lv.4 w/[Machine]/[Cyborg]/[TS] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[Machine]/[Cyborg]/[TS] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Blocker＞ ＜Armor Purge＞ [End of Attack] [End of Opponent's Turn] [Once per Turn] You may play 1 play cost 5 or lower card with the [Machine], [Cyborg] or [TS] trait from this Digimon's digivolution cards without paying the cost."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "Assembly -2: [Blimpmon]/Tamer card w/[TS] trait When this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon's attack target can't change."
+      }
+    ],
+    "type": "Machine/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3d2bbe8390acc734b7b201e81d9817da54d6ed777efbe346153c98c22cf92e00",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "d6f5f21921ff3a1bc2d402d5db98a612b7a13416cbfdf854057d3ce20c18bfe9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-062",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-062"
+}

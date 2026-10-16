@@ -4,6 +4,18 @@ use std::path::Path;
 
 use crate::enums::{CardColor, CardKind};
 
+/// Match a rules-name substring with verified language-standardization exceptions.
+/// Bandai Language Standardization Rules p.4 excludes Indramon from [Dramon].
+/// Apply this per name so a different granted alias can still satisfy the query.
+pub fn rules_name_contains(name: &str, needle: &str) -> bool {
+    let name = name.to_lowercase();
+    let needle = needle.to_lowercase();
+    if needle == "dramon" && name == "indramon" {
+        return false;
+    }
+    name.contains(&needle)
+}
+
 /// Digivolution cost entry from cards.json.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EvoCost {
@@ -148,6 +160,10 @@ pub struct CardData {
     /// `CardSource.HasText` skips `LinkEffect`.
     #[serde(default)]
     pub link_text: String,
+    /// Printed special requirement wording (compatibility `xros_req`).
+    /// Searchable card text, separate from effects and numeric route costs.
+    #[serde(default)]
+    pub requirement_text: String,
     pub effect_class_name: String,
     /// Stable integer index from cards.json (1-based; 0 = unset/legacy).
     /// This is the source of truth for tensor encoding — must match Python.
@@ -213,6 +229,8 @@ struct RawCard {
     security_effect_description_eng: String,
     #[serde(default)]
     link_effect_description_eng: String,
+    #[serde(default)]
+    xros_req: String,
     #[serde(default)]
     evo_costs: Vec<RawEvoCost>,
     /// DNA digivolve costs — absent in cards.json today; deserializes to
@@ -408,6 +426,7 @@ impl CardData {
                 inherited_text: raw_card.inherited_effect_description_eng,
                 security_text: raw_card.security_effect_description_eng,
                 link_text: raw_card.link_effect_description_eng,
+                requirement_text: raw_card.xros_req,
                 keywords,
                 effect_class_name: raw_card.card_effect_class_name,
                 index: raw_card.index,

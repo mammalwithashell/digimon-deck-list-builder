@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT12-028",
+    "colors": "Blue Green",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "8000",
+    "form": "Ultimate",
+    "play_cost": "8",
+    "special_digivolution_condition": "[DNA Digivolve] 0 from blue Lv.4 + green Lv.4 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolve] 0 from blue Lv.4 + green Lv.4 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] Trash the top 3 digivolution cards of all of your opponent's Digimon. Then, if DNA digivolving, 2 of your opponent's Digimon with no digivolution cards can't attack until the end of your opponent's turn."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[End of Attack] If this Digimon has [Imperialdramon] in its name or the [Free] trait, gain 1 memory."
+      }
+    ],
+    "type": "Dragonkin"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "2defa4cb7b5bc9f62640e436902f6a21e11774a2a169b5a5c18d723c636ebf3a",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "7184ad1b4001e1810f5d7080959e43af4e98553a6109439a3188534832e6dd57",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT12-028",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT12-028"
+}

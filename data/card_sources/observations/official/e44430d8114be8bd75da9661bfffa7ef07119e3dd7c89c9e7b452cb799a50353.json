@@ -1,0 +1,51 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT23-047",
+    "colors": "Green Red Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "15000",
+    "form": "Mega",
+    "play_cost": "15",
+    "qa": [
+      "[Security] effects take precedence for activation. Upon a security check, a [Security] effect will immediately activate without pending activation. For other triggered effects, the turn player activates their effects first."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.6 w/[CS] trait: Cost 5 [DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.6 w/[CS] trait: Cost 5 [DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Piercing＞ ＜Security A. +1＞ ＜Partition＞ (green Lv.5 &amp; blue Lv.5) [On Play] [When Digivolving] Suspend 5 of your opponent's Digimon or Tamers. None of your opponent's Digimon can unsuspend in their next unsuspend phase. Then, this Digimon may attack. [Your Turn] [Once Per Turn] When your opponent's security stack is removed from, trash 1 of their Option cards in the battle area. Then, delete 1 of their suspended Digimon or Tamers."
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight/CS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "e44430d8114be8bd75da9661bfffa7ef07119e3dd7c89c9e7b452cb799a50353",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "25eec7907a32800de3829f3229f2e0e891fc847a2806ebdc252ebdc7b9a0d5f6",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT23-047",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT23-047"
+}

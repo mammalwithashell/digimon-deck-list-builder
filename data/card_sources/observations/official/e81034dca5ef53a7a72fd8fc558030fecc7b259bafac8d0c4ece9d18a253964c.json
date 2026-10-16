@@ -1,0 +1,123 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX12-013",
+    "card_type": "Digimon",
+    "colors": [
+      "Red",
+      "Yellow"
+    ],
+    "dp": 6000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red",
+          "Yellow"
+        ],
+        "cost": 3,
+        "from_level": 3,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Yellow"
+        ],
+        "dp": 6000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 4,
+        "name": "BetelGammamon",
+        "play_cost": 5,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Gammamon]/Lv.3 w/[VB] trait: Cost 2"
+          },
+          {
+            "label": "Effect",
+            "text": "[Main] [Once Per Turn] You may play or use 1 card with [Gammamon] in its text or the [VB] trait from your hand with the cost reduced by 2."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+          }
+        ]
+      }
+    ],
+    "form": "Champion",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 4,
+    "name": "BetelGammamon",
+    "play_cost": 5,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-013.png?260529",
+      "printing_id": "EX12-013"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements.\nFor example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6730",
+        "question": "What kind of card does \"a card with X in its text\" refer to?"
+      },
+      {
+        "answer": "No.\nYou cannot activate multiple play or use effects simultaneously.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6731",
+        "question": "There are two copies of this card in the battle area.\nCan I activate both of their [Main] effects and play or use one specified card with its cost reduced by the combined amount from both effects?"
+      },
+      {
+        "answer": "You can activate it and play the card, but the cost will not be reduced.\nRelated Cards",
+        "date": "Jun. 19, 2026",
+        "number": "Q6732",
+        "question": "If a Digimon with the effect \"Players can't reduce play costs,\" such as [ST12-03 Solarmon], is in the battle area, can I activate this card's [Main] effect and play a specified card?"
+      },
+      {
+        "answer": "You can activate it, but the card can't be played.\nRelated Cards",
+        "date": "Jun. 19, 2026",
+        "number": "Q6733",
+        "question": "If a Digimon with the effect \"Players can't play Digimon by effects,\" such as [BT9-047 Pomumon], is in the battle area, can I activate this card's [Main] effect and play a specified card?"
+      }
+    ],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] [Gammamon]/Lv.3 w/[VB] trait: Cost 2"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Gammamon]/Lv.3 w/[VB] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[Main] [Once Per Turn] You may play or use 1 card with [Gammamon] in its text or the [VB] trait from your hand with the cost reduced by 2."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+      }
+    ],
+    "type": "Dragonkin/VB"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "e81034dca5ef53a7a72fd8fc558030fecc7b259bafac8d0c4ece9d18a253964c",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-013:EX12-013",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

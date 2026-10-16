@@ -41,6 +41,20 @@ fn runner() -> DebugRunner {
         .start()
 }
 
+// Exercise the paid Option-use path with a genuine color provider in breeding.
+// The breeding provider does not alter battle-field slots or target assertions.
+fn use_fixture_option(runner: &mut DebugRunner, provider: &str) {
+    runner.place_in_breeding(0, provider);
+    runner.game.enter_main_phase();
+    let action = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 0)[action as usize],
+        1.0,
+        "fixture Option must be legal before Main action dispatch"
+    );
+    runner.game.decode_action(action, 0);
+}
+
 #[test]
 fn st1_15_main_exposes_opponent_targets_as_oppfield_field_slots() {
     let mut runner = runner();
@@ -49,7 +63,7 @@ fn st1_15_main_exposes_opponent_targets_as_oppfield_field_slots() {
     let small = runner.place_on_field(1, "OPP-SMALL", Some(0));
     let _big = runner.place_on_field(1, "OPP-BIG", Some(1));
 
-    runner.play(0, 0).expect("play Giga Destroyer from hand");
+    use_fixture_option(&mut runner, "MY-RED");
 
     // The selection MUST present as the field-target kind the frontend's
     // field-click router understands, not the bespoke multi-select tag.

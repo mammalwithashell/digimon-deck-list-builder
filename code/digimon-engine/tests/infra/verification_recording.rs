@@ -134,3 +134,26 @@ fn debug_runner_recorded_action_hook_emits_digests() {
     assert_eq!(recording.digests, vec![runner.game.verification_digest()]);
     assert_eq!(recording.final_digest, runner.game.verification_digest());
 }
+
+#[test]
+fn current_replay_protocol_round_trips_and_unknown_versions_are_rejected() {
+    use digimon_engine::runners::replay::{ReplaySession, VerificationReplayAdapter};
+    use digimon_engine::recorder::VERIFICATION_ENGINE_SCHEMA_VERSION;
+    let db = test_card_db();
+    let deck = test_deck();
+    let mut runner = HeadlessRunner::new(deck.clone(), deck, &db, false, true, false, Some(17)).unwrap();
+    while runner.mulligan_current_player().is_some() { runner.step(0); }
+    runner.step(62);
+    let recording = runner.get_verification_replay_recording("sha256:test-cards").unwrap();
+    assert_eq!(recording.engine_schema_version, VERIFICATION_ENGINE_SCHEMA_VERSION);
+    assert_eq!(recording.engine_schema_version, 2);
+    let report = ReplaySession::verify_verification_recording("current-digest", recording.clone(), &db).unwrap();
+    assert!(report.divergence.is_none(), "{report:?}");
+    let mut unknown = recording.clone(); unknown.engine_schema_version = 999;
+    assert!(VerificationReplayAdapter::from_recording(unknown, &db).is_err());
+    let mut wrong = recording.clone(); wrong.engine_schema_version = 1;
+    let report = ReplaySession::verify_verification_recording("wrong-digest-version", wrong, &db).unwrap();
+    assert!(report.divergence.is_some(), "no fallback to another digest version");
+    let mut unknown_format = recording; unknown_format.format_version = 999;
+    assert!(VerificationReplayAdapter::from_recording(unknown_format, &db).is_err());
+}

@@ -395,7 +395,7 @@ class TestTensorProfiles:
         assert layout["profile_id"] == "standard_lite_v2"
         assert layout["tensor_version"] == 2
         # Task S1.4: PERM_MAX_SOURCES 11 -> 12; tensor_size 8320 -> 8410.
-        assert layout["feature_schema_version"] == "standard_lite_v2.2"
+        assert layout["feature_schema_version"] == "standard_lite_v2.3"
         assert layout["tensor_size"] == 8410
         assert len(layout["card_id_positions"]) == 572
         assert len(layout["scalar_positions"]) == 7838
@@ -507,3 +507,15 @@ def test_rust_headless_game_starts_with_explicit_mulligan_choices():
     assert mask[1] == 1.0
     assert mask[60] == 0.0
     assert mask[62] == 0.0
+
+
+def test_real_binding_exports_live_action_semantic_version():
+    import re
+    from pathlib import Path
+    import digimon_engine
+    from model_contract import current_contract
+    space = Path(__file__).resolve().parents[1] / "digimon-engine" / "src" / "action" / "space.rs"
+    source_version = int(re.search(r"pub const SCHEMA_VERSION: u32 = (\d+);", space.read_text()).group(1))
+    assert type(digimon_engine.ACTION_SCHEMA_VERSION) is int
+    assert digimon_engine.ACTION_SCHEMA_VERSION == source_version
+    assert current_contract("standard_lite_v2")["action_schema_version"] == source_version

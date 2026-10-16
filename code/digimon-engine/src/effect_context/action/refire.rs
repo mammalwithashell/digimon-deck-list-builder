@@ -33,8 +33,14 @@ impl<'a> EffectContext<'a> {
         let Some(timing_filter) = TimingFilter::from_timing_key(timing_key) else {
             return Err(EffectRefireError::InvalidTiming(timing_key.to_string()));
         };
-        let _ =
-            self.refire_target_effect_inner(source, timing_filter, self.player, false, optional);
+        let _ = self.refire_target_effect_inner(
+            source,
+            timing_filter,
+            self.player,
+            false,
+            optional,
+            false,
+        );
         Ok(())
     }
 
@@ -61,6 +67,7 @@ impl<'a> EffectContext<'a> {
             selecting_player,
             bypass_once_per_turn,
             false,
+            false,
         )
     }
 
@@ -71,6 +78,7 @@ impl<'a> EffectContext<'a> {
         selecting_player: PlayerId,
         bypass_once_per_turn: bool,
         optional: bool,
+        target_attribution: bool,
     ) -> bool {
         let effects: Vec<ReFireableEffect> = timing_filter
             .timing_keys()
@@ -78,7 +86,13 @@ impl<'a> EffectContext<'a> {
             .flat_map(|timing_key| enumerate_refireable_effects(self.game, target, timing_key))
             .collect();
         let effects = self.collapse_combined_timing_clauses(effects);
-        self.dispatch_refireable_effects(effects, selecting_player, bypass_once_per_turn, optional)
+        self.dispatch_refireable_effects(
+            effects,
+            selecting_player,
+            bypass_once_per_turn,
+            optional,
+            target_attribution,
+        )
     }
 
     /// A printed `[On Play] [When Digivolving]` effect is ONE effect even
@@ -150,7 +164,7 @@ impl<'a> EffectContext<'a> {
         // turn, so its effects have no prior activations to gate on (DCGO
         // enumerates a fresh effect instance for the placed card and only
         // checks `CanUse`).
-        self.dispatch_refireable_effects(effects, selecting_player, true, false)
+        self.dispatch_refireable_effects(effects, selecting_player, true, false, false)
     }
 
     /// Shared dispatch tail for both refire variants: OPT-slot filtering,
@@ -162,14 +176,17 @@ impl<'a> EffectContext<'a> {
         selecting_player: PlayerId,
         bypass_once_per_turn: bool,
         optional: bool,
+        target_attribution: bool,
     ) -> bool {
         let mut effects: Vec<ReFireableEffect> = effects
             .into_iter()
             .filter(|effect| bypass_once_per_turn || self.refire_effect_slot_available(effect))
             .collect();
         for effect in &mut effects {
-            effect.attribution_source_card = Some(self.source_card);
-            effect.attribution_source_kind = Some(self.source_kind);
+            if !target_attribution {
+                effect.attribution_source_card = Some(self.source_card);
+                effect.attribution_source_kind = Some(self.source_kind);
+            }
             effect.bypass_once_per_turn = bypass_once_per_turn;
             effect.controller = self.player;
         }

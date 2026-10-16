@@ -1,0 +1,58 @@
+{
+  "extracted": {
+    "attribute": "System",
+    "card_id": "BT24-071",
+    "colors": "Purple Red",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "6000",
+    "form": "Sup./Appmon",
+    "play_cost": "6",
+    "qa": [
+      "App Fusion is possible with the following combinations. ●[Hackmon] with [Protecmon] link card ●[Hackmon] with [Pipomon] link card ●[Protecmon] with [Hackmon] link card ●[Protecmon] with [Pipomon] link card ●[Pipomon] with [Hackmon] link card ●[Pipomon] with [Protecmon] link card"
+    ],
+    "special_digivolution_condition": "[App Fusion] [Hackmon] & [Protecmon] & [Pipomon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Hackmon] & [Protecmon] & [Pipomon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] 1 of your Digimon with the [System], [Life] or [Transmutation] trait gains ＜Security A. +1＞ for the turn. [On Deletion] You may play 1 level 3 Digimon card with the [Appmon] trait from your trash without paying the cost."
+      },
+      {
+        "label": "Link DP",
+        "text": "DP+3000"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[On Deletion] You may play 1 level 3 [Appmon] trait Digimon card from your trash without paying the cost."
+      }
+    ],
+    "type": "Super Hacking"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "46b545c2eb2a6e10f1d8b3deae6a2ec897affa8f06380475e6f94229f5329e29",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "ce482753f8228020517c2cac21c6e1f1c46d20738b3793f00caafd1737935bf2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-071",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-071"
+}

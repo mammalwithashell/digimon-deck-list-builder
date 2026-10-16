@@ -1,0 +1,106 @@
+{
+  "card_id": "EX13-039",
+  "printing": {
+    "printing_id": "EX13-039",
+    "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-039.png?260529",
+    "alternate_art": false,
+    "category_id": ""
+  },
+  "name": "Coredramon",
+  "rarity": "C",
+  "card_type": "Digimon",
+  "level": 4,
+  "colors": [
+    "Green",
+    "Red"
+  ],
+  "play_cost": 5,
+  "dp": 5000,
+  "form": "Champion",
+  "attribute": "Virus",
+  "type": "Dragon",
+  "evolution_routes": [
+    {
+      "slot": 1,
+      "colors": [
+        "Green",
+        "Red"
+      ],
+      "cost": 3,
+      "from_level": 3
+    }
+  ],
+  "grade_evolution_routes": [],
+  "tamer_evolution_routes": [],
+  "special_evolution_routes": [
+    "[Digivolve] Lv.3 w/[Dracomon] in name: Cost 2"
+  ],
+  "text_sections": [
+    {
+      "label": "Special Digivolution Condition",
+      "text": "[Digivolve] Lv.3 w/[Dracomon] in name: Cost 2"
+    },
+    {
+      "label": "Effect",
+      "text": "[On Play] [When Digivolving] You may return 1 non-Digi-Egg card with [Dracomon] or [Examon] in its text from your trash to the hand.\n[Your Turn] When any of your other Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into a Digimon card with [Examon] in its text in the hand with the cost reduced by 2."
+    },
+    {
+      "label": "Inherited Effect",
+      "text": "[Your Turn] This Digimon gets +2000 DP."
+    }
+  ],
+  "rule_grants": {
+    "traits": [],
+    "attributes": []
+  },
+  "qa": [
+    {
+      "number": "Q7332",
+      "date": "Sep. 18, 2026",
+      "question": "When a Digimon with [Dracomon] or [Examon] in its text is played, this card's [Your Turn] effect and that Digimon's [On Play] effect trigger simultaneously.\nThis card's [Your Turn] effect is activated first to digivolve this card.\nAt this time, in what order do I activate the digivolved card's [When Digivolving] effect and the played card's [On Play] effect?",
+      "answer": "The [When Digivolving] effect is activated first.\nWhen your Digimon was played, the [On Play] effect and the [Your Turn] effect triggered simultaneously.\nActivating this card's [Your Turn] effect to digivolve the Digimon caused its [When Digivolving] effect to newly trigger, so it is activated first according to the derived triggering rule."
+    },
+    {
+      "number": "Q7333",
+      "date": "Sep. 18, 2026",
+      "question": "What kind of card does \"a card with X in its text\" refer to?",
+      "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements.\nFor example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+    },
+    {
+      "number": "Q7334",
+      "date": "Sep. 18, 2026",
+      "question": "What kind of card does the text \"[AA] or [BB] in its text\" refer to?",
+      "answer": "It checks if that card has [AA] or [BB] in its text."
+    }
+  ],
+  "layout": "single",
+  "faces": [
+    {
+      "face_id": "primary",
+      "kind": "digimon",
+      "name": "Coredramon",
+      "colors": [
+        "Green",
+        "Red"
+      ],
+      "play_cost": 5,
+      "level": 4,
+      "dp": 5000,
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.3 w/[Dracomon] in name: Cost 2"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] You may return 1 non-Digi-Egg card with [Dracomon] or [Examon] in its text from your trash to the hand.\n[Your Turn] When any of your other Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into a Digimon card with [Examon] in its text in the hand with the cost reduced by 2."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] This Digimon gets +2000 DP."
+        }
+      ]
+    }
+  ],
+  "printing_field_gaps": []
+}

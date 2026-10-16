@@ -95,20 +95,24 @@ fn fingerprint(all_card_data: &HashMap<String, CardData>) -> u64 {
         d.traits.hash(&mut h);
         d.keywords.hash(&mut h);
         d.ace_overflow.hash(&mut h);
-        // Long/variable text + structured costs by LENGTH only — hashing every
-        // card's full text + a `Debug` of its costs made the per-game fingerprint
-        // ~3.6 ms, eroding the construction win. Length is enough to distinguish
-        // sets in practice (card behavior on differing text lives in the effect
-        // registry, keyed by id; production loads one DB whose fingerprint is
-        // stable regardless of completeness, so this only needs to separate the
-        // small synthetic DBs that tests build).
-        d.card_name.len().hash(&mut h);
-        d.effect_text.len().hash(&mut h);
-        d.inherited_text.len().hash(&mut h);
-        d.security_text.len().hash(&mut h);
-        d.link_text.len().hash(&mut h);
-        d.effect_class_name.len().hash(&mut h);
+        // Every returned field is content-keyed: same-length text, identity
+        // aliases, routes and dual faces can change legal predicates or costs.
+        d.card_id.hash(&mut h);
+        d.norm_id.to_bits().hash(&mut h);
+        d.card_name.hash(&mut h);
+        d.effect_text.hash(&mut h);
+        d.inherited_text.hash(&mut h);
+        d.security_text.hash(&mut h);
+        d.link_text.hash(&mut h);
+        d.effect_class_name.hash(&mut h);
         d.evo_costs.len().hash(&mut h);
+        // Equal-length route updates still change legal hosts and payment.
+        // Hash the small printed circles by value, preserving route order.
+        for cost in &d.evo_costs {
+            cost.card_color.hash(&mut h);
+            cost.level.hash(&mut h);
+            cost.memory_cost.hash(&mut h);
+        }
         // `dna_costs` are hashed by discriminating CONTENT, not just length.
         // The effect-initiated DNA verbs (G-ENGINE-DNA-PRINTED-COST /
         // -RECIPE-ENFORCEMENT) read `dna_costs[].memory_cost` and each
@@ -117,20 +121,44 @@ fn fingerprint(all_card_data: &HashMap<String, CardData>) -> u64 {
         // shape) MUST re-key — otherwise a cache hit serves the wrong DNA cost.
         // `dna_costs` is tiny (≤2 entries), so folding the fields is cheap.
         // (`DnaCost`/`DnaRequirement` don't derive `Hash`, so project the fields.)
+        d.dna_costs.len().hash(&mut h);
         for cost in &d.dna_costs {
             cost.memory_cost.hash(&mut h);
             for req in [&cost.requirement1, &cost.requirement2] {
                 req.level.hash(&mut h);
-                (req.card_colors.len() as u8).hash(&mut h);
+                req.card_colors.len().hash(&mut h);
                 for c in &req.card_colors {
                     (*c as u8).hash(&mut h);
                 }
-                req.name_contains.len().hash(&mut h);
-                req.text_contains.len().hash(&mut h);
+                req.name_contains.hash(&mut h);
+                req.text_contains.hash(&mut h);
             }
         }
-        d.digixros_aliases.len().hash(&mut h);
-        d.also_treated_as.len().hash(&mut h);
+        d.digixros_aliases.hash(&mut h);
+        d.also_treated_as.hash(&mut h);
+        d.dual.is_some().hash(&mut h);
+        if let Some(dual) = &d.dual {
+            let face = &dual.digimon;
+            face.level.hash(&mut h);
+            face.dp.hash(&mut h);
+            face.colors.hash(&mut h);
+            face.traits.hash(&mut h);
+            face.evo_costs.len().hash(&mut h);
+            for cost in &face.evo_costs {
+                cost.card_color.hash(&mut h);
+                cost.level.hash(&mut h);
+                cost.memory_cost.hash(&mut h);
+            }
+            face.effect_text.hash(&mut h);
+            face.inherited_text.hash(&mut h);
+            face.keywords.hash(&mut h);
+            let face = &dual.option;
+            face.use_cost.hash(&mut h);
+            face.colors.hash(&mut h);
+            face.effect_text.hash(&mut h);
+            face.security_text.hash(&mut h);
+            face.keywords.hash(&mut h);
+        }
         sum = sum.wrapping_add(h.finish());
     }
     sum
@@ -164,7 +192,6 @@ const CACHE_SOFT_CAP: usize = 16;
 fn evict_unused(cache: &mut HashMap<u64, Arc<SharedCardStore>>) {
     cache.retain(|_, store| Arc::strong_count(store) > 1);
 }
-
 
 /// The reference build — the exact clone+enrich+index+token-absorb sequence
 /// previously inline in `Game::new`. The cache-miss path; also the oracle baseline.

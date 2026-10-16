@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX9-019",
+    "colors": "Blue Black",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "8000",
+    "form": "Ultimate",
+    "play_cost": "8",
+    "qa": [
+      "No, you can't."
+    ],
+    "special_digivolution_condition": "[Digivolve] [WereGarurumon]: Cost 1 [Digivolve] Lv.4 w/[Garurumon] in name or w/[ADVENTURE] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [WereGarurumon]: Cost 1 [Digivolve] Lv.4 w/[Garurumon] in name or w/[ADVENTURE] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends. [Your Turn] When any of your Digimon or Tamers with [Greymon] or [Matt Ishida] in their names are played or any of your Digimon digivolve into a Digimon with [Greymon] in its name, this Digimon may digivolve into a Digimon card with [Garurumon] in its name in the hand without paying the cost."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+      }
+    ],
+    "type": "Beastkin/ADVENTURE"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "1610e953019cd7996c9ffbd3cb46fc881cd4f965c17cca843b21d75563d3504e",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "c93e4fb33fade3991b3356bcadda81fd87a3fab56269d06f7fd4699f50df9c3d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX9-019",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX9-019"
+}

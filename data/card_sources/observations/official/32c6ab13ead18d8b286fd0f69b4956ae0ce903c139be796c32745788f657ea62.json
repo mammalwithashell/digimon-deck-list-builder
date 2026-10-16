@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT16-077",
+    "colors": "Purple Red",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "8000",
+    "form": "Ultimate",
+    "play_cost": "8",
+    "qa": [
+      "Yes, you can process it. Even if this Digimon didn't DNA digivolve, this card's [When Digivolving] effect can give 1 of your Digimon and that Digimon can attack."
+    ],
+    "special_digivolution_condition": "[DNA Digivolve] Purple Lv.4 + red Lv.4: Cost 0 Stack the 2 specified Digimon and digivolve unsuspended.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolve] Purple Lv.4 + red Lv.4: Cost 0 Stack the 2 specified Digimon and digivolve unsuspended."
+      },
+      {
+        "label": "Effect",
+        "text": "＜Raid＞ ＜Partition (purple Lv.4 & red Lv.4)＞ [When Digivolving] If DNA digivolving, you may play 1 level 5 or lower Digimon card with the [Free] trait from your trash without paying the cost. Then, 1 of your Digimon may gain ＜Rush＞ for the turn and attack a player."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Partition (purple Lv.4 & red Lv.4)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your effects or a battle, you may play 1 each of the specified cards without paying the costs.)"
+      }
+    ],
+    "type": "Mutant"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "32c6ab13ead18d8b286fd0f69b4956ae0ce903c139be796c32745788f657ea62",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "4a8c14a2dfe7e6999f23a730387a6402aa7fd595bb3dc5ddc09d4cd582d46af4",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT16-077",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT16-077"
+}

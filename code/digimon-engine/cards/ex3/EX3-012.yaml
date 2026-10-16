@@ -1,0 +1,41 @@
+# Official EX3-012 observation 1397723a66f0dbae72830c1e81dadb4b669e9b5cfe32edcef79dfa2093aae1d3.
+# Actual image inspected; Q4669-Q4672 and Q6508 define causing-player play restriction.
+# Requires actual-deletion receipt lowering and filtered DP play prohibition.
+card: EX3-012
+name: Volcanicdramon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+form: Mega
+attribute: Virus
+traits: [Earth Dragon]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+effects:
+  - when: on_play
+    summary: Delete all opposing lowest-DP Digimon; if none are deleted, opponent cannot play Digimon with 5000 DP or less until their turn ends
+    process:
+      - delete_all_permanents:
+          over: { of: opponent, zone: [battle_area], kind: digimon }
+          selector: lowest_dp
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - add_player_modifier:
+                target_player: opponent
+                modifier: CannotPlayDigimonWithDPAtMost
+                value: 5000
+                expiry: end_of_opponents_turn
+  - when: when_attacking
+    summary: If you have a Tamer in play, trash the top card of opponent's security
+    condition:
+      any_permanent: { of: you, zone: [battle_area], kind: tamer }
+    process:
+      - trash_top_security: { of: opponent, count: 1 }

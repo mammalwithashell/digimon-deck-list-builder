@@ -23,6 +23,7 @@ fn fighter(id: &str, dp: i32, keywords: Vec<Keyword>) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords,
         dual: None,
         effect_class_name: id.replace('-', "_"),

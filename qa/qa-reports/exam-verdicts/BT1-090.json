@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-11T03:48:27.930161400+00:00",
+  "clauses": {
+    "BT1-090#effect#0": {
+      "clause_id": "BT1-090#effect#0",
+      "card_id": "BT1-090",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "eda07f40beb2cb86c83d663603fe75798eb28bb6b39ba42a05523f5ab9a2d09f",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\tail-20261011T034743Z-b8bc9aaa6e\\BT1-090-tail-effect0-20261011T034743Z-b8bc9aaa6e.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT1-090-tail-effect0-20261011T034743Z-b8bc9aaa6e",
+      "recorded_at": "2026-10-11T03:48:27.930161400+00:00"
+    }
+  }
+}

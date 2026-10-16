@@ -116,6 +116,20 @@ fn process_contains_move_self_option(steps: &[CompiledStep]) -> bool {
 // Section 1 — Structural
 // ════════════════════════════════════════════════════════════════════════════
 
+// Exercise the paid Option-use path with a genuine color provider in breeding.
+// The breeding provider does not alter battle-field slots or target assertions.
+fn use_fixture_option(runner: &mut DebugRunner, provider: &str) {
+    runner.place_in_breeding(0, provider);
+    runner.game.enter_main_phase();
+    let action = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 0)[action as usize],
+        1.0,
+        "fixture Option must be legal before Main action dispatch"
+    );
+    runner.game.decode_action(action, 0);
+}
+
 #[test]
 fn st24_15_is_white_data_squad_option() {
     let card = compiled(CARD_ID);
@@ -207,6 +221,8 @@ fn setup_field_option(
         runner.place_on_field(0, "PT", Some(0));
     }
     let option = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.player_mut(0).battle_area[option.index as usize].option_state =
+        digimon_engine::permanent::OptionState::OrdinaryFieldOption;
     (runner, option)
 }
 
@@ -347,7 +363,7 @@ fn st24_15_main_plays_data_squad_free_and_persists_in_battle_area() {
     runner.set_first_player(0);
 
     let _mem_before = runner.memory();
-    runner.play(0, 0);
+    use_fixture_option(&mut runner, "FILLER");
     let _ = runner.auto_resolve();
 
     let dsd_on_field = runner.game.players[0]
@@ -360,4 +376,49 @@ fn st24_15_main_plays_data_squad_free_and_persists_in_battle_area() {
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID);
     assert!(dna_on_field, "DNA Charge persists in the battle area");
+}
+
+#[test]
+fn st24_15_paid_main_is_ordinary_field_option_and_survives_next_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("embedded ST24-15")
+        .add_card(ds_digimon("DSD"))
+        .add_card(filler("FILLER"))
+        .hand(0, &[CARD_ID, "DSD"])
+        .deck(0, &["FILLER"; 12])
+        .deck(1, &["FILLER"; 12])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    use_fixture_option(&mut runner, "FILLER");
+    runner.auto_resolve().expect("legal Main selections");
+    assert_eq!(
+        runner.memory(),
+        7,
+        "ordinary field placement still pays printed use cost 3"
+    );
+    let assert_ordinary = |r: &DebugRunner| {
+        let option = r.game.players[0]
+            .battle_area
+            .iter()
+            .find(|p| p.top_card().card_id(&r.game.card_data) == CARD_ID)
+            .expect("persistent printed field Option must survive");
+        assert!(matches!(
+            option.option_state,
+            digimon_engine::permanent::OptionState::OrdinaryFieldOption
+        ));
+    };
+    assert_ordinary(&runner);
+    let mut clone = runner.game.clone();
+    for _ in 0..3 {
+        runner.end_turn();
+        runner.auto_resolve().expect("turn selections");
+        assert_ordinary(&runner);
+        clone.end_turn();
+        assert!(clone.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&clone.card_data) == CARD_ID));
+    }
 }

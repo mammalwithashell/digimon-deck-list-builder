@@ -30,7 +30,7 @@ include = ["server*", "digimon_gym*"]
 exclude = ["tests*", "tools*"]
 
 [tool.setuptools]
-py-modules = ["data_paths"]
+py-modules = ["data_paths", "model_contract"]
 
 [tool.setuptools.package-dir]
 "" = "code"

@@ -1,0 +1,48 @@
+# Live oracle comparison confirmed this clause on 2026-10-10; see campaign evidence JSON.
+# Start-main free Coredramon evolution; ordinary route costs three.
+# Expected assertions are author-derived, NOT oracle-backfilled evidence.
+# Clause text_sha256: ef5336d958c7a28cd9a56f7255778a4ec589835922e4e5fa0c04a727195be9a9
+# Exact historical library deck digilab_eabd2374a811; 50 main + 5 eggs.
+# Opponent passes throughout; no opposing targets for evolution effects.
+card: BT21-046
+clause: BT21-046#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [BT21-046, EX3-018, BT23-047, BT23-047, BT23-047, BT20-027, BT20-027, BT20-027, BT20-044, BT20-044, BT13-096, BT13-096]
+    rest: examon-sanchez-20260207
+  p1:
+    stack: []
+    rest: examon-sanchez-20260207
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT21-046, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # OptionalSkill fold: DCGO yes/no gate followed by the hand-card pick.
+  - actor: 0
+    do: { select: { cards: [EX3-018] } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Our inherited empty end-turn optional gate; DCGO suppresses it without another ally.
+  - actor: 0
+    do: { select: { decline: true, sim_only: true } }
+assert:
+  - at: 6
+    that:
+      p0.memory: 3
+      p0.hand: [BT23-047, BT23-047, BT23-047, BT13-096, BT13-096]
+      p0.field: [{ card_id: EX3-018, sources: [BT21-046] }]

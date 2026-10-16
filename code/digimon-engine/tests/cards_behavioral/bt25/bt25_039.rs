@@ -226,7 +226,7 @@ fn bt25_039_has_leave_prevention_replacement_clause() {
                     && trigger == "when_would_leave_battle_area"
                     && process
                         .iter()
-                        .any(|s| matches!(s, CompiledStep::DeleteSelfAndCancelLeave))
+                        .any(|s| matches!(s, CompiledStep::DeleteSelfAndCancelAllMatchingLeaves))
             }
             _ => false,
         },

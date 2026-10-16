@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX11-015",
+    "colors": "Blue Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "6000",
+    "form": "Champion",
+    "play_cost": "5",
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Ice-Snow] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Ice-Snow] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Suzune Kazuki] from your hand without paying the cost."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+      }
+    ],
+    "type": "Ice-Snow/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "9bbdaf2e33bcbb750b0cc9e105d2dae2a477d23d5d47bc83f25bc5894df2c125",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "8db71a1cca39213132ba03e8b2d2bb5ee8f49896d40baf412f6dfe84abed3e99",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX11-015",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX11-015"
+}

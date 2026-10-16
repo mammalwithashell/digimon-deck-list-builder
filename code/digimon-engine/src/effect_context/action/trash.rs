@@ -23,7 +23,28 @@ use crate::selection::*;
 use crate::token_registry::*;
 use crate::trigger_context::*;
 
+impl Game {
+    /// Source-specific effect protection. Rules cleanup and whole-stack departure
+    /// deliberately do not consult this effect-trash gate.
+    pub fn source_card_trash_blocked(
+        &self,
+        host: PermanentHandle,
+        card: CardHandle,
+        controller: PlayerId,
+    ) -> bool {
+        self.modifiers.blocks_effect_from(host, ModifierType::ImmuneFromStackTrashing, controller)
+            || (self.player(host.player).battle_area.get(host.index as usize).is_some_and(|p| p.card_sources.iter().take(p.card_sources.len().saturating_sub(1)).any(|c| c.handle() == card))
+            && self.modifiers.get(host, ModifierType::CannotTrash).iter().any(|entry| {
+                matches!(&entry.payload, ModifierPayload::ProtectedSourceCards(cards) if cards.contains(&card))
+            }))
+    }
+}
+
 impl<'a> EffectContext<'a> {
+    pub fn source_card_trash_blocked(&self, host: PermanentHandle, card: CardHandle) -> bool {
+        self.game.source_card_trash_blocked(host, card, self.player)
+    }
+
     /// Whether `target`'s stacked cards are protected from being trashed by
     /// THIS effect (its controller `self.player`), per
     /// `ModifierType::ImmuneFromStackTrashing` and each entry's controller
@@ -484,7 +505,7 @@ impl<'a> EffectContext<'a> {
         // G-ENGINE-STACKED-CARD-RETURN-PROTECTION: stacked-card trash
         // protection (DCGO `TrashDigivolutionCards` checks
         // `ImmuneFromStackTrashing` before any removal).
-        if self.stack_trash_blocked(perm) {
+        if self.source_card_trash_blocked(perm, card) {
             return false;
         }
         let (removed, host_card) = {
@@ -593,6 +614,18 @@ impl<'a> EffectContext<'a> {
     /// Reject-before-mutate discipline: invalid handle and empty stack both
     /// return `false` before any state change.
     pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
+        if let Some(card) = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .and_then(|p| p.card_sources.last())
+        {
+            if self.source_card_trash_blocked(target, card.handle()) {
+                return false;
+            }
+        }
+
         // Track C / D consult site (2026-05-08): `ImmuneFromStackTrashing`
         // on the host permanent blocks the inherited stack-peel mutation.
         // Distinct from `CannotBeDestroyed` (which protects the live top
@@ -649,41 +682,24 @@ impl<'a> EffectContext<'a> {
             return 0;
         }
 
-        let mut removed_count = 0;
-        for _ in 0..count {
-            let removed = {
-                let Some(permanent) = self
-                    .game
-                    .player_mut(target.player)
-                    .battle_area
-                    .get_mut(target.index as usize)
-                else {
-                    break;
-                };
-                if permanent.card_sources.len() <= 1 {
-                    break;
-                }
-                permanent.card_sources.remove(0)
-            };
-
-            // Host = the (unchanged) top card; the below-top source was already
-            // removed from the stack above, so this is its final state and the
-            // helper's push-to-trash doesn't alter it. Standard cause.
-            let Some(host_card) = self
-                .game
-                .player(target.player)
-                .battle_area
-                .get(target.index as usize)
-                .map(|permanent| permanent.top_card().handle())
-            else {
-                break;
-            };
-            self.game
-                .trash_source_and_fire(removed.owner, target, removed, host_card);
-            removed_count += 1;
-        }
-        let _ = self.cleanup_exposed_battle_area_digi_egg(target);
-        removed_count
+        let cards: Vec<_> = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .map(|p| {
+                p.card_sources
+                    .iter()
+                    .take(p.card_sources.len().saturating_sub(1))
+                    .take(count as usize)
+                    .map(|c| c.handle())
+                    .collect()
+            })
+            .unwrap_or_default();
+        cards
+            .into_iter()
+            .filter(|card| self.trash_card_source(target, *card))
+            .count() as u8
     }
 
     /// Trash up to `count` cards from the top of `target`'s stack, one at a
@@ -713,45 +729,49 @@ impl<'a> EffectContext<'a> {
             return 0;
         }
 
-        let mut trashed = 0usize;
-        for _ in 0..count {
-            let Some((removed, host_card)) = ({
-                let permanent = match self
+        if include_top_card {
+            let mut removed = 0;
+            for _ in 0..count {
+                if !self
                     .game
-                    .player_mut(target.player)
+                    .player(target.player)
                     .battle_area
-                    .get_mut(target.index as usize)
+                    .get(target.index as usize)
+                    .is_some_and(|p| p.card_sources.len() > 1)
                 {
-                    Some(permanent) => permanent,
-                    None => return trashed,
-                };
-                if permanent.card_sources.len() <= 1 {
-                    None
-                } else if include_top_card {
-                    // Pop the visible top; the host is the promoted new top.
-                    let removed = permanent
-                        .card_sources
-                        .pop()
-                        .expect("len > 1 checked above");
-                    let host_card = permanent.top_card().handle();
-                    Some((removed, host_card))
-                } else {
-                    let source_index = permanent.card_sources.len() - 2;
-                    let host_card = permanent.top_card().handle();
-                    Some((permanent.card_sources.remove(source_index), host_card))
+                    break;
                 }
-            }) else {
-                return trashed;
-            };
-
-            self.game
-                .trash_source_and_fire(removed.owner, target, removed, host_card);
-            trashed += 1;
-            if include_top_card && self.cleanup_exposed_battle_area_digi_egg(target) {
-                return trashed;
+                if !self.trash_top_source(target) {
+                    break;
+                }
+                removed += 1;
             }
+            return removed;
         }
-        trashed
+        let cards: Vec<_> = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .map(|p| {
+                let len = p.card_sources.len();
+                let end = if include_top_card {
+                    len
+                } else {
+                    len.saturating_sub(1)
+                };
+                p.card_sources[..end]
+                    .iter()
+                    .rev()
+                    .take((count as usize).min(len.saturating_sub(1)))
+                    .map(|c| c.handle())
+                    .collect()
+            })
+            .unwrap_or_default();
+        cards
+            .into_iter()
+            .filter(|card| self.trash_card_source(target, *card))
+            .count()
     }
 
     /// Trash the bottom-most face-down digivolution source from `target`,
@@ -768,18 +788,26 @@ impl<'a> EffectContext<'a> {
     /// the standard `OnDigivolutionCardTrashed` ownership semantics (mirrors
     /// `trash_card_source` / `trash_top_source`).
     ///
-    /// Unlike `trash_top_source`, this helper does NOT honor
-    /// `ImmuneFromStackTrashing`: that modifier guards against involuntary
-    /// stack-peeling by opponent effects, whereas this is a voluntary
-    /// activation cost the controller chooses to pay (the controller earlier
-    /// stashed the face-down card under their own Tamer). The omission is by
-    /// design — do not add the check.
+    /// Effect costs obey source-card trash protection too (BT9-109 Q1920).
+    /// Controller-scoped stack protection still distinguishes opponent effects.
     ///
     /// Used by: ST23-01 Kekkomon, ST23-03 Cougarmon, ST23-04 Murasamemon,
     /// ST23-08 Monarchlizamon, ST23-11 Wolvermon, ST23-12 Chiropmon,
     /// ST24-01 Koromon, ST24-06 RizeGreymon, ST24-10 Lilamon, ST24-11 Rosemon,
     /// ST24-12 Falcomon.
     pub fn trash_bottom_face_down_source(&mut self, target: PermanentHandle) -> bool {
+        if let Some(card) = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .and_then(|p| p.card_sources.first())
+        {
+            if self.source_card_trash_blocked(target, card.handle()) {
+                return false;
+            }
+        }
+
         // Inspect `card_sources[0]`: it must exist AND be face-down. Reject
         // before any mutation otherwise (missing target, empty stack, or a
         // face-up bottom source — e.g. an un-stashed Tamer whose only source
@@ -948,59 +976,28 @@ impl<'a> EffectContext<'a> {
         if n == 0 {
             return 0;
         }
-        let mut total = 0usize;
-        for _ in 0..n {
-            // For each pass, snapshot per-permanent (handle, source_to_peel)
-            // BEFORE any mutation. Source-to-peel is the topmost
-            // digivolution card — `card_sources[len - 2]` — by stable
-            // CardHandle, so the source-trash dispatch can find it even if
-            // the carrier's index shifted between passes.
-            let mut targets: Vec<(PermanentHandle, CardHandle)> = Vec::new();
-            for (i, perm) in self
-                .game
-                .player(target_player)
-                .battle_area
-                .iter()
-                .enumerate()
-            {
-                let len = perm.card_sources.len();
-                if len < 2 {
-                    continue;
-                }
-                let source_card = perm.card_sources[len - 2].handle();
-                targets.push((
-                    PermanentHandle {
-                        player: target_player,
-                        index: i as u8,
-                    },
-                    source_card,
-                ));
-            }
-            if targets.is_empty() {
-                break;
-            }
-            for (handle, source_card) in targets {
-                // Re-validate the carrier slot AND the source's continued
-                // membership in this stack (an earlier permanent's
-                // observer trigger could have moved this source). Skip
-                // gracefully if state no longer matches.
-                let still_present = self
-                    .game
-                    .player(target_player)
-                    .battle_area
-                    .get(handle.index as usize)
-                    .map(|p| p.card_sources.iter().any(|c| c.handle() == source_card))
-                    .unwrap_or(false);
-                if !still_present {
-                    continue;
-                }
-                // Bool discarded: caller counts attempts that passed the
-                // pre-validation gate, not actuals. Aligns with the existing
-                // contract — `total` reflects "trash attempts dispatched".
-                let _ = self.trash_card_source(handle, source_card);
-                total += 1;
-            }
-        }
-        total
+        let targets: Vec<_> = self
+            .game
+            .player(target_player)
+            .battle_area
+            .iter()
+            .enumerate()
+            .flat_map(|(index, p)| {
+                let h = PermanentHandle {
+                    player: target_player,
+                    index: index as u8,
+                };
+                p.card_sources
+                    .iter()
+                    .take(p.card_sources.len().saturating_sub(1))
+                    .rev()
+                    .take(n as usize)
+                    .map(move |c| (h, c.handle()))
+            })
+            .collect();
+        targets
+            .into_iter()
+            .filter(|(host, card)| self.trash_card_source(*host, *card))
+            .count()
     }
 }

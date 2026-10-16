@@ -1,7 +1,7 @@
-# EX8-070 Zofr Kabus — Option, Purple, Cost 2.
+# EX8-070 Zofr Kabus — Option, Black, Cost 2.
 # Traits: [LIBERATOR]
 #
-# Printed card text (data/cards.json):
+# Printed card text: official EX8-070 observation b8c43572d08b3f0eb8b8af3a617985f840d38c4e409444f37e96add046deab08; actual image verified.
 #
 # [Main] By trashing any 1 digivolution card of 1 of your Digimon with the
 # [Mineral] or [Rock] trait, until the end of your opponent's turn, that
@@ -25,38 +25,18 @@
 #   1_0. OPTIONAL accept/decline gate (§15-7-1/§15-7-4) — see the clause comment
 #   1a. select_own_permanent (Mineral/Rock trait + stack_size_gte:2) → target Digimon
 #   1b. select_own_sources (from: target Digimon, any source, 1 card) → chosen_source
-#   1c. trash_selected_sources: chosen_source
+#   1c. trash_selected_sources_as_cost: chosen_source
 #   1d. grant_keyword Collision / Piercing / Reboot (expiry: end_of_opponents_turn)
 #   1e. add_modifier CannotBeReturnedToHand + CannotBeReturnedToDeck (expiry: end_of_opponents_turn)
 #   1f. add_dp_modifier +3000 (expiry: end_of_opponents_turn)
 #
-# Clause 2 — [Security] Delete 1 opponent Digimon with lowest play cost:
-#   raw_rust: ex8_070_delete_lowest_cost_digimon
-#   GAP G-PLAY-COST-AGGREGATE: DSL has no aggregate play_cost min formula for
-#   select_opponent_permanent filter. The raw_rust step auto-selects the
-#   lowest-index Digimon at the minimum play cost. When G-PLAY-COST-AGGREGATE
-#   closes, replace with native DSL verb.
-#
-# ─── Implementation status ───────────────────────────────────────────────────
-#
-# | Card-text element                              | Status        |
-# |------------------------------------------------|---------------|
-# | [Main] "By trashing" is DECLINABLE (§15-7-4)   | IMPLEMENTED   |
-# | [Main] target selection (Mineral/Rock + src)   | IMPLEMENTED   |
-# | [Main] trash 1 digivolution source             | IMPLEMENTED   |
-# | [Main] grant Collision until EoOT              | IMPLEMENTED   |
-# | [Main] grant Piercing until EoOT               | IMPLEMENTED   |
-# | [Main] grant Reboot until EoOT                 | IMPLEMENTED   |
-# | [Main] CannotBeReturnedToHand until EoOT       | IMPLEMENTED   |
-# | [Main] CannotBeReturnedToDeck until EoOT       | IMPLEMENTED   |
-# | [Main] +3000 DP until EoOT                     | IMPLEMENTED   |
-# | [Security] delete 1 lowest-play-cost Digimon   | PARTIAL — G-PLAY-COST-AGGREGATE
-# |  (tie-breaking selection auto-picks lowest idx) |               |
+# Clause 2 — [Security]: native lowest_play_cost selector exposes all tied
+# minimum-cost opponent Digimon, then deletes the selected one.
 
 card: EX8-070
 name: Zofr Kabus
 kind: option
-color: [purple]
+color: [black]
 cost: 2
 traits: [LIBERATOR]
 
@@ -133,7 +113,7 @@ effects:
           prompt: "Choose 1 digivolution card to trash from that Digimon"
 
       # Step 1c: Trash the selected source card.
-      - trash_selected_sources: { source_refs: chosen_source }
+      - trash_selected_sources_as_cost: { source_refs: chosen_source }
 
       # Step 1d: Grant Collision, Piercing, and Reboot until end of opponent's turn.
       - grant_keyword:

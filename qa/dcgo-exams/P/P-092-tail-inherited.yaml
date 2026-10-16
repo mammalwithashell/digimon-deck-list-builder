@@ -1,0 +1,88 @@
+# Draft; legal play and oracle validation pending.
+card: P-092
+clause: P-092#inherited#0
+covers:
+- P-092#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+    - P-092
+    - BT1-020
+    - ST8-07
+    - ST2-05
+    - ST1-02
+    - ST1-05
+    - ST1-05
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - ST2-03
+    - ST2-04
+    - ST2-06
+    - ST2-07
+    rest: p-092-tail-inherited-p0
+  p1:
+    stack:
+    - ST1-03
+    - ST1-04
+    - ST2-03
+    - BT1-090
+    - BT3-093
+    - ST1-05
+    - ST1-05
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - ST2-04
+    - ST2-06
+    - ST2-07
+    rest: p-092-tail-inherited-p1
+steps:
+- actor: 0
+  do:
+    pass: &id001 {}
+- actor: 0
+  do:
+    play:
+      card: P-092
+      from: hand
+- actor: 1
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: ST2-05
+- actor: 0
+  do:
+    play:
+      card: BT1-020
+      from: hand
+# DCGO exposes an outer optional gate; engine optional hand pick preserves the same decline.
+- actor: 0
+  do:
+    select:
+      yes: true
+      dcgo_only: true
+- actor: 0
+  do:
+    select:
+      cards:
+      - ST8-07
+- actor: 1
+  do:
+    pass: *id001
+assert:
+- at: 9
+  that:
+    p0.field:
+    - ST8-07
+    - BT1-020

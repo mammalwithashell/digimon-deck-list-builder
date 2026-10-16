@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT17-077",
+    "colors": "White Blue Green",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "dp": "16000",
+    "form": "Mega",
+    "play_cost": "9",
+    "qa": [
+      "If a Digi-Egg card is affected by an effect that places it at the bottom of the deck, it will be placed at the bottom of the Digi-Egg deck."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.6 w/[Imperialdramon] in name: Cost 5",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.6 w/[Imperialdramon] in name: Cost 5"
+      },
+      {
+        "label": "Effect",
+        "text": "[Hand] [Counter] ＜Blast Digivolve＞ (One of your Digimon may digivolve into this card without paying the cost.) [On Play][When Digivolving] Trash all digivolution cards of all of your opponent's Digimon. Then, return all cards in your or your opponent's trash to the bottom of the deck. If this effect returned level 7 white cards, gain 3 memory. [When Attacking] By returning 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck, unsuspend this Digimon. (Rule) Trait: Has [Free] attribute."
+      },
+      {
+        "label": "Special Rule",
+        "text": "＜Overflow (-5)＞ (As this card moves from the battle area or under a card to another area, lose 5 memory.)"
+      }
+    ],
+    "type": "Ancient Holy Warrior"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "67a9d726dd5fe0ae9f68d294b18402eeb0472d96ec67b0da71055721a0b062af",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "d1d0dc4a95554137b5ee6bed6e83d043685a35d1c4700725a029499ba3c44d2d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT17-077",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT17-077"
+}

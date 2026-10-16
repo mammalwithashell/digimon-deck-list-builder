@@ -1,0 +1,56 @@
+# BT21-046 Dracomon (X Antibody).
+# Official observation e69c56cb12ae5a6de60feff285748eabf95fc792eda89b719dbd513479a50e86
+# and local card image verified. Behavior: base DCGO BT21/Green/BT21_046.cs.
+# Rules: general_rule.pdf pp.16-17, 8-1-3 and 8-2-3 (requirements, cost, bonus draw).
+card: BT21-046
+name: Dracomon (X Antibody)
+kind: digimon
+level: 3
+color: [green, blue]
+cost: 4
+dp: 3000
+traits: [Dragon, X Antibody]
+form: Rookie
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: {level_eq: 2, color_is: green}
+    cost: 1
+  - kind: digivolve
+    from: {level_eq: 2, color_is: blue}
+    cost: 1
+  - kind: digivolve
+    from: {name_is: Dracomon}
+    cost: 0
+effects:
+  - when: [start_of_your_main_phase, when_digivolving]
+    summary: "This Digimon may digivolve into [Coredramon] in hand without paying the cost."
+    process:
+      - select_hand:
+          of: you
+          bind_as: evolution
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: Coredramon
+              - can_digivolve_onto: source
+          prompt: "Digivolve this Digimon into Coredramon without paying the cost?"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evolution
+          cost: free
+          ignore_requirements: false
+  - when: end_of_your_turn
+    scope: inherited
+    active_when: {your_turn: true}
+    optional: true
+    summary: "This Digimon and another of your Digimon may DNA digivolve into a Digimon card in hand."
+    process:
+      - may_dna_digivolve_now:
+          partner_filter: {of: you, kind: digimon}
+          target_filter: {of: you, kind: digimon}
+          # With requirements enforced, the primitive pays the chosen printed DNA cost.
+          ignore_requirements: false
+          optional: true
+          prompt: "Choose another of your Digimon for DNA digivolution."

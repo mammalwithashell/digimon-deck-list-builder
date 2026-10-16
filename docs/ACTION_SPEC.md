@@ -12,7 +12,7 @@ The engine exposes `2192` discrete action IDs. Legal actions are provided by `ge
 | `61` | 1 | Move from breeding |
 | `62` | 1 | Pass / decline |
 | `63-92` | 30 | Initiate DNA Digivolve | `63 + hand_idx` |
-| `93` | 1 | Concede game (always legal at agent decision points) |
+| `93` | 1 | Explicit concede command; suppressed from agent masks |
 | `94` | 1 | Play first (BO3 `SelectPlayOrder` only) |
 | `95` | 1 | Play second (BO3 `SelectPlayOrder` only) |
 | `96-99` | 4 | Unused |
@@ -91,9 +91,9 @@ Action IDs are intentionally reused across phases.
 
 Entered between games of a best-of-three match by `Game::request_play_order_selection(loser_id)`. Only the loser of the previous game is the chooser; the mask reports `94`/`95` legal only for that player. The chosen `PlayOrder` is written to `Game::last_play_order_choice` for the Python `MatchEnv` wrapper to consume.
 
-### Concede (always legal)
+### Concede (explicit command)
 
-- `93`: concede the game (`Game::concede(player)`). Mask reports `93 = 1` whenever the player has any other legal action — i.e., at every agent decision point (mulligan, main, breeding, block / counter / alliance timing, end-of-turn-action, every selection variant including `SelectPlayOrder`). The engine decoder accepts `93` regardless of `pending_selection` state — concede during a pending selection clears the selection, drains the effect queue, emits a `GameEvent::Concede` event before the terminal `GameEvent::GameOver`, and reports `win_reason = "concede"`.
+- `93`: explicit concede command. The current engine intentionally suppresses this action from agent masks. Count navigation preserves that policy; it does not introduce a new concede choice.
 
 ### Selection Phases
 
@@ -173,3 +173,37 @@ Used in `SelectSource` / `SelectMaterial` when effects need a specific card from
 - `1.0` means legal, `0.0` illegal
 - Frontend and RL agents must select only masked-legal actions
 - Backend decoder is phase-aware and resolves semantics from current `GamePhase`
+
+
+## Dedicated paged count choices
+
+An installed count prompt uses `SelectEffectChoice` / `EffectChoice` and owns a
+typed page in its continuation. These are phase-aware aliases of existing IDs:
+
+| Action | Meaning inside a count prompt |
+|---|---|
+| 30–57 | Commit the corresponding one of up to 28 presented counts |
+| 58 | Previous page, only when a previous page exists |
+| 59 | Next page, only when a next page exists |
+| 62 | Decline only when the prompt is optional |
+
+The engine retains the complete count list, including choices beyond 30 or 300.
+Counts must be strictly increasing, payable cannot exceed declared, and declared
+cannot exceed i64::MAX (the existing DSL Literal binding domain). Every offered
+commit action binds the exact declared value, never its page index or ordinal.
+Navigation changes only the owned prompt page and its observation/digest. It
+does not pay a cost, consume OPT, move cards, resolve another effect, or advance
+the turn. Foreign-seat and masked actions remain rejected. Clone continuations
+own independent page state.
+
+Each menu entry includes typed `count_choice` metadata in desktop/debug DTOs,
+and `countChoice` in the web state envelope. Its operation is `commit_count`,
+`previous_page`, or `next_page`; exact count/page/identity values are decimal
+strings. UI buttons dispatch the supplied action ID and obey the action mask.
+The metadata explains choices and never grants legality. See TENSOR_SPEC for
+the coordinated observation schema/hash update and model compatibility gate.
+
+
+### Model action semantic compatibility
+
+Model training contracts require `action_schema_version` in addition to the six observation/action shape fields. Its sole authority is Rust `action::space::SCHEMA_VERSION`, exported by PyO3 as `ACTION_SCHEMA_VERSION`. Equal shapes do not imply compatible actions. Missing, malformed, or mismatched action semantics reject inference, checkpoint resume/export, publication, download and loading. Upload parsers preserve declared artifact values; they never stamp current semantics onto old weights. Legacy database rows remain null and incompatible. New training and newly initialized random exports may capture the current contract; re-export requires the authentic compatible training tuple. This preparatory gate does not bump SCHEMA_VERSION (still 1), resize actions/tensors, or complete the capacity migration.

@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "LM-020",
+    "colors": "Yellow Green",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "Mega",
+    "play_cost": "13",
+    "qa": [
+      "You choose and declare 1 card category. Then, you reveal the top card of your opponent's deck. If that card is of the declared category, this Digimon isn't affected by the effects of that card category for the turn. The revealed card is returned to the top or the bottom of your opponent's deck."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] By placing 1 Digimon as the top security card, reveal all of your opponent's security cards, and place 1 card among them on top of the deck. Shuffle the rest and return them to the security stack. [Start of Opponent's Turn] Declare 1 card category. Then, reveal the top card of your opponent's deck. If it's of that category, this Digimon isn't affected by that category's effects, other than this Digimon's effects, for the turn. Return the revealed cards to the top or bottom of your opponent's deck."
+      }
+    ],
+    "type": "Fairy"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "02691f9099e67a197d3ef870526a5c0123635759ac00200fc7af80645c746650",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "3c93bdf774f09d3b5ac57403057c76b2364621e5e7af046485df6d05437f5aa1",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:LM-020",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/LM-020"
+}

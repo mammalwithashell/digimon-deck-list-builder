@@ -2,6 +2,9 @@
 
 Resolution order per card (README, and CLAUDE.md "Printed card data"):
 
+    0. Reviewed `card_corrections.json` printed-text replacements override
+       only their named fields, retaining other official sections.
+
     1. `data/card_bundles/<ID>.md` (official Bandai DB) -- parsed from its
        machine-readable twin `data/card_official.json`'s `text_sections`
        (same underlying scrape, both written by `build_card_bundles.py`;
@@ -32,13 +35,13 @@ filter is an exact-match blocklist, never a heuristic -- see
 
 Deliberately NOT consulted for the "inherited" zone: `cards.json`'s
 `inherited_effect_description_eng` field for Tamer/Option/Dual-kind cards.
-The Digimon TCG rules concept "Inherited Effect" only exists for
-Digimon/Digi-Egg cards (cards that can become digivolution material); for
-other kinds the API positionally reuses this field for something else
+The compatibility API normally uses inherited text for Digimon/Digi-Egg
+cards; for other kinds it positionally reuses this field for something else
 entirely (observed: security-face text for EX12-073/EX12-066/EX12-069) --
 an unverified ingestion quirk, not documented API behavior. Trusting it
 would be exactly the silent-wrong-denominator failure this tool exists to
-prevent, so it is read for Digimon/Digi-Egg kinds only. See the README.
+prevent, so the fallback is read for Digimon/Digi-Egg kinds only unless explicitly
+reviewed. Official inherited Option sections (such as BT9-109) are preserved.
 """
 
 from __future__ import annotations
@@ -281,17 +284,65 @@ def load_overrides_index(path: Path) -> dict:
     return _load_json(path)
 
 
-def load_official_index(path: Path) -> dict:
-    """Load `data/card_official.json` -> {card_id: card_official_entry}.
+_REVIEWED_TEXT_LABELS = {
+    "effect_description_eng": "Effect",
+    "inherited_effect_description_eng": "Inherited Effect",
+    "security_effect_description_eng": "Security Effect",
+}
 
-    Missing file is tolerated (empty index -- every card falls through to
-    the cards.json path), since the official mirror is a nice-to-have, not
-    a hard dependency.
+
+def _reviewed_corrections_path(official_path: Path) -> Path | None:
+    """Prefer the selected dataset's ledger; linked old worktrees may use base evidence.
+
+    Never attach the user's real ledger to an arbitrary caller fixture/dataset.
+    The base fallback applies only to this checkout's standard data directory.
     """
-    if not Path(path).exists():
-        return {}
-    data = _load_json(path)
-    return data.get("cards", {})
+    sibling = official_path.parent / "card_corrections.json"
+    if sibling.exists():
+        return sibling
+    project_root = Path(__file__).resolve().parents[3]
+    if official_path.resolve() == (project_root / "data/card_official.json").resolve():
+        base = _base_repo_root()
+        if base is not None:
+            candidate = base / "data/card_corrections.json"
+            if candidate.exists():
+                return candidate
+    return None
+
+
+def load_official_index(path: Path) -> dict:
+    """Load official sections, then reviewed printed-text corrections in memory.
+
+    Both clause coverage and interaction extraction share this loader. Raw
+    observations and generated compatibility files remain untouched. Corrections
+    replace only the named section, preserving unusual inherited Option text.
+    """
+    path = Path(path)
+    data = _load_json(path).get("cards", {}) if path.exists() else {}
+    corrections_path = _reviewed_corrections_path(path)
+    if corrections_path is None:
+        return data
+    ledger = _load_json(corrections_path)
+    if ledger.get("schema_version") != 1:
+        raise ValueError(f"unsupported reviewed correction schema: {corrections_path}")
+    seen = set()
+    for correction in ledger.get("corrections", []):
+        field = correction.get("field_path")
+        if field not in _REVIEWED_TEXT_LABELS:
+            continue
+        cid = correction.get("card_id")
+        target = (cid, field)
+        if target in seen:
+            raise ValueError(f"duplicate reviewed text correction: {target}")
+        seen.add(target)
+        if not isinstance(correction.get("value"), str) or not all(
+            correction.get(key) for key in
+            ("card_id", "correction_id", "reason", "reviewer", "reviewed_at", "evidence_observation_ids")
+        ):
+            raise ValueError(f"invalid reviewed text correction: {target}")
+        entry = data.setdefault(cid, {})
+        entry.setdefault("_reviewed_text", {})[field] = correction["value"]
+    return data
 
 
 def load_image_cache(path: Path | None) -> dict:
@@ -381,23 +432,48 @@ def extract_card_clauses(
 
     official = official_index.get(card_id)
 
-    if official is not None:
-        for section in official.get("text_sections", []) or []:
+    # An empty scrape record is not evidence of a blank printed card. Some
+    # catalog entries contain only the ID and empty lists (e.g. LM-057/058).
+    # Use secondary sources and retain unresolved security in that case.
+    sections = (official or {}).get("text_sections", []) or []
+    reviewed = (official or {}).get("_reviewed_text", {})
+    if (official or {}).get("colors") or any(
+        str(section.get("text") or "").strip() for section in sections
+    ):
+        sections = [dict(section) for section in sections]
+        for field, text in reviewed.items():
+            label = _REVIEWED_TEXT_LABELS[field]
+            zone = _LABEL_TO_ZONE[label.casefold()]
+            # Canonical and legacy labels name the same printed section.
+            # Do not use the normal unknown-label -> effect fallback here:
+            # a main-text correction must preserve DUAL/Link/Rule sections.
+            matches = [i for i, section in enumerate(sections)
+                       if _LABEL_TO_ZONE.get(str(section.get("label", "")).strip().casefold()) == zone]
+            replacement = {"label": label, "text": text, "_reviewed": True}
+            if matches:
+                sections[matches[0]] = replacement
+                sections = [section for i, section in enumerate(sections) if i not in matches[1:]]
+            else:
+                sections.append(replacement)
+        for section in sections:
             label = str(section.get("label", "")).strip()
             text = section.get("text") or ""
             if not text.strip():
                 continue
             zone = _LABEL_TO_ZONE.get(label.lower(), "effect")
-            add(zone, label or "bundle", text, source="bundle")
+            add(zone, label or "bundle", text, source="card_corrections" if section.get("_reviewed") else "bundle")
         # Bundle exists and has no "Security Effect" section: the official DB
         # is authoritative, so a missing section is a CONFIRMED absence, not
         # lossy silence -- deliberately NOT an image-required slot.
         return clauses
 
     record, touched = _merged_card_record(card_id, cards_index, overrides_index)
+    record = {**record, **reviewed}
     kind = record.get("card_kind", CARD_KIND_DIGIMON)
 
     def source_for(field_name: str) -> str:
+        if field_name in reviewed:
+            return "card_corrections"
         return "card_overrides" if field_name in touched else "cards_json"
 
     effect_text = record.get("effect_description_eng") or ""
@@ -420,7 +496,7 @@ def extract_card_clauses(
     if link_text.strip():
         add("effect", "link_effect_description_eng", link_text, source_for("link_effect_description_eng"))
 
-    if kind in _KINDS_WITH_INHERITED_ZONE:
+    if kind in _KINDS_WITH_INHERITED_ZONE or "inherited_effect_description_eng" in reviewed:
         inherited_text = record.get("inherited_effect_description_eng") or ""
         if inherited_text.strip():
             add(
@@ -432,7 +508,7 @@ def extract_card_clauses(
     # else: Tamer/Option/Dual -- deliberately not read; see module docstring.
 
     security_text = record.get("security_effect_description_eng") or ""
-    security_resolved = False
+    security_resolved = "security_effect_description_eng" in reviewed
     if security_text.strip():
         add(
             "security",

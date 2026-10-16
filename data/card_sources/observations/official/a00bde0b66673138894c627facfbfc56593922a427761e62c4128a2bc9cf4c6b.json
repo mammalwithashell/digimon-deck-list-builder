@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT25-050",
+    "colors": "Green",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "qa": [
+      "Yes, you can suspend either player's Digimon."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[TS] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[TS] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] You may suspend 1 Digimon. Then, if there are 2 or more suspended Digimon, 1 of your opponent's Digimon can't unsuspend until their turn ends. (Rule) Trait: Has [Vegetation] Type."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] All of your Digimon get +1000 DP."
+      }
+    ],
+    "type": "Ancient Bird/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "a00bde0b66673138894c627facfbfc56593922a427761e62c4128a2bc9cf4c6b",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "5ff73b0bd66f6508d095d5ddedf45ec03b3b8d59f2af159c4dcd24eee6f0879c",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-050",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-050"
+}

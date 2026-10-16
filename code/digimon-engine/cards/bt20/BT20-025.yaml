@@ -1,0 +1,47 @@
+# Official observation 22da842eebcac8dc27cb5ed7cd43ff4d9b45c3022b9b92e554bf7af718ff137f
+# and actual BT20-025 image: both blue/red Lv.4 routes, cost 4.
+# Q4314: identity applies only on the field, not to a hand DNA material.
+card: BT20-025
+name: Wingdramon
+kind: digimon
+level: 5
+color: [blue, red]
+cost: 7
+dp: 7000
+traits: [Sky Dragon]
+form: Ultimate
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: Coredramon }
+    cost: 3
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "Delete 1 of your opponent's Digimon with 6000 DP or less."
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon, dp_lte: 6000 }
+          prompt: "Delete 1 opponent Digimon with 6000 DP or less"
+      - if:
+          condition: { binding_present: target }
+          then:
+            - delete_permanent: { target: target }
+  - kind: aura
+    target: {}
+    dna_material_identity:
+      for_result: Examon
+      level: 6
+      name: Slayerdramon
+    summary: "[All Turns] This Digimon is also treated as Lv.6 [Slayerdramon] for [Examon]'s DNA digivolution."
+  - kind: grant_keyword
+    scope: inherited
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "Inherited: Security Attack +1"

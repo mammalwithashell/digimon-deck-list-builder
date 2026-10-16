@@ -1,6 +1,7 @@
 """Admin model management router: admin CRUD + public manifest endpoint."""
 
 from __future__ import annotations
+from model_contract import FIELDS, contract_from_row, validate_contract, validate_session
 
 import asyncio
 import os
@@ -49,8 +50,13 @@ def _to_admin_response(
         id=row.id,
         name=row.name,
         model_type=row.model_type,
+        observation_profile=row.observation_profile,
+        tensor_version=row.tensor_version,
+        feature_schema_version=row.feature_schema_version,
+        tensor_layout_hash=row.tensor_layout_hash,
         tensor_size=row.tensor_size,
         action_space_size=row.action_space_size,
+        action_schema_version=row.action_schema_version,
         engine_commit=row.engine_commit,
         trained_at=row.trained_at,
         file_sha256=row.file_sha256,
@@ -83,12 +89,17 @@ async def create_model(
     db: AsyncSession = Depends(get_db),
 ) -> AIModelCreateResponse:
     """Create an AIModel row in pending state and return a presigned PUT URL."""
+    try:
+        contract = validate_contract({key: getattr(request, key) for key in FIELDS})
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     import uuid as _uuid_mod
     model_id = str(_uuid_mod.uuid4())
     spaces_key = f"models/{model_id}/policy.onnx"
 
     row = AIModel(
         id=model_id,
+        **contract,
         name=request.name,
         model_type=request.model_type,
         engine_commit=request.engine_commit,
@@ -131,6 +142,11 @@ async def confirm_model(
     if row is None:
         raise HTTPException(status_code=404, detail="Model not found")
 
+    try:
+        declared_contract = validate_contract(contract_from_row(row))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     # Verify object exists in Spaces
     try:
         await asyncio.to_thread(spaces.head_object, row.spaces_key)
@@ -170,6 +186,11 @@ async def confirm_model(
         except Exception as exc:
             raise await _fail(f"Failed to load ONNX model: {exc}")
 
+        try:
+            artifact_contract = validate_session(sess, declared_contract)
+        except ValueError as exc:
+            raise await _fail(str(exc))
+
         obs_input = next((i for i in sess.get_inputs() if i.name == "obs"), None)
         logits_output = next(
             (o for o in sess.get_outputs() if o.name == "logits"), None
@@ -193,6 +214,8 @@ async def confirm_model(
             pass
 
     # Success — update model fields
+    for key, value in artifact_contract.items():
+        setattr(row, key, value)
     row.state = "uploaded"
     row.file_sha256 = sha256_hex
     row.file_size_bytes = total_bytes
@@ -206,8 +229,13 @@ async def confirm_model(
         state=row.state,
         file_sha256=row.file_sha256,
         file_size_bytes=row.file_size_bytes,
+        observation_profile=row.observation_profile,
+        tensor_version=row.tensor_version,
+        feature_schema_version=row.feature_schema_version,
+        tensor_layout_hash=row.tensor_layout_hash,
         tensor_size=row.tensor_size,
         action_space_size=row.action_space_size,
+        action_schema_version=row.action_schema_version,
     )
 
 
@@ -229,6 +257,12 @@ async def update_model(
             status_code=409,
             detail="Cannot publish a model that is not in 'uploaded' state",
         )
+
+    if request.published is True:
+        try:
+            validate_contract(contract_from_row(row))
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     if request.name is not None:
         row.name = request.name
@@ -368,13 +402,27 @@ async def get_manifest(
         )
         deck_name_map = {did: dname for did, dname in decks_result.all()}
 
+    compatible_rows = []
+    for row in rows:
+        try:
+            validate_contract(contract_from_row(row))
+        except ValueError:
+            continue
+        compatible_rows.append(row)
+    rows = compatible_rows
+
     manifest_models = [
         ManifestModel(
             id=row.id,
             name=row.name,
             model_type=row.model_type,
+            observation_profile=row.observation_profile,
+            tensor_version=row.tensor_version,
+            feature_schema_version=row.feature_schema_version,
+            tensor_layout_hash=row.tensor_layout_hash,
             tensor_size=row.tensor_size,
             action_space_size=row.action_space_size,
+        action_schema_version=row.action_schema_version,
             engine_commit=row.engine_commit,
             trained_at=row.trained_at,
             file_sha256=row.file_sha256,
@@ -414,6 +462,8 @@ async def prepare_model(
         path, downloaded = await resolve_manifest_model_path(db, model_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
 
     filename = Path(path).name  # "<sha256>.onnx"
     # Ensure get_models_dir sees this file.

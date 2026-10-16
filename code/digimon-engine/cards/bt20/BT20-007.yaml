@@ -1,0 +1,53 @@
+# Verified against official observation 6c3e4064162f72e5c6e0d971bc1ae5d7b72debfae1ba6a44330cd6d3dd2cef47,
+# printed card image, and DCGO BT20/Red/BT20_007.cs. Optional cost: rules 15-7.
+card: BT20-007
+name: Dracomon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Dragon]
+form: Rookie
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from: { name_is: Bebydomon }
+    cost: 0
+effects:
+  - when: start_of_your_main_phase
+    active_when: { your_turn: true }
+    optional: true
+    summary: "By trashing 1 Dracomon/Examon-text card from hand, Draw 1 and gain 1 memory"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - in_text_contains: Dracomon
+            - in_text_contains: Examon
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - in_text_contains: Dracomon
+              - in_text_contains: Examon
+          prompt: "Trash 1 card with Dracomon or Examon in its text to draw 1 and gain 1 memory"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - draw: { of: you, count: 1 }
+      - gain_memory: 1
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"

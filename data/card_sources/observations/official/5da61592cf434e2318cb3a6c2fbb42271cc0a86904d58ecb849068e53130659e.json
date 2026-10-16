@@ -1,0 +1,37 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT24-068",
+    "colors": "Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Evil] or [Fallen Angel] trait and 1 card with the [Seven Great Demon Lords] trait among them to the hand. Return the rest to the bottom of the deck. Then, trash 1 card in your hand."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] Trash the top card of both players' decks."
+      }
+    ],
+    "type": "Evil"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "5da61592cf434e2318cb3a6c2fbb42271cc0a86904d58ecb849068e53130659e",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "0509884966ce36baf4cb4c625af5c37921a8f233c2aa3a572c1f0fa7faf170c4",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-068",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-068"
+}

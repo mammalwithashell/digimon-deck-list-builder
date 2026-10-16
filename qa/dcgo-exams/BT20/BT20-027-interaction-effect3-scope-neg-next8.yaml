@@ -1,0 +1,162 @@
+# Source-derived draft; no sim/live result or verdict claimed.
+# Phoenixmon attacks and removes security while Slayerdramon is present. Only the off-scope Phoenixmon is suspended; it cannot be unsuspended by the text-restricted effect.
+card: BT20-027
+clause: BT20-027#effect#3
+interaction:
+  id: probe:BT20-027#effect#3:scope:neg
+  source: probe
+  kind: negative
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST1-08
+    - BT20-027
+    - ST1-10
+    - ST2-02
+    - ST2-03
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-02
+    - ST2-08
+    - ST1-07
+    - ST1-08
+    - ST2-09
+    - ST2-10
+    - ST2-11
+    rest: BT20-027-interaction-effect3-scope-neg-next8-p0
+  p1:
+    stack:
+    - ST2-02
+    - ST2-03
+    - ST2-04
+    - ST2-05
+    - ST2-06
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-02
+    - ST2-08
+    - ST1-07
+    - ST1-08
+    - ST2-09
+    - ST2-10
+    - ST2-11
+    rest: BT20-027-interaction-effect3-scope-neg-next8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST1-08
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: BT20-027
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST1-10
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    attack:
+      attacker: field.1
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      'yes': true
+      dcgo_only: true
+  expect:
+    prompt: OptionalSkill
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.0
+  expect:
+    prompt: SelectPermanentEffect
+    count: 1
+    candidates:
+    - BT20-027
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+assert:
+- at: 16
+  that:
+    memory: 3
+    p0.field:
+    - card_id: BT20-027
+      suspended: false
+      sources:
+      - ST1-08
+    - card_id: ST1-10
+      suspended: true
+      sources: []
+    p1.security: 4

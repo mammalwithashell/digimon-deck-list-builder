@@ -1,0 +1,28 @@
+{
+  "extracted": {
+    "attribute": "System",
+    "card_id": "EX10-001",
+    "colors": "Green",
+    "digivolve_costs": [],
+    "form": "Appmon",
+    "qa": [
+      "No, it doesn't trigger."
+    ],
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] [Once Per Turn] When effects trash any of this Digimon's link cards, gain 1 memory."
+      }
+    ],
+    "type": "Flick"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "1982fc0e647774a7f8b06a4bfe543635908bdbd7ee0a8d5fb28e02469b6b765f",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "a83e6642c5d34c3e539c90361bb6fd3737dcaeae263e647e8bc45d0798466dce",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX10-001",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX10-001"
+}

@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT25-008",
+    "colors": "Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[TS] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Moving] [On Play] By trashing up to 2 [Iliad] or [TS] trait cards from your hand, ＜Draw 1＞ for each card trashed."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon gets +2000 DP."
+      }
+    ],
+    "type": "Beast/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "43519ee1051403e659df1bdcf63801e7997270f43a745fdeb90ac93f6c4d4f6e",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "8bf4513589d2152483e061ac32dd6d11552f9e790aabc9b64289716863ba5882",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-008",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-008"
+}

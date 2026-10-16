@@ -22,6 +22,20 @@ fn st1_builder() -> DebugRunnerBuilder {
     builder
 }
 
+// Exercise the paid Option-use path with a genuine color provider in breeding.
+// The breeding provider does not alter battle-field slots or target assertions.
+fn use_fixture_option(runner: &mut DebugRunner, provider: &str) {
+    runner.place_in_breeding(0, provider);
+    runner.game.enter_main_phase();
+    let action = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 0)[action as usize],
+        1.0,
+        "fixture Option must be legal before Main action dispatch"
+    );
+    runner.game.decode_action(action, 0);
+}
+
 #[test]
 fn st1_gaia_red_all_unique_cards_compile_from_embedded_pack() {
     let runner = st1_builder().start();
@@ -200,7 +214,7 @@ fn st1_14_starlight_explosion_main_adds_own_security_dp_modifier() {
             .player_modifier_value(0, ModifierType::ChangeOwnSecurityDigimonDp),
         0
     );
-    runner.play(0, 0).expect("play ST1-14 from hand");
+    use_fixture_option(&mut runner, "ST1-01");
 
     assert_eq!(
         runner
@@ -218,7 +232,7 @@ fn st1_15_giga_destroyer_selects_up_to_two_opponent_digimon_4000_dp_or_less() {
     let weak_b = runner.place_on_field(1, "ST1-04", Some(0));
     let too_large = runner.place_on_field(1, "ST1-05", Some(0));
 
-    runner.play(0, 0).expect("play ST1-15 from hand");
+    use_fixture_option(&mut runner, "ST1-01");
     let first_prompt = runner
         .pending_selection()
         .expect("ST1-15 installs an up-to-2 selection");
@@ -262,7 +276,7 @@ fn st1_16_gaia_force_selects_and_deletes_one_opponent_digimon() {
     let mut runner = st1_builder().memory(10).hand(0, &["ST1-16"]).start();
     let victim = runner.place_on_field(1, "ST1-05", Some(0));
 
-    runner.play(0, 0).expect("play ST1-16 from hand");
+    use_fixture_option(&mut runner, "ST1-01");
     let prompt = runner
         .pending_selection()
         .expect("ST1-16 installs a mandatory opponent Digimon selection");

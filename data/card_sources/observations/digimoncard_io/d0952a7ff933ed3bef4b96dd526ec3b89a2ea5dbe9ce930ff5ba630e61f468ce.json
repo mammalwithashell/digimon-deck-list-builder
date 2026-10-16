@@ -1,0 +1,110 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Virus"
+      ],
+      "card_colors": [
+        "Red",
+        "Purple"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Proximamon",
+      "dp": 15000,
+      "effect_description_eng": "[All Turns] [Once Per Turn] When another Digimon is deleted, you may play 1 level 4 or lower Digimon card with [Gammamon] in its name from your trash without paying the cost.\r\n[End of Your Turn] [Once Per Turn] By placing 1 Digimon card with [Gammamon] in its text from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Red"
+          ],
+          "cost": 6,
+          "from_level": 6
+        }
+      ],
+      "form_eng": [
+        "Mega"
+      ],
+      "inherited_effect_description_eng": "",
+      "level": 7,
+      "play_cost": 15,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Unique"
+      ]
+    },
+    "card_id": "RB1-036",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [
+      {
+        "authority": "secondary",
+        "color": "Red",
+        "cost": 6,
+        "derived": false,
+        "level": 6,
+        "ordinal": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Purple"
+        ],
+        "dp": 15000,
+        "effect_text": "[All Turns] [Once Per Turn] When another Digimon is deleted, you may play 1 level 4 or lower Digimon card with [Gammamon] in its name from your trash without paying the cost.\r\n[End of Your Turn] [Once Per Turn] By placing 1 Digimon card with [Gammamon] in its text from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 7,
+        "play_cost": 15,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "[Digivolve] [Siriusmon] w/[Arcturusmon] digivolution card: Cost 3",
+      "artist": null,
+      "attribute": "Virus",
+      "color": "Red",
+      "color2": "Purple",
+      "date_added": "2025-11-25 10:12:18",
+      "digi_type": "Unique",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 15000,
+      "evolution_color": "Red",
+      "evolution_cost": 6,
+      "evolution_level": 6,
+      "form": "Mega",
+      "id": "RB1-036",
+      "level": 7,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[All Turns] [Once Per Turn] When another Digimon is deleted, you may play 1 level 4 or lower Digimon card with [Gammamon] in its name from your trash without paying the cost.\r\n[End of Your Turn] [Once Per Turn] By placing 1 Digimon card with [Gammamon] in its text from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP.",
+      "name": "Proximamon",
+      "play_cost": 15,
+      "pretty_url": "proximamon-rb1-036",
+      "rarity": "SEC",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "RB-01: Resurgence Booster"
+      ],
+      "source_effect": "",
+      "stage": "Mega",
+      "tcgplayer_id": 516605,
+      "tcgplayer_name": "Proximamon (Textured Alternate Art)",
+      "type": "Digimon",
+      "xros_req": "[Digivolve] [Siriusmon] w/[Arcturusmon] digivolution card: Cost 3"
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "d0952a7ff933ed3bef4b96dd526ec3b89a2ea5dbe9ce930ff5ba630e61f468ce",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "RB1-036#2",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

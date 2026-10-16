@@ -1,0 +1,180 @@
+# Source-derived draft; independent verification pending.
+card: EX13-044
+clause: EX13-044#effect#3
+interaction:
+  id: qa:Q7348
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX13-044
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST3-04
+    - ST3-04
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: EX13-044-interaction-Q7348-ex13-battle-boundary8-p0
+  p1:
+    stack:
+    - ST1-04
+    - ST1-03
+    - ST1-02
+    - BT1-090
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: EX13-044-interaction-Q7348-ex13-battle-boundary8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-04
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    play:
+      card: ST1-03
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    attack:
+      attacker: field.1
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    play:
+      card: ST1-02
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX13-044
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.2
+- actor: 0
+  do:
+    select:
+      decline: true
+      sim_only: true
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+      sim_only: true
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.1
+      sim_only: true
+- actor: 0
+  do:
+    select:
+      cards:
+      - ST1-04
+      - ST1-03
+      dcgo_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert: []
+expect_ruling:
+  q_id: Q7348
+  assert:
+  - at: 19
+    that:
+      memory: -9
+      p0.field:
+      - card_id: EX13-044
+        suspended: false
+      p0.security: 3
+      p1.field:
+      - card_id: ST1-04
+        suspended: true
+      - card_id: ST1-03
+        suspended: true
+      - card_id: ST1-02
+        suspended: false

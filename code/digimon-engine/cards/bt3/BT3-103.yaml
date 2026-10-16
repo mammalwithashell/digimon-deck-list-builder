@@ -1,4 +1,4 @@
-# BT3-103 Hidden Potential Discovered! — Option, Green, Cost 4.
+# BT3-103 Hidden Potential Discovered! — Option, Green, Cost 0.
 #
 # Printed card text (cards.json, effect_description_eng):
 #
@@ -51,7 +51,7 @@
 #   prompts the player to suspend 1 of their own Digimon (a nested
 #   `OwnField` selection); the -5 reduction then applies and `single_fire`
 #   consumes the reducer. On decline the digivolution proceeds at the full
-#   cost and the reducer stays armed. Both the accept/decline choice and
+#   cost and the next-event reducer is consumed. Both the accept/decline choice and
 #   the suspend pick surface through `pending_selection` per the
 #   no-approximations policy (Working Rule §17) — no auto-suspend, no
 #   auto-application.
@@ -91,7 +91,7 @@ card: BT3-103
 name: "Hidden Potential Discovered!"
 kind: option
 color: [green]
-cost: 4
+cost: 0
 
 effects:
   # ─── Clause 0: [Main] one-shot green-Digimon-digivolve cost reduction ────────

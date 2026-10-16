@@ -17,7 +17,7 @@
 # Clause layout:
 #   Clause A: BeforePayCost cost reduction — -1 per opp Digimon (when played)
 #   Clause B: [Main] — floodgate (CannotPlayDigimonByEffect EndOfOpponentsTurn)
-#             + for_each delete opp Digimon ≤6000 DP
+#             + batch delete opp Digimon ≤6000 DP
 #   Clause C: [Security] — activate Main effects (AddActivateMainOptionSecurityEffect)
 
 card: BT8-097
@@ -74,7 +74,7 @@ effects:
   # opponent with EndOfOpponentsTurn expiry. Note: DCGO blocks "Digimon or DigiEgg"
   # — in the Rust engine CannotPlayDigimonByEffect covers both.
   #
-  # Delete: for_each over opp battle area Digimon with dp_lte:6000 → delete_permanent.
+  # Delete: delete_all_permanents over opponent battle-area Digimon with dp_lte:6000.
   #
   # dp_lte is evaluated by the Group 7 predicate path, so the sweep only
   # deletes opponent Digimon whose current DP is 6000 or less.
@@ -86,16 +86,13 @@ effects:
           target_player: opponent
           modifier: CannotPlayDigimonByEffect
           expiry: end_of_opponents_turn
-      - for_each:
+      - delete_all_permanents:
           over:
             all_of:
               - kind: digimon
               - of: opponent
               - zone: [battle_area]
               - dp_lte: 6000
-          bind_as: victim
-          body:
-            - delete_permanent: { target: victim }
 
   # ─── Clause C: [Security] — activate Main effects ────────────────────────────
   #
@@ -111,13 +108,10 @@ effects:
           target_player: opponent
           modifier: CannotPlayDigimonByEffect
           expiry: end_of_opponents_turn
-      - for_each:
+      - delete_all_permanents:
           over:
             all_of:
               - kind: digimon
               - of: opponent
               - zone: [battle_area]
               - dp_lte: 6000
-          bind_as: victim
-          body:
-            - delete_permanent: { target: victim }

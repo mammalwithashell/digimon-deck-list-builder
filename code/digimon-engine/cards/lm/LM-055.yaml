@@ -3,19 +3,13 @@ name: "Sprint Dash Training"
 kind: option
 color: [green, red]
 cost: 2
+use_requirement:
+  no_permanent:
+    of: you
+    zone: [battle_area]
+    name_is: "Sprint Dash Training"
 
 effects:
-  - kind: flood_gate
-    active_when:
-      no_permanent:
-        of: you
-        zone: [battle_area]
-        kind: option
-        card_number_is: "LM-055"
-    modifier: IgnoreColorRequirement
-    target: { card_number_is: "LM-055" }
-    summary: "While you don't have Sprint Dash Training in the battle area, ignore this card's color requirements"
-
   - when: main_from_hand
     optional: false
     summary: "[Main] Reveal top 2; add 1 green or red card; bottom the rest; place self in battle area"
@@ -26,7 +20,7 @@ effects:
       - select_reveal:
           of: you
           bind_as: picked
-          optional: true
+          optional: false
           filter:
             any_of:
               - color_is: green
@@ -52,13 +46,24 @@ effects:
           filter:
             kind: digimon
             zone: [battle_area]
+            has_digivolve_candidate:
+              of: you
+              zone: [hand]
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - color_is: green
+                      - color_is: red
           prompt: "Choose 1 of your Digimon to digivolve"
       - select_hand:
           of: you
           bind_as: evo
+          optional: true
           filter:
             all_of:
               - kind: digimon
+              - can_digivolve_onto: target
               - any_of:
                   - color_is: green
                   - color_is: red
@@ -80,7 +85,7 @@ effects:
       - select_reveal:
           of: you
           bind_as: picked
-          optional: true
+          optional: false
           filter:
             any_of:
               - color_is: green

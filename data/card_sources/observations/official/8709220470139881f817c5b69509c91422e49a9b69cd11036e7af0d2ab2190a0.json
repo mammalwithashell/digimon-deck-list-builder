@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "EX10-059",
+    "colors": "Purple Black",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "dp": "16000",
+    "form": "Mega",
+    "play_cost": "16",
+    "qa": [
+      "No, you can't. A \"by\" condition can't be met if only some of the required actions are performed. The conditions for this [On Play] [When Digivolving] effect require you to place the specified number of cards from your trash as this Digimon's top digivolution cards."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] Choose 1 card in your opponent's hand without looking and place it as any of their Digimon's bottom digivolution card or under any of their Tamers. Then, by placing 3 [Bagra Army] trait Digimon cards from your trash as this Digimon's top digivolution cards, delete 1 of their Digimon or Tamers with cards under it. [All Turns] This Digimon gains all [All Turns] effects on all level 6 [Bagra Army] trait Digimon cards in its digivolution cards."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "DigiXros -3: [Bagramon]×[DarkKnightmon] When this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+      }
+    ],
+    "type": "Composite/Bagra Army"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "8709220470139881f817c5b69509c91422e49a9b69cd11036e7af0d2ab2190a0",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "25eb5ee941bd76f8b379010938f270d0caca3d11e319ac99b2440bd17728644d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX10-059",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX10-059"
+}

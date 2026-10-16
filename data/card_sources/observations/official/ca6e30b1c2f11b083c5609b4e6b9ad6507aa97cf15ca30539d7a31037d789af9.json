@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX8-019",
+    "colors": "Blue Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "No, it doesn’t trigger."
+    ],
+    "special_digivolution_condition": "[Digivolve] [Hiyarimon]: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Hiyarimon]: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Ice-Snow] trait, reduce the digivolution cost by 1. (Rule) Trait: Has [Ice-Snow] Type."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] Give 1 of your opponent's Digimon ＜Security A. -1＞ until the end of their turn."
+      }
+    ],
+    "type": "Avian/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "ca6e30b1c2f11b083c5609b4e6b9ad6507aa97cf15ca30539d7a31037d789af9",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "726478508bf0e1a67b9adf0b4ad3209fd822ffec0fbc0efb2d2479c4e9b8b1e3",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX8-019",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX8-019"
+}

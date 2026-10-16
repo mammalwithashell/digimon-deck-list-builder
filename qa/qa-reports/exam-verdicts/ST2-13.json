@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "last_updated": "2026-10-11T10:04:55.793562300+00:00",
+  "clauses": {
+    "ST2-13#effect#0": {
+      "clause_id": "ST2-13#effect#0",
+      "card_id": "ST2-13",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "f06bda3e4e413a345c55bee752f8d94de1d2c75d49f5eebacde5784eec77964b",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\tail-20261011T080315Z-1706f28d43\\ST2-13-tail-all-20261011T080315Z-1706f28d43.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-ST2-13-tail-all-20261011T080315Z-1706f28d43",
+      "recorded_at": "2026-10-11T08:13:05.722284700+00:00"
+    },
+    "ST2-13#security#0": {
+      "clause_id": "ST2-13#security#0",
+      "card_id": "ST2-13",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "ba4bbc30484f190d76f26322b22415110ad2e23d6daf36c54ab053d2eb4dddcf",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\tail-20261011T080315Z-1706f28d43\\ST2-13-tail-all-20261011T080315Z-1706f28d43.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-ST2-13-tail-all-20261011T080315Z-1706f28d43",
+      "recorded_at": "2026-10-11T08:13:05.722284700+00:00"
+    }
+  },
+  "interactions": {
+    "qa:Q623": {
+      "interaction_id": "qa:Q623",
+      "card_ids": [
+        "ST2-13"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "522e73f32c17122dd6030621744b837b711ee2e5251bee6871a1c3da7033a30e",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T092847Z-55c77ff39c\\ST2-13-interaction-Q623-20261011T092847Z-55c77ff39c.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-ST2-13-interaction-Q623-20261011T092847Z-55c77ff39c",
+      "recorded_at": "2026-10-11T10:04:55.793562300+00:00"
+    }
+  }
+}

@@ -418,7 +418,9 @@ impl Game {
     /// trash observers — the card MOVES into the stack, it is not trashed.
     ///
     /// Returns `false` (routing `card` to its owner's trash) if `target` is not
-    /// a live battle-area permanent.
+    /// a live battle-area permanent or is a token (general_rule 4-18-3 forbids
+    /// stacking cards with tokens). Selecting a token may still be legal; the
+    /// attempted placement fails and the resolving Option goes to trash.
     pub(crate) fn seat_card_source_under_permanent(
         &mut self,
         mut card: CardSource,
@@ -432,6 +434,7 @@ impl Game {
             .player(target.player)
             .battle_area
             .get(target.index as usize)
+            .filter(|perm| !perm.top_card().is_token)
             .map(|perm| perm.top_card().handle())
         else {
             self.player_mut(card.owner).trash.push(card);

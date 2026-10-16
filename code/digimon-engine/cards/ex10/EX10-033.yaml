@@ -38,7 +38,7 @@
 # Step layout:
 #   1. select_own_sources (filter: Mineral or Rock, min: 0, max: 3, bind_as: chosen_sources)
 #      → prompts SourceMulti with PASS immediately available (up-to-3).
-#   2. trash_selected_sources: { source_refs: chosen_sources }
+#   2. trash_selected_sources_as_cost: { source_refs: chosen_sources, min_count: 0 }
 #   3. select_opponent_permanent: 1 opponent Digimon → bind_as: target_digi
 #   4. per_selected over chosen_sources, bind_as: _src:
 #        add_modifier: { target: { binding: target_digi }, modifier: ChangePlayCost,
@@ -131,7 +131,7 @@ effects:
           prompt: "Choose up to 3 [Mineral] or [Rock] digivolution cards to trash"
           then:
             # Step 2: Trash the selected source cards.
-            - trash_selected_sources: { source_refs: chosen_sources }
+            - trash_selected_sources_as_cost: { source_refs: chosen_sources, min_count: 0 }
 
             # Step 3: Select 1 opponent Digimon as the cost-reduction target.
             - select_opponent_permanent:

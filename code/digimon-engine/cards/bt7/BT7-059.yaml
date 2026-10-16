@@ -1,0 +1,40 @@
+# Official observation d237e2c38630379b2f3cabc08adf75224fffd9a1c73fcdaf0d8d104ea8c1a66d.
+# Rules 1-3-6: choose at least one available card; printed up to two permits stopping after one.
+card: BT7-059
+name: DeadlyAxemon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 3000
+form: Champion
+attribute: Virus
+traits: [Dark Animal]
+alt_paths:
+  - kind: digivolve
+    from: {level_eq: 3, color_is: black}
+    cost: 2
+effects:
+  - when: on_play
+    process:
+      - reveal_top_deck: {of: you, count: 5, bind_as: revealed}
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: knights
+              filter: {name_contains: Knightmon}
+              min: 1
+              max: 2
+          prompt: Add up to 2 cards with Knightmon in their names to your hand
+      - add_to_hand_from_reveal: {of: you, card: knights}
+      - place_remainder_on_deck: {of: you, position: bottom}
+  - kind: aura
+    scope: inherited
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_of:
+            - name_contains: Knightmon
+            - name_contains: Bagramon
+    target: {}
+    dp_modifier: 2000

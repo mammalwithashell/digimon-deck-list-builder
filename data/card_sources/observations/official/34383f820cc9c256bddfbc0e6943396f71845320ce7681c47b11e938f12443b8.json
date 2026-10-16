@@ -1,0 +1,58 @@
+{
+  "extracted": {
+    "attribute": "Navi",
+    "card_id": "EX10-030",
+    "colors": "Black Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "8000",
+    "form": "Ult./Appmon",
+    "play_cost": "8",
+    "qa": [
+      "Yes, you can."
+    ],
+    "special_digivolution_condition": "[App Fusion] [Warpmon] & [Weatherdramon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Warpmon] & [Weatherdramon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+      },
+      {
+        "label": "Effect",
+        "text": "＜Collision＞ [On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost. [All Turns] [Once Per Turn] When effects trash any of this Digimon's link cards, 1 of your opponent's Digimon gets -8000 DP for the turn."
+      },
+      {
+        "label": "Link DP",
+        "text": "+4000 DP"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave."
+      }
+    ],
+    "type": "Astronomy/Leviathan"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "34383f820cc9c256bddfbc0e6943396f71845320ce7681c47b11e938f12443b8",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "c92f6c58db4882e81f76e05a1b85891cf31f22711d887b3222f10f02b3c8e3a9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX10-030",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX10-030"
+}

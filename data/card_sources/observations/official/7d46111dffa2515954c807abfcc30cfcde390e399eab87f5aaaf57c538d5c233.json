@@ -1,0 +1,25 @@
+{
+  "extracted": {
+    "attribute": "System",
+    "card_id": "BT24-006",
+    "colors": "Purple",
+    "digivolve_costs": [],
+    "form": "Appmon",
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, ＜Draw 1＞ and trash 1 card in your hand."
+      }
+    ],
+    "type": "Tap"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "7d46111dffa2515954c807abfcc30cfcde390e399eab87f5aaaf57c538d5c233",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "2d2c2fcfba58df994e51ca26dd42c7ff77db17cd0eadc0fa45a5b3b30f4f034d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-006",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-006"
+}

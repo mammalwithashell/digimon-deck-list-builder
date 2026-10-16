@@ -1,0 +1,92 @@
+# Official observation 2316bf841996213c69543b65142b147cae4896e7628d3ad062c7c794c95a73a2 and image verified.
+card: BT20-044
+name: Breakdramon
+kind: digimon
+level: 6
+color: [green, red]
+cost: 12
+dp: 12000
+traits: [Machine Dragon]
+form: Mega
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: Groundramon }
+    cost: 3
+  - kind: digivolve
+    from: { name_is: Wingdramon }
+    cost: 3
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Suspend 2 opponent Digimon or Tamers; then 1 of your Digimon may attack"
+    process:
+      - select_opponent_permanent:
+          bind_as: first
+          filter: { any_of: [{ kind: digimon }, { kind: tamer }] }
+          prompt: "Choose the first Digimon or Tamer to suspend"
+      - select_opponent_permanent:
+          bind_as: second
+          filter:
+            not_in_binding: first
+            any_of: [{ kind: digimon }, { kind: tamer }]
+          prompt: "Choose the second Digimon or Tamer to suspend"
+      - if:
+          condition: { binding_present: first }
+          then:
+            - suspend: { target: first }
+      - if:
+          condition: { binding_present: second }
+          then:
+            - suspend: { target: second }
+      - select_own_permanent:
+          bind_as: attacker
+          filter: { kind: digimon }
+          optional: true
+          prompt: "Choose 1 of your Digimon to attack"
+      - may_attack_now:
+          attacker: attacker
+          targets: any
+          optional: true
+          prompt: "Attack with the chosen Digimon?"
+  - when: on_ally_won_battle
+    once_per_turn: true
+    condition:
+      event_battle_deleter:
+        owner: you
+        kind: digimon
+        any_of: [{ in_text_contains: Dracomon }, { in_text_contains: Examon }]
+    summary: "[All Turns][Once Per Turn] When any of your Dracomon/Examon-text Digimon deletes an opponent Digimon in battle, delete 1 suspended opponent Digimon or Tamer"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            is_suspended: true
+            any_of: [{ kind: digimon }, { kind: tamer }]
+          prompt: "Delete 1 suspended opponent Digimon or Tamer"
+      - delete_permanent: { target: target }
+  - scope: inherited
+    when: on_ally_won_battle
+    once_per_turn: true
+    condition:
+      event_battle_deleter:
+        owner: you
+        kind: digimon
+        any_of: [{ in_text_contains: Dracomon }, { in_text_contains: Examon }]
+    summary: "Inherited [All Turns][Once Per Turn] When any of your Dracomon/Examon-text Digimon deletes an opponent Digimon in battle, delete 1 suspended opponent Digimon or Tamer"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            is_suspended: true
+            any_of: [{ kind: digimon }, { kind: tamer }]
+          prompt: "Delete 1 suspended opponent Digimon or Tamer"
+      - delete_permanent: { target: target }
+

@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT21-044",
+    "colors": "Yellow Red",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "7000",
+    "form": "Ultimate",
+    "play_cost": "7",
+    "qa": [
+      "It causes that card to also be treated as a Digimon with X000 DP. For example, if a Tamer is also treated as a Digimon, it can attack like a standard Digimon, and it will gain inherited effects from cards stacked under it. However, even if a Tamer is played and then treated as a Digimon in the same turn, it can't attack during that turn."
+    ],
+    "special_digivolution_condition": "[Digivolve] [GeoGreymon]: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [GeoGreymon]: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] For the turn, 1 of your [Marcus Damon]s is also treated as a 3000 DP Digimon, can't digivolve, and gains ＜Rush＞ and ＜Alliance＞. Then, 1 of your Digimon may attack. [All Turns] [Once Per Turn] When any of your yellow or red Tamers are deleted, you may place 1 [Marcus Damon] from your trash as the top security card."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] [Once Per Turn] When any of your yellow or red Tamers are deleted, you may place 1 [Marcus Damon] from your trash as the top security card."
+      }
+    ],
+    "type": "Cyborg"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "596e44ed1b84f881f59bcf4585956627ca4ce6987e778cabb95cdf13f7a16ae4",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "4f7797ae7f52cf6a1b8cadbe2b9bfea641de5b48e6cb6e8dd44bef294403e1ae",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-044",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-044"
+}

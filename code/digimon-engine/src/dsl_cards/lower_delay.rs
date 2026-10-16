@@ -190,6 +190,9 @@ pub fn lower_with_raw(
     {
         builder = builder.optional().needs_outer_optional_prompt();
     }
+    if is_marker_only {
+        builder = builder.ordinary_field_option();
+    }
     if let Some(predicate) = active_when {
         builder =
             builder.condition(move |ctx| eval_predicate(&predicate, ctx, PredicateSubject::None));

@@ -1,0 +1,43 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT23-054",
+    "colors": "Black Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "7000",
+    "form": "Armor Form",
+    "play_cost": "7",
+    "special_digivolution_condition": "[Digivolve] [Veemon]/Lv.3 w/[CS] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Veemon]/Lv.3 w/[CS] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Blocker＞＜Armor Purge＞ [On Play] [When Digivolving] ＜Draw 1＞. Then, 1 of your Digimon with the [Royal Knight] or [CS] trait can't be returned to hands or decks by your opponent's effects until their turn ends."
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight/CS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "f23f92fe376a7755eecd8de178e480d1f8fc666c570a7fa1eba6749f54837269",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "ebf219e06010c59e54978867b7d6caf1b24b33b91dd7ab939dd7dae7317a1ffd",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT23-054",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT23-054"
+}

@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT20-059",
+    "colors": "Black",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "Mega",
+    "play_cost": "13",
+    "qa": [
+      "This effect prevents Digimon from being affected by effects. For example, your Digmon won't suspend if it's chosen for a \"suspend 1 of your opponent's Digimon\" effect, and its DP won't be reduced if it's chosen for a \"1 of your opponent's Digimon gets -3000 DP\" effect."
+    ],
+    "special_digivolution_condition": "[Digivolve] [Gankoomon]: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Gankoomon]: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. Then, if [Gankoomon] or [X Antibody] is in this Digimon's digivolution cards, until the end of your opponent's turn, none of your Digimon are affected by your opponent's Digimon's effects. [Opponent's Turn] All of your Digimon with [Sistermon] or [Huckmon] in their names or the [Royal Knight] trait gain ＜Reboot＞ and ＜Blocker＞."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Opponent's Turn] While this Digimon is [Jesmon GX], all of your Digimon gain ＜Reboot＞ and ＜Blocker＞."
+      }
+    ],
+    "type": "Holy Warrior/X Antibody/Royal Knight"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "722ef277c06dda986a9897853359c9d47ab6853e4ad71b95f3314d616a14ee8a",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "361b77fe408cb7ac18285f5582d1db52137295d282ab5f12a04feb8122536bd0",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT20-059",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT20-059"
+}

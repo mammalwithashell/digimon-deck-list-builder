@@ -1,0 +1,86 @@
+# Source-derived draft; independent verification pending.
+card: EX13-018
+clause: EX13-018#effect#1
+interaction:
+  id: qa:Q7258
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX13-018
+    - EX3-020
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - ST1-02
+    - ST2-04
+    - BT3-093
+    - ST2-04
+    - ST2-05
+    rest: EX13-018-interaction-Q7258-ex13-battle-boundary8-p0
+  p1:
+    stack:
+    - ST1-03
+    - ST1-02
+    - ST1-10
+    - BT1-090
+    - ST2-03
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-05
+    rest: EX13-018-interaction-Q7258-ex13-battle-boundary8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX13-018
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX3-020
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert: []
+expect_ruling:
+  q_id: Q7258
+  assert:
+  - at: 3
+    that:
+      memory: -5
+      p0.field:
+      - card_id: EX13-018
+        suspended: false
+      p0.hand:
+      - BT1-090
+      - BT1-090
+      - BT3-093
+      - ST1-02
+      - ST2-04
+      p0.trash:
+      - EX3-020

@@ -1,0 +1,572 @@
+{
+  "generated_at": "2026-10-11T01:15:30.008336+00:00",
+  "status": "in progress; implementation candidates integrated, independent review and full DCGO confirmation pending",
+  "report_markdown": "In progress. Default Claude review model exhausted usage credits; supported Sonnet fallback succeeded for BT20 fixture and now processes25frozen source reviews. FinalWT45candidate sims,129wheel contracts,71Tauri,1034DSL,401engine and583harness checks pass. Live96regressions andfinalbinaryoffline comparisons continue clean sofar. Fullcards hasoneidentified stalefixture nowcorrected andtargetedverified. No neworacleconfirmations claimed.",
+  "final_sim_replay": {
+    "evidence": "qa/archetype-qa/dsl/examon-2026-10-10-evidence/oracle/repair-20261011T010548Z-ca9849ca5f",
+    "scenarios": 51,
+    "assertions": 6940,
+    "failures": 0
+  },
+  "final_tier0": {
+    "requested_tier": 0,
+    "mode": "run",
+    "metadata": {},
+    "results": [
+      {
+        "tier": 0,
+        "name": "impact_index_check",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/impact_index.py",
+          "--cards-dir",
+          "code/digimon-engine/cards",
+          "--out",
+          "qa/impact/dsl_impact_index.json",
+          "--check"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 7.626599000002898,
+        "returncode": 0
+      },
+      {
+        "tier": 0,
+        "name": "impact_lowering_map_check",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/impact_lowering_map.py",
+          "--map",
+          "qa/impact/lowering_verb_map.json",
+          "--check"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 0.164138299995102,
+        "returncode": 0
+      },
+      {
+        "tier": 0,
+        "name": "keyword_semantics_matrix_check",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/keyword_semantics_matrix.py",
+          "--source",
+          "docs/digimon-rules/keyword-semantics.md",
+          "--engine-enum",
+          "code/digimon-engine/src/enums.rs",
+          "--out",
+          "qa/rules/keyword_semantics_matrix.json",
+          "--check"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 0.1165127999993274,
+        "returncode": 0
+      },
+      {
+        "tier": 0,
+        "name": "faq_conformance_check",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/faq_conformance_generator.py",
+          "--cases",
+          "qa/rules/faq_conformance_cases.json",
+          "--out",
+          "code/digimon-engine/tests/rules_faq/generated_conformance.rs",
+          "--check"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 0.11442270000407007,
+        "returncode": 0
+      },
+      {
+        "tier": 0,
+        "name": "authoring_guide_check",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/clause_coverage/authoring_guide.py",
+          "--check"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 0.11407319999852916,
+        "returncode": 0
+      },
+      {
+        "tier": 0,
+        "name": "oracle_readiness_check",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/clause_coverage/readiness.py",
+          "--check"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 1.4301221999994596,
+        "returncode": 0
+      },
+      {
+        "tier": 0,
+        "name": "verification_tool_tests",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "-m",
+          "pytest",
+          "code/tests/tools/test_impact_index.py",
+          "code/tests/tools/test_impact_lowering_map.py",
+          "code/tests/tools/test_impact_scope.py",
+          "code/tests/tools/test_keyword_semantics_matrix.py",
+          "code/tests/tools/test_faq_conformance_generator.py",
+          "code/tests/tools/test_clause_coverage_authoring_guide.py",
+          "code/tests/tools/test_clause_coverage_readiness.py",
+          "code/tests/tools/test_verification_tier_manifest.py",
+          "code/tests/tools/test_nextest_config.py",
+          "code/tests/tools/test_verify_script.py",
+          "-q"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 3.5009638000046834,
+        "returncode": 0
+      }
+    ]
+  },
+  "broad_tier2": {
+    "requested_tier": 2,
+    "mode": "run",
+    "metadata": {
+      "impact_scope": {
+        "cards": [],
+        "cards_behavioral_filter": "",
+        "full_suite_required": true,
+        "reasons": [
+          "code/digimon-engine/src/combat/mod.rs is an unmapped engine/core file",
+          "code/digimon-engine/src/game/mod.rs is an unmapped engine/core file",
+          "code/digimon-engine/src/dsl_cards/lower_replacement.rs is an unmapped engine/core file"
+        ],
+        "side_binaries": [],
+        "verbs": []
+      }
+    },
+    "results": [
+      {
+        "tier": 0,
+        "name": "impact_index_check",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/impact_index.py",
+          "--cards-dir",
+          "code/digimon-engine/cards",
+          "--out",
+          "qa/impact/dsl_impact_index.json",
+          "--check"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 8.604688100000203,
+        "returncode": 0
+      },
+      {
+        "tier": 0,
+        "name": "impact_lowering_map_check",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/impact_lowering_map.py",
+          "--map",
+          "qa/impact/lowering_verb_map.json",
+          "--check"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 0.18416979999892646,
+        "returncode": 0
+      },
+      {
+        "tier": 0,
+        "name": "keyword_semantics_matrix_check",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/keyword_semantics_matrix.py",
+          "--source",
+          "docs/digimon-rules/keyword-semantics.md",
+          "--engine-enum",
+          "code/digimon-engine/src/enums.rs",
+          "--out",
+          "qa/rules/keyword_semantics_matrix.json",
+          "--check"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 0.1185710999998264,
+        "returncode": 0
+      },
+      {
+        "tier": 0,
+        "name": "faq_conformance_check",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/faq_conformance_generator.py",
+          "--cases",
+          "qa/rules/faq_conformance_cases.json",
+          "--out",
+          "code/digimon-engine/tests/rules_faq/generated_conformance.rs",
+          "--check"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 0.1215472999974736,
+        "returncode": 0
+      },
+      {
+        "tier": 0,
+        "name": "authoring_guide_check",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/clause_coverage/authoring_guide.py",
+          "--check"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 0.12336510000022827,
+        "returncode": 0
+      },
+      {
+        "tier": 0,
+        "name": "oracle_readiness_check",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/clause_coverage/readiness.py",
+          "--check"
+        ],
+        "env": {},
+        "status": "failed",
+        "seconds": 1.545130500002415,
+        "returncode": 1
+      },
+      {
+        "tier": 0,
+        "name": "verification_tool_tests",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "-m",
+          "pytest",
+          "code/tests/tools/test_impact_index.py",
+          "code/tests/tools/test_impact_lowering_map.py",
+          "code/tests/tools/test_impact_scope.py",
+          "code/tests/tools/test_keyword_semantics_matrix.py",
+          "code/tests/tools/test_faq_conformance_generator.py",
+          "code/tests/tools/test_clause_coverage_authoring_guide.py",
+          "code/tests/tools/test_clause_coverage_readiness.py",
+          "code/tests/tools/test_verification_tier_manifest.py",
+          "code/tests/tools/test_nextest_config.py",
+          "code/tests/tools/test_verify_script.py",
+          "-q"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 4.064817599995877,
+        "returncode": 0
+      },
+      {
+        "tier": 1,
+        "name": "dsl",
+        "kind": "cargo",
+        "required": true,
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "code/digimon-engine/Cargo.toml",
+          "--test",
+          "dsl"
+        ],
+        "env": {
+          "RUST_MIN_STACK": "268435456"
+        },
+        "status": "ok",
+        "seconds": 193.28868610000063,
+        "returncode": 0
+      },
+      {
+        "tier": 1,
+        "name": "judge_quiz",
+        "kind": "cargo",
+        "required": true,
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "code/digimon-engine/Cargo.toml",
+          "--test",
+          "judge_quiz"
+        ],
+        "env": {
+          "RUST_MIN_STACK": "268435456"
+        },
+        "status": "ok",
+        "seconds": 85.64124820000143,
+        "returncode": 0
+      },
+      {
+        "tier": 1,
+        "name": "rules_faq",
+        "kind": "cargo",
+        "required": true,
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "code/digimon-engine/Cargo.toml",
+          "--test",
+          "rules_faq"
+        ],
+        "env": {
+          "RUST_MIN_STACK": "268435456"
+        },
+        "status": "ok",
+        "seconds": 35.91398470000422,
+        "returncode": 0
+      },
+      {
+        "tier": 1,
+        "name": "keyword_semantics_matrix",
+        "kind": "cargo",
+        "required": true,
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "code/digimon-engine/Cargo.toml",
+          "--test",
+          "keyword_semantics_matrix"
+        ],
+        "env": {
+          "RUST_MIN_STACK": "268435456"
+        },
+        "status": "ok",
+        "seconds": 6.502859200001694,
+        "returncode": 0
+      },
+      {
+        "tier": 1,
+        "name": "determinism_guard",
+        "kind": "cargo",
+        "required": true,
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "code/digimon-engine/Cargo.toml",
+          "--test",
+          "infra",
+          "determinism_guard"
+        ],
+        "env": {
+          "RUST_MIN_STACK": "268435456"
+        },
+        "status": "ok",
+        "seconds": 7.666726299998118,
+        "returncode": 0
+      },
+      {
+        "tier": 2,
+        "name": "impact_scope",
+        "kind": "python",
+        "required": true,
+        "command": [
+          "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+          "code/tools/impact_scope.py",
+          "--json",
+          "--path",
+          "code/digimon-engine/src/combat/mod.rs",
+          "--path",
+          "code/digimon-engine/src/game/mod.rs",
+          "--path",
+          "code/digimon-engine/src/dsl_cards/lower_replacement.rs"
+        ],
+        "env": {},
+        "status": "ok",
+        "seconds": 0.22112300000299,
+        "returncode": 0
+      },
+      {
+        "tier": 2,
+        "name": "cards_behavioral_full_required",
+        "kind": "cargo",
+        "required": true,
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "code/digimon-engine/Cargo.toml",
+          "--test",
+          "cards_behavioral"
+        ],
+        "env": {
+          "RUST_MIN_STACK": "268435456",
+          "RUST_TEST_THREADS": "8"
+        },
+        "status": "failed",
+        "seconds": 1928.8989883999966,
+        "returncode": 101
+      },
+      {
+        "tier": 2,
+        "name": "replay_goldens_verify",
+        "kind": "cargo",
+        "required": true,
+        "command": [
+          "cargo",
+          "run",
+          "--manifest-path",
+          "code/digimon-engine/Cargo.toml",
+          "--bin",
+          "replay_corpus",
+          "--",
+          "verify",
+          "--goldens",
+          "qa/replay-goldens",
+          "--cards",
+          "data/cards.json"
+        ],
+        "env": {
+          "RUST_MIN_STACK": "268435456",
+          "RUST_TEST_THREADS": "8"
+        },
+        "status": "failed",
+        "seconds": 3.3060905000020284,
+        "returncode": 1
+      },
+      {
+        "tier": 2,
+        "name": "invariant_fuzz",
+        "kind": "cargo",
+        "required": true,
+        "command": [
+          "cargo",
+          "test",
+          "--manifest-path",
+          "code/digimon-engine/Cargo.toml",
+          "--test",
+          "invariant_fuzz"
+        ],
+        "env": {
+          "RUST_MIN_STACK": "268435456",
+          "RUST_TEST_THREADS": "8"
+        },
+        "status": "ok",
+        "seconds": 132.03831150000042,
+        "returncode": 0
+      }
+    ]
+  },
+  "broad_engine": {
+    "log": "repair-full-engine-8t.log",
+    "completed_result_blocks": 89,
+    "passed": 3684,
+    "failed": 6,
+    "ignored": 14,
+    "note": "Raw broad run, excluding interrupted duplicate cards target. Infra marker-parser failure resolved by env8 rerun; final production followups validated separately. Not an all-green final claim."
+  },
+  "aggregate_required_suites_pass": false,
+  "notes": "Do not treat focused followups as a repeated all-green full suite. See report_markdown and raw logs.",
+  "historical_report_markdown": "- Seven restored cards: 61 focused tests; independent spec and quality reviews passed. EX13-018/039: 30 focused tests; EX13-024: 14.\n- Final shared regression run: 414 passed (combat 257, replacements 125, Delay 15, security battle 9, effect-battle Piercing 6, Blast DNA bonus 2). Replacement incarnation additionally passed five clone regressions and its BT20-016 targeted case. See `effect-battle-piercing-green-5.log` and `repair-followup-review.md`.\n- Broad full-card sweep: 11,069 passed, 3 failed, 34 ignored. The three failures were then repaired and independently verified: BT20-016's replacement/explicit-material case (1 pass), and EX13-057's explicit cost-choice fixture (2 passes). The entire 11,106-test sweep was not repeated after these final fixes; the final shared suites and targeted reruns are reported separately.\n- Broad engine run outside that card sweep: 3684 passed across 89 result blocks. Remaining baseline issues: 18 EX12 printed-circle discrepancies in one guard, missing BT25-043 display kind, a stale inline DNA predicate fixture, and two stale DSL arm-lint assumptions. Evidence that implicated inputs are unchanged is in the four `*-unchanged-inputs.json` receipts. The infra subprocess marker failure passes with `RUST_TEST_THREADS=8`; the duplicate interrupted card target is accounted for by the full-card sweep. See `full-suite-execution-note.md`.\n- Required tier-2 ladder executed: DSL 1,032, judge 43, FAQ 31, keyword 3, determinism 2, and invariant fuzz passed. The DSL crate separately passed 102 tests. Replay goldens retain the known 10/10 step-1 digest divergence; they were not silently blessed. These broader runs preceded the last focused fixes and do not constitute an all-green final repository result.\n- Final simulator replay of 51 oracle-backfilled source scenarios: 6940 assertions passed, zero failed. Live oracle comparisons, not this replay alone, establish the 122 confirmed core clauses.\n- Final tier-0 generated-data/tool checks all passed after readiness/index regeneration. Whitespace diff check passed. Action-space and observation-layout contracts remain unchanged.\n",
+  "current_checkpoint": {
+    "utc": "2026-10-11T18:20:38.763348+00:00",
+    "status": "in progress; no new oracle confirmations",
+    "scope": "existing 52-card campaign plus full support cards",
+    "interaction_binding": {
+      "confirmed": 248,
+      "diverged": 5,
+      "unavailable": 2,
+      "unmeasured": 32,
+      "gating_total": 287
+    },
+    "completed": {
+      "WT_full_DSL": "1034 passed, 1 ignored; build15-full-dsl-repairs.log",
+      "WT_selection_resolve": "58 passed; build15-engine-selection-resolve58.log",
+      "Q1157_v5_RED": "ordinary digest test fails, treated control passes",
+      "Q1157_v5_GREEN": "2 module tests and 17 integration tests pass",
+      "Q1157_v5_cost_regressions": "138 tests pass including unchanged replay",
+      "cache_relocation": "all file SHA256 verified; original target retained as junction to D drive",
+      "Tauri_formatting": "one assertion formatted; no behavior change",
+      "WT_provisional_integration": "Q1157 16 files; observer16 files; EX3/BT20 5 files; all guarded. Independent review pending.",
+      "WT_formatting": "28 promoted Rust files; build16-format-receipt",
+      "observer_Rust": "valid RED4pass6fail -> GREEN10; unit4pass; final harness583pass",
+      "observer_Python": "WT12 movement claim tests plus56 packet/probe tests pass",
+      "candidate4": "c168329c0ab5df3e60f9de57ea8fd4de0302397aed5396f3d6e4d4119693b165, complete cardpack",
+      "candidate4_sim": "20-case batch19pass1fixturefailure; repaired Q1775v3pass all3ruling checks; six materialized source-assertion reruns allpass; seven observercanary sims allpass",
+      "observer_live_canaries": "6 clean, artifact2370410c719f0e16296b6e82f4a6f34b848a97fe5ecb1e2b87c82eb1aa8d0f48, PID43244, no ledger/backfill",
+      "WT_integrated_support_cost": "184 passed; build16-integrated-support-and-cost.log",
+      "WT_integrated_engine_harness_lib": "401 engine and583 harness passed; build16-integrated-lib-harness.log",
+      "review_dispatch_dependencies": "jsonschema4.25.1 and cp312 dependencies installed to scratch pythonlibs",
+      "WT_EX13_077": "22 passed; fixture timing corrected, source-only independent supplement pending",
+      "WT_final_DSL": "1034 passed,1ignored; build16 ladder",
+      "WT_fresh_wheel": "129 contract tests passed;build16-fresh-wheel-contracts.log",
+      "WT_final_artifacts": "build16-v2-pinned;1414 input pins; wheel/schema/binary hashes; provenance audit accepted",
+      "WT_tier0": "7 suites including82 tool tests pass; build16-tier0-refreshed.json",
+      "WT_Tauri": "71passed;build16-tauri-boundaries.log",
+      "final_harness_sim45": "45/45PASS incl Q1921, allsourceassertions retained;build16-sim45-results",
+      "WT_final_rules": "judge44pass1ignored;FAQ31pass;keyword3pass;determinism2pass1ignored",
+      "BT20_stale_fixture": "all10existing testsPASS + changedtestPASSafterreviewstrengthening; receiptbt20-044-attack-tail-fixture-v2;temporarytestentryremoved"
+    },
+    "active": {
+      "integrated_ladder": "17306;build16-final-verification-plan-v2/run-ladder-20261011T175945Z;cards8threads then replay/fuzzserial",
+      "priorconfirmed_live96": "75442 v2thenv3;tail_batch2_spec;78cleanlastsnapshot;operationalhandoff19:00",
+      "final_WT_offline96": "26968;tail_ex1066;77cleanlastsnapshot"
+    },
+    "pending": [
+      "25 independent Sonnet source reviews pending;572frozenpins;BT20fixture26acceptedseparately",
+      "Fullcards17306hasoneknownstaleBT20fixturefailure correctedandtargetedverified;remainingtestscontinue",
+      "Replaygoldens andinvariantfuzz afterfullcards (runnerstopsatfailedsuite;launchremainingexplicitly)",
+      "Canonical source scenario installation via candidate4-canonical-installer-v2,mapv3;all approvalsfalse",
+      "ActualQ1921live withheldpendingobservergate;newlivecasesaftercohortrelease",
+      "Finalreadiness/docs;EX13timingcommentafterindependentreview"
+    ],
+    "candidate3": {
+      "sha256": "ea09c16edf68721d1f71b61f0af704f6d48f3b6195d7618a72839e6b76dc1012",
+      "Q1923": "prior step44 fixed, step47 missing Reaper action due to absent isolated YAML; not an oracle verdict"
+    },
+    "run_interruption": {
+      "session": "76696",
+      "reason": "Full card suite serial setting too slow; owned test PID47112 lineageverified then stopped. Firstfive suites passed and retained; cards/replay/fuzz restarted only in17306 using established8cardthreads. No DCGO process interrupted."
+    },
+    "review_recovery": {
+      "default_attempt": "independent-reviews-20261011T181016Z:bothcalls429 model_requires_usage_credits;noapproval",
+      "fallback": "CLI documented sonnet alias;independentClaude family retained",
+      "fixture26": "bt20-fixture-sonnet-review-v1:agrees true;rootaccepted with two strengthening suggestions implemented andfocusedGREEN",
+      "active_dispatch": "28044;independent-sonnet-reviews-20261011T181705Z;queuev7;25reviews;twoatonce"
+    }
+  },
+  "checkpoint_updated_at": "2026-10-11T17:27:54.785314+00:00"
+}

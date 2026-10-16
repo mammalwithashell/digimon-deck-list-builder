@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT23-018",
+    "colors": "Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "5000",
+    "form": "Champion",
+    "play_cost": "6",
+    "qa": [
+      "Yes, you can."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Gabumon] in name or w/[CS] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Gabumon] in name or w/[CS] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Jamming＞ [Main] [Once Per Turn] By placing this Digimon's top stacked card as its bottom digivolution card, you may play 1 [Agumon] or [Nokia Shiramine] from your hand with the play cost reduced by 2."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Opponent's Turn] This Digimon gets +2000 DP."
+      }
+    ],
+    "type": "Beast/CS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3f4f305d3ef938728fef16fccfc797d6c9363ff56ab222288768692f27417ea9",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "35f95a94ed9474f4cbc422919336b0835a5b07d4c7e53f5515cf5458bdda6ef5",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT23-018",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT23-018"
+}

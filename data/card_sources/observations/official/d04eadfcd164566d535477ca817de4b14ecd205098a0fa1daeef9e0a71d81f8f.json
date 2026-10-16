@@ -1,0 +1,40 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT21-055",
+    "colors": "Black",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "No, it doesn’t trigger."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Your Turn] When this Digimon would digivolve into a card with the [Mineral] or [Rock] trait, reduce the digivolution cost by 1. (Rule) Trait: Has [Mineral] Type."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less."
+      }
+    ],
+    "type": "Reptile/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "d04eadfcd164566d535477ca817de4b14ecd205098a0fa1daeef9e0a71d81f8f",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "ca9af899d1b280792fc4e5f310c3858384657dbf288c8084156b1a6eda9e3c56",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-055",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-055"
+}

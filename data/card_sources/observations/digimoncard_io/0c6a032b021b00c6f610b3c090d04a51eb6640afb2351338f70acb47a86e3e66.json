@@ -1,0 +1,100 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Vaccine"
+      ],
+      "card_colors": [
+        "Red"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Siriusmon",
+      "dp": 11000,
+      "effect_description_eng": "[When Digivolving] By placing 1 Digimon card with [Gammamon] in text from your hand as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP. [Your Turn] (Once Per Turn) When an opponent’s Digimon is deleted, unsuspend this Digimon.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "",
+      "level": 6,
+      "play_cost": 11,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Light Dragon"
+      ]
+    },
+    "card_id": "RB1-10",
+    "derived_diagnostics": [
+      {
+        "authoritative": false,
+        "candidate": {
+          "color": "Red",
+          "cost": 3,
+          "level": 5,
+          "ordinal": 1
+        },
+        "derived": true,
+        "field_path": "evolution_routes",
+        "reason": "digimoncard.io omitted explicit evolution route components"
+      }
+    ],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": 11000,
+        "effect_text": "[When Digivolving] By placing 1 Digimon card with [Gammamon] in text from your hand as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP. [Your Turn] (Once Per Turn) When an opponent’s Digimon is deleted, unsuspend this Digimon.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 6,
+        "play_cost": 11,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "&lt;Digivolve: 3 from Lv.5 w/[Gammamon] in text&gt;",
+      "artist": null,
+      "attribute": "Vaccine",
+      "color": "Red",
+      "color2": null,
+      "date_added": "2025-11-25 10:12:18",
+      "digi_type": "Light Dragon",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 11000,
+      "evolution_color": null,
+      "evolution_cost": 3,
+      "evolution_level": null,
+      "form": null,
+      "id": "RB1-10",
+      "level": 6,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[When Digivolving] By placing 1 Digimon card with [Gammamon] in text from your hand as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP. [Your Turn] (Once Per Turn) When an opponent’s Digimon is deleted, unsuspend this Digimon.",
+      "name": "Siriusmon",
+      "play_cost": 11,
+      "pretty_url": "siriusmon-rb1-10",
+      "rarity": "Unknown",
+      "series": "Digimon Card Game",
+      "set_name": [],
+      "source_effect": "",
+      "stage": "Mega",
+      "tcgplayer_id": null,
+      "tcgplayer_name": null,
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "0c6a032b021b00c6f610b3c090d04a51eb6640afb2351338f70acb47a86e3e66",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "RB1-10",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

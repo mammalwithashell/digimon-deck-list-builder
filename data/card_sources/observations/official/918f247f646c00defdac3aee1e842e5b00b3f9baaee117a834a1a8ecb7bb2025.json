@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT19-012",
+    "colors": "Red Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "7000",
+    "form": "Ultimate",
+    "play_cost": "7",
+    "qa": [
+      "No, you can't. This card is only treated as [Shoutmon] for a DigiXros. Related Cards"
+    ],
+    "special_digivolution_condition": "[Digivolve] [Shoutmon]: Cost 4/Lv.4 w/[Xros Heart] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Shoutmon]: Cost 4/Lv.4 w/[Xros Heart] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "This card is also treated as [Shoutmon] for DigiXros. [On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, delete 1 of their Digimon with 3000 DP or less. [On Deletion] You may place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under any of your Tamers."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Rush＞."
+      }
+    ],
+    "type": "Dragonkin/Xros Heart"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "918f247f646c00defdac3aee1e842e5b00b3f9baaee117a834a1a8ecb7bb2025",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "9df3f4925f2fa663dc9557eadb9720d578439acf1763a0c09d67a6b54bd3a086",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT19-012",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT19-012"
+}

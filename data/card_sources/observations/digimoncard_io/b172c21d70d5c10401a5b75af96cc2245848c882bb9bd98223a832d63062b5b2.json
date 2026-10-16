@@ -1,0 +1,98 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Virus"
+      ],
+      "card_colors": [
+        "Black"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Gundramon",
+      "dp": 13000,
+      "effect_description_eng": "＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Fragment (3)＞ (When this Digimon would be deleted, by trashing any 3 of its digivolution cards, it isn't deleted.)\r\n[When Digivolving] [Counter] [Once Per Turn] Reveal the top 6 cards of your deck. You may play or use 1 play or use cost 6 or lower [Three Musketeers] text card among them without paying the cost. Return the rest to the bottom of the deck.\r\n[When Digivolving] [When Attacking] By trashing up to 3 [Three Musketeers] text cards from any of your Digimon's digivolution cards, for each one trashed, delete 1 of your opponent's play cost 7 or lower Digimon.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "[Main] Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.",
+      "level": 6,
+      "play_cost": 6,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Machine",
+        "Three Musketeers",
+        "Titan",
+        "TS"
+      ]
+    },
+    "card_id": "LM-067",
+    "derived_diagnostics": [
+      {
+        "authoritative": false,
+        "candidate": {
+          "color": "Black",
+          "cost": 4,
+          "level": 5,
+          "ordinal": 1
+        },
+        "derived": true,
+        "field_path": "evolution_routes",
+        "reason": "digimoncard.io omitted explicit evolution route components"
+      }
+    ],
+    "explicit_evolution_routes": [],
+    "faces": [],
+    "source_record": {
+      "alt_effect": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 4",
+      "artist": null,
+      "attribute": "Virus",
+      "color": "Black",
+      "color2": null,
+      "date_added": "2026-05-13 01:00:38",
+      "digi_type": "Machine",
+      "digi_type2": "Three Musketeers",
+      "digi_type3": "Titan",
+      "digi_type4": "TS",
+      "dp": 13000,
+      "evolution_color": null,
+      "evolution_cost": 4,
+      "evolution_level": null,
+      "form": null,
+      "id": "LM-067",
+      "level": 6,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Fragment (3)＞ (When this Digimon would be deleted, by trashing any 3 of its digivolution cards, it isn't deleted.)\r\n[When Digivolving] [Counter] [Once Per Turn] Reveal the top 6 cards of your deck. You may play or use 1 play or use cost 6 or lower [Three Musketeers] text card among them without paying the cost. Return the rest to the bottom of the deck.\r\n[When Digivolving] [When Attacking] By trashing up to 3 [Three Musketeers] text cards from any of your Digimon's digivolution cards, for each one trashed, delete 1 of your opponent's play cost 7 or lower Digimon.",
+      "name": "Gundramon",
+      "play_cost": 6,
+      "pretty_url": "LM-067-gundramon",
+      "rarity": "p",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "LM-09: LIMITED CARD PACK DISTANCIA CERO"
+      ],
+      "source_effect": "[Main] Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.",
+      "stage": null,
+      "tcgplayer_id": null,
+      "tcgplayer_name": null,
+      "type": "Dual",
+      "xros_req": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 4"
+    },
+    "structural_diagnostics": [
+      {
+        "authoritative": false,
+        "derived": false,
+        "field_path": "faces.1.colors",
+        "reason": "digimoncard.io omitted the explicit Option-face color"
+      }
+    ]
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "b172c21d70d5c10401a5b75af96cc2245848c882bb9bd98223a832d63062b5b2",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "LM-067",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

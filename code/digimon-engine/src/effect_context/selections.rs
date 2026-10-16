@@ -200,9 +200,9 @@ impl DistinctByMode {
     ) -> bool {
         match self {
             DistinctByMode::CardNumber => picked.iter().all(|p| p.card_id != candidate.card_id),
-            DistinctByMode::Level => picked.iter().all(|p| {
-                !matches!((p.level, candidate.level), (Some(a), Some(b)) if a == b)
-            }),
+            DistinctByMode::Level => picked
+                .iter()
+                .all(|p| !matches!((p.level, candidate.level), (Some(a), Some(b)) if a == b)),
             DistinctByMode::Name => picked.iter().all(|p| p.card_name != candidate.card_name),
             DistinctByMode::Color => {
                 let mut masks: Vec<u8> = picked.iter().map(|p| color_mask(&p.colors)).collect();
@@ -1046,6 +1046,7 @@ impl<'a> EffectContext<'a> {
             let action_id = HAND_EFFECT_START + i as u16;
             valid_action_ids.push(action_id);
             choices.push(EffectChoiceEntry {
+                count_choice: None,
                 label: label.clone(),
                 action_id,
                 source_card: Some(source_card),
@@ -2021,7 +2022,7 @@ impl<'a> EffectContext<'a> {
 
         // Phase 6: CannotPlayDigimonByEffect gates effect-initiated plays,
         // including security triggers. If the revealed card is a Digimon
-        // and the defending player has the modifier installed, block the
+        // and the effect controller has the modifier installed, block the
         // play by returning early without raising `pending.played`.
         // The security-resolution loop (combat.rs) will see `played == false`
         // and trash the card via the normal "didn't stick" path — no double
@@ -2040,9 +2041,13 @@ impl<'a> EffectContext<'a> {
             _ => None,
         };
         if let Some(gate) = gate {
-            if self.game.modifiers.player_has(defender, gate) {
+            if self.game.modifiers.player_has(self.player, gate) {
                 return;
             }
+        }
+
+        if self.game.card_play_is_prohibited(self.player, &card) {
+            return;
         }
 
         let perm = crate::permanent::Permanent::new(card, turn);
@@ -3765,7 +3770,11 @@ mod distinct_color_tests {
         // re-routes RB→Blue.
         assert!(colors_assignable(&[m(&[Red, Blue]), m(&[Red])]));
         // Hall violation: 3 cards over {Red, Blue}.
-        assert!(!colors_assignable(&[m(&[Red, Blue]), m(&[Red]), m(&[Blue])]));
+        assert!(!colors_assignable(&[
+            m(&[Red, Blue]),
+            m(&[Red]),
+            m(&[Blue])
+        ]));
     }
 
     #[test]

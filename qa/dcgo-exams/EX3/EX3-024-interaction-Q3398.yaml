@@ -1,0 +1,64 @@
+# qa:Q3398 (2024-03-28) -- "Can I activate this card's [Start of Opponent's Main Phase] effect even if
+# there are no Digimon in my opponent's battle area?" -> "Yes, you can. In such cases, there are no
+# target Digimon, therefore the effect ends without an attack being performed."
+# P1 never plays a Digimon. P0 fields Wingdramon BT20-025 (turn 1) and Birdramon ST1-05 (turn 3;
+# "Birdramon" carries [Dramon] in its name -- DCGO CardSource.HasDramonName, our name_contains is
+# case-insensitive), then digivolves Wingdramon into Slayerdramon EX3-024 (turn 5). At the start of
+# P1's turn-6 main phase P0 is offered the cost with an EMPTY opposing battle area and pays it by
+# suspending Birdramon (own.field.1) rather than Slayerdramon, so the payment stays visible: the final
+# row shows Birdramon suspended, Slayerdramon unsuspended, P1's field empty and no attack performed.
+# If an engine gated the activation on an opposing Digimon being present, step 13 would have no prompt
+# to answer and would not lower -- that is the finding this exam exists to surface.
+# DCGO EX3_024.cs: CanActivateCondition checks only HasMatchConditionPermanent(own unsuspended Dramon);
+# after the tap, `Enemy.GetBattleAreaDigimons().Count(...) >= 1` is false and the coroutine ends.
+# Ours (EX3-024.yaml): the attacker pick is a select_opponent_permanent whose zero-candidate install
+# short-circuits (selections.rs install_select_opponent_permanent), so force_attack never runs.
+# Step 13 carries the OptionalSkill fold marker (DCGO gate + pick; ours one declinable pick).
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: EX3-024
+clause: EX3-024#effect#1
+covers: [EX3-024#effect#1, EX3-024#effect#0]
+interaction: { id: "qa:Q3398", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: BT20-025, EX3-024, ST1-05, BT1-090, BT3-093 | security bottom->top: ST1-03 x4, ST2-03 | draws (T3, T5): BT3-093, ST1-02, then ST1-02, ST2-04, ST2-04
+    stack: [BT20-025, EX3-024, ST1-05, BT1-090, BT3-093, ST1-03, ST1-03, ST1-03, ST1-03, ST2-03, BT3-093, ST1-02, ST1-02, ST2-04, ST2-04]
+    rest: EX3-024-effect1-repair-p0
+  p1:
+    # hand: ST2-09, BT1-090, BT1-090, BT3-093, BT3-093 (never played) | security bottom->top: ST1-03 x4, ST2-03 | draws (T2, T4, T6): BT3-093, BT3-093, ST1-02, then ST1-02, ST2-04, ST2-04
+    stack: [ST2-09, BT1-090, BT1-090, BT3-093, BT3-093, ST1-03, ST1-03, ST1-03, ST1-03, ST2-03, BT3-093, BT3-093, ST1-02, ST1-02, ST2-04, ST2-04]
+    rest: EX3-024-effect1-repair-p1
+steps:
+# T1 P0: Wingdramon BT20-025 (7) -> -7 (no opponent Digimon: no [On Play] prompt on either engine).
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: BT20-025, from: hand } }, expect: { prompt: main_phase } }
+# T2 P1 (7): nothing.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T3 P0 (3): Birdramon ST1-05 (4) -> -1.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: ST1-05, from: hand } }, expect: { prompt: main_phase } }
+# T4 P1 (1 -> set to 3): nothing.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T5 P0 (3): Wingdramon (first-entered, slot 0 on both wires) -> Slayerdramon via "3 from [Wingdramon]" (-> 0), pass.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { digivolve: { from: field.0, using: EX3-024 } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { select: { value: 3 } }, expect: { prompt: SelectCountEffect } }
+- { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+# T6 P1 (3): start of main phase with NO opposing Digimon. P0 is still offered the cost and pays it with Birdramon.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { select: { targets: [own.field.1] } }, expect: { prompt: OptionalSkill } }
+# Observation: Birdramon suspended, Slayerdramon unsuspended, P1 field empty, no attack happened, memory untouched.
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+expect_ruling:
+  q_id: Q3398
+  assert:
+  - at: 14
+    that:
+      p0.field:
+      - EX3-024
+      - card_id: ST1-05
+        suspended: true
+      p1.field: []

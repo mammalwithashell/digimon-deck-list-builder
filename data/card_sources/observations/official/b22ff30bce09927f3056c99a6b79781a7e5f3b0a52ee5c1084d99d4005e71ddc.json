@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "AD1-010",
+    "colors": "Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "5000",
+    "form": "Champion",
+    "play_cost": "5",
+    "qa": [
+      "No, you can't."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Omnimon] in text or w/[ADVENTURE] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Omnimon] in text or w/[ADVENTURE] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] ＜Draw 1＞ [All Turns] When your Digimon or Tamers are played or digivolve, if any of them have [Greymon] or [Matt Ishida] in their names, this Digimon may digivolve into a Digimon card with [Garurumon] in its name in the hand without paying the cost."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+      }
+    ],
+    "type": "Beast/ADVENTURE"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "b22ff30bce09927f3056c99a6b79781a7e5f3b0a52ee5c1084d99d4005e71ddc",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "8d936c65f81b4be7e17bbfe3e21f7c5b8cb5e31c84dba59cd2f8888e89032e02",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:AD1-010",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/AD1-010"
+}

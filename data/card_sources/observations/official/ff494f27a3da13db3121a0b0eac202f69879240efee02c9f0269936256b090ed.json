@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT16-027",
+    "colors": "Blue Green",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "Mega",
+    "play_cost": "8",
+    "special_digivolution_condition": "[Digivolve] [Imperialdramon: Dragon Mode]: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Imperialdramon: Dragon Mode]: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "{Hand} [Counter] ＜Blast Digivolve＞ (One of your Digimon may digivolve into this card without paying the cost.) [On Play] [When Digivolving] Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck. [End of Attack] [Once Per Turn] Unsuspend this Digimon. Then, if [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards, return 1 of your opponent's suspended Digimon to the bottom of the deck."
+      },
+      {
+        "label": "Special Rule",
+        "text": "＜Overflow (-4)＞ (As this card moves from the battle area or under a card to another area, lose 4 memory.)"
+      }
+    ],
+    "type": "Ancient Dragonkin"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "ff494f27a3da13db3121a0b0eac202f69879240efee02c9f0269936256b090ed",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "d60bfcf65c4469387d0f47f2f9f28046c89368093e052c9857d99a2558f545d1",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT16-027",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT16-027"
+}

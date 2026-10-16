@@ -1,0 +1,58 @@
+{
+  "extracted": {
+    "attribute": "Game",
+    "card_id": "BT23-022",
+    "colors": "Blue Red",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "9000",
+    "form": "Ult./Appmon",
+    "play_cost": "9",
+    "qa": [
+      "No, you can't."
+    ],
+    "special_digivolution_condition": "[App Fusion] [Dosukomon] & [Coachmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Dosukomon] & [Coachmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+      },
+      {
+        "label": "Effect",
+        "text": "＜Raid＞ [When Digivolving] [When Attacking] [Once Per Turn] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost. [All Turns] [Once Per Turn] When this Digimon gets linked, it may unsuspend."
+      },
+      {
+        "label": "Link DP",
+        "text": "+4000 DP"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+      }
+    ],
+    "type": "Battle"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "2f8447036e5a89cb4b1ad3a7f9b0e8293329f844db714fd1079bbaab79a5332b",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "fda5007ec5fcdf2982b64d3b53c159d084d59100beba5b679aecdd52ed52542e",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT23-022",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT23-022"
+}

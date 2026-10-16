@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT9-112",
+    "colors": "Purple Black",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "dp": "15000",
+    "form": "Mega",
+    "play_cost": "20",
+    "qa": [
+      "No, you reduce its memory cost by 3 based on the total number of Digimon and Tamer cards your opponent has in play. For example, if your opponent has 2 Digimon and 1 Tamer, this adds up to 3 cards total, which means you get to reduce the play cost by 9."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "When this card would be played, reduce the play cost by 3 for each of your opponent's Digimon and Tamers. [On Play] [When Digivolving] ＜De-Digivolve 1＞ all of your opponent’s Digimon. Then, delete all of their level 4 or lower Digimon. [End of Opponent’s Turn] [Once Per Turn] Delete all of your opponent's Digimon with the lowest play cost."
+      }
+    ],
+    "type": "Unanalyzable/X Program"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "85c4c8b8ea462da78c3a5b15ee022a5b010ea85cfad40d2c3b6fbd17228a7f6f",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "c6db5f653b555cf5d19fe8bbacef96a06a520523b994c12b210812b13add5dd5",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT9-112",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT9-112"
+}

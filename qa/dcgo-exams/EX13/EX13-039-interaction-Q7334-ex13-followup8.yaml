@@ -1,0 +1,135 @@
+# Source-derived draft; independent verification pending.
+card: EX13-039
+clause: EX13-039#effect#1
+interaction:
+  id: qa:Q7334
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX3-020
+    - EX13-039
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-05
+    rest: EX13-039-interaction-Q7334-ex13-followup8-p0
+  p1:
+    stack:
+    - ST1-03
+    - ST1-16
+    - ST1-10
+    - BT1-090
+    - ST2-03
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-05
+    rest: EX13-039-interaction-Q7334-ex13-followup8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX3-020
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+      sim_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-03
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    play:
+      card: ST1-16
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX13-039
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX3-020
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert: []
+expect_ruling:
+  q_id: Q7334
+  assert:
+  - at: 11
+    that:
+      memory: -1
+      p0.field:
+      - card_id: EX13-039
+        suspended: false
+      p0.trash: []
+      p0.hand:
+      - BT1-090
+      - BT1-090
+      - BT3-093
+      - BT3-093
+      - EX3-020
+      p1.field:
+      - card_id: ST1-03
+        suspended: false
+      p1.trash:
+      - ST1-16

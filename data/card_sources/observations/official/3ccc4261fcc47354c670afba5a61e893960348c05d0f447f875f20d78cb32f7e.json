@@ -1,0 +1,42 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT19-047",
+    "colors": "Green Black",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] This Digimon may digivolve into [AtlurBallistamon] under your Tamers without paying the cost. [On Deletion] ＜Save＞"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Opponent's Turn] This Digimon with the [Xros Heart] trait gains ＜Blocker＞."
+      }
+    ],
+    "type": "Machine/Xros Heart"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3ccc4261fcc47354c670afba5a61e893960348c05d0f447f875f20d78cb32f7e",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "8cf0c253ef245594579719e796f91ad3361c00d5d3f2fab0c96440362e8e14d5",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT19-047",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT19-047"
+}
