@@ -1,0 +1,32 @@
+# OBS_OPP_PLAY_LVL -- Tamer, red, play cost 3.
+# The §15-8-3-9-3 example text:
+#   [All Turns] When your opponent plays a Digimon, by suspending this Tamer,
+#   if that Digimon is level 4 or higher, gain 1 memory. If it is level 3,
+#   <Draw 1>.
+# "by suspending this Tamer" is an optional processing condition (§15-7-1), so
+# the effect is optional. The two "if" clauses are processing conditions
+# (§15-6-1), referenced when the processing is performed (§15-8-3-9-3).
+card: OBS_OPP_PLAY_LVL
+name: Sentry Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_any_digimon_played
+    optional: true
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - source_is_unsuspended: true
+    summary: "[All Turns] When your opponent plays a Digimon, by suspending this Tamer, if that Digimon is level 4 or higher, gain 1 memory. If it is level 3, <Draw 1>."
+    process:
+      - activation_cost: { suspend_self: true }
+      - if:
+          condition: { event_target_level_gte: 4 }
+          then:
+            - gain_memory: 1
+      - if:
+          condition: { event_target_level_eq: 3 }
+          then:
+            - draw: { of: you, count: 1 }

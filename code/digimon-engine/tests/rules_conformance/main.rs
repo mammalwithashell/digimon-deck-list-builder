@@ -14,3 +14,4 @@ mod meta;
 mod fixtures;
 
 mod ch15_04_effect_states;
+mod ch15_08_effect_categories;

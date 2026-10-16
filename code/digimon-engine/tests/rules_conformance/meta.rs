@@ -10,10 +10,16 @@ use crate::cite::*;
 /// `("ch15_effects.rs", include_str!("ch15_effects.rs"))`). A forgotten entry
 /// fails `chapter_source_list_is_complete`, which compares this list with the
 /// `*.rs` files actually present in the directory.
-const CHAPTER_SOURCES: &[(&str, &str)] = &[(
-    "ch15_04_effect_states.rs",
-    include_str!("ch15_04_effect_states.rs"),
-)];
+const CHAPTER_SOURCES: &[(&str, &str)] = &[
+    (
+        "ch15_04_effect_states.rs",
+        include_str!("ch15_04_effect_states.rs"),
+    ),
+    (
+        "ch15_08_effect_categories.rs",
+        include_str!("ch15_08_effect_categories.rs"),
+    ),
+];
 
 /// `main.rs`, `cite.rs`, `meta.rs` are infrastructure, not chapter modules.
 const INFRA_FILES: usize = 3;

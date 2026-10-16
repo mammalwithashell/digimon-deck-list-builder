@@ -1,0 +1,18 @@
+# OBS_TAMER_TRASH -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   [All Turns] When effects trash cards from under your Tamers, gain 1
+#   memory.
+# A trigger-type observer (no "would"): it waits until the trashing effect
+# has finished (§15-8-3-2).
+card: OBS_TAMER_TRASH
+name: Undertamermon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - when: on_digivolution_card_trashed
+    condition: { event_host_is_own_tamer: true }
+    summary: "[All Turns] When effects trash cards from under your Tamers, gain 1 memory."
+    process:
+      - gain_memory: 1

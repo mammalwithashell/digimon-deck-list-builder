@@ -87,3 +87,63 @@
 "15-4-5-3":
   status: proven
   tests: ["ch15_04_effect_states::non_turn_player_derived_trigger_precedes_turn_player_pending"]
+
+# ── ch15-08 Effect Categories (§15-8) — tests/rules_conformance/ch15_08_effect_categories.rs ──
+"15-8-3-2":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS
+  tests: ["ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish"]
+  note: "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: from an Option [Main] the observer waits (green half); from an [On Play] it resolves before 'Then, gain 1 memory' (inline drain in fire_digivolution_card_trashed). Test is #[ignore]d."
+"15-8-3-5":
+  status: proven
+  tests: ["ch15_08_effect_categories::inherited_on_deletion_is_pending_on_the_former_top_card"]
+  note: "Inherited [On Deletion] offered once; pending on the former top card: when the top card's own [On Deletion] returns it from the trash first, the inherited effect can no longer activate (15-4-4-3); control order activates it. DCGO CanActivateOnDeletion requires IsTopCardStillInTrash."
+"15-8-3-6":
+  status: proven
+  tests: ["ch15_08_effect_categories::end_of_turn_trigger_persists_through_memory_change"]
+"6-6-4":
+  status: proven
+  tests: ["ch15_08_effect_categories::end_of_turn_trigger_persists_through_memory_change"]
+  note: "After a pass, [End of Your Turn] effects bring the memory back to 2 on the turn player's side: the turn player and the main phase continue."
+"15-8-3-7":
+  status: proven
+  tests: ["ch15_08_effect_categories::trigger_reference_uses_state_at_processing"]
+  note: "Security count read at processing: ordering the sibling <Recovery +1> first makes a level 4 Digimon returnable; ordering the observer first does not."
+"15-8-3-8":
+  status: proven
+  tests: ["ch15_08_effect_categories::trigger_reference_tied_to_condition_uses_trigger_time_state"]
+  note: "The rule's example: the played level 4 Digimon digivolves to level 5 before the observer activates; only the opponent's level 4 Digimon is a legal deletion target."
+"15-8-3-9-1":
+  status: proven
+  tests: ["ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger"]
+  note: "The 15-8-3-9-3 example: 'level 4 or higher' unmet when the observer triggered (level 3 played), met when it activates (digivolved to 4): it activates and gains memory."
+"15-8-3-9-3":
+  status: proven
+  tests: ["ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger"]
+  note: "The rule's example text; control (no digivolve) takes the level 3 <Draw 1> branch."
+"15-8-3-9-4":
+  status: proven
+  tests: ["ch15_08_effect_categories::removal_trigger_processing_condition_uses_trigger_state"]
+  note: "The rule's example text: deleted with a digivolution card it may play itself from the trash; deleted alone it can't."
+"15-8-4-4-1":
+  status: proven
+  tests: ["ch15_08_effect_categories::activation_type_declarable_only_when_optional_condition_payable"]
+  note: "Printed <Training> (parsed from the printed text; the DSL grant_keyword: Training clause is declaration-only by design): not in the action mask while suspended; declared while unsuspended, it suspends with no skip prompt and places the deck top face down."
+"15-8-5-2":
+  status: proven
+  tests: ["ch15_08_effect_categories::immediate_effect_interrupts_before_cause"]
+"15-8-5-3":
+  status: proven
+  tests: ["ch15_08_effect_categories::immediate_effects_only_simultaneous_with_immediate_effects"]
+  note: "A would-be-deleted effect is offered alone before the deletion; the [On Deletion] of the other simultaneously deleted Digimon triggers after it. The positive half (two immediates sharing one ordering choice) is G-REPLACEMENT-NO-ORDER-PROMPT territory and is not asserted here."
+"15-8-5-4":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT
+  tests: ["ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause"]
+  note: "Controller ruling: the cause is the resolving [Main]. New-cause half (a fresh [Main]) passes; same-cause half fails: the second deletion from one [Main] re-offers the replacement (replacement_fired is cleared per depth-0 event). Test is #[ignore]d."
+"15-8-5-5-2":
+  status: proven
+  tests: ["ch15_08_effect_categories::immediate_effect_with_condition_met_later_can_activate"]
+  note: "Two would-be-deleted effects on one card: 'if you have 4 or more security cards, it isn't deleted' (unmet at 3) and '<Recovery +1 (Deck)>'; after the recovery the first activates. Control: empty deck, Digimon deleted."

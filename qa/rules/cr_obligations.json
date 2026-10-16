@@ -4615,16 +4615,18 @@
       "text": "A trigger-type effect will always trigger as soon as its trigger conditions are met, then the effect will activate. If an effect reads \"[When Attacking] Lose 2 memory\" or \"[Your Turn] When effects suspend this Digimon, suspend 1 of your opponent's Digimon,\" that shows a trigger timing."
     },
     "15-8-3-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 15,
       "fingerprint": "db9514d0faa35f84c637c60f04cbbe89569aafaa1a4d579674c36b56820b69e1",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: from an Option [Main] the observer waits (green half); from an [On Play] it resolves before 'Then, gain 1 memory' (inline drain in fire_digivolution_card_trashed). Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish"
+      ],
       "text": "Trigger-type effects can't activate during the processing for a rule or effect."
     },
     "15-8-3-3": {
@@ -4661,9 +4663,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Inherited [On Deletion] offered once; pending on the former top card: when the top card's own [On Deletion] returns it from the trash first, the inherited effect can no longer activate (15-4-4-3); control order activates it. DCGO CanActivateOnDeletion requires IsTopCardStillInTrash.",
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::inherited_on_deletion_is_pending_on_the_former_top_card"
+      ],
       "text": "If a trigger-type effect triggers when a card is deleted, the card where it will be pending activation is the card that was the top card in the original area.28 (Example: Upon the deletion of a Digimon with an inherited effect that reads \"[On Deletion] Gain 1 memory\" on its digivolution card, that effect will trigger, and it will be pending activation for the card that was the top card of that Digimon.)"
     },
     "15-8-3-6": {
@@ -4675,8 +4679,10 @@
         "effects-and-ordering"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::end_of_turn_trigger_persists_through_memory_change"
+      ],
       "text": "If a trigger-type effect triggers at the end of the turn timing, it will trigger as soon as the end of the turn timing arrives. Once an effect triggers, it will remain triggered, even if the memory increases or decreases."
     },
     "15-8-3-7": {
@@ -4687,9 +4693,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Security count read at processing: ordering the sibling <Recovery +1> first makes a level 4 Digimon returnable; ordering the observer first does not.",
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::trigger_reference_uses_state_at_processing"
+      ],
       "text": "If an unspecified reference is to be made during the processing for a trigger-type effect, the reference is made in the state when the processing is being performed. (Example: If an effect reads \"[All Turns] [Once Per Turn] When a card is added to your security stack, return 1 of your opponent's Digimon with a level less than or equal to the number of your security cards to the hand,\" if you have 4 security cards when referencing them for the processing, you would return 1 of your opponent's level 4 or lower Digimon to the hand.)"
     },
     "15-8-3-8": {
@@ -4700,9 +4708,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example: the played level 4 Digimon digivolves to level 5 before the observer activates; only the opponent's level 4 Digimon is a legal deletion target.",
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::trigger_reference_tied_to_condition_uses_trigger_time_state"
+      ],
       "text": "If a reference in the same state as the effect's trigger conditions is to be made during the processing for a trigger-type effect, the state where the effect has triggered will be referenced. The state where the effect has triggered will be referenced, even if the state changes after the effect triggers. This refers to effects where text such as \"when another of your Digimon is played\" is a trigger condition and a reference is made using text such as \"Digimon with a level less than or equal to the played Digimon.\" (Example: When an effect plays a level 4 Digimon and an effect reads \"[All Turns] When an effect plays another of your Digimon, delete 1 of your opponent's Digimon with a level less than or equal to the played Digimon,\" this effect deletes 1 of your opponent's level 4 or lower Digimon, even if the Digimon digivolves into a level 5 Digimon before this effect activates.)"
     },
     "15-8-3-9": {
@@ -4726,9 +4736,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The 15-8-3-9-3 example: 'level 4 or higher' unmet when the observer triggered (level 3 played), met when it activates (digivolved to 4): it activates and gains memory.",
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger"
+      ],
       "text": "A trigger-type effect with processing conditions will always trigger as soon as its trigger conditions are met, then the effect will activate if the processing conditions are met."
     },
     "15-8-3-9-2": {
@@ -4754,9 +4766,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example text; control (no digivolve) takes the level 3 <Draw 1> branch.",
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger"
+      ],
       "text": "If a reference is to be made in the processing conditions for a trigger-type effect, the reference is made in the state when the processing is being performed. (Example: If an effect reads \"[All Turns] When your opponent plays a Digimon, by suspending this Tamer, if that Digimon is level 4 or higher, gain 1 memory. If it is level 3, <Draw 1>,\" you will gain 1 memory if your opponent's Digimon is level 4 upon being referenced when this effect activates.)"
     },
     "15-8-3-9-4": {
@@ -4767,9 +4781,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example text: deleted with a digivolution card it may play itself from the trash; deleted alone it can't.",
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::removal_trigger_processing_condition_uses_trigger_state"
+      ],
       "text": "If a reference is to be made in the processing conditions for a trigger-type effect that will trigger when a card is removed from an area, the reference is made in the state when the effect triggered. (Example: If an effect reads \"[On Deletion] When this Digimon has digivolution cards, you may play this card from your trash without paying the cost,\" it references whether or not that Digimon has digivolution cards upon deletion.)"
     },
     "15-8-4": {
@@ -4858,9 +4874,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Printed <Training> (parsed from the printed text; the DSL grant_keyword: Training clause is declaration-only by design): not in the action mask while suspended; declared while unsuspended, it suspends with no skip prompt and places the deck top face down.",
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::activation_type_declarable_only_when_optional_condition_payable"
+      ],
       "text": "If an activation-type effect has optional processing conditions, a player can only declare activation while the optional processing conditions can be performed. In addition, once declared, the optional processing conditions must be performed. (Example: Activation of <Training> can be declared if suspending is possible. Once declared, suspending must be performed.)"
     },
     "15-8-5": {
@@ -4898,8 +4916,10 @@
         "effects-and-ordering"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::immediate_effect_interrupts_before_cause"
+      ],
       "text": "Activation of immediate-type effects will interrupt right before the cause of such effects. (Example: An immediate-type effect that triggers \"when X would be deleted\" will trigger immediately before the deletion, and if that \"when X would be deleted\" effect prevents the card from being removed from the battle area, it isn't deleted.)"
     },
     "15-8-5-3": {
@@ -4910,22 +4930,26 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A would-be-deleted effect is offered alone before the deletion; the [On Deletion] of the other simultaneously deleted Digimon triggers after it. The positive half (two immediates sharing one ordering choice) is G-REPLACEMENT-NO-ORDER-PROMPT territory and is not asserted here.",
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::immediate_effects_only_simultaneous_with_immediate_effects"
+      ],
       "text": "Immediate-type effects will only trigger simultaneously with other immediate-type effects."
     },
     "15-8-5-4": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 15,
       "fingerprint": "7586ddc0ccc9332f3ced38f131201eceaf1856a8343ac14248891fafc18fb30b",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "Controller ruling: the cause is the resolving [Main]. New-cause half (a fresh [Main]) passes; same-cause half fails: the second deletion from one [Main] re-offers the replacement (replacement_fired is cleared per depth-0 event). Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause"
+      ],
       "text": "Each immediate-type effect can be activated once until the cause that first interrupted the immediate- type effect is resolved. (Example: If \"[Main] Delete 1 of your opponent's Digimon\" causes \"[All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, it isn't deleted\" to activate, until the deletion is resolved, the already activated \"[All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, it isn't deleted\" can't activate again.)"
     },
     "15-8-5-5": {
@@ -4962,9 +4986,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Two would-be-deleted effects on one card: 'if you have 4 or more security cards, it isn't deleted' (unmet at 3) and '<Recovery +1 (Deck)>'; after the recovery the first activates. Control: empty deck, Digimon deleted.",
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::immediate_effect_with_condition_met_later_can_activate"
+      ],
       "text": "Even if an immediate-type effect with processing conditions triggers when its processing conditions aren't met, it can be activated if its processing conditions are later met."
     },
     "15-9": {
@@ -13063,9 +13089,11 @@
       "mechanisms": [
         "turn-flow"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "After a pass, [End of Your Turn] effects bring the memory back to 2 on the turn player's side: the turn player and the main phase continue.",
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::end_of_turn_trigger_persists_through_memory_change"
+      ],
       "text": "If the memory moves to 0 or more at the end of the turn, the end of the turn will be postponed and the current phase will continue."
     },
     "7-1": {
@@ -14634,9 +14662,9 @@
         "total": 10
       },
       "15": {
-        "gap": 168,
+        "gap": 157,
         "not_testable": 66,
-        "proven": 10,
+        "proven": 21,
         "total": 244
       },
       "16": {
@@ -14682,9 +14710,9 @@
         "total": 14
       },
       "6": {
-        "gap": 35,
+        "gap": 34,
         "not_testable": 10,
-        "proven": 0,
+        "proven": 1,
         "total": 45
       },
       "7": {
@@ -14706,15 +14734,15 @@
         "total": 13
       }
     },
-    "gap": 863,
+    "gap": 851,
     "mechanics": {
-      "gap_blocking": 4,
-      "gap_nonblocking": 549,
+      "gap_blocking": 6,
+      "gap_nonblocking": 535,
       "not_testable": 152,
-      "proven": 10
+      "proven": 22
     },
     "not-testable": 246,
-    "proven": 10
+    "proven": 22
   },
   "version": 1
 }

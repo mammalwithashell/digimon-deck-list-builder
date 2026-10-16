@@ -46,6 +46,36 @@ const CH15_04: &[&str] = &[
     include_str!("ch15_04/WOULD_DEL_STRIKE.yaml"),
 ];
 
+/// §15-8 "Effect Categories" chapter cards (`ch15_08_effect_categories.rs`).
+const CH15_08: &[&str] = &[
+    include_str!("ch15_08/EOT_MEM.yaml"),
+    include_str!("ch15_08/EOT_MEM3.yaml"),
+    include_str!("ch15_08/IMM_COND.yaml"),
+    include_str!("ch15_08/INH_OD_MEM.yaml"),
+    include_str!("ch15_08/LV4_PLAIN.yaml"),
+    include_str!("ch15_08/LV5_PLAIN.yaml"),
+    include_str!("ch15_08/MAIN_DEL1.yaml"),
+    include_str!("ch15_08/MAIN_DEL2.yaml"),
+    include_str!("ch15_08/MAIN_DEL_ALL.yaml"),
+    include_str!("ch15_08/MAIN_PLAY_LV4.yaml"),
+    include_str!("ch15_08/MAIN_TRASH_UNDER_MEM.yaml"),
+    include_str!("ch15_08/OBS_EFFPLAY_DEL_LE.yaml"),
+    include_str!("ch15_08/OBS_OPP_PLAY_LVL.yaml"),
+    include_str!("ch15_08/OBS_TAMER_TRASH.yaml"),
+    include_str!("ch15_08/OD_REPLAY_SRC.yaml"),
+    include_str!("ch15_08/OD_RET_SELF.yaml"),
+    include_str!("ch15_08/OP_DIGI_LV3.yaml"),
+    include_str!("ch15_08/OP_DIGI_LV4.yaml"),
+    include_str!("ch15_08/OP_TRASH_UNDER_MEM.yaml"),
+    include_str!("ch15_08/PLAIN_TAMER.yaml"),
+    include_str!("ch15_08/PLAY_RET_LE_SEC.yaml"),
+    include_str!("ch15_08/REC_PLAY.yaml"),
+    include_str!("ch15_08/SCAPEGOAT_LIKE.yaml"),
+    include_str!("ch15_08/SUKAMON.yaml"),
+    include_str!("ch15_08/TRAIN.yaml"),
+    include_str!("ch15_08/WOULD_DEL_MEM.yaml"),
+];
+
 /// Every shared card's YAML source.
 pub fn common_cards() -> &'static [&'static str] {
     COMMON
@@ -54,6 +84,11 @@ pub fn common_cards() -> &'static [&'static str] {
 /// Every `ch15_04/` card's YAML source.
 pub fn ch15_04_cards() -> &'static [&'static str] {
     CH15_04
+}
+
+/// Every `ch15_08/` card's YAML source.
+pub fn ch15_08_cards() -> &'static [&'static str] {
+    CH15_08
 }
 
 /// Register each card of `cards` on `builder`. Panics with the card's compile
@@ -88,7 +123,11 @@ fn every_fixture_file_is_listed() {
         env!("CARGO_MANIFEST_DIR"),
         "/tests/rules_conformance/fixtures"
     );
-    for (dir, listed) in [("common", COMMON.len()), ("ch15_04", CH15_04.len())] {
+    for (dir, listed) in [
+        ("common", COMMON.len()),
+        ("ch15_04", CH15_04.len()),
+        ("ch15_08", CH15_08.len()),
+    ] {
         let on_disk = std::fs::read_dir(format!("{root}/{dir}"))
             .unwrap_or_else(|e| panic!("read fixtures/{dir}: {e}"))
             .filter_map(|e| e.ok())
