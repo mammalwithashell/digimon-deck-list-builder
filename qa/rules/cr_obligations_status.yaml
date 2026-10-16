@@ -1040,8 +1040,8 @@
   status: gap
   blocks_training: true
   gap_id: G-DEDIGIVOLVE-NO-DECLARATION
-  tests: ["ch16_processing_keywords::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3"]
-  note: "<De-Digivolve 2> offers no 1-or-2 declaration; the maximum is always trashed. #[ignore]d. The 'starting with the top card' half is proven by de_digivolve_multi_card_trash_is_simultaneous_but_sequential."
+  tests: ["ch16_processing_keywords::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3", "ch16_processing_keywords::de_digivolve_trashes_top_cards_not_digivolution_cards"]
+  note: "<De-Digivolve 2> offers no 1-or-2 declaration; the maximum is always trashed. Second gap: each trashed top card fires 'digivolution cards trashed' observers (G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED; 4-8-1: digivolution cards are the cards UNDER a Digimon; DCGO stacks WhenTopCardTrashed only). Both #[ignore]d. The 'starting with the top card' order is proven by de_digivolve_multi_card_trash_is_simultaneous_but_sequential."
 "16-12-2":
   status: proven
   tests: ["ch16_processing_keywords::de_digivolve_kind_matches_rule"]
@@ -1058,7 +1058,7 @@
 "16-12-5":
   status: proven
   tests: ["ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential"]
-  note: "<De-Digivolve 2>: trash order top first; a 'when cards are trashed from your Digimon' observer triggers once."
+  note: "<De-Digivolve 2>: trash order top first; a 'when the top stacked card of one of your Digimon is trashed' observer (BT21-094 wording; DCGO WhenTopCardTrashed, stacked once per IDegeneration) triggers once. The fixture is authored on on_digivolution_card_trashed for lack of a top-card timing (G-DSL-TOP-CARD-TRASHED-TIMING)."
 "16-12-6":
   status: proven
   tests: ["ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential"]
@@ -1068,7 +1068,7 @@
   blocks_training: true
   gap_id: G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS
   tests: ["ch16_processing_keywords::de_digivolve_separate_instances_processed_separately"]
-  note: "Two <De-Digivolve 1> instances in one Option [Main]: both cards trashed, but the observer triggers once instead of once per trashing (15-4-2-4, owner ruling 2026-10-10 #5). #[ignore]d."
+  note: "Two <De-Digivolve 1> instances in one Option [Main]: both cards trashed, but the 'top stacked card trashed' observer triggers once instead of once per instance (15-4-2-4, owner ruling 2026-10-10 #5; DCGO runs IDegeneration twice, each stacking WhenTopCardTrashed). #[ignore]d."
 "16-12-8":
   status: proven
   tests: ["ch16_processing_keywords::de_digivolve_state_confirmed_after_each_instance"]
@@ -1087,7 +1087,7 @@
 "16-17-2":
   status: proven
   tests: ["ch16_processing_keywords::delay_optionality_matches_rule", "ch16_processing_keywords::delay_scheduled_window_is_optional"]
-  note: "[Main]-activated and [Start of Your Turn] <Delay> both optional (decline keeps the Option). The latter contradicts the OPEN G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN entry, which now carries an 'observed fixed' note."
+  note: "[Main]-activated and [Start of Your Turn] <Delay> both optional (decline keeps the Option). The scheduled half is the conformance pin of G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN, resolved 2026-08-24 (73733429d) and moved to qa/resolved-gaps.md."
 "16-17-3":
   status: proven
   tests: ["ch16_processing_keywords::delay_optional_trash_option_not_the_turn_it_entered_no_color_or_cost"]
@@ -1187,17 +1187,23 @@
   tests: ["ch16_processing_keywords::blast_dna_kind_matches_rule"]
   note: "Witness: the field Digimon and the hand card are both chosen before any card moves (no reveal-from-hand event exists to observe the reveal itself)."
 "16-40-1":
-  status: proven
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED
   tests: ["ch16_processing_keywords::link_plus_adds_to_max_link_cards_and_instances_add"]
-  note: "Measured relative to the plain host's limit. The absolute base (1, 4-9-5) is wrong in the engine: G-ENGINE-LINK-MAX-BASE, test link_max_base_is_one."
+  note: "LINKPLUS2 (two <Link +1>, max 3): with 2 link cards a link adds (green half); with 3 it must replace 1 (4-9-5), the engine adds a 4th (base 5 + 2: G-ENGINE-LINK-MAX-BASE); with the base fixed it would refuse (G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED). #[ignore]d."
 "16-40-2":
-  status: proven
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED
   tests: ["ch16_processing_keywords::link_plus_kind_matches_rule"]
-  note: "A granted <Link +1> raises the limit by exactly 1 with no decision."
+  note: "A granted <Link +1> (max 2): no decision; with 1 link card a link adds (green half); with 2 it must replace, the engine adds (also G-ENGINE-LINK-MAX-BASE). #[ignore]d."
 "16-40-3":
-  status: proven
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED
   tests: ["ch16_processing_keywords::link_plus_adds_to_max_link_cards_and_instances_add"]
-  note: "Two printed <Link +1> raise it by exactly 2. The 'not considered <Link +2>' half is not staged."
+  note: "Same test as 16-40-1 (two instances add to 3). The 'not considered <Link +2>' half is not staged. Also G-ENGINE-LINK-MAX-BASE. #[ignore]d."
 "16-41-1":
   status: proven
   tests: ["ch16_processing_keywords::training_optional_cost_then_mandatory_place_also_in_breeding_area"]
@@ -1213,4 +1219,4 @@
   blocks_training: true
   gap_id: G-ENGINE-LINK-MAX-BASE
   tests: ["ch16_processing_keywords::link_max_base_is_one"]
-  note: "The engine's base link limit is 5, not 1 (a host with no <Link +> accepts up to 5 link cards). #[ignore]d. The 'excess trashed' half is covered by ch17 (17-1-3-2-5)."
+  note: "Linking to a host with no <Link +> and 1 link card must replace it (count stays 1, the old card trashed at the same time); the engine adds a 2nd (base limit 5). With the base fixed it would refuse the link instead (G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED: link_host_candidates drops hosts at the limit). #[ignore]d. Not the same as ch17's 17-1-3-2-5 rule-check trim (a host over its limit at a rule check)."

@@ -819,15 +819,20 @@ fn reboot_timing_matches_rule() {
 
 // ─── §16-12 <De-Digivolve> ──────────────────────────────────────────────────
 
-/// P0 holds `option`; P1's stack `p1_stack` is at slot 0; with
-/// `observer`, P1 also has `OBS_SRC_TRASH_MEM` ("[All Turns] When cards are
-/// trashed from the digivolution cards of one of your Digimon, gain 1
-/// memory").
-fn dedigi_board(option: &str, p1_stack: &[&str], observer: bool) -> (DebugRunner, PermanentHandle) {
+/// P0 holds `option`; P1's stack `p1_stack` is at slot 0; P1 also has the
+/// Tamer `observer` when given: `OBS_TOP_TRASH_MEM` ("[All Turns] When the
+/// top stacked card of one of your Digimon is trashed, gain 1 memory") or
+/// `OBS_SRC_TRASH_MEM` ("[All Turns] When cards are trashed from the
+/// digivolution cards of one of your Digimon, gain 1 memory").
+fn dedigi_board(
+    option: &str,
+    p1_stack: &[&str],
+    observer: Option<&str>,
+) -> (DebugRunner, PermanentHandle) {
     let mut r = board(&[option], &[]);
     let target = r.place_stack(1, p1_stack);
-    if observer {
-        r.place_on_field(1, "OBS_SRC_TRASH_MEM", Some(0));
+    if let Some(observer) = observer {
+        r.place_on_field(1, observer, Some(0));
     }
     red_anchor(&mut r);
     (r, target)
@@ -895,7 +900,7 @@ fn de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3() 
         "16-12-4",
         "b205c610d0d6b7a30e8002e5585a7cae99d9a1e5300f403b8d0803ee15675fdd"
     );
-    let (mut r, target) = dedigi_board("DEDIGI2_OPT", &[FILL, "LV4_PLAIN", "LV5_PLAIN"], false);
+    let (mut r, target) = dedigi_board("DEDIGI2_OPT", &[FILL, "LV4_PLAIN", "LV5_PLAIN"], None);
     use_on_opponent_slot(&mut r, "DEDIGI2_OPT", target.index as u16);
     let p = current_prompt(&r)
         .filter(|p| p.player == 0 && !is_option_trash_order(p))
@@ -921,13 +926,49 @@ fn de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3() 
         "declaring 2 trashes 2, declaring 1 trashes 1"
     );
 
-    let (mut r, target) = dedigi_board("DEDIGI2_OPT", &[FILL, "LV4_PLAIN"], false);
+    let (mut r, target) = dedigi_board("DEDIGI2_OPT", &[FILL, "LV4_PLAIN"], None);
     use_on_opponent_slot(&mut r, "DEDIGI2_OPT", target.index as u16);
     settle_declaring_max(&mut r);
     assert_eq!(
         stack_ids(&r, target),
         owned(&[FILL]),
         "stops at the level 3 card"
+    );
+}
+
+/// §16-12-1 "<De-Digivolve> is a keyword effect where the player declares a
+/// number from 1 up to the number specified in the effect, then the declared
+/// number of cards are trashed from the chosen stack(s) of cards STARTING
+/// WITH THE TOP CARD. ..."
+/// §4-8-1 "A digivolution card refers to a card placed under a Digimon. ..."
+///
+/// Every card <De-Digivolve> trashes is the top card at that moment, never a
+/// card under the Digimon, so it trashes no digivolution card: P0's
+/// `DEDIGI2_OPT` on P1's `[FILL, LV4_PLAIN, LV5_PLAIN]` trashes 2 cards and
+/// P1's `OBS_SRC_TRASH_MEM` ("When cards are trashed from the digivolution
+/// cards of one of your Digimon, gain 1 memory") does not trigger. DCGO
+/// agrees: `IDegeneration` stacks `WhenTopCardTrashed`, never
+/// `OnDigivolutionCardDiscarded` (`CardController.cs` ~L5384 vs ~L5685).
+#[test]
+#[ignore = "G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED (§16-12-1)"]
+fn de_digivolve_trashes_top_cards_not_digivolution_cards() {
+    cite!(
+        "16-12-1",
+        "29204991edef21032de826718e2bd74edb37cbc6f870483b871c14735d057d0a"
+    );
+    let (mut r, target) = dedigi_board(
+        "DEDIGI2_OPT",
+        &[FILL, "LV4_PLAIN", "LV5_PLAIN"],
+        Some("OBS_SRC_TRASH_MEM"),
+    );
+    let cp = r.event_checkpoint();
+    use_on_opponent_slot(&mut r, "DEDIGI2_OPT", target.index as u16);
+    settle_declaring_max(&mut r);
+    assert_eq!(stack_ids(&r, target), owned(&[FILL]), "2 cards trashed");
+    assert_eq!(
+        memory_events_from(&r, cp, "OBS_SRC_TRASH_MEM"),
+        0,
+        "no digivolution card was trashed"
     );
 }
 
@@ -945,12 +986,12 @@ fn de_digivolve_cannot_trash_level_3_or_lower() {
         "16-12-4",
         "b205c610d0d6b7a30e8002e5585a7cae99d9a1e5300f403b8d0803ee15675fdd"
     );
-    let (mut r, target) = dedigi_board("DEDIGI2_OPT", &[FILL, "LV4_PLAIN"], false);
+    let (mut r, target) = dedigi_board("DEDIGI2_OPT", &[FILL, "LV4_PLAIN"], None);
     use_on_opponent_slot(&mut r, "DEDIGI2_OPT", target.index as u16);
     settle_declaring_max(&mut r);
     assert_eq!(stack_ids(&r, target), owned(&[FILL]));
 
-    let (mut r, target) = dedigi_board("DEDIGI1_OPT", &[FILL, "OD_MEM"], false);
+    let (mut r, target) = dedigi_board("DEDIGI1_OPT", &[FILL, "OD_MEM"], None);
     use_on_opponent_slot(&mut r, "DEDIGI1_OPT", target.index as u16);
     settle_declaring_max(&mut r);
     assert_eq!(
@@ -971,7 +1012,7 @@ fn de_digivolve_kind_matches_rule() {
         "16-12-2",
         "0a924be0962e3422e2509510527568f1d74ab36fad96c48209231f390116c8bb"
     );
-    let (mut r, target) = dedigi_board("DEDIGI1_OPT", &[FILL, "LV4_PLAIN"], false);
+    let (mut r, target) = dedigi_board("DEDIGI1_OPT", &[FILL, "LV4_PLAIN"], None);
     use_on_opponent_slot(&mut r, "DEDIGI1_OPT", target.index as u16);
     assert_eq!(
         trash_in_order(&r, 1),
@@ -997,7 +1038,7 @@ fn de_digivolve_optionality_matches_rule() {
         "16-12-3",
         "2febcfe712be6454f972591ed0cfeaf5cf014cf8e0fca737180fd668f8edd37c"
     );
-    let (mut r, target) = dedigi_board("DEDIGI1_OPT", &[FILL, "LV4_PLAIN"], false);
+    let (mut r, target) = dedigi_board("DEDIGI1_OPT", &[FILL, "LV4_PLAIN"], None);
     use_on_opponent_slot(&mut r, "DEDIGI1_OPT", target.index as u16);
     let prompts = settle_declining(&mut r);
     assert!(!offered_to(&prompts, 0), "nothing to decline: {prompts:?}");
@@ -1016,8 +1057,12 @@ fn de_digivolve_optionality_matches_rule() {
 ///   PLAIN_TAMER, LV5_PLAIN]`: after `LV5_PLAIN`, the top card is a Tamer;
 ///   the trashing continues with `PLAIN_TAMER` (top first, 1 at a time).
 /// - At the same time: `DEDIGI2_OPT` (declaring 2) on P1's `[FILL, LV4_PLAIN,
-///   LV5_PLAIN]` with P1's `OBS_SRC_TRASH_MEM`: the 2 cards are trashed at the
-///   same time, so "when cards are trashed" triggers once.
+///   LV5_PLAIN]` with P1's `OBS_TOP_TRASH_MEM` ("When the top stacked card of
+///   one of your Digimon is trashed"): each card is the top card when it is
+///   trashed, and the 2 are trashed at the same time, so it triggers once
+///   (§15-5-2). DCGO agrees: `IDegeneration` (`CardController.cs`
+///   ~L5313-5385) trashes 1 card at a time, then stacks
+///   `EffectTiming.WhenTopCardTrashed` ONCE with every trashed card.
 #[test]
 fn de_digivolve_multi_card_trash_is_simultaneous_but_sequential() {
     cite!(
@@ -1028,7 +1073,7 @@ fn de_digivolve_multi_card_trash_is_simultaneous_but_sequential() {
         "16-12-6",
         "d9c38010c2f484614592dc2e98179f9a66c8cc0895695e972c99eb059750d863"
     );
-    let (mut r, target) = dedigi_board("DEDIGI2_OPT", &[FILL, "PLAIN_TAMER", "LV5_PLAIN"], false);
+    let (mut r, target) = dedigi_board("DEDIGI2_OPT", &[FILL, "PLAIN_TAMER", "LV5_PLAIN"], None);
     use_on_opponent_slot(&mut r, "DEDIGI2_OPT", target.index as u16);
     settle_declaring_max(&mut r);
     assert_eq!(stack_ids(&r, target), owned(&[FILL]));
@@ -1038,13 +1083,17 @@ fn de_digivolve_multi_card_trash_is_simultaneous_but_sequential() {
         "1 card at a time from the top, past the category change"
     );
 
-    let (mut r, target) = dedigi_board("DEDIGI2_OPT", &[FILL, "LV4_PLAIN", "LV5_PLAIN"], true);
+    let (mut r, target) = dedigi_board(
+        "DEDIGI2_OPT",
+        &[FILL, "LV4_PLAIN", "LV5_PLAIN"],
+        Some("OBS_TOP_TRASH_MEM"),
+    );
     let cp = r.event_checkpoint();
     use_on_opponent_slot(&mut r, "DEDIGI2_OPT", target.index as u16);
     settle_declaring_max(&mut r);
     assert_eq!(stack_ids(&r, target), owned(&[FILL]));
     assert_eq!(
-        memory_events_from(&r, cp, "OBS_SRC_TRASH_MEM"),
+        memory_events_from(&r, cp, "OBS_TOP_TRASH_MEM"),
         1,
         "both cards were trashed at the same time: one trigger"
     );
@@ -1061,8 +1110,10 @@ fn de_digivolve_multi_card_trash_is_simultaneous_but_sequential() {
 /// <De-Digivolve 1>."
 ///
 /// `DEDIGI1X2_OPT` ("<De-Digivolve 1> it, then <De-Digivolve 1> it again") on
-/// P1's `[FILL, LV4_PLAIN, LV5_PLAIN]` with P1's `OBS_SRC_TRASH_MEM`: both
-/// cards are trashed, by 2 separate trashings. Unlike the 1 instance of
+/// P1's `[FILL, LV4_PLAIN, LV5_PLAIN]` with P1's `OBS_TOP_TRASH_MEM` ("When
+/// the top stacked card of one of your Digimon is trashed"): both cards are
+/// trashed, by 2 separate trashings (DCGO: 2 `IDegeneration` runs, each
+/// stacking its own `WhenTopCardTrashed`). Unlike the 1 instance of
 /// <De-Digivolve 2> in `de_digivolve_multi_card_trash_is_simultaneous_but_sequential`
 /// (2 cards at the same time: 1 trigger, §15-5-2), the 2nd trashing meets
 /// "when cards are trashed" again, so the observer triggers again (§15-4-2-4
@@ -1076,13 +1127,17 @@ fn de_digivolve_separate_instances_processed_separately() {
         "16-12-7",
         "706566bf4559d2891c74d862aaf32604927b34d4ade8ad425abca709c5584da5"
     );
-    let (mut r, target) = dedigi_board("DEDIGI1X2_OPT", &[FILL, "LV4_PLAIN", "LV5_PLAIN"], true);
+    let (mut r, target) = dedigi_board(
+        "DEDIGI1X2_OPT",
+        &[FILL, "LV4_PLAIN", "LV5_PLAIN"],
+        Some("OBS_TOP_TRASH_MEM"),
+    );
     let cp = r.event_checkpoint();
     use_on_opponent_slot(&mut r, "DEDIGI1X2_OPT", target.index as u16);
     settle_declaring_max(&mut r);
     assert_eq!(stack_ids(&r, target), owned(&[FILL]));
     assert_eq!(
-        memory_events_from(&r, cp, "OBS_SRC_TRASH_MEM"),
+        memory_events_from(&r, cp, "OBS_TOP_TRASH_MEM"),
         2,
         "each instance trashed separately: the condition is met twice"
     );
@@ -1107,12 +1162,12 @@ fn de_digivolve_state_confirmed_after_each_instance() {
         "16-12-8",
         "f578bdda9bb979befe6962db42892245adde778aa5198bb3dffa6b38f338dfed"
     );
-    let (mut r, target) = dedigi_board("DEDIGI1X2_OPT", &[FILL, "LV4_PLAIN", "LV5_PLAIN"], false);
+    let (mut r, target) = dedigi_board("DEDIGI1X2_OPT", &[FILL, "LV4_PLAIN", "LV5_PLAIN"], None);
     use_on_opponent_slot(&mut r, "DEDIGI1X2_OPT", target.index as u16);
     settle_declaring_max(&mut r);
     assert_eq!(stack_ids(&r, target), owned(&[FILL]), "control");
 
-    let (mut r, target) = dedigi_board("DEDIGI1X2_OPT", &[FILL, "IMMUNE_LV4", "LV5_PLAIN"], false);
+    let (mut r, target) = dedigi_board("DEDIGI1X2_OPT", &[FILL, "IMMUNE_LV4", "LV5_PLAIN"], None);
     use_on_opponent_slot(&mut r, "DEDIGI1X2_OPT", target.index as u16);
     settle_declaring_max(&mut r);
     assert_eq!(
@@ -2253,8 +2308,9 @@ fn can_link(r: &DebugRunner) -> bool {
     legal(r, 0, HAND_EFFECT_START)
 }
 
-/// P0 (hand `[LINK_A]`) has `host` with `links` link cards (`LINK_B`) and,
-/// with `aura`, `LINKPLUS_AURA` ("[All Turns] Your Digimon gain <Link +1>").
+/// P0 (hand `[LINK_A]`) has `host` (slot 0) with `links` link cards
+/// (`LINK_B`) and, with `aura`, `LINKPLUS_AURA` ("[All Turns] Your Digimon
+/// gain <Link +1>").
 fn link_board(host: &str, links: usize, aura: bool) -> DebugRunner {
     let mut r = board(&["LINK_A"], &[]);
     let h = r.place_on_field(0, host, Some(0));
@@ -2270,31 +2326,90 @@ fn link_board(host: &str, links: usize, aura: bool) -> DebugRunner {
     r
 }
 
+/// Link `LINK_A` from P0's hand onto `host` (the only Digimon), taking the
+/// first option of any decision (the host pick; which existing link card to
+/// trash, if asked). `None` when the link can't be declared; otherwise the
+/// host's link cards and P0's trash.
+fn link_outcome(host: &str, links: usize, aura: bool) -> Option<(Vec<String>, Vec<String>)> {
+    let mut r = link_board(host, links, aura);
+    if !can_link(&r) {
+        return None;
+    }
+    r.game.decode_action(HAND_EFFECT_START, 0);
+    for _ in 0..8 {
+        let Some(p) = current_prompt(&r) else {
+            break;
+        };
+        let a = p.actions[0];
+        r.execute_action(p.player, a)
+            .unwrap_or_else(|e| panic!("{p:?}: {e:?}"));
+    }
+    assert!(
+        r.pending_selection().is_none(),
+        "{:?}",
+        r.pending_selection()
+    );
+    let linked = card_ids(&r, &r.game.player(0).battle_area[0].linked_cards);
+    Some((linked, trash_ids(&r, 0)))
+}
+
+/// Below the maximum, linking adds `LINK_A` and trashes nothing.
+fn assert_link_adds(host: &str, links: usize, aura: bool) {
+    let (linked, trash) = link_outcome(host, links, aura)
+        .unwrap_or_else(|| panic!("{host} with {links} link cards (aura {aura}): can link"));
+    assert_eq!(
+        linked.len(),
+        links + 1,
+        "{host}/{links}/{aura}: added: {linked:?}"
+    );
+    assert!(linked.contains(&"LINK_A".to_string()), "{linked:?}");
+    assert!(
+        !trash.contains(&"LINK_B".to_string()),
+        "nothing trashed: {trash:?}"
+    );
+}
+
+/// At the maximum, linking is still legal and REPLACES: `LINK_A` is linked,
+/// the count stays the same, and exactly 1 existing link card is trashed.
+fn assert_link_replaces(host: &str, links: usize, aura: bool) {
+    let (linked, trash) = link_outcome(host, links, aura).unwrap_or_else(|| {
+        panic!("{host} with {links} link cards (aura {aura}): at the limit the link is still legal")
+    });
+    assert_eq!(
+        linked.len(),
+        links,
+        "{host}/{links}/{aura}: replaced, not added: {linked:?}"
+    );
+    assert!(linked.contains(&"LINK_A".to_string()), "{linked:?}");
+    assert_eq!(
+        trash.iter().filter(|c| *c == "LINK_B").count(),
+        1,
+        "1 existing link card trashed: {trash:?}"
+    );
+}
+
 /// §16-40-2 "<Link +> is a persistent effect. ..."
+/// §4-9-5 "1 card can have a maximum of 1 link card. When linking to a
+/// Digimon that has already reached the link limit, the same number of the
+/// existing link cards are trashed at the same time as the newly linked
+/// cards."
 ///
-/// Measured against the engine's own base limit `k` (the number of link
-/// cards at which the plain `LINK_HOST_LV4` stops accepting `LINK_A`): with
-/// `LINKPLUS_AURA` on the field the same host accepts a link card at `k`
-/// and stops at `k + 1`, with nothing offered or activated for it.
+/// `LINK_HOST_LV4` with `LINKPLUS_AURA` ("Your Digimon gain <Link +1>") on
+/// the field has a maximum of 2 as soon as the aura applies, with nothing
+/// activated or decided for it: with 1 link card, linking `LINK_A` adds it
+/// (2 link cards, nothing trashed); with 2, linking `LINK_A` replaces 1 of
+/// them (still 2, 1 trashed).
 #[test]
+#[ignore = "G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED + G-ENGINE-LINK-MAX-BASE (§16-40-2)"]
 fn link_plus_kind_matches_rule() {
     cite!(
         "16-40-2",
         "fd7cb513430e7f9af8b81f14ad80fd7da63cdcd38afd6adf9a6f9ec496fad7fc"
     );
-    let k = (0..12)
-        .find(|&n| !can_link(&link_board("LINK_HOST_LV4", n, false)))
-        .expect("a link limit exists");
-    let r = link_board("LINK_HOST_LV4", k, true);
+    let r = link_board("LINK_HOST_LV4", 1, true);
     assert!(r.pending_selection().is_none(), "no decision");
-    assert!(
-        can_link(&r),
-        "<Link +1> applies at once: room for 1 more at {k}"
-    );
-    assert!(
-        !can_link(&link_board("LINK_HOST_LV4", k + 1, true)),
-        "exactly 1 more"
-    );
+    assert_link_adds("LINK_HOST_LV4", 1, true);
+    assert_link_replaces("LINK_HOST_LV4", 2, true);
 }
 
 /// §16-40-1 "<Link +> is a keyword effect that adds the specified number to
@@ -2304,13 +2419,17 @@ fn link_plus_kind_matches_rule() {
 /// However, even if a card has multiple instances of <Link +>, the effect
 /// isn't considered to be an effect with the combined values from <Link +>.
 /// ..."
+/// §4-9-5 "1 card can have a maximum of 1 link card. When linking to a
+/// Digimon that has already reached the link limit, the same number of the
+/// existing link cards are trashed at the same time as the newly linked
+/// cards."
 ///
-/// Measured against the plain host's limit `k` (whatever the base is, see
-/// `link_max_base_is_one`): `LINKPLUS2` (a level 4 Digimon printing two
-/// <Link +1>) accepts `LINK_A` with `k + 1` link cards and not with `k + 2`:
-/// both instances add. (The "isn't considered <Link +2>" half is not staged:
-/// no effect here references a <Link +> value.)
+/// `LINKPLUS2` (two <Link +1>): maximum 1 + 1 + 1 = 3. With 2 link cards,
+/// linking `LINK_A` adds it (3, nothing trashed); with 3, it replaces 1 (still
+/// 3, 1 trashed). (The "isn't considered <Link +2>" half is not staged: no
+/// effect here references a <Link +> value.)
 #[test]
+#[ignore = "G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED + G-ENGINE-LINK-MAX-BASE (§16-40-1)"]
 fn link_plus_adds_to_max_link_cards_and_instances_add() {
     cite!(
         "16-40-1",
@@ -2320,46 +2439,27 @@ fn link_plus_adds_to_max_link_cards_and_instances_add() {
         "16-40-3",
         "53808aa3e4596d6b262f330ec958fb2138d92e62ba7cf9a626fe405651381b9c"
     );
-    let k = (0..12)
-        .find(|&n| !can_link(&link_board("LINK_HOST_LV4", n, false)))
-        .expect("a link limit exists");
-    assert!(
-        can_link(&link_board("LINKPLUS2", k + 1, false)),
-        "+1 +1: room at {}",
-        k + 1
-    );
-    assert!(
-        !can_link(&link_board("LINKPLUS2", k + 2, false)),
-        "exactly 2 more"
-    );
+    assert_link_adds("LINKPLUS2", 2, false);
+    assert_link_replaces("LINKPLUS2", 3, false);
 }
 
-/// §4-9-5 "1 card can have a maximum of 1 link card. ..." -- the base that
-/// <Link +> (§16-40-1) adds to.
+/// §4-9-5 "1 card can have a maximum of 1 link card. When linking to a
+/// Digimon that has already reached the link limit, the same number of the
+/// existing link cards are trashed at the same time as the newly linked
+/// cards."
 ///
-/// `LINK_HOST_LV4` (no <Link +>) accepts `LINK_A` with no link card and not
-/// with 1; `LINKPLUS2` (two <Link +1>, maximum 1 + 1 + 1 = 3) accepts it with
-/// 2 and not with 3.
+/// `LINK_HOST_LV4` (no <Link +>): with no link card, linking `LINK_A` adds it;
+/// with 1, linking `LINK_A` is legal and replaces it (still 1 link card,
+/// `LINK_B` trashed).
 #[test]
-#[ignore = "G-ENGINE-LINK-MAX-BASE (§4-9-5)"]
+#[ignore = "G-ENGINE-LINK-MAX-BASE + G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED (§4-9-5)"]
 fn link_max_base_is_one() {
     cite!(
         "4-9-5",
         "fcec093c198b9ce1bb55b9d769eefe9b189ae82d63c7002091435e834fb2c980"
     );
-    assert!(
-        can_link(&link_board("LINK_HOST_LV4", 0, false)),
-        "control: room for 1"
-    );
-    assert!(
-        !can_link(&link_board("LINK_HOST_LV4", 1, false)),
-        "the base maximum is 1"
-    );
-    assert!(
-        can_link(&link_board("LINKPLUS2", 2, false)),
-        "1 + 1 + 1 = 3"
-    );
-    assert!(!can_link(&link_board("LINKPLUS2", 3, false)), "not 4");
+    assert_link_adds("LINK_HOST_LV4", 0, false);
+    assert_link_replaces("LINK_HOST_LV4", 1, false);
 }
 
 // ─── §16-41 <Training> ──────────────────────────────────────────────────────

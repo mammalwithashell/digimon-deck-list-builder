@@ -5371,10 +5371,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "<De-Digivolve 2> offers no 1-or-2 declaration; the maximum is always trashed. #[ignore]d. The 'starting with the top card' half is proven by de_digivolve_multi_card_trash_is_simultaneous_but_sequential.",
+      "note": "<De-Digivolve 2> offers no 1-or-2 declaration; the maximum is always trashed. Second gap: each trashed top card fires 'digivolution cards trashed' observers (G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED; 4-8-1: digivolution cards are the cards UNDER a Digimon; DCGO stacks WhenTopCardTrashed only). Both #[ignore]d. The 'starting with the top card' order is proven by de_digivolve_multi_card_trash_is_simultaneous_but_sequential.",
       "status": "gap",
       "tests": [
-        "ch16_processing_keywords::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3"
+        "ch16_processing_keywords::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3",
+        "ch16_processing_keywords::de_digivolve_trashes_top_cards_not_digivolution_cards"
       ],
       "text": "<De-Digivolve> is a keyword effect where the player declares a number from 1 up to the number specified in the effect, then the declared number of cards are trashed from the chosen stack(s) of cards starting with the top card. This is shown on cards using text such as <De- Digivolve 1>."
     },
@@ -5432,7 +5433,7 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "<De-Digivolve 2>: trash order top first; a 'when cards are trashed from your Digimon' observer triggers once.",
+      "note": "<De-Digivolve 2>: trash order top first; a 'when the top stacked card of one of your Digimon is trashed' observer (BT21-094 wording; DCGO WhenTopCardTrashed, stacked once per IDegeneration) triggers once. The fixture is authored on on_digivolution_card_trashed for lack of a top-card timing (G-DSL-TOP-CARD-TRASHED-TIMING).",
       "status": "proven",
       "tests": [
         "ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential"
@@ -5462,7 +5463,7 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "Two <De-Digivolve 1> instances in one Option [Main]: both cards trashed, but the observer triggers once instead of once per trashing (15-4-2-4, owner ruling 2026-10-10 #5). #[ignore]d.",
+      "note": "Two <De-Digivolve 1> instances in one Option [Main]: both cards trashed, but the 'top stacked card trashed' observer triggers once instead of once per instance (15-4-2-4, owner ruling 2026-10-10 #5; DCGO runs IDegeneration twice, each stacking WhenTopCardTrashed). #[ignore]d.",
       "status": "gap",
       "tests": [
         "ch16_processing_keywords::de_digivolve_separate_instances_processed_separately"
@@ -5754,7 +5755,7 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "[Main]-activated and [Start of Your Turn] <Delay> both optional (decline keeps the Option). The latter contradicts the OPEN G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN entry, which now carries an 'observed fixed' note.",
+      "note": "[Main]-activated and [Start of Your Turn] <Delay> both optional (decline keeps the Option). The scheduled half is the conformance pin of G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN, resolved 2026-08-24 (73733429d) and moved to qa/resolved-gaps.md.",
       "status": "proven",
       "tests": [
         "ch16_processing_keywords::delay_optionality_matches_rule",
@@ -7460,45 +7461,45 @@
       "text": "<Link +>"
     },
     "16-40-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "2636d95bc17ed9aa333e5b8e2b8116ea6e5e14032b2f8b1498afef57c45132cb",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED",
       "mechanisms": [
         "keywords"
       ],
-      "note": "Measured relative to the plain host's limit. The absolute base (1, 4-9-5) is wrong in the engine: G-ENGINE-LINK-MAX-BASE, test link_max_base_is_one.",
-      "status": "proven",
+      "note": "LINKPLUS2 (two <Link +1>, max 3): with 2 link cards a link adds (green half); with 3 it must replace 1 (4-9-5), the engine adds a 4th (base 5 + 2: G-ENGINE-LINK-MAX-BASE); with the base fixed it would refuse (G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED). #[ignore]d.",
+      "status": "gap",
       "tests": [
         "ch16_processing_keywords::link_plus_adds_to_max_link_cards_and_instances_add"
       ],
       "text": "<Link +> is a keyword effect that adds the specified number to the maximum link cards of the Digimon with this effect."
     },
     "16-40-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "fd7cb513430e7f9af8b81f14ad80fd7da63cdcd38afd6adf9a6f9ec496fad7fc",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED",
       "mechanisms": [
         "keywords"
       ],
-      "note": "A granted <Link +1> raises the limit by exactly 1 with no decision.",
-      "status": "proven",
+      "note": "A granted <Link +1> (max 2): no decision; with 1 link card a link adds (green half); with 2 it must replace, the engine adds (also G-ENGINE-LINK-MAX-BASE). #[ignore]d.",
+      "status": "gap",
       "tests": [
         "ch16_processing_keywords::link_plus_kind_matches_rule"
       ],
       "text": "<Link +> is a persistent effect. (For details, refer to 15- 8-2 \"Persistent Effects\")15-8-2"
     },
     "16-40-3": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "53808aa3e4596d6b262f330ec958fb2138d92e62ba7cf9a626fe405651381b9c",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED",
       "mechanisms": [
         "keywords"
       ],
-      "note": "Two printed <Link +1> raise it by exactly 2. The 'not considered <Link +2>' half is not staged.",
-      "status": "proven",
+      "note": "Same test as 16-40-1 (two instances add to 3). The 'not considered <Link +2>' half is not staged. Also G-ENGINE-LINK-MAX-BASE. #[ignore]d.",
+      "status": "gap",
       "tests": [
         "ch16_processing_keywords::link_plus_adds_to_max_link_cards_and_instances_add"
       ],
@@ -12840,7 +12841,7 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": "The engine's base link limit is 5, not 1 (a host with no <Link +> accepts up to 5 link cards). #[ignore]d. The 'excess trashed' half is covered by ch17 (17-1-3-2-5).",
+      "note": "Linking to a host with no <Link +> and 1 link card must replace it (count stays 1, the old card trashed at the same time); the engine adds a 2nd (base limit 5). With the base fixed it would refuse the link instead (G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED: link_host_candidates drops hosts at the limit). #[ignore]d. Not the same as ch17's 17-1-3-2-5 rule-check trim (a host over its limit at a rule check).",
       "status": "gap",
       "tests": [
         "ch16_processing_keywords::link_max_base_is_one"
@@ -15205,9 +15206,9 @@
         "total": 244
       },
       "16": {
-        "gap": 31,
+        "gap": 34,
         "not_testable": 44,
-        "proven": 131,
+        "proven": 128,
         "total": 206
       },
       "17": {
@@ -15271,15 +15272,15 @@
         "total": 13
       }
     },
-    "gap": 672,
+    "gap": 675,
     "mechanics": {
-      "gap_blocking": 51,
+      "gap_blocking": 54,
       "gap_nonblocking": 330,
       "not_testable": 152,
-      "proven": 182
+      "proven": 179
     },
     "not-testable": 246,
-    "proven": 201
+    "proven": 198
   },
   "version": 1
 }

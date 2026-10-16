@@ -9090,3 +9090,12 @@ Found by the rules-conformance ch16 replacement-keywords suite (`code/digimon-en
 
 - **Wanted (proposal only, not implemented):** a `dsl-lint` rule that (a) requires every `kind: partition` clause to carry `exclude_cause: [own_effect, battle]` and a non-empty `sources:`; (b) requires every `<Decode …>` clause to carry `optional: true`, the `none_of: [replacement_cause: battle]` gate, a non-optional `select_material`, and a free `play_from_materials`. (b) needs a way to recognise a Decode clause: the summary prefix `<Decode` is fragile (BT21-060 / BT23-032 cite the "Decode-family idiom" in comments for non-Decode clauses), so the cleaner fix is a `keyword: Decode` marker on the replacement clause (or a `kind: decode` declarative clause, mirroring `kind: partition`).
 - **Tests that rely on the authoring path:** `ch16_replacement_keywords::{partition_*, decode_*, specified_cards_follow_the_icon_note}` (sidecar notes for 16-29-1/2, 16-36-1/2/3 and 16-3 say so).
+
+
+### No "top stacked card is trashed" timing [G-DSL-TOP-CARD-TRASHED-TIMING] — OPEN (2026-10-16)
+
+Found by the rules-conformance ch16 processing-keywords suite (`code/digimon-engine/tests/rules_conformance/ch16_processing_keywords.rs`). Printed text such as BT21-094's "[All Turns] When the top stacked card of any of your [Armor Form] trait Digimon is trashed" (DCGO `EffectTiming.WhenTopCardTrashed`, stacked once per <De-Digivolve> instance by `IDegeneration` and by <Armor Purge>) has no DSL timing: the only stack-trash timing is `on_digivolution_card_trashed` ("when cards are trashed from the digivolution cards", DCGO `OnDigivolutionCardDiscarded`), which the engine also fires for top-card trashes (`G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED` in `docs/RUST_ENGINE_GAPS.md`).
+
+- **Wanted:** `when: on_top_card_trashed` lowered to a new `EffectTiming::OnTopCardTrashed`, fired once per <De-Digivolve> instance / <Armor Purge> with the trashed cards and the host on the trigger context (`event_host_*` leaves apply).
+- **Interim authoring:** the conformance fixture `fixtures/ch16_proc/OBS_TOP_TRASH_MEM.yaml` prints the top-card wording but is authored with `on_digivolution_card_trashed`; its scenarios contain no other stack trash, so it fires exactly when the printed condition is met. Re-author it on the new timing.
+- **Production cards affected:** BT21-094, BT8-110, EX10-010 (DCGO `WhenTopCardTrashed` users) are unauthored or need re-checking when authored.
