@@ -1093,12 +1093,10 @@ impl Game {
         if let Some(route) =
             self.registered_blast_dna_route_for_hand_card(player, result, material, field_idx)
         {
-            // A blast path beside a printed DNA requirement is only offered
-            // for materials that also meet that requirement. (A card with no
-            // DNA requirement has nothing to ignore.)
-            if result_meta.dna_costs.is_empty() {
-                return Some(route);
-            }
+            // A blast path is only offered for materials that also meet a DNA
+            // requirement (§16-31-4, §8-2-1): a result card with none can't be
+            // DNA-digivolved into at all (DCGO `CanPlayJogress` is false when
+            // `jogressCondition` is null).
             return requirement_match.map(|(first_is_top, _)| DnaRouteMatch {
                 first_is_top,
                 memory_cost: route.memory_cost,

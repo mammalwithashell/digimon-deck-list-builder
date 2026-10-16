@@ -13,6 +13,13 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: purple }
     cost: 4
+  # Printed: [DNA Digivolve] Purple Lv.5 + red Lv.5: Cost 0. <Blast DNA
+  # Digivolve> can't ignore it (CR 4.3 §16-31-5).
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 5, color_is: purple }
+      - { level_eq: 5, color_is: red }
+    cost: 0
   - kind: blast_dna_digivolve
     materials:
       # Printed: <Blast DNA Digivolve ([Dinobeemon] + [Paildramon])>. All

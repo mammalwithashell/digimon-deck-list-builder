@@ -2302,6 +2302,32 @@ fn blast_dna_cannot_ignore_dna_requirements() {
     );
 }
 
+/// §16-31-4 "<Blast DNA Digivolve> is an effect that performs DNA
+/// digivolution." A DNA digivolution needs a DNA requirement to be met
+/// (§8-2-1), so a card that prints <Blast DNA Digivolve> but no DNA
+/// digivolution requirement (`BDNA_NOREQ`) is not offered, even with the
+/// specified [Leftmon] on the field and [Rightmon] in the hand. Control: `BDNA`
+/// (same blast materials plus the requirement) is offered on the same board.
+#[test]
+fn blast_dna_without_dna_requirement_is_not_offered() {
+    cite!(
+        "16-31-4",
+        "c8ee07972fef4954a886dbffa5b93918b8dc95f44a5a9bbb4bcc1e1179fc6574"
+    );
+    let r = blast_dna_board("LEFT5");
+    assert!(blast_dna_offered(&r), "control: {:?}", current_prompt(&r));
+
+    let mut r = board(&[], &["BDNA_NOREQ", "RIGHT5"]);
+    r.place_on_field(1, "LEFT5", Some(0));
+    let attacker = r.place_on_field(0, "LV5_PLAIN", Some(0));
+    r.attack_player(attacker, 1, false);
+    assert!(
+        !blast_dna_offered(&r),
+        "no DNA requirement to meet: {:?}",
+        current_prompt(&r)
+    );
+}
+
 // ─── §16-40 <Link +> ────────────────────────────────────────────────────────
 
 /// Whether P0 may link `LINK_A` (hand index 0; link requirement: a level 4

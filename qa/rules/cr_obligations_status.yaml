@@ -665,16 +665,16 @@
   note: "Overwrite: the card is not in the trash at the decision and never reaches it when accepted. Matrix row ArtsDigivolve (optional) agrees."
 "4-6-1":
   status: proven
-  tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information", "ch16_new_keywords::dual_traits_belong_to_both_informations", "ch16_new_keywords::dual_unqualified_colour_reference_matches_either_information"]
-  note: "In the hand a DUAL is offered both as an Option (use) and as a Digimon (digivolve), and matches both 'Digimon card' and 'Option card' trait searches; an unqualified color reference (no category named) matches if either information has the color (ruling W5 reading (a))."
+  tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information", "ch16_new_keywords::dual_traits_belong_to_both_informations", "ch16_new_keywords::dual_unqualified_colour_reference_matches_either_information", "ch16_new_keywords::dual_unqualified_reference_holds_through_one_information"]
+  note: "In the hand a DUAL is offered both as an Option (use) and as a Digimon (digivolve), and matches both 'Digimon card' and 'Option card' trait searches; an unqualified reference (no category named) matches if the WHOLE reference holds through either information (ruling W5 reading (a)): 'purple card' and 'red card' find the DUAL, 'purple Lv.6 card' does not, 'card that is not red' does."
 "4-6-2":
   status: proven
   tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information"]
   note: "The two declarations are distinct actions in the mask (use bit vs digivolve bit)."
 "4-6-3":
   status: proven
-  tests: ["ch16_new_keywords::dual_on_field_is_a_digimon_not_an_option"]
-  note: "The rule's example: 'trash 1 of your opponent's Option cards in the battle area' never takes the DUAL stack (trashes a real field Option instead, or nothing); 'delete 1 Digimon' deletes it."
+  tests: ["ch16_new_keywords::dual_on_field_is_a_digimon_not_an_option", "ch16_new_keywords::dual_digivolution_card_on_field_reads_digimon_information"]
+  note: "The rule's example: 'trash 1 of your opponent's Option cards in the battle area' never takes the DUAL stack (trashes a real field Option instead, or nothing); 'delete 1 Digimon' deletes it. A DUAL digivolution card is on the field too: a color search over digivolution cards reads only its Digimon information (red found, Option-purple not)."
 "4-6-4":
   status: proven
   tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information"]
@@ -1172,8 +1172,8 @@
   tests: ["ch16_processing_keywords::blast_dna_optionality_matches_rule"]
 "16-31-4":
   status: proven
-  tests: ["ch16_processing_keywords::blast_dna_kind_matches_rule"]
-  note: "One DNA digivolution, stacked per 8-2-2-2, at no cost."
+  tests: ["ch16_processing_keywords::blast_dna_kind_matches_rule", "ch16_processing_keywords::blast_dna_without_dna_requirement_is_not_offered"]
+  note: "One DNA digivolution, stacked per 8-2-2-2, at no cost; a card with no DNA requirement to meet is not offered."
 "16-31-5":
   status: proven
   tests: ["ch16_processing_keywords::blast_dna_cannot_ignore_dna_requirements"]

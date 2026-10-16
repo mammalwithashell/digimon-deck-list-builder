@@ -56,16 +56,33 @@ pub fn eval_predicate_with_bindings(
     subject: PredicateSubject,
     bindings: Option<&Bindings>,
 ) -> bool {
+    // §4-6-1: a DUAL card can be treated as either a Digimon card or an Option
+    // card. A reference that names neither category (no `kind:` Digimon /
+    // Option anywhere in its conjunction) matches when the WHOLE predicate
+    // holds read through either information -- not leaf by leaf (a "purple
+    // Lv.6 card" needs one information that is both purple and Lv.6).
+    let is_dual_card = match subject {
+        PredicateSubject::Card(c) | PredicateSubject::RevealedCard(c) => rctx
+            .game
+            .card_data_for_handle(c)
+            .is_some_and(|d| d.dual.is_some()),
+        _ => false,
+    };
+    if is_dual_card && conjunct_dual_ref(pred) == DualRef::Either {
+        return eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Digimon)
+            || eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Option);
+    }
     eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Either)
 }
 
 /// Which information of a DUAL card a card-zone search reads (§4-6-5-2,
 /// §4-6-6-2). `kind: digimon` references the card as a Digimon card (Digimon
 /// information only), `kind: option` as an Option card (Option information
-/// only); a reference naming neither category ("a purple card") picks neither,
-/// so the card is treated as either (§4-6-1): a leaf matches when EITHER
-/// information matches (owner-pending ruling W5, reading (a)). A card that is
-/// not a DUAL has one set of information and ignores this.
+/// only). `Either` is the unresolved state of a reference that names neither
+/// category: `eval_predicate_with_bindings` resolves it for a DUAL card by
+/// evaluating the whole predicate once per information (§4-6-1; owner-pending
+/// ruling W5, reading (a)), so a leaf only ever sees `Digimon` or `Option` for
+/// a DUAL. A card that is not a DUAL has one set of information.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DualRef {
     Either,
@@ -89,20 +106,6 @@ fn conjunct_dual_ref(pred: &CompiledPredicate) -> DualRef {
         .unwrap_or(DualRef::Either)
 }
 
-/// The color sets of `data` a search leaf may read: one for a non-DUAL card or
-/// a DUAL referenced by category, both informations for an unqualified DUAL.
-fn search_color_views(data: &crate::card_data::CardData, dual_ref: DualRef) -> [Option<&[CardColor]>; 2] {
-    match (&data.dual, dual_ref) {
-        (Some(d), DualRef::Digimon) => [Some(d.digimon.colors.as_slice()), None],
-        (Some(d), DualRef::Option) => [Some(d.option.colors.as_slice()), None],
-        (Some(d), DualRef::Either) => [
-            Some(d.digimon.colors.as_slice()),
-            Some(d.option.colors.as_slice()),
-        ],
-        (None, _) => [Some(data.colors.as_slice()), None],
-    }
-}
-
 fn eval_predicate_ref(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
@@ -110,11 +113,17 @@ fn eval_predicate_ref(
     bindings: Option<&Bindings>,
     inherited_ref: DualRef,
 ) -> bool {
-    let dual_ref = if inherited_ref != DualRef::Either {
-        inherited_ref
-    } else {
-        conjunct_dual_ref(pred)
+    // A node's own category (its `kind` or an `all_of` conjunct) wins over the
+    // one inherited from an enclosing node.
+    let mut dual_ref = match conjunct_dual_ref(pred) {
+        DualRef::Either => inherited_ref,
+        own => own,
     };
+    // §4-6-3: a DUAL card placed on the field is treated as a Digimon and can't
+    // be referenced as an Option card there; a digivolution card is on the field.
+    if matches!(subject, PredicateSubject::Source(_)) {
+        dual_ref = DualRef::Digimon;
+    }
     // Source subjects: evaluate source-stack-metadata leaves here, then
     // degrade the subject to Card so every existing card-identity leaf
     // (trait_has / kind / name / etc.) continues to work unchanged.
@@ -3160,16 +3169,21 @@ fn eval_card_fields(
         Some(d) => d,
         None => return false,
     };
-    // §4-6-5-2 / §4-6-6-2: a DUAL referenced as an Option card has no level
-    // and its use cost stands in for the play cost; otherwise the printed
-    // (Digimon-information) values apply.
+    // §4-6-5-2 / §4-6-6-2: a DUAL referenced as an Option card has only its
+    // Option information (color, use cost; no level, no DP); otherwise the
+    // Digimon information (the top-level printed values) applies.
     let option_ref = data.dual.is_some() && dual_ref == DualRef::Option;
     let ref_level = if option_ref { None } else { data.level };
-    let ref_play_cost = match (&data.dual, option_ref) {
-        (Some(d), true) => d.option.use_cost,
-        _ => data.play_cost,
+    let ref_dp = if option_ref { None } else { data.dp };
+    let ref_play_cost: i32 = match (&data.dual, option_ref) {
+        (Some(d), true) => effective_use_cost(rctx, card).unwrap_or(i32::from(d.option.use_cost)),
+        _ => i32::from(data.play_cost),
     };
-    let color_views = search_color_views(data, dual_ref);
+    let ref_colors: &[CardColor] = match (&data.dual, option_ref) {
+        (Some(d), true) => d.option.colors.as_slice(),
+        (Some(d), false) => d.digimon.colors.as_slice(),
+        (None, _) => data.colors.as_slice(),
+    };
     if let Some(want) = pred.can_play_to_breeding_from_hand {
         let can = rctx
             .game
@@ -3303,53 +3317,34 @@ fn eval_card_fields(
         }
     }
     if let Some(want) = pred.color_is {
-        if !color_views
-            .iter()
-            .flatten()
-            .any(|cs| cs.iter().any(|c| color_matches(want, *c)))
-        {
+        if !ref_colors.iter().any(|c| color_matches(want, *c)) {
             return false;
         }
     }
     if let Some(ref allowed) = pred.color_only {
-        if !color_views.iter().flatten().any(|cs| {
-            cs.iter()
-                .all(|c| allowed.iter().any(|a| color_matches(*a, *c)))
-        }) {
-            return false;
+        for c in ref_colors {
+            if !allowed.iter().any(|a| color_matches(*a, *c)) {
+                return false;
+            }
         }
     }
     if let Some(of) = pred.color_matches_any_field_digimon {
-        if !color_views
-            .iter()
-            .flatten()
-            .any(|cs| card_shares_color_with_any_field_digimon(rctx, of, cs))
-        {
+        if !card_shares_color_with_any_field_digimon(rctx, of, ref_colors) {
             return false;
         }
     }
     if let Some(ref binding) = pred.color_matches_binding {
-        if !color_views
-            .iter()
-            .flatten()
-            .any(|cs| card_shares_color_with_bound_permanent(rctx, bindings, binding, cs))
-        {
+        if !card_shares_color_with_bound_permanent(rctx, bindings, binding, ref_colors) {
             return false;
         }
     }
     if pred.color_matches_returned_card == Some(true)
-        && !color_views
-            .iter()
-            .flatten()
-            .any(|cs| card_shares_color_with_returned_card(rctx, bindings, cs))
+        && !card_shares_color_with_returned_card(rctx, bindings, ref_colors)
     {
         return false;
     }
     if pred.color_matches_own_source_stack.is_some()
-        && !color_views
-            .iter()
-            .flatten()
-            .any(|cs| card_shares_color_with_own_source_stack(rctx, cs))
+        && !card_shares_color_with_own_source_stack(rctx, ref_colors)
     {
         return false;
     }
@@ -3369,20 +3364,12 @@ fn eval_card_fields(
         }
     }
     if let Some(floor) = pred.self_color_count_gte {
-        if !color_views
-            .iter()
-            .flatten()
-            .any(|cs| distinct_color_count(cs) >= usize::from(floor))
-        {
+        if distinct_color_count(ref_colors) < usize::from(floor) {
             return false;
         }
     }
     if let Some(cap) = pred.self_color_count_lte {
-        if !color_views
-            .iter()
-            .flatten()
-            .any(|cs| distinct_color_count(cs) <= usize::from(cap))
-        {
+        if distinct_color_count(ref_colors) > usize::from(cap) {
             return false;
         }
     }
@@ -3519,17 +3506,17 @@ fn eval_card_fields(
         }
     }
     if let Some(cap) = &pred.play_cost_lte {
-        if i32::from(ref_play_cost) > eval_int_constraint(cap, rctx, formula_target, bindings) {
+        if ref_play_cost > eval_int_constraint(cap, rctx, formula_target, bindings) {
             return false;
         }
     }
     if let Some(floor) = &pred.play_cost_gte {
-        if i32::from(ref_play_cost) < eval_int_constraint(floor, rctx, formula_target, bindings) {
+        if ref_play_cost < eval_int_constraint(floor, rctx, formula_target, bindings) {
             return false;
         }
     }
     if let Some(want) = &pred.play_cost_eq {
-        if i32::from(ref_play_cost) != eval_int_constraint(want, rctx, formula_target, bindings) {
+        if ref_play_cost != eval_int_constraint(want, rctx, formula_target, bindings) {
             return false;
         }
     }
@@ -3542,7 +3529,7 @@ fn eval_card_fields(
             return false;
         };
         let threshold = reference + i32::from(spec.offset);
-        let candidate = i32::from(ref_play_cost);
+        let candidate = ref_play_cost;
         let ok = match spec.op {
             digimon_dsl::compiled::CompiledComparatorOp::Eq => candidate == threshold,
             digimon_dsl::compiled::CompiledComparatorOp::Gte => candidate >= threshold,
@@ -3598,7 +3585,7 @@ fn eval_card_fields(
     // `eval_dp_constraints` against `effective_dp`. Options and other
     // non-Digimon cards have `dp = None` and cannot satisfy a DP constraint.
     if pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some() {
-        let Some(dp) = data.dp else {
+        let Some(dp) = ref_dp else {
             return false;
         };
         let perm_target =
@@ -4464,11 +4451,12 @@ fn eval_permanent_fields(
                     // Full predicate eval (Card subject) so `all_of` / `any_of` /
                     // `none_of` / `not` in the nested filter are honoured â€” the
                     // bare `eval_card_fields` leaf path ignores combinators.
-                    eval_predicate_with_bindings(
+                    eval_predicate_ref(
                         filter,
                         rctx,
                         PredicateSubject::Card(s.handle()),
                         bindings,
+                        DualRef::Digimon,
                     )
                 })
                 .count()
@@ -4491,11 +4479,12 @@ fn eval_permanent_fields(
                 // Full predicate eval (Card subject) so `all_of` / `any_of` /
                 // `none_of` / `not` in the nested filter are honoured â€” the
                 // bare `eval_card_fields` leaf path ignores combinators.
-                eval_predicate_with_bindings(
+                eval_predicate_ref(
                     filter,
                     rctx,
                     PredicateSubject::Card(s.handle()),
                     bindings,
+                    DualRef::Digimon,
                 )
             })
             .count();
@@ -4817,11 +4806,12 @@ fn eval_breeding_permanent_fields(
                     // Full predicate eval (Card subject) so `all_of` / `any_of` /
                     // `none_of` / `not` in the nested filter are honoured â€” the
                     // bare `eval_card_fields` leaf path ignores combinators.
-                    eval_predicate_with_bindings(
+                    eval_predicate_ref(
                         filter,
                         rctx,
                         PredicateSubject::Card(s.handle()),
                         bindings,
+                        DualRef::Digimon,
                     )
                 })
                 .count()
@@ -4842,11 +4832,12 @@ fn eval_breeding_permanent_fields(
                 // Full predicate eval (Card subject) so `all_of` / `any_of` /
                 // `none_of` / `not` in the nested filter are honoured â€” the
                 // bare `eval_card_fields` leaf path ignores combinators.
-                eval_predicate_with_bindings(
+                eval_predicate_ref(
                     filter,
                     rctx,
                     PredicateSubject::Card(s.handle()),
                     bindings,
+                    DualRef::Digimon,
                 )
             })
             .count();

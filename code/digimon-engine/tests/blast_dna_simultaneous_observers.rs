@@ -20,6 +20,12 @@ color: [green, blue]
 cost: 9
 dp: 15000
 alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - {{ level_eq: 6, color_is: green }}
+      - {{ level_eq: 6, color_is: blue }}
+    cost: 0
+    stacks_unsuspended: true
   - kind: blast_dna_digivolve
     materials:
       - {{ kind: digimon, name_is: Breakdramon }}

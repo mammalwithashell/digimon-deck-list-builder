@@ -13,6 +13,8 @@ fn bt20_081_counter_blast_dna_uses_fenriloogamon_and_kazuchimon() {
 
     let mut kazuchimon = make_test_card_with_level("TEST-KAZUCHIMON", "Kazuchimon", 6);
     kazuchimon.colors = vec![CardColor::Yellow];
+    // The printed DNA requirement: yellow Lv.6 with [Pulsemon] in its text.
+    kazuchimon.effect_text = "[Pulsemon]".to_string();
     kazuchimon.dp = Some(12000);
 
     let mut attacker = make_test_card_with_level("TEST-ATTACKER", "Attacker", 6);

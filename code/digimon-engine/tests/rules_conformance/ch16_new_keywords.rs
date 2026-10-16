@@ -1814,6 +1814,91 @@ fn dual_unqualified_colour_reference_matches_either_information() {
     assert_eq!(hand_ids(&r, 0), owned(&["DUAL_ARTS"]));
 }
 
+/// §4-6-1 "A DUAL card is a card that can be treated as being in either the
+/// Digimon card category or the Option card category."
+///
+/// An unqualified reference matches a DUAL when the WHOLE reference holds
+/// through ONE of its informations -- not leaf by leaf across both. `DUAL_ARTS`:
+/// Digimon information red Lv.6, Option information purple (no level).
+/// - `HAND_PICK_PURPLE_LV6_ANY` ("Trash 1 purple Lv.6 card from your hand")
+///   can't choose it: purple is the Option information, Lv.6 the Digimon one;
+/// - `HAND_PICK_NOT_RED_ANY` ("Trash 1 card that is not red from your hand")
+///   can: its Option information is not red.
+#[test]
+fn dual_unqualified_reference_holds_through_one_information() {
+    cite!(
+        "4-6-1",
+        "71e521e2421527fc20a64b564c7792b256d164651256c309effe1e311448eee7"
+    );
+    let mut r = board(&["HAND_PICK_PURPLE_LV6_ANY", "DUAL_ARTS"]);
+    red_anchor(&mut r);
+    use_option(&mut r, 0, "HAND_PICK_PURPLE_LV6_ANY");
+    assert!(
+        r.pending_selection().is_none(),
+        "no single information is both purple and Lv.6: {:?}",
+        r.pending_selection()
+    );
+    settle_after_option(&mut r);
+    assert_eq!(hand_ids(&r, 0), owned(&["DUAL_ARTS"]));
+
+    let mut r = board(&["HAND_PICK_NOT_RED_ANY", "DUAL_ARTS"]);
+    red_anchor(&mut r);
+    use_option(&mut r, 0, "HAND_PICK_NOT_RED_ANY");
+    assert!(
+        r.pending_selection().is_some(),
+        "the Option information is not red: a legal pick (no pick offered)"
+    );
+    pick_hand_card(&mut r, 0, "DUAL_ARTS");
+    settle_after_option(&mut r);
+    assert!(hand_ids(&r, 0).is_empty());
+    assert!(trash_ids(&r, 0).contains(&"DUAL_ARTS".to_string()));
+}
+
+/// §4-6-3 "A DUAL card placed on the field is treated as a Digimon. It can't
+/// be referenced as an Option card placed on the field."
+///
+/// A DUAL card under a Digimon (a digivolution card) is on the field, so a
+/// color reference over digivolution cards reads only its Digimon information.
+/// P1's stack is `[LV5_PLAIN, DUAL_ARTS]` with `DUAL_ARTS` underneath
+/// (Digimon information red, Option information purple):
+/// - `SRC_PICK_RED_ANY` ("Trash 1 red card from the digivolution cards of 1 of
+///   your opponent's Digimon") can choose it and trashes it;
+/// - `SRC_PICK_PURPLE_ANY` can't: purple is only its Option information.
+#[test]
+fn dual_digivolution_card_on_field_reads_digimon_information() {
+    cite!(
+        "4-6-3",
+        "a73913aee829c3e62eba607984ce4c0cf52b6708908f0c90353cff4b678be173"
+    );
+    let staged = |picker: &str| {
+        let mut r = board(&[picker]);
+        red_anchor(&mut r);
+        r.place_stack(1, &["DUAL_ARTS", "LV5_PLAIN"]);
+        use_option(&mut r, 0, picker);
+        r
+    };
+
+    let mut r = staged("SRC_PICK_RED_ANY");
+    step_prompt(&mut r); // the opponent's only Digimon
+    assert!(
+        r.pending_selection().is_some(),
+        "the DUAL digivolution card is red: a legal pick (no pick offered)"
+    );
+    step_prompt(&mut r);
+    settle_after_option(&mut r);
+    assert!(trash_ids(&r, 1).contains(&"DUAL_ARTS".to_string()));
+
+    let mut r = staged("SRC_PICK_PURPLE_ANY");
+    step_prompt(&mut r); // the opponent's only Digimon
+    assert!(
+        r.pending_selection().is_none(),
+        "purple is only the Option information, not readable on the field: {:?}",
+        r.pending_selection()
+    );
+    settle_after_option(&mut r);
+    assert!(trash_ids(&r, 1).is_empty());
+}
+
 /// §4-6-3 "A DUAL card placed on the field is treated as a Digimon. It can't
 /// be referenced as an Option card placed on the field. (Example: A DUAL
 /// card that is digivolved by placing it on top of one of your cards on the

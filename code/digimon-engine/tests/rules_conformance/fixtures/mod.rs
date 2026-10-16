@@ -127,6 +127,8 @@ const CH16_NEW: &[&str] = &[
     include_str!("ch16_new/ENGAGE.yaml"),
     include_str!("ch16_new/GUARD.yaml"),
     include_str!("ch16_new/HAND_PICK_BLUE_ANY.yaml"),
+    include_str!("ch16_new/HAND_PICK_NOT_RED_ANY.yaml"),
+    include_str!("ch16_new/HAND_PICK_PURPLE_LV6_ANY.yaml"),
     include_str!("ch16_new/HAND_PICK_DIGI.yaml"),
     include_str!("ch16_new/HAND_PICK_OPT.yaml"),
     include_str!("ch16_new/HAND_PICK_PURPLE_DIGI.yaml"),
@@ -144,6 +146,8 @@ const CH16_NEW: &[&str] = &[
     include_str!("ch16_new/MAIN_TRASH_OPP_OPT.yaml"),
     include_str!("ch16_new/PURPLE_LV3.yaml"),
     include_str!("ch16_new/SEVEN_LINK.yaml"),
+    include_str!("ch16_new/SRC_PICK_PURPLE_ANY.yaml"),
+    include_str!("ch16_new/SRC_PICK_RED_ANY.yaml"),
     include_str!("ch16_new/SUCC_TOP.yaml"),
     include_str!("ch16_new/TS_DIGI.yaml"),
     include_str!("ch16_new/TS_TAMER.yaml"),
@@ -204,6 +208,7 @@ const CH16_ATK: &[&str] = &[
 /// §16-6..§16-41 processing keyword cards (`ch16_processing_keywords.rs`).
 const CH16_PROC: &[&str] = &[
     include_str!("ch16_proc/BDNA.yaml"),
+    include_str!("ch16_proc/BDNA_NOREQ.yaml"),
     include_str!("ch16_proc/BLAST.yaml"),
     include_str!("ch16_proc/BURST.yaml"),
     include_str!("ch16_proc/DEDIGI1X2_OPT.yaml"),
