@@ -584,18 +584,20 @@ struct LoopOutcome {
 
 /// P0 plays `loop_card` (its "[On Play] Suspend this Digimon" starts the
 /// loop) while P1's `OBS_OPP_PLAY_MEM` ("[All Turns] When your opponent plays
-/// a Digimon, gain 1 memory") triggers on the same play.
-fn loop_board(loop_card: &str) -> (DebugRunner, usize) {
+/// a Digimon, gain 1 memory") triggers on the same play. Returns the runner,
+/// the event checkpoint and P0's deck size, both taken just before the play.
+fn loop_board(loop_card: &str) -> (DebugRunner, usize, usize) {
     let mut r = ch18()
         .hand(0, &[loop_card])
-        .deck(0, &[FILL; 4])
+        .deck(0, &[FILL; 64])
         .deck(1, &[FILL; 4])
         .memory(5)
         .start();
     r.place_on_field(1, "OBS_OPP_PLAY_MEM", Some(0));
     let cp = r.event_checkpoint();
+    let deck = r.deck_size(0);
     r.play(0, 0);
-    (r, cp)
+    (r, cp, deck)
 }
 
 /// §18-3-1 "An infinite loop refers to a state where a set of processing will
@@ -625,7 +627,7 @@ fn infinite_loop_is_stopped_not_silently_cleared() {
         "989de42a09e690aa1c0e80632ee1aeb9f94eb27d3fdfeff9b09fa784f38f29ca"
     );
     let outcome = within("mandatory loop", Duration::from_secs(30), || {
-        let (r, cp) = loop_board("LOOP_FLIP");
+        let (r, cp, _) = loop_board("LOOP_FLIP");
         LoopOutcome {
             game_over: r.game_over(),
             winner: r.winner(),
@@ -652,16 +654,20 @@ fn infinite_loop_is_stopped_not_silently_cleared() {
 /// possible."
 ///
 /// `LOOP_FLIP_MAY` is the same loop with "you may suspend it": P0 can stop it.
-/// P0 repeats it 40 times -- well past any fixed iteration cap -- then stops.
-/// Either prompt shape satisfies §18-3-3-3 as long as the count is honoured:
+/// Each suspension trashes the top card of P0's deck, so the deck count
+/// witnesses how many times the loop ran. P0 repeats it 40 times -- well past
+/// any fixed iteration cap -- then stops. Either prompt shape satisfies
+/// §18-3-3-3 as long as the count is honoured:
 /// - a repeat-count declaration (§18-3-3-1; a count choice), answered with the
-///   smallest offered count of at least 40, after which any further "you may"
-///   is declined (the player stops when possible); or
-/// - one optional prompt per repetition, accepted 40 times and then declined.
+///   smallest offered count of at least 40; or
+/// - one optional prompt per repetition.
 ///
-/// Either way, after the stop: the Digimon is unsuspended (the loop stops on
-/// "you may suspend it"), the game is not over, and P1's `OBS_OPP_PLAY_MEM`,
-/// pending since the play, activates exactly once.
+/// In both shapes any "you may suspend it" is accepted until the witness shows
+/// the target count of repetitions, then declined (the player stops when
+/// possible). After the stop: the loop ran at least the target count, the
+/// Digimon is unsuspended (it stopped on "you may suspend it"), the game is not
+/// over, and P1's `OBS_OPP_PLAY_MEM`, pending since the play, activates exactly
+/// once.
 #[test]
 #[ignore = "G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED (§18-3-3)"]
 fn stoppable_loop_repeats_until_its_owner_stops_it() {
@@ -675,10 +681,12 @@ fn stoppable_loop_repeats_until_its_owner_stops_it() {
     );
     within("stoppable loop", Duration::from_secs(30), || {
         const REPEATS: u64 = 40;
-        let (mut r, cp) = loop_board("LOOP_FLIP_MAY");
+        let (mut r, cp, deck_before) = loop_board("LOOP_FLIP_MAY");
+        // Suspensions since the play, less the [On Play] one: repetitions.
+        let repetitions =
+            |r: &DebugRunner| ((deck_before - r.deck_size(0)) as u64).saturating_sub(1);
         let mut declared: Option<u64> = None;
-        let mut accepted: u64 = 0;
-        // Hard step bound: 40 repetitions, a declaration and its pages, the stop.
+        // Hard step bound: the repetitions, a declaration and its pages, the stop.
         for step in 0..200 {
             let Some(sel) = r.pending_selection() else {
                 break;
@@ -716,8 +724,7 @@ fn stoppable_loop_repeats_until_its_owner_stops_it() {
                 r.execute_action(player, action)
                     .unwrap_or_else(|e| panic!("declaration rejected: {e:?}"));
             } else if sel.is_optional && player == 0 {
-                if declared.is_none() && accepted < REPEATS {
-                    accepted += 1;
+                if repetitions(&r) < declared.unwrap_or(REPEATS) {
                     accept(&mut r, 0);
                 } else {
                     r.decline_optional_trigger().expect("P0 stops the loop");
@@ -731,10 +738,18 @@ fn stoppable_loop_repeats_until_its_owner_stops_it() {
             "{:?}",
             r.pending_selection()
         );
+        let target = declared.unwrap_or(REPEATS);
+        let ran = repetitions(&r);
         assert!(
-            declared.is_some() || accepted == REPEATS,
-            "P0 could repeat the loop only {accepted} of {REPEATS} times before it was abandoned \
-             (no count declaration offered)"
+            ran >= target,
+            "the loop ran {ran} times before it stopped; {target} were {} (P1's observer \
+             resolved: {})",
+            if declared.is_some() {
+                "declared"
+            } else {
+                "chosen, with no count declaration offered"
+            },
+            memory_event_index(&r, cp, "OBS_OPP_PLAY_MEM").is_some()
         );
         assert!(!r.game_over(), "a stoppable loop does not end the game");
         let loop_perm = r.perm_handle(0, 0);
