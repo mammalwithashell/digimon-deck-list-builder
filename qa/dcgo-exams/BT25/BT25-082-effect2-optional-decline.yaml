@@ -72,9 +72,11 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # (2026-10-10) P1 can neither hatch nor move on T6, so both engines skip its breeding phase
+  # and this pass is taken in the main phase (DCGO asked main_phase here; ours is in Main too).
   - actor: 1
     do: { pass: {} }
-    expect: { prompt: breeding_action }
+    expect: { prompt: main_phase }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: SelectHandEffect }
