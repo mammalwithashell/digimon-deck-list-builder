@@ -5289,7 +5289,10 @@ Rule citations below use the Comprehensive Rules Manual **Ver. 4.3 (2026-09-18)*
   `attacker_observer_dp_bonus_resolves_before_security_battle` (b),
   `security_effect_resolves_before_observers_and_both_before_battle` (c),
   `non_digimon_security_card_runs_observers_skips_battle_and_trashes` (d). All four were red
-  before the reorder.
+  before the reorder. The rules-conformance suite's
+  `ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle`
+  (§13-1-8 / §13-1-8-2-1 / §13-1-8-3-1, defender-side -3000 DP observer; was `#[ignore]`d under
+  this gap id) is un-ignored and green.
 - **Oracle exams:** no scenario under `qa/dcgo-exams/` scripts a "when a security check is
   performed" observer (every `security check` hit is a `<Piercing>` / `<Security A.>` clause), and
   no production YAML uses `when: on_security_check` yet, so no exam expected row depends on this

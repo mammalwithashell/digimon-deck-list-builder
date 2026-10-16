@@ -627,7 +627,6 @@ fn checking_digimon_leaving_stops_further_checks() {
 ///   It triggers on the check and resolves BEFORE the battle (§13-1-8-2 comes
 ///   before §13-1-8-3): `LV5_PLAIN` battles at 4000 DP, loses and is deleted.
 #[test]
-#[ignore = "G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE (§13-1-8-2)"]
 fn check_triggered_effects_resolve_before_security_battle() {
     cite!(
         "13-1-8",

@@ -371,23 +371,23 @@
   tests: ["ch11_14_attack_procedure::checking_digimon_leaving_stops_further_checks"]
   note: "A <Security A. +1> attacker loses the battle against the first Security Digimon and is deleted: the second card is never checked; control: 2 checks."
 "13-1-8":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE
+  status: proven
+  blocks_training: false
+  gap_id: null
   tests: ["ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle"]
-  note: "Procedure order: the check-triggered effects (13-1-8-2) resolve after the Security Digimon battle (13-1-8-3). Test is #[ignore]d."
+  note: "Procedure order: the check-triggered effects (13-1-8-2) now resolve before the Security Digimon battle (13-1-8-3), via the §13-1-8 reorder (F2 merge, commit b41f3f5f1). Test is green."
 "13-1-8-2-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE
+  status: proven
+  blocks_training: false
+  gap_id: null
   tests: ["ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle"]
-  note: "A defender's 'when your opponent's Digimon checks your security, that Digimon gets -3000 DP for the turn' resolves after the battle: the 7000 DP attacker beats the 5000 DP Security Digimon and only then drops to 4000. Test is #[ignore]d."
+  note: "A defender's 'when your opponent's Digimon checks your security, that Digimon gets -3000 DP for the turn' resolves before the battle: the 7000 DP attacker drops to 4000 and loses to the 5000 DP Security Digimon. Resolved by the §13-1-8 reorder, commit b41f3f5f1."
 "13-1-8-3-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE
+  status: proven
+  blocks_training: false
+  gap_id: null
   tests: ["ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle"]
-  note: "The battle itself happens (see 13-1-5, 16-9-1), but before the check-triggered effects resolve; the citing test is #[ignore]d."
+  note: "The battle happens (see 13-1-5, 16-9-1) after the check-triggered effects resolve. Resolved by the §13-1-8 reorder, commit b41f3f5f1; the citing test is green."
 "15-16-10-2":
   status: proven
   tests: ["ch11_14_attack_procedure::security_effect_activates_before_other_check_triggers"]

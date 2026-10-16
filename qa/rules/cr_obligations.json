@@ -1628,15 +1628,15 @@
       "text": "A checked Digimon card is treated as a Security Digimon."
     },
     "13-1-8": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 13,
       "fingerprint": "d796225ea662544003beeb852eb91ae73c1a94a74d48c0ff98caf97ba27bda77",
-      "gap_id": "G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE",
+      "gap_id": null,
       "mechanisms": [
         "security"
       ],
-      "note": "Procedure order: the check-triggered effects (13-1-8-2) resolve after the Security Digimon battle (13-1-8-3). Test is #[ignore]d.",
-      "status": "gap",
+      "note": "Procedure order: the check-triggered effects (13-1-8-2) now resolve before the Security Digimon battle (13-1-8-3), via the §13-1-8 reorder (F2 merge, commit b41f3f5f1). Test is green.",
+      "status": "proven",
       "tests": [
         "ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle"
       ],
@@ -1682,15 +1682,15 @@
       "text": "Processing for effects triggered upon a security check"
     },
     "13-1-8-2-1": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 13,
       "fingerprint": "0e1852a3368ea62c1d17008d028f5130221066709cb66d79f3170065d76d34ca",
-      "gap_id": "G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE",
+      "gap_id": null,
       "mechanisms": [
         "security"
       ],
-      "note": "A defender's 'when your opponent's Digimon checks your security, that Digimon gets -3000 DP for the turn' resolves after the battle: the 7000 DP attacker beats the 5000 DP Security Digimon and only then drops to 4000. Test is #[ignore]d.",
-      "status": "gap",
+      "note": "A defender's 'when your opponent's Digimon checks your security, that Digimon gets -3000 DP for the turn' resolves before the battle: the 7000 DP attacker drops to 4000 and loses to the 5000 DP Security Digimon. Resolved by the §13-1-8 reorder, commit b41f3f5f1.",
+      "status": "proven",
       "tests": [
         "ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle"
       ],
@@ -1710,15 +1710,15 @@
       "text": "Processing Battles against Security Digimon"
     },
     "13-1-8-3-1": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 13,
       "fingerprint": "bfd93b2798f4fdd0540acabda0f8ec1ef16c15c5701a0d71dc1cce3a42e05c85",
-      "gap_id": "G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE",
+      "gap_id": null,
       "mechanisms": [
         "security"
       ],
-      "note": "The battle itself happens (see 13-1-5, 16-9-1), but before the check-triggered effects resolve; the citing test is #[ignore]d.",
-      "status": "gap",
+      "note": "The battle happens (see 13-1-5, 16-9-1) after the check-triggered effects resolve. Resolved by the §13-1-8 reorder, commit b41f3f5f1; the citing test is green.",
+      "status": "proven",
       "tests": [
         "ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle"
       ],
@@ -15188,9 +15188,9 @@
         "total": 9
       },
       "13": {
-        "gap": 11,
+        "gap": 8,
         "not_testable": 3,
-        "proven": 4,
+        "proven": 7,
         "total": 18
       },
       "14": {
@@ -15272,15 +15272,15 @@
         "total": 13
       }
     },
-    "gap": 675,
+    "gap": 672,
     "mechanics": {
-      "gap_blocking": 54,
+      "gap_blocking": 51,
       "gap_nonblocking": 330,
       "not_testable": 152,
-      "proven": 179
+      "proven": 182
     },
     "not-testable": 246,
-    "proven": 198
+    "proven": 201
   },
   "version": 1
 }

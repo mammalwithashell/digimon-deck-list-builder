@@ -22,3 +22,15 @@ These are **inputs**. Never edit them by hand. `mechanisms-by-rule.json` and `co
 ## Pending switch
 
 `comprehensive-4.3.md` will later be superseded by `docs/digimon-rules/cr-4.3.txt` (our own extraction of the manual) as the parser's default source. Once that lands, this copy remains only as a cross-check.
+
+**Status 2026-10-16: the switch is pending, not done.** `parse_rules` over `docs/digimon-rules/cr-4.3.txt` yields the same 1,119 ids as over this copy, but 5 fingerprints differ because the Aegis extraction has page-number and footnote digits fused into the rule text; our extraction is the cleaner of the two:
+
+| id | this copy has | `cr-4.3.txt` has |
+|---|---|---|
+| 4-26-1 | `...3 digivolution cards,13 <Blitz>` | `...3 digivolution cards, <Blitz>` |
+| 13-1-8-3-1 | `..."Battles")1424` | `..."Battles")14` |
+| 15-10-1-3 | `"Both Players"30` | `"Both Players"` |
+| 15-16-8 | `...Opponent's Turn]35` | `...Opponent's Turn]` |
+| 17-1-2-1 | `...A43 rule check will only...` | `...A rule check will only...` |
+
+Switching the default `--source` would change those 5 fingerprints, so every `cite!` pin on them in `code/digimon-engine/tests/rules_conformance/` (e.g. `13-1-8-3-1`) and the generated `qa/rules/cr_obligations.json` would have to be re-pinned in the same change. Do that as a deliberate follow-up (re-pin the 5 cites, switch `DEFAULT_SOURCE` in `code/tools/rules/build_obligations.py` and the three `code/tests/tools/test_rules_*.py` fixtures, regenerate, `--check`), not as a no-op swap.

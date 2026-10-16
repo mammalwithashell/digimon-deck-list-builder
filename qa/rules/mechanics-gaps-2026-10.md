@@ -11,8 +11,8 @@ From the regenerated `qa/rules/cr_obligations.json` (1,119 obligations, Ver. 4.3
 
 | Scope | Obligations | Proven | Not-testable | Gap (blocking) | Gap (non-blocking) | Gap total |
 |---|---|---|---|---|---|---|
-| All chapters | 1,119 | 198 | 246 | 66 | 609 | 675 |
-| Mechanics set (§5b) | 715 | 179 | 152 | 54 | 330 | 384 |
+| All chapters | 1,119 | 201 | 246 | 63 | 609 | 672 |
+| Mechanics set (§5b) | 715 | 182 | 152 | 51 | 330 | 381 |
 
 "Gap (non-blocking)" is mostly the untriaged default: an id absent from the sidecar is `gap`, `blocks_training: false`. Only 3 non-blocking gaps carry a test and a gap id (listed below). The 12 blocking obligations outside the mechanics set (§4-6-6-2, §4-9-5, §4-19-5 ×3, §18-1-2, §18-3-x ×6) still block training on their own merits; they are tagged `terminology-and-identity` / `other-information` in Aegis's taxonomy.
 
@@ -44,19 +44,19 @@ Statuses live in `qa/rules/cr_obligations_status.yaml` (hand-maintained sidecar)
 | 10 | Link | 10 | 0 | 2 | 0 | 8 |
 | 11 | Attacking | 40 | 2 | 8 | 5 | 30 |
 | 12 | Blocking | 9 | 4 | 1 | 0 | 4 |
-| 13 | Security Checks | 18 | 4 | 3 | 3 | 11 |
+| 13 | Security Checks | 18 | 7 | 3 | 0 | 8 |
 | 14 | Battles | 10 | 7 | 0 | 0 | 3 |
 | 15 | Effect Rules | 244 | 27 | 66 | 7 | 151 |
 | 16 | Keyword Effects | 206 | 128 | 44 | 32 | 34 |
 | 17 | Rule Checks | 16 | 5 | 3 | 6 | 8 |
 | 18 | Other Information | 15 | 4 | 3 | 7 | 8 |
-| **Total** | | **1,119** | **198** | **246** | **66** | **675** |
+| **Total** | | **1,119** | **201** | **246** | **63** | **672** |
 
 "Gap" includes "Gap (blocking)". Plan 1 covered chapters 11-18 (mechanics-first, design §0); chapters 1-10 were touched only where a mechanic depended on them (§4 DUAL / Link / Overflow, §9-1-5). Chapters 6-9 and 1-5/10 are deferred to a follow-up plan.
 
 ## Blocking gaps
 
-**31 gap ids** block training (66 obligations). **All 31 are `PDF-explicit`**: the 4.3 text (with, where noted, an official Q&A) settles the expected behaviour, so Plan 3 fixes them without asking. **None is `PDF-silent`.** Six explicit gaps carry a worksheet question that does not hold up their fix: Vortex target (W2), the end-of-turn attack keywords (W3), DUAL (W5 and W11), infinite loops (W10), Overflow (W11) and Link-at-limit (W12).
+**29 gap ids** block training (63 obligations). **All 29 are `PDF-explicit`**: the 4.3 text (with, where noted, an official Q&A) settles the expected behaviour, so Plan 3 fixes them without asking. **None is `PDF-silent`.** Six explicit gaps carry a worksheet question that does not hold up their fix: Vortex target (W2), the end-of-turn attack keywords (W3), DUAL (W5 and W11), infinite loops (W10), Overflow (W11) and Link-at-limit (W12).
 
 Grouped by the mechanism the defect lives in; when the obligation's Aegis taxonomy tag differs, it is given after the rule id. The tests are those the sidecar lists for the gap's obligations: the red ones are `#[ignore]`d under the gap id and fail with `--include-ignored`; the green ones (other halves of the same obligations) are marked "(green)". "DCGO" and "Aegis" give each reference engine's stance on the rule as the gap entry and Aegis's vendored scenario index (`qa/rules/aegis/conformance-scenario-index.md`) / engine audits (`docs/audits/engine/*.md` at Aegis `ec0cd22f0`) record it.
 
@@ -160,16 +160,6 @@ Grouped by the mechanism the defect lives in; when the obligation's Aegis taxono
 - Aegis: mixed (scenario "16-33-1: <Vortex> does not bypass the normal suspended-target requirement"; the 2026-09-05 `vortex-timing.md` audit describes allowing "unsuspended opposing Digimon").
 - Classification: §11-2-7-1 names the legal targets ("the opponent or 1 of the opponent's suspended Digimon"); §16-33-1 grants an attack on a Digimon but no target permission, and the manual spells such a permission out wherever it exists (§16-38-1 <Execute>, the §15-1-3 example).
 - Fix: apply the normal suspended / `CanAttackUnsuspended` / <Raid> target legality to Vortex-only attacks in the mask and the decoder; keep the same-turn exemption.
-
-### security
-
-**G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE**: `PDF-explicit`
-- Rules: §13-1-8, §13-1-8-2-1, §13-1-8-3-1.
-- Test: `ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle`.
-- Cause: `SecurityPhase` runs `SecuritySkillDrain → BattleResolved → OnSecurityCheckDrain`, so check-triggered observers resolve after the Security Digimon battle.
-- DCGO: agrees (resolves `[Security]` then the collected triggers, then the battle).
-- Aegis: none found (its ch13 scenarios pin the battle and the one-card-at-a-time loop, not this order).
-- Fix: reorder to `SecuritySkillDrain → OnSecurityCheckDrain → BattleResolved`, keeping the §13-1-6 removal triggers where they are.
 
 ### battle
 
@@ -398,11 +388,9 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 - `G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT`: retracted (`b20297ec9`). The engine's per-event `replacement_fired` scope is right; `ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause` now proves §15-8-5-4 (W7).
 - `G-ENGINE-COMPOUND-OPTIONAL-CONDITION-PARTIAL-PAYMENT`: retracted as an engine gap (`ed7a9a9cb`); refiled as DSL vocabulary `G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK` (non-blocking list).
 - `G-REPLACEMENT-NO-ORDER-PROMPT`: no longer reproduces (checked 2026-10-16): `replacement_window.rs` installs an `EffectChoice` order for simultaneous immediate-type effects; `ch16_replacement_keywords::two_simultaneous_replacements_ordered_by_controller` proves §15-8-5-3.
+- `G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE`: resolved by the F2 merge (`b41f3f5f1`, the §13-1-8 reorder `SecuritySkillDrain → OnSecurityCheckDrain → BattleResolved`); `ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle` is un-ignored and green, and §13-1-8 / §13-1-8-2-1 / §13-1-8-3-1 are `proven`.
+- `G-ENGINE-DNA-RESULT-KEEPS-BASE-ORIENTATION`: resolved (§8-2-2-1-1, design F3). Fix `98d4937a6` (PR #737); the per-clause conformance tests `code/digimon-engine/tests/dna_result_new_card.rs` landed with the F3 merge and are green. The tracker entry in `docs/RUST_ENGINE_GAPS.md` is RESOLVED.
 - `G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN`: resolved (fixed 2026-08-24 in `73733429d`, confirmed by `delay_scheduled_window_is_optional`); entry moved to `qa/resolved-gaps.md`.
-
-### Pending verification (fix on main, tests on another branch)
-
-- `G-ENGINE-DNA-RESULT-KEEPS-BASE-ORIENTATION` (§8-2-2-1-1, design F3): reported fixed in `98d4937a6` (PR #737, in this branch's history) per the F3 sibling session; conformance tests (`tests/dna_result_new_card.rs`) live on `refs/heads/claude/sharp-cori-670aed`, not merged here; the tracker entry stays OPEN until those tests land.
 
 ## Vocabulary gaps filed (`qa/dsl-vocab-gaps.md`, 2026-10-16)
 
@@ -418,7 +406,6 @@ By blast radius: substrate first, so later fixes land on the corrected loop.
 1. **Trigger-loop pooling** (one simultaneous pool per event, §15-4-3):
    - `G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL` (Alliance + Raid windows) with `G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS`;
    - `G-ENGINE-PENDING-PROCESSING-OUTSIDE-TRIGGER-POOL`;
-   - `G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE`;
    - `G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE` + `G-ENGINE-RULE-CHECK-TARGETS-NOT-SIMULTANEOUS`, with `G-ENGINE-LINK-MAX-BASE` + `G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED` landing together in one change (§17-1-3-2-5 needs the base limit of 1, and the base alone turns the link tests into refusals);
    - `G-ENGINE-ON-DELETION-DRAINED-BEFORE-DELETION-OBSERVERS`;
    - `G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS` (#726 rework) and `F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE` (§9-1-5).
