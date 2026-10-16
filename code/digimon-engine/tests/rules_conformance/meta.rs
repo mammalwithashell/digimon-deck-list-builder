@@ -23,6 +23,7 @@ const CHAPTER_SOURCES: &[(&str, &str)] = &[
         "ch15_08_effect_categories.rs",
         include_str!("ch15_08_effect_categories.rs"),
     ),
+    ("ch17_rule_checks.rs", include_str!("ch17_rule_checks.rs")),
 ];
 
 /// `main.rs`, `cite.rs`, `meta.rs`, `support.rs` are infrastructure, not

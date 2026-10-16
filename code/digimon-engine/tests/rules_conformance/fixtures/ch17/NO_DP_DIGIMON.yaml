@@ -1,0 +1,15 @@
+# NO_DP_DIGIMON -- Digimon, Lv.3, red, no DP, play cost 2.
+#   [On Deletion] Gain 1 memory.
+# A Digimon card printed without a DP value (§17-1-3-2-1 trash target). The
+# [On Deletion] shows the rule check trashes it rather than deleting it.
+card: NO_DP_DIGIMON
+name: Hollowmon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+effects:
+  - when: on_deletion
+    summary: "[On Deletion] Gain 1 memory."
+    process:
+      - gain_memory: 1

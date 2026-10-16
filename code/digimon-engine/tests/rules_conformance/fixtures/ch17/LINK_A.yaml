@@ -1,0 +1,14 @@
+# LINK_A -- Digimon, Lv.3, red, 2000 DP, play cost 3.
+#   [Link] Link requirement: 1 level 4 Digimon. Link cost: 1.
+# A link card (§4-9) whose link requirement (§2-3-11-4-2) is "level 4".
+card: LINK_A
+name: Linkamon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - kind: link_condition
+    cost: 1
+    filter: { level_eq: 4 }

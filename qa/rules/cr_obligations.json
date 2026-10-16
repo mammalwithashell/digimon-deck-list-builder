@@ -4062,9 +4062,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example: an '[Opponent's Turn] -3000 DP' aura leaves a 3000 DP Digimon at 0 DP when its controller's turn starts; its [On Deletion] and a [Start of Your Turn] effect are offered in ONE TriggerOrder, nothing activated before the choice.",
+      "status": "proven",
+      "tests": [
+        "ch17_rule_checks::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers"
+      ],
       "text": "When an effect is triggered by a rule check, it triggers simultaneously with other effects that triggered at that timing. (Example: An [On Deletion] effect on a Digimon that was deleted by its DP becoming 0 at the start of your turn will trigger simultaneously with [Start of Your Turn] effects.)"
     },
     "15-4-3-4": {
@@ -7826,9 +7828,11 @@
       "mechanisms": [
         "rule-checks"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example: a 0 DP Digimon's immediate-type 'when this Digimon would be deleted, you may play 1 [Zeromon] from your hand' plays a 0 DP Zeromon during the rule check; Zeromon's own would-be-deleted decision appears only after the first Digimon is already in the trash, and the next rule check deletes it.",
+      "status": "proven",
+      "tests": [
+        "ch17_rule_checks::rule_check_not_during_rule_processing"
+      ],
       "text": "Rule checks aren't performed during rule processing. (Examples: If an immediate-type effect activates during rule check processing and a Digimon is played, a rule check won't yet be performed for that Digimon even if it has 0 DP. A43 rule check will only be performed after the previous rule check is resolved. If the Digimon has 0 DP upon the new rule check, it will then be deleted."
     },
     "17-1-2-2": {
@@ -7839,22 +7843,26 @@
       "mechanisms": [
         "rule-checks"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The rule's example '[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP and <Security A. -1>' on a 3000 DP Digimon: at the would-be-deleted decision it is at 0 DP and already has SecurityAttackChange -1, so the effect finished before the rule check deleted it.",
+      "status": "proven",
+      "tests": [
+        "ch17_rule_checks::rule_check_not_during_effect_processing"
+      ],
       "text": "Rule checks aren't performed during effect processing. (Example: If an effect reads \"[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP and <Security Attack -1> until the end of their turn,\" a Digimon whose DP becomes 0 due to getting -3000 DP will be deleted upon a rule check after it gains <Security A. -1>.)"
     },
     "17-1-3": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 17,
       "fingerprint": "258e62c6c447db35c1ba047e10bbd202a7280b501eaa465b1425850bff9b7caa",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-RULE-CHECK-TARGETS-NOT-SIMULTANEOUS",
       "mechanisms": [
         "rule-checks"
       ],
-      "note": null,
+      "note": "The rule check removes targets one at a time and drains each 0 DP Digimon's [On Deletion] before the next target: two 0 DP Digimon give Trash/Memory/Trash/Memory with no TriggerOrder; a 0 DP Digimon's [On Deletion] resolves before an orphan Option in the same check is trashed. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch17_rule_checks::all_rule_check_targets_processed_simultaneously"
+      ],
       "text": "The respective processing is performed simultaneously for the following circumstances during timings when rule checks are possible."
     },
     "17-1-3-1": {
@@ -7878,9 +7886,11 @@
       "mechanisms": [
         "rule-checks"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "-3000 DP on a 3000 DP Digimon: deleted at the rule check (its [On Deletion] activates); control 7000 DP stays at 4000.",
+      "status": "proven",
+      "tests": [
+        "ch17_rule_checks::zero_dp_digimon_in_battle_area_is_deleted"
+      ],
       "text": "A Digimon placed in the battle area whose DP is 0"
     },
     "17-1-3-2": {
@@ -7904,9 +7914,11 @@
       "mechanisms": [
         "rule-checks"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A Digimon card printed without DP is trashed at the rule check; its [On Deletion] does not activate; a 1000 DP Digimon next to it stays.",
+      "status": "proven",
+      "tests": [
+        "ch17_rule_checks::digimon_without_dp_in_battle_area_is_trashed_not_deleted"
+      ],
       "text": "Digimon without DP placed in the battle area"
     },
     "17-1-3-2-2": {
@@ -7917,72 +7929,82 @@
       "mechanisms": [
         "rule-checks"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "An Option in the battle area that no effect placed there is trashed; control: an Option placed by its own '[Main] Place this card in the battle area' (§4-28-1) stays.",
+      "status": "proven",
+      "tests": [
+        "ch17_rule_checks::option_in_battle_area_not_placed_by_effect_is_trashed"
+      ],
       "text": "Option cards placed in the battle area (except Option cards placed in the battle area by an effect)"
     },
     "17-1-3-2-3": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 17,
       "fingerprint": "977d5c310b19401d2946ed0ff9ac79ad8aec8ed1ab8c15d5d21d5e1c7ad73975",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE",
       "mechanisms": [
         "rule-checks"
       ],
-      "note": null,
+      "note": "The rule check never reads the breeding area: a Tamer there stays. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch17_rule_checks::non_digimon_in_breeding_area_is_trashed"
+      ],
       "text": "Cards other than Digimon placed in the breeding area (except cards placed in the breeding area by an effect)"
     },
     "17-1-3-2-4": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 17,
       "fingerprint": "3f8b095b8a7c5d7b54ecb43f897639cfbd959c313c361a00299d86a7b1bc0131",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE",
       "mechanisms": [
         "rule-checks"
       ],
-      "note": "Rule-check trash target (normative); explicit so the short text is never read as a heading.",
+      "note": "Rule-check trash target (normative; explicit so the short text is never read as a heading). The rule check never reads face_down: a face-down card on the field stays as a 1000 DP Digimon. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch17_rule_checks::face_down_card_on_field_is_trashed"
+      ],
       "text": "Face-down cards placed on the field"
     },
     "17-1-3-2-5": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 17,
       "fingerprint": "42c41c1ce213cb5e7b7f877a9d012fbe936ffa3580b5c7c7af917c437a7fc518",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE",
       "mechanisms": [
         "rule-checks"
       ],
-      "note": null,
+      "note": "No rule-check step trims link cards, and the base link limit is 5, not 1 (G-ENGINE-LINK-MAX-BASE). Q6370: the player chooses which excess link cards to trash (DCGO agrees: RemoveLinkedCard -> SelectCardEffect by the owner). Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch17_rule_checks::excess_link_cards_trashed_player_chooses_which"
+      ],
       "text": "Link cards for a Digimon that has exceeded the link limit (only the cards that exceed link limit are trashed)"
     },
     "17-1-3-2-6": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 17,
       "fingerprint": "4d0487af2812eb49a5d5472851d3a6f002ea5106d06bae3f863caf8714c2eefb",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE",
       "mechanisms": [
         "rule-checks"
       ],
-      "note": null,
+      "note": "Link requirements are checked only when linking: a link card whose host no longer meets its requirement stays linked. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch17_rule_checks::link_card_failing_requirement_is_trashed"
+      ],
       "text": "Link cards that don't meet the link requirements"
     },
     "17-1-3-2-7": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 17,
       "fingerprint": "8ae92f0207a8efec74343ffeab23eb9ba401473c30810a609572336931e98e04",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE",
       "mechanisms": [
         "rule-checks"
       ],
-      "note": null,
+      "note": "No rule-check step for linked cards of a category the <Link> notes don't allow (code inspection of run_state_based_rules_check; untested, no fixture yet).",
       "status": "gap",
       "tests": [],
       "text": "Linked cards in a card category other than those specified in the notes for <Link>"
@@ -14677,9 +14699,9 @@
         "total": 10
       },
       "15": {
-        "gap": 153,
+        "gap": 152,
         "not_testable": 66,
-        "proven": 25,
+        "proven": 26,
         "total": 244
       },
       "16": {
@@ -14689,9 +14711,9 @@
         "total": 206
       },
       "17": {
-        "gap": 13,
+        "gap": 8,
         "not_testable": 3,
-        "proven": 0,
+        "proven": 5,
         "total": 16
       },
       "18": {
@@ -14749,15 +14771,15 @@
         "total": 13
       }
     },
-    "gap": 847,
+    "gap": 841,
     "mechanics": {
-      "gap_blocking": 8,
-      "gap_nonblocking": 529,
+      "gap_blocking": 14,
+      "gap_nonblocking": 517,
       "not_testable": 152,
-      "proven": 26
+      "proven": 32
     },
     "not-testable": 246,
-    "proven": 26
+    "proven": 32
   },
   "version": 1
 }

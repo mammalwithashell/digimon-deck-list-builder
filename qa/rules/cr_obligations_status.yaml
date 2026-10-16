@@ -21,9 +21,6 @@
 # heading heuristic never seeds them `not-testable` (e.g. 17-1-3-2-4 "Face-down
 # cards placed on the field"). They default to `gap`. The depth-4 sub-headings
 # 17-1-3-1 "Deletion Targets" and 17-1-3-2 "Trash Targets" stay `not-testable`.
-"17-1-3-2-4":
-  status: gap
-  note: "Rule-check trash target (normative); explicit so the short text is never read as a heading."
 "16-4":
   status: not-testable
   note: "Keyword icon <Security A.> with a formerly-named parenthetical (※formerly <Security Attack>); a keyword label, not a testable rule."
@@ -183,3 +180,64 @@
   gap_id: G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION
   tests: ["ch15_07_optional_conditions::mandatory_invoker_does_not_force_invoked_optional_condition"]
   note: "Ver. 4.3 rewrite. The DSL expresses borrowing (refire_card_effect, BT15-102 idiom). A mandatory '[When Attacking] Place 1 [Lender] card from your trash under this Digimon; activate 1 of its [On Play] effects as an effect of this Digimon' runs a borrowed 'By trashing your top security card, gain 1 memory' with no decision (security trashed, memory gained); a borrowed hand-pick condition keeps its PASS. Test is #[ignore]d."
+
+# ── ch17 Rule Checks (§17, §15-4-3-3) — tests/rules_conformance/ch17_rule_checks.rs ──
+"17-1-2-1":
+  status: proven
+  tests: ["ch17_rule_checks::rule_check_not_during_rule_processing"]
+  note: "The rule's example: a 0 DP Digimon's immediate-type 'when this Digimon would be deleted, you may play 1 [Zeromon] from your hand' plays a 0 DP Zeromon during the rule check; Zeromon's own would-be-deleted decision appears only after the first Digimon is already in the trash, and the next rule check deletes it."
+"17-1-2-2":
+  status: proven
+  tests: ["ch17_rule_checks::rule_check_not_during_effect_processing"]
+  note: "The rule's example '[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP and <Security A. -1>' on a 3000 DP Digimon: at the would-be-deleted decision it is at 0 DP and already has SecurityAttackChange -1, so the effect finished before the rule check deleted it."
+"17-1-3":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-RULE-CHECK-TARGETS-NOT-SIMULTANEOUS
+  tests: ["ch17_rule_checks::all_rule_check_targets_processed_simultaneously"]
+  note: "The rule check removes targets one at a time and drains each 0 DP Digimon's [On Deletion] before the next target: two 0 DP Digimon give Trash/Memory/Trash/Memory with no TriggerOrder; a 0 DP Digimon's [On Deletion] resolves before an orphan Option in the same check is trashed. Test is #[ignore]d."
+"17-1-3-1-1":
+  status: proven
+  tests: ["ch17_rule_checks::zero_dp_digimon_in_battle_area_is_deleted"]
+  note: "-3000 DP on a 3000 DP Digimon: deleted at the rule check (its [On Deletion] activates); control 7000 DP stays at 4000."
+"17-1-3-2-1":
+  status: proven
+  tests: ["ch17_rule_checks::digimon_without_dp_in_battle_area_is_trashed_not_deleted"]
+  note: "A Digimon card printed without DP is trashed at the rule check; its [On Deletion] does not activate; a 1000 DP Digimon next to it stays."
+"17-1-3-2-2":
+  status: proven
+  tests: ["ch17_rule_checks::option_in_battle_area_not_placed_by_effect_is_trashed"]
+  note: "An Option in the battle area that no effect placed there is trashed; control: an Option placed by its own '[Main] Place this card in the battle area' (§4-28-1) stays."
+"17-1-3-2-3":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE
+  tests: ["ch17_rule_checks::non_digimon_in_breeding_area_is_trashed"]
+  note: "The rule check never reads the breeding area: a Tamer there stays. Test is #[ignore]d."
+"17-1-3-2-4":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE
+  tests: ["ch17_rule_checks::face_down_card_on_field_is_trashed"]
+  note: "Rule-check trash target (normative; explicit so the short text is never read as a heading). The rule check never reads face_down: a face-down card on the field stays as a 1000 DP Digimon. Test is #[ignore]d."
+"17-1-3-2-5":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE
+  tests: ["ch17_rule_checks::excess_link_cards_trashed_player_chooses_which"]
+  note: "No rule-check step trims link cards, and the base link limit is 5, not 1 (G-ENGINE-LINK-MAX-BASE). Q6370: the player chooses which excess link cards to trash (DCGO agrees: RemoveLinkedCard -> SelectCardEffect by the owner). Test is #[ignore]d."
+"17-1-3-2-6":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE
+  tests: ["ch17_rule_checks::link_card_failing_requirement_is_trashed"]
+  note: "Link requirements are checked only when linking: a link card whose host no longer meets its requirement stays linked. Test is #[ignore]d."
+"17-1-3-2-7":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE
+  note: "No rule-check step for linked cards of a category the <Link> notes don't allow (code inspection of run_state_based_rules_check; untested, no fixture yet)."
+"15-4-3-3":
+  status: proven
+  tests: ["ch17_rule_checks::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers"]
+  note: "The rule's example: an '[Opponent's Turn] -3000 DP' aura leaves a 3000 DP Digimon at 0 DP when its controller's turn starts; its [On Deletion] and a [Start of Your Turn] effect are offered in ONE TriggerOrder, nothing activated before the choice."

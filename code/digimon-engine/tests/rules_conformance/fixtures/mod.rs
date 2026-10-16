@@ -95,6 +95,24 @@ const CH15_08: &[&str] = &[
     include_str!("ch15_08/WOULD_DEL_MEM.yaml"),
 ];
 
+/// §17 "Rule Checks" chapter cards (`ch17_rule_checks.rs`).
+const CH17: &[&str] = &[
+    include_str!("ch17/LINK_A.yaml"),
+    include_str!("ch17/LINK_B.yaml"),
+    include_str!("ch17/LINK_HOST_LV4.yaml"),
+    include_str!("ch17/MAIN_PLACE_SELF.yaml"),
+    include_str!("ch17/NO_DP_DIGIMON.yaml"),
+    include_str!("ch17/OPP_TURN_MINUS3000.yaml"),
+    include_str!("ch17/OPT_PLAIN.yaml"),
+    include_str!("ch17/OP_MINUS3000_SA_MINUS1.yaml"),
+    include_str!("ch17/SOYT_MEM.yaml"),
+    include_str!("ch17/TAMER_PLAIN.yaml"),
+    include_str!("ch17/WD_PLAY_ZEROMON.yaml"),
+    include_str!("ch17/WOULD_DEL_MAY_MEM.yaml"),
+    include_str!("ch17/ZEROMON.yaml"),
+    include_str!("ch17/ZERO_OD_MEM.yaml"),
+];
+
 /// Every shared card's YAML source.
 pub fn common_cards() -> &'static [&'static str] {
     COMMON
@@ -113,6 +131,11 @@ pub fn ch15_07_cards() -> &'static [&'static str] {
 /// Every `ch15_08/` card's YAML source.
 pub fn ch15_08_cards() -> &'static [&'static str] {
     CH15_08
+}
+
+/// Every `ch17/` card's YAML source.
+pub fn ch17_cards() -> &'static [&'static str] {
+    CH17
 }
 
 /// Register each card of `cards` on `builder`. Panics with the card's compile
@@ -152,6 +175,7 @@ fn every_fixture_file_is_listed() {
         ("ch15_04", CH15_04.len()),
         ("ch15_07", CH15_07.len()),
         ("ch15_08", CH15_08.len()),
+        ("ch17", CH17.len()),
     ] {
         let on_disk = std::fs::read_dir(format!("{root}/{dir}"))
             .unwrap_or_else(|e| panic!("read fixtures/{dir}: {e}"))
