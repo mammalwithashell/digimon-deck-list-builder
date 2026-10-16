@@ -3074,6 +3074,10 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "Iceclad",
     "MaterialSave",
     "DigiBurst",
+    // <Digisorption -N> (§16-10): `value:` is N (the reduction). The
+    // runtime reads the printed keyword off the HAND card being digivolved
+    // into (`try_prompt_digivolve_reducer_chain_mode`).
+    "Digisorption",
     "Decode",
     "ArmorPurge",
     "Fragment",

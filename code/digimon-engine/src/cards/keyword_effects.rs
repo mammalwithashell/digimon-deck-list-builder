@@ -2358,6 +2358,12 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // must author the `[Main]` body via DSL or hand-rolled `CardEffect`.
         Keyword::DigiBurst(_) => Vec::new(),
 
+        // `<Digisorption -N>` acts from the HAND, before the digivolution
+        // cost is paid (§16-10-2): the digivolve reducer chain reads the hand
+        // card's printed instances (`try_prompt_digivolve_reducer_chain_mode`).
+        // Nothing to install on a permanent.
+        Keyword::Digisorption(_) => Vec::new(),
+
         // Non-replacement keywords — handled elsewhere (combat, mask, etc.).
         _ => Vec::new(),
     }

@@ -1226,7 +1226,8 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
                 continue;
             }
             if let Some(kw) = lookup_keyword(keyword, *value) {
-                if !keywords.contains(&kw) {
+                // Every `<Digisorption>` instance is its own effect (§16-10-4).
+                if matches!(kw, Keyword::Digisorption(_)) || !keywords.contains(&kw) {
                     keywords.push(kw);
                 }
             }

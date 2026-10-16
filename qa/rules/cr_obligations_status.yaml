@@ -988,35 +988,25 @@
   tests: ["ch16_processing_keywords::draw_is_mandatory"]
   note: "No decision from an Option [Main] <Draw 2> nor from a [When Attacking] <Draw 1>."
 "16-10-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED
+  status: proven
   tests: ["ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"]
-  note: "No engine path (no Keyword variant, no printed parse, no DSL vocabulary); the card is loaded from its printed face. Digivolving into it offers nothing and pays the full cost. #[ignore]d. Blocks training in principle; no authored card prints it."
+  note: "DIGISORB (<Digisorption -3>, cost 2) from its printed face: digivolving into it from the hand offers <Digisorption> before payment; suspending the base reduces the cost to 0 (never below), and two printed <Digisorption -1> are both offered for one digivolution (Keyword::Digisorption, the digivolve reducer chain)."
 "16-10-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED
+  status: proven
   tests: ["ch16_processing_keywords::digisorption_kind_matches_rule", "ch16_processing_keywords::digisorption_timing_matches_rule"]
-  note: "Both #[ignore]d. The play-from-hand half of the timing test (no offer, play cost paid) passes."
+  note: "Offered while DIGISORB is still in the hand, the base still on top and no memory paid (immediate-type, before the digivolution); playing it from the hand offers nothing and pays the play cost."
 "16-10-3":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED
+  status: proven
   tests: ["ch16_processing_keywords::digisorption_optionality_matches_rule", "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"]
-  note: "Both #[ignore]d."
+  note: "Declining pays the full cost and suspends nothing; once a Digimon is suspended the reduction applies with no further decision."
 "16-10-4":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED
+  status: proven
   tests: ["ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"]
-  note: "Two printed <Digisorption -1> on one card, both activated for one digivolution. #[ignore]d."
+  note: "Two printed <Digisorption -1> on one card: each is offered and paid with its own suspend for the one digivolution (2 - 1 - 1 = 0)."
 "16-10-5":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED
+  status: proven
   tests: ["ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"]
-  note: "The digivolving base must be among the Digimon that can be suspended. #[ignore]d."
+  note: "The suspend candidates include the digivolving base (the Digimon that will become a digivolution card) and the other own Digimon."
 "16-11-1":
   status: proven
   tests: ["ch16_processing_keywords::reboot_unsuspends_in_opponents_unsuspend_phase_once_with_two_instances", "ch16_processing_keywords::reboot_timing_matches_rule"]

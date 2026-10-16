@@ -574,7 +574,8 @@ fn keyword_token_continues_into_then(after: &str) -> bool {
 /// (`Security A. +N`, `De-Digivolve N`, `Draw N`, …) are parsed into their
 /// typed variants.
 ///
-/// Returns a deduplicated Vec in document order across the three input fields.
+/// Returns a deduplicated Vec in document order across the three input fields
+/// (except `Digisorption`, whose every printed instance is kept, §16-10-4).
 pub fn parse_printed_keywords(
     effect_text: &str,
     inherited_text: &str,
@@ -741,6 +742,19 @@ pub fn parse_printed_keywords(
                 let n_str = rest.trim().split_whitespace().next().unwrap_or("");
                 let n = n_str.parse::<u8>().unwrap_or(1);
                 push_unique(Keyword::MaterialSave(n), &mut found);
+                continue;
+            }
+
+            // Parametric: Digisorption -N. Every printed instance is kept,
+            // duplicates included: multiple instances on one card all
+            // activate for a single digivolution (§16-10-4).
+            if let Some(rest) = trimmed.strip_prefix("Digisorption") {
+                let rest = rest.trim();
+                let digits = rest.strip_prefix('-').unwrap_or(rest);
+                let n_str = digits.trim().split_whitespace().next().unwrap_or("");
+                if let Ok(n) = n_str.parse::<u8>() {
+                    found.push(Keyword::Digisorption(n));
+                }
                 continue;
             }
 
@@ -1115,6 +1129,25 @@ mod tests {
             "",
         );
         assert_eq!(kws, vec![Keyword::DigiBurst(2)]);
+    }
+
+    /// §16-10-1 `<Digisorption -N>` parses with its value; §16-10-4 every
+    /// printed instance is kept (two `-1` instances both activate).
+    #[test]
+    fn digisorption_parses_value_and_keeps_every_instance() {
+        use crate::enums::Keyword;
+        let kws = parse_printed_keywords(
+            "＜Digisorption -2＞ (When one of your Digimon digivolves into this card from your hand, you may suspend 1 of your Digimon to reduce the memory cost of the digivolution by 2.)",
+            "",
+            "",
+        );
+        assert_eq!(kws, vec![Keyword::Digisorption(2)]);
+        let kws = parse_printed_keywords(
+            "＜Digisorption -1＞ (reminder) ＜Digisorption -1＞ (reminder)",
+            "",
+            "",
+        );
+        assert_eq!(kws, vec![Keyword::Digisorption(1), Keyword::Digisorption(1)]);
     }
 
     #[test]

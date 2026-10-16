@@ -512,7 +512,6 @@ fn digivolve_into_digisorb(r: &mut DebugRunner, base: PermanentHandle) {
 ///   one digivolution; suspending `FILL` and `LV4_PLAIN` reduces the cost 2
 ///   to 0.
 #[test]
-#[ignore = "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED (§16-10-1)"]
 fn digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks() {
     cite!(
         "16-10-1",
@@ -577,7 +576,6 @@ fn digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks() {
 /// `DIGISORB` is still in P0's hand, `FILL` is still the top card and no
 /// memory has been paid.
 #[test]
-#[ignore = "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED (§16-10-2)"]
 fn digisorption_kind_matches_rule() {
     cite!(
         "16-10-2",
@@ -606,7 +604,6 @@ fn digisorption_kind_matches_rule() {
 ///   further decision (memory 5). (Matrix row `Digisorption`:
 ///   `optional_cost_then_mandatory`, agrees.)
 #[test]
-#[ignore = "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED (§16-10-3)"]
 fn digisorption_optionality_matches_rule() {
     cite!(
         "16-10-3",
@@ -646,7 +643,6 @@ fn digisorption_optionality_matches_rule() {
 ///   costs its play cost 5.
 /// - Digivolving into it from the hand offers <Digisorption>.
 #[test]
-#[ignore = "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED (§16-10-2)"]
 fn digisorption_timing_matches_rule() {
     cite!(
         "16-10-2",

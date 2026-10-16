@@ -547,6 +547,14 @@ pub enum Keyword {
     /// parser carries the parameter; card bodies still author the "effect
     /// below" through DSL `digi_burst` or equivalent scripts.
     DigiBurst(u8),
+    /// Printed `<Digisorption -N>` (§16-10). An immediate-type effect of the
+    /// card in the HAND: when a digivolution into it would occur, by
+    /// suspending 1 of your Digimon (optional; the base may be the one,
+    /// §16-10-5) the digivolution cost is reduced by N (floored at 0).
+    /// Each printed instance is offered separately (§16-10-4), so the
+    /// printed-keyword parse keeps duplicates of this variant. Consumed by
+    /// the digivolve reducer chain (`try_prompt_digivolve_reducer_chain_mode`).
+    Digisorption(u8),
     Fortitude,
     Overclock,
     Barrier,
