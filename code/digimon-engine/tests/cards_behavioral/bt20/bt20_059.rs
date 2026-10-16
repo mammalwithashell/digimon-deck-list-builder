@@ -341,7 +341,8 @@ fn bt20_059_de_digivolve_two_peels_two_sources() {
         .game
         .resolve_selection(view.selecting_player, view.valid_action_ids[0])
         .expect("De-Digivolve target resolves");
-    runner.auto_resolve().ok();
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    runner.auto_resolve_declaring_max().ok();
 
     // De-Digivolve removes from the TOP: with stack [OPP-S1, OPP-S2, OPP-A]
     // (all level 6, so the level-3 floor never trips), De-Digivolve 2 pops the

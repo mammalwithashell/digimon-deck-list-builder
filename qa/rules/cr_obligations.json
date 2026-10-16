@@ -5370,15 +5370,15 @@
       "text": "<De-Digivolve>"
     },
     "16-12-1": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "29204991edef21032de826718e2bd74edb37cbc6f870483b871c14735d057d0a",
-      "gap_id": "G-DEDIGIVOLVE-NO-DECLARATION",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "<De-Digivolve 2> offers no 1-or-2 declaration; the maximum is always trashed. Second gap: each trashed top card fires 'digivolution cards trashed' observers (G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED; 4-8-1: digivolution cards are the cards UNDER a Digimon; DCGO stacks WhenTopCardTrashed only). Both #[ignore]d. The 'starting with the top card' order is proven by de_digivolve_multi_card_trash_is_simultaneous_but_sequential.",
-      "status": "gap",
+      "note": "<De-Digivolve 2> on 2 trashable cards parks a non-optional count declaration with exactly the numbers 1 and 2 (count-choice VM, ResumeSelectKind::DeDigivolveCount); declaring 1 trashes the top card only. The trashed top cards fire on_top_card_trashed once per instance, never 'digivolution cards trashed' (4-8-1; DCGO stacks WhenTopCardTrashed only). Resolved G-DEDIGIVOLVE-NO-DECLARATION and G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED. The 'starting with the top card' order is proven by de_digivolve_multi_card_trash_is_simultaneous_but_sequential.",
+      "status": "proven",
       "tests": [
         "ch16_processing_keywords::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3",
         "ch16_processing_keywords::de_digivolve_trashes_top_cards_not_digivolution_cards"
@@ -5408,23 +5408,24 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "Mandatory, nothing to decline, 0 not choosable. Also cited by the #[ignore]d declaration test (G-DEDIGIVOLVE-NO-DECLARATION, 16-12-1), which additionally requires the 1..N declaration to be non-optional.",
+      "note": "Mandatory, nothing to decline, 0 not choosable: <De-Digivolve 1> has no decision, and the 1..N declaration of <De-Digivolve 2> is non-optional with no 0 (G-DEDIGIVOLVE-NO-DECLARATION resolved).",
       "status": "proven",
       "tests": [
-        "ch16_processing_keywords::de_digivolve_optionality_matches_rule"
+        "ch16_processing_keywords::de_digivolve_optionality_matches_rule",
+        "ch16_processing_keywords::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3"
       ],
       "text": "The trashing from <De-Digivolve> is mandatory. Once activated, a player can't choose to trash 0 cards."
     },
     "16-12-4": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "b205c610d0d6b7a30e8002e5585a7cae99d9a1e5300f403b8d0803ee15675fdd",
-      "gap_id": "G-ENGINE-DEDIGIVOLVE-LEVEL-FLOOR-READS-NEXT-CARD",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "A level 3 Digimon on a level 3 card is de-digivolved (the floor reads the card below the top). The ordinary stop at a level 3 card under a level 4 top holds. Both #[ignore]d.",
-      "status": "gap",
+      "note": "The floor tests the TOP card being trashed: a level 3 Digimon on a level 3 card is not de-digivolved; a level 4 top over a level 3 card stops at the level 3 card (G-ENGINE-DEDIGIVOLVE-LEVEL-FLOOR-READS-NEXT-CARD resolved).",
+      "status": "proven",
       "tests": [
         "ch16_processing_keywords::de_digivolve_cannot_trash_level_3_or_lower",
         "ch16_processing_keywords::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3"
@@ -5439,7 +5440,7 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "<De-Digivolve 2>: trash order top first; a 'when the top stacked card of one of your Digimon is trashed' observer (BT21-094 wording; DCGO WhenTopCardTrashed, stacked once per IDegeneration) triggers once. The fixture is authored on on_digivolution_card_trashed for lack of a top-card timing (G-DSL-TOP-CARD-TRASHED-TIMING): the observer half is provisional until an on_top_card_trashed DSL timing exists (witness authored on the stand-in on_digivolution_card_trashed).",
+      "note": "<De-Digivolve 2>: trash order top first; a 'when the top stacked card of one of your Digimon is trashed' observer (BT21-094 wording; DCGO WhenTopCardTrashed, stacked once per IDegeneration) triggers once. The witness OBS_TOP_TRASH_MEM is authored on the on_top_card_trashed timing (G-DSL-TOP-CARD-TRASHED-TIMING resolved), which the engine fires once per instance with every trashed card.",
       "status": "proven",
       "tests": [
         "ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential"
@@ -15214,9 +15215,9 @@
         "total": 244
       },
       "16": {
-        "gap": 27,
+        "gap": 25,
         "not_testable": 44,
-        "proven": 135,
+        "proven": 137,
         "total": 206
       },
       "17": {
@@ -15280,15 +15281,15 @@
         "total": 13
       }
     },
-    "gap": 661,
+    "gap": 659,
     "mechanics": {
-      "gap_blocking": 41,
+      "gap_blocking": 39,
       "gap_nonblocking": 330,
       "not_testable": 152,
-      "proven": 192
+      "proven": 194
     },
     "not-testable": 246,
-    "proven": 212
+    "proven": 214
   },
   "version": 1
 }

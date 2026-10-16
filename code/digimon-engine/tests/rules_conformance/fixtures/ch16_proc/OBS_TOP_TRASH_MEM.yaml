@@ -6,21 +6,17 @@
 # moment. Printed wording as on BT21-094 ("When the top stacked card of ...
 # is trashed"); DCGO fires `EffectTiming.WhenTopCardTrashed` ONCE per
 # <De-Digivolve> instance, with every trashed card in its hashtable
-# (`CardController.cs` `IDegeneration`, ~L5372-5385).
-# AUTHORING NOTE: the DSL has no top-card-trashed timing
-# (G-DSL-TOP-CARD-TRASHED-TIMING): the engine routes every stack trash,
-# De-Digivolve's top-card trashes included (`game_actions/helpers.rs`
-# `de_digivolve_core`, `fire_digivolution_card_trashed`), through
-# `on_digivolution_card_trashed`. In the scenarios that use this card the
-# only stack trashes are De-Digivolve's, so the clause fires exactly when the
-# printed condition is met.
+# (`CardController.cs` `IDegeneration`, ~L5372-5385). Authored on the
+# `on_top_card_trashed` timing (G-DSL-TOP-CARD-TRASHED-TIMING, resolved),
+# which the engine fires once per <De-Digivolve> instance and for <Armor
+# Purge>.
 card: OBS_TOP_TRASH_MEM
 name: Watch Tamer
 kind: tamer
 color: [red]
 cost: 3
 effects:
-  - when: on_digivolution_card_trashed
+  - when: on_top_card_trashed
     active_when: { all_turns: true }
     condition:
       event_host_is_own_digimon: true

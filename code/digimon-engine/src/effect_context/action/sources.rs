@@ -776,12 +776,12 @@ impl<'a> EffectContext<'a> {
         // Modifier cleanup: no per-card-source tracking exists in this engine;
         // permanent-handle modifiers remain valid for the promoted top card.
         //
-        // Host = the promoted new top. The `top` was already popped above, and
-        // pushing it to TRASH (inside the helper) does not touch the perm's
-        // battle-area stack, so the host is identical computed here vs after
-        // the push. Cause = `Cost` (matches DCGO `ArmorPurge.cs:65-78`, which
-        // re-stacks `WhenTopCardTrashed`). Trash + fire via the shared Tier-2
-        // primitive.
+        // Host = the promoted new top. The trashed card is the TOP card, not a
+        // digivolution card (§4-8-1), so it fires `OnTopCardTrashed` (DCGO
+        // `ArmorPurge.cs:65-78` stacks `WhenTopCardTrashed`), never
+        // `OnDigivolutionCardTrashed`. Cause = `Cost` (the optional "by
+        // trashing the top card" condition, §16-19).
+        // G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED.
         let host_card = self
             .game
             .player(perm.player)
@@ -789,13 +789,16 @@ impl<'a> EffectContext<'a> {
             .get(perm.index as usize)
             .map(|permanent| permanent.top_card().handle())
             .unwrap_or(top_handle);
-        self.game.trash_source_and_fire_with_cause(
+        self.game.player_mut(controller).trash.push(top);
+        self.game.enqueue_top_cards_trashed(
             controller,
             perm,
-            top,
             host_card,
+            vec![top_handle],
             crate::trigger_context::EventCause::Cost,
         );
+        self.game.mark_until_condition_dirty();
+        self.game.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     /// `<Training>` (Phase F §F4 / RULES_CONTEXT 16-40 / DCGO `Training.cs:30`)

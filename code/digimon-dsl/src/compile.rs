@@ -332,6 +332,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnOpponentSecurityRemoved => CompiledTiming::OnOpponentSecurityRemoved,
         S::OnOwnSecurityRemoved => CompiledTiming::OnOwnSecurityRemoved,
         S::OnDigivolutionCardTrashed => CompiledTiming::OnDigivolutionCardTrashed,
+        S::OnTopCardTrashed => CompiledTiming::OnTopCardTrashed,
         S::OnAddDigivolutionCards => CompiledTiming::OnAddDigivolutionCards,
         S::OnSourceReturnedToDeckBottom => CompiledTiming::OnDigivolutionCardReturnedToDeckBottom,
         S::OnSecurityCheck => CompiledTiming::OnSecurityCheck,

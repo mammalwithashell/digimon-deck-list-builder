@@ -176,6 +176,8 @@ fn ex12_017_when_digivolving_de_digivolves_two_then_deletes_lowest_dp() {
         "first prompt chooses the De-Digivolve target"
     );
     select_first_non_pass(&mut runner);
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(runner.declare_max_count().expect("declare 2"));
     assert_eq!(
         top_card_id(&runner, 1, target.index as usize),
         "OPP-BASE",

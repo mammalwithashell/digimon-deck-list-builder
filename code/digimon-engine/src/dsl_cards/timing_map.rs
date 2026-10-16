@@ -44,6 +44,8 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnOpponentSecurityRemoved => EffectTiming::OnOpponentSecurityRemoved,
         CompiledTiming::OnOwnSecurityRemoved => EffectTiming::OnOwnSecurityRemoved,
         CompiledTiming::OnDigivolutionCardTrashed => EffectTiming::OnDigivolutionCardTrashed,
+        // G-DSL-TOP-CARD-TRASHED-TIMING (§4-8-1, §16-12-1).
+        CompiledTiming::OnTopCardTrashed => EffectTiming::OnTopCardTrashed,
         // Source-ADDED observer maps 1:1. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
         CompiledTiming::OnAddDigivolutionCards => EffectTiming::OnAddDigivolutionCards,
         CompiledTiming::OnDigivolutionCardReturnedToDeckBottom => {

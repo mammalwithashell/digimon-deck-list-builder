@@ -353,6 +353,8 @@ fn p_240_on_play_de_digivolve_3_then_place_2_grants_forced_attack() {
     assert_eq!(r.pending_kind(), Some(SelectionKind::OppField));
     assert!(!r.pending_is_optional(), "De-Digivolve target is mandatory");
     pick_perm(&mut r, opp);
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(r.declare_max_count().expect("declare 3"));
     assert_eq!(
         stack_ids(&r, opp),
         vec!["OPP3".to_string()],

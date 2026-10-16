@@ -847,6 +847,77 @@ impl DebugRunner {
         Ok(())
     }
 
+    /// Whether the pending selection is a count declaration from the count
+    /// choice VM (e.g. the §16-12-1 `<De-Digivolve N>` declaration).
+    pub fn pending_is_count_declaration(&self) -> bool {
+        self.pending_selection()
+            .and_then(|sel| sel.effect_choices.as_ref())
+            .is_some_and(|choices| choices.iter().any(|c| c.count_choice.is_some()))
+    }
+
+    /// Answer a pending count declaration with its LARGEST value (paging
+    /// forward first when needed). Returns whether a declaration was pending.
+    pub fn declare_max_count(&mut self) -> Result<bool, SelectionError> {
+        use crate::count_choice::CountChoiceOperation;
+        if !self.pending_is_count_declaration() {
+            return Ok(false);
+        }
+        loop {
+            let Some(sel) = self.pending_selection() else {
+                return Ok(true);
+            };
+            let player = sel.selecting_player;
+            let rows: Vec<_> = sel
+                .effect_choices
+                .as_ref()
+                .map(|choices| {
+                    choices
+                        .iter()
+                        .filter_map(|c| c.count_choice.map(|m| (c.action_id, m.operation)))
+                        .collect()
+                })
+                .unwrap_or_default();
+            if let Some((next, _)) = rows
+                .iter()
+                .find(|(_, op)| matches!(op, CountChoiceOperation::NextPage))
+            {
+                self.execute_action(player, *next)?;
+                continue;
+            }
+            let best = rows
+                .iter()
+                .filter_map(|(id, op)| match op {
+                    CountChoiceOperation::Commit(v) => Some((v.declared, *id)),
+                    _ => None,
+                })
+                .max()
+                .map(|(_, id)| id)
+                .ok_or(SelectionError::InvalidAction)?;
+            self.execute_action(player, best)?;
+            return Ok(true);
+        }
+    }
+
+    /// [`Self::auto_resolve`], except that a count declaration (e.g. the
+    /// §16-12-1 `<De-Digivolve N>` declaration) is answered with its largest
+    /// value instead of the first (smallest) one.
+    pub fn auto_resolve_declaring_max(&mut self) -> Result<(), SelectionError> {
+        while let Some(sel) = self.pending_selection() {
+            if self.pending_is_count_declaration() {
+                self.declare_max_count()?;
+                continue;
+            }
+            let player = sel.selecting_player;
+            let action_id = match sel.valid_action_ids.first().copied() {
+                Some(id) => id,
+                None if sel.is_optional => crate::action::space::PASS,
+                None => return Err(SelectionError::InvalidAction),
+            };
+            self.execute_action(player, action_id)?;
+        }
+        Ok(())
+    }
+
     // ─── Event helpers ──────────────────────────────────────────────
 
     pub fn event_checkpoint(&self) -> usize {

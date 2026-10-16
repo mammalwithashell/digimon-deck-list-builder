@@ -1056,7 +1056,6 @@ fn settle_declaring_max(r: &mut DebugRunner) {
 /// - On `[FILL, LV4_PLAIN]`, declaring the maximum trashes `LV4_PLAIN` and
 ///   stops at the level 3 `FILL`.
 #[test]
-#[ignore = "G-DEDIGIVOLVE-NO-DECLARATION (§16-12-1)"]
 fn de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3() {
     cite!(
         "16-12-1",
@@ -1120,7 +1119,6 @@ fn de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3() 
 /// agrees: `IDegeneration` stacks `WhenTopCardTrashed`, never
 /// `OnDigivolutionCardDiscarded` (`CardController.cs` ~L5384 vs ~L5685).
 #[test]
-#[ignore = "G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED (§16-12-1)"]
 fn de_digivolve_trashes_top_cards_not_digivolution_cards() {
     cite!(
         "16-12-1",
@@ -1150,7 +1148,6 @@ fn de_digivolve_trashes_top_cards_not_digivolution_cards() {
 ///   Digimon on a level 3 card): the top card is level 3, so nothing is
 ///   trashed. (DCGO `IDegeneration` stops when the permanent's level is 3.)
 #[test]
-#[ignore = "G-ENGINE-DEDIGIVOLVE-LEVEL-FLOOR-READS-NEXT-CARD (§16-12-4)"]
 fn de_digivolve_cannot_trash_level_3_or_lower() {
     cite!(
         "16-12-4",

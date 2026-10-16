@@ -850,6 +850,42 @@ pub(crate) fn run_resume(
                         return;
                     }
                 }
+                ResumeSelectKind::DeDigivolveCount { mut page, state } => {
+                    // §16-12-1: trash the declared number from the top, then
+                    // continue the clause. G-DEDIGIVOLVE-NO-DECLARATION.
+                    let Some(crate::count_choice::CountChoiceOperation::Commit(value)) =
+                        page.resolve(action_id)
+                    else {
+                        game.dsl_clause_aborted = true;
+                        return;
+                    };
+                    let previous = std::mem::replace(
+                        &mut game.current_trigger_context,
+                        trigger_context.clone(),
+                    );
+                    let previous_source = game.effect_source_player.replace(prov.controller);
+                    game.de_digivolve_commit_declared(&state, value.declared);
+                    game.effect_source_player = previous_source;
+                    {
+                        let mut ctx = EffectContext::new_with_source_kind_and_override(
+                            game,
+                            prov.source_card,
+                            prov.source_permanent,
+                            prov.source_kind,
+                            prov.controller,
+                            prov.override_pin,
+                        );
+                        let mut b = bindings;
+                        run_tail_preserving_trigger_context(
+                            &mut ctx,
+                            trigger_context,
+                            &inner_tail,
+                            &mut b,
+                            &runtime,
+                        );
+                    }
+                    game.current_trigger_context = previous;
+                }
                 ResumeSelectKind::CountChoice(mut page) => {
                     let Some(crate::count_choice::CountChoiceOperation::Commit(value)) =
                         page.resolve(action_id)

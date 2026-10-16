@@ -242,6 +242,15 @@ pub enum ResumeSelectKind {
         page: crate::count_choice::CountChoicePage,
         state: crate::dsl_cards::step::source_prefix_payment::SourcePrefixCountState,
     },
+    /// §16-12-1 `<De-Digivolve>` count declaration (1..=min(N, trashable),
+    /// non-optional, §16-12-3). On commit the declared number of cards is
+    /// trashed from the top of the declared Digimon
+    /// (`Game::de_digivolve_commit_declared`), then `inner_tail` / outer
+    /// continuations run. G-DEDIGIVOLVE-NO-DECLARATION.
+    DeDigivolveCount {
+        page: crate::count_choice::CountChoicePage,
+        state: crate::game_actions::DeDigivolveCountState,
+    },
     EffectChoice {
         post: Option<EffectChoicePostAction>,
     },

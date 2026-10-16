@@ -691,6 +691,20 @@ pub enum TriggerSource {
         card: CardHandle,
         cause: crate::trigger_context::EventCause,
     },
+    /// Observer timing (`OnTopCardTrashed`) fired ONCE after one event trashed
+    /// the TOP card(s) of `host`'s stack: every card of one <De-Digivolve>
+    /// instance (§16-12-1 / §16-12-5) or <Armor Purge>'s top card. Scans all
+    /// players' battle areas (and event-gated `<Delay>` Options) while carrying
+    /// the host (`host` / `host_card`, the host's new top card) and the trashed
+    /// `cards`. DCGO `EffectTiming.WhenTopCardTrashed` +
+    /// `CanTriggerWhenTopCardTrashed`. G-DSL-TOP-CARD-TRASHED-TIMING.
+    TopCardsTrashed {
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: CardHandle,
+        cards: Vec<CardHandle>,
+        cause: crate::trigger_context::EventCause,
+    },
     /// Observer timing (`OnLinkedCardTrashed`) fired after an EFFECT trashes a
     /// link card from a host that stays in the battle area
     /// (`Game::trash_specific_link_card`). Scans all players' battle areas

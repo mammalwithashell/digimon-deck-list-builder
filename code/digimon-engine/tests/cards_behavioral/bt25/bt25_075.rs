@@ -504,7 +504,9 @@ fn bt25_075_on_play_links_two_then_de_digivolves_opponents_by_two() {
     let vulcan = r.place_on_field(0, CARD_ID, Some(0));
     let ally = r.place_on_field(0, "OWN-ALLY", Some(1));
     // Opponent stack with 3 sources so a -2 de-digivolve is observable.
-    let opp = r.place_stack(1, &["OPP-LV3", "OPP-LV3", "OPP-LV5"]);
+    // Two level 5 cards above the level 3 base: a level 3 top card can't be
+    // trashed (§16-12-4).
+    let opp = r.place_stack(1, &["OPP-LV3", "OPP-LV5", "OPP-LV5"]);
     let opp_sources_before = r.game.player(1).battle_area[opp.index as usize]
         .card_sources
         .len();

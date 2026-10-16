@@ -1639,11 +1639,22 @@ fn on_digivolution_card_trashed_return_to_deck_carries_host_and_trashed_source()
     assert_eq!(r.memory(), before + 1);
 }
 
+/// <De-Digivolve> trashes the TOP card, never a digivolution card (§16-12-1
+/// "trashed ... starting with the top card"; §4-8-1 "A digivolution card
+/// refers to a card placed under a Digimon"), so a source-trash observer does
+/// NOT see it; the instance fires `OnTopCardTrashed` instead (DCGO
+/// `IDegeneration` stacks `WhenTopCardTrashed`). Inverted from the former
+/// `on_digivolution_card_trashed_de_digivolve_carries_host_and_trashed_source`
+/// (G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED).
 #[test]
-fn on_digivolution_card_trashed_de_digivolve_carries_host_and_trashed_source() {
+fn on_digivolution_card_trashed_does_not_observe_de_digivolve() {
     let mut r = DebugRunner::builder()
         .add_card(plain_digimon("OBS-DEDE", "Source Trash Observer", 3))
-        .add_card(plain_digimon("TOP-DEDE", "Top", 4))
+        // Level 4: a level 3 top card can't be trashed (§16-12-4).
+        .add_card(CardData {
+            level: Some(4),
+            ..plain_digimon("TOP-DEDE", "Top", 4)
+        })
         .add_card(plain_digimon("UNDER-DEDE", "Under", 3))
         .memory(5)
         .start();
@@ -1679,8 +1690,9 @@ fn on_digivolution_card_trashed_de_digivolve_carries_host_and_trashed_source() {
         r.game_mut().de_digivolve_from_effect(host, 0, 1),
         "de_digivolve should trash TOP-DEDE and expose UNDER-DEDE"
     );
+    r.game_mut().drain_effect_queue();
 
-    assert_eq!(r.memory(), before + 1);
+    assert_eq!(r.memory(), before, "no digivolution card was trashed");
 }
 
 #[test]
