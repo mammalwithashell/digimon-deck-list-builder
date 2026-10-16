@@ -464,7 +464,7 @@
 "16-44-1":
   status: proven
   tests: ["ch16_new_keywords::engage_optional_eot_attack"]
-  note: "At the end of P0's turn an attack with the <Engage> Digimon is offered (with PASS); it checks security, then the turn ends. The engine then parks EndOfTurnAction once more with PASS as the only legal action (a no-choice step, not a rule violation)."
+  note: "At the end of P0's turn an attack with the <Engage> Digimon is offered (with PASS); it checks security, then the turn ends. The engine then parks EndOfTurnAction once more with PASS as the only legal action: a forced no-op decision point logged as G-ENGINE-ENGAGE-EOT-PASS-ONLY-STEP (blocks_training: false); the rule itself holds."
 "16-44-2":
   status: gap
   blocks_training: true
@@ -534,7 +534,7 @@
   blocks_training: true
   gap_id: G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT
   tests: ["ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player"]
-  note: "Observed: P1's instance first (memory 9 -> 10 capped), then P0's two (-> 4); the rule gives 9 -> 3 -> 6. The turn player's choice among their own instances is unobservable (same direction). Test is #[ignore]d."
+  note: "Observed in a mutual battle deletion of two ACEs (memory 9 -> 10 capped -> 7; rule 9 -> 6 -> 9) and in 'delete all Digimon' (9 -> 10 -> 4; rule 9 -> 3 -> 6): P1's instance first. Both route through combat/deletion.rs trash_batch_survivors. The turn player's choice among their own instances is unobservable (same direction). Test is #[ignore]d."
 "4-19-5-2":
   status: gap
   blocks_training: true
@@ -586,7 +586,7 @@
   blocks_training: true
   gap_id: G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH
   tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information", "ch16_new_keywords::dual_option_information_referenced_as_option_card"]
-  note: "Option USE reads the Option information (purple color requirement, use cost 2: proven). A 'purple Option card' hand search does not match the DUAL (its Option information is purple): card-search predicates read the top-level (Digimon information) colors. dual_option_information_referenced_as_option_card is #[ignore]d."
+  note: "Option USE reads the Option information (purple color requirement, use cost 2: proven). Card-search predicates read the top-level (Digimon information) colors: 'purple Option card' misses the DUAL (Option information purple) and 'red Option card' wrongly offers it (Digimon information red); 'purple Digimon card' correctly misses it. The test pins both directions, so a both-faces-union fix fails it. dual_option_information_referenced_as_option_card is #[ignore]d."
 "4-6-6-3":
   status: proven
   tests: ["ch16_new_keywords::dual_effects_are_digimon_or_option_effects_by_information"]

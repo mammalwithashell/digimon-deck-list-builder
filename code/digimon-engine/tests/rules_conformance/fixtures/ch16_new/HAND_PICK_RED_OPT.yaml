@@ -1,0 +1,22 @@
+# HAND_PICK_RED_OPT -- Option, red, use cost 0.
+#   [Main] Trash 1 red Option card from your hand.
+# A DUAL card whose Option information is not red must NOT match, even when
+# its Digimon information is red (§4-6-6-2).
+card: HAND_PICK_RED_OPT
+name: Crimson Audit
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash 1 red Option card from your hand."
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: option
+              - color_is: red
+          prompt: "Trash 1 red Option card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: pick }

@@ -36,7 +36,7 @@ use crate::fixtures;
 use crate::support::*;
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
-    encode_attack, encode_digivolve, PASS, PLAY_HAND_START, SECURITY_TARGET,
+    encode_attack, encode_digivolve, ATTACK_START, PASS, PLAY_HAND_START, SECURITY_TARGET,
 };
 use digimon_engine::debug_runner::{DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{GamePhase, PlayerId};
@@ -231,6 +231,13 @@ fn stack_ids(r: &DebugRunner, h: PermanentHandle) -> Vec<String> {
         r,
         &r.game.player(h.player).battle_area[h.index as usize].card_sources,
     )
+}
+
+/// The action id that picks battle-area `slot` in an own-/opponent-field
+/// selection (`OwnField` / `OppField` encode a slot as `ATTACK_START + slot`;
+/// see `support::pick_field`).
+fn field_pick_action(slot: u16) -> u16 {
+    ATTACK_START + slot
 }
 
 /// Whether P0 may use the hand card at `index` now (its play / use bit).
@@ -1358,6 +1365,11 @@ fn overflow_not_processed_entering_under_a_card() {
 /// first (9 -> 6 -> 3), then P1's (3 -> 6). The order is observable through
 /// the memory cap: P1's first would give 9 -> 10 (capped) -> 7 -> 4.
 ///
+/// The likelier real path is a battle where both ACEs are deleted: P0's `ACE`
+/// (7000 DP) attacks P1's suspended `ACE` (7000 DP) at memory 9; both are
+/// deleted together, P0's instance first (9 -> 6), then P1's (6 -> 9); P1's
+/// first would give 9 -> 10 (capped) -> 7.
+///
 /// The turn player's choice among their own instances is not observable:
 /// they all move the marker the same way, so any order gives the same result
 /// (the engine offers no prompt for it; nothing is lost).
@@ -1376,6 +1388,23 @@ fn overflow_turn_player_orders_then_non_turn_player() {
         "4-19-5-2",
         "a60b917e4326f91400b6ec0304d6d0fca2db87be4de9c94faf18251a4c08d765"
     );
+    // Mutual battle deletion.
+    let mut r = board(&[]);
+    r.game.set_memory(9);
+    let attacker = r.place_on_field(0, "ACE", Some(0));
+    let defender = r.place_on_field(1, "ACE", Some(0));
+    set_suspended(&mut r, defender, true);
+    let cp = r.event_checkpoint();
+    r.attack_digimon(attacker, defender, false);
+    settle_declining(&mut r);
+    assert!(field_top_ids(&r, 0).is_empty() && field_top_ids(&r, 1).is_empty());
+    assert_eq!(
+        (rule_memory_moves(&r, cp), r.memory()),
+        (vec![(0, -3), (1, 3)], 9),
+        "battle: the turn player's instance first"
+    );
+
+    // One effect deleting all Digimon.
     let mut r = board(&["MAIN_DEL_ALL_ANY"]);
     r.game.set_memory(9);
     r.place_on_field(0, "ACE", Some(0));
@@ -1413,6 +1442,9 @@ fn dual_board(hand0: &[&str]) -> DebugRunner {
 /// P0 uses `DUAL_ARTS` as an Option (use cost 2: memory 5 -> 3); its [Main]
 /// finds no target. Instead of the trash, P0 may digivolve a card on the
 /// field into it:
+/// - only the cost is waived, not the digivolution requirements: the red
+///   Lv.5 `LV5_PLAIN` (slot 1) is a legal target, the purple Lv.3
+///   `PURPLE_LV3` (slot 0) is not;
 /// - accepting on `LV5_PLAIN`: `DUAL_ARTS` becomes the top of that stack,
 ///   memory stays 3 (no digivolution cost), and it never reaches the trash;
 /// - declining: the used Option is trashed as usual.
@@ -1436,15 +1468,17 @@ fn arts_digivolve_replaces_option_trash_with_free_digivolve() {
         "P0 may Arts Digivolve instead of trashing"
     );
     assert!(trash_ids(&r, 0).is_empty(), "not trashed yet");
-    let target = encode_attack(0, 1);
+    let cp = r.event_checkpoint();
+    let offered = r.pending_selection().unwrap().valid_action_ids.clone();
     assert!(
-        r.pending_selection()
-            .unwrap()
-            .valid_action_ids
-            .contains(&target),
-        "LV5_PLAIN is a legal target"
+        offered.contains(&field_pick_action(1)),
+        "LV5_PLAIN meets the digivolution requirements: {offered:?}"
     );
-    r.execute_action(0, target).expect("Arts Digivolve");
+    assert!(
+        !offered.contains(&field_pick_action(0)),
+        "PURPLE_LV3 does not (only the cost is waived): {offered:?}"
+    );
+    pick_field(&mut r, 1);
     settle_declining(&mut r);
     assert_eq!(
         stack_ids(&r, r.perm_handle(0, 1)),
@@ -1453,6 +1487,13 @@ fn arts_digivolve_replaces_option_trash_with_free_digivolve() {
     );
     assert_eq!(r.memory(), 3, "without paying the digivolution cost");
     assert!(trash_ids(&r, 0).is_empty(), "the trashing was replaced");
+    // Complements the trash read above: the event stream shows no trash of the
+    // card either (the plain Option-trash path emits none at all,
+    // G-ENGINE-OPTION-TRASH-NO-EVENT, so this alone would not be a witness).
+    assert!(
+        !trashed_since(&r, cp, 0, "DUAL_ARTS"),
+        "DUAL_ARTS never reached the trash"
+    );
 
     let mut r = dual_board(&["DUAL_ARTS"]);
     use_option(&mut r, 0, "DUAL_ARTS");
@@ -1661,10 +1702,17 @@ fn dual_effects_are_digimon_or_option_effects_by_information() {
 /// referencing the card as an Option card."
 ///
 /// In the hand, `DUAL_ARTS` referenced as an Option card has its Option
-/// information's color: purple (its Digimon information is red). P0's
-/// `HAND_PICK_PURPLE_OPT` ("Trash 1 purple Option card from your hand") can
-/// choose it. (Option USE already reads the Option information's color and
-/// cost: `dual_use_declares_digimon_or_option_information`.)
+/// information's color, purple -- and only that: its Digimon information is
+/// red. Referenced as a Digimon card it has only the Digimon information's
+/// red. (Option USE already reads the Option information's color and cost:
+/// `dual_use_declares_digimon_or_option_information`.)
+/// - `HAND_PICK_PURPLE_OPT` ("Trash 1 purple Option card from your hand")
+///   can choose it;
+/// - `HAND_PICK_RED_OPT` ("Trash 1 red Option card from your hand") can't;
+/// - `HAND_PICK_PURPLE_DIGI` ("Trash 1 purple Digimon card from your hand")
+///   can't.
+/// The two negatives rule out a "Digimon colors and Option colors together"
+/// reading, which would offer illegal picks.
 #[test]
 #[ignore = "G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH (§4-6-6-2)"]
 fn dual_option_information_referenced_as_option_card() {
@@ -1683,6 +1731,28 @@ fn dual_option_information_referenced_as_option_card() {
     settle_after_option(&mut r);
     assert!(hand_ids(&r, 0).is_empty());
     assert!(trash_ids(&r, 0).contains(&"DUAL_ARTS".to_string()));
+
+    for (picker, why) in [
+        (
+            "HAND_PICK_RED_OPT",
+            "referenced as an Option card, DUAL_ARTS is purple, not red",
+        ),
+        (
+            "HAND_PICK_PURPLE_DIGI",
+            "referenced as a Digimon card, DUAL_ARTS is red, not purple",
+        ),
+    ] {
+        let mut r = board(&[picker, "DUAL_ARTS"]);
+        red_anchor(&mut r);
+        use_option(&mut r, 0, picker);
+        assert!(
+            r.pending_selection().is_none(),
+            "{picker}: {why}: {:?}",
+            r.pending_selection()
+        );
+        settle_after_option(&mut r);
+        assert_eq!(hand_ids(&r, 0), owned(&["DUAL_ARTS"]), "{picker}: {why}");
+    }
 }
 
 /// §4-6-3 "A DUAL card placed on the field is treated as a Digimon. It can't
