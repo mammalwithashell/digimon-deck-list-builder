@@ -981,6 +981,7 @@ dependencies = [
  "ndarray 0.17.2",
  "ort",
  "rand 0.8.5",
+ "regex",
  "serde",
  "serde_json",
  "serde_yml",
