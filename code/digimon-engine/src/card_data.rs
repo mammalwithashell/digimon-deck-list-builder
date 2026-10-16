@@ -341,6 +341,45 @@ impl CardData {
             .unwrap_or(self.evo_costs.as_slice())
     }
 
+    /// Whole-card "[X] in its text" scan (G-DSL-IN-TEXT-CONTAINS), the broad
+    /// DCGO `CardSource.HasText` surface: name, identity aliases, the whole
+    /// trait line, printed requirement wording and all printed text (both faces
+    /// of a DUAL). Case-insensitive substring. Shared by the `in_text_contains`
+    /// predicate and by DNA-requirement text matching (`text_contains`).
+    pub fn in_text_contains(&self, needle: &str) -> bool {
+        let needle = needle.to_lowercase();
+        if needle.is_empty() {
+            return false;
+        }
+        if self.card_name.to_lowercase().contains(&needle)
+            || self
+                .also_treated_as
+                .iter()
+                .any(|a| a.to_lowercase().contains(&needle))
+            || self
+                .digixros_aliases
+                .iter()
+                .any(|a| a.to_lowercase().contains(&needle))
+        {
+            return true;
+        }
+        // The top-level trait list AND the DUAL Digimon-face traits.
+        if self
+            .traits
+            .iter()
+            .chain(self.dual.iter().flat_map(|d| d.digimon.traits.iter()))
+            .any(|t| t.to_lowercase().contains(&needle))
+        {
+            return true;
+        }
+        if self.requirement_text.to_lowercase().contains(&needle) {
+            return true;
+        }
+        self.text_for_search_all_faces()
+            .to_lowercase()
+            .contains(&needle)
+    }
+
     pub fn text_for_search_all_faces(&self) -> String {
         if let Some(dual) = &self.dual {
             return [

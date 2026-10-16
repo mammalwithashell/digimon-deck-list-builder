@@ -61,11 +61,15 @@ pub fn eval_predicate_with_bindings(
     // Option anywhere in its conjunction) matches when the WHOLE predicate
     // holds read through either information -- not leaf by leaf (a "purple
     // Lv.6 card" needs one information that is both purple and Lv.6).
+    // Only a DUAL card in a card zone has two readings: on the field it is a
+    // Digimon (§4-6-3) and `eval_card_fields` reads it as one.
     let is_dual_card = match subject {
-        PredicateSubject::Card(c) | PredicateSubject::RevealedCard(c) => rctx
-            .game
-            .card_data_for_handle(c)
-            .is_some_and(|d| d.dual.is_some()),
+        PredicateSubject::Card(c) | PredicateSubject::RevealedCard(c) => {
+            rctx.game
+                .card_data_for_handle(c)
+                .is_some_and(|d| d.dual.is_some())
+                && !rctx.game.card_is_on_field(c)
+        }
         _ => false,
     };
     if is_dual_card && conjunct_dual_ref(pred) == DualRef::Either {
@@ -3106,41 +3110,7 @@ fn any_effective_name_matches(
 ///   requirement wording is retained in `requirement_text` by the loader.
 /// Numeric `evo_costs` and `dna_costs` are not text and are not searched.
 fn card_in_text_contains(data: &crate::card_data::CardData, needle: &str) -> bool {
-    let needle = needle.to_lowercase();
-    if needle.is_empty() {
-        return false;
-    }
-    // Name + identity aliases.
-    if data.card_name.to_lowercase().contains(&needle)
-        || data
-            .also_treated_as
-            .iter()
-            .any(|a| a.to_lowercase().contains(&needle))
-        || data
-            .digixros_aliases
-            .iter()
-            .any(|a| a.to_lowercase().contains(&needle))
-    {
-        return true;
-    }
-    // Traits (the Type line) â€” the [Three Musketeers]-trait regression.
-    // Scans the top-level trait list AND the Dual digimon-face traits (a Dual
-    // card's face may carry its own trait list distinct from `data.traits`).
-    if data
-        .traits
-        .iter()
-        .chain(data.dual.iter().flat_map(|d| d.digimon.traits.iter()))
-        .any(|t| t.to_lowercase().contains(&needle))
-    {
-        return true;
-    }
-    if data.requirement_text.to_lowercase().contains(&needle) {
-        return true;
-    }
-    // All printed text (both dual faces via `text_for_search_all_faces`).
-    data.text_for_search_all_faces()
-        .to_lowercase()
-        .contains(&needle)
+    data.in_text_contains(needle)
 }
 
 /// Card-subject sibling including effect-granted physical identity aliases.
@@ -3168,6 +3138,15 @@ fn eval_card_fields(
     let data = match rctx.game.card_data_for_handle(card) {
         Some(d) => d,
         None => return false,
+    };
+    // §4-6-3: a DUAL card placed on the field (top card, digivolution card,
+    // link card, breeding) is treated as a Digimon and can't be referenced as
+    // an Option card there, whatever the caller asked for.
+    let on_field_dual = data.dual.is_some() && rctx.game.card_is_on_field(card);
+    let dual_ref = if on_field_dual {
+        DualRef::Digimon
+    } else {
+        dual_ref
     };
     // §4-6-5-2 / §4-6-6-2: a DUAL referenced as an Option card has only its
     // Option information (color, use cost; no level, no DP); otherwise the
@@ -3238,6 +3217,9 @@ fn eval_card_fields(
         .flatten();
 
     if let Some(want) = pred.kind {
+        if on_field_dual && matches!(want, CompiledCardKind::Option) {
+            return false;
+        }
         let overlay_match = overlay
             .and_then(|o| o.kind)
             .is_some_and(|kind| kind_matches(want, kind));

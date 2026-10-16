@@ -1245,8 +1245,9 @@ pub struct SourceMultiState {
     /// are candidates. `target_resolution_failed` rejects all (binding missing).
     pub target_permanent: Option<PermanentHandle>,
     pub target_resolution_failed: bool,
-    /// `select_own_sources` evaluates the predicate on `PredicateSubject::Source`;
-    /// `select_opponent_sources` on `PredicateSubject::Card(source.card)`.
+    /// Both `select_own_sources` and `select_opponent_sources` evaluate the
+    /// predicate on `PredicateSubject::Source` (a digivolution card is on the
+    /// field, §4-6-3); this flag is kept only for frame compatibility.
     pub eval_on_card: bool,
     pub prompt: String,
     // ── data terminal (bind the picked source-ref list, then run the tail) ──

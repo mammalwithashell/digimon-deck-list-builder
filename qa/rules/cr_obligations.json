@@ -12449,11 +12449,12 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": "The rule's example: 'trash 1 of your opponent's Option cards in the battle area' never takes the DUAL stack (trashes a real field Option instead, or nothing); 'delete 1 Digimon' deletes it. A DUAL digivolution card is on the field too: a color search over digivolution cards reads only its Digimon information (red found, Option-purple not).",
+      "note": "The rule's example: 'trash 1 of your opponent's Option cards in the battle area' never takes the DUAL stack (trashes a real field Option instead, or nothing); 'delete 1 Digimon' deletes it. A DUAL digivolution card is on the field too: any predicate over it (a source pick, a self source count) reads only its Digimon information (red / Digimon counted; Option-purple and 'Option card' not).",
       "status": "proven",
       "tests": [
         "ch16_new_keywords::dual_on_field_is_a_digimon_not_an_option",
-        "ch16_new_keywords::dual_digivolution_card_on_field_reads_digimon_information"
+        "ch16_new_keywords::dual_digivolution_card_on_field_reads_digimon_information",
+        "ch16_new_keywords::dual_digivolution_card_counts_as_digimon_only"
       ],
       "text": "A DUAL card placed on the field is treated as a Digimon. It can't be referenced as an Option card placed on the field. (Example: A DUAL card that is digivolved by placing it on top of one of your cards on the field will be treated as a Digimon, and it can't be trashed by a \"trash an Option card in the battle area\" effect.)"
     },

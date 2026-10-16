@@ -1666,17 +1666,11 @@ fn card_data_matches_req_ext(
         }
     }
     if !req.text_contains.is_empty() {
-        // Python's `_perm_matches_dna_req` searches effect + inherited +
-        // security text concatenated (digivolve_validator.py:189-199).
-        let needle = req.text_contains.to_lowercase();
-        let haystack = [
-            meta.effect_text.as_str(),
-            meta.inherited_text.as_str(),
-            meta.security_text.as_str(),
-        ]
-        .join(" ")
-        .to_lowercase();
-        if !haystack.contains(&needle) {
+        // "w/[X] in text" is the whole-card text scan (name, traits, printed
+        // text and digivolution-requirement wording), the same surface as the
+        // `in_text_contains` predicate (official Q&A counts the digivolution
+        // requirement as text).
+        if !meta.in_text_contains(&req.text_contains) {
             return false;
         }
     }

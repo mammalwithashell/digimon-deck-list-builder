@@ -673,8 +673,8 @@
   note: "The two declarations are distinct actions in the mask (use bit vs digivolve bit)."
 "4-6-3":
   status: proven
-  tests: ["ch16_new_keywords::dual_on_field_is_a_digimon_not_an_option", "ch16_new_keywords::dual_digivolution_card_on_field_reads_digimon_information"]
-  note: "The rule's example: 'trash 1 of your opponent's Option cards in the battle area' never takes the DUAL stack (trashes a real field Option instead, or nothing); 'delete 1 Digimon' deletes it. A DUAL digivolution card is on the field too: a color search over digivolution cards reads only its Digimon information (red found, Option-purple not)."
+  tests: ["ch16_new_keywords::dual_on_field_is_a_digimon_not_an_option", "ch16_new_keywords::dual_digivolution_card_on_field_reads_digimon_information", "ch16_new_keywords::dual_digivolution_card_counts_as_digimon_only"]
+  note: "The rule's example: 'trash 1 of your opponent's Option cards in the battle area' never takes the DUAL stack (trashes a real field Option instead, or nothing); 'delete 1 Digimon' deletes it. A DUAL digivolution card is on the field too: any predicate over it (a source pick, a self source count) reads only its Digimon information (red / Digimon counted; Option-purple and 'Option card' not)."
 "4-6-4":
   status: proven
   tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information"]

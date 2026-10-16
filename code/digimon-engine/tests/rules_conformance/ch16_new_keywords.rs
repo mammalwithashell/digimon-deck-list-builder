@@ -1900,6 +1900,50 @@ fn dual_digivolution_card_on_field_reads_digimon_information() {
 }
 
 /// §4-6-3 "A DUAL card placed on the field is treated as a Digimon. It can't
+/// be referenced as an Option card placed on the field."
+///
+/// Whatever reads a card through the general predicate -- here a Digimon
+/// counting its OWN digivolution cards (`self_source_count`) -- sees a DUAL
+/// digivolution card as a Digimon card with only its Digimon information.
+/// `DUAL_ARTS` (Digimon information red, Option information purple) under the
+/// attacker: "[When Attacking] If this Digimon has ... in its digivolution
+/// cards, gain 3 memory."
+/// - `DUALSRC_RED` ("a red card") and `DUALSRC_DIGI` ("a Digimon card") count it;
+/// - `DUALSRC_PURPLE` ("a purple card") counts 0: purple is only the Option
+///   information;
+/// - `DUALSRC_OPT` ("an Option card") counts 0: it can't be referenced as one.
+#[test]
+fn dual_digivolution_card_counts_as_digimon_only() {
+    cite!(
+        "4-6-3",
+        "a73913aee829c3e62eba607984ce4c0cf52b6708908f0c90353cff4b678be173"
+    );
+    let gains_memory = |top: &str| {
+        let mut r = ch16_new()
+            .deck(0, &[FILL; 6])
+            .deck(1, &[FILL; 6])
+            .security(1, &[FILL; 4])
+            .memory(0)
+            .start();
+        let h = r.place_stack(0, &["DUAL_ARTS", top]);
+        let cp = r.event_checkpoint();
+        r.attack_player(h, 1, false);
+        settle_declining(&mut r);
+        !memory_sources(&r, cp).is_empty()
+    };
+    assert!(gains_memory("DUALSRC_RED"), "red: its Digimon information");
+    assert!(gains_memory("DUALSRC_DIGI"), "a Digimon card");
+    assert!(
+        !gains_memory("DUALSRC_PURPLE"),
+        "purple is only the Option information, which isn't readable on the field"
+    );
+    assert!(
+        !gains_memory("DUALSRC_OPT"),
+        "a DUAL on the field can't be referenced as an Option card"
+    );
+}
+
+/// §4-6-3 "A DUAL card placed on the field is treated as a Digimon. It can't
 /// be referenced as an Option card placed on the field. (Example: A DUAL
 /// card that is digivolved by placing it on top of one of your cards on the
 /// field will be treated as a Digimon, and it can't be trashed by a "trash an
