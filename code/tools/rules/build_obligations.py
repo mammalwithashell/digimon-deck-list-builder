@@ -55,10 +55,20 @@ _KEYWORD_ICON = re.compile(r"^<[^<>]+>$")
 _TRAILING_FOOTNOTE = re.compile(r"(?<=[.)])\d{1,2}$")
 _TERMINATORS = (".", ")", ":")
 _MAX_HEADING_WORDS = 6
+# Rule-check enumerations: every unit under these prefixes is normative (an
+# enumerated deletion/trash target, even when it is short and unterminated, e.g.
+# 17-1-3-2-4 "Face-down cards placed on the field"), so the heading heuristic
+# never seeds them `not-testable`.
+_NORMATIVE_PREFIXES = ("17-1-3-",)
 
 
-def is_heading(text: str) -> bool:
-    """Heading-only unit: no sentence terminator and at most 6 words, or a bare keyword icon."""
+def is_heading(text: str, rule_id: str | None = None) -> bool:
+    """Heading-only unit: no sentence terminator and at most 6 words, or a bare keyword icon.
+
+    Units under ``_NORMATIVE_PREFIXES`` (rule-check target enumerations) are never headings.
+    """
+    if rule_id is not None and rule_id.startswith(_NORMATIVE_PREFIXES):
+        return False
     t = _TRAILING_FOOTNOTE.sub("", text.strip())
     if _KEYWORD_ICON.match(t):
         return True
@@ -85,12 +95,18 @@ def build(source: Path, sidecar: dict, mechanisms: dict) -> dict:
     unknown = sorted(set(sidecar) - ids)
     if unknown:
         raise ValueError(f"sidecar has ids not in the rules source: {unknown[:10]}")
+    bad = sorted(k for k, v in sidecar.items() if v is not None and not isinstance(v, dict))
+    if bad:
+        raise ValueError(f"sidecar entries must be mappings (status/tests/...): {bad[:10]}")
+    stale = sorted(set(mechanisms) - ids)
+    if stale:
+        raise ValueError(f"mechanisms map has ids not in the rules source: {stale[:10]}")
 
     mech_set = set(MECHANICS_SET)
     obligations: dict[str, dict] = {}
     for u in units:
         entry = sidecar.get(u.id) or {}
-        status = entry.get("status") or ("not-testable" if is_heading(u.text) else "gap")
+        status = entry.get("status") or ("not-testable" if is_heading(u.text, u.id) else "gap")
         if status not in STATUSES:
             raise ValueError(f"{u.id}: invalid status {status!r}")
         obligations[u.id] = {

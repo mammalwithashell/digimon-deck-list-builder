@@ -6977,8 +6977,8 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
+      "note": "Keyword icon <Security A.> with a formerly-named parenthetical (※formerly <Security Attack>); a keyword label, not a testable rule.",
+      "status": "not-testable",
       "tests": [],
       "text": "<Security A.> (※formerly <Security Attack>)"
     },
@@ -7797,7 +7797,7 @@
         "rule-checks"
       ],
       "note": null,
-      "status": "not-testable",
+      "status": "gap",
       "tests": [],
       "text": "Deletion Targets"
     },
@@ -7823,7 +7823,7 @@
         "rule-checks"
       ],
       "note": null,
-      "status": "not-testable",
+      "status": "gap",
       "tests": [],
       "text": "Trash Targets"
     },
@@ -7874,8 +7874,8 @@
       "mechanisms": [
         "rule-checks"
       ],
-      "note": null,
-      "status": "not-testable",
+      "note": "Rule-check trash target (normative); explicit so the short text is never read as a heading.",
+      "status": "gap",
       "tests": [],
       "text": "Face-down cards placed on the field"
     },
@@ -14612,14 +14612,14 @@
         "total": 244
       },
       "16": {
-        "gap": 163,
-        "not_testable": 43,
+        "gap": 162,
+        "not_testable": 44,
         "proven": 0,
         "total": 206
       },
       "17": {
-        "gap": 12,
-        "not_testable": 4,
+        "gap": 15,
+        "not_testable": 1,
         "proven": 0,
         "total": 16
       },
@@ -14678,14 +14678,14 @@
         "total": 13
       }
     },
-    "gap": 873,
+    "gap": 875,
     "mechanics": {
       "gap_blocking": 0,
-      "gap_nonblocking": 563,
-      "not_testable": 152,
+      "gap_nonblocking": 565,
+      "not_testable": 150,
       "proven": 0
     },
-    "not-testable": 246,
+    "not-testable": 244,
     "proven": 0
   },
   "version": 1

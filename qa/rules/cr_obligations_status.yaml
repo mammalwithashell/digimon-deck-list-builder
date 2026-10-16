@@ -13,5 +13,16 @@
 #     blocks_training: true | false           # optional; default false
 #     note: "free text"                       # optional
 #
-# Ids must exist in the rules source; unknown ids make the build fail.
-{}
+# Ids must exist in the rules source; unknown ids make the build fail. Each entry
+# must be a mapping.
+#
+# Heuristic exception: every unit under the `17-1-3-` prefix (the enumerated
+# deletion/trash targets of the rule checks) is normative, so the heading
+# heuristic never seeds them `not-testable` (e.g. 17-1-3-2-4 "Face-down cards
+# placed on the field", 17-1-3-1 "Deletion Targets"). They default to `gap`.
+"17-1-3-2-4":
+  status: gap
+  note: "Rule-check trash target (normative); explicit so the short text is never read as a heading."
+"16-4":
+  status: not-testable
+  note: "Keyword icon <Security A.> with a formerly-named parenthetical (※formerly <Security Attack>); a keyword label, not a testable rule."
