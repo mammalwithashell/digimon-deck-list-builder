@@ -246,6 +246,16 @@ pub struct TriggerContext {
     /// (BT7-056 "one of YOUR effects": `EffectSourceCard.Owner == card.Owner`).
     /// `event_caused_by_own_effect` reads it. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
     pub event_cause_effect: Option<EffectAttribution>,
+    /// `(qualifier id, source card, met)`: the queued effect's trigger qualifier
+    /// (`Effect::trigger_qualifier`, a DSL clause's `active_when`) evaluated
+    /// when the effect TRIGGERED (`Game::enqueue_triggered`). §15-8-3-8: what
+    /// the trigger condition refers to is read in the triggered state, so the
+    /// lowered condition uses this verdict instead of re-reading the board
+    /// (e.g. "when one of your [X] Digimon attacks" after the attacker left);
+    /// processing conditions are still read at activation (§15-8-3-9-3).
+    /// Derived from the trigger-time board, so it is left out of `Debug`
+    /// (and the verification digest built from it).
+    pub(crate) trigger_qualifier_met: Option<(u64, CardHandle, bool)>,
 }
 
 impl TriggerContext {

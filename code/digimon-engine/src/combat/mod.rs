@@ -2307,10 +2307,6 @@ impl Game {
                     AttackTarget::Digimon(blocker),
                     AttackTargetChangeReason::Blocker,
                 );
-                // The target-change observers resolve before OnBlock is
-                // triggered (the substitution defers its drain inside a
-                // selection resolution; this order predates that deferral).
-                game.drain_effect_queue();
 
                 // OnBlock fires globally after the blocker is declared.
                 // The payload carries the blocked attacker as the event
@@ -2403,10 +2399,6 @@ impl Game {
             AttackTarget::Digimon(blocker),
             AttackTargetChangeReason::Blocker,
         );
-        // The target-change observers resolve before OnBlock is triggered
-        // (the substitution defers its drain inside a selection resolution;
-        // this order predates that deferral).
-        self.drain_effect_queue();
 
         if let Some(card) = self
             .player(attacker.player)
@@ -4089,10 +4081,51 @@ impl Game {
     /// slot. Observers that the declaration triggered stay pending and still
     /// activate (§15-4-3-2; the attack happened), but must not read a later
     /// occupant of the slot as the attacker.
+    ///
+    /// Judged by the attacker's stack identity captured at declaration, not
+    /// by `is_attacking` (which `cleanup_attack` clears before EndOfAttack,
+    /// when the attacker is still there).
     pub(crate) fn live_attack_attacker(&self) -> Option<PermanentHandle> {
         let pa = self.pending_attack.as_ref()?;
-        (!pa.declaration_committed || self.handle_still_attacking(pa.attacker))
-            .then_some(pa.attacker)
+        if !pa.declaration_committed {
+            return Some(pa.attacker);
+        }
+        let Some((player, identity)) = self.attack_attacker_identity else {
+            return self.handle_still_attacking(pa.attacker).then_some(pa.attacker);
+        };
+        self.player(player)
+            .battle_area
+            .iter()
+            .position(|perm| perm.battle_identity == Some(identity))
+            .map(|index| PermanentHandle {
+                player,
+                index: index as u8,
+            })
+    }
+
+    /// Record the declared attacker's stack identity (allocating one if the
+    /// permanent has none yet) for `live_attack_attacker`.
+    fn capture_attack_attacker_identity(&mut self, attacker: PermanentHandle) {
+        let Some(perm) = self
+            .players
+            .get(attacker.player as usize)
+            .and_then(|p| p.battle_area.get(attacker.index as usize))
+        else {
+            self.attack_attacker_identity = None;
+            return;
+        };
+        let identity = match perm.battle_identity {
+            Some(identity) => identity,
+            None => {
+                let identity = self.next_battle_identity;
+                self.next_battle_identity =
+                    identity.checked_add(1).expect("stack identity exhausted");
+                self.player_mut(attacker.player).battle_area[attacker.index as usize]
+                    .battle_identity = Some(identity);
+                identity
+            }
+        };
+        self.attack_attacker_identity = Some((attacker.player, identity));
     }
 
     fn handle_still_attacking(&self, handle: PermanentHandle) -> bool {
@@ -4181,6 +4214,7 @@ impl Game {
     ) {
         use crate::selection::TriggerSource;
 
+        self.capture_attack_attacker_identity(handle);
         self.enqueue_triggered(EffectTiming::OnAttack, TriggerSource::Permanent(handle));
         if let Some(card) = suspend_event {
             self.enqueue_on_suspend(handle, card, false);

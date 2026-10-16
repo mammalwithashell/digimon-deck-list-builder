@@ -1,0 +1,21 @@
+# OBS_ATK_GE5 -- Tamer, red, play cost 3.
+#   [Your Turn] When one of your Digimon attacks, if that Digimon is level 5
+#   or higher, gain 1 memory.
+# "one of your Digimon attacks" is the trigger condition (`active_when`);
+# "if that Digimon is level 5 or higher" is a processing condition
+# (`condition`), read when the effect is processed (§15-8-3-9-3).
+card: OBS_ATK_GE5
+name: Gauger
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_ally_attack
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+    condition: { event_target_level_gte: 5 }
+    summary: "[Your Turn] When one of your Digimon attacks, if that Digimon is level 5 or higher, gain 1 memory."
+    process:
+      - gain_memory: 1

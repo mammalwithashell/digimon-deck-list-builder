@@ -515,6 +515,90 @@ fn processing_condition_checked_at_activation_not_trigger() {
     );
 }
 
+// ─── §15-8-3-8 / §15-8-3-9-3 — attack observers after the attacker leaves ───
+
+/// P0's Tamer `observer` and P0's `WA_RET_CHRON` (level 5, [Chronicle];
+/// "[When Attacking] Return this Digimon to the hand"). P0's `WA_RET_CHRON`
+/// attacks P1: its [When Attacking] and the Tamer's effect trigger together
+/// and pend in one TriggerOrder for P0.
+fn attacker_leaves_board(observer: &str) -> DebugRunner {
+    let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
+        .security(1, &[FILL; 3])
+        .memory(3)
+        .start();
+    r.place_on_field(0, observer, Some(0));
+    let attacker = r.place_on_field(0, "WA_RET_CHRON", Some(0));
+    r.attack_player(attacker, 1, false);
+    let choices = order_choices(&r, 0);
+    assert_eq!(choices.len(), 2, "both triggered on the attack: {choices:?}");
+    r
+}
+
+/// §15-8-3-8 (the state where the effect triggered is referenced for what
+/// its trigger condition names). `OBS_ATK_CHRON`: "[Your Turn] When one of
+/// your [Chronicle] trait Digimon attacks, gain 1 memory" -- "[Chronicle]
+/// trait" qualifies the trigger condition. P0 activates `WA_RET_CHRON`'s
+/// return first, so the attacking Digimon is gone when the Tamer's effect
+/// activates; it was a [Chronicle] Digimon when the effect triggered, so the
+/// effect still activates. (DCGO checks the qualifier only when stacking.)
+#[test]
+fn trigger_condition_qualifier_read_in_triggered_state_after_attacker_leaves() {
+    cite!(
+        "15-8-3-8",
+        "f9fa5d72cc53f4d558f8cb42b2bac4ae3cd435c46ad3cb75edb2e0efc5ab8a4e"
+    );
+    let mut r = attacker_leaves_board("OBS_ATK_CHRON");
+    let cp = r.event_checkpoint();
+    choose(&mut r, "WA_RET_CHRON");
+    resolve_prompts(&mut r);
+    assert!(
+        hand_ids(&r, 0).contains(&"WA_RET_CHRON".to_string()),
+        "the attacker returned to the hand first"
+    );
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(0, "OBS_ATK_CHRON".to_string())],
+        "the effect activates: its trigger condition was met when it triggered"
+    );
+    assert_eq!(r.security_count(1), 3, "the attack ended without a check");
+}
+
+/// §15-8-3-9-3 (processing conditions are referenced when processing is
+/// performed). `OBS_ATK_GE5`: "[Your Turn] When one of your Digimon attacks,
+/// if that Digimon is level 5 or higher, gain 1 memory" -- "if that Digimon
+/// is level 5 or higher" is a processing condition.
+/// - Control: P0 activates the Tamer's effect first -- the level 5 attacker
+///   is still there, so P0 gains 1 memory.
+/// - P0 activates `WA_RET_CHRON`'s return first -- when the Tamer's effect is
+///   processed there is no level 5 or higher attacking Digimon, so it does
+///   not activate.
+#[test]
+fn trigger_processing_condition_read_at_processing_after_attacker_leaves() {
+    cite!(
+        "15-8-3-9-3",
+        "5b7a0031fb2110b5f52c02890fe2231471493a3cf527d6ee65f538904d4ca7ed"
+    );
+    let mut r = attacker_leaves_board("OBS_ATK_GE5");
+    let cp = r.event_checkpoint();
+    choose(&mut r, "OBS_ATK_GE5");
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(0, "OBS_ATK_GE5".to_string())],
+        "control: the level 5 attacker is still there"
+    );
+
+    let mut r = attacker_leaves_board("OBS_ATK_GE5");
+    let cp = r.event_checkpoint();
+    choose(&mut r, "WA_RET_CHRON");
+    resolve_prompts(&mut r);
+    assert!(hand_ids(&r, 0).contains(&"WA_RET_CHRON".to_string()));
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "the processing condition is unmet when processed: {:?}",
+        memory_sources(&r, cp)
+    );
+}
+
 // ─── §15-8-3-9-4 ────────────────────────────────────────────────────────────
 
 /// A board for the §15-8-3-9-4 test: P0 holds `MAIN_DEL1` ("[Main] Delete 1

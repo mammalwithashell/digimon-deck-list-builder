@@ -692,3 +692,79 @@ fn raid_first_derived_target_change_observer_precedes_pending_sibling() {
         "the derived observer resolves first; the sibling then sees the switched target"
     );
 }
+
+/// Two pooled `[When Attacking]` effects: slot 0 redirects the attack to a
+/// fixed Digimon (`ctx.redirect_attack`) and then logs "tail"; slot 1 logs
+/// "sibling".
+struct RedirectThenTailAndSibling {
+    new_target: PermanentHandle,
+    log: Arc<Mutex<Vec<String>>>,
+}
+impl CardEffect for RedirectThenTailAndSibling {
+    fn effects(&self, c: CardHandle) -> Vec<Effect> {
+        let new_target = self.new_target;
+        let tail_log = self.log.clone();
+        let sibling_log = self.log.clone();
+        vec![
+            Effect::when_attacking(c)
+                .name("Redirect, then tail")
+                .process(move |ctx| {
+                    ctx.redirect_attack(AttackTarget::Digimon(new_target))
+                        .expect("legal redirect");
+                    tail_log.lock().unwrap().push("tail".to_string());
+                })
+                .build(),
+            Effect::when_attacking(c)
+                .name("Sibling")
+                .process(move |_ctx| sibling_log.lock().unwrap().push("sibling".to_string()))
+                .build(),
+        ]
+    }
+}
+
+/// §15-8-3-2 / §15-4-5-2: a `[When Attacking]` effect that switches the
+/// attack target and then does more ("tail") finishes before the
+/// `OnAttackTargetChange` observer its switch triggered activates; that
+/// derived observer then activates before the still-pending sibling
+/// `[When Attacking]`. An inline drain at the switch would run the observer
+/// and the sibling before the tail.
+#[test]
+fn redirect_effect_finishes_before_derived_observer_then_pending_sibling() {
+    let log: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("DEF-A"))
+        .add_card(card("DEF-B"))
+        .add_card(card("WITNESS"))
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def_a = r.place_on_field(1, "DEF-A", Some(0));
+    let def_b = r.place_on_field(1, "DEF-B", Some(0));
+    r.register_effect(
+        "ATK",
+        Arc::new(RedirectThenTailAndSibling {
+            new_target: def_b,
+            log: log.clone(),
+        }),
+    );
+    r.register_effect("WITNESS", Arc::new(LogTargetChange(log.clone())));
+    let _witness = r.place_on_field(0, "WITNESS", Some(0));
+
+    assert_eq!(r.attack_digimon(atk, def_a, false), AttackResult::InProgress);
+    let order = r.game.pending_selection.as_ref().expect("the declaration's TriggerOrder");
+    assert_eq!(order.kind, SelectionKind::TriggerOrder, "{order:?}");
+    let redirect = order
+        .effect_choices
+        .as_ref()
+        .unwrap()
+        .iter()
+        .find(|c| c.label.starts_with("ATK slot 0"))
+        .expect("the redirecting [When Attacking]")
+        .action_id;
+    r.game.resolve_selection(0, redirect).expect("redirect first");
+
+    assert_eq!(
+        *log.lock().unwrap(),
+        vec!["tail".to_string(), "target change".to_string(), "sibling".to_string()],
+    );
+}

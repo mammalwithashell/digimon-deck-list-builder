@@ -293,6 +293,23 @@ pub fn lower_for_kind_with_clause_index(
             let aw = active_when.clone();
             let cc = condition.clone();
             let tc = timing_condition.clone();
+            // `active_when` is the trigger condition's qualifier ("[Your
+            // Turn] when one of your [X] Digimon attacks"); `condition` is
+            // the processing condition. §15-8-3-8: the qualifier is read in
+            // the state where the effect triggered, so it is also exposed as
+            // `trigger_qualifier`, evaluated once at `enqueue_triggered`, and
+            // the verdict recorded there wins over a live re-read below.
+            // §15-8-3-9-3: `condition` is re-read when processing.
+            static NEXT_QUALIFIER_ID: std::sync::atomic::AtomicU64 =
+                std::sync::atomic::AtomicU64::new(1);
+            let qualifier_id = aw
+                .as_ref()
+                .map(|_| NEXT_QUALIFIER_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
+            if let (Some(id), Some(p)) = (qualifier_id, aw.clone()) {
+                builder = builder.trigger_qualifier(id, move |rctx| {
+                    eval_predicate(&p, rctx, predicate_subject_for_source(rctx))
+                });
+            }
             builder = builder.condition(move |rctx| {
                 // DigiLink Shape-B self-filter: a `when_linked` effect fires
                 // only when THIS card is the just-linked card.
@@ -312,7 +329,19 @@ pub fn lower_for_kind_with_clause_index(
                 }
                 let subject = predicate_subject_for_source(rctx);
                 if let Some(p) = &aw {
-                    if !eval_predicate(p, rctx, subject) {
+                    let recorded = qualifier_id.and_then(|id| {
+                        rctx.game
+                            .current_trigger_context
+                            .as_ref()
+                            .and_then(|t| t.trigger_qualifier_met)
+                            .filter(|&(qid, card, _)| qid == id && card == rctx.source_card)
+                            .map(|(_, _, met)| met)
+                    });
+                    let met = match recorded {
+                        Some(met) => met,
+                        None => eval_predicate(p, rctx, subject),
+                    };
+                    if !met {
                         return false;
                     }
                 }

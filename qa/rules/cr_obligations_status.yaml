@@ -101,7 +101,7 @@
   note: "Security count read at processing: ordering the sibling <Recovery +1> first makes a level 4 Digimon returnable; ordering the observer first does not."
 "15-8-3-8":
   status: proven
-  tests: ["ch15_08_effect_categories::trigger_reference_tied_to_condition_uses_trigger_time_state"]
+  tests: ["ch15_08_effect_categories::trigger_reference_tied_to_condition_uses_trigger_time_state", "ch15_08_effect_categories::trigger_condition_qualifier_read_in_triggered_state_after_attacker_leaves"]
   note: "The rule's example: the played level 4 Digimon digivolves to level 5 before the observer activates; only the opponent's level 4 Digimon is a legal deletion target."
 "15-8-3-9-1":
   status: proven
@@ -109,7 +109,7 @@
   note: "Two witnesses. The 15-8-3-9-3 example (two branches). Single-branch OBS_OPP_PLAY_GE4 ('if that Digimon is level 4 or higher, gain 1 memory', mandatory): the level 3 play triggers it with the processing condition unmet; digivolved to 4 before activation it activates, otherwise it can't (15-6-3). 'Triggered' is shown through the later activation, not a pending-list entry."
 "15-8-3-9-3":
   status: proven
-  tests: ["ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger"]
+  tests: ["ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger", "ch15_08_effect_categories::trigger_processing_condition_read_at_processing_after_attacker_leaves"]
   note: "The rule's example text; control (no digivolve) takes the level 3 <Draw 1> branch."
 "15-8-3-9-4":
   status: proven

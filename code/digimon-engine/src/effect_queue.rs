@@ -355,6 +355,65 @@ impl Game {
     }
 
     pub fn enqueue_triggered(&mut self, timing: EffectTiming, source: TriggerSource) {
+        let start = self.effect_queue.len();
+        self.enqueue_triggered_scan(timing, source);
+        self.record_trigger_qualifiers(start);
+    }
+
+    /// §15-8-3-8: evaluate the trigger qualifier (`Effect::trigger_qualifier`)
+    /// of every entry this event just triggered, in the state where it
+    /// triggered, and record the verdict on the entry's trigger context. The
+    /// effect's lowered `condition` reads the verdict instead of re-reading
+    /// the board, so e.g. "when one of your [X] Digimon attacks" stays met
+    /// after the attacker leaves while the effect is pending; its processing
+    /// condition is still read when it activates (§15-8-3-9-3).
+    fn record_trigger_qualifiers(&mut self, start: usize) {
+        for i in start..self.effect_queue.len() {
+            let qe = self.effect_queue[i].clone();
+            if qe.granted_effect_id.is_some() {
+                continue;
+            }
+            let Some(context) = qe.trigger_context.as_ref() else {
+                continue;
+            };
+            if context.trigger_qualifier_met.is_some()
+                || !context.simultaneous_play_members.is_empty()
+            {
+                continue;
+            }
+            let Some(effects) = self.effects_for_queued(&qe) else {
+                continue;
+            };
+            let Some((id, qualifier)) = effects
+                .get(qe.effect_slot as usize)
+                .and_then(|effect| effect.trigger_qualifier.clone())
+            else {
+                continue;
+            };
+            let source_kind = self.queued_effect_activation_kind(&qe);
+            let prev_dna_origin = self.current_dna_origin;
+            if qe.dna_origin_context.is_some() {
+                self.current_dna_origin = qe.dna_origin_context;
+            }
+            let met = {
+                let trigger_guard = TriggerContextGuard::install(self, qe.trigger_context.clone());
+                let ctx = EffectContext::new_with_source_kind(
+                    &mut *trigger_guard.game,
+                    qe.source_card,
+                    qe.source_permanent,
+                    source_kind,
+                    qe.controller,
+                );
+                qualifier(&ctx.as_read())
+            };
+            self.current_dna_origin = prev_dna_origin;
+            if let Some(context) = self.effect_queue[i].trigger_context.as_mut() {
+                context.trigger_qualifier_met = Some((id, qe.source_card, met));
+            }
+        }
+    }
+
+    fn enqueue_triggered_scan(&mut self, timing: EffectTiming, source: TriggerSource) {
         match source {
             TriggerSource::Permanent(handle) => {
                 let trigger_context =

@@ -497,6 +497,14 @@ pub struct Effect {
     /// pre-evaluated). `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     pub outer_optional_guard: Option<ConditionFn>,
 
+    /// The trigger-condition half of a triggered effect's gate (a DSL
+    /// clause's `active_when`), with an id unique to this lowered clause. It
+    /// is ALSO part of `condition`; `Game::enqueue_triggered` evaluates it
+    /// once when the effect triggers and records the verdict on the queued
+    /// entry's trigger context, which `condition` then reads instead of the
+    /// live board (§15-8-3-8). See `TriggerContext::trigger_qualifier_met`.
+    pub trigger_qualifier: Option<(u64, ConditionFn)>,
+
     /// `BeforePayCost` cost reducers only: when `true`, this reducer's
     /// `pay_cost_fn` begins with a declinable (PASS-able) selection, so
     /// running it surfaces the player's own opt-in/opt-out rather than
@@ -950,6 +958,7 @@ impl EffectBuilder {
                 when_playing_this: false,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
+                trigger_qualifier: None,
                 pay_cost_self_gated: false,
                 pay_cost_interactive: false,
             },
@@ -1106,6 +1115,16 @@ impl EffectBuilder {
         F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     {
         self.inner.outer_optional_guard = Some(Arc::new(f));
+        self
+    }
+
+    /// Attach the trigger-condition half of the gate. See
+    /// `Effect::trigger_qualifier`.
+    pub fn trigger_qualifier<F>(mut self, id: u64, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
+    {
+        self.inner.trigger_qualifier = Some((id, Arc::new(f)));
         self
     }
 

@@ -1080,6 +1080,11 @@ pub struct Game {
     /// resumes after the battle's triggered choices have finished.
     pub(crate) pending_attack_battle_result: Option<crate::combat::AttackResult>,
     pub(crate) next_battle_identity: u64,
+    /// Stack identity (`Permanent::battle_identity`) of the declared
+    /// attacker, captured when the declaration's triggers are enqueued
+    /// (`fire_on_attack`). `Game::live_attack_attacker` uses it to tell the
+    /// attacker from a later occupant of its compacted slot.
+    pub(crate) attack_attacker_identity: Option<(PlayerId, u64)>,
     /// Optional harness ledger, excluded from gameplay and verification state.
     pub(crate) native_play_observation: Option<native_play_observation::NativePlayObservation>,
 

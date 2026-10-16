@@ -97,6 +97,8 @@ const CH15_08: &[&str] = &[
     include_str!("ch15_08/MAIN_DEL_ALL.yaml"),
     include_str!("ch15_08/MAIN_PLAY_LV4.yaml"),
     include_str!("ch15_08/MAIN_TRASH_UNDER_MEM.yaml"),
+    include_str!("ch15_08/OBS_ATK_CHRON.yaml"),
+    include_str!("ch15_08/OBS_ATK_GE5.yaml"),
     include_str!("ch15_08/OBS_EFFPLAY_DEL_LE.yaml"),
     include_str!("ch15_08/OBS_OPP_PLAY_GE4.yaml"),
     include_str!("ch15_08/OBS_OPP_PLAY_LVL.yaml"),
@@ -112,6 +114,7 @@ const CH15_08: &[&str] = &[
     include_str!("ch15_08/SCAPEGOAT_LIKE.yaml"),
     include_str!("ch15_08/SUKAMON.yaml"),
     include_str!("ch15_08/TRAIN.yaml"),
+    include_str!("ch15_08/WA_RET_CHRON.yaml"),
     include_str!("ch15_08/WOULD_DEL_MEM.yaml"),
 ];
 

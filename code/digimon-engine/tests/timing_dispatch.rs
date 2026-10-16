@@ -2237,7 +2237,7 @@ fn no_security_reveal(r: &DebugRunner, cp: usize) -> bool {
 /// §15-4-3-2: P1's "when an opponent's Digimon attacks" observer triggers on
 /// the declaration together with P0's ally observer; when P0's observer
 /// returns the attacker to hand, P1's pending observer still activates
-/// (§15-8-3-9-1: a trigger-type effect activates once triggered; the attack
+/// (§15-8-3-1: a trigger-type effect activates once triggered; the attack
 /// was declared, so its trigger condition was met and does not un-happen).
 /// The attack itself ends: no battle, no security check. The observer must
 /// not read the Digimon that later occupies the attacker's old slot.
@@ -2291,7 +2291,7 @@ fn on_opponent_attack_observer_still_fires_after_ally_observer_removes_attacker(
 /// hand") and both allies' "when one of your Digimon attacks" observers
 /// trigger on the same declaration and pend in one TriggerOrder. Activating
 /// the OnAttack first removes the attacker; the two observers stay pending
-/// and still activate (§15-8-3-9-1), seeing no attacker (ALLY-A now sits in
+/// and still activate (§15-8-3-1), seeing no attacker (ALLY-A now sits in
 /// the attacker's old slot and must not be reported as it). The attack ends:
 /// no battle, no security check.
 #[test]

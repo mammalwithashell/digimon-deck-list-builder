@@ -4780,7 +4780,8 @@
       "note": "The rule's example: the played level 4 Digimon digivolves to level 5 before the observer activates; only the opponent's level 4 Digimon is a legal deletion target.",
       "status": "proven",
       "tests": [
-        "ch15_08_effect_categories::trigger_reference_tied_to_condition_uses_trigger_time_state"
+        "ch15_08_effect_categories::trigger_reference_tied_to_condition_uses_trigger_time_state",
+        "ch15_08_effect_categories::trigger_condition_qualifier_read_in_triggered_state_after_attacker_leaves"
       ],
       "text": "If a reference in the same state as the effect's trigger conditions is to be made during the processing for a trigger-type effect, the state where the effect has triggered will be referenced. The state where the effect has triggered will be referenced, even if the state changes after the effect triggers. This refers to effects where text such as \"when another of your Digimon is played\" is a trigger condition and a reference is made using text such as \"Digimon with a level less than or equal to the played Digimon.\" (Example: When an effect plays a level 4 Digimon and an effect reads \"[All Turns] When an effect plays another of your Digimon, delete 1 of your opponent's Digimon with a level less than or equal to the played Digimon,\" this effect deletes 1 of your opponent's level 4 or lower Digimon, even if the Digimon digivolves into a level 5 Digimon before this effect activates.)"
     },
@@ -4838,7 +4839,8 @@
       "note": "The rule's example text; control (no digivolve) takes the level 3 <Draw 1> branch.",
       "status": "proven",
       "tests": [
-        "ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger"
+        "ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger",
+        "ch15_08_effect_categories::trigger_processing_condition_read_at_processing_after_attacker_leaves"
       ],
       "text": "If a reference is to be made in the processing conditions for a trigger-type effect, the reference is made in the state when the processing is being performed. (Example: If an effect reads \"[All Turns] When your opponent plays a Digimon, by suspending this Tamer, if that Digimon is level 4 or higher, gain 1 memory. If it is level 3, <Draw 1>,\" you will gain 1 memory if your opponent's Digimon is level 4 upon being referenced when this effect activates.)"
     },
