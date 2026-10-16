@@ -895,9 +895,10 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // re-check is belt-and-suspenders for an earlier same-chain replacement
         // shrinking the stack between collection and process.)
         //
-        // The event-fire (OnDigivolutionCardTrashed) for the trashed top is
-        // handled by `EffectContext::armor_purge_top` itself; see Phase D
-        // Task 5 commit log.
+        // The event-fire for the trashed top is handled by
+        // `EffectContext::armor_purge_top` itself: `OnTopCardTrashed`, never
+        // `OnDigivolutionCardTrashed` (§4-8-1: the top card is not a
+        // digivolution card; DCGO `ArmorPurge.cs` stacks `WhenTopCardTrashed`).
         Keyword::ArmorPurge => vec![Effect::when_would_be_deleted(card)
             .name("<Armor Purge>")
             .optional()
@@ -951,8 +952,8 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     return;
                 }
 
-                // Trash the top card and promote the next source — and fire
-                // OnDigivolutionCardTrashed (handled inside the primitive).
+                // Trash the top card and promote the next source — and enqueue
+                // OnTopCardTrashed (handled inside the primitive, §4-8-1).
                 rctx.effect.armor_purge_top(subject);
                 // Cancel the original deletion synchronously. Honored by
                 // `delete_permanent_with_cause` (`Cancelled` arm — skip the

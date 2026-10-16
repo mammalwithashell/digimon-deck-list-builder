@@ -413,6 +413,21 @@ impl Game {
             })
             .collect();
         let Some(page) = CountChoicePage::new(values, Some(state.host)) else {
+            // Unreachable (1..=trashable, trashable >= 2, is strictly
+            // ascending); never skip the mandatory trash (§16-12-3): fall back
+            // to trashing the maximum.
+            debug_assert!(false, "<De-Digivolve> declaration page rejected 1..={trashable}");
+            if let Some(target) =
+                self.resolve_digivolve_host_identity(state.host.player, state.host.battle_identity)
+            {
+                self.de_digivolve_trash_from_top(
+                    target,
+                    state.stop_at_level,
+                    trashable,
+                    state.immunity_recheck,
+                    state.cause,
+                );
+            }
             return;
         };
         {
