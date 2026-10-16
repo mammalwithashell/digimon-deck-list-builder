@@ -5245,3 +5245,24 @@ Evidence targets: `bt25_simultaneous_nondeletion`, `decoy_partition_processing`,
 The bounded Examon audit of the original 52 cards plus witness pools (92 authored cards) found no reachable dual-role Blast pair: its only Blast producer, BT20-045, requires distinct Breakdramon and Slayerdramon roles, and the scanned printed identities and result-scoped identity effects did not create both roles on one material. This does not prove closure for external cards or future modifiers. Two legacy Counter tests used identical synthetic requirements with an unjustified fixed-order assertion; disambiguating those fixtures is separate from implementing this capability.
 
 Required follow-up: public-mask tests for both assignments, clone and physical-incarnation revalidation, preserved source blocks, and exactly-once digivolution/payment/observers. Use an existing typed pending choice without expanding the action space; a uniquely matched route must not gain an extra prompt. Draft discriminators have not run, and no generic ambiguity repair or live confirmation is claimed.
+
+## Findings from the 2026-10-15 rules-conformance investigation — OPEN, logged not fixed
+
+Design and full findings: `docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md`.
+Rule citations below use the Comprehensive Rules Manual **Ver. 4.3 (2026-09-18)**; the base-repo PDF is still Ver. 3.6, and the 3.6 numbering is given where it differs.
+
+### Security check battles the Security Digimon before resolving the effects the check triggered  [G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE]
+
+- **Rule:** §13-1-8 (3.6: §13-1-7). Procedure per checked card: reveal (13-1-8-1) → *effects triggered by the security check are resolved* (13-1-8-2-1) → battle against a Security Digimon (13-1-8-3) → trash (13-1-8-4) → next check (13-1-8-5). `[Security]` effects go first within the triggered window (§15-16-10-2).
+- **DCGO:** `Assets/Scripts/Script/CardController.cs` `ISecurityCheck.SecurityCheck` collects `EffectTiming.OnSecurityCheck` skill infos at reveal, resolves the `[Security]` skill, then the collected triggered skills, and only then enters `#region battle with security Digimon`.
+- **Ours:** `code/digimon-engine/src/combat/mod.rs` `SecurityPhase` runs `SecuritySkillDrain → BattleResolved → OnSecurityCheckDrain`. Observer triggers ("when a security check is performed", "when your opponent's Digimon checks security") resolve **after** the battle, so any observer that changes DP, suspends, or deletes changes the battle's outcome relative to the rules and to DCGO.
+- **Tests pinning the current order:** none found (`OnSecurityCheck` appears in `tests/cards_behavioral/st2/st2_13.rs` as a negative and in `tests/dsl/phase3d_event_context.rs` via direct enqueue only).
+- **Fix shape:** reorder the phase machine to `SecuritySkillDrain → OnSecurityCheckDrain → BattleResolved`, keeping `WhenWouldLoseSecurity`/`OnLoseSecurity` where the §13-1-6 removal timing puts them; add a `rules_conformance` test with a DP-modifying observer on each side of the battle.
+
+### DNA digivolution result keeps the base permanent's orientation and identity  [G-ENGINE-DNA-RESULT-KEEPS-BASE-ORIENTATION]
+
+- **Rule:** §8-2-2-1-1 — the card placed on top "digivolves unsuspended without carrying over the Digimon's orientation from before the digivolution". Sibling rules in the same block: materials become new cards (§8-2-2-1-2, link cards trashed first), effects applied to them end (§8-2-2-1-5), `[X Per Turn]` uses reset (§8-2-2-1-6), a played-this-turn material loses that state (§8-2-2-1-7).
+- **DCGO:** builds a fresh permanent for a jogress result (`Effects.CreateFieldPermanentCardEffect(..., jogressEvoRoots)`), so it is unsuspended by construction.
+- **Ours:** `code/digimon-engine/src/game/mod.rs` `dna_digivolve_inner` keeps permanent A in place, appends B's `card_sources` and the hand card, and sets `turn_digivolved`. No orientation reset exists in the DNA path (`grep -n suspend` over the function is empty), so a suspended base yields a suspended DNA result that cannot attack. The hand-partner and trash-partner variants share the shape. Whether A's modifiers, OPT counters, and "played this turn" state are cleared needs the same check.
+- **Tests pinning the current behaviour:** none; `tests/cards_behavioral/ad1/ad1_011.rs:533` has a comment wondering about it.
+- **Fix shape:** on DNA commit, reset orientation to unsuspended and treat the result as a new card (clear per-permanent modifiers/OPT/played-this-turn for the merged permanent per §8-2-2-1); conformance tests for a suspended base, a suspended partner, and an OPT already used on a material.
