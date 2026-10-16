@@ -8,3 +8,9 @@
 #[macro_use]
 mod cite;
 mod meta;
+
+// Shared YAML fixture-card loader. It lives in `fixtures/mod.rs` (a
+// subdirectory), so `meta::chapter_source_list_is_complete` does not count it.
+mod fixtures;
+
+mod ch15_04_effect_states;

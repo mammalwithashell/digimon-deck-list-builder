@@ -3936,8 +3936,10 @@
         "effects-and-ordering"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch15_04_effect_states::activated_effect_completes_after_source_becomes_new_card"
+      ],
       "text": "When a card activates an effect, all of the effect is resolved, even if that card becomes a new card during the processing for the activated effect. (Example: If your Digimon has \"[When Digivolving] Delete 1 of your opponent's Digimon with 8000 DP or less and return 1 of their level 6 or higher Digimon to the bottom of the deck,\" when you delete 1 of your opponent's Digimon with 8000 DP or less, you will process \"return 1 of their level 6 or higher Digimon to the bottom of the deck,\" even if another immediate-type effect deletes your Digimon.)"
     },
     "15-4-2": {
@@ -3988,8 +3990,10 @@
         "effects-and-ordering"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch15_04_effect_states::pending_effects_activate_one_at_a_time"
+      ],
       "text": "Effects that are pending activation must be activated 1 at a time. Multiple triggered effects can't be activated at the same time."
     },
     "15-4-2-4": {
@@ -4032,16 +4036,18 @@
       "text": "Simultaneous triggering refers to when multiple effects trigger at the same timing."
     },
     "15-4-3-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 15,
       "fingerprint": "9806b36822f7fbe00db55ccc91fbb1cd9e2988f7064073bf57491efb6f425b57",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "<Alliance> resolves in its own AllianceOpen window after the [When Attacking] drain instead of joining the simultaneous pool (design F4). Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_04_effect_states::when_attacking_and_alliance_share_one_pool"
+      ],
       "text": "If multiple effects are triggered before a single rule or effect is resolved, they all trigger simultaneously. If effects trigger simultaneously, the effects will be pending activation and activate 1 at a time. (For details, refer to 15-4-4 \"Pending Activation\")15-4- 4"
     },
     "15-4-3-3": {
@@ -4084,29 +4090,33 @@
       "text": "Effects that trigger simultaneously are processed by performing the following procedure."
     },
     "15-4-3-5-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 15,
       "fingerprint": "d89bb63cefda9cf4c0485d6d3b9c0c7f799c40b360e7255e3e91e64c3cfd0616",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "The turn-player half behaves correctly in the test (P0 orders only its own effects and resolves all of them first), but the test is #[ignore]d because the non-turn-player half fails; proven once the gap is fixed and the test un-ignored.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"
+      ],
       "text": "The turn player chooses 1 of their effects to activate from among the effects that triggered simultaneously. This step is repeated until there are no more pending activation effects for the turn player."
     },
     "15-4-3-5-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 15,
       "fingerprint": "e71f29e0e84022ff4c506913e8c99313a93bc72e23d18d5a0a140dcf63c3235d",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "When the turn player's [When Attacking] effects park on a TriggerOrder prompt, the non-turn player's 'when an opponent's Digimon attacks' effects are never enqueued. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"
+      ],
       "text": "Once there are no more pending activation effects for the turn player, the non-turn player chooses 1 of their effects to activate from among the effects that triggered simultaneously. This step is repeated until there are no more pending activation effects for the non-turn player."
     },
     "15-4-4": {
@@ -4143,9 +4153,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Same sentence as 15-4-2-3, restated for pending activation.",
+      "status": "proven",
+      "tests": [
+        "ch15_04_effect_states::pending_effects_activate_one_at_a_time"
+      ],
       "text": "Effects that are pending activation must be activated 1 at a time. Multiple triggered effects can't be activated at the same time."
     },
     "15-4-4-3": {
@@ -4157,8 +4169,10 @@
         "effects-and-ordering"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch15_04_effect_states::pending_on_play_lost_when_card_leaves_before_activation"
+      ],
       "text": "When a card with an effect that's pending activation becomes a new card before the effect activates, the effect can no longer be activated. (Example: When an [On Play] effect is triggered by a card being played, if the card is removed from the battle area before the effect is activated, the effect26 can no longer be activated.)"
     },
     "15-4-4-4": {
@@ -4170,8 +4184,10 @@
         "effects-and-ordering"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch15_04_effect_states::digivolving_mid_pending_cancels_sibling_when_attacking"
+      ],
       "text": "When a card with an effect that's pending activation loses the effect before it activates, the effect can no longer be activated. (Example: When a Digimon with the text \"[When Attacking] <Draw 1>\" and \"[When Attacking] This Digimon may digivolve into a Digimon card with the [Hybrid] trait in the hand with the digivolution cost reduced by 1\" attacks, then it digivolves from the 2nd [When Attacking] effect, the 1st [When Attacking] effect can no longer activate.)"
     },
     "15-4-4-5": {
@@ -4182,9 +4198,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Witness is official Q&A Q1009 (BT2-034: two [On Deletion] 'if you have 3 or fewer security cards' copies; the first's Recovery makes the second's condition no longer apply).",
+      "status": "proven",
+      "tests": [
+        "ch15_04_effect_states::pending_effect_whose_condition_lapsed_is_dropped"
+      ],
       "text": "When a card with an effect that's pending activation no longer meets the trigger conditions of that effect before it activates, the effect can no longer be activated."
     },
     "15-4-5": {
@@ -4222,8 +4240,10 @@
         "effects-and-ordering"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch15_04_effect_states::derived_trigger_resolves_before_pending_siblings"
+      ],
       "text": "A derived triggering effect will activate before previously triggered effects that are pending activation."
     },
     "15-4-5-3": {
@@ -4235,8 +4255,10 @@
         "effects-and-ordering"
       ],
       "note": null,
-      "status": "gap",
-      "tests": [],
+      "status": "proven",
+      "tests": [
+        "ch15_04_effect_states::non_turn_player_derived_trigger_precedes_turn_player_pending"
+      ],
       "text": "If a derived triggering effect occurs for the non- turn player when there are pending activation effects for the turn player, the derived triggering effect will activate first."
     },
     "15-5": {
@@ -5982,16 +6004,18 @@
       "text": "<Alliance> is a keyword effect. When a Digimon with this effect attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to the attacking Digimon and it gains <Security A. +1> for the attack."
     },
     "16-24-2": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "bd670d479e92a9d73ac4a88f81b37040639fd11848da35490e846b59ffb112dc",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL",
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
+      "note": "<Alliance> is not a queued trigger-type effect; see 15-4-3-2. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_04_effect_states::when_attacking_and_alliance_share_one_pool"
+      ],
       "text": "<Alliance> is a trigger-type effect that triggers when a Digimon with this effect attacks. (For details, refer to 15-8-3 \"Trigger-Type Effects\")15-8-3"
     },
     "16-24-3": {
@@ -14606,9 +14630,9 @@
         "total": 10
       },
       "15": {
-        "gap": 178,
+        "gap": 170,
         "not_testable": 66,
-        "proven": 0,
+        "proven": 8,
         "total": 244
       },
       "16": {
@@ -14678,15 +14702,15 @@
         "total": 13
       }
     },
-    "gap": 873,
+    "gap": 865,
     "mechanics": {
-      "gap_blocking": 0,
-      "gap_nonblocking": 563,
+      "gap_blocking": 4,
+      "gap_nonblocking": 551,
       "not_testable": 152,
-      "proven": 0
+      "proven": 8
     },
     "not-testable": 246,
-    "proven": 0
+    "proven": 8
   },
   "version": 1
 }

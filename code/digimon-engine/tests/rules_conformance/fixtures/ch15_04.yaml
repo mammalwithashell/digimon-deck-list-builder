@@ -1,0 +1,246 @@
+# Chapter-specific synthetic fixture cards for `ch15_04_effect_states.rs`
+# (Comprehensive Rules Ver. 4.3, §15-4 "Effect States").
+#
+# Same conventions as `common.yaml`: one YAML document per card separated by
+# `---`, every clause carries a `summary:` with the printed-style text, and the
+# comment above each card gives the whole card face.
+
+# WA_ALLIANCE -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+#   <Alliance> (When this Digimon attacks, by suspending 1 of your other
+#   Digimon, add the suspended Digimon's DP to this Digimon and it gains
+#   <Security A. +1> for the attack.)
+#   [When Attacking] Gain 1 memory.
+card: WA_ALLIANCE
+name: Allymon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - kind: grant_keyword
+    keyword: Alliance
+    summary: "<Alliance> (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains <Security A. +1> for the attack.)"
+  - when: when_attacking
+    summary: "[When Attacking] Gain 1 memory."
+    process:
+      - gain_memory: 1
+---
+# WA_HYBRID_DIGI -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+# The §15-4-4-4 example card, both texts printed on the one card:
+#   [When Attacking] <Draw 1>.
+#   [When Attacking] This Digimon may digivolve into a Digimon card with the
+#   [Hybrid] trait in the hand with the digivolution cost reduced by 1.
+# The "may" lives in the optional hand pick (AD1-011 [When Attacking] idiom):
+# declining the pick skips the digivolve.
+card: WA_HYBRID_DIGI
+name: Hybridcallmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] <Draw 1> (Draw 1 card from your deck.)"
+    process:
+      - draw: { of: you, count: 1 }
+  - when: when_attacking
+    summary: "[When Attacking] This Digimon may digivolve into a Digimon card with the [Hybrid] trait in the hand with the digivolution cost reduced by 1."
+    process:
+      - select_hand:
+          of: you
+          bind_as: hybrid
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Hybrid
+              - can_digivolve_onto: source
+          prompt: "This Digimon may digivolve into a [Hybrid] trait Digimon card in the hand with the digivolution cost reduced by 1"
+      - if:
+          condition: { binding_present: hybrid }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: hybrid
+                cost: { reduce: 1 }
+                ignore_requirements: false
+---
+# HYBRID_LV5 -- Digimon, Lv.5, red, 8000 DP, play cost 7. Trait [Hybrid].
+#   Digivolve: red Lv.4, cost 3. No text.
+card: HYBRID_LV5
+name: Hybridmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 8000
+traits: [Hybrid]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+---
+# WD_DEL_RET -- Digimon, Lv.6, red, 12000 DP, play cost 12.
+#   Digivolve: red Lv.5, cost 3.
+# The §15-4-1-2 example card:
+#   [When Digivolving] Delete 1 of your opponent's Digimon with 8000 DP or less
+#   and return 1 of their level 6 or higher Digimon to the bottom of the deck.
+card: WD_DEL_RET
+name: Sweepreturnmon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Delete 1 of your opponent's Digimon with 8000 DP or less and return 1 of their level 6 or higher Digimon to the bottom of the deck."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 8000
+          prompt: "Delete 1 of your opponent's Digimon with 8000 DP or less"
+      - delete_permanent: { target: victim }
+      - select_opponent_permanent:
+          bind_as: big
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 6
+          prompt: "Return 1 of your opponent's level 6 or higher Digimon to the bottom of the deck"
+      - return_to_deck: { target: big, position: bottom }
+---
+# WOULD_DEL_STRIKE -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+# An immediate-type effect (§15-8-5-1 "when X would") that deletes a Digimon:
+#   [All Turns] When this Digimon would be deleted, delete 1 of your
+#   opponent's Digimon.
+card: WOULD_DEL_STRIKE
+name: Revengemon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - kind: replacement
+    timing: when_would_be_deleted
+    summary: "[All Turns] When this Digimon would be deleted, delete 1 of your opponent's Digimon."
+    process:
+      - select_opponent_permanent:
+          bind_as: strike
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: strike }
+---
+# BIG_LV6 -- Digimon, Lv.6, red, 12000 DP, play cost 12. No text.
+card: BIG_LV6
+name: Bigmon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+---
+# RET_PLAYED -- Tamer, red, play cost 3.
+#   [Your Turn] When one of your Digimon is played, return that Digimon to the
+#   hand.
+card: RET_PLAYED
+name: Recall Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_any_digimon_played
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    summary: "[Your Turn] When one of your Digimon is played, return that Digimon to the hand."
+    process:
+      - return_to_hand: { target: event_target }
+---
+# OD_RECOVER_LE3 -- Digimon, Lv.3, yellow, 2000 DP, play cost 4.
+# Same text as BT2-034 Salamon (official Q&A Q1009 rules on two copies):
+#   [On Deletion] If you have 3 or fewer security cards, <Recovery +1 (Deck)>.
+#   (Place the top card of your deck on top of your security stack.)
+card: OD_RECOVER_LE3
+name: Recovermon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 4
+dp: 2000
+effects:
+  - when: on_deletion
+    condition: { security_count_lte: 3 }
+    summary: "[On Deletion] If you have 3 or fewer security cards, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack.)"
+    process:
+      - recover: { of: you, count: 1 }
+---
+# SWEEPER -- Digimon, Lv.4, yellow, 5000 DP, play cost 3.
+#   [On Play] Delete all Digimon with 2000 DP or less.
+card: SWEEPER
+name: Sweepmon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 3
+dp: 5000
+effects:
+  - when: on_play
+    summary: "[On Play] Delete all Digimon with 2000 DP or less."
+    process:
+      - delete_all_permanents:
+          over:
+            all_of:
+              - kind: digimon
+              - dp_lte: 2000
+---
+# WA_DEL4K -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+#   [When Attacking] Delete 1 of your opponent's Digimon with 4000 DP or less.
+card: WA_DEL4K
+name: Strikeattackmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Delete 1 of your opponent's Digimon with 4000 DP or less."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete 1 of your opponent's Digimon with 4000 DP or less"
+      - delete_permanent: { target: victim }
+---
+# OBS_OPP_DEL_MEM -- Tamer, red, play cost 3.
+#   [All Turns] When one of your opponent's Digimon is deleted, gain 1 memory.
+card: OBS_OPP_DEL_MEM
+name: Witness Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_any_deletion
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    summary: "[All Turns] When one of your opponent's Digimon is deleted, gain 1 memory."
+    process:
+      - gain_memory: 1

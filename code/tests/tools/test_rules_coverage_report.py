@@ -9,7 +9,25 @@ from tools.rules.coverage_report import (
 )
 
 REPO = Path(__file__).resolve().parents[3]
-OBL = json.loads((REPO / "qa/rules/cr_obligations.json").read_text(encoding="utf-8"))
+
+
+def _nothing_proven(obl):
+    """The live denominator with every `proven` obligation reset to `gap`.
+
+    Chapter modules mark obligations `proven` as they land, so the tests below
+    build on a fixed "nothing proven yet" baseline instead of the live counts.
+    """
+    out = copy.deepcopy(obl)
+    for o in out["obligations"].values():
+        if o["status"] == "proven":
+            o["status"] = "gap"
+            o["tests"] = []
+    return out
+
+
+OBL = _nothing_proven(
+    json.loads((REPO / "qa/rules/cr_obligations.json").read_text(encoding="utf-8"))
+)
 
 
 def with_status(obl, rule_id, status, tests=()):

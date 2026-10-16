@@ -27,3 +27,55 @@
 "16-4":
   status: not-testable
   note: "Keyword icon <Security A.> with a formerly-named parenthetical (※formerly <Security Attack>); a keyword label, not a testable rule."
+
+# ── ch15-04 Effect States (§15-4) — tests/rules_conformance/ch15_04_effect_states.rs ──
+"15-4-1-2":
+  status: proven
+  tests: ["ch15_04_effect_states::activated_effect_completes_after_source_becomes_new_card"]
+"15-4-2-3":
+  status: proven
+  tests: ["ch15_04_effect_states::pending_effects_activate_one_at_a_time"]
+"15-4-4-2":
+  status: proven
+  tests: ["ch15_04_effect_states::pending_effects_activate_one_at_a_time"]
+  note: "Same sentence as 15-4-2-3, restated for pending activation."
+"15-4-3-2":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL
+  tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool"]
+  note: "<Alliance> resolves in its own AllianceOpen window after the [When Attacking] drain instead of joining the simultaneous pool (design F4). Test is #[ignore]d."
+"16-24-2":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL
+  tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool"]
+  note: "<Alliance> is not a queued trigger-type effect; see 15-4-3-2. Test is #[ignore]d."
+"15-4-3-5-1":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS
+  tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"]
+  note: "The turn-player half behaves correctly in the test (P0 orders only its own effects and resolves all of them first), but the test is #[ignore]d because the non-turn-player half fails; proven once the gap is fixed and the test un-ignored."
+"15-4-3-5-2":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS
+  tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"]
+  note: "When the turn player's [When Attacking] effects park on a TriggerOrder prompt, the non-turn player's 'when an opponent's Digimon attacks' effects are never enqueued. Test is #[ignore]d."
+"15-4-4-3":
+  status: proven
+  tests: ["ch15_04_effect_states::pending_on_play_lost_when_card_leaves_before_activation"]
+"15-4-4-4":
+  status: proven
+  tests: ["ch15_04_effect_states::digivolving_mid_pending_cancels_sibling_when_attacking"]
+"15-4-4-5":
+  status: proven
+  tests: ["ch15_04_effect_states::pending_effect_whose_condition_lapsed_is_dropped"]
+  note: "Witness is official Q&A Q1009 (BT2-034: two [On Deletion] 'if you have 3 or fewer security cards' copies; the first's Recovery makes the second's condition no longer apply)."
+"15-4-5-2":
+  status: proven
+  tests: ["ch15_04_effect_states::derived_trigger_resolves_before_pending_siblings"]
+"15-4-5-3":
+  status: proven
+  tests: ["ch15_04_effect_states::non_turn_player_derived_trigger_precedes_turn_player_pending"]

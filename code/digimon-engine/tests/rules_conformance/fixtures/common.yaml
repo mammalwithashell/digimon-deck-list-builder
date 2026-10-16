@@ -1,0 +1,119 @@
+# Shared synthetic fixture cards for the rules_conformance suite.
+#
+# One YAML document per card, separated by `---` lines; `fixtures/mod.rs`
+# splits the file and compiles each document with
+# `DebugRunnerBuilder::from_dsl_yaml`. Every effect clause carries a `summary:`
+# holding the printed-style text the clause stands for, and the comment above
+# each card gives the whole card face. Cards are authored to the PRINTED
+# phrasing (mandatory text stays mandatory; only "may"/"up to" is optional),
+# never to the engine's current behaviour.
+#
+# Reused by later chapter modules -- change a card here only if every user
+# still reads the same printed text.
+
+# WA_MEM -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+#   [When Attacking] Gain 1 memory.
+#   Inherited Effect: [When Attacking] Gain 1 memory.
+# The inherited copy lets a stack carry two simultaneous [When Attacking]
+# effects (top card's own + this card's inherited) -- a common printed shape.
+card: WA_MEM
+name: Memattackmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Gain 1 memory."
+    process:
+      - gain_memory: 1
+  - scope: inherited
+    when: when_attacking
+    summary: "Inherited: [When Attacking] Gain 1 memory."
+    process:
+      - gain_memory: 1
+---
+# WA_DRAW -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+#   [When Attacking] <Draw 1>.
+#   Inherited Effect: [When Attacking] <Draw 1>.
+card: WA_DRAW
+name: Drawattackmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] <Draw 1> (Draw 1 card from your deck.)"
+    process:
+      - draw: { of: you, count: 1 }
+  - scope: inherited
+    when: when_attacking
+    summary: "Inherited: [When Attacking] <Draw 1> (Draw 1 card from your deck.)"
+    process:
+      - draw: { of: you, count: 1 }
+---
+# OD_MEM -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Deletion] Gain 1 memory.
+card: OD_MEM
+name: Memdeletemon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_deletion
+    summary: "[On Deletion] Gain 1 memory."
+    process:
+      - gain_memory: 1
+---
+# OPP_WA_OBS -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [All Turns] When an opponent's Digimon attacks, gain 1 memory.
+card: OPP_WA_OBS
+name: Watchmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_opponent_attack
+    summary: "[All Turns] When an opponent's Digimon attacks, gain 1 memory."
+    process:
+      - gain_memory: 1
+---
+# OP_PLAY_LV3 -- Digimon, Lv.4, red, 5000 DP, play cost 4.
+#   [On Play] Play 1 level 3 Digimon card from your hand without paying the cost.
+card: OP_PLAY_LV3
+name: Callermon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 5000
+effects:
+  - when: on_play
+    summary: "[On Play] Play 1 level 3 Digimon card from your hand without paying the cost."
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+          prompt: "Play 1 level 3 Digimon card from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }
+---
+# VANILLA_LV3 -- Digimon, Lv.3, red, 1000 DP, play cost 2. No text.
+# Deck / security / hand filler and a plain body for <Alliance> or deletion.
+card: VANILLA_LV3
+name: Plainmon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 1000
