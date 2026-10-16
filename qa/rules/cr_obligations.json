@@ -5185,79 +5185,85 @@
       "text": "<Digisorption>"
     },
     "16-10-1": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "46ffa6072e70675fb7aad16dc7a671b4dfe3bf31402d69494bb9807a3c7af35a",
-      "gap_id": "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "No engine path (no Keyword variant, no printed parse, no DSL vocabulary); the card is loaded from its printed face. Digivolving into it offers nothing and pays the full cost. #[ignore]d. Blocks training in principle; no authored card prints it.",
-      "status": "gap",
+      "note": "DIGISORB (<Digisorption -3>, cost 2) from its printed face: digivolving into it from the hand offers <Digisorption> before payment; suspending the base reduces the cost to 0 (never below), and two printed <Digisorption -1> are both offered for one digivolution (Keyword::Digisorption, the digivolve reducer chain).",
+      "status": "proven",
       "tests": [
-        "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"
+        "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks",
+        "ch16_processing_keywords::digisorption_not_offered_while_digivolution_cost_cannot_be_reduced"
       ],
       "text": "<Digisorption> is a keyword effect. When a digivolution into a Digimon card with this effect in the hand would occur, by suspending 1 of your Digimon, the digivolution cost is reduced according to the value specified in the effect. This is shown on cards using text such as <Digisorption -3>."
     },
     "16-10-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "a6a10bed2ea37996c30e662df98118930a6e6f7fdba2f0c7efae3f1a8615b815",
-      "gap_id": "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Both #[ignore]d. The play-from-hand half of the timing test (no offer, play cost paid) passes.",
-      "status": "gap",
+      "note": "Offered while DIGISORB is still in the hand, the base still on top and no memory paid (immediate-type, before the digivolution); playing it from the hand offers nothing and pays the play cost.",
+      "status": "proven",
       "tests": [
         "ch16_processing_keywords::digisorption_kind_matches_rule",
-        "ch16_processing_keywords::digisorption_timing_matches_rule"
+        "ch16_processing_keywords::digisorption_timing_matches_rule",
+        "ch16_processing_keywords::digisorption_not_offered_for_a_breeding_area_digivolution"
       ],
       "text": "<Digisorption> is an immediate-type effect that triggers when a digivolution into a card with this effect in the hand would occur. (For details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-10-3": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "096c5b9d397f4219597aea82e472b233ba6032fe1b474ef40de8077ab0639fad",
-      "gap_id": "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Both #[ignore]d.",
-      "status": "gap",
+      "note": "Declining pays the full cost and suspends nothing; once a Digimon is suspended the reduction applies with no further decision.",
+      "status": "proven",
       "tests": [
         "ch16_processing_keywords::digisorption_optionality_matches_rule",
-        "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"
+        "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks",
+        "ch16_processing_keywords::digisorption_not_offered_without_a_digimon_to_suspend",
+        "ch16_processing_keywords::digisorption_second_instance_not_offered_once_nothing_can_suspend"
       ],
       "text": "\"By suspending 1 of your Digimon\" in <Digisorption> is an optional processing condition. If the content of that condition is executed, the processing for \"the digivolution cost is reduced\" will be mandatory."
     },
     "16-10-4": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "9eaef97b28a20933b73e2847d5d3ba0498fe1f822579d7e51b26efeb9e15fa3b",
-      "gap_id": "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Two printed <Digisorption -1> on one card, both activated for one digivolution. #[ignore]d.",
-      "status": "gap",
+      "note": "Two printed <Digisorption -1> on one card: each is offered and paid with its own suspend for the one digivolution (2 - 1 - 1 = 0).",
+      "status": "proven",
       "tests": [
-        "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"
+        "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks",
+        "ch16_processing_keywords::digisorption_second_instance_not_offered_once_nothing_can_suspend"
       ],
       "text": "If 1 Digimon card has multiple instances of <Digisorption>, they overlap when they trigger.37 Multiple instances of <Digisorption> can be activated for a single digivolution."
     },
     "16-10-5": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "bb23bb4ee3301d9acd8de6afd8ca7546e8313f5bebf9271e1a74759ecc1956fb",
-      "gap_id": "G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "The digivolving base must be among the Digimon that can be suspended. #[ignore]d.",
-      "status": "gap",
+      "note": "The suspend candidates include the digivolving base (the Digimon that will become a digivolution card) and the other own Digimon.",
+      "status": "proven",
       "tests": [
-        "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks"
+        "ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks",
+        "ch16_processing_keywords::digisorption_base_that_cannot_suspend_is_not_a_candidate"
       ],
       "text": "<Digisorption> can be used to suspend a Digimon that will become a digivolution card."
     },
@@ -15206,9 +15212,9 @@
         "total": 244
       },
       "16": {
-        "gap": 32,
+        "gap": 27,
         "not_testable": 44,
-        "proven": 130,
+        "proven": 135,
         "total": 206
       },
       "17": {
@@ -15272,15 +15278,15 @@
         "total": 13
       }
     },
-    "gap": 667,
+    "gap": 662,
     "mechanics": {
-      "gap_blocking": 46,
+      "gap_blocking": 41,
       "gap_nonblocking": 330,
       "not_testable": 152,
-      "proven": 187
+      "proven": 192
     },
     "not-testable": 246,
-    "proven": 206
+    "proven": 211
   },
   "version": 1
 }

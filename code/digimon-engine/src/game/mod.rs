@@ -96,7 +96,7 @@ impl TerminalOutcomeReason {
     }
 }
 
-fn face_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
+pub(crate) fn face_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
     if card_data.effect_text.is_empty()
         && card_data.inherited_text.is_empty()
         && card_data.security_text.is_empty()

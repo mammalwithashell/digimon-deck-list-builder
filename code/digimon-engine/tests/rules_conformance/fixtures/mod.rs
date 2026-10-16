@@ -218,6 +218,7 @@ const CH16_PROC: &[&str] = &[
     include_str!("ch16_proc/LINKPLUS_AURA.yaml"),
     include_str!("ch16_proc/MINDLINK.yaml"),
     include_str!("ch16_proc/MSAVE2.yaml"),
+    include_str!("ch16_proc/NOSUSP3.yaml"),
     include_str!("ch16_proc/OBS_SRC_TRASH_MEM.yaml"),
     include_str!("ch16_proc/OBS_TOP_TRASH_MEM.yaml"),
     include_str!("ch16_proc/REBOOT.yaml"),

@@ -129,7 +129,7 @@
       "effect_mandatory_after_cost": true,
       "once_per_window": false,
       "parameterized": true,
-      "engine_keyword": false
+      "engine_keyword": true
     },
     {
       "keyword_id": "Reboot",
