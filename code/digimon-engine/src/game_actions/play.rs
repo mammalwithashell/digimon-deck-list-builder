@@ -431,7 +431,7 @@ impl Game {
         //
         // `field_index == BREEDING_TARGET (=14)` routes to the breeding-area
         // path. The mask only emits this bit for `<Training>`-bearing
-        // breeding-area carriers (RULES_CONTEXT 16-40 — only Training
+        // breeding-area carriers (RULES_CONTEXT 16-41 — only Training
         // activates from breeding); the dispatcher here independently
         // re-checks the gate (printed Training keyword on top + carrier not
         // suspended) and runs only the `<Training>` effect (filtered by

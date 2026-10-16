@@ -389,7 +389,7 @@ impl Permanent {
     /// The Petrification Token prints as `(Digimon/white/3000 DP/...)`.
     ///
     /// Leaving it out made every rule phrased "your opponent's Digimon" skip
-    /// tokens. Measured case: `<Raid>` (general_rule.pdf 16-22-1 switches the
+    /// tokens. Measured case: `<Raid>` (general_rule.pdf 16-23-1 switches the
     /// attack to the opponent's unsuspended DIGIMON with the highest DP) never
     /// offered a Petrification Token, because `raid_switch_candidates` gates on
     /// this predicate -- every other filter passed (unsuspended, Standard option

@@ -216,7 +216,7 @@ fn fire(r: &mut DebugRunner, timing: EffectTiming, h: PermanentHandle) {
 /// **C1 Witchelny discount route** — EX13-025 Candlemon + EX13-029
 /// FlameWizardmon. Candlemon's (Rule) Trait [Witchelny] unlocks the printed
 /// "[Digivolve] Lv.3 w/[Witchelny] in text: Cost 2" route. FlameWizardmon's
-/// [When Digivolving] then pays its top security (4 → 3, 15-7-4), gives
+/// [When Digivolving] then pays its top security (4 → 3, 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]), gives
 /// Magnadramon -4000 (12000 → 8000) and — now at 3 security — deletes the
 /// 4000-DP Tapirmon.
 #[test]

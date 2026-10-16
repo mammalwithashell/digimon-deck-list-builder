@@ -4,9 +4,9 @@
 //! Rules sources:
 //! - `docs/RULES_CONTEXT.md` section 7: ordinary Options resolve and trash
 //!   unless an effect places them elsewhere.
-//! - `docs/RULES_CONTEXT.md` section 16-16: Delay Options stay in the battle
+//! - `docs/RULES_CONTEXT.md` section 16-17: Delay Options stay in the battle
 //!   area and activate by trashing themselves.
-//! - `docs/RULES_CONTEXT.md` sections 4-7 and 8: Link/Plug-In cards attach to
+//! - `docs/RULES_CONTEXT.md` sections 4-9 and 8: Link/Plug-In cards attach to
 //!   a carrier and are not ordinary standalone battle-area permanents while
 //!   linked.
 
@@ -125,7 +125,7 @@ impl Game {
         // Same narrowing as `place_self_as_delay_option_permanent` — see the
         // long comment there. A card with no `kind: delay` clause has its
         // `<Delay>` window owned elsewhere (a `kind: replacement` clause), so
-        // the carrier parks indefinitely (16-16-1) instead of inheriting a
+        // the carrier parks indefinitely (16-17-1) instead of inheriting a
         // fabricated `EndOfYourNextTurn` auto-trash.
         // G-DELAY-EVENT-WINDOW-AUTOTRASHED.
         let trigger = self
@@ -418,7 +418,7 @@ impl Game {
     /// trash observers — the card MOVES into the stack, it is not trashed.
     ///
     /// Returns `false` (routing `card` to its owner's trash) if `target` is not
-    /// a live battle-area permanent or is a token (general_rule 4-18-3 forbids
+    /// a live battle-area permanent or is a token (general_rule 4-21-3 forbids
     /// stacking cards with tokens). Selecting a token may still be legal; the
     /// attempted placement fails and the resolving Option goes to trash.
     pub(crate) fn seat_card_source_under_permanent(
@@ -519,8 +519,8 @@ impl Game {
     // auto-fired by the start/end-of-turn scan. Its controller takes a
     // player-visible `[Main]`-phase `FIELD_EFFECT` action — "By trashing this
     // card after the placing turn, activate the effect below" (RULES_CONTEXT
-    // 16-16). The activation is optional (16-16-2) and unavailable on the
-    // placing turn (16-16-3).
+    // 16-17). The activation is optional (16-17-2) and unavailable on the
+    // placing turn (16-17-3).
 
     /// True when the permanent at `option` is a standard `<Delay>` Option
     /// whose placing turn has passed — i.e. its `<Delay>` body may be

@@ -99,12 +99,12 @@ fn trash_contains(runner: &DebugRunner, player: u8, card_id: &str) -> bool {
 /// park it indefinitely, not invent a turn-scheduled expiry.
 ///
 /// Rules manual (`general_rule.pdf` p.35):
-/// - 16-16-1 "＜Delay＞ is a keyword effect. While a card with this effect is
+/// - 16-17-1 "＜Delay＞ is a keyword effect. While a card with this effect is
 ///   in the battle area, by trashing that card, the effect specified in
 ///   ＜Delay＞ will activate." — availability is bounded by presence in the
 ///   battle area, and by nothing else. There is no expiry clause anywhere in
-///   16-16.
-/// - 16-16-3 bounds it only from BELOW ("can't be activated the same turn the
+///   16-17.
+/// - 16-17-3 bounds it only from BELOW ("can't be activated the same turn the
 ///   card ... is placed").
 ///
 /// DCGO agrees: `EX12_070.cs`'s Delay registers at
@@ -131,7 +131,7 @@ fn ex12_070_delay_option_parks_with_no_scheduled_expiry() {
         } => {
             assert_eq!(
                 placed_on_turn, placing_turn,
-                "placing turn is recorded for the 16-16-3 gate"
+                "placing turn is recorded for the 16-17-3 gate"
             );
             assert_ne!(
                 trigger,
@@ -142,7 +142,7 @@ fn ex12_070_delay_option_parks_with_no_scheduled_expiry() {
             assert_eq!(
                 trash_on_turn,
                 u16::MAX,
-                "16-16-1 bounds availability by presence in the battle area only \
+                "16-17-1 bounds availability by presence in the battle area only \
                  — an event-window <Delay> parks indefinitely"
             );
         }
@@ -153,7 +153,7 @@ fn ex12_070_delay_option_parks_with_no_scheduled_expiry() {
 /// The behavioural half of G-DELAY-EVENT-WINDOW-AUTOTRASHED: the carrier
 /// survives the turn-end scan that the `EndOfYourNextTurn` fallback used to
 /// schedule it into (`placing_turn + 2`). See the doc comment above for the
-/// 16-16-1 / DCGO citations.
+/// 16-17-1 / DCGO citations.
 #[test]
 fn ex12_070_delay_option_is_not_auto_trashed_after_the_owners_next_turn() {
     let mut runner = builder_with_deck_fuel();
@@ -168,7 +168,7 @@ fn ex12_070_delay_option_is_not_auto_trashed_after_the_owners_next_turn() {
             .expect("no selection is owed by a turn flip");
         assert!(
             field_contains(&runner, 0, CARD_ID),
-            "EX12-070 must stay in the battle area (16-16-1): turn {} (placed on {placing_turn})",
+            "EX12-070 must stay in the battle area (16-17-1): turn {} (placed on {placing_turn})",
             runner.game.turn_count
         );
         assert!(
@@ -195,7 +195,7 @@ fn ex12_070_parked_delay_option_offers_no_main_phase_activation() {
     let mut runner = builder_with_deck_fuel();
     place_via_main(&mut runner);
 
-    // Advance to the owner's next turn, where 16-16-3 no longer blocks.
+    // Advance to the owner's next turn, where 16-17-3 no longer blocks.
     runner.end_turn();
     runner.auto_resolve().expect("no selection owed");
     runner.end_turn();

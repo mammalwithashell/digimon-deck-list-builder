@@ -203,7 +203,7 @@ fn bt16_025_has_inherited_partition_with_blue_lv4_and_green_lv4() {
 }
 
 /// Both Partition clauses must exclude `battle` and `own_effect` per DCGO and
-/// RULES_CONTEXT.md §16-28 ("not by your own effects or by battle").
+/// RULES_CONTEXT.md §16-29 ("not by your own effects or by battle").
 #[test]
 fn bt16_025_partition_clauses_exclude_battle_and_own_effect() {
     let runner = paildramon_runner();
@@ -230,7 +230,7 @@ fn bt16_025_partition_clauses_exclude_battle_and_own_effect() {
     for (i, xs) in partitions.iter().enumerate() {
         assert!(
             xs.iter().any(|s| s == "battle"),
-            "Partition clause {i} must exclude `battle` per Rules Manual §16-28"
+            "Partition clause {i} must exclude `battle` per Rules Manual §16-29"
         );
         assert!(
             xs.iter().any(|s| s == "own_effect"),

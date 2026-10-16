@@ -2521,7 +2521,7 @@ impl Game {
             }
             // `SecuritySkill` / `OnLoseSecurity`: only `[Security]`-scoped
             // effects are live on a card that is leaving / has left the
-            // security stack — it is not a battle-area permanent (§13-1-5 "in
+            // security stack — it is not a battle-area permanent (§13-1-6 "in
             // no area"; §15-14-5). In particular a removed card's own
             // `[All Turns]` "when your security stack is removed from"
             // observer (BT24-101, BT25-044) must not fire for its own
@@ -2802,7 +2802,7 @@ impl Game {
         // was that PERSISTENT granted keywords worked — the mask reads them
         // through `Game::has_keyword` — while TRIGGER keywords were inert: the
         // engine knew the recipient had `<Retaliation>` and had no `Effect` to
-        // fire. §16-12 makes `<Retaliation>` mandatory, and the DCGO oracle
+        // fire. §16-13 makes `<Retaliation>` mandatory, and the DCGO oracle
         // deletes the battle winner, so silence was a faithfulness bug.
         //
         // Fixing it at trigger DISPATCH (rather than in
@@ -3574,7 +3574,7 @@ impl Game {
         // Q2229 classifies native field effects on activation, after earlier
         // simultaneous effects. Cost/body continuations retain this capture.
         // Inherited effects use 15-3-2; link effects are gained by the Digimon
-        // (4-2-6), whose activation is a Digimon effect (15-2-1-1). Explicit
+        // (4-3-5), whose activation is a Digimon effect (15-2-1-1). Explicit
         // Option or cross-card refire attribution is not promoted.
         // A granted body belongs to its carrier. The queued source_card is
         // retained as grant provenance and can be a different physical card.
@@ -4818,7 +4818,7 @@ impl Game {
             //
             // One exception has to be recorded rather than dropped: a
             // turn-scheduled `<Delay>`. Its carrier is trashed by the turn scan
-            // AFTER the body runs, because the trash is the §16-16-2 cost — so a
+            // AFTER the body runs, because the trash is the §16-17-2 cost — so a
             // decline must suppress that trash too (§15-7-2). `note_declined_delay`
             // leaves the key for `resolve_delayed_options_matching` /
             // `resume_pending_delayed_option_lifecycle` to reschedule instead.
@@ -4853,7 +4853,7 @@ impl Game {
         self.run_queued_effect(state.queued_effect);
     }
 
-    /// Record that a turn-scheduled `<Delay>`'s §16-16-2 cost was declined, so
+    /// Record that a turn-scheduled `<Delay>`'s §16-17-2 cost was declined, so
     /// the turn scan reschedules its carrier instead of trashing it.
     ///
     /// A no-op for every other timing: only `DelayEffect` has a carrier the
@@ -5276,7 +5276,7 @@ impl Game {
         // was the last nested pick of a replacement process (e.g. <Decode>'s
         // source pick, which PLAYS a Digimon), the parked replacement's commit
         // — the original event completing, e.g. the carrier leaving — is
-        // still part of the same immediate-effect processing (§16-35; an
+        // still part of the same immediate-effect processing (§16-36; an
         // immediate effect's processing completes before waiting triggered
         // effects resolve). Commit it INSIDE the deferred-drain scope so
         // triggers the process raised (the played Digimon's [On Play]) wait

@@ -116,7 +116,7 @@ fn infer_effect_source_kind(
             if perm.card_sources.iter().any(|card| card.handle() == source_card)
                 || perm.linked_cards.iter().any(|card| card.handle() == source_card) {
                 // Inherited effects: 15-3-2. Links are gained by the Digimon
-                // (4-2-6), so its activated effects use 15-2-1-1 regardless
+                // (4-3-5), so its activated effects use 15-2-1-1 regardless
                 // of the physical link card's printed category.
                 return EffectSourceKind::Digimon;
             }
@@ -809,7 +809,7 @@ impl<'a> EffectReadContext<'a> {
     /// Direct player attacks (`AttackTarget::Player`) return `None` because
     /// there is no opposing Digimon.
     pub fn battle_opponent_of(&self, self_handle: PermanentHandle) -> Option<PermanentHandle> {
-        // Trigger-time identity first (16-12; survives a parked TriggerOrder
+        // Trigger-time identity first (16-13; survives a parked TriggerOrder
         // prompt), live `pending_attack` otherwise. See
         // `Game::resolving_battle_opponent_of`.
         self.game.resolving_battle_opponent_of(self_handle)
@@ -1564,7 +1564,7 @@ impl<'a> EffectContext<'a> {
 
     /// See [`EffectReadContext::battle_opponent_of`].
     pub fn battle_opponent_of(&self, self_handle: PermanentHandle) -> Option<PermanentHandle> {
-        // Trigger-time identity first (16-12; survives a parked TriggerOrder
+        // Trigger-time identity first (16-13; survives a parked TriggerOrder
         // prompt), live `pending_attack` otherwise. See
         // `Game::resolving_battle_opponent_of`.
         self.game.resolving_battle_opponent_of(self_handle)

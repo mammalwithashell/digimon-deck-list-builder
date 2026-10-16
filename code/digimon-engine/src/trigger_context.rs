@@ -215,7 +215,7 @@ pub struct TriggerContext {
     /// TOP CARD of the Digimon the deleted carrier was battling, captured when
     /// its `[On Deletion]` entries are ENQUEUED on a `Battle`-cause deletion
     /// (`Game::enqueue_batch_on_deletion`, while `pending_attack` is still
-    /// live). general_rule.pdf 16-12: <Retaliation> "delete[s] the Digimon it
+    /// live). general_rule.pdf 16-13: <Retaliation> "delete[s] the Digimon it
     /// battled" -- who that is, is a fact of the TRIGGER. Reading it from the
     /// live `pending_attack` at RESOLUTION time is wrong whenever resolution is
     /// deferred: a second [On Deletion] trigger on the same stack opens a

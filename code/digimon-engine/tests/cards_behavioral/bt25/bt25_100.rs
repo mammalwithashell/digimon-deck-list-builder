@@ -304,7 +304,7 @@ fn bt25_100_linked_host_gains_dp_2000_collision_and_piercing() {
 // G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON. A security-flipped Iron Slash
 // runs the same [Main] body, and its "you may link this card" tail must lift
 // the card OUT of the security resolution onto the chosen host (DCGO
-// `Permanent.AddLinkCard` → `RemoveFromAllArea`; §13-1-7-4 trashes a checked
+// `Permanent.AddLinkCard` → `RemoveFromAllArea`; §13-1-8-4 trashes a checked
 // card only "unless it belongs to an area"). Before the fix the link step
 // silently returned (no `pending_option`), Iron Slash was trashed, and the
 // host never gained the Link DP / <Piercing>.
@@ -599,7 +599,7 @@ fn bt25_100_no_mode_select_when_only_non_ts_digimon_on_board() {
 // "`effect#5` -- unreachable: no shared action means \"plug this Option in from
 // hand\"", same clause on BT25-093#effect#4).
 //
-// general_rule.pdf (Ver.3.6) §6-5-1 lists the main-phase actions, and "use an
+// general_rule.pdf (Ver.4.3) §6-5-1 lists the main-phase actions, and "use an
 // Option card from the hand" (§6-5-1-3) and "link a card from the hand or
 // battle area" (§6-5-1-4) are two SEPARATE entries; §10-1-1 says a card is
 // linked from the hand "by paying the cost as part of the main phase actions".

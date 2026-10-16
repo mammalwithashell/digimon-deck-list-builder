@@ -266,11 +266,11 @@ fn piercing_does_nothing_when_attacker_wiped() {
 }
 
 // ─── Blocked-player-attack path (glossary: "This effect also works if an
-//     attack is blocked"; rules §16-6-1/-2) ─────────────────────────────
+//     attack is blocked"; rules §16-7-1/-2) ─────────────────────────────
 //
 // The canonical real-game Piercing scenario: attack the PLAYER, the
 // opponent blocks, the attacker deletes the blocker in battle and
-// survives → the security check still happens (mandatory, §16-6-3).
+// survives → the security check still happens (mandatory, §16-7-3).
 
 /// Same CardData shape as `big_digimon` but with `<Piercing>` printed on
 /// the card face (fullwidth brackets, as ingested card text uses).
@@ -347,7 +347,7 @@ fn piercing_fires_when_player_attack_is_blocked_modifier_grant() {
         "Piercing must perform the security check after a blocked player \
          attack (glossary: 'This effect also works if an attack is blocked')"
     );
-    // No prompt: the Piercing check is mandatory (§16-6-3).
+    // No prompt: the Piercing check is mandatory (§16-7-3).
     assert!(
         r.pending_selection().is_none(),
         "no player prompt — the Piercing security check is mandatory"
@@ -572,7 +572,7 @@ fn piercing_fires_when_blocked_with_higher_slot_bystander() {
     );
 }
 
-/// §16-6-6: with 0 security cards the Piercing check can't be performed —
+/// §16-6-6 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md]: with 0 security cards the Piercing check can't be performed —
 /// and, critically, it must NOT win the game (unlike an unblocked player
 /// attack under §11-5-1-2). DCGO parity: `DetermineAttackOutcome` only
 /// ends the game on the DefendingPermanent == null arm; the post-battle
@@ -602,7 +602,7 @@ fn piercing_with_zero_security_does_not_win_game() {
     assert!(
         !r.game_over(),
         "Piercing with 0 opposing security must not end the game \
-         (§16-6-6: the check can't be performed at all)"
+         (§16-6-6 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md]: the check can't be performed at all)"
     );
     assert!(
         r.game.pending_attack.is_none(),

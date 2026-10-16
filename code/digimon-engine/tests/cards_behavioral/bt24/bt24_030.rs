@@ -344,7 +344,7 @@ fn bt24_030_used_option_is_trashed_before_the_non_turn_players_on_suspend_prompt
         "P1 is the turn player / Option user"
     );
     let neptunemon = runner.place_on_field(0, "BT24-030", Some(0));
-    // Gaia Force is red: its user needs a red card in play (4-19 color
+    // Gaia Force is red: its user needs a red card in play (4-22 color
     // requirements) -- the exam line uses Tai Kamiya ST1-12 for this.
     runner.place_on_field(1, "OPP-A", Some(0));
 

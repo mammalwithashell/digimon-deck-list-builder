@@ -379,7 +379,7 @@ fn save_does_not_offer_opponent_tamers() {
 /// deletion_no_replace`: a card hosting BOTH an optional `WhenWouldBeDeleted`
 /// replacement (`<Evade>`) AND `<Save>` on the same carrier exercises the
 /// deferred-decline path. (Was `<Decoy>` until 2026-10-04: Decoy cannot
-/// protect its own carrier — keyword-semantics 16-17 — and its self-dialog
+/// protect its own carrier — keyword-semantics 16-18 — and its self-dialog
 /// was a phantom prompt, now suppressed at candidate collection.) Without the `pending_selection.is_some()` guard,
 /// `Player::delete_permanent` would shift the Tamer's index synchronously
 /// while Save's parked Tamer-pick still references the old index, corrupting

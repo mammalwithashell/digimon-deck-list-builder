@@ -334,7 +334,7 @@ fn bt24_036_on_play_deletes_3000_dp_digimon() {
     runner.place_on_field(1, "OPP-3000", Some(0));
     runner.play(0, 0).expect("plays");
     runner.auto_resolve().unwrap();
-    assert_eq!(runner.battle_area_size(1), 0, "0 DP → deleted (17-1-3-1)");
+    assert_eq!(runner.battle_area_size(1), 0, "0 DP → deleted (17-1-3-1-1)");
 }
 
 #[test]

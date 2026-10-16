@@ -408,7 +408,7 @@ pub enum EffectTiming {
     /// consumption and App Fusion (all `cardEffect: null` in DCGO) never fire
     /// it. Rule 15-5-2 (`general_rule.pdf` p.23): one trigger condition met
     /// several times at once triggers once — hence the per-host batch. Rule
-    /// 15-5-3 (p.23-24, whose worked example IS this timing): the placed
+    /// 15-5-3 (p.26, whose worked example IS this timing): the placed
     /// card's own inherited effect triggers when it is itself placed. The
     /// `TriggerContext` carries the host (`event_host_permanent` /
     /// `event_host_card`), the added cards (`moved_card_sets[0].cards` →
@@ -459,7 +459,7 @@ pub enum EffectTiming {
 /// When a Delay Option's body fires relative to the play.
 ///
 /// `MainPhaseActivated` is the standard printed `<Delay>` (RULES_CONTEXT
-/// 16-16): a player-visible `[Main]`-phase action — "By trashing this card
+/// 16-17): a player-visible `[Main]`-phase action — "By trashing this card
 /// after the placing turn, activate the effect below." The body NEVER
 /// auto-fires; the controller takes a `FIELD_EFFECT` action on a later main
 /// phase, trashing the Option as the cost. The remaining variants are
@@ -494,7 +494,7 @@ pub enum DelayTrigger {
     ///     while its `place_self_as_delay_option` step is live. So the name of
     ///     this variant OVERSTATES that card: nothing gates it, and it now
     ///     parks inert for the rest of the game instead of being auto-trashed.
-    ///     That is still the better of the two wrongs -- 16-16-1 says the card
+    ///     That is still the better of the two wrongs -- 16-17-1 says the card
     ///     stays in the battle area, and the missing activation is the
     ///     pre-existing BLOCKED gap, not something introduced here -- but it is
     ///     untested behaviour on a card this change never opened. Do not read
@@ -510,10 +510,10 @@ pub enum DelayTrigger {
     /// `MainPhaseActivated`), and must not be event-dispatched
     /// (`enqueue_event_gated_delayed_options` matches only `OnEvent`).
     ///
-    /// Rules manual 16-16-1 (`general_rule.pdf` p.35): "＜Delay＞ is a keyword
+    /// Rules manual 16-17-1 (`general_rule.pdf` p.38): "＜Delay＞ is a keyword
     /// effect. While a card with this effect is in the battle area, by trashing
     /// that card, the effect specified in ＜Delay＞ will activate." Availability
-    /// is bounded by presence in the battle area and by nothing else — 16-16
+    /// is bounded by presence in the battle area and by nothing else — 16-17
     /// prints no expiry. The previous fallback (`EndOfYourNextTurn`) invented
     /// one and silently trashed the carrier a turn later, taking the printed
     /// option away from the player. G-DELAY-EVENT-WINDOW-AUTOTRASHED.
@@ -579,7 +579,7 @@ pub enum Keyword {
     Progress,
 
     /// DCGO `Retaliation` — when this Digimon is deleted in battle, delete
-    /// the battled opponent Digimon. Mandatory trigger (RULES_CONTEXT 16-12).
+    /// the battled opponent Digimon. Mandatory trigger (RULES_CONTEXT 16-13).
     /// Wire-up Phase E §E1 — auto-installed `OnDeletion` trigger gated on
     /// `deletion_cause() == Some(Battle)` that calls
     /// `ctx.battle_opponent_of(self)` to find the winner.
@@ -589,12 +589,12 @@ pub enum Keyword {
     /// other than its own controller's effect, optionally delete another of
     /// the controller's permanents to cancel the deletion. Wire-up Phase E
     /// §E2 — auto-installed `WhenWouldBeDeleted` substitute replacement.
-    /// RULES_CONTEXT 16-31.
+    /// RULES_CONTEXT 16-32.
     Scapegoat,
 
     /// DCGO `Execute` — at end of your turn, this Digimon may attack
     /// (including unsuspended Digimon); when the attack ends, this
-    /// Digimon is deleted. Trigger-type, Optional (RULES_CONTEXT 16-37).
+    /// Digimon is deleted. Trigger-type, Optional (RULES_CONTEXT 16-38).
     /// Wire-up Phase F §F1 — auto-installed `EndOfYourTurn` triggered
     /// effect that grants `MayAttack` + `CanAttackUnsuspended` for the
     /// upcoming attack window and queues an `EndOfAttack` self-deletion.
@@ -610,14 +610,14 @@ pub enum Keyword {
     /// Digimon from leaving.
     Guard,
 
-    /// DCGO `Iceclad` — passive (RULES_CONTEXT 16-34). When this Digimon
+    /// DCGO `Iceclad` — passive (RULES_CONTEXT 16-35). When this Digimon
     /// is in a Digimon-vs-Digimon battle (NOT a security-Digimon battle),
     /// compare digivolution-card count instead of DP. Higher count wins;
     /// equal count = mutual destruction. No `keyword_to_auto_effect` arm —
     /// consumed directly in `combat::resolve_battle` via `has_keyword`.
     Iceclad,
 
-    /// DCGO `MindLink` — active skill on Tamers (RULES_CONTEXT 16-27).
+    /// DCGO `MindLink` — active skill on Tamers (RULES_CONTEXT 16-28).
     /// `[Main]` activation: place this Tamer at the bottom of an own
     /// Digimon's digivolution stack. Target Digimon must have NO Tamer
     /// digivolution sources (DCGO `cardSource.IsTamer && !cardSource.IsFlipped`
@@ -626,7 +626,7 @@ pub enum Keyword {
     /// Wire-up Phase F §F3.
     MindLink,
 
-    /// DCGO `Training` — active skill (RULES_CONTEXT 16-40). `[Main]`
+    /// DCGO `Training` — active skill (RULES_CONTEXT 16-41). `[Main]`
     /// activation usable from battle area OR breeding area: suspend self
     /// (cost) + place top deck card under self at stack bottom, face-down.
     /// Cost requires `is_suspended == false`. Wire-up Phase F §F4.

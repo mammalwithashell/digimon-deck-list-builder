@@ -64,7 +64,7 @@ fn make_filler(id: &str) -> CardData {
 /// Tamer security filler — used so the carrier attacking security doesn't
 /// mutually destruct with same-DP Digimon security (RULES_CONTEXT 14-2-1-3,
 /// see `equal_dp_security_battle_deletes_attacker`). Non-Digimon security
-/// skips the battle compare per 13-1-7-3 / 14-2-3.
+/// skips the battle compare per 13-1-8-3 / 14-2-3.
 fn make_non_digimon_security_filler(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Tamer;

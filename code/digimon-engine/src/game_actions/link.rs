@@ -108,7 +108,7 @@ impl Game {
     /// read as one) carrying a `LinkCondition` effect, return its link cost
     /// and the legal hosts it may plug into right now.
     ///
-    /// `general_rule.pdf` (Ver.3.6) §10-1-1: "A card from the hand or battle
+    /// `general_rule.pdf` (Ver.4.3) §10-1-1: "A card from the hand or battle
     /// area can be linked to a Digimon in the battle area by paying the cost
     /// **as part of the main phase actions**" — and §6-5-1 lists "use an
     /// Option card from the hand" (§6-5-1-3) and "link a card from the hand or
@@ -204,7 +204,7 @@ impl Game {
         // resolution machinery — see `hand_option_link_condition_targets`.
         //
         // `G-ENGINE-OPTION-HAND-LINK-COST-TIMING`: the HOST PICK COMES FIRST.
-        // `general_rule.pdf` (Ver.3.6) §10-1-3, p.19, orders the link
+        // `general_rule.pdf` (Ver.4.3) §10-1-3, p.21, orders the link
         // procedure 10-1-3-1 "the player chooses 1 of their Digimon that meets
         // the requirement" -> 10-1-3-2 "The specified link cost is paid." ->
         // 10-1-3-3 "The card to link is plugged in sideways into the chosen

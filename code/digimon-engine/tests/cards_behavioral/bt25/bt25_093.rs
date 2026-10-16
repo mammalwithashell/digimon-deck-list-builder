@@ -303,7 +303,7 @@ fn bt25_093_security_flip_links_then_host_when_attacking_deletes_dp_bounded_mand
 
 // ── Section 4: the §10-1-3 link procedure ORDER (from-hand declaration) ──
 //
-// general_rule.pdf (Ver.3.6) §10-1-3, p.19, fixes the order of the link
+// general_rule.pdf (Ver.4.3) §10-1-3, p.21, fixes the order of the link
 // procedure and our from-hand Plug-In Option declaration must follow it:
 //   10-1-3-1  "The player declares a link and reveals 1 card to link. 1 link
 //              requirement is chosen on the revealed card, then the player

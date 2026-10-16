@@ -14,7 +14,7 @@
 //!
 //! Mirrors DCGO `Fragment.cs:23-77`. The auto-install uses `Effect::optional()`
 //! with an outer accept dialog because Fragment is "by [Effect]" per
-//! RULES_CONTEXT 16-36 ("Processing: Optional") and DCGO
+//! RULES_CONTEXT 16-37 ("Processing: Optional") and DCGO
 //! `Fragment.cs:37` calls `SetUpActivateClass(..., isOptional=true, ...)`.
 //! `Fragment.cs:38`'s `canNoSelect: () => false` governs only the inner
 //! source-pick UI once the player has accepted the outer dialog.

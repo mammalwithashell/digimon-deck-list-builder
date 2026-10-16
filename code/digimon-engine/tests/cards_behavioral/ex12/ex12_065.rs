@@ -76,7 +76,7 @@ fn ex12_065_on_deletion_bottom_decks_opponent_lowest_level_digimon() {
 // EX12-065 prints ONE sentence granting two keywords: "[All Turns] All of your
 // [Puppet] or [TB] trait Digimon gain <Blocker> and <Retaliation>." `<Blocker>`
 // is a persistent flag the mask reads through `Game::has_keyword`, so it always
-// worked. `<Retaliation>` is a §16-12 MANDATORY TRIGGER — the DCGO oracle diff
+// worked. `<Retaliation>` is a §16-13 MANDATORY TRIGGER — the DCGO oracle diff
 // on `qa/dcgo-exams/EX12/EX12-065-effect3.yaml` step 16 showed DCGO deleting the
 // battle winner while we left it alive, because a filtered-target aura installed
 // the keyword FLAG on the recipient but no `Effect` anywhere fired it.
@@ -102,7 +102,7 @@ fn ex12_065_mass_granted_retaliation_deletes_battle_winner_on_recipient() {
     );
 
     // PUPPET (5000) loses to BIG-ATTACKER (12000) → deleted with cause=Battle
-    // → the granted <Retaliation> must delete the winner (§16-12, mandatory).
+    // → the granted <Retaliation> must delete the winner (§16-13, mandatory).
     // EX12-065 also mass-grants <Blocker>, so the declaration opens an
     // optional block window first — decline it and let the battle resolve.
     let _ = runner.attack_digimon(attacker, puppet, false);
@@ -171,7 +171,7 @@ fn ex12_065_mass_granted_retaliation_also_fires_on_the_grantor_itself() {
     );
 }
 
-/// Cause gate survives the grant: §16-12 fires only on BATTLE deletions, so an
+/// Cause gate survives the grant: §16-13 fires only on BATTLE deletions, so an
 /// effect deletion of the recipient must NOT take anything with it.
 #[test]
 fn ex12_065_mass_granted_retaliation_respects_the_battle_cause_gate() {
@@ -357,7 +357,7 @@ fn advance_to_trigger_order(runner: &mut DebugRunner) {
 /// A `<Retaliation>` whose battle condition is not met must never REACH the
 /// trigger-order prompt -- not merely resolve to nothing once chosen.
 ///
-/// 16-12 makes `<Retaliation>` fire "when deleted in battle". On an EFFECT
+/// 16-13 makes `<Retaliation>` fire "when deleted in battle". On an EFFECT
 /// deletion it does not trigger at all, so it is not one of the simultaneous
 /// triggers 15-4-3-5-1 asks the turn player to order. Offering it anyway is
 /// wrong three ways: it puts a mandatory branch in the RL action space that
@@ -397,7 +397,7 @@ fn ex12_065_retaliation_is_not_offered_as_a_branch_on_an_effect_deletion() {
                 !choices
                     .iter()
                     .any(|c| c.keyword == Some(Keyword::Retaliation)),
-                "16-12: <Retaliation> triggers only on a BATTLE deletion, so it \
+                "16-13: <Retaliation> triggers only on a BATTLE deletion, so it \
                  must not be one of the branches offered for an effect \
                  deletion; offered = {offered:?}"
             );

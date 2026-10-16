@@ -280,7 +280,7 @@ fn bt21_093_event_gated_delay_clause_is_all_turns_on_opponent_security_removed()
     assert_eq!(delay_body.scope, CompiledScope::FaceUp);
     assert!(
         delay_body.optional,
-        "the <Delay> is declinable (Comprehensive Rules 16-16-2) — modelled as \
+        "the <Delay> is declinable (Comprehensive Rules 16-17-2) — modelled as \
          optional: true plus a leading trash_self activation_cost"
     );
     assert_eq!(
@@ -661,7 +661,7 @@ fn bt21_093_delay_activates_on_opp_security_removed() {
         .expect("the <Delay> accept/decline prompt must install");
     assert!(
         gate.is_optional,
-        "the <Delay> prompt is declinable (PASS legal, Comprehensive Rules 16-16-2)"
+        "the <Delay> prompt is declinable (PASS legal, Comprehensive Rules 16-17-2)"
     );
     runner
         .game
@@ -873,7 +873,7 @@ fn bt21_093_delay_digivolve_is_optional_decline_keeps_trash() {
 /// G-ACTIVATION-COST-TRASH-SELF: the <Delay> itself is declinable. Declining
 /// the accept/decline prompt does NOT pay the trash-self cost — BT21-093 stays
 /// on the field as a Delay option and no digivolve sub-flow runs. (Comprehensive
-/// Rules 16-16-2: the processing of a <Delay> is optional.)
+/// Rules 16-17-2: the processing of a <Delay> is optional.)
 #[test]
 fn bt21_093_delay_can_be_declined() {
     use digimon_engine::action::space::PASS;

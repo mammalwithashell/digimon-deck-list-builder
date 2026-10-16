@@ -524,7 +524,7 @@ fn fire_when_digivolving_on(r: &mut DebugRunner, h: digimon_engine::permanent::P
 }
 
 /// EX12-065 Kaguyamon carries BOTH <Fortitude> ("play this Digimon from the
-/// trash without paying the cost", 16-26, MANDATORY) and [On Deletion] ("Return
+/// trash without paying the cost", 16-27, MANDATORY) and [On Deletion] ("Return
 /// 1 of your opponent's lowest level Digimon to the bottom of the deck").
 /// Returning it to the deck must cost it both.
 #[test]
@@ -541,7 +541,7 @@ fn when_digivolving_returning_the_corpse_makes_kaguyamon_miss_its_on_deletion() 
         .start();
 
     let medusa = r.place_on_field(0, "EX11-012", None);
-    // <Fortitude> (16-26) only fires for a Digimon deleted WITH digivolution
+    // <Fortitude> (16-27) only fires for a Digimon deleted WITH digivolution
     // cards, so Kaguyamon is stacked over a source. Without one its
     // mandatory trigger legitimately no-ops and could not signal anything.
     r.place_stack(1, &["FODDER-SRC", "EX12-065"]);
@@ -579,7 +579,7 @@ fn when_digivolving_returning_the_corpse_makes_kaguyamon_miss_its_on_deletion() 
     );
     assert!(
         !field_has(&r, 1, "EX12-065"),
-        "Kaguyamon reached the deck, so its MANDATORY <Fortitude> (16-26) must NOT have played it back. The control below proves this is a real signal: leave Kaguyamon in the trash and <Fortitude> DOES return it to the field"
+        "Kaguyamon reached the deck, so its MANDATORY <Fortitude> (16-27) must NOT have played it back. The control below proves this is a real signal: leave Kaguyamon in the trash and <Fortitude> DOES return it to the field"
     );
     assert!(
         field_has(&r, 0, "EX11-012"),
@@ -655,7 +655,7 @@ fn when_digivolving_returning_the_corpse_makes_amaterasumon_miss_both_triggers()
 ///
 /// Kaguyamon therefore STAYS in the trash where the deletion left it, so its
 /// triggers keep their timing and must fire:
-///   * <Fortitude> (16-26, MANDATORY) plays it back from the trash;
+///   * <Fortitude> (16-27, MANDATORY) plays it back from the trash;
 ///   * [On Deletion] returns Medusamon (P0's only, hence lowest-level, Digimon)
 ///     to the bottom of P0's deck.
 ///
@@ -675,7 +675,7 @@ fn when_digivolving_returning_the_decoy_leaves_kaguyamon_triggers_intact() {
         .start();
 
     let medusa = r.place_on_field(0, "EX11-012", None);
-    // <Fortitude> (16-26) only fires for a Digimon deleted WITH digivolution
+    // <Fortitude> (16-27) only fires for a Digimon deleted WITH digivolution
     // cards, so Kaguyamon is stacked over a source. Without one its
     // mandatory trigger legitimately no-ops and could not signal anything.
     r.place_stack(1, &["FODDER-SRC", "EX12-065"]);

@@ -1,4 +1,4 @@
-//! BT20-093: official observation 074c2baf, image, Q4433-Q4436; rules 16-16 (p35).
+//! BT20-093: official observation 074c2baf, image, Q4433-Q4436; rules 16-17 (p.38).
 use digimon_engine::card_data::{CardData, DnaCost, DnaRequirement};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger};

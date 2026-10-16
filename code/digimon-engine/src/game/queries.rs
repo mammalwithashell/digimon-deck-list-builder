@@ -148,7 +148,7 @@ impl Game {
         // `linked_cards`, so a linked Option's `<Piercing>` (BT25-100) or any
         // other link-card keyword grant would not register at query time.
         // Fold in every link card: both its PRINTED link keywords
-        // (`link_text`, 4-2-6) and its `.inherited()` / `.linked()`
+        // (`link_text`, 4-3-5) and its `.inherited()` / `.linked()`
         // `grant_keyword` clauses count. A single
         // clause is `.inherited()` XOR `.linked()` (scope-driven), so accepting
         // either cannot double-fire. (Materializing `grant_keyword` clauses also

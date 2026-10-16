@@ -114,7 +114,7 @@ fn inherited_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
 }
 
 /// Keywords printed in a link card's link effect: a Digimon gains them while the
-/// card is one of its link cards (general_rule.pdf 4-2-6), and only then.
+/// card is one of its link cards (general_rule.pdf 4-3-5), and only then.
 fn link_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
     if card_data.link_text.is_empty() {
         return Vec::new();
@@ -1187,7 +1187,7 @@ pub struct Game {
     /// delete/replacement selection. Re-entered from `resolve_selection`.
     pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
     /// Stable key `(owner, bottom_card_index)` of a turn-scheduled `<Delay>`
-    /// Option whose Â§16-16-2 cost the controller just DECLINED.
+    /// Option whose Â§16-17-2 cost the controller just DECLINED.
     ///
     /// The turn scan (`resolve_delayed_options_matching`) trashes the Option
     /// after running its body, because the trash IS the Delay's cost. When the
@@ -1642,11 +1642,11 @@ impl Game {
         sources: &[crate::card_source::CardSource],
     ) {
         // <Overflow> is OWNER-relative: "lose X memory" (4-1-4) is applied to
-        // the card's owner (4-17-1; DCGO `AceOverflowClass.Overflow()` ->
+        // the card's owner (4-19-1; DCGO `AceOverflowClass.Overflow()` ->
         // `cardSource.Owner.AddMemory(-OverflowMemory)`, CardController.cs
         // ~6151). The raw `self.memory` seesaw is turn-player relative, so
         // adding the signed value directly made a non-turn-player owner GAIN
-        // memory. Simultaneous instances resolve turn player's first (4-17-5).
+        // memory. Simultaneous instances resolve turn player's first (4-19-5).
         let turn_player = self.turn_player();
         let mut penalties: Vec<(PlayerId, i16)> = sources
             .iter()
@@ -3789,7 +3789,7 @@ impl Game {
                         // pair opened a phantom TriggerOrder prompt, and the
                         // park outlived the battle the keyword needed. DCGO
                         // registers exactly one `RetaliationSelfEffect`
-                        // (BT25_078.cs); 16-12-4 treats instances per
+                        // (BT25_078.cs); 16-12-4 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md] treats instances per
                         // printed keyword, and this card prints one. The
                         // embedded DSL pack leaves the text fields empty, which
                         // is why only live games / the exam ever saw this.
@@ -3817,7 +3817,7 @@ impl Game {
                 }
 
                 // Printed LINK keywords reach the host only while this card is
-                // one of its link cards (4-2-6), so they synthesize as
+                // one of its link cards (4-3-5), so they synthesize as
                 // `.linked()` auto-effects: the linked-card trigger and
                 // replacement passes collect them, the top-card and inherited
                 // scans skip them. De-duped against an unconditional
@@ -3871,7 +3871,7 @@ impl Game {
         // conditionally granted trigger keyword installed NO body anywhere:
         // granted <Execute> never fired at end of turn and the printed "may
         // attack" choice never reached the action space (rule-17 violation â€”
-        // Â§16-37-2/-3, Â§15-9-2-2).
+        // Â§16-38-2/-3, Â§15-9-2-2).
         if let Some(es) = registry_effects.as_ref() {
             for grant in es {
                 let Some(kw) = grant.granted_keyword else {
@@ -3893,7 +3893,7 @@ impl Game {
                             effect.inherited = grant.inherited;
                             // A `scope: linked` grant (Link-ESS) fires for the
                             // host through the linked-card scans, never as the
-                            // card's own face effect (4-2-6): BT24-067
+                            // card's own face effect (4-3-5): BT24-067
                             // Hackmon's link-box <Retaliation>.
                             effect.linked = grant.linked;
                             if let Some(gc) = grant_condition.clone() {

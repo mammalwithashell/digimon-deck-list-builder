@@ -151,11 +151,11 @@ pub struct CardData {
     pub effect_text: String,
     pub inherited_text: String,
     pub security_text: String,
-    /// A link card's printed link effect (general_rule.pdf 2-3-12-6), from
+    /// A link card's printed link effect (general_rule.pdf 2-3-11-4-6), from
     /// cards.json's `link_effect_description_eng`. A Digimon gains it while this
-    /// card is one of its link cards (4-2-6), never while the card is one of its
-    /// digivolution cards: that is `inherited_text` (4-2-4), and a link card isn't
-    /// a stacked card (4-7-2). "[X] in its text" searches don't read it: the
+    /// card is one of its link cards (4-3-5), never while the card is one of its
+    /// digivolution cards: that is `inherited_text` (4-3-3), and a link card isn't
+    /// a stacked card (4-9-2). "[X] in its text" searches don't read it: the
     /// official ruling enumerating that text lists no link effects, and DCGO's
     /// `CardSource.HasText` skips `LinkEffect`.
     #[serde(default)]

@@ -429,7 +429,7 @@ impl Game {
     /// two Digimon's digivolution-card counts instead of DP ("Compare the
     /// number of digivolution cards instead of DP in this battle." — EX13-076
     /// Imperialdramon: Paladin Mode; G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT).
-    /// It is the battle-scoped twin of `<Iceclad>` (16-34): DCGO routes both
+    /// It is the battle-scoped twin of `<Iceclad>` (16-35): DCGO routes both
     /// through the same `IBattle.CompareStats` branch
     /// (`HasIceclad || CompareDigivolutionCards`). Everything else is a
     /// standard battle — ties delete both, battle deletions run the normal
@@ -841,7 +841,7 @@ impl Game {
                     // attacker. Applies to both attack shapes: declared on
                     // a Digimon, or declared on the player and blocked
                     // (glossary: "This effect also works if an attack is
-                    // blocked"; §16-6-2).
+                    // blocked"; §16-7-2).
                     //
                     // The security pipeline may park on a
                     // `PendingSelection`; in that case we return
@@ -866,7 +866,7 @@ impl Game {
                                 && self.has_keyword(attacker_h, Keyword::Piercing)
                             {
                                 self.transition_attack_state(AttackState::PostBattle);
-                                // §16-6-4: `<Piercing>` is pending processing
+                                // §16-7-4: `<Piercing>` is pending processing
                                 // that resolves AFTER effects triggered by
                                 // the battle. If the battle's OnDeletion /
                                 // EndOfBattle chain parked a selection or
@@ -895,7 +895,7 @@ impl Game {
                     //    Yield.
                     // 2. The Battle arm deferred an owed `<Piercing>` check
                     //    because battle-triggered effects were still
-                    //    resolving (§16-6-4). Those have now cleared (the
+                    //    resolving (§16-7-4). Those have now cleared (the
                     //    loop-top guard yields while a selection or queued
                     //    effect is pending), so fire the check now.
                     if self.security_resolution.is_some() {
@@ -1926,7 +1926,7 @@ impl Game {
 
         // §8-1-3-3: the digivolution procedure "places the Digimon ... on top
         // of the chosen card, draws 1 card"; <Blast Digivolve> "is an effect
-        // that digivolves the chosen Digimon" (16-25-4), so it draws like any
+        // that digivolves the chosen Digimon" (16-26-4), so it draws like any
         // other digivolution (DCGO `PlayCardClass`: `if (isEvolution) ...
         // DrawClass(card.Owner, 1)`, CardController.cs ~1762). Lands after the
         // stack mutation and BEFORE the WhenDigivolving fan-out, mirroring
@@ -2952,10 +2952,10 @@ impl Game {
     /// attack when the check can no longer be performed.
     ///
     /// Preconditions re-validated here (they may have changed while
-    /// battle-triggered effects resolved, §16-6-4):
+    /// battle-triggered effects resolved, §16-7-4):
     /// - the attacker is still the in-flight attacking Digimon;
     /// - it still has `<Piercing>`;
-    /// - the defending player has ≥ 1 security card — §16-6-6: with 0
+    /// - the defending player has ≥ 1 security card — §16-6-6 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md]: with 0
     ///   security the check "can't be performed" at all, and in particular
     ///   Piercing must NOT win the game (the 0-security game-win arm is
     ///   exclusive to unblocked player attacks, §11-5-1-2; DCGO parity:
@@ -3328,7 +3328,7 @@ impl Game {
     ///   `advance_security_resolution`.
     ///
     /// A security battle's triggered and scheduled effects finish before
-    /// disposal or another check (general_rule.pdf 13-1-7 / 14-2).
+    /// disposal or another check (general_rule.pdf 13-1-8 / 14-2).
     fn drive_security_resolution(&mut self) -> Option<AttackResult> {
         loop {
             // Safety rail: if `declare_winner` fired mid-drain, unwind.
@@ -3422,7 +3422,7 @@ impl Game {
                                     .saturating_add(
                                         self.defender_security_dp_adjustment(state.defender),
                                     );
-                                // Rules 13-1-7-3 / 14-2: this is a battle even
+                                // Rules 13-1-8-3 / 14-2: this is a battle even
                                 // though the security Digimon cannot be deleted.
                                 // Save the comparison before deletion can park on
                                 // a replacement or an On Deletion choice.
@@ -3455,7 +3455,7 @@ impl Game {
                                     // on ReplacementCause::Battle and were
                                     // therefore filtered out before ever being
                                     // offered. Losing to a Security Digimon is
-                                    // a battle deletion: rule 16-8 <Jamming>
+                                    // a battle deletion: rule 16-9 <Jamming>
                                     // names it outright ("not deleted as a
                                     // result of a battle with a Security
                                     // Digimon"), and the Jamming check directly
@@ -3633,13 +3633,13 @@ impl Game {
                     self.set_security_phase(SecurityPhase::Dispose);
                 }
                 SecurityPhase::Dispose => {
-                    // §13-1-5: "A checked card is removed from the security
+                    // §13-1-6: "A checked card is removed from the security
                     // stack and is treated as NOT BEING IN ANY PARTICULAR
-                    // AREA." It only reaches the trash at §13-1-7-4 ("a card
+                    // AREA." It only reaches the trash at §13-1-8-4 ("a card
                     // revealed from a security check is placed in the trash
                     // unless it belongs to an area"), which is the LAST step
-                    // of the check procedure -- after §13-1-7-2's triggered
-                    // effects and §13-1-7-3's security battle.
+                    // of the check procedure -- after §13-1-8-2's triggered
+                    // effects and §13-1-8-3's security battle.
                     //
                     // So the security-removed observers below run while the
                     // card is still in no area, and the trash push happens in
@@ -3700,7 +3700,7 @@ impl Game {
                     self.set_security_phase(SecurityPhase::DisposeFinalize);
                 }
                 SecurityPhase::DisposeFinalize => {
-                    // §13-1-7-4, the last step of the check: the revealed card
+                    // §13-1-8-4, the last step of the check: the revealed card
                     // is placed in the trash "unless it belongs to an area" --
                     // i.e. unless an effect raised the `played` bit via
                     // `EffectContext::play_pending_security` (or otherwise
@@ -4319,7 +4319,7 @@ impl Game {
         let a_dp = self.effective_dp(attacker).unwrap_or(0);
         let d_dp = self.effective_dp(defender).unwrap_or(0);
 
-        // Phase F §F2 — Iceclad (RULES_CONTEXT 16-34): when EITHER
+        // Phase F §F2 — Iceclad (RULES_CONTEXT 16-35): when EITHER
         // combatant has Iceclad in a Digimon-vs-Digimon battle, compare
         // digivolution-card stack lengths (`card_sources.len()`) instead
         // of DP. The security-battle exception is naturally honored:
@@ -4521,7 +4521,7 @@ impl Game {
                     pa.battle_defender_deleted = state.defender_deleted;
                 }
             }
-            // §16-6-2/4, clarified by Bandai's CRM4 "May battle" notes:
+            // §16-7-2/4, clarified by Bandai's CRM4 "May battle" notes:
             // an effect battle during an attack also earns Piercing, but only
             // for the surviving attacking Digimon that actually deleted its
             // opponent. Stable winner identity excludes removed/replayed bodies.

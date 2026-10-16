@@ -17,7 +17,7 @@
 //! <Barrier>
 //! ```
 //! Official Q&A: "Yes, you can." (the optional processing condition may be
-//! paid even when no [Richard Sampson] can be played — rule 15-7-4).
+//! paid even when no [Richard Sampson] can be played — rule 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]).
 //!
 //! # DCGO C# reference
 //! None — DCGO has no `EX13_030.cs` at `b9a0638cd`. BT23-035 Dynasmon
@@ -292,7 +292,7 @@ fn ex13_030_may_decline_the_play_after_paying() {
 
 #[test]
 fn ex13_030_can_pay_even_without_richard_available() {
-    // Official Q&A "Yes, you can." / rule 15-7-4.
+    // Official Q&A "Yes, you can." / rule 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md].
     let mut r = runner_with(&[CARD_ID]);
     let sec = r.security_count(0);
     play_and_accept(&mut r);

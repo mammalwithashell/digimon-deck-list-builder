@@ -9,7 +9,7 @@
 //! with [Familiar] Tokens (Yellow/3000 DP / `[On Deletion]` -3000 DP), then
 //! deliberately deletes its own tokens via the **Overclock** keyword to draw
 //! cards (Arisa), refill the board (Cendrillmon refire), and stack -DP onto the
-//! opponent until things hit 0 DP and die (rule 17-1-3-1). Deletion is a
+//! opponent until things hit 0 DP and die (rule 17-1-3-1-1). Deletion is a
 //! *resource*, not a cost — so the high-value bugs live at the seams where one
 //! card's deletion feeds another card's trigger.
 //!
@@ -377,11 +377,11 @@ fn c2_declined_refire_leaves_the_board_one_token_short() {
 //
 // BT22-042 Nyabootmon's `[When Digivolving]` gives "-3000 DP until their turn
 // ends for each of your Digimon" to one opponent Digimon. Over a WIDE board the
-// stacked -DP drives the target to <=0 → deleted (rule 17-1-3-1). The SAME
+// stacked -DP drives the target to <=0 → deleted (rule 17-1-3-1-1). The SAME
 // effect over a NARROW board leaves it alive — the removal is gated on board
 // width, the system-level fact a per-card test can't express.
 //
-// Sources: $BASE_DCGO/.../BT22/Yellow/BT22_042.cs; 0-DP deletion rule 17-1-3-1
+// Sources: $BASE_DCGO/.../BT22/Yellow/BT22_042.cs; 0-DP deletion rule 17-1-3-1-1
 // (memory project_dp_zero_deletion.md). Per-card: cards_behavioral/bt22/bt22_042.rs.
 
 fn c3_runner() -> DebugRunner {

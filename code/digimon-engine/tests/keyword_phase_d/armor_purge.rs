@@ -16,7 +16,7 @@
 //!      top.
 //!
 //! Mirrors DCGO `ArmorPurge.cs:40-78`. Optional ("by [cost]") per
-//! RULES_CONTEXT 16-18 — the outer accept dialog represents the optional
+//! RULES_CONTEXT 16-19 — the outer accept dialog represents the optional
 //! "by trashing" cost. Once accepted, the synchronous body trashes the top
 //! and cancels the deletion (no nested player selection — the cost target
 //! is fixed to the visible top).

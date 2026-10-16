@@ -393,8 +393,8 @@ fn bt1_090_black_only_support_rejects_option_play() {
     assert!(runner.game.scheduled_effects.is_empty());
 }
 
-/// general_rule.pdf p7, 4-2-1/4-2-2: a hatched Digi-Egg is a Digimon.
-/// Together with p10, 4-19-2, red Koromon alone satisfies this red option.
+/// general_rule.pdf p.9, 4-3-1 (4.3 merged 3.6's 4-2-1/4-2-2): a hatched Digi-Egg is a Digimon.
+/// Together with p.12, 4-22-2, red Koromon alone satisfies this red option.
 /// This must use a real DigiEgg card, not a Digimon fixture named "egg".
 #[test]
 fn bt1_090_hatched_red_digi_egg_enables_legal_option_play() {

@@ -117,7 +117,7 @@ fn first_non_pass(r: &mut DebugRunner) {
 }
 
 /// G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES: <Decode> is an immediate
-/// (replacement-timing) effect (§16-35, keyword-semantics.md). The Digimon it
+/// (replacement-timing) effect (§16-36, keyword-semantics.md). The Digimon it
 /// plays has its [On Play] TRIGGERED, which must wait until the Decode
 /// processing — including the carrier's leave — completes. So when BT25-044
 /// Junomon's [On Play] "place 1 other Digimon as the top security card" pick

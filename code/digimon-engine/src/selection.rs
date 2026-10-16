@@ -957,7 +957,7 @@ pub enum OptionResolutionPhase {
 /// the flow and resume from the same phase after the selection resolves.
 ///
 /// The security battle and all of its triggered/scheduled processing finish
-/// before check disposal or the next check (general_rule.pdf 13-1-7 / 14-2).
+/// before check disposal or the next check (general_rule.pdf 13-1-8 / 14-2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SecurityPhase {
     /// Enqueue + drain `SecuritySkill` effects on the revealed card.
@@ -1138,13 +1138,13 @@ pub struct PendingAttack {
     /// `effective_target`) actually DELETED the defending Digimon (the
     /// deletion batch completed — not cancelled/substituted by a
     /// replacement). This is the `<Piercing>` trigger condition (rules
-    /// §16-6-2). Stored explicitly because battle-area handles are
+    /// §16-7-2). Stored explicitly because battle-area handles are
     /// slot-based: after the defender's removal a higher-indexed bystander
     /// shifts down into its slot, so re-probing `effective_target` with
     /// `handle_valid` misreads the bystander as a surviving defender.
     pub battle_defender_deleted: bool,
     /// A battle caused by an effect earned Piercing for this attacking Digimon.
-    /// Processing waits until immediately before the attack ends (16-6-4).
+    /// Processing waits until immediately before the attack ends (16-7-4).
     pub effect_battle_piercing_pending: bool,
     /// Only one transition to security checking is allowed during one attack,
     /// including ordinary checks and any number of Piercing activations.
