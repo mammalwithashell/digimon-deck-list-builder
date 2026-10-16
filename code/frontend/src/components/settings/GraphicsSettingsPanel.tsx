@@ -1,4 +1,4 @@
-import { useUiStore, type Motion, type TextScale } from '@/stores/uiStore';
+import { useUiStore, type BoardStyle, type Motion, type TextScale } from '@/stores/uiStore';
 import { ThemeSwitch } from '@/design/components/ThemeSwitch';
 import {
   RESOLUTION_PRESETS,
@@ -9,6 +9,11 @@ const MOTION_OPTIONS: { value: Motion; label: string }[] = [
   { value: 'full', label: 'Full' },
   { value: 'reduced', label: 'Reduced' },
   { value: 'off', label: 'Off' },
+];
+
+const BOARD_STYLE_OPTIONS: { value: BoardStyle; label: string }[] = [
+  { value: 'classic', label: 'Classic' },
+  { value: 'arena', label: 'Arena' },
 ];
 
 const TEXT_SCALE_OPTIONS: { value: TextScale; label: string }[] = [
@@ -35,6 +40,8 @@ export function GraphicsSettingsPanel() {
   const setMotion = useUiStore((s) => s.setMotion);
   const liveBackground = useUiStore((s) => s.liveBackground);
   const setLiveBackground = useUiStore((s) => s.setLiveBackground);
+  const boardStyle = useUiStore((s) => s.boardStyle);
+  const setBoardStyle = useUiStore((s) => s.setBoardStyle);
   const textScale = useUiStore((s) => s.textScale);
   const setTextScale = useUiStore((s) => s.setTextScale);
 
@@ -100,6 +107,37 @@ export function GraphicsSettingsPanel() {
           </div>
         </div>
         <ThemeSwitch />
+      </div>
+
+      <div className="mb-4 flex items-center justify-between border border-[var(--line-1)] bg-[var(--surface-raised)] px-4 py-3">
+        <div>
+          <div className="text-sm font-medium text-[var(--ink-0)]">Board style</div>
+          <div className="text-xs text-[var(--ink-2)]">
+            Classic follows the theme above; Arena is a stone tabletop with a
+            coin memory track and an End Turn button.
+          </div>
+        </div>
+        <div className="flex gap-1" role="group" aria-label="Board style">
+          {BOARD_STYLE_OPTIONS.map((opt) => {
+            const active = boardStyle === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                data-testid={`graphics-boardstyle-${opt.value}`}
+                onClick={() => setBoardStyle(opt.value)}
+                aria-pressed={active}
+                className={`border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  active
+                    ? 'border-[var(--accent)] bg-[var(--surface-raised)] text-[var(--ink-0)]'
+                    : 'border-[var(--line-1)] bg-[var(--surface-sunken)] text-[var(--ink-1)] hover:border-[var(--accent)] hover:text-[var(--ink-0)]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mb-4 flex items-center justify-between border border-[var(--line-1)] bg-[var(--surface-raised)] px-4 py-3">

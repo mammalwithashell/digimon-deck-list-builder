@@ -9,6 +9,7 @@ const PRESET_STORAGE_KEY = 'desktop.graphicsPreset';
 const FULLSCREEN_STORAGE_KEY = 'desktop.fullscreen';
 const RAIL_COLLAPSED_STORAGE_KEY = 'desktop.railCollapsed';
 const BOT_SPEED_STORAGE_KEY = 'gameplay.botSpeed';
+const BOARD_STYLE_STORAGE_KEY = 'gameplay.boardStyle';
 const DECK_BUILDER_VIEW_STORAGE_KEY = 'deckBuilder.viewMode';
 const MOTION_STORAGE_KEY = 'desktop.motion';
 const LIVE_BG_STORAGE_KEY = 'desktop.liveBackground';
@@ -77,6 +78,36 @@ function persistBotSpeed(value: BotSpeed): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(BOT_SPEED_STORAGE_KEY, value);
+  } catch {
+    // Best-effort persistence.
+  }
+}
+
+/** In-game board look. `classic` is the Digi-OS / Adventure '99 console
+ *  board that follows the app theme; `arena` is the tabletop arena (stone
+ *  plaza, coin memory track, round End Turn button). Layout and interaction
+ *  (centred permanents, drag landing spot, fanned hand) are shared. */
+export type BoardStyle = 'classic' | 'arena';
+
+const BOARD_STYLES: BoardStyle[] = ['classic', 'arena'];
+const DEFAULT_BOARD_STYLE: BoardStyle = 'classic';
+
+function loadPersistedBoardStyle(): BoardStyle {
+  if (typeof window === 'undefined') return DEFAULT_BOARD_STYLE;
+  try {
+    const raw = window.localStorage.getItem(BOARD_STYLE_STORAGE_KEY);
+    return BOARD_STYLES.includes(raw as BoardStyle)
+      ? (raw as BoardStyle)
+      : DEFAULT_BOARD_STYLE;
+  } catch {
+    return DEFAULT_BOARD_STYLE;
+  }
+}
+
+function persistBoardStyle(value: BoardStyle): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(BOARD_STYLE_STORAGE_KEY, value);
   } catch {
     // Best-effort persistence.
   }
@@ -298,6 +329,9 @@ interface UiStore {
    *  changes apply from the next agent beat without restarting. */
   botSpeed: BotSpeed;
 
+  /** In-game board look. Persisted. */
+  boardStyle: BoardStyle;
+
   /** Whether the desktop `MenuShell` nav rail is collapsed to an icon-only
    *  strip. Persisted so the choice survives relaunch. */
   railCollapsed: boolean;
@@ -326,6 +360,7 @@ interface UiStore {
   setFullscreen: (value: boolean) => void;
   setCanvasScale: (value: number) => void;
   setBotSpeed: (value: BotSpeed) => void;
+  setBoardStyle: (value: BoardStyle) => void;
   setRailCollapsed: (value: boolean) => void;
   toggleRail: () => void;
   setDeckBuilderView: (value: DeckBuilderView) => void;
@@ -343,6 +378,7 @@ export const useUiStore = create<UiStore>((set) => ({
   fullscreen: loadPersistedFullscreen(),
   canvasScale: 1,
   botSpeed: loadPersistedBotSpeed(),
+  boardStyle: loadPersistedBoardStyle(),
   railCollapsed: loadPersistedRailCollapsed(),
   deckBuilderView: loadPersistedDeckBuilderView(),
   motion: loadPersistedMotion(),
@@ -366,6 +402,10 @@ export const useUiStore = create<UiStore>((set) => ({
   setBotSpeed: (value) => {
     persistBotSpeed(value);
     set({ botSpeed: value });
+  },
+  setBoardStyle: (value) => {
+    persistBoardStyle(value);
+    set({ boardStyle: value });
   },
   setRailCollapsed: (value) => {
     persistRailCollapsed(value);
@@ -422,6 +462,7 @@ export const __uiStoreInternals = {
   FULLSCREEN_STORAGE_KEY,
   RAIL_COLLAPSED_STORAGE_KEY,
   BOT_SPEED_STORAGE_KEY,
+  BOARD_STYLE_STORAGE_KEY,
   DECK_BUILDER_VIEW_STORAGE_KEY,
   MOTION_STORAGE_KEY,
   LIVE_BG_STORAGE_KEY,
@@ -431,6 +472,7 @@ export const __uiStoreInternals = {
   loadPersistedFullscreen,
   loadPersistedRailCollapsed,
   loadPersistedBotSpeed,
+  loadPersistedBoardStyle,
   loadPersistedDeckBuilderView,
   loadPersistedMotion,
   deriveDefaultMotion,

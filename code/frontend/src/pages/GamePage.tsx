@@ -70,6 +70,7 @@ import {
 } from '@/types/game';
 import { useUiStore } from '@/stores/uiStore';
 import { BotSpeedControl } from '@/components/game/BotSpeedControl';
+import { BoardStyleControl } from '@/components/game/BoardStyleControl';
 import { usePacedAgentDriver } from '@/hooks/usePacedAgentDriver';
 import { formatEvents } from '@/utils/gameLogFormat';
 
@@ -1445,13 +1446,12 @@ export function GamePage() {
           </div>
         )}
 
-        {/* Bot speed selector — only meaningful for locally-paced bot
-            games; hidden for server-paced WebSocket games. */}
-        {!useWebSocket && (
-          <div className="shrink-0 flex justify-end px-3 py-1">
-            <BotSpeedControl />
-          </div>
-        )}
+        {/* Board look, plus the bot speed selector — only meaningful for
+            locally-paced bot games; hidden for server-paced WebSocket games. */}
+        <div className="shrink-0 flex justify-end gap-6 px-3 py-1">
+          <BoardStyleControl />
+          {!useWebSocket && <BotSpeedControl />}
+        </div>
         {(store.gameSeed ?? flowSeed) && (
           <div className="shrink-0 flex items-center justify-end gap-2 px-3 py-1 text-xs text-gray-300">
             <span className="uppercase tracking-widest text-gray-500">Seed</span>

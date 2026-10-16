@@ -170,7 +170,7 @@ export function BattleArea({
             onClick={() => onSlotClick?.(i)}
           >
             {isEmpty ? (
-              <div className="ib-battle-slot ib-battle-slot--empty">
+              <div className="ib-battle-slot ib-battle-slot--empty ib-battle-slot--landing">
                 <span>Play here</span>
               </div>
             ) : (

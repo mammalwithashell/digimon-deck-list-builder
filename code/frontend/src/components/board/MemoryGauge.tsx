@@ -1,5 +1,6 @@
 import { PHASE_NAMES } from '@/utils/constants';
 import type { GamePhase } from '@/types/game';
+import type { BoardStyle } from '@/stores/uiStore';
 
 interface MemoryGaugeProps {
   /** Raw memory value from backend (positive = player 1's memory) */
@@ -10,19 +11,27 @@ interface MemoryGaugeProps {
   currentPhase: GamePhase;
   /** Preview cost — positive means memory moves toward opponent */
   previewCost?: number | null;
-  /** End-turn handler; when absent the round button renders disabled. */
+  /** `classic`: diamond segments with an Action pill. `arena`: numbered
+   *  coins with a round End Turn button. */
+  variant?: BoardStyle;
+  /** Latest decoded action label for the classic Action pill */
+  latestActionLabel?: string | null;
+  /** Arena: end-turn handler; when absent the round button renders disabled. */
   onEndTurn?: () => void;
-  /** Text on the round end-turn button. */
+  /** Arena: text on the round end-turn button. */
   endTurnLabel?: string;
 }
 
-/** Coin-track memory gauge with a phase plaque and a round End Turn button.
- *  Player's memory is always on the LEFT. */
+/** Memory gauge between the two fields, flanked by a phase badge. Classic is
+ *  the DCGO-style diamond track; arena is a coin track with an End Turn
+ *  button. Player's memory is always on the LEFT. */
 export function MemoryGauge({
   value,
   localPlayer,
   currentPhase,
   previewCost,
+  variant = 'classic',
+  latestActionLabel,
   onEndTurn,
   endTurnLabel = 'End Turn',
 }: MemoryGaugeProps) {
@@ -49,6 +58,7 @@ export function MemoryGauge({
       </div>
 
       <div className="ib-gauge-bar" aria-label={`Memory ${orientedValue}`}>
+        {variant === 'classic' && <div className="ib-gauge-label">Memory</div>}
         <div className="ib-gauge-segments">
           {leftSegments.map((seg) => {
             const isActive = orientedValue >= seg;
@@ -65,6 +75,7 @@ export function MemoryGauge({
                 side="player"
                 isPreviewTarget={isPreviewTarget}
                 isPreviewTrail={isPreviewTrail}
+                allNumbered={variant === 'arena'}
               />
             );
           })}
@@ -75,6 +86,7 @@ export function MemoryGauge({
             isExact={orientedValue === 0}
             side="zero"
             isPreviewTarget={previewValue === 0}
+            allNumbered={variant === 'arena'}
           />
 
           {rightSegments.map((seg) => {
@@ -92,21 +104,29 @@ export function MemoryGauge({
                 side="opponent"
                 isPreviewTarget={isPreviewTarget}
                 isPreviewTrail={isPreviewTrail}
+                allNumbered={variant === 'arena'}
               />
             );
           })}
         </div>
       </div>
 
-      <button
-        type="button"
-        data-testid="board-end-turn"
-        className="ib-end-turn"
-        disabled={!onEndTurn}
-        onClick={onEndTurn}
-      >
-        {endTurnLabel}
-      </button>
+      {variant === 'arena' ? (
+        <button
+          type="button"
+          data-testid="board-end-turn"
+          className="ib-end-turn"
+          disabled={!onEndTurn}
+          onClick={onEndTurn}
+        >
+          {endTurnLabel}
+        </button>
+      ) : (
+        <div className="ib-gauge-pill ib-gauge-pill--action">
+          <span>Action</span>
+          {latestActionLabel ?? 'Resolve'}
+        </div>
+      )}
     </div>
   );
 }
@@ -118,9 +138,14 @@ interface GaugeSegmentProps {
   side: 'player' | 'opponent' | 'zero';
   isPreviewTarget?: boolean;
   isPreviewTrail?: boolean;
+  /** Arena coins show every number; classic shows ticks between 1, 5, 10. */
+  allNumbered?: boolean;
 }
 
-function GaugeSegment({ number, isActive, isExact, side, isPreviewTarget, isPreviewTrail }: GaugeSegmentProps) {
+function GaugeSegment({ number, isActive, isExact, side, isPreviewTarget, isPreviewTrail, allNumbered }: GaugeSegmentProps) {
+  const showNumber = allNumbered
+    || number === 0 || number % 5 === 0 || number === 1 || isExact || isPreviewTarget;
+
   return (
     <div
       className={[
@@ -130,9 +155,10 @@ function GaugeSegment({ number, isActive, isExact, side, isPreviewTarget, isPrev
         isExact ? 'is-focal' : '',
         isPreviewTarget ? 'is-ghost' : '',
         isPreviewTrail ? 'is-trail' : '',
+        showNumber ? 'is-numbered' : 'is-tick',
       ].filter(Boolean).join(' ')}
     >
-      {number}
+      {showNumber ? number : ''}
     </div>
   );
 }

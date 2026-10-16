@@ -1,6 +1,7 @@
 import { useGameStore } from '@/stores/gameStore';
-import { useEffectiveLiveBackground } from '@/stores/uiStore';
+import { useEffectiveLiveBackground, useUiStore } from '@/stores/uiStore';
 import { usePeekStore } from '@/stores/peekStore';
+import { LiveAtmosphere } from '@/components/layout/LiveAtmosphere';
 import { PlayerHalf } from './PlayerHalf';
 import { HandZone } from './HandZone';
 import { MemoryGauge } from './MemoryGauge';
@@ -49,8 +50,9 @@ interface GameBoardProps {
   onHandCardInspect?: (cardId: string) => void;
   actionTraces?: ActionTrace[];
   latestTensorSummary?: TensorSummary | null;
-  /** End-turn (pass) handler for the round button on the memory track.
-   *  Omit when passing is not legal right now; the button then shows disabled. */
+  /** End-turn (pass) handler for the arena board's round button on the
+   *  memory track. Omit when passing is not legal right now; the button then
+   *  shows disabled. */
   onEndTurn?: () => void;
 }
 
@@ -99,9 +101,12 @@ export function GameBoard({
   } = useGameStore();
 
   // Board atmosphere animates only when effective live-background is on
-  // (motion full + toggle). Drives the `is-live` gate on the arena's
-  // rim-light breathing (index.css).
+  // (motion full + toggle). Drives the `is-live` gate on the board's
+  // scanline-roll / grid-drift CSS (animate-board-atmosphere), or the arena's
+  // rim-light breathing.
   const liveBg = useEffectiveLiveBackground();
+  const boardStyle = useUiStore((s) => s.boardStyle);
+  const isArena = boardStyle === 'arena';
 
   // "Peek the board" also fades the centered revealed-cards strip (a reveal
   // selection is one of the modal surfaces the PeekButton shows for), so the
@@ -144,13 +149,27 @@ export function GameBoard({
     ...fieldHighlights.enemy,
     ...anyFieldHighlights.enemy,
   ]);
+  const latestActionLabel = (actionTraces as unknown as { at(index: number): ActionTrace | undefined }).at(-1)?.decoded.label ?? null;
   const isYourTurn = currentPlayer === 1;
   const endTurnLabel = isYourTurn ? 'End Turn' : 'Enemy Turn';
 
   return (
-    <div data-testid="game-board" className={`ib-board${liveBg ? ' is-live' : ''}`}>
+    <div
+      data-testid="game-board"
+      data-board-style={boardStyle}
+      className={`ib-board${isArena ? ' ib-board--arena' : ''}${liveBg ? ' is-live' : ''}`}
+    >
       <div className="ib-board__mat" />
-      <div className="ib-board__rings" />
+      {isArena ? (
+        <div className="ib-board__rings" />
+      ) : (
+        <>
+          <LiveAtmosphere surface="board" />
+          <div className="ib-board__horizon" />
+          <div className="ib-board__scanlines" />
+          <div className="ib-board__vignette" />
+        </>
+      )}
 
       <div className="ib-board__top-chrome">
         <div className="ib-chrome-tag"><span className="ib-dot" />MATCH LIVE</div>
@@ -160,12 +179,14 @@ export function GameBoard({
       </div>
 
       <PlayerTag
+        initialFromLabel={isArena}
         className="ib-player-tag--opp"
         accent="opp"
         label={playerLabels[2] ?? 'Opponent'}
         sublabel={`${player2.handCount} hand · ${player2.deckCount} deck`}
       />
       <PlayerTag
+        initialFromLabel={isArena}
         className="ib-player-tag--you"
         accent="you"
         label={playerLabels[1] ?? 'You'}
@@ -184,6 +205,7 @@ export function GameBoard({
           <PlayerHalf
             player={player2}
             isOpponent
+            boardStyle={boardStyle}
             highlightedSlots={enemySlots}
             selectedSlots={selectedEnemySlots}
             onTrashClick={onOpponentTrashClick}
@@ -200,6 +222,8 @@ export function GameBoard({
             localPlayer={1}
             currentPhase={currentPhase}
             previewCost={previewCost}
+            variant={boardStyle}
+            latestActionLabel={latestActionLabel}
             onEndTurn={isYourTurn ? onEndTurn : undefined}
             endTurnLabel={endTurnLabel}
           />
@@ -209,6 +233,7 @@ export function GameBoard({
           <PlayerHalf
             player={player1}
             isOpponent={false}
+            boardStyle={boardStyle}
             highlightedSlots={ownSlots}
             selectedSlots={selectedOwnSlots}
             canHatch={canHatch}
@@ -274,11 +299,14 @@ export function GameBoard({
 }
 
 function PlayerTag({
+  initialFromLabel,
   className,
   accent,
   label,
   sublabel,
 }: {
+  /** Arena portraits show the player's initial; classic shows Y / O. */
+  initialFromLabel: boolean;
   className: string;
   accent: 'opp' | 'you';
   label: string;
@@ -286,7 +314,7 @@ function PlayerTag({
 }) {
   return (
     <div className={`ib-player-tag ${className} ib-player-tag--${accent}`}>
-      <div className="ib-player-tag__avatar">{label.charAt(0).toUpperCase() || (accent === 'you' ? 'Y' : 'O')}</div>
+      <div className="ib-player-tag__avatar">{(initialFromLabel && label.charAt(0).toUpperCase()) || (accent === 'you' ? 'Y' : 'O')}</div>
       <div className="ib-player-tag__plate">
         <div className="ib-player-tag__name">{label}</div>
         <div className="ib-player-tag__sub">{sublabel}</div>

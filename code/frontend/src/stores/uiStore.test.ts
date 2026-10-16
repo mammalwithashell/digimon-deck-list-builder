@@ -215,6 +215,35 @@ describe('uiStore live background preference', () => {
   });
 });
 
+const BOARD_STYLE_KEY = __uiStoreInternals.BOARD_STYLE_STORAGE_KEY;
+
+describe('uiStore board style preference', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    useUiStore.setState({ boardStyle: 'classic' });
+  });
+
+  it('defaults to classic when nothing is persisted', () => {
+    expect(__uiStoreInternals.loadPersistedBoardStyle()).toBe('classic');
+  });
+
+  it('hydrates a persisted arena value', () => {
+    window.localStorage.setItem(BOARD_STYLE_KEY, 'arena');
+    expect(__uiStoreInternals.loadPersistedBoardStyle()).toBe('arena');
+  });
+
+  it('falls back to classic on an invalid persisted value', () => {
+    window.localStorage.setItem(BOARD_STYLE_KEY, 'hologram');
+    expect(__uiStoreInternals.loadPersistedBoardStyle()).toBe('classic');
+  });
+
+  it('persists on setBoardStyle', () => {
+    useUiStore.getState().setBoardStyle('arena');
+    expect(useUiStore.getState().boardStyle).toBe('arena');
+    expect(window.localStorage.getItem(BOARD_STYLE_KEY)).toBe('arena');
+  });
+});
+
 const TEXT_SCALE_KEY = __uiStoreInternals.TEXT_SCALE_STORAGE_KEY;
 
 describe('uiStore text scale preference', () => {
