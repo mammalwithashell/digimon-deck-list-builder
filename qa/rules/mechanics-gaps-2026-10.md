@@ -368,6 +368,7 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 - (b) The Digimon information only (the card's default, top-level face), as the engine does for every reference today.
 - (c) Neither colour unless the effect names the category.
 - DCGO: not checked. Suite: unasserted; the fix must pin whichever is chosen.
+- **Fixed on reading (a); owner may override.** Task 18 of Plan 4 pins it: a `kind: option` / `kind: digimon` reference reads that information only (§4-6-5-2, §4-6-6-2); an unqualified reference matches if the whole reference holds through either information (§4-6-1), pinned by `ch16_new_keywords::dual_unqualified_colour_reference_matches_either_information` and `dual_unqualified_reference_holds_through_one_information` ("purple Lv.6 card" does not match a red-Lv.6 / purple-Option DUAL; "card that is not red" does); digivolution cards on the field read the Digimon information only (§4-6-3). Reading (b) or (c) would invert that test's two positive picks.
 
 **W6. Sign-off: §15-8-3-9-4 versus Q1009** (15-8-3-9-2 sidecar note, `05d39e4cb`). §15-8-3-9-4 covers the removed card's own last-known state; references to general game state (e.g. your security count) are made when processing is performed (§15-8-3-9-3), as Q1009 rules for BT2-034. Proven on that reading (`pending_effect_whose_condition_lapsed_is_dropped`).
 

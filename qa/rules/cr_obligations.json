@@ -6794,23 +6794,24 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "One DNA digivolution, stacked per 8-2-2-2, at no cost.",
+      "note": "One DNA digivolution, stacked per 8-2-2-2, at no cost; a card with no DNA requirement to meet is not offered.",
       "status": "proven",
       "tests": [
-        "ch16_processing_keywords::blast_dna_kind_matches_rule"
+        "ch16_processing_keywords::blast_dna_kind_matches_rule",
+        "ch16_processing_keywords::blast_dna_without_dna_requirement_is_not_offered"
       ],
       "text": "<Blast DNA Digivolve> is an effect that performs DNA digivolution. (For details, refer to 8-2 \"DNA Digivolution\")8-2"
     },
     "16-31-5": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "aea0042eadc9cfcd7a1c47c8e7351868f3bc79a569016c612a3bd6b6876232ec",
-      "gap_id": "G-ENGINE-BLAST-DNA-IGNORES-DNA-REQUIREMENTS",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "A same-named level 4 field Digimon (DNA requirement: Lv.5) is offered. #[ignore]d.",
-      "status": "gap",
+      "note": "A same-named level 4 field Digimon (DNA requirement: Lv.5) is not offered; the level 5 control is.",
+      "status": "proven",
       "tests": [
         "ch16_processing_keywords::blast_dna_cannot_ignore_dna_requirements"
       ],
@@ -12426,11 +12427,13 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": "In the hand a DUAL is offered both as an Option (use) and as a Digimon (digivolve), and matches both 'Digimon card' and 'Option card' trait searches.",
+      "note": "In the hand a DUAL is offered both as an Option (use) and as a Digimon (digivolve), and matches both 'Digimon card' and 'Option card' trait searches; an unqualified reference (no category named) matches if the WHOLE reference holds through either information (ruling W5 reading (a)): 'purple card' and 'red card' find the DUAL, 'purple Lv.6 card' does not, 'card that is not red' does.",
       "status": "proven",
       "tests": [
         "ch16_new_keywords::dual_use_declares_digimon_or_option_information",
-        "ch16_new_keywords::dual_traits_belong_to_both_informations"
+        "ch16_new_keywords::dual_traits_belong_to_both_informations",
+        "ch16_new_keywords::dual_unqualified_colour_reference_matches_either_information",
+        "ch16_new_keywords::dual_unqualified_reference_holds_through_one_information"
       ],
       "text": "A DUAL card is a card that can be treated as being in either the Digimon card category or the Option card category."
     },
@@ -12457,10 +12460,12 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": "The rule's example: 'trash 1 of your opponent's Option cards in the battle area' never takes the DUAL stack (trashes a real field Option instead, or nothing); 'delete 1 Digimon' deletes it.",
+      "note": "The rule's example: 'trash 1 of your opponent's Option cards in the battle area' never takes the DUAL stack (trashes a real field Option instead, or nothing); 'delete 1 Digimon' deletes it. A DUAL digivolution card is on the field too: any predicate over it (a source pick, a self source count) reads only its Digimon information (red / Digimon counted; Option-purple and 'Option card' not).",
       "status": "proven",
       "tests": [
-        "ch16_new_keywords::dual_on_field_is_a_digimon_not_an_option"
+        "ch16_new_keywords::dual_on_field_is_a_digimon_not_an_option",
+        "ch16_new_keywords::dual_digivolution_card_on_field_reads_digimon_information",
+        "ch16_new_keywords::dual_digivolution_card_counts_as_digimon_only"
       ],
       "text": "A DUAL card placed on the field is treated as a Digimon. It can't be referenced as an Option card placed on the field. (Example: A DUAL card that is digivolved by placing it on top of one of your cards on the field will be treated as a Digimon, and it can't be trashed by a \"trash an Option card in the battle area\" effect.)"
     },
@@ -12567,15 +12572,15 @@
       "text": "This refers a DUAL card's traits and the information below them."
     },
     "4-6-6-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 4,
       "fingerprint": "048c65a256d7f9e5a4d1bfb47bdb99c098feb6678a7d999b6b2062c4e2e40b52",
-      "gap_id": "G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH",
+      "gap_id": null,
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": "Option USE reads the Option information (purple color requirement, use cost 2: proven). Card-search predicates read the top-level (Digimon information) colors: 'purple Option card' misses the DUAL (Option information purple) and 'red Option card' wrongly offers it (Digimon information red); 'purple Digimon card' correctly misses it. The test pins both directions, so a both-faces-union fix fails it. dual_option_information_referenced_as_option_card is #[ignore]d.",
-      "status": "gap",
+      "note": "Option USE reads the Option information (purple color requirement, use cost 2). Card-zone searches now reference the Option information when the search is for an Option card: 'purple Option card' finds the DUAL, 'red Option card' and 'purple Digimon card' don't (both directions pinned, so a both-faces-union fix fails).",
+      "status": "proven",
       "tests": [
         "ch16_new_keywords::dual_use_declares_digimon_or_option_information",
         "ch16_new_keywords::dual_option_information_referenced_as_option_card"
@@ -15217,9 +15222,9 @@
         "total": 244
       },
       "16": {
-        "gap": 25,
+        "gap": 24,
         "not_testable": 44,
-        "proven": 137,
+        "proven": 138,
         "total": 206
       },
       "17": {
@@ -15247,9 +15252,9 @@
         "total": 66
       },
       "4": {
-        "gap": 90,
+        "gap": 89,
         "not_testable": 34,
-        "proven": 15,
+        "proven": 16,
         "total": 139
       },
       "5": {
@@ -15283,15 +15288,15 @@
         "total": 13
       }
     },
-    "gap": 659,
+    "gap": 657,
     "mechanics": {
-      "gap_blocking": 39,
+      "gap_blocking": 38,
       "gap_nonblocking": 330,
       "not_testable": 152,
-      "proven": 194
+      "proven": 195
     },
     "not-testable": 246,
-    "proven": 214
+    "proven": 216
   },
   "version": 1
 }

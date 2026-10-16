@@ -1496,7 +1496,13 @@ fn material_to_dna_requirement(
         .clone()
         .or_else(|| f.name_contains.clone())
         .unwrap_or_default();
-    let text_contains = f.effect_text_contains.clone().unwrap_or_default();
+    // `in_text_contains` ("w/[X] in text") is the requirement's text match;
+    // `effect_text_contains` keeps its historical mapping.
+    let text_contains = f
+        .in_text_contains
+        .clone()
+        .or_else(|| f.effect_text_contains.clone())
+        .unwrap_or_default();
     Some(DnaRequirement {
         level: f.level_eq.unwrap_or(0),
         card_colors,
@@ -1669,6 +1675,42 @@ pub fn make_test_dna_card(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dna_material_in_text_contains_lowers_to_the_requirement_text() {
+        // "[DNA Digivolve] [Fenriloogamon] + yellow Lv.6 w/[Pulsemon] in text":
+        // the text constraint must reach the DNA requirement, not degrade to
+        // "any yellow Lv.6".
+        let r = DebugRunner::builder()
+            .from_dsl_yaml(
+                r#"
+card: TEST-INTEXT-DNA
+name: In Text DNA
+kind: digimon
+level: 7
+color: [yellow, purple]
+cost: 9
+dp: 16000
+alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - { name_is: "Fenriloogamon" }
+      - { level_eq: 6, color_is: yellow, in_text_contains: "Pulsemon" }
+    cost: 0
+"#,
+            )
+            .unwrap()
+            .start();
+        let card = r
+            .game
+            .card_data
+            .iter()
+            .find(|c| c.card_id == "TEST-INTEXT-DNA")
+            .expect("card registered");
+        assert_eq!(card.dna_costs.len(), 1);
+        assert_eq!(card.dna_costs[0].requirement2.text_contains, "Pulsemon");
+        assert_eq!(card.dna_costs[0].requirement2.level, 6);
+    }
 
     #[test]
     fn builder_starts_in_turn_1() {
