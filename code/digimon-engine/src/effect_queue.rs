@@ -424,22 +424,35 @@ impl Game {
                 let trigger_context = self.trigger_context_for_source(&source, None, timing);
                 self.enqueue_from_security_stack_card(timing, player, card, Some(trigger_context));
             }
-            TriggerSource::OnSecurityCheck { defender, .. } => {
-                // Observer timing: scan every permanent in the defender's
-                // battle area for `OnSecurityCheck`-timed effects. Attacker
-                // + revealed card metadata are carried through
-                // `game.security_resolution` for the drained effects to
-                // read via `EffectContext::attacker` / `security_digimon`
-                // / the defender's `last_security_reveal` snapshot.
-                let count = self.player(defender).battle_area.len();
-                for i in 0..count {
-                    let handle = PermanentHandle {
-                        player: defender,
-                        index: i as u8,
-                    };
-                    let trigger_context =
-                        self.trigger_context_for_source(&source, Some(handle), timing);
-                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+            TriggerSource::OnSecurityCheck { .. } => {
+                // Observer timing (§13-1-8-2): scan every permanent in BOTH
+                // players' battle areas for `OnSecurityCheck`-timed effects,
+                // turn player first — DCGO `AutoProcessing.GetSkillInfos`
+                // walks `Players_ForTurnPlayer`, and attacker-side observers
+                // exist (BT20-005 "gain <Jamming> for the turn", BT12-088
+                // "Memory +2" ESS). Attacker + revealed card metadata are
+                // carried through `game.security_resolution` for the drained
+                // effects to read via `EffectContext::attacker` /
+                // `security_digimon` / the defender's `last_security_reveal`
+                // snapshot.
+                let turn_player = self.turn_player();
+                let mut scan_order: Vec<PlayerId> = vec![turn_player];
+                for p in 0..self.players.len() as PlayerId {
+                    if p != turn_player {
+                        scan_order.push(p);
+                    }
+                }
+                for player in scan_order {
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
                 }
             }
             TriggerSource::OnCheckFaceUpSecurity { attacker, .. } => {

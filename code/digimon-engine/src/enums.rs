@@ -206,8 +206,11 @@ pub enum EffectTiming {
     /// `security` flag on the `Effect` struct (builder: `.security_flag()`).
     SecuritySkill,
     /// Observer timing fired once per security reveal **after** the revealed
-    /// card's own effects resolve. Consumed by other-zone effects that watch
-    /// for security checks (e.g. "When security is checked, gain 1 memory").
+    /// card's own effects resolve (§15-16-10-2) and **before** the battle
+    /// against a Security Digimon (§13-1-8-2 precedes §13-1-8-3). Collected
+    /// from BOTH players' battle areas, turn player first. Consumed by
+    /// effects that watch for security checks (e.g. "When security is
+    /// checked, gain 1 memory"; BT20-005's attacker-side "gain <Jamming>").
     /// Mirrors Python's `OnSecurityCheck`.
     OnSecurityCheck,
     /// Attacker-side observer timing fired when one of the controller's

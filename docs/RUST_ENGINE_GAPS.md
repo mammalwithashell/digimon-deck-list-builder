@@ -5261,14 +5261,40 @@ Required follow-up: public-mask tests for both assignments, clone and physical-i
 Design and full findings: `docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md`.
 Rule citations below use the Comprehensive Rules Manual **Ver. 4.3 (2026-09-18)**; the base-repo PDF is still Ver. 3.6, and the 3.6 numbering is given where it differs.
 
-### Security check battles the Security Digimon before resolving the effects the check triggered  [G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE]
+### G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE — RESOLVED (2026-10-15)
 
-- **Rule:** §13-1-8 (3.6: §13-1-7). Procedure per checked card: reveal (13-1-8-1) → *effects triggered by the security check are resolved* (13-1-8-2-1) → battle against a Security Digimon (13-1-8-3) → trash (13-1-8-4) → next check (13-1-8-5). `[Security]` effects go first within the triggered window (§15-16-10-2).
-- **DCGO:** `Assets/Scripts/Script/CardController.cs` `ISecurityCheck.SecurityCheck` collects `EffectTiming.OnSecurityCheck` skill infos at reveal, resolves the `[Security]` skill, then the collected triggered skills, and only then enters `#region battle with security Digimon`.
-- **Ours:** `code/digimon-engine/src/combat/mod.rs` `SecurityPhase` runs `SecuritySkillDrain → BattleResolved → OnSecurityCheckDrain`. Observer triggers ("when a security check is performed", "when your opponent's Digimon checks security") resolve **after** the battle, so any observer that changes DP, suspends, or deletes changes the battle's outcome relative to the rules and to DCGO.
-- **Tests pinning the current order:** none found (`OnSecurityCheck` appears in `tests/cards_behavioral/st2/st2_13.rs` as a negative and in `tests/dsl/phase3d_event_context.rs` via direct enqueue only).
-- **Fix shape:** reorder the phase machine to `SecuritySkillDrain → OnSecurityCheckDrain → BattleResolved`, keeping `WhenWouldLoseSecurity`/`OnLoseSecurity` where the §13-1-6 removal timing puts them; add a `rules_conformance` test with a DP-modifying observer on each side of the battle.
-- **Conformance repro:** `ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle` (`#[ignore]`d): P1's `SEC_CHECK_OBS_MINUS_DP` (-3000 DP to the checking Digimon) should make P0's 7000 DP attacker lose to a 5000 DP Security Digimon; observed, the attacker wins the battle and only then drops to 4000 DP.
+- **Found by:** the 2026-10-15 rules-conformance investigation
+  (`docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md`, finding F2).
+- **Rule:** Comprehensive Rules §13-1-8 (Ver. 4.3; §13-1-7 in the Ver. 3.6 PDF) orders each
+  checked card: reveal (§13-1-8-1) → *effects triggered by the security check* resolve
+  (§13-1-8-2, the checked card's `[Security]` effect first per §15-16-10-2) → battle against a
+  Security Digimon (§13-1-8-3-1; skipped for a non-Digimon card, §13-1-8-3-2) → trash
+  (§13-1-8-4) → next check (§13-1-8-5).
+- **Was:** `drive_security_resolution` ran `SecuritySkillDrain → BattleResolved →
+  OnSecurityCheckDrain`, so a "when a security check is performed" observer's DP / keyword grant
+  landed *after* the battle it was printed to influence. The observer scan also covered only the
+  defender's battle area, although attacker-side observers exist (DCGO BT20-005 "gain `<Jamming>`
+  for the turn" ESS, BT12-088 "Memory +2" ESS) and DCGO collects `OnSecurityCheck` skill infos from
+  both players (`AutoProcessing.GetSkillInfos` → `Players_ForTurnPlayer`, turn player first) before
+  `#region battle with security Digimon` (`CardController.cs`, `ISecurityCheck.SecurityCheck`).
+- **Now:** `SecuritySkillDrain → OnSecurityCheckDrain → BattleResolved → (EndOfSecurityBattle*) →
+  WhenWouldLoseSecurity → OnLoseSecurityDrain → Dispose → DisposeFinalize`
+  (`code/digimon-engine/src/combat/mod.rs`, `SecurityPhase` in `src/selection.rs`).
+  `TriggerSource::OnSecurityCheck` now scans both players' battle areas, turn player first
+  (`src/effect_queue.rs`). The §13-1-6 removal timing, the 0-security win check, and the
+  park-and-resume path (`advance_security_resolution` re-enters `OnSecurityCheckDrain` with its
+  `phase_enqueue_done` guard) are unchanged.
+- **Tests:** `code/digimon-engine/tests/combat/security_check_order.rs` —
+  `defender_observer_dp_penalty_resolves_before_security_battle` (a),
+  `attacker_observer_dp_bonus_resolves_before_security_battle` (b),
+  `security_effect_resolves_before_observers_and_both_before_battle` (c),
+  `non_digimon_security_card_runs_observers_skips_battle_and_trashes` (d). All four were red
+  before the reorder.
+- **Oracle exams:** no scenario under `qa/dcgo-exams/` scripts a "when a security check is
+  performed" observer (every `security check` hit is a `<Piercing>` / `<Security A.>` clause), and
+  no production YAML uses `when: on_security_check` yet, so no exam expected row depends on this
+  order. The first card authored on that timing (BT20-005 / BT12-088 are the DCGO exemplars) should
+  get an exam that pins observer-before-battle against the oracle.
 
 ### DNA digivolution result keeps the base permanent's orientation and identity  [G-ENGINE-DNA-RESULT-KEEPS-BASE-ORIENTATION]
 

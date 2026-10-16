@@ -47,7 +47,7 @@ fn progress_attacker_does_not_suppress_security_skill_drain() {
     // Sanity check: an attacker with Progress still causes the defender's
     // SecuritySkill phase to run. No revealed card carries a SecuritySkill
     // effect in this fixture — this test verifies the phase transitions
-    // through SecuritySkillDrain → BattleResolved normally, as a regression
+    // through SecuritySkillDrain → OnSecurityCheckDrain → BattleResolved normally, as a regression
     // guard against accidentally re-adding a gate there.
     let mut r = DebugRunner::builder()
         .add_card(fighter_with_keywords("ATK", 6000, vec![Keyword::Progress]))
