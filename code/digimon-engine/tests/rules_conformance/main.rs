@@ -5,6 +5,14 @@
 //! `#[macro_use]` on `cite` must stay first so sibling chapter modules can use
 //! `cite!` (a test crate cannot `#[macro_export]`).
 
+/// mimalloc as this test binary's global allocator, exactly as
+/// `tests/cards_behavioral/main.rs` does. With the Windows system heap the
+/// target stalls at the default thread count (heap-lock contention,
+/// CLAUDE.md rule 33). `#[global_allocator]` must live in the binary crate,
+/// and an integration-test binary is its own crate, so it goes here.
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[macro_use]
 mod cite;
 mod meta;

@@ -1063,6 +1063,9 @@ fn de_digivolve_optionality_matches_rule() {
 ///   (§15-5-2). DCGO agrees: `IDegeneration` (`CardController.cs`
 ///   ~L5313-5385) trashes 1 card at a time, then stacks
 ///   `EffectTiming.WhenTopCardTrashed` ONCE with every trashed card.
+///   This observer half is PROVISIONAL until an `on_top_card_trashed` DSL
+///   timing exists (`G-DSL-TOP-CARD-TRASHED-TIMING`): the witness is authored
+///   on the stand-in `on_digivolution_card_trashed`.
 #[test]
 fn de_digivolve_multi_card_trash_is_simultaneous_but_sequential() {
     cite!(
@@ -2371,6 +2374,8 @@ fn assert_link_adds(host: &str, links: usize, aura: bool) {
 
 /// At the maximum, linking is still legal and REPLACES: `LINK_A` is linked,
 /// the count stays the same, and exactly 1 existing link card is trashed.
+/// Simultaneity (§4-9-5 "trashed at the same time as the newly linked
+/// cards") is not asserted.
 fn assert_link_replaces(host: &str, links: usize, aura: bool) {
     let (linked, trash) = link_outcome(host, links, aura).unwrap_or_else(|| {
         panic!("{host} with {links} link cards (aura {aura}): at the limit the link is still legal")

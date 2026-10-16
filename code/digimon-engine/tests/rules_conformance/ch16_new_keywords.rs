@@ -668,16 +668,26 @@ fn engage_timing_matches_rule() {
 /// Your Turn timing."
 ///
 /// A trigger-type effect pends with the other effects triggered at the same
-/// timing, and activates -- all of its processing -- before the next one
-/// (§15-4-2-3, §15-8-3). P0 has `ENGAGE` and `EOT_MEM` ("[End of Your Turn]
-/// Gain 2 memory"). At the end of P0's turn both pend in one `TriggerOrder`.
-/// P0 activates <Engage> first: its processing ("this Digimon may attack")
-/// is offered while `EOT_MEM` is still pending, and the attack (here: a
-/// security check) happens BEFORE `EOT_MEM` gains memory.
+/// timing (§15-4-2-3, §15-8-3). P0 has `ENGAGE` and `EOT_MEM` ("[End of Your
+/// Turn] Gain 2 memory"). At the end of P0's turn both pend in one
+/// `TriggerOrder`. P0 activates <Engage> first: its processing ("this
+/// Digimon may attack") is offered while `EOT_MEM` is still pending, and
+/// `EOT_MEM` resolves only after the attack declaration.
+///
+/// Official Q&A Q3868 / Q3869 (EX7-064, <Vortex>, applied to <Engage> by
+/// analogy: both are trigger-type end-of-turn "may attack" keywords):
+/// activating the keyword first, "you can activate <Vortex> and make an
+/// attack declaration, [the other] effect that triggered simultaneously will
+/// activate, then the counter timing will occur." So the still-pending
+/// effect resolves AFTER the attack declaration and BEFORE the counter timing
+/// / security check; the test pins declaration < `EOT_MEM` < security check,
+/// exactly as `ch16_attack_keywords::{vortex,execute,overclock}_kind_matches_rule`.
 ///
 /// DCGO: `CardEffectFactory/KeyWordEffects/Engage.cs` builds <Engage> as an
-/// `ActivateClass` on `OnEndTurn`; `EngageProcess` runs the attack
-/// (`SelectAttackEffect.Activate()`) inside its `ActivateCoroutine`.
+/// `ActivateClass` on `OnEndTurn`; `EngageProcess` runs the whole attack
+/// (`SelectAttackEffect.Activate()`) inside its `ActivateCoroutine`, so in
+/// DCGO the other effect waits for the whole attack. The official ruling
+/// governs over DCGO here.
 #[test]
 #[ignore = "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS (§16-44-2)"]
 fn engage_kind_matches_rule() {
@@ -709,6 +719,10 @@ fn engage_kind_matches_rule() {
         .decode_action(encode_attack(engage.index as u16, SECURITY_TARGET), 0);
     settle_declining(&mut r);
     let events = r.events_since(cp);
+    let declared = events
+        .iter()
+        .position(|e| matches!(e, GameEvent::Attack { .. }))
+        .expect("the <Engage> attack was declared");
     let check = events
         .iter()
         .position(|e| matches!(e, GameEvent::SecurityReveal { .. }))
@@ -720,8 +734,8 @@ fn engage_kind_matches_rule() {
         })
         .expect("EOT_MEM resolved");
     assert!(
-        check < gain,
-        "the attack (#{check}) precedes EOT_MEM (#{gain}), which was ordered after it"
+        declared < gain && gain < check,
+        "declaration (#{declared}) < EOT_MEM (#{gain}) < security check (#{check})"
     );
 }
 

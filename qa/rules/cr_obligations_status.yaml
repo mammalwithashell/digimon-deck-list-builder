@@ -470,7 +470,7 @@
   blocks_training: true
   gap_id: G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS
   tests: ["ch16_new_keywords::engage_kind_matches_rule", "ch16_new_keywords::engage_timing_matches_rule"]
-  note: "Timing half proven (no <Engage> at the end of the opponent's turn). Kind half fails: <Engage> pends in a TriggerOrder with another [End of Your Turn] effect, but choosing it first only grants MayAttack; the other effect resolves before the attack, which happens after the drain in EndOfTurnAction. engage_kind_matches_rule is #[ignore]d."
+  note: "Timing half proven (no <Engage> at the end of the opponent's turn). Kind half fails: <Engage> pends in a TriggerOrder with another [End of Your Turn] effect, but choosing it first only grants MayAttack; the other effect resolves before the attack declaration, which happens after the drain in EndOfTurnAction. The test pins declaration < other effect < security check (Q3868/Q3869, EX7-064, by analogy with <Vortex>). engage_kind_matches_rule is #[ignore]d."
 "16-44-3":
   status: proven
   tests: ["ch16_new_keywords::engage_optionality_matches_rule"]
@@ -1058,7 +1058,7 @@
 "16-12-5":
   status: proven
   tests: ["ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential"]
-  note: "<De-Digivolve 2>: trash order top first; a 'when the top stacked card of one of your Digimon is trashed' observer (BT21-094 wording; DCGO WhenTopCardTrashed, stacked once per IDegeneration) triggers once. The fixture is authored on on_digivolution_card_trashed for lack of a top-card timing (G-DSL-TOP-CARD-TRASHED-TIMING)."
+  note: "<De-Digivolve 2>: trash order top first; a 'when the top stacked card of one of your Digimon is trashed' observer (BT21-094 wording; DCGO WhenTopCardTrashed, stacked once per IDegeneration) triggers once. The fixture is authored on on_digivolution_card_trashed for lack of a top-card timing (G-DSL-TOP-CARD-TRASHED-TIMING): the observer half is provisional until an on_top_card_trashed DSL timing exists (witness authored on the stand-in on_digivolution_card_trashed)."
 "16-12-6":
   status: proven
   tests: ["ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential"]
