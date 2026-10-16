@@ -1,8 +1,8 @@
 # Aegis conformance scenario index
 
-Source: `apps/api/src/engine/conformance/*.test.ts` @ `ec0cd22f0`. One line per `it(...)` title. Generated; do not edit by hand.
+Source: `apps/api/src/engine/conformance/*.test.ts` @ `ec0cd22f0`. One line per `it(...)` title; parametrized `it.each(...)` tests are listed once, by their template title, and marked `[each]` (each expands to several runtime cases). Generated; do not edit by hand.
 
-Total: 647 scenarios across 85 files.
+Total: 689 entries across 85 files (647 `it`, 42 `it.each` [each]; each `[each]` entry expands to several runtime cases).
 
 ## _kb.meta.test.ts (4)
 
@@ -11,9 +11,10 @@ Total: 647 scenarios across 85 files.
 - _kb.meta.test.ts: no id is both cited and not-testable
 - _kb.meta.test.ts: reports coverage (proxy only — not a pass/fail gate; see README)
 
-## activation-cost-and-borrowed-gates.test.ts (1)
+## activation-cost-and-borrowed-gates.test.ts (2: 1 it, 1 it.each)
 
 - activation-cost-and-borrowed-gates.test.ts: fires the cost threshold from printed use cost when payment-only reduction reaches zero (Q5462)
+- activation-cost-and-borrowed-gates.test.ts: [each] %s: blocks a borrowed When Digivolving effect at the lender (Q5543)
 
 ## activation-cost-borrowed-effects.test.ts (2)
 
@@ -29,10 +30,13 @@ Total: 647 scenarios across 85 files.
 
 - activation-cost-targetless-payload.test.ts: pays BT19-086's four-Device compound cost when no Cyberdramon exists
 
-## activation-processing-costs.test.ts (3)
+## activation-processing-costs.test.ts (6: 3 it, 3 it.each)
 
+- activation-processing-costs.test.ts: [each] Option use with no evolution destination keeps its processing choice optional: accept=%s
 - activation-processing-costs.test.ts: 15-7-5: payable placement may be declared without a subsequent evolution card
 - activation-processing-costs.test.ts: 15-8-4-4-1: declaring a payable condition commits its payment before optional evolution
+- activation-processing-costs.test.ts: [each] Henry pays his declared condition independently of evolution availability: destination=%s
+- activation-processing-costs.test.ts: [each] $tamer publicly orders its complete unpaid placement batch: $permutation
 - activation-processing-costs.test.ts: BT15-091 rejects forged or duplicate ordered loose payments atomically
 
 ## ch01-game-overview.test.ts (23)
@@ -121,10 +125,11 @@ Total: 647 scenarios across 85 files.
 - ch03-game-areas.test.ts: 3-7-2: the security stack is private and face-down until individually revealed
 - ch03-game-areas.test.ts: 3-7-4: a face-up security card becomes public information (revealed to the opponent's view)
 
-## ch04-basic-terminology.test.ts (55)
+## ch04-basic-terminology.test.ts (56: 55 it, 1 it.each)
 
 - ch04-basic-terminology.test.ts: 4-1-1/4-1-4: paying a cost moves the gauge toward the opponent; 'gain X' moves it back toward you
 - ch04-basic-terminology.test.ts: 4-1-2/4-1-3: 'or less/more memory' reads from each side's OWN perspective of the shared gauge
+- ch04-basic-terminology.test.ts: [each] 4-2-2: playing $card (cost $playCost) at $memory memory moves the gauge exactly $playCost toward the opponent
 - ch04-basic-terminology.test.ts: 4-2-2: a cost larger than the gauge can move is not paid in part
 - ch04-basic-terminology.test.ts: 4-2-3-1: with an [Iliad] Tamer, BT24-041 (play cost 12) pays exactly the alternate cost of 7
 - ch04-basic-terminology.test.ts: 4-2-3-1: the alternate cost of 7 is what decides payability, so the play is legal at -3 memory and lands on -10
@@ -209,13 +214,14 @@ Total: 647 scenarios across 85 files.
 - ch06-game-procedures.test.ts: 6-6-4: an OnEndTurn effect that moves memory back to 0 or more postpones the end of the turn and continues the Main phase
 - ch06-game-procedures.test.ts: 6-6-4: a turn whose gauge never crossed is not postponed (the rule needs a MOVE, not a value)
 
-## ch07-playing-a-card.test.ts (20)
+## ch07-playing-a-card.test.ts (21: 20 it, 1 it.each)
 
 - ch07-playing-a-card.test.ts: 7-1-1: a card is played from hand into the battle area as a Main-phase action; illegal off-phase
 - ch07-playing-a-card.test.ts: 7-1-2-1: a Digimon can't attack the same turn it was played
 - ch07-playing-a-card.test.ts: 7-1-2-4: an unaffordable play returns the card unchanged and doesn't move memory
 - ch07-playing-a-card.test.ts: 7-2-1: the play cost is reduced by the requirement's value for each material placed
 - ch07-playing-a-card.test.ts: 7-2-2-1/6: chosen hand materials are revealed and consumed atomically by the declaration
+- ch07-playing-a-card.test.ts: [each] 7-2-2-8: printed material order holds when %s starts on the battle area
 - ch07-playing-a-card.test.ts: 7-2-2-4: a declared DigiXros can't place 0 materials
 - ch07-playing-a-card.test.ts: 7-2-2-7: a battle-area material's OWN digivolution cards are trashed, not carried under the 
 - ch07-playing-a-card.test.ts: 7-2-2-10: an 'if DigiXrosing with 2 cards' clause fires only when 2+ materials were actually placed
@@ -232,7 +238,7 @@ Total: 647 scenarios across 85 files.
 - ch07-playing-a-card.test.ts: 7-3-3-2/7-3-3-3: the reduced cost is paid after other modifiers, and materials are placed before the play resolves
 - ch07-playing-a-card.test.ts: 7-3-3-3: an unaffordable Assembly play (even reduced) is rejected before any state changes
 
-## ch08-digivolution.test.ts (19)
+## ch08-digivolution.test.ts (20: 19 it, 1 it.each)
 
 - ch08-digivolution.test.ts: 8-1-1: a hand Digimon stacks onto an existing field permanent, paying its evolve cost, as a Main-phase action
 - ch08-digivolution.test.ts: 8-1-2-3/8-1-2-4: the digivolved Digimon is ONE Digimon (prior top becomes a digivolution card), carrying over suspended orientation
@@ -252,6 +258,7 @@ Total: 647 scenarios across 85 files.
 - ch08-digivolution.test.ts: 8-4-1: App Fusion places a linked card's specified fusion-target on top of a battle-area Digimon
 - ch08-digivolution.test.ts: 8-4-2-1: the fusion-target's printed app-fusion cost is charged
 - ch08-digivolution.test.ts: 8-4-3-3: the App Fusion procedure draws the player 1 card
+- ch08-digivolution.test.ts: [each] 8-1-3-1..3: choosing the $label pays that requirement's cost, stacks the card, and draws 1
 - ch08-digivolution.test.ts: 8-1-3-1: the chosen field card must meet the CHOSEN requirement — no fallback to another path
 
 ## ch09-using-cards.test.ts (7)
@@ -337,7 +344,7 @@ Total: 647 scenarios across 85 files.
 - ch14-battles.test.ts: 14-2-4: an effect triggered by the battle (OnDestroyedAnyone) is fully resolved before the next action (end-of-attack) begins
 - ch14-battles.test.ts: NOW MET: a card's own '[When this Digimon wins/ends a battle]' clause filed at EffectTiming.OnEndBattle should actually fire when a battle ends
 
-## ch15-01-effect-basics.test.ts (13)
+## ch15-01-effect-basics.test.ts (14: 13 it, 1 it.each)
 
 - ch15-01-effect-basics.test.ts: 15-1-5: a mandatory (non-optional) effect resolves without asking — no 'use this effect?' prompt
 - ch15-01-effect-basics.test.ts: 15-1-7/15-2-1-1: an unqualified target spec reaches the battle area, and its source is classified as a Digimon effect
@@ -348,6 +355,7 @@ Total: 647 scenarios across 85 files.
 - ch15-01-effect-basics.test.ts: 15-15-2-1/15-15-2-2: a target "gains" a keyword and is thereafter affected by it
 - ch15-01-effect-basics.test.ts: (structural) the DP change-information ledger applies 'most recently applied wins' — the same rule §15-12-1-3 states for added information
 - ch15-01-effect-basics.test.ts: 15-1-8: an effect that references Security Digimon changes the DP a Security Digimon battles with
+- ch15-01-effect-basics.test.ts: [each] 15-1-9: returning a $label to the hand meets the 'return to hand' processing condition although it never reaches the hand
 - ch15-01-effect-basics.test.ts: 15-1-10: a 'card added to the security stack' trigger fires for a Digimon card but not for a Digi-Egg or token
 - ch15-01-effect-basics.test.ts: 15-15-6-1: the replacing Digimon stands in for a bracketed requirement ([Greymon] of BT10-024)
 - ch15-01-effect-basics.test.ts: 15-15-6-2 control: BT19-065 accepts a material that meets its printed requirement
@@ -430,16 +438,23 @@ Total: 647 scenarios across 85 files.
 - ch16a-security-blocker-draw.test.ts: 16-9-1: a printed-<Jamming> attacker isn't deleted by losing a battle against a Security Digimon
 - ch16a-security-blocker-draw.test.ts: NEGATIVE CONTROL: without Jamming, the identical losing battle against a Security Digimon deletes the attacker
 
-## ch16b-digivolve-and-battle-keywords.test.ts (14)
+## ch16b-digivolve-and-battle-keywords.test.ts (21: 14 it, 7 it.each)
 
 - ch16b-digivolve-and-battle-keywords.test.ts: 16-10-1: suspending 1 Digimon reduces the digivolution cost by the printed amount
 - ch16b-digivolve-and-battle-keywords.test.ts: 16-11-1: an opponent's <Reboot> permanent unsuspends during the turn player's own unsuspend phase
 - ch16b-digivolve-and-battle-keywords.test.ts: NEGATIVE CONTROL: without Reboot, an opponent's suspended permanent stays suspended through the turn player's unsuspend phase
 - ch16b-digivolve-and-battle-keywords.test.ts: a Digimon deleted in battle with <Retaliation> also deletes the opponent's battled Digimon
 - ch16b-digivolve-and-battle-keywords.test.ts: 16-14-1: trashing the specified number of digivolution cards activates the attached effect
+- ch16b-digivolve-and-battle-keywords.test.ts: [each] %s publicly attacks the turn played while the neutral control cannot
 - ch16b-digivolve-and-battle-keywords.test.ts: loses printed Rush after public digivolution without resetting its fresh-play restriction
+- ch16b-digivolve-and-battle-keywords.test.ts: [each] $source inherited Rush matches $destination and resolves $security security
+- ch16b-digivolve-and-battle-keywords.test.ts: [each] $source continuously grants Rush to a new eligible recipient until its source is removed
+- ch16b-digivolve-and-battle-keywords.test.ts: [each] $source inherited trigger distinguishes plays, enforces frequency and resets next turn
 - ch16b-digivolve-and-battle-keywords.test.ts: EX3-049 grants Rush only to the newly played D-Brigade subject
 - ch16b-digivolve-and-battle-keywords.test.ts: P-098 offers only blue Rush recipients after a yellow effect play
+- ch16b-digivolve-and-battle-keywords.test.ts: [each] %s chooses one Rush recipient from a public simultaneous Dragon play
+- ch16b-digivolve-and-battle-keywords.test.ts: [each] %s keeps two inherited Rush occurrences independent on one host
+- ch16b-digivolve-and-battle-keywords.test.ts: [each] %s binds Rush only to the Dragon in a public mixed play
 - ch16b-digivolve-and-battle-keywords.test.ts: 16-16-1/16-16-5: offers the attack only once the opponent has 1 or more memory
 - ch16b-digivolve-and-battle-keywords.test.ts: 16-17-1/16-17-3: a <Delay> [Main] ability is unusable the turn the card enters the battle area
 - ch16b-digivolve-and-battle-keywords.test.ts: becomes activatable (and mandatorily trashes the card) once it's been on the field since a prior turn
@@ -508,8 +523,11 @@ Total: 647 scenarios across 85 files.
 - ch18-other-information.test.ts: §18-3-3: a loop one of the players CAN stop is stopped, not resolved as a §18-3-2 draw
 - ch18-other-information.test.ts: §18-3-3-3: after the stop, the same infinite loop is not performed again in that window
 
-## digivolution-card-placement.test.ts (0)
+## digivolution-card-placement.test.ts (3: 0 it, 3 it.each)
 
+- digivolution-card-placement.test.ts: [each] $card public attack $mode reports only actual bottom deck payment
+- digivolution-card-placement.test.ts: [each] $card still offers and pays the processing condition without a target (15-7-5)
+- digivolution-card-placement.test.ts: [each] $card actual turn with egg=$hasEgg retains face-up bottom placement and full processing
 
 ## duration-remaining-fronts.test.ts (2)
 
@@ -589,14 +607,16 @@ Total: 647 scenarios across 85 files.
 - interaction-rule-check-triggers.test.ts: keeps a rule check caused by a chosen deletion effect in a later derived batch
 - interaction-rule-check-triggers.test.ts: keeps a rule-check deletion watcher with printed start-turn and deletion effects
 
-## interaction-trigger-timing.test.ts (8)
+## interaction-trigger-timing.test.ts (10: 8 it, 2 it.each)
 
 - interaction-trigger-timing.test.ts: resolves the turn player's EX13-028 On Deletion before the opponent's after a mutual battle deletion
 - interaction-trigger-timing.test.ts: lets seat 0 order simultaneous deletion effects and decline play before seat 1 chooses
 - interaction-trigger-timing.test.ts: lets seat 1 order simultaneous deletion effects and decline play before seat 0 chooses
 - interaction-trigger-timing.test.ts: drops a pending battle deletion watcher when an earlier On Deletion removes its surviving source
+- interaction-trigger-timing.test.ts: [each] offers both in one order request and resolves them as chosen (%s)
 - interaction-trigger-timing.test.ts: resolves EX6 Shoutmon's Alliance and When Attacking before MetalEtemon and the inherited EX5 Etemon
 - interaction-trigger-timing.test.ts: resolves BT13-021's When Attacking before BT11 Analogman's redirect on an effect-driven attack
+- interaction-trigger-timing.test.ts: [each] holds %s's On Play until EX13 Alphamon's End of Turn effect ends, then resolves it inside the attack
 - interaction-trigger-timing.test.ts: lets BT12-002's inherited When Attacking draw again after Paildramon DNA digivolves in the same turn
 - interaction-trigger-timing.test.ts: lets BT13-021 use its Once Per Turn When Attacking again after it leaves and is played again
 
@@ -612,15 +632,18 @@ Total: 647 scenarios across 85 files.
 - keyword-alliance-consent.test.ts: lets the controller choose one exact ally and applies its DP to the battle
 - keyword-alliance-consent.test.ts: allows public refusal while preserving every eligible ally and completing the attack
 
-## keyword-ascension-lifecycle.test.ts (4)
+## keyword-ascension-lifecycle.test.ts (6: 4 it, 2 it.each)
 
+- keyword-ascension-lifecycle.test.ts: [each] $card preserves exact card identity and source destinations
+- keyword-ascension-lifecycle.test.ts: [each] Execute preserves the chosen reaction order (Ascension first: %s)
 - keyword-ascension-lifecycle.test.ts: publicly refuses optional Ascension and leaves the deleted card in trash
 - keyword-ascension-lifecycle.test.ts: orders public Ascension before a pending On Deletion effect and preserves source identity
 - keyword-ascension-lifecycle.test.ts: uses a granted Ascension from a public keyword grant and moves that exact card
 - keyword-ascension-lifecycle.test.ts: expires granted Ascension before the next player's public battle
 
-## keyword-blast-digivolve-consent.test.ts (4)
+## keyword-blast-digivolve-consent.test.ts (5: 4 it, 1 it.each)
 
+- keyword-blast-digivolve-consent.test.ts: [each] does not waive a base grant's condition or turn restriction for %s
 - keyword-blast-digivolve-consent.test.ts: does not offer or accept a generic Blast Digivolve onto Yuuko
 - keyword-blast-digivolve-consent.test.ts: passes the real Counter window without consuming an ACE or base when the defender declines
 - keyword-blast-digivolve-consent.test.ts: accepts AD1-005 over the selected real red level-5 base and waives its cost
@@ -631,9 +654,10 @@ Total: 647 scenarios across 85 files.
 - keyword-blast-dna-consent.test.ts: chooses an exact field/hand recipe and resolves the DNA stack and attack
 - keyword-blast-dna-consent.test.ts: passes the Counter and preserves both DNA materials while the attack resolves
 
-## keyword-blocker-lifecycle.test.ts (2)
+## keyword-blocker-lifecycle.test.ts (3: 2 it, 1 it.each)
 
 - keyword-blocker-lifecycle.test.ts: publicly plays BT19-064, blocks on the opponent turn, then expires it
+- keyword-blocker-lifecycle.test.ts: [each] rejects %s from a public block window
 - keyword-blocker-lifecycle.test.ts: accepts an untapped printed AD1-005 block and resolves against that exact blocker
 
 ## keyword-blocker-source-changes.test.ts (2)
@@ -666,8 +690,10 @@ Total: 647 scenarios across 85 files.
 
 - keyword-delay-boundaries.test.ts: refuses the entry-turn Delay and activates it after a natural owner-turn boundary
 
-## keyword-detach-lifecycle.test.ts (7)
+## keyword-detach-lifecycle.test.ts (10: 7 it, 3 it.each)
 
+- keyword-detach-lifecycle.test.ts: [each] %s may trash a specified link to prevent deletion by the opponent's Option
+- keyword-detach-lifecycle.test.ts: [each] prevents opponent %s after paying one eligible link
 - keyword-detach-lifecycle.test.ts: only the threatened Digimon's controller can decline Detach
 - keyword-detach-lifecycle.test.ts: does not offer payment using a link without the specified trait
 - keyword-detach-lifecycle.test.ts: does not save a Digimon from the zero-DP rule after an opponent Option reduces its DP
@@ -675,6 +701,7 @@ Total: 647 scenarios across 85 files.
 - keyword-detach-lifecycle.test.ts: fires an allied EX10-062 watcher while Gaia Force is prevented by Detach
 - keyword-detach-lifecycle.test.ts: does not prevent the owner's own deletion cost
 - keyword-detach-lifecycle.test.ts: pays Detach when an attack into an equal-DP security Digimon would delete the holder
+- keyword-detach-lifecycle.test.ts: [each] does not offer the processing choice with unpayable links $links (accept=$accept)
 
 ## keyword-digi-burst-parameters.test.ts (5)
 
@@ -706,8 +733,11 @@ Total: 647 scenarios across 85 files.
 - keyword-fragment-parameters.test.ts: allows public refusal with three eligible sources and then deletes the host normally
 - keyword-fragment-parameters.test.ts: uses EX12-060 Fragment 2 through a public battle and preserves its host
 
-## keyword-guard-lifecycle.test.ts (14)
+## keyword-guard-lifecycle.test.ts (18: 14 it, 4 it.each)
 
+- keyword-guard-lifecycle.test.ts: [each] %s pays its own printed Guard to save another Digimon from public Gaia Force
+- keyword-guard-lifecycle.test.ts: [each] prevents opposing %s relocation by paying Guard, destination %s
+- keyword-guard-lifecycle.test.ts: [each] face-up security grants Guard to the actual ME holder, faceUp: %s
 - keyword-guard-lifecycle.test.ts: drops a face-up EX12-072 Guard grant after public security exchange
 - keyword-guard-lifecycle.test.ts: re-enters Guard after EX12-072 is publicly replayed from hand
 - keyword-guard-lifecycle.test.ts: one paid grantor saves both targets of public Iron-Fisted Onslaught after its aura disappears
@@ -720,6 +750,7 @@ Total: 647 scenarios across 85 files.
 - keyword-guard-lifecycle.test.ts: does not use Guard to prevent the controller's public Heat Viper payment
 - keyword-guard-lifecycle.test.ts: a lone security-granted Guard holder cannot pay to save itself
 - keyword-guard-lifecycle.test.ts: only the actual granted holder's controller can answer its Guard decision
+- keyword-guard-lifecycle.test.ts: [each] lets the controller choose %s when both keyword reactions apply
 - keyword-guard-lifecycle.test.ts: keeps a paid Guard stack's inherited OnDeletion and then resolves sibling Detach
 - keyword-guard-lifecycle.test.ts: falls back to Guard when Detach has only a non-Seven-Code linked card
 
@@ -800,21 +831,31 @@ Total: 647 scenarios across 85 files.
 - keyword-scapegoat-lifecycle.test.ts: does not protect against its controller's own public delete-own effect
 - keyword-scapegoat-lifecycle.test.ts: uses Scapegoat against a public opponent Gaia Force deletion and preserves the selected holder
 
-## keyword-security-attack-accumulation.test.ts (1)
+## keyword-security-attack-accumulation.test.ts (2: 1 it, 1 it.each)
 
 - keyword-security-attack-accumulation.test.ts: combines WarGreymon's public +1 with ST1-07's inherited +1 for three exact checks
+- keyword-security-attack-accumulation.test.ts: [each] publicly applies the current -2 provider to one complete security attack with %s Security cards
 
 ## keyword-security-attack-lifecycle.test.ts (2)
 
 - keyword-security-attack-lifecycle.test.ts: publicly grants BT26-017 Security Attack +1 and reveals two cards
 - keyword-security-attack-lifecycle.test.ts: publicly applies BT19-035 Security Attack -1, then expires it
 
-## keyword-succession-lifecycle.test.ts (4)
+## keyword-succession-lifecycle.test.ts (13: 4 it, 9 it.each)
 
+- keyword-succession-lifecycle.test.ts: [each] $card publishes Succession after legal evolution over $base
+- keyword-succession-lifecycle.test.ts: [each] publicly removes the current $upper provider and exposes the lower $lower source for $card
 - keyword-succession-lifecycle.test.ts: publicly removes BT3-056, then the exposed BT25-059 reaction fires on the next natural turn
 - keyword-succession-lifecycle.test.ts: publicly loses a live copied redirector when its granted host returns to hand
+- keyword-succession-lifecycle.test.ts: [each] public Chronomon attack resolves the gained effect, acceptance %s
+- keyword-succession-lifecycle.test.ts: [each] public Digisorption payment with %s redirect
+- keyword-succession-lifecycle.test.ts: [each] redirect is used only once after two public evolutions, copied %s
 - keyword-succession-lifecycle.test.ts: uses two independent copied Digisorption redirectors for two public payments
 - keyword-succession-lifecycle.test.ts: resets a copied BT3-056 redirector across a real next turn
+- keyword-succession-lifecycle.test.ts: [each] supplemental failed suspension preserves redirect usage, copied %s
+- keyword-succession-lifecycle.test.ts: [each] public paid suspension resolves Ceresmon's reaction, copied %s
+- keyword-succession-lifecycle.test.ts: [each] public Bagramon placement copies $lender without copying Succession again
+- keyword-succession-lifecycle.test.ts: [each] public Giromon placement hides $0 from Succession
 
 ## keyword-training-boundaries.test.ts (4)
 
@@ -858,8 +899,9 @@ Total: 647 scenarios across 85 files.
 
 - manual-03-effect-rules-and-keywords.test.ts: a Digimon standing at 0 DP after effects finish resolving is deleted at the next rule-check 
 
-## mother-eater-placement.test.ts (1)
+## mother-eater-placement.test.ts (2: 1 it, 1 it.each)
 
+- mother-eater-placement.test.ts: [each] $name
 - mother-eater-placement.test.ts: with an empty Digi-Egg deck still offers the 10-card-stack clause and plays three sources
 
 ## placement-remaining-fronts.test.ts (2)

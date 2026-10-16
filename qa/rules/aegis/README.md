@@ -12,7 +12,7 @@ Vendored, read-only inputs from the Aegis project, used by the rules-conformance
 |---|---|
 | `comprehensive-4.3.md` | Verbatim copy of `data/kb/rules/comprehensive.md` at the commit above: a `pdftotext -raw` extraction of the official Comprehensive Rules Manual Ver. 4.3 (3,925 lines). The rules parser reads this. |
 | `mechanisms-by-rule.json` | `{ "<rule-id>": ["<mechanism>", ...] }` for all 1,119 `kind == "rule"` obligations in Aegis `data/kb/rule-obligations.json` (key = `source.section`, value = `mechanisms`), sorted by rule id. 18 distinct mechanism strings. |
-| `conformance-scenario-index.md` | One line per `it("...")` title in Aegis `apps/api/src/engine/conformance/*.test.ts` (647 scenarios across 85 files). A checklist to read when authoring our own mechanics tests; documentation, not code. |
+| `conformance-scenario-index.md` | One line per `it("...")` title in Aegis `apps/api/src/engine/conformance/*.test.ts` (689 entries across 85 files: 647 plain `it` plus 42 parametrized `it.each`, listed once by template title and marked `[each]`; each `[each]` entry expands to several runtime cases). A checklist to read when authoring our own mechanics tests; documentation, not code. |
 | `LICENSE-MIT.txt` | Aegis licence. |
 
 ## Rules for these files
