@@ -2194,19 +2194,58 @@ fn on_ally_attack_still_fires_if_attacker_stack_changes_during_on_attack() {
     );
 }
 
+/// An attack observer with no qualifier: records the attacker it can see
+/// (`None` once the attacker has left) and gains memory.
+struct PlainAttackObserver {
+    timing: EffectTiming,
+    memory: i16,
+    seen: Arc<Mutex<Vec<Option<PermanentHandle>>>>,
+}
+
+impl CardEffect for PlainAttackObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = self.seen.clone();
+        let memory = self.memory;
+        vec![EffectBuilder::new(card, self.timing)
+            .name("Plain attack observer")
+            .process(move |ctx| {
+                seen.lock().unwrap().push(ctx.attack_attacker());
+                ctx.gain_memory(memory);
+            })
+            .build()]
+    }
+}
+
+fn no_security_reveal(r: &DebugRunner, cp: usize) -> bool {
+    !r.events_since(cp)
+        .iter()
+        .any(|e| matches!(e, GameEvent::SecurityReveal { .. }))
+}
+
+/// §15-4-3-2: P1's "when an opponent's Digimon attacks" observer triggers on
+/// the declaration together with P0's ally observer; when P0's observer
+/// returns the attacker to hand, P1's pending observer still activates
+/// (§15-8-3-9-1: a trigger-type effect activates once triggered; the attack
+/// was declared, so its trigger condition was met and does not un-happen).
+/// The attack itself ends: no battle, no security check. The observer must
+/// not read the Digimon that later occupies the attacker's old slot.
 #[test]
-fn on_opponent_attack_does_not_fire_if_ally_observer_removes_attacker() {
+fn on_opponent_attack_observer_still_fires_after_ally_observer_removes_attacker() {
     let mut r = DebugRunner::builder()
         .add_card(plain_digimon("ATTACKER", "Attacker", 3))
         .add_card(plain_digimon("ALLY-REMOVE", "Ally Remove", 3))
         .add_card(plain_digimon("OPP-OBS", "Opponent Observer", 3))
+        .add_card(plain_digimon("SEC", "Security", 3))
+        .security(1, &["SEC"])
         .memory(5)
         .start();
     let opponent_seen = Arc::new(Mutex::new(Vec::new()));
     r.register_effect("ALLY-REMOVE", Arc::new(ReturnAttackerOnAllyAttack));
     r.register_effect(
         "OPP-OBS",
-        Arc::new(OpponentAttackObserver {
+        Arc::new(PlainAttackObserver {
+            timing: EffectTiming::OnOpponentAttack,
+            memory: 2,
             seen: opponent_seen.clone(),
         }),
     );
@@ -2215,6 +2254,7 @@ fn on_opponent_attack_does_not_fire_if_ally_observer_removes_attacker() {
     r.place_on_field(0, "ALLY-REMOVE", None);
     r.place_on_field(1, "OPP-OBS", None);
     let before = r.memory();
+    let cp = r.event_checkpoint();
 
     let result = r.attack_player(attacker, 1, false);
     r.auto_resolve()
@@ -2223,51 +2263,55 @@ fn on_opponent_attack_does_not_fire_if_ally_observer_removes_attacker() {
     assert_eq!(
         result,
         digimon_engine::combat::AttackResult::Invalid,
-        "attack should stop after an ally observer removes the attacker"
+        "the attack ends once an ally observer removes the attacker"
     );
+    assert_eq!(r.security_count(1), 1, "no security check");
+    assert!(no_security_reveal(&r, cp), "the attack never reached security");
     assert_eq!(
-        r.memory(),
-        before,
-        "opponent observers must not fire after the attacker leaves during ally observer fan-out"
+        *opponent_seen.lock().unwrap(),
+        vec![None],
+        "the opponent observer still activates, with no stale attacker context"
     );
-    assert!(
-        opponent_seen.lock().unwrap().is_empty(),
-        "opponent observers must not receive stale attack context"
-    );
+    assert_eq!(r.memory(), before - 2, "P1's observer gained 2 memory");
 }
 
+/// §15-4-3-2 / §15-4-3-5-1: the attacker's OnAttack ("return this Digimon to
+/// hand") and both allies' "when one of your Digimon attacks" observers
+/// trigger on the same declaration and pend in one TriggerOrder. Activating
+/// the OnAttack first removes the attacker; the two observers stay pending
+/// and still activate (§15-8-3-9-1), seeing no attacker (ALLY-A now sits in
+/// the attacker's old slot and must not be reported as it). The attack ends:
+/// no battle, no security check.
 #[test]
-fn on_ally_attack_does_not_fire_if_attacker_left_during_on_attack() {
+fn on_ally_attack_observers_still_fire_after_attacker_left_during_on_attack() {
     let mut r = DebugRunner::builder()
         .add_card(plain_digimon("ATTACKER", "Attacker", 3))
         .add_card(plain_digimon("ALLY-A", "Ally A", 3))
         .add_card(plain_digimon("ALLY-B", "Ally B", 3))
+        .add_card(plain_digimon("SEC", "Security", 3))
+        .security(1, &["SEC"])
         .memory(5)
         .start();
     let ally_seen = Arc::new(Mutex::new(Vec::new()));
     r.register_effect("ATTACKER", Arc::new(ReturnSelfOnAttack));
-    r.register_effect(
-        "ALLY-A",
-        Arc::new(AllyAttackObserver {
-            seen: ally_seen.clone(),
-        }),
-    );
-    r.register_effect(
-        "ALLY-B",
-        Arc::new(AllyAttackObserver {
-            seen: ally_seen.clone(),
-        }),
-    );
+    for id in ["ALLY-A", "ALLY-B"] {
+        r.register_effect(
+            id,
+            Arc::new(PlainAttackObserver {
+                timing: EffectTiming::OnAllyAttack,
+                memory: 1,
+                seen: ally_seen.clone(),
+            }),
+        );
+    }
 
     let attacker = r.place_on_field(0, "ATTACKER", Some(0));
     r.place_on_field(0, "ALLY-A", None);
     r.place_on_field(0, "ALLY-B", None);
     let before = r.memory();
+    let cp = r.event_checkpoint();
 
     let result = r.attack_player(attacker, 1, false);
-    // §15-4-3-2 / §15-4-3-5-1: the attacker's OnAttack and both allies'
-    // observers trigger on the same declaration and pend in one TriggerOrder
-    // for the turn player; `auto_resolve` takes its first branch, the OnAttack.
     assert_eq!(result, digimon_engine::combat::AttackResult::InProgress);
     let first = r
         .pending_selection()
@@ -2276,22 +2320,24 @@ fn on_ally_attack_does_not_fire_if_attacker_left_during_on_attack() {
         .and_then(|c| c.first())
         .and_then(|c| c.timing);
     assert_eq!(first, Some(EffectTiming::OnAttack), "OnAttack is offered first");
+    // `auto_resolve` takes the first branch each time: the OnAttack, then the
+    // two observers.
     r.auto_resolve()
         .expect("attack prompts should auto-resolve");
 
+    assert!(r.game.pending_attack.is_none(), "the attack ended");
+    assert_eq!(r.security_count(1), 1, "no security check");
+    assert!(no_security_reveal(&r, cp), "the attack never reached security");
     assert!(
-        r.game.pending_attack.is_none(),
-        "attack should stop after the attacker leaves during OnAttack"
+        r.game.players[0].hand.iter().any(|c| c.card_id(&r.game.card_data) == "ATTACKER"),
+        "the attacker returned to hand"
     );
     assert_eq!(
-        r.memory(),
-        before,
-        "OnAllyAttack must not fire after the original attacker leaves"
+        *ally_seen.lock().unwrap(),
+        vec![None, None],
+        "both ally observers activate, with no stale attacker context"
     );
-    assert!(
-        ally_seen.lock().unwrap().is_empty(),
-        "shifted battle-area slots must not receive stale attacker context"
-    );
+    assert_eq!(r.memory(), before + 2);
 }
 
 #[test]

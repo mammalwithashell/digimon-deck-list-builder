@@ -597,3 +597,98 @@ fn raid_retarget_respects_cannot_be_redirected_candidate() {
     assert!(r.game.pending_selection.is_none());
     assert!(r.game.pending_attack.is_none());
 }
+
+/// `[When Attacking]` sibling that logs the attack target it sees.
+struct LogWhenAttacking(Arc<Mutex<Vec<String>>>);
+impl CardEffect for LogWhenAttacking {
+    fn effects(&self, c: CardHandle) -> Vec<Effect> {
+        let log = self.0.clone();
+        vec![Effect::when_attacking(c)
+            .name("Log [When Attacking]")
+            .process(move |ctx| {
+                let target = ctx.game.pending_attack.as_ref().map(|pa| pa.effective_target);
+                log.lock().unwrap().push(format!("sibling {target:?}"));
+            })
+            .build()]
+    }
+}
+
+/// `OnAttackTargetChange` observer that logs its activation.
+struct LogTargetChange(Arc<Mutex<Vec<String>>>);
+impl CardEffect for LogTargetChange {
+    fn effects(&self, c: CardHandle) -> Vec<Effect> {
+        let log = self.0.clone();
+        vec![Effect::on_attack_target_change(c)
+            .name("Log target change")
+            .process(move |_ctx| log.lock().unwrap().push("target change".to_string()))
+            .build()]
+    }
+}
+
+/// §15-8-3-2 / §15-4-5-2: `<Raid>` ordered first from the declaration pool,
+/// ahead of a sibling `[When Attacking]`. Its switch triggers an
+/// `OnAttackTargetChange` observer. Nothing else resolves while `<Raid>`'s
+/// body (the switch pick) is resolving; once it has, the DERIVED observer
+/// activates before the still-pending sibling, which then sees the switched
+/// target.
+#[test]
+fn raid_first_derived_target_change_observer_precedes_pending_sibling() {
+    let log: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("LOW"))
+        .add_card(card("HIGH"))
+        .add_card(card("WITNESS"))
+        .add_card(card("SEC"))
+        .security(1, &["SEC"])
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let _low = r.place_on_field(1, "LOW", Some(0));
+    let high = r.place_on_field(1, "HIGH", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Raid, Expiry::Permanent, 0);
+    r.game.modifiers.add(
+        high,
+        ModifierEntry::simple(ModifierType::ChangeDp, 3000, Expiry::Permanent, 1),
+    );
+    r.register_effect("ATK", Arc::new(LogWhenAttacking(log.clone())));
+    r.register_effect("WITNESS", Arc::new(LogTargetChange(log.clone())));
+    let _witness = r.place_on_field(0, "WITNESS", Some(0));
+
+    assert_eq!(r.attack_player(atk, 1, false), AttackResult::InProgress);
+    let order = r.game.pending_selection.as_ref().expect("the declaration's TriggerOrder");
+    assert_eq!(order.kind, SelectionKind::TriggerOrder, "{order:?}");
+    let raid = order
+        .effect_choices
+        .as_ref()
+        .unwrap()
+        .iter()
+        .find(|c| c.keyword == Some(Keyword::Raid))
+        .expect("the <Raid> branch")
+        .action_id;
+    r.game.resolve_selection(0, raid).expect("<Raid> first");
+
+    let switch = r.game.pending_selection.as_ref().expect("<Raid>'s switch pick");
+    assert_eq!(switch.kind, SelectionKind::OppField);
+    assert!(log.lock().unwrap().is_empty(), "nothing resolved yet");
+    r.game
+        .resolve_selection(0, encode_attack(0, high.index as u16))
+        .expect("switch to HIGH");
+
+    assert!(
+        r.game
+            .pending_selection
+            .as_ref()
+            .is_none_or(|s| s.kind != SelectionKind::TriggerOrder),
+        "the derived observer is not pooled with the pending sibling"
+    );
+    assert_eq!(
+        *log.lock().unwrap(),
+        vec![
+            "target change".to_string(),
+            format!("sibling {:?}", Some(AttackTarget::Digimon(high))),
+        ],
+        "the derived observer resolves first; the sibling then sees the switched target"
+    );
+}

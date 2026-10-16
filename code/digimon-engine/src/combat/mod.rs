@@ -1218,7 +1218,13 @@ impl Game {
                 reason,
             },
         );
-        self.drain_effect_queue();
+        // Deferred while an effect is resolving (e.g. the `<Raid>` body's
+        // switch pick, resolved inside the declaration's trigger pool): the
+        // derived OnAttackTargetChange observers wait for that effect to
+        // finish (§15-8-3-2) and then resolve before the effects still
+        // pending from the pool (§15-4-5-2), instead of draining those
+        // pending siblings mid-body.
+        self.maybe_drain_effect_queue();
     }
 
     /// Validate whether `target` is a legal attack target for `attacker`.
@@ -2301,6 +2307,10 @@ impl Game {
                     AttackTarget::Digimon(blocker),
                     AttackTargetChangeReason::Blocker,
                 );
+                // The target-change observers resolve before OnBlock is
+                // triggered (the substitution defers its drain inside a
+                // selection resolution; this order predates that deferral).
+                game.drain_effect_queue();
 
                 // OnBlock fires globally after the blocker is declared.
                 // The payload carries the blocked attacker as the event
@@ -2393,6 +2403,10 @@ impl Game {
             AttackTarget::Digimon(blocker),
             AttackTargetChangeReason::Blocker,
         );
+        // The target-change observers resolve before OnBlock is triggered
+        // (the substitution defers its drain inside a selection resolution;
+        // this order predates that deferral).
+        self.drain_effect_queue();
 
         if let Some(card) = self
             .player(attacker.player)
@@ -4069,7 +4083,19 @@ impl Game {
         }
     }
 
-    pub(crate) fn handle_still_attacking(&self, handle: PermanentHandle) -> bool {
+    /// The in-flight attack's attacker, or `None` once it has left the
+    /// battle area. `PendingAttack::attacker` is a slot handle: after the
+    /// attacker leaves, field compaction can put another permanent in that
+    /// slot. Observers that the declaration triggered stay pending and still
+    /// activate (§15-4-3-2; the attack happened), but must not read a later
+    /// occupant of the slot as the attacker.
+    pub(crate) fn live_attack_attacker(&self) -> Option<PermanentHandle> {
+        let pa = self.pending_attack.as_ref()?;
+        (!pa.declaration_committed || self.handle_still_attacking(pa.attacker))
+            .then_some(pa.attacker)
+    }
+
+    fn handle_still_attacking(&self, handle: PermanentHandle) -> bool {
         self.player(handle.player)
             .battle_area
             .get(handle.index as usize)

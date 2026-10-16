@@ -727,10 +727,7 @@ impl<'a> EffectReadContext<'a> {
     }
 
     pub fn attack_attacker(&self) -> Option<PermanentHandle> {
-        self.game
-            .pending_attack
-            .as_ref()
-            .map(|attack| attack.attacker)
+        self.game.live_attack_attacker()
     }
 
     pub fn attack_target(&self) -> Option<crate::AttackTarget> {
@@ -1496,10 +1493,7 @@ impl<'a> EffectContext<'a> {
     }
 
     pub fn attack_attacker(&self) -> Option<PermanentHandle> {
-        self.game
-            .pending_attack
-            .as_ref()
-            .map(|attack| attack.attacker)
+        self.game.live_attack_attacker()
     }
 
     pub fn attack_target(&self) -> Option<crate::AttackTarget> {

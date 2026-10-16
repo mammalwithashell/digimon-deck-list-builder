@@ -561,6 +561,20 @@ pub(crate) fn partition_extract_and_play(
     }
 }
 
+/// Attack-declaration trigger keywords (`<Alliance>`, `<Raid>`) whose
+/// modifier-registry grants are dispatched from the registry itself when the
+/// attack triggers (`Game::enqueue_from_permanent`'s granted-keyword scan),
+/// rather than through the granted-triggered body store
+/// (`EffectContext::grant_keyword_triggered_auto_effects`). Every registry
+/// grant then fires exactly once, keeps the keyword body's activation
+/// `condition` (the body store drops it), and reaches the trigger pool the
+/// same way whether it came from a runtime grant or a direct registry entry —
+/// the reach the former `AllianceOpen` / `RaidOpen` windows had through
+/// `Game::has_keyword`.
+pub(crate) fn keyword_trigger_dispatched_from_registry(keyword: Keyword) -> bool {
+    matches!(keyword, Keyword::Alliance | Keyword::Raid)
+}
+
 /// Map a printed keyword to zero-or-more synthesized `Effect`s that install
 /// the matching `WhenWouldBe*` replacements. Returns an empty `Vec` for
 /// keywords that do not carry replacement semantics (or that are explicitly
@@ -582,20 +596,6 @@ pub(crate) fn partition_extract_and_play(
 /// effect GRANTS this keyword" and is read that way at `game/queries.rs`,
 /// `game/triggers.rs` and `game_phases.rs`; setting it here would make every
 /// synthesized `<Barrier>` body claim to grant `<Barrier>` to its carrier.
-/// Attack-declaration trigger keywords (`<Alliance>`, `<Raid>`) whose
-/// modifier-registry grants are dispatched from the registry itself when the
-/// attack triggers (`Game::enqueue_from_permanent`'s granted-keyword scan),
-/// rather than through the granted-triggered body store
-/// (`EffectContext::grant_keyword_triggered_auto_effects`). Every registry
-/// grant then fires exactly once, keeps the keyword body's activation
-/// `condition` (the body store drops it), and reaches the trigger pool the
-/// same way whether it came from a runtime grant or a direct registry entry —
-/// the reach the former `AllianceOpen` / `RaidOpen` windows had through
-/// `Game::has_keyword`.
-pub(crate) fn keyword_trigger_dispatched_from_registry(keyword: Keyword) -> bool {
-    matches!(keyword, Keyword::Alliance | Keyword::Raid)
-}
-
 pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect> {
     keyword_to_auto_effect_inner(keyword, card)
         .into_iter()
