@@ -5296,13 +5296,65 @@ Rule citations below use the Comprehensive Rules Manual **Ver. 4.3 (2026-09-18)*
   order. The first card authored on that timing (BT20-005 / BT12-088 are the DCGO exemplars) should
   get an exam that pins observer-before-battle against the oracle.
 
-### DNA digivolution result keeps the base permanent's orientation and identity  [G-ENGINE-DNA-RESULT-KEEPS-BASE-ORIENTATION]
+### DNA result keeps the base permanent's state [G-ENGINE-DNA-RESULT-KEEPS-BASE-ORIENTATION] — RESOLVED (2026-10-15)
 
-- **Rule:** §8-2-2-1-1 — the card placed on top "digivolves unsuspended without carrying over the Digimon's orientation from before the digivolution". Sibling rules in the same block: materials become new cards (§8-2-2-1-2, link cards trashed first), effects applied to them end (§8-2-2-1-5), `[X Per Turn]` uses reset (§8-2-2-1-6), a played-this-turn material loses that state (§8-2-2-1-7).
-- **DCGO:** builds a fresh permanent for a jogress result (`Effects.CreateFieldPermanentCardEffect(..., jogressEvoRoots)`), so it is unsuspended by construction.
-- **Ours:** `code/digimon-engine/src/game/mod.rs` `dna_digivolve_inner` keeps permanent A in place, appends B's `card_sources` and the hand card, and sets `turn_digivolved`. No orientation reset exists in the DNA path (`grep -n suspend` over the function is empty), so a suspended base yields a suspended DNA result that cannot attack. The hand-partner and trash-partner variants share the shape. Whether A's modifiers, OPT counters, and "played this turn" state are cleared needs the same check.
-- **Tests pinning the current behaviour:** none; `tests/cards_behavioral/ad1/ad1_011.rs:533` has a comment wondering about it.
-- **Fix shape:** on DNA commit, reset orientation to unsuspended and treat the result as a new card (clear per-permanent modifiers/OPT/played-this-turn for the merged permanent per §8-2-2-1); conformance tests for a suspended base, a suspended partner, and an OPT already used on a material.
+Finding F3 of the 2026-10-15 rules-conformance investigation
+(`docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md`)
+reported that `dna_digivolve_inner` kept material A in place and never reset
+its orientation, so a suspended base produced a suspended DNA result.
+Comprehensive Rules §8-2-2-1 (Ver. 4.3; same text in the Ver. 3.6 PDF
+pp.16-17) makes the DNA result a NEW Digimon: §8-2-2-1-1 it digivolves
+unsuspended without carrying over the display format; §8-2-2-1-2 materials are
+new cards and a material's link card is trashed before stacking; §8-2-2-1-5
+effects the materials gained end; §8-2-2-1-6 [X Per Turn] uses reset;
+§8-2-2-1-7 a material played this turn does not make the result summoning sick.
+DCGO builds the jogress result as a fresh permanent
+(`Effects.CreateFieldPermanentCardEffect(.., jogressEvoRoots)`).
+
+The finding was taken against a pre-#737 main. `98d4937a6` (merged in #737)
+had already landed `Game::reset_dna_material_objects` (`src/game/mod.rs`),
+which every DNA entry point (`dna_digivolve_inner`, the hand-partner and
+trash-partner variants, hence also the user-action
+`initiate_dna_digivolve` stage-2 resolution) runs after the route and payment
+succeed: it unsuspends, clears `turn_played` / `attacks_this_turn` /
+`is_attacking`, clears the per-permanent `effect_activations` OPT map, drops
+permanent-scoped modifiers and granted triggered bodies via
+`clear_permanent_full`, strips effect-granted card overlays, and trashes each
+material's `linked_cards` (applying linked ACE Overflow owner-relatively, turn
+player first) before the stacks are merged. The merged permanent keeps A's
+slot (positional handles of bystanders must survive compaction, 15-4-4-3), so
+"new card" is implemented as an in-place reset of every piece of state the
+rule enumerates rather than as a fresh `Permanent` object.
+
+Verification:
+
+- `tests/dna_result_new_card.rs` (added 2026-10-15) — one test per clause,
+  driven entirely through the user-action path (DNA declared with
+  `DNA_DIGIVOLVE_START + hand_index`, both material picks through
+  `resolve_selection`; suspension from real attacks; the OPT from a real
+  inherited `[When Attacking] [Once Per Turn]`; the DP gain from a real
+  `[Main]` activation; the link via `link_chosen_card_into_host`):
+  `suspended_base_dna_result_is_unsuspended_and_can_attack` (a, §8-2-2-1-1),
+  `suspended_partner_dna_result_is_unsuspended_and_can_attack` (b),
+  `suspended_materials_picked_partner_first_still_yield_unsuspended_result`,
+  `once_per_turn_use_on_material_stack_resets_on_dna_result` (c, §8-2-2-1-6),
+  `for_the_turn_dp_modifier_on_base_does_not_apply_to_dna_result` (d, §8-2-2-1-5),
+  `base_played_this_turn_dna_result_can_attack` (e, §8-2-2-1-7),
+  `material_link_cards_are_trashed_before_dna_stacking` (f, §8-2-2-1-2), plus
+  the §8-1-2-4 control `ordinary_digivolution_still_carries_suspension_over`.
+  Mutation-checked 2026-10-15: with `reset_dna_material_objects` made a
+  no-op, (a), (c), (d), (e), (f) and the pick-order companion fail on their
+  own clause assertions; (b) stays green because the carrier was never
+  suspended there, and the §8-1-2-4 control is unaffected by design.
+- `tests/dna_new_object_state.rs` (landed with `98d4937a6`) — the same reset
+  asserted field-by-field across all three DNA entry points, the rejected-DNA
+  no-op, cross-owner link Overflow ordering, queued-effect invalidation, and the
+  ordinary-evolution control.
+
+Not covered here: §8-2-2-1-3 / §8-2-2-1-4 (an attacking / attack-target
+material is treated as removed) is handled by `reset_dna_material_objects`'s
+`effective_target_removed_by_dna` + `invalidate_battle_winners_for_dna` but has
+no dedicated clause test in `dna_result_new_card.rs`.
 
 ### Attack-keyword windows (`<Alliance>`, `<Raid>`) resolve outside the `[When Attacking]` trigger pool  [G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL]
 
