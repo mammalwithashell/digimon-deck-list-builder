@@ -413,6 +413,20 @@ fn excess_link_board() -> (DebugRunner, PermanentHandle) {
     (r, host)
 }
 
+/// Finish the excess-link choice: answer any follow-up prompt (e.g. a
+/// confirm step) with its first legal option until nothing is pending.
+fn settle_link_choice(r: &mut DebugRunner) {
+    for _ in 0..8 {
+        let Some(sel) = r.pending_selection() else {
+            return;
+        };
+        let (player, action) = (sel.selecting_player, sel.valid_action_ids[0]);
+        r.execute_action(player, action)
+            .unwrap_or_else(|e| panic!("follow-up pick rejected: {e:?}"));
+    }
+    panic!("the excess-link choice did not settle after 8 picks");
+}
+
 /// §17-1-3-2-5 (a trash target) "Link cards for a Digimon that has exceeded
 /// the link limit (only the cards that exceed link limit are trashed)"
 /// Official Q&A Q6370 (BT25-075): on losing <Link +N> "its maximum number of
@@ -425,15 +439,17 @@ fn excess_link_board() -> (DebugRunner, PermanentHandle) {
 /// whichever option P0 takes, exactly 1 link card is trashed, and across the
 /// options P0 can keep either one.
 ///
-/// Red: nothing is pending after the rule check -- `run_state_based_rules_check`
-/// has no link-card step at all. The engine's base link limit is also 5, not 1
-/// (`G-ENGINE-LINK-MAX-BASE`), so it would not see this host as over its limit
-/// either. DCGO agrees with Q6370: `AutoProcessing.DigimonLackLinkMaxCountProcess`
-/// calls `Permanent.RemoveLinkedCard(null, excess)`, a `SelectCardEffect` over
-/// the link cards with `selectPlayer: TopCard.Owner`
-/// (`G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE`).
+/// Red for two independent reasons: nothing is pending after the rule check
+/// -- `run_state_based_rules_check` has no link-card step at all -- and the
+/// engine's base link limit is 5, not 1 (`G-ENGINE-LINK-MAX-BASE`), so it
+/// would not see this host as over its limit either.
+/// `excess_link_cards_over_any_limit_prompt_before_trash` pins the missing
+/// step alone. DCGO agrees with Q6370:
+/// `AutoProcessing.DigimonLackLinkMaxCountProcess` calls
+/// `Permanent.RemoveLinkedCard(null, excess)`, a `SelectCardEffect` over the
+/// link cards with `selectPlayer: TopCard.Owner`.
 #[test]
-#[ignore = "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE (§17-1-3-2-5)"]
+#[ignore = "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE + G-ENGINE-LINK-MAX-BASE (§17-1-3-2-5)"]
 fn excess_link_cards_trashed_player_chooses_which() {
     cite!(
         "17-1-3-2-5",
@@ -464,11 +480,7 @@ fn excess_link_cards_trashed_player_chooses_which() {
         rule_check_timing(&mut r);
         r.execute_action(0, action)
             .unwrap_or_else(|e| panic!("link pick rejected: {e:?}"));
-        assert!(
-            r.pending_selection().is_none(),
-            "{:?}",
-            r.pending_selection()
-        );
+        settle_link_choice(&mut r);
         let linked = linked_ids(&r, host);
         assert_eq!(
             linked.len(),
@@ -485,6 +497,40 @@ fn excess_link_cards_trashed_player_chooses_which() {
         owned(&["LINK_A", "LINK_B"]),
         "P0 can keep either link card"
     );
+}
+
+/// §17-1-3-2-5, independent of the base link limit's value: P0's
+/// `LINK_HOST_LV4` holds 6 link cards (`LINK_A` x3, `LINK_B` x3), over both the
+/// printed base limit of 1 (§4-9-5) and the engine's current base of 5
+/// (`G-ENGINE-LINK-MAX-BASE`). At the rule check P0 must be asked which link
+/// cards to trash (Q6370), and nothing may be trashed before that choice.
+///
+/// Red: nothing is pending after the rule check --
+/// `run_state_based_rules_check` has no link-card step
+/// (`G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE`).
+#[test]
+#[ignore = "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE (§17-1-3-2-5)"]
+fn excess_link_cards_over_any_limit_prompt_before_trash() {
+    cite!(
+        "17-1-3-2-5",
+        "42c41c1ce213cb5e7b7f877a9d012fbe936ffa3580b5c7c7af917c437a7fc518"
+    );
+    let mut r = ch17().deck(0, &[FILL; 4]).memory(3).start();
+    let host = r.place_on_field(0, "LINK_HOST_LV4", Some(0));
+    for card in ["LINK_A", "LINK_B", "LINK_A", "LINK_B", "LINK_A", "LINK_B"] {
+        r.push_linked_owned(host, card, 0);
+    }
+    rule_check_timing(&mut r);
+    let sel = r
+        .pending_selection()
+        .expect("P0 chooses which link cards exceed the limit (Q6370)");
+    assert_eq!(sel.selecting_player, 0, "{sel:?}");
+    assert_eq!(
+        linked_ids(&r, host).len(),
+        6,
+        "nothing trashed before the choice"
+    );
+    assert!(trash_ids(&r, 0).is_empty(), "{:?}", trash_ids(&r, 0));
 }
 
 // ─── §17-1-3-2-6 ────────────────────────────────────────────────────────────
@@ -525,6 +571,48 @@ fn link_card_failing_requirement_is_trashed() {
     assert_eq!(trash_ids(&r, 0), owned(&["LINK_A"]));
     assert_eq!(linked_ids(&r, ok), owned(&["LINK_B"]), "control");
     assert_eq!(field_top_ids(&r, 0), owned(&["LINK_HOST_LV4", "LV5_PLAIN"]));
+}
+
+// ─── §17-1-3-2-7 ────────────────────────────────────────────────────────────
+
+/// §17-1-3-2-7 (a trash target) "Linked cards in a card category other than
+/// those specified in the notes for <Link>"
+///
+/// The closest stageable case: a Tamer card (`TAMER_PLAIN`, which has no
+/// [Link] at all, so no <Link> note names its category) linked to P0's
+/// `LINK_HOST_LV4` is trashed at the rule check. Control: the Digimon link
+/// card `LINK_B` on a second `LINK_HOST_LV4` stays (its category, Digimon, is
+/// the one its link requirement names). A Tamer has no link requirements, so
+/// this board also falls under §17-1-3-2-6; a purer witness needs a <Link>
+/// note restricting categories, which no fixture models yet.
+///
+/// Red: `run_state_based_rules_check` has no category step; the Tamer stays
+/// linked (`G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE`).
+#[test]
+#[ignore = "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE (§17-1-3-2-7)"]
+fn linked_card_of_unlisted_category_is_trashed() {
+    cite!(
+        "17-1-3-2-7",
+        "8ae92f0207a8efec74343ffeab23eb9ba401473c30810a609572336931e98e04"
+    );
+    let mut r = ch17().deck(0, &[FILL; 4]).memory(3).start();
+    let bad = r.place_on_field(0, "LINK_HOST_LV4", Some(0));
+    let ok = r.place_on_field(0, "LINK_HOST_LV4", Some(0));
+    r.push_linked_owned(bad, "TAMER_PLAIN", 0);
+    r.push_linked_owned(ok, "LINK_B", 0);
+    rule_check_timing(&mut r);
+
+    assert!(
+        r.pending_selection().is_none(),
+        "{:?}",
+        r.pending_selection()
+    );
+    assert!(
+        linked_ids(&r, bad).is_empty(),
+        "the linked Tamer card was trashed"
+    );
+    assert_eq!(trash_ids(&r, 0), owned(&["TAMER_PLAIN"]));
+    assert_eq!(linked_ids(&r, ok), owned(&["LINK_B"]), "control");
 }
 
 // ─── §15-4-3-3 ──────────────────────────────────────────────────────────────

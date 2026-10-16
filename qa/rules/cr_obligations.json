@@ -7974,10 +7974,11 @@
       "mechanisms": [
         "rule-checks"
       ],
-      "note": "No rule-check step trims link cards, and the base link limit is 5, not 1 (G-ENGINE-LINK-MAX-BASE). Q6370: the player chooses which excess link cards to trash (DCGO agrees: RemoveLinkedCard -> SelectCardEffect by the owner). Test is #[ignore]d.",
+      "note": "Red for two independent gaps: G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE (no rule-check step trims link cards) + G-ENGINE-LINK-MAX-BASE (the base link limit is 5, not 1, so a 2-link host is never over its limit). The 6-link variant pins the missing trim step alone. Q6370: the player chooses which excess link cards to trash (DCGO agrees: RemoveLinkedCard -> SelectCardEffect by the owner). Both tests are #[ignore]d.",
       "status": "gap",
       "tests": [
-        "ch17_rule_checks::excess_link_cards_trashed_player_chooses_which"
+        "ch17_rule_checks::excess_link_cards_trashed_player_chooses_which",
+        "ch17_rule_checks::excess_link_cards_over_any_limit_prompt_before_trash"
       ],
       "text": "Link cards for a Digimon that has exceeded the link limit (only the cards that exceed link limit are trashed)"
     },
@@ -8004,9 +8005,11 @@
       "mechanisms": [
         "rule-checks"
       ],
-      "note": "No rule-check step for linked cards of a category the <Link> notes don't allow (code inspection of run_state_based_rules_check; untested, no fixture yet).",
+      "note": "run_state_based_rules_check has no category step: a Tamer card linked to a Digimon stays linked. Closest stageable witness (a Tamer has no [Link], so the board also falls under 17-1-3-2-6); no fixture models a category-restricting <Link> note yet. Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch17_rule_checks::linked_card_of_unlisted_category_is_trashed"
+      ],
       "text": "Linked cards in a card category other than those specified in the notes for <Link>"
     },
     "18-1": {
