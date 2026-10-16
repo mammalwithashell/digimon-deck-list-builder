@@ -6,6 +6,8 @@ The nine EX13 campaign cards are EX13-005, EX13-008, EX13-018, EX13-021, EX13-02
 
 ## Captured validation
 
+PR integration merged upstream `main` at `3aa457f77`, retaining its additional source-trash adjudication in the only documentation conflict. Engine and DSL implementation files were unchanged by that merge. Fresh post-merge checks passed: `cargo test -p dcgo-harness --lib` (628 tests) and the two card-loop exam/harness pytest suites (95 tests). Logs are included in `examon-2026-10-10-evidence/verification/pr-review/`. The full engine suite was not rerun during PR packaging. The packaging whitespace check reports existing trailing whitespace and extra EOF blank lines; those bytes were preserved rather than reformatted across the captured source snapshot.
+
 The final build22 acceptance review records 1,081 passing EX13 tests, 198 focused receipt tests, 24 successful pipeline gates, 11 separate ladder/wheel gates, and all ten replay goldens passing after the reviewed attribution correction. The original failed golden run remains a historical failure; it was resolved by a separately captured successful run. Copies of the compact reviews are under `examon-2026-10-10-evidence/verification/pr-review/`.
 
 On PR preparation, all 3,874 non-QA working-tree file pins in the build22 comparison closure still matched. This is a source-to-evidence check, not a fresh full test run. Git line-ending normalization during staging may change repository blob bytes without changing the tested working-tree files.

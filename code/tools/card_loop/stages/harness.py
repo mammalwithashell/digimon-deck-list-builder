@@ -370,6 +370,57 @@ def prompt_mismatch(result: Mapping) -> PromptMismatch | None:
     return PromptMismatch(row=int(m.group(1)), expected=m.group(2), asked=m.group(3))
 
 
+@dataclass(frozen=True)
+class IncompleteSelection:
+    """DCGO asked the prompt the scenario expected, but the scripted answer did
+    not complete it (`SelectionAnswer.IncompleteSelection`): either DCGO's
+    prompt cannot END on that answer -- `needs` "2 picks or cancel" where the
+    step names one card, the EX7-073 scope-neg line -- or the prompt sat open
+    with nothing moving until the player's own stall watch failed the job
+    (`stalled`)."""
+    row: int            # DCGO's scripted-input cursor (a lowered row, not a scenario step)
+    prompt: str
+    wanted: list
+    detail: str
+
+    @property
+    def stalled(self) -> bool:
+        return "held a prompt open" in self.detail
+
+    @property
+    def needs(self) -> str | None:
+        m = re.search(r"prompt needs ([^;]+)", self.detail)
+        return m.group(1).strip() if m else None
+
+
+# InputDriver.cs: `prompt mismatch: step N selection did not complete '<Prompt>' (wanted [..], <why>)`
+_INCOMPLETE = re.compile(r"prompt mismatch: step (\d+) selection did not complete '([^']*)' "
+                         r"\(wanted \[([^\]]*)\], ([^)]*)\)")
+
+
+def incomplete_selection(result: Mapping) -> IncompleteSelection | None:
+    if result.get("job_outcome") != "failed":
+        return None
+    m = _INCOMPLETE.search(str(result.get("reason") or ""))
+    if not m:
+        return None
+    return IncompleteSelection(row=int(m.group(1)), prompt=m.group(2),
+                               wanted=[x.strip() for x in m.group(3).split(",") if x.strip()],
+                               detail=m.group(4).strip())
+
+
+# JobWatcher.cs: the player files a job that outlived its limits.timeout_seconds.
+_TIMEOUT = re.compile(r"DCGO job failed: timeout after (\d+)s")
+
+
+def job_timeout(result: Mapping) -> int | None:
+    """The limit, in seconds, of a job the player failed for running past it."""
+    if result.get("job_outcome") != "failed":
+        return None
+    m = _TIMEOUT.search(str(result.get("reason") or ""))
+    return int(m.group(1)) if m else None
+
+
 _ACTOR = re.compile(r"prompt mismatch: step (\d+) expected actor (\d) but DCGO asked actor (\d)")
 
 

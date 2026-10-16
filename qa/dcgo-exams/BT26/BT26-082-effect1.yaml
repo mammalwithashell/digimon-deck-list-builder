@@ -81,8 +81,10 @@ steps:
     expect: { prompt: SelectHandEffect }
   - actor: 0
     do: { select: { yes: true } }
-  - actor: 0
-    do: { select: { decline: true } }
+  # (2026-10-10) A step here used to decline Crowmon's inherited [On Deletion] play. Neither
+  # engine offers it: once Ravemon goes to security, that waiting effect can no longer activate
+  # (owner ruling; 15-3-2, 15-3-3, 15-4-4-3; DCGO OnDeletion.cs:114-116). The stray decline
+  # is what stopped the oracle run.
   - actor: 0
     do: { pass: {} }
   - actor: 1

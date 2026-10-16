@@ -106,15 +106,25 @@ clause/int:  PENDING → [CLASSIFY] → AUTHORING → [ENCODE] → SIM → ORACL
 - **A prompt mismatch** on the oracle is routed by who disagreed: both engines
   contradict the scenario → back to AUTHORING; ours matches the scenario and
   DCGO does not → TRIAGE (a missing decline looks exactly like this).
-- **A stalled player** (DCGO enforces no job timeout: a scripted selection
-  that cannot complete its prompt holds the player forever, heartbeat fresh)
-  is reported by the harness once the claim outlives the job's own
-  `timeout_seconds` + 60 s while the heartbeat still names it, with the newest
-  recording's last row as evidence. The item goes to TRIAGE as `undetermined`
-  and the stage restarts the player (`node down` / `node up`) — only while
-  the heartbeat still names that job, so two runs sharing a player do not
-  restart it twice. A retry whose identical job is still on the player waits
-  for it; a claim the heartbeat no longer names is set aside under `aside/`.
+- **A scripted selection that cannot complete its prompt** fails the job on
+  the player (DCGO fork, 2026-10-09) as
+  `prompt mismatch: step N selection did not complete '<Prompt>' (wanted [..], <why>)`.
+  `<why>` = `prompt needs 2 picks or cancel` (the answer is one DCGO's panel
+  cannot end on; ours took it sim-only) → TRIAGE as `engines_disagree`;
+  `DCGO held a prompt open for 10s …` (the player's stall watch: a prompt sat
+  open with no new prompt and no game progress) → TRIAGE as `undetermined`.
+  A job that outlives its own `timeout_seconds` (exam jobs: 240 s) is filed
+  `failed`, `timeout after Ns` → TRIAGE as `undetermined`. The player frees
+  itself in all three, so nothing is restarted.
+- **A stalled player** — one too wedged to file even that, or a build older
+  than the in-player enforcement — is reported by the harness once the claim
+  outlives the job's own `timeout_seconds` + 30 s while the heartbeat still
+  names it, with the newest recording's last row as evidence. The item goes to
+  TRIAGE as `undetermined` and the stage restarts the player (`node down` /
+  `node up`) — only while the heartbeat still names that job, so two runs
+  sharing a player do not restart it twice. A retry whose identical job is
+  still on the player waits for it; a claim the heartbeat no longer names is
+  set aside under `aside/`.
 - **Triage** classifies an oracle divergence `ours_wrong` (→ FIX), `dcgo_quirk`
   / `unreachable` (→ the two-family termination check), `scenario_wrong` (→
   back to AUTHORING with the objection: the exam picks the wrong card, asserts
@@ -255,11 +265,13 @@ artifact regenerated (`report` prints the regenerate command).
 
 - One oracle node, at most two players; the oracle is the throughput ceiling
   (~15–60 s per scenario).
-- DCGO itself enforces no per-job timeout (`HarnessJobLimits.timeout_seconds`
-  is read by nobody in Unity): a wedged job is detected and cured from this
-  side (stall report + player restart, above), at the cost of the job's
-  limit + 60 s per stall. Teaching the DCGO mod to abort a selection its
-  script cannot complete is the proper fix (base-repo DCGO work, rule 29).
+- The player's stall watch only sees a wedge while DCGO's command text (its
+  "the opponent is selecting…" prompt banner) is showing. A hang with no
+  prompt on screen still costs the job's full `timeout_seconds`.
+- Only `SelectCardEffect` holds a scripted pick to what its panel can end on
+  (exact count unless "up to", the card's end condition, cancel only when
+  offered). `SelectHandEffect` / `SelectPermanentEffect` still accept an
+  under-count pick silently.
 - A card whose official-mirror entry is a failed lookup (no `colors`) is not
   `ready` until the mirror covers it; EX12 is the known hole.
 - `exam_probe` (MCP) never records a verdict; only a committed scenario's run

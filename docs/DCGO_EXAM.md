@@ -79,6 +79,12 @@ The oracle pass submits a `policy: "scripted"` job into the phase-1 queue and is
 subject to every phase-1 rule: the harness must be enabled (`dcgo-harness
 enable`), Unity must be in Play, and a job overdue past `timeout_seconds` is
 requeued then quarantined after two failures. See `docs/DCGO_HARNESS.md`.
+Exam jobs carry a 240 s limit, which the player enforces itself (`failed`,
+`timeout after 240s`). A `select:` DCGO's prompt cannot end on — one card for
+a `SelectCardEffect` that takes 2 or a cancel — fails at once as
+`prompt mismatch: step N selection did not complete 'SelectCardEffect'
+(wanted [..], prompt needs 2 picks or cancel)`, and a prompt that sits open
+10 s with nothing moving fails the same way (`… DCGO held a prompt open …`).
 
 ## The scenario file
 

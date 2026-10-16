@@ -31,10 +31,14 @@ pub struct OracleRun {
 }
 
 /// Grace past a job's own `limits.timeout_seconds` before a claim the heartbeat
-/// still names counts as a stall. DCGO enforces no job timeout (`JobLimits`
-/// documents the CLI as the enforcer): a scripted selection that cannot
-/// complete its prompt holds the player forever, heartbeat fresh, claim ageing.
-pub const STALL_GRACE_SECS: u64 = 60;
+/// still names counts as a stall. The player files a job that outlives its
+/// limit as `failed` ("timeout after Ns") itself, and a scripted line wedged on
+/// a prompt as a prompt mismatch within seconds (DCGO fork, 2026-10-09); this
+/// is the backstop for a player too wedged to file anything, or a build older
+/// than that. Short enough that limit + grace stays inside the default oracle
+/// wait (240 + 30 < 300), so the backstop reports a stall rather than a
+/// timeout.
+pub const STALL_GRACE_SECS: u64 = 30;
 
 /// `limits.timeout_seconds` when a job's JSON does not carry one.
 const DEFAULT_LIMIT_SECS: u64 = 180;
@@ -571,8 +575,14 @@ pub struct MismatchAt {
 }
 
 /// Parse DCGO's `prompt mismatch: step N expected prompt 'X' but DCGO asked 'Y'`
-/// (or `... expected actor A but DCGO asked actor B`) into
+/// (or `... expected actor A but DCGO asked actor B`, or
+/// `... step N selection did not complete 'X' (wanted [..], <why>)`) into
 /// `(row, expected prompt, asked prompt)`.
+///
+/// "did not complete" is DCGO asking exactly the prompt the row expected and
+/// the scripted answer not ending it -- too few picks for a prompt that takes
+/// N or a cancel (the EX7-073 scope-neg wedge), or a prompt that sat open with
+/// nothing moving -- so expected and asked are both that prompt.
 pub fn parse_prompt_mismatch(message: &str) -> Option<(usize, Option<String>, Option<String>)> {
     let rest = message.split("prompt mismatch:").nth(1)?.trim();
     let rest = rest.strip_prefix("step ")?;
@@ -585,7 +595,13 @@ pub fn parse_prompt_mismatch(message: &str) -> Option<(usize, Option<String>, Op
     };
     let (expected, asked) = match tail.split_once(" but DCGO asked") {
         Some((e, a)) if e.trim_start().starts_with("expected prompt") => (quoted(e), quoted(a)),
-        _ => (None, None),
+        _ => match tail.strip_prefix("selection did not complete") {
+            Some(rest) => {
+                let prompt = quoted(rest);
+                (prompt.clone(), prompt)
+            }
+            None => (None, None),
+        },
     };
     Some((row, expected, asked))
 }
@@ -915,6 +931,26 @@ mod mismatch_tests {
         assert_eq!((m.0, m.1, m.2), (14, None, None));
         assert!(parse_prompt_mismatch("bad deck").is_none());
     }
+
+    #[test]
+    fn an_incomplete_selection_parses_as_that_prompt_on_both_sides() {
+        // InputDriver.AbortIncomplete / CheckStall (DCGO fork, 2026-10-09):
+        // the EX7-073 scope-neg wedge, now filed instead of held.
+        for msg in [
+            "prompt mismatch: step 20 selection did not complete 'SelectCardEffect' \
+             (wanted [BT25-085], prompt needs 2 picks or cancel)",
+            "prompt mismatch: step 20 selection did not complete 'SelectCardEffect' \
+             (wanted [BT25-085], DCGO held a prompt open for 10s after step 19 with no new \
+             prompt and no game progress)",
+        ] {
+            let m = parse_prompt_mismatch(msg).unwrap();
+            assert_eq!(
+                (m.0, m.1.as_deref(), m.2.as_deref()),
+                (20, Some("SelectCardEffect"), Some("SelectCardEffect")),
+                "{msg}"
+            );
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1006,9 +1042,10 @@ mod tests {
 
     #[test]
     fn a_claim_past_its_limit_that_the_heartbeat_still_names_is_a_stall() {
-        // DCGO enforces no job timeout: a scripted selection that cannot
-        // complete its prompt holds the player forever, heartbeat fresh, the
-        // claim ageing. Two pilots wedged on one such job for 15 minutes.
+        // Before the player enforced its own limit, a scripted selection that
+        // could not complete its prompt held it forever, heartbeat fresh, the
+        // claim ageing; two pilots wedged on one such job for 15 minutes. The
+        // host check stays as the backstop for a player that cannot file.
         let t = root();
         let claim = t.path().join("claimed/exam-S-effect0.json");
         std::fs::write(&claim, LIMIT_1S).unwrap();
