@@ -246,16 +246,16 @@ pub struct TriggerContext {
     /// (BT7-056 "one of YOUR effects": `EffectSourceCard.Owner == card.Owner`).
     /// `event_caused_by_own_effect` reads it. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
     pub event_cause_effect: Option<EffectAttribution>,
-    /// `(qualifier id, source card, met)`: the queued effect's trigger qualifier
-    /// (`Effect::trigger_qualifier`, a DSL clause's `active_when`) evaluated
-    /// when the effect TRIGGERED (`Game::enqueue_triggered`). §15-8-3-8: what
-    /// the trigger condition refers to is read in the triggered state, so the
-    /// lowered condition uses this verdict instead of re-reading the board
-    /// (e.g. "when one of your [X] Digimon attacks" after the attacker left);
-    /// processing conditions are still read at activation (§15-8-3-9-3).
-    /// Derived from the trigger-time board, so it is left out of `Debug`
-    /// (and the verification digest built from it).
-    pub(crate) trigger_qualifier_met: Option<(u64, CardHandle, bool)>,
+    /// Last-known information of the event Digimon (`event_permanent`), taken
+    /// when the effect triggered (`Game::trigger_context_for_source`), in the
+    /// `deleted_object` shape. Read only by a clause-level gate whose event
+    /// Digimon has since LEFT the field (`Game::gate_trigger_context`): the
+    /// event happened and the references the trigger made keep their
+    /// last-known values. Shared (`Arc`) by every context of one event.
+    /// Derived from the trigger-time board (whose identity is already in
+    /// `event_permanent_identity`), so it is left out of `Debug` and the
+    /// verification digest built from it.
+    pub(crate) event_snapshot: Option<std::sync::Arc<DeletedObjectSnapshot>>,
 }
 
 impl TriggerContext {

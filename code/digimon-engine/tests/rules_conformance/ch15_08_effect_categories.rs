@@ -571,7 +571,7 @@ fn trigger_condition_qualifier_read_in_triggered_state_after_attacker_leaves() {
 ///   is still there, so P0 gains 1 memory.
 /// - P0 activates `WA_RET_CHRON`'s return first -- when the Tamer's effect is
 ///   processed there is no level 5 or higher attacking Digimon, so it does
-///   not activate.
+///   not gain memory (the condition is a body `if:`, read live).
 #[test]
 fn trigger_processing_condition_read_at_processing_after_attacker_leaves() {
     cite!(
@@ -596,6 +596,37 @@ fn trigger_processing_condition_read_at_processing_after_attacker_leaves() {
         memory_sources(&r, cp).is_empty(),
         "the processing condition is unmet when processed: {:?}",
         memory_sources(&r, cp)
+    );
+}
+
+/// §15-8-3-9-3 (processing conditions are referenced when processing is
+/// performed). `WA_HAND7_DRAW`: "[When Attacking] <Draw 1>" and "[When
+/// Attacking] If your hand has 7 or fewer cards, <Draw 1>" (the second
+/// authored with its processing condition in `active_when`, the BT26-019
+/// shape). P0 attacks with 7 cards in hand and activates the plain draw
+/// first: 8 cards when the second effect is processed, so it does not draw.
+#[test]
+fn processing_condition_in_active_when_read_at_processing() {
+    cite!(
+        "15-8-3-9-3",
+        "5b7a0031fb2110b5f52c02890fe2231471493a3cf527d6ee65f538904d4ca7ed"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
+        .hand(0, &[FILL; 7])
+        .deck(0, &[FILL; 4])
+        .security(1, &[FILL; 3])
+        .memory(3)
+        .start();
+    let attacker = r.place_on_field(0, "WA_HAND7_DRAW", Some(0));
+    r.attack_player(attacker, 1, false);
+    let choices = order_choices(&r, 0);
+    assert_eq!(choices.len(), 2, "{choices:?}");
+    choose(&mut r, "WA_HAND7_DRAW slot 0");
+    resolve_prompts(&mut r);
+    assert_eq!(
+        r.hand_size(0),
+        8,
+        "7 -> 8 from the first draw; 8 cards when the second is processed: no draw"
     );
 }
 

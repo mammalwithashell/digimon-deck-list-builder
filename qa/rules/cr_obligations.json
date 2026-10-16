@@ -4840,7 +4840,8 @@
       "status": "proven",
       "tests": [
         "ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger",
-        "ch15_08_effect_categories::trigger_processing_condition_read_at_processing_after_attacker_leaves"
+        "ch15_08_effect_categories::trigger_processing_condition_read_at_processing_after_attacker_leaves",
+        "ch15_08_effect_categories::processing_condition_in_active_when_read_at_processing"
       ],
       "text": "If a reference is to be made in the processing conditions for a trigger-type effect, the reference is made in the state when the processing is being performed. (Example: If an effect reads \"[All Turns] When your opponent plays a Digimon, by suspending this Tamer, if that Digimon is level 4 or higher, gain 1 memory. If it is level 3, <Draw 1>,\" you will gain 1 memory if your opponent's Digimon is level 4 upon being referenced when this effect activates.)"
     },

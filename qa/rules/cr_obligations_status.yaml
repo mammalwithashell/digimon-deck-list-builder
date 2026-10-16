@@ -109,7 +109,7 @@
   note: "Two witnesses. The 15-8-3-9-3 example (two branches). Single-branch OBS_OPP_PLAY_GE4 ('if that Digimon is level 4 or higher, gain 1 memory', mandatory): the level 3 play triggers it with the processing condition unmet; digivolved to 4 before activation it activates, otherwise it can't (15-6-3). 'Triggered' is shown through the later activation, not a pending-list entry."
 "15-8-3-9-3":
   status: proven
-  tests: ["ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger", "ch15_08_effect_categories::trigger_processing_condition_read_at_processing_after_attacker_leaves"]
+  tests: ["ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger", "ch15_08_effect_categories::trigger_processing_condition_read_at_processing_after_attacker_leaves", "ch15_08_effect_categories::processing_condition_in_active_when_read_at_processing"]
   note: "The rule's example text; control (no digivolve) takes the level 3 <Draw 1> branch."
 "15-8-3-9-4":
   status: proven

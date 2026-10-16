@@ -1085,6 +1085,11 @@ pub struct Game {
     /// (`fire_on_attack`). `Game::live_attack_attacker` uses it to tell the
     /// attacker from a later occupant of its compacted slot.
     pub(crate) attack_attacker_identity: Option<(PlayerId, u64)>,
+    /// Scratch cache scoped to one `enqueue_triggered` call (empty outside
+    /// it): the event Digimon's last-known snapshot, built once per event
+    /// and shared by every context of that event.
+    pub(crate) event_snapshot_cache:
+        Option<((PlayerId, u64), std::sync::Arc<crate::trigger_context::DeletedObjectSnapshot>)>,
     /// Optional harness ledger, excluded from gameplay and verification state.
     pub(crate) native_play_observation: Option<native_play_observation::NativePlayObservation>,
 

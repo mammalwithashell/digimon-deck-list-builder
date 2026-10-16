@@ -1665,13 +1665,19 @@ fn eval_event_fields(
         }
     }
     if let Some(ref trait_name) = pred.attacker_trait_has {
+        let has_trait = |traits: &[String]| traits.iter().any(|t| t.eq_ignore_ascii_case(trait_name));
         let pinned_event = rctx
             .game
             .current_trigger_context
             .as_ref()
             .filter(|trigger| trigger.event_permanent_identity.is_some());
         let attacker = if let Some(trigger) = pinned_event {
-            trigger.resolve_event_permanent(rctx.game)
+            trigger.resolve_event_permanent(rctx.game).ok_or_else(|| {
+                // The attacker has left the field: a clause-level gate reads
+                // its last-known information (`Game::gate_trigger_context`
+                // exposes the trigger's event snapshot as `deleted_object`).
+                trigger.deleted_object.as_ref().map(|snapshot| has_trait(&snapshot.traits))
+            })
         } else {
             rctx.attack_target_change()
                 .map(|change| change.attacker)
@@ -1682,27 +1688,19 @@ fn eval_event_fields(
                         .and_then(|trigger| trigger.event_permanent)
                 })
                 .or_else(|| rctx.attack_attacker())
+                .ok_or(None)
         };
-        let Some(attacker) = attacker else {
-            return false;
+        let matched = match attacker {
+            Err(snapshot_match) => snapshot_match.unwrap_or(false),
+            Ok(attacker) => rctx
+                .game
+                .player(attacker.player)
+                .battle_area
+                .get(attacker.index as usize)
+                .and_then(|perm| rctx.game.card_data_for_handle(perm.top_card().handle()))
+                .is_some_and(|data| has_trait(&data.traits)),
         };
-        let Some(card) = rctx
-            .game
-            .player(attacker.player)
-            .battle_area
-            .get(attacker.index as usize)
-            .map(|perm| perm.top_card().handle())
-        else {
-            return false;
-        };
-        let Some(data) = rctx.game.card_data_for_handle(card) else {
-            return false;
-        };
-        if !data
-            .traits
-            .iter()
-            .any(|t| t.eq_ignore_ascii_case(trait_name))
-        {
+        if !matched {
             return false;
         }
     }

@@ -114,6 +114,7 @@ const CH15_08: &[&str] = &[
     include_str!("ch15_08/SCAPEGOAT_LIKE.yaml"),
     include_str!("ch15_08/SUKAMON.yaml"),
     include_str!("ch15_08/TRAIN.yaml"),
+    include_str!("ch15_08/WA_HAND7_DRAW.yaml"),
     include_str!("ch15_08/WA_RET_CHRON.yaml"),
     include_str!("ch15_08/WOULD_DEL_MEM.yaml"),
 ];

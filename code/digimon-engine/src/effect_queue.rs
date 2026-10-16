@@ -355,62 +355,35 @@ impl Game {
     }
 
     pub fn enqueue_triggered(&mut self, timing: EffectTiming, source: TriggerSource) {
-        let start = self.effect_queue.len();
+        self.event_snapshot_cache = None;
         self.enqueue_triggered_scan(timing, source);
-        self.record_trigger_qualifiers(start);
+        self.event_snapshot_cache = None;
     }
 
-    /// §15-8-3-8: evaluate the trigger qualifier (`Effect::trigger_qualifier`)
-    /// of every entry this event just triggered, in the state where it
-    /// triggered, and record the verdict on the entry's trigger context. The
-    /// effect's lowered `condition` reads the verdict instead of re-reading
-    /// the board, so e.g. "when one of your [X] Digimon attacks" stays met
-    /// after the attacker leaves while the effect is pending; its processing
-    /// condition is still read when it activates (§15-8-3-9-3).
-    fn record_trigger_qualifiers(&mut self, start: usize) {
-        for i in start..self.effect_queue.len() {
-            let qe = self.effect_queue[i].clone();
-            if qe.granted_effect_id.is_some() {
-                continue;
-            }
-            let Some(context) = qe.trigger_context.as_ref() else {
-                continue;
-            };
-            if context.trigger_qualifier_met.is_some()
-                || !context.simultaneous_play_members.is_empty()
-            {
-                continue;
-            }
-            let Some(effects) = self.effects_for_queued(&qe) else {
-                continue;
-            };
-            let Some((id, qualifier)) = effects
-                .get(qe.effect_slot as usize)
-                .and_then(|effect| effect.trigger_qualifier.clone())
-            else {
-                continue;
-            };
-            let source_kind = self.queued_effect_activation_kind(&qe);
-            let prev_dna_origin = self.current_dna_origin;
-            if qe.dna_origin_context.is_some() {
-                self.current_dna_origin = qe.dna_origin_context;
-            }
-            let met = {
-                let trigger_guard = TriggerContextGuard::install(self, qe.trigger_context.clone());
-                let ctx = EffectContext::new_with_source_kind(
-                    &mut *trigger_guard.game,
-                    qe.source_card,
-                    qe.source_permanent,
-                    source_kind,
-                    qe.controller,
-                );
-                qualifier(&ctx.as_read())
-            };
-            self.current_dna_origin = prev_dna_origin;
-            if let Some(context) = self.effect_queue[i].trigger_context.as_mut() {
-                context.trigger_qualifier_met = Some((id, qe.source_card, met));
-            }
+    /// The trigger context a CLAUSE-LEVEL gate (an effect's `condition`,
+    /// which carries a DSL clause's `active_when` and `condition`) reads, or
+    /// `None` to read `context` as is.
+    ///
+    /// While the event Digimon is still on the field the gate reads it live:
+    /// a pending effect whose trigger conditions are no longer met can't
+    /// activate (§15-4-4-5). Once it has LEFT the field, the gate reads its
+    /// last-known information captured when the effect triggered
+    /// (`TriggerContext::event_snapshot`, exposed as `deleted_object`): the
+    /// event happened and does not un-happen, so the trigger's references
+    /// keep their triggered-state values (§15-8-3-1; the §15-8-3-9-4 model of
+    /// last-known information). Effect bodies always read live
+    /// (§15-8-3-9-3).
+    pub(crate) fn gate_trigger_context(&self, context: &TriggerContext) -> Option<TriggerContext> {
+        if context.deleted_object.is_some() || context.event_permanent_identity.is_none() {
+            return None;
         }
+        let snapshot = context.event_snapshot.as_ref()?;
+        if context.resolve_event_permanent(self).is_some() {
+            return None;
+        }
+        let mut gate = context.clone();
+        gate.deleted_object = Some((**snapshot).clone());
+        Some(gate)
     }
 
     fn enqueue_triggered_scan(&mut self, timing: EffectTiming, source: TriggerSource) {
@@ -2436,6 +2409,20 @@ impl Game {
                         }
                     };
                     context.event_permanent_identity = Some((handle.player, identity));
+                    let key = (handle.player, identity);
+                    let cached = self
+                        .event_snapshot_cache
+                        .as_ref()
+                        .filter(|(cached_key, _)| *cached_key == key)
+                        .map(|(_, snapshot)| snapshot.clone());
+                    context.event_snapshot = match cached {
+                        Some(snapshot) => Some(snapshot),
+                        None => self.build_snapshot_for_handle(handle).map(|snapshot| {
+                            let snapshot = std::sync::Arc::new(snapshot);
+                            self.event_snapshot_cache = Some((key, snapshot.clone()));
+                            snapshot
+                        }),
+                    };
                 }
             }
         }
@@ -2600,7 +2587,8 @@ impl Game {
         };
 
         let prev_trigger_context = self.current_trigger_context.clone();
-        self.current_trigger_context = Some(trigger_context);
+        let gate = self.gate_trigger_context(&trigger_context);
+        self.current_trigger_context = Some(gate.unwrap_or(trigger_context));
         let ctx = EffectReadContext::new_with_source_kind(
             self,
             source_card,
@@ -3604,7 +3592,11 @@ impl Game {
         let condition_passes = if let Some(effects) = looked_up {
             if let Some(eff) = effects.get(effect_slot) {
                 if let Some(cond) = &eff.condition {
-                    let trigger_guard = TriggerContextGuard::install(self, trigger_context);
+                    let gate = trigger_context
+                        .as_ref()
+                        .and_then(|context| self.gate_trigger_context(context));
+                    let trigger_guard =
+                        TriggerContextGuard::install(self, gate.or(trigger_context));
                     let ctx = EffectContext::new_with_source_kind(
                         &mut *trigger_guard.game,
                         source_card,
@@ -3873,14 +3865,34 @@ impl Game {
         let skip_condition = qe.timing == EffectTiming::SecuritySkill;
         if !skip_condition {
             if let Some(cond) = &effect.condition {
-                let ctx = EffectContext::new_with_source_kind(
-                    self,
-                    attribution_source_card,
-                    qe.source_permanent,
-                    attribution_source_kind,
-                    qe.controller,
-                );
-                if !cond(&ctx.as_read()) {
+                // The clause-level gate reads the gate view of the installed
+                // trigger context; the body below reads it as is.
+                let gate = self
+                    .current_trigger_context
+                    .as_ref()
+                    .and_then(|context| self.gate_trigger_context(context));
+                let passes = if let Some(gate) = gate {
+                    // The guard restores the live context for the body.
+                    let guard = TriggerContextGuard::install(self, Some(gate));
+                    let ctx = EffectContext::new_with_source_kind(
+                        &mut *guard.game,
+                        attribution_source_card,
+                        qe.source_permanent,
+                        attribution_source_kind,
+                        qe.controller,
+                    );
+                    cond(&ctx.as_read())
+                } else {
+                    let ctx = EffectContext::new_with_source_kind(
+                        self,
+                        attribution_source_card,
+                        qe.source_permanent,
+                        attribution_source_kind,
+                        qe.controller,
+                    );
+                    cond(&ctx.as_read())
+                };
+                if !passes {
                     return;
                 }
             }
@@ -4884,6 +4896,26 @@ impl Game {
         // the previous value even on panic. See
         // `G-OUTER-OPTIONAL-TRIGGER-CTX` (proposal
         // `fix-outer-optional-prompt-trigger-ctx`).
+        if qe.timing != EffectTiming::SecuritySkill {
+            if let Some(cond) = &effect.condition {
+                let gate = qe
+                    .trigger_context
+                    .as_ref()
+                    .and_then(|context| self.gate_trigger_context(context));
+                let guard =
+                    TriggerContextGuard::install(self, gate.or_else(|| qe.trigger_context.clone()));
+                let rctx = EffectReadContext::new_with_source_kind(
+                    &*guard.game,
+                    attribution_source_card,
+                    qe.source_permanent,
+                    attribution_source_kind,
+                    qe.controller,
+                );
+                if !cond(&rctx) {
+                    return false;
+                }
+            }
+        }
         let guard = TriggerContextGuard::install(self, qe.trigger_context.clone());
         let rctx = EffectReadContext::new_with_source_kind(
             &*guard.game,
@@ -4892,13 +4924,6 @@ impl Game {
             attribution_source_kind,
             qe.controller,
         );
-        if qe.timing != EffectTiming::SecuritySkill {
-            if let Some(cond) = &effect.condition {
-                if !cond(&rctx) {
-                    return false;
-                }
-            }
-        }
         // Body-actionability guard: when the body's first step is a
         // selection, only prompt if it has at least one candidate — DCGO
         // does not prompt for an optional ability with no legal target.
