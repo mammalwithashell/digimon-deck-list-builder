@@ -139,7 +139,7 @@
 "15-8-5-4":
   status: proven
   tests: ["ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause", "ch16_replacement_keywords::multiple_instances_of_one_keyword_each_offered_once_per_event"]
-  note: "Controller ruling (task 8 review, PDF governs; reverses the earlier [Main]-scope ruling): the cause is the interrupting event, i.e. each 'would be deleted' (15-8-5-1/-2; the example closes the window 'until the deletion is resolved'). Two deletions from one [Main] are two causes: the Sukamon effect activates for each. One-event witness: two non-preventing would-be-deleted effects on one Digimon each activate once in that event, then the deletion proceeds. DCGO enforces neither reading for BT11-041 (ChainActivations -1; IsCutInEffectHasUsed stub). G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT retracted."
+  note: "Controller ruling (task 8 review, PDF governs; reverses the earlier [Main]-scope ruling): the cause is the interrupting event, i.e. each 'would be deleted' (15-8-5-1/-2; the example closes the window 'until the deletion is resolved'). Two deletions from one [Main] are two causes: the Sukamon effect activates for each. One-event witness: two non-preventing would-be-deleted effects on one Digimon each activate once in that event, then the deletion proceeds. DCGO enforces neither reading for BT11-041 (ChainActivations -1; IsCutInEffectHasUsed stub). G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT retracted. TODO (Task 14, owner-rulings list in qa/rules/mechanics-gaps-2026-10.md): after one immediate-type effect has already prevented a deletion, the engine still offers the carrier's other pending prevention effects in the same window; controller leans engine-correct (15-8-5-1/-5-4/-5-5-2), left unasserted."
 "15-8-5-5-2":
   status: proven
   tests: ["ch15_08_effect_categories::immediate_effect_with_condition_met_later_can_activate"]
@@ -478,19 +478,21 @@
 "16-1":
   status: proven
   tests: ["ch16_replacement_keywords::multiple_instances_of_one_keyword_each_offered_once_per_event"]
-  note: "Bracketed keyword icons (<Barrier>, <Fragment (n)>, <Decoy>, <Decoy (Black)>) parse to keyword effects; each printed/inherited instance is its own effect: a Digimon with <Barrier> on its top card and an inherited <Barrier> is offered each instance once in one battle deletion."
+  note: "The bracketed icon <Barrier> parses to the keyword effect; each printed/inherited instance is its own effect: a Digimon with <Barrier> on its top card and an inherited <Barrier> gets an ordering choice, then each instance offered once in one battle deletion (first declined, second accepted)."
 "16-2":
-  status: proven
-  tests: ["ch16_replacement_keywords::multiple_instances_of_one_keyword_each_offered_once_per_event"]
-  note: "<Fragment (1)>/<Fragment (2)> and <Decoy>/<Decoy (Black)> parse to one Keyword variant each (value / specified card are parameters, same type)."
+  status: gap
+  blocks_training: false
+  gap_id: G-ENGINE-KEYWORD-REFERENCE-MATCHES-ONE-VALUE
+  tests: ["ch16_replacement_keywords::keyword_reference_matches_every_value_of_the_keyword"]
+  note: "Behavioural witness: '[Main] Delete 1 of your opponent's Digimon with <Fragment>' (DSL `has_keyword: Fragment`) must be able to choose a <Fragment (2)> Digimon as well as a <Fragment (1)> one; the engine compares the whole Keyword value (lookup_keyword(\"Fragment\", None) = Fragment(1)), so only <Fragment (1)> qualifies. #[ignore]d. Supporting evidence only: the printed icons parse to one Keyword variant per keyword. No production card references a parametric keyword through has_keyword today, hence blocks_training false."
 "16-3":
   status: proven
   tests: ["ch16_replacement_keywords::specified_cards_follow_the_icon_note"]
-  note: "The parenthetical decides: <Decoy (Black)> protects a black Digimon, not a red one; <Decode (blue Lv.4)> can't choose a red Lv.4 source; <Partition (blue Lv.4 & green Lv.4)> doesn't trigger with a red Lv.4 in place of the green one."
+  note: "The parenthetical decides: <Decoy (Black)> protects a black Digimon, not a red one (engine keyword parameter); <Partition (blue Lv.4 & green Lv.4)> doesn't trigger with a red Lv.4 in place of the green one (engine slot gate over the authored `sources:`). Decode leg: <Decode (blue Lv.4)> can't choose a red Lv.4 source -- Holds for cards authored with a `replacement` clause on `when_would_leave_battle_area`, `optional: true`, `active_when: none_of: [replacement_cause: battle]`, a `select_material` filter equal to the parenthetical and `play_from_materials` with `cost_delta: free` (Keyword::Decode has no generic body). This is the production authoring path (EX12-031, BT22-015, P-213). A dsl-lint guard is proposed in qa/dsl-vocab-gaps.md (G-DSL-REPLACEMENT-KEYWORD-EXCLUSIONS-LINT)."
 "16-18-1":
   status: proven
   tests: ["ch16_replacement_keywords::decoy_only_for_specified_digimon_deleted_by_opponent_effect"]
-  note: "Opponent's deletion effect on another own black Digimon: offered; accepting deletes the <Decoy> Digimon and the other stays. Not offered for a non-specified (red) Digimon, the owner's own effect, or a battle."
+  note: "Opponent's deletion effect on another own black Digimon: offered; accepting deletes the <Decoy> Digimon and the other stays. Not offered for a non-specified (red) Digimon, the owner's own effect, or a battle, nor when the opponent deletes their own black Digimon (\"your\" Digimon only)."
 "16-18-2":
   status: proven
   tests: ["ch16_replacement_keywords::decoy_only_for_specified_digimon_deleted_by_opponent_effect", "ch16_replacement_keywords::decoy_kind_matches_rule", "ch16_replacement_keywords::decoy_timing_matches_rule"]
@@ -502,7 +504,7 @@
 "16-19-1":
   status: proven
   tests: ["ch16_replacement_keywords::armor_purge_requires_a_digivolution_card_and_keeps_modifiers"]
-  note: "Accepting trashes only the top card; the Digimon is not deleted and keeps a -3000 DP for-the-turn modifier (matrix: surviving modifiers carry over). A lone card (no digivolution card) is not offered (DCGO ArmorPurge.cs:13 DigivolutionCards.Count >= 1). The 4.3 text itself says nothing about modifiers."
+  note: "Counted toward the obligation: accepting trashes only the top card and the Digimon is not deleted. Not counted: [DCGO-derived, ArmorPurge.cs:13] a lone card (no digivolution card) is not offered; [supporting: §15-13-2 by analogy, §4-7-6] the Digimon keeps a -3000 DP for-the-turn modifier (matrix: surviving modifiers carry over). The 4.3 text says nothing about either."
 "16-19-2":
   status: proven
   tests: ["ch16_replacement_keywords::armor_purge_kind_matches_rule", "ch16_replacement_keywords::armor_purge_timing_matches_rule"]
@@ -514,7 +516,7 @@
 "16-22-1":
   status: proven
   tests: ["ch16_replacement_keywords::evade_suspends_to_prevent_deletion"]
-  note: "Accepting suspends the Digimon and it is not deleted. Already suspended (condition can't be executed, 15-7-4): not offered."
+  note: "Accepting suspends the Digimon and it is not deleted. Already suspended (suspending isn't performed, 1-3-3, so the condition can't be executed, 15-7-4): not offered."
 "16-22-2":
   status: proven
   tests: ["ch16_replacement_keywords::evade_kind_matches_rule", "ch16_replacement_keywords::evade_timing_matches_rule"]
@@ -533,16 +535,16 @@
   note: "Immediate-type: offered with the Digimon in the battle area and the security stack intact. Triggers for the attacker losing its battle too."
 "16-25-3":
   status: proven
-  tests: ["ch16_replacement_keywords::barrier_optionality_matches_rule"]
-  note: "Declining: deleted, security untouched. Matrix row Barrier: optional_cost_then_mandatory, agrees."
+  tests: ["ch16_replacement_keywords::barrier_trashes_top_security_only_for_battle_deletion", "ch16_replacement_keywords::barrier_optionality_matches_rule"]
+  note: "Declining: deleted, security untouched. Accepting: the top security card is trashed and no further decision follows. Matrix row Barrier: optional_cost_then_mandatory, agrees."
 "16-29-1":
   status: proven
   tests: ["ch16_replacement_keywords::partition_plays_one_of_each_specified_all_or_nothing"]
-  note: "Opponent's deletion effect: offered; accepting plays the blue Lv.4 and the green Lv.4 for free. Not offered without 1 of each specified card, for the owner's own effect, or in battle. Proven via the AD1-011 `kind: partition` idiom."
+  note: "Opponent's deletion effect: offered; accepting plays the blue Lv.4 and the green Lv.4 for free; with two blue Lv.4 cards exactly one blue and the green are played, the other blue is trashed. Not offered without 1 of each specified card, for the owner's own effect, or in battle. Holds for cards authored with `kind: partition` + `sources:` (one predicate per slot) + `exclude_cause: [own_effect, battle]`; the synthesized Keyword::Partition body hard-codes the Battle/OwnEffect cause skip. This is the production authoring path (AD1-011, BT16-025, BT20-037). A dsl-lint guard is proposed in qa/dsl-vocab-gaps.md (G-DSL-REPLACEMENT-KEYWORD-EXCLUSIONS-LINT)."
 "16-29-2":
   status: proven
   tests: ["ch16_replacement_keywords::partition_kind_matches_rule", "ch16_replacement_keywords::partition_timing_matches_rule"]
-  note: "Immediate-type: offered with the full stack in the battle area, nothing trashed. Triggers for a return to the hand too (removal, not only deletion). The plays are sequential, not one simultaneous play: G-ENGINE-PARTITION-PLAYS-NOT-SIMULTANEOUS (not asserted here)."
+  note: "Immediate-type: offered with the full stack in the battle area, nothing trashed. Triggers for a return to the hand too (removal, not only deletion). The plays are sequential, not one simultaneous play: G-ENGINE-PARTITION-PLAYS-NOT-SIMULTANEOUS (not asserted here). Holds for cards authored with `kind: partition` + `sources:` (one predicate per slot) + `exclude_cause: [own_effect, battle]`; the synthesized Keyword::Partition body hard-codes the Battle/OwnEffect cause skip. This is the production authoring path (AD1-011, BT16-025, BT20-037). A dsl-lint guard is proposed in qa/dsl-vocab-gaps.md (G-DSL-REPLACEMENT-KEYWORD-EXCLUSIONS-LINT)."
 "16-29-3":
   status: proven
   tests: ["ch16_replacement_keywords::partition_optionality_matches_rule"]
@@ -550,7 +552,7 @@
 "16-29-4":
   status: proven
   tests: ["ch16_replacement_keywords::partition_plays_one_of_each_specified_all_or_nothing"]
-  note: "Once accepted, the only decision is which specified card is played first (mandatory, 2 candidates); both are always played."
+  note: "Once accepted, any card pick the engine asks for can't be declined and both specified cards are always played (1 of each, never 2 blues). The number of picks is not asserted (today's play-order pick is an artifact of G-ENGINE-PARTITION-PLAYS-NOT-SIMULTANEOUS)."
 "16-32-1":
   status: proven
   tests: ["ch16_replacement_keywords::scapegoat_other_than_your_own_effect"]
@@ -562,19 +564,19 @@
 "16-32-3":
   status: proven
   tests: ["ch16_replacement_keywords::scapegoat_optionality_matches_rule"]
-  note: "Declining: deleted. Accepting with two other Digimon: a mandatory pick of which to delete, then no further decision. Matrix row Scapegoat: optional_cost_then_mandatory, agrees."
+  note: "Declining: deleted. Accepting with two other Digimon: a mandatory pick of which to delete (only the owner's other Digimon; the opponent's Digimon and the carrier are not choosable), then no further decision. Matrix row Scapegoat: optional_cost_then_mandatory, agrees."
 "16-36-1":
   status: proven
   tests: ["ch16_replacement_keywords::decode_plays_specified_card_not_in_battle"]
-  note: "Opponent's return-to-hand and the owner's own deletion: offered; accepting plays the blue Lv.4 source for free. Battle: not offered. Proven via the EX12-031 `replacement` idiom (Keyword::Decode has no generic body)."
+  note: "Opponent's return-to-hand and the owner's own deletion: offered; accepting plays the blue Lv.4 source for free; with two blue Lv.4 sources the player picks one (not declinable) and only it is played. Battle: not offered. Holds for cards authored with a `replacement` clause on `when_would_leave_battle_area`, `optional: true`, `active_when: none_of: [replacement_cause: battle]`, a `select_material` filter equal to the parenthetical and `play_from_materials` with `cost_delta: free` (Keyword::Decode has no generic body). This is the production authoring path (EX12-031, BT22-015, P-213). A dsl-lint guard is proposed in qa/dsl-vocab-gaps.md (G-DSL-REPLACEMENT-KEYWORD-EXCLUSIONS-LINT)."
 "16-36-2":
   status: proven
   tests: ["ch16_replacement_keywords::decode_plays_specified_card_not_in_battle", "ch16_replacement_keywords::decode_kind_matches_rule", "ch16_replacement_keywords::decode_timing_matches_rule"]
-  note: "Immediate-type: offered with the stack in the battle area. Deletion by an effect is leaving the battle area: offered."
+  note: "Immediate-type: offered with the stack in the battle area. Deletion by an effect is leaving the battle area: offered. Holds for cards authored with a `replacement` clause on `when_would_leave_battle_area`, `optional: true`, `active_when: none_of: [replacement_cause: battle]`, a `select_material` filter equal to the parenthetical and `play_from_materials` with `cost_delta: free` (Keyword::Decode has no generic body). This is the production authoring path (EX12-031, BT22-015, P-213). A dsl-lint guard is proposed in qa/dsl-vocab-gaps.md (G-DSL-REPLACEMENT-KEYWORD-EXCLUSIONS-LINT)."
 "16-36-3":
   status: proven
   tests: ["ch16_replacement_keywords::decode_optionality_matches_rule"]
-  note: "One optional decision (the clause); declining plays nothing. Matrix row Decode: optional, agrees. (G-DECODE-DOUBLE-OPTIONAL concerns the EX12-036 card spec, not this idiom.)"
+  note: "One optional decision (the clause); declining plays nothing. Matrix row Decode: optional, agrees. (G-DECODE-DOUBLE-OPTIONAL concerns the EX12-036 card spec.) Holds for cards authored with a `replacement` clause on `when_would_leave_battle_area`, `optional: true`, `active_when: none_of: [replacement_cause: battle]`, a `select_material` filter equal to the parenthetical and `play_from_materials` with `cost_delta: free` (Keyword::Decode has no generic body). This is the production authoring path (EX12-031, BT22-015, P-213). A dsl-lint guard is proposed in qa/dsl-vocab-gaps.md (G-DSL-REPLACEMENT-KEYWORD-EXCLUSIONS-LINT)."
 "16-37-1":
   status: proven
   tests: ["ch16_replacement_keywords::fragment_trashes_exact_count_of_chosen_sources"]

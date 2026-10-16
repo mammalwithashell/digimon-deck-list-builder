@@ -161,6 +161,7 @@ const CH16_REPL: &[&str] = &[
     include_str!("ch16_repl/EVADE_FRAG1.yaml"),
     include_str!("ch16_repl/FRAG2.yaml"),
     include_str!("ch16_repl/GREEN_LV4.yaml"),
+    include_str!("ch16_repl/MAIN_DEL_FRAG.yaml"),
     include_str!("ch16_repl/PARTITION.yaml"),
     include_str!("ch16_repl/SCAPEGOAT.yaml"),
 ];

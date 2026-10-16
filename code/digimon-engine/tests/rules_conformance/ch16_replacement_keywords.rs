@@ -39,7 +39,7 @@
 
 use crate::fixtures;
 use crate::support::*;
-use digimon_engine::action::space::encode_source_select;
+use digimon_engine::action::space::{encode_source_select, ATTACK_START};
 use digimon_engine::card_data::{parse_printed_keywords, CardData};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{Keyword, PlayerId};
@@ -258,6 +258,8 @@ fn decoy_board(owner: PlayerId, hand0: &[&str]) -> (DebugRunner, PermanentHandle
 ///   `BLACK_LV3` next to P0's `DECOY`: no <Decoy>.
 /// - In battle: P0's `LV5_PLAIN` attacks P1's suspended `BLACK_LV3`: no
 ///   <Decoy>.
+/// - Not one of YOUR Digimon: P0's `MAIN_DEL_OWN_MEM` deletes P0's own black
+///   `BLACK_LV3` while P1 has `DECOY`: P1 is not offered <Decoy>.
 #[test]
 fn decoy_only_for_specified_digimon_deleted_by_opponent_effect() {
     cite!(
@@ -303,6 +305,21 @@ fn decoy_only_for_specified_digimon_deleted_by_opponent_effect() {
     let prompts = settle_declining(&mut r);
     assert!(!offered_to(&prompts, 1), "battle: no <Decoy>: {prompts:?}");
     assert_eq!(field_top_ids(&r, 1), owned(&["DECOY", FILL]));
+
+    // Not one of YOUR Digimon: P0 deletes P0's own black Digimon while P1
+    // has DECOY.
+    let mut r = board(&["MAIN_DEL_OWN_MEM"]);
+    r.place_on_field(1, "DECOY", Some(0));
+    r.place_on_field(0, "BLACK_LV3", Some(0));
+    red_anchor(&mut r);
+    delete_own(&mut r, 0);
+    let prompts = settle_declining(&mut r);
+    assert!(
+        !offered_to(&prompts, 1),
+        "the opponent's black Digimon: no <Decoy>: {prompts:?}"
+    );
+    assert!(trash_ids(&r, 0).contains(&"BLACK_LV3".to_string()));
+    assert_eq!(field_top_ids(&r, 1), owned(&["DECOY"]));
 }
 
 /// §16-18-3 ""By deleting this Digimon" in <Decoy> is an optional processing
@@ -568,6 +585,9 @@ fn armor_purge_timing_matches_rule() {
 /// executed, the processing for "prevents the deletion" will be mandatory."
 /// §15-7-4 "If executing an optional processing condition's contents isn't
 /// possible, then the player can't choose to execute them. ..."
+/// §1-3-3 "If a card in a given state is requested to be changed to that same
+/// state, the card remains in its current state. ..." (suspending a suspended
+/// Digimon isn't performed, so the condition can't be executed)
 ///
 /// - P0's `MAIN_DEL1` targets P1's unsuspended `EVADE`: offered; accepting
 ///   suspends it and, with no further decision, it is not deleted.
@@ -586,6 +606,10 @@ fn evade_suspends_to_prevent_deletion() {
     cite!(
         "15-7-4",
         "210ce11e09b84d8a05b2b4861fcbff3ad5d398894a7da5879d8c869dc6446b14"
+    );
+    cite!(
+        "1-3-3",
+        "ca899d2909e51caa64022d4c9553942bacb4a821e53cb52e8f2e1d02a4830324"
     );
     let (mut r, evade) = p1_stack_board(&["EVADE"], &["MAIN_DEL1"]);
     use_on_opponent_slot(&mut r, "MAIN_DEL1", 0);
@@ -658,7 +682,7 @@ fn evade_optionality_matches_rule() {
 /// - Any cause, including its owner's own effect: P0's `MAIN_DEL_OWN_MEM`
 ///   deletes P0's own `EVADE`: offered; accepting keeps it on the field.
 /// - In battle (P0's `LV5_PLAIN` battles P1's unsuspended `EVADE` through
-///   `battle_digimon`): offered.
+///   `battle_digimon`): offered; accepting suspends it and it survives.
 /// - Leaving without deletion: P0's `MAIN_BOUNCE1` returns P1's `EVADE` to
 ///   the hand: no <Evade>.
 #[test]
@@ -686,6 +710,10 @@ fn evade_timing_matches_rule() {
         advance_to(&mut r, optional_for(1)),
         "deleted in battle: <Evade> is offered"
     );
+    accept(&mut r, 1);
+    settle_declining(&mut r);
+    assert_eq!(field_top_ids(&r, 1), owned(&["EVADE"]), "not deleted");
+    assert!(is_suspended(&r, evade), "suspended to pay");
 
     let (mut r, _) = p1_stack_board(&["EVADE"], &["MAIN_BOUNCE1"]);
     use_on_opponent_slot(&mut r, "MAIN_BOUNCE1", 0);
@@ -853,23 +881,20 @@ fn barrier_timing_matches_rule() {
 
 const PARTITION_FULL: &[&str] = &["BLUE_LV4", "GREEN_LV4", "PARTITION"];
 
-/// After <Partition> is accepted: the engine asks which specified card to
-/// play first (both cards are played either way, so the pick can't be
-/// declined -- §16-29-4); take `BLUE_LV4`. The last card is taken without a
-/// prompt.
-fn play_partition_blue_first(r: &mut DebugRunner, partition: PermanentHandle) {
-    let first = current_prompt(r).expect("P1 picks the first card to play");
-    assert_eq!(first.player, 1, "{first:?}");
-    assert!(
-        !first.optional,
-        "no way to play none or only some: {first:?}"
-    );
-    assert_eq!(
-        r.pending_action_count(),
-        2,
-        "either specified card may go first: {:?}",
-        r.pending_selection()
-    );
+/// After <Partition> is accepted, answer any card pick the engine asks for by
+/// taking a `BLUE_LV4`. Whatever the engine asks here (today: which specified
+/// card to play first, an artifact of the sequential plays --
+/// `G-ENGINE-PARTITION-PLAYS-NOT-SIMULTANEOUS`; or which of two blue Lv.4
+/// cards fills the blue slot), it can't be declined: §16-29-4 forbids playing
+/// none or only some of the specified cards. The test asserts the outcome.
+fn pick_partition_blue_if_asked(r: &mut DebugRunner, partition: PermanentHandle) {
+    let Some(p) = current_prompt(r) else {
+        return;
+    };
+    if p.player != 1 || !p.labels.is_empty() {
+        return;
+    }
+    assert!(!p.optional, "no way to play none or only some: {p:?}");
     pick_source(r, partition, "BLUE_LV4");
 }
 
@@ -884,10 +909,13 @@ fn play_partition_blue_first(r: &mut DebugRunner, partition: PermanentHandle) {
 /// can't choose to only play one or some of the specified cards."
 ///
 /// - P0's `MAIN_DEL1` targets P1's `[BLUE_LV4, GREEN_LV4, PARTITION]`. P1
-///   accepts <Partition>: P1 only picks which specified card is played first
-///   (that pick can't be declined), BOTH `BLUE_LV4` and `GREEN_LV4` are
-///   played (no decision lets P1 play only one) without paying (P1's memory
-///   is unchanged), and `PARTITION` is deleted.
+///   accepts <Partition>: any card pick that follows can't be declined, BOTH
+///   `BLUE_LV4` and `GREEN_LV4` are played (no decision lets P1 play only
+///   one) without paying (P1's memory is unchanged), and `PARTITION` is
+///   deleted.
+/// - 1 of EACH: on `[BLUE_LV4, BLUE_LV4, GREEN_LV4, PARTITION]` exactly one
+///   blue Lv.4 and the green Lv.4 are played; the other blue Lv.4 is trashed
+///   with `PARTITION`.
 /// - Without 1 of each specified card (`[BLUE_LV4, LV4_PLAIN, PARTITION]`, no
 ///   green Lv.4): not offered.
 /// - By its owner's own effect (P0's `MAIN_DEL_OWN_MEM` on P0's own
@@ -912,7 +940,7 @@ fn partition_plays_one_of_each_specified_all_or_nothing() {
         "P1 is offered <Partition>"
     );
     accept(&mut r, 1);
-    play_partition_blue_first(&mut r, partition);
+    pick_partition_blue_if_asked(&mut r, partition);
     let after = settle_declining(&mut r);
     assert!(
         !offered_to(&after, 1),
@@ -925,6 +953,27 @@ fn partition_plays_one_of_each_specified_all_or_nothing() {
     );
     assert_eq!(trash_ids(&r, 1), owned(&["PARTITION"]));
     assert_eq!(r.memory(), memory, "played without paying their costs");
+
+    // "1 of each": with two blue Lv.4 cards, only one of them is played.
+    let (mut r, partition) = p1_stack_board(
+        &["BLUE_LV4", "BLUE_LV4", "GREEN_LV4", "PARTITION"],
+        &["MAIN_DEL1"],
+    );
+    use_on_opponent_slot(&mut r, "MAIN_DEL1", 0);
+    assert!(advance_to(&mut r, optional_for(1)));
+    accept(&mut r, 1);
+    pick_partition_blue_if_asked(&mut r, partition);
+    settle_declining(&mut r);
+    assert_eq!(
+        sorted(field_top_ids(&r, 1)),
+        owned(&["BLUE_LV4", "GREEN_LV4"]),
+        "exactly 1 blue Lv.4 and 1 green Lv.4 were played"
+    );
+    assert_eq!(
+        trash_ids(&r, 1),
+        owned(&["BLUE_LV4", "PARTITION"]),
+        "the other blue Lv.4 was not played"
+    );
 
     let (mut r, _) = p1_stack_board(&["BLUE_LV4", "LV4_PLAIN", "PARTITION"], &["MAIN_DEL1"]);
     use_on_opponent_slot(&mut r, "MAIN_DEL1", 0);
@@ -1017,7 +1066,7 @@ fn partition_timing_matches_rule() {
         "a return to the hand is removal from the battle area"
     );
     accept(&mut r, 1);
-    play_partition_blue_first(&mut r, partition);
+    pick_partition_blue_if_asked(&mut r, partition);
     settle_declining(&mut r);
     assert_eq!(
         sorted(field_top_ids(&r, 1)),
@@ -1154,7 +1203,8 @@ fn scapegoat_kind_matches_rule() {
 ///
 /// - P1 declines: `SCAPEGOAT` is deleted, `FILL` and `BLACK_LV3` stay.
 /// - P1 accepts with two other Digimon: P1 chooses WHICH to delete (a field
-///   pick that can't be declined: the condition was chosen), picks
+///   pick that can't be declined: the condition was chosen; only P1's own
+///   other Digimon, never P0's `LV4_PLAIN` -- "1 of YOUR other Digimon"), picks
 ///   `BLACK_LV3`, and with no further decision `SCAPEGOAT` is not deleted.
 ///   (Matrix row `Scapegoat`: `optional_cost_then_mandatory`, agrees.)
 #[test]
@@ -1172,6 +1222,7 @@ fn scapegoat_optionality_matches_rule() {
     assert_eq!(field_top_ids(&r, 1), owned(&[FILL, "BLACK_LV3"]));
 
     let (mut r, _) = scapegoat_board(1, &[FILL, "BLACK_LV3"], &["MAIN_DEL1"]);
+    r.place_on_field(0, "LV4_PLAIN", Some(0));
     use_on_opponent_slot(&mut r, "MAIN_DEL1", 0);
     assert!(advance_to(&mut r, optional_for(1)));
     accept(&mut r, 1);
@@ -1180,6 +1231,14 @@ fn scapegoat_optionality_matches_rule() {
     assert!(
         !pick.optional,
         "the chosen condition can't be skipped: {pick:?}"
+    );
+    assert_eq!(pick.kind, SelectionKind::OwnField, "{pick:?}");
+    let mut valid = r.pending_selection().unwrap().valid_action_ids.clone();
+    valid.sort();
+    assert_eq!(
+        valid,
+        vec![ATTACK_START + 1, ATTACK_START + 2],
+        "only P1's OTHER Digimon: not SCAPEGOAT, not P0's LV4_PLAIN"
     );
     pick_field(&mut r, 2);
     let after = settle_declining(&mut r);
@@ -1240,6 +1299,8 @@ fn scapegoat_timing_matches_rule() {
 /// - P0's `MAIN_BOUNCE1` returns P1's `[BLUE_LV4, DECODE]` to the hand. P1
 ///   accepts <Decode>: `BLUE_LV4` is played without paying (P1's memory is
 ///   unchanged) and `DECODE` goes to the hand.
+/// - "Play 1": on `[BLUE_LV4, BLUE_LV4, DECODE]` P1 chooses one blue Lv.4;
+///   only it is played, the other is trashed.
 /// - "Other than by a battle" includes its owner's own effects: P0's
 ///   `MAIN_DEL_OWN_MEM` deletes P0's own `[BLUE_LV4, DECODE]`: offered;
 ///   accepting plays `BLUE_LV4`.
@@ -1267,6 +1328,29 @@ fn decode_plays_specified_card_not_in_battle() {
     assert_eq!(field_top_ids(&r, 1), owned(&["BLUE_LV4"]));
     assert_eq!(hand_ids(&r, 1), owned(&["DECODE"]));
     assert_eq!(r.memory(), memory, "played without paying the cost");
+
+    // "Play 1": with two blue Lv.4 cards under it, P1 chooses one (a pick
+    // that can't be declined) and only that one is played.
+    let (mut r, decode) = p1_stack_board(&["BLUE_LV4", "BLUE_LV4", "DECODE"], &["MAIN_BOUNCE1"]);
+    use_on_opponent_slot(&mut r, "MAIN_BOUNCE1", 0);
+    assert!(advance_to(&mut r, optional_for(1)));
+    accept(&mut r, 1);
+    let pick = current_prompt(&r).expect("P1 chooses which blue Lv.4 to play");
+    assert!(!pick.optional, "{pick:?}");
+    assert_eq!(r.pending_action_count(), 2, "{:?}", r.pending_selection());
+    pick_source(&mut r, decode, "BLUE_LV4");
+    settle_declining(&mut r);
+    assert_eq!(
+        field_top_ids(&r, 1),
+        owned(&["BLUE_LV4"]),
+        "exactly 1 played"
+    );
+    assert_eq!(
+        trash_ids(&r, 1),
+        owned(&["BLUE_LV4"]),
+        "the other is trashed"
+    );
+    assert_eq!(hand_ids(&r, 1), owned(&["DECODE"]));
 
     let mut r = board(&["MAIN_DEL_OWN_MEM"]);
     r.place_stack(0, &["BLUE_LV4", "DECODE"]);
@@ -1490,7 +1574,7 @@ fn fragment_optionality_matches_rule() {
 /// BE DELETED."
 ///
 /// - In battle: P0's `LV5_PLAIN` (7000 DP) attacks P1's suspended `FRAG2`
-///   (5000 DP): offered.
+///   (5000 DP): offered; paying 2 sources keeps it on the field.
 /// - Leaving without deletion: P0's `MAIN_BOUNCE1` returns it to the hand: no
 ///   <Fragment>.
 #[test]
@@ -1505,6 +1589,11 @@ fn fragment_timing_matches_rule() {
         advance_to(&mut r, optional_for(1)),
         "deleted in battle: <Fragment> is offered"
     );
+    accept(&mut r, 1);
+    pick_source(&mut r, frag, "BLUE_LV4");
+    pick_source(&mut r, frag, "LV4_PLAIN");
+    settle_declining(&mut r);
+    assert_eq!(stack_ids(&r, frag), owned(&[FILL, "FRAG2"]), "not deleted");
 
     let (mut r, _) = p1_stack_board(FRAG_FULL, &["MAIN_BOUNCE1"]);
     use_on_opponent_slot(&mut r, "MAIN_BOUNCE1", 0);
@@ -1575,24 +1664,22 @@ fn specified_cards_follow_the_icon_note() {
 
 /// §16-1 "Keyword effects are effects indicated by icons enclosed in
 /// brackets."
-/// §16-2 "A keyword effect is considered to be the same type even if it has a
-/// different numerical value or specified card included in the icon enclosed
-/// in brackets."
 /// §15-8-5-4 "Each immediate-type effect can be activated once until the cause
 /// that first interrupted the immediate-type effect is resolved. ..."
 ///
 /// Ver. 4.3 deleted the per-keyword "if a Digimon has multiple instances of
 /// <X>" rules; what remains is that each instance is its own immediate-type
-/// effect (§16-1), of one keyword type (§16-2), each usable once per cause
-/// (§15-8-5-4).
-/// - Recognition: the bracketed icons `＜Barrier＞`, `＜Fragment (1)＞`,
-///   `＜Fragment (2)＞`, `＜Decoy＞`, `＜Decoy (Black)＞` parse to keyword
-///   effects, and the different values / specified cards are one type each.
+/// effect (§16-1), each usable once per cause (§15-8-5-4).
+/// - Recognition: the bracketed icon `＜Barrier＞` parses to the keyword effect.
 /// - Two instances: P1's `[BARRIER_INH, BARRIER]` has <Barrier> on its top
 ///   card and an inherited <Barrier>. Losing a battle to P0's `LV5_PLAIN`, P1
-///   is offered <Barrier> TWICE in that one deletion: declining the first
-///   leaves the other instance; accepting it trashes ONE security card (the top,
+///   first chooses which instance to use (an `EffectChoice`), and is then
+///   offered <Barrier> TWICE in that one deletion: declining the first leaves
+///   the other instance; accepting it trashes ONE security card (the top,
 ///   `BLUE_LV4`) and the Digimon survives. Neither is offered a second time.
+///
+/// The second-EVENT half of §15-8-5-4 (a new deletion is a new cause) is in
+/// `ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause`.
 #[test]
 fn multiple_instances_of_one_keyword_each_offered_once_per_event() {
     cite!(
@@ -1600,30 +1687,12 @@ fn multiple_instances_of_one_keyword_each_offered_once_per_event() {
         "ebab731ed17c952fefbe8e74966b8142d0e8fa4c59bb844e8d44aae6e1b9674d"
     );
     cite!(
-        "16-2",
-        "25a61affcf23dd9a1afcd3484a1e3b3436b81c9211cd6491a7044ce3dcf8e8c9"
-    );
-    cite!(
         "15-8-5-4",
         "7586ddc0ccc9332f3ced38f131201eceaf1856a8343ac14248891fafc18fb30b"
     );
-    let kw = |text: &str| parse_printed_keywords(text, "", "");
-    assert_eq!(kw("＜Barrier＞"), vec![Keyword::Barrier]);
-    let (f1, f2) = (kw("＜Fragment (1)＞"), kw("＜Fragment (2)＞"));
     assert_eq!(
-        (f1.clone(), f2.clone()),
-        (vec![Keyword::Fragment(1)], vec![Keyword::Fragment(2)])
-    );
-    assert_eq!(
-        std::mem::discriminant(&f1[0]),
-        std::mem::discriminant(&f2[0]),
-        "<Fragment (1)> and <Fragment (2)> are the same keyword type"
-    );
-    let (d0, d1) = (kw("＜Decoy＞"), kw("＜Decoy (Black)＞"));
-    assert_eq!(
-        std::mem::discriminant(&d0[0]),
-        std::mem::discriminant(&d1[0]),
-        "<Decoy> and <Decoy (Black)> are the same keyword type: {d0:?} {d1:?}"
+        parse_printed_keywords("＜Barrier＞", "", ""),
+        vec![Keyword::Barrier]
     );
 
     let mut r = board_with(ch16_repl(), &[], &[FILL; 3], SEC_TOP_BLUE);
@@ -1631,8 +1700,11 @@ fn multiple_instances_of_one_keyword_each_offered_once_per_event() {
     red_anchor(&mut r);
     attack_with_lv5(&mut r, h);
     let mut offers = 0;
+    let mut ordered = false;
+    let mut settled = false;
     for _ in 0..12 {
         let Some(p) = current_prompt(&r) else {
+            settled = true;
             break;
         };
         if p.optional && p.player == 1 {
@@ -1644,18 +1716,70 @@ fn multiple_instances_of_one_keyword_each_offered_once_per_event() {
             }
         } else if p.player == 1 && p.kind == SelectionKind::EffectChoice {
             // Which instance first: P1's ordering choice.
+            ordered = true;
             let action = r.pending_selection().unwrap().valid_action_ids[0];
             r.execute_action(1, action).expect("order pick");
         } else {
             step_prompt(&mut r);
         }
     }
+    assert!(settled, "decisions did not settle after 12 steps");
+    assert!(ordered, "P1 chose which <Barrier> instance to use first");
     assert_eq!(offers, 2, "each <Barrier> instance is offered once");
     assert_eq!(field_top_ids(&r, 1), owned(&["BARRIER"]), "prevented");
     assert_eq!(
         security_ids(&r, 1),
         owned(&[FILL, FILL]),
         "one instance paid once"
+    );
+}
+
+/// §16-2 "A keyword effect is considered to be the same type even if it has a
+/// different numerical value or specified card included in the icon enclosed
+/// in brackets."
+///
+/// A reference to the keyword by name matches every value of it. P0's
+/// `MAIN_DEL_FRAG` ("[Main] Delete 1 of your opponent's Digimon with
+/// <Fragment>") can choose P1's `FRAG2` (<Fragment (2)>) and P1's
+/// `EVADE_FRAG1` (<Fragment (1)>), but not P1's `FILL` (no <Fragment>).
+///
+/// Supporting evidence only (not counted toward the obligation): the printed
+/// icons `＜Fragment (1)＞`/`＜Fragment (2)＞` and `＜Decoy＞`/`＜Decoy (Black)＞`
+/// parse to one `Keyword` variant each.
+#[test]
+#[ignore = "G-ENGINE-KEYWORD-REFERENCE-MATCHES-ONE-VALUE (§16-2)"]
+fn keyword_reference_matches_every_value_of_the_keyword() {
+    cite!(
+        "16-2",
+        "25a61affcf23dd9a1afcd3484a1e3b3436b81c9211cd6491a7044ce3dcf8e8c9"
+    );
+    let kw = |text: &str| parse_printed_keywords(text, "", "");
+    let (f1, f2) = (kw("＜Fragment (1)＞"), kw("＜Fragment (2)＞"));
+    assert_eq!(
+        std::mem::discriminant(&f1[0]),
+        std::mem::discriminant(&f2[0])
+    );
+    let (d0, d1) = (kw("＜Decoy＞"), kw("＜Decoy (Black)＞"));
+    assert_eq!(
+        std::mem::discriminant(&d0[0]),
+        std::mem::discriminant(&d1[0])
+    );
+
+    let mut r = board(&["MAIN_DEL_FRAG"]);
+    r.place_on_field(1, "FRAG2", Some(0));
+    r.place_on_field(1, "EVADE_FRAG1", Some(0));
+    r.place_on_field(1, FILL, Some(0));
+    red_anchor(&mut r);
+    use_option(&mut r, 0, "MAIN_DEL_FRAG");
+    let sel = r
+        .pending_selection()
+        .expect("P0 chooses the Digimon to delete");
+    let mut valid = sel.valid_action_ids.clone();
+    valid.sort();
+    assert_eq!(
+        valid,
+        vec![ATTACK_START, ATTACK_START + 1],
+        "<Fragment (2)> and <Fragment (1)> both qualify, FILL doesn't: {sel:?}"
     );
 }
 
@@ -1690,6 +1814,10 @@ fn two_simultaneous_replacements_ordered_by_controller() {
         use_on_opponent_slot(&mut r, "MAIN_DEL1", 0);
         let order = current_prompt(&r).expect("P1 chooses which effect to use first");
         assert_eq!(order.player, 1, "{order:?}");
+        assert!(
+            order.kind == SelectionKind::EffectChoice && !order.optional,
+            "an ordering choice, not a yes/no: {order:?}"
+        );
         assert!(
             order.labels.iter().any(|l| l.starts_with("<Evade"))
                 && order.labels.iter().any(|l| l.starts_with("<Fragment")),
