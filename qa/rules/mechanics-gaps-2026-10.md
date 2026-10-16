@@ -56,15 +56,15 @@ Statuses live in `qa/rules/cr_obligations_status.yaml` (hand-maintained sidecar)
 
 ## Blocking gaps
 
-**31 gap ids** block training (66 obligations). **30 are `PDF-explicit`**: the 4.3 text (with, where noted, an official Q&A) settles the expected behaviour, so Plan 3 fixes them without asking. **1 is `PDF-silent`** (`G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON`, worksheet W2). Three explicit ones carry a confirmation question in the worksheet (W3, W5, W10), which does not hold up their fix.
+**31 gap ids** block training (66 obligations). **All 31 are `PDF-explicit`**: the 4.3 text (with, where noted, an official Q&A) settles the expected behaviour, so Plan 3 fixes them without asking. **None is `PDF-silent`.** Seven explicit gaps carry a worksheet question that does not hold up their fix: Vortex target (W2), the end-of-turn attack keywords (W3), DUAL (W5 and W11), infinite loops (W10), Overflow (W11) and Link-at-limit (W12).
 
-Grouped by the mechanism the defect lives in; when the obligation's Aegis taxonomy tag differs, it is given after the rule id. Every test named is `#[ignore]`d under the gap id and fails with `--include-ignored`. "DCGO" and "Aegis" give each reference engine's stance on the rule as the gap entry and Aegis's vendored scenario index (`qa/rules/aegis/conformance-scenario-index.md`) / engine audits (`docs/audits/engine/*.md` at Aegis `ec0cd22f0`) record it.
+Grouped by the mechanism the defect lives in; when the obligation's Aegis taxonomy tag differs, it is given after the rule id. The tests are those the sidecar lists for the gap's obligations: the red ones are `#[ignore]`d under the gap id and fail with `--include-ignored`; the green ones (other halves of the same obligations) are marked "(green)". "DCGO" and "Aegis" give each reference engine's stance on the rule as the gap entry and Aegis's vendored scenario index (`qa/rules/aegis/conformance-scenario-index.md`) / engine audits (`docs/audits/engine/*.md` at Aegis `ec0cd22f0`) record it.
 
 ### effects-and-ordering
 
 **G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL**: `PDF-explicit`
 - Rules: §15-4-3-2; §16-24-2 (keywords, <Alliance>); §16-23-2 (keywords, <Raid>).
-- Tests: `ch15_04_effect_states::when_attacking_and_alliance_share_one_pool`, `ch16_attack_keywords::alliance_kind_matches_rule`, `ch16_attack_keywords::raid_kind_matches_rule`, `ch16_attack_keywords::raid_timing_matches_rule`.
+- Tests: `ch15_04_effect_states::when_attacking_and_alliance_share_one_pool`, `ch16_attack_keywords::alliance_kind_matches_rule`, `ch16_attack_keywords::raid_kind_matches_rule`, `ch16_attack_keywords::raid_timing_matches_rule` (green).
 - Cause: <Alliance> and <Raid> are attack-state windows (`AllianceOpen`, `RaidOpen`) reached only after the `[When Attacking]` drain, not trigger-type entries in the same pool, so the turn player can never order them before a `[When Attacking]`.
 - DCGO: agrees with the rule (both are `ActivateClass`es stacked in the one `OnAllyAttack` batch).
 - Aegis: agrees (`interaction-trigger-timing.test.ts`: "resolves EX6 Shoutmon's Alliance and When Attacking before MetalEtemon…"; `raid-lifecycle.md`: Raid "triggers from a Digimon attack").
@@ -88,7 +88,7 @@ Grouped by the mechanism the defect lives in; when the obligation's Aegis taxono
 
 **G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED**: `PDF-explicit` (Ver. 4.3 reversed 3.6; owner ruling 2026-10-10 #6)
 - Rules: §15-7-4, §15-8-4-4-1.
-- Tests: `ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen`, `ch15_08_effect_categories::activation_type_declarable_only_when_optional_condition_payable`.
+- Tests: `ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen`, `ch15_08_effect_categories::activation_type_declarable_only_when_optional_condition_payable` (green).
 - Cause: a "by X, Y" clause is `optional: true` with X as leading steps; nothing marks X as the condition, so neither the trigger prompt nor the `[Main]` mask checks that X can be executed, and accepting runs Y for free.
 - DCGO: agrees (per-card `CanActivateCondition`).
 - Aegis: agrees (`tamer-suspend-cost-consent`: "does not offer the unpayable triggered clause"; `keyword-detach-lifecycle`: "does not offer the processing choice with unpayable links"; "does not declare an impossible activation-type compound payment").
@@ -152,13 +152,14 @@ Grouped by the mechanism the defect lives in; when the obligation's Aegis taxono
 - Aegis: none found.
 - Fix: drop the short-circuit; keep `AttackInitiator::Vortex` only for the same-turn exemption; invert `tests/combat/counter_interrupt.rs::vortex_bypasses_counter`.
 
-**G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON**: `PDF-silent` (worksheet W2)
+**G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON**: `PDF-explicit` (confirmation question W2)
 - Rules: §11-2-7-1; §16-33-1 (keywords).
-- Test: `ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon` (§16-33-1 also lists `vortex_optional_eot_attack_on_digimon_and_same_turn_played` and `vortex_attack_has_block_timing`).
+- Test: `ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon` (§16-33-1 also lists `vortex_optional_eot_attack_on_digimon_and_same_turn_played` (green) and `vortex_attack_has_block_timing`).
 - Cause: the end-of-turn mask and `end_of_turn_attack_vortex_flag` offer a Vortex attack on every opponent Digimon, unsuspended included.
 - DCGO: suspended targets only (`CanAttackTargetDigimon` requires `IsSuspended || isExecute`).
 - Aegis: mixed (scenario "16-33-1: <Vortex> does not bypass the normal suspended-target requirement"; the 2026-09-05 `vortex-timing.md` audit describes allowing "unsuspended opposing Digimon").
-- Fix (if the owner rules suspended-only): apply the normal suspended / `CanAttackUnsuspended` / <Raid> target legality to Vortex-only attacks in the mask and the decoder; keep the same-turn exemption.
+- Classification: §11-2-7-1 names the legal targets ("the opponent or 1 of the opponent's suspended Digimon"); §16-33-1 grants an attack on a Digimon but no target permission, and the manual spells such a permission out wherever it exists (§16-38-1 <Execute>, the §15-1-3 example).
+- Fix: apply the normal suspended / `CanAttackUnsuspended` / <Raid> target legality to Vortex-only attacks in the mask and the decoder; keep the same-turn exemption.
 
 ### security
 
@@ -240,7 +241,7 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 - Cause: `link_host_candidates` / `can_insert_plug_in_at` use a base link limit of 5 (`5 + link_max_delta`), not 1.
 - DCGO: agrees with the rule (`LinkedMax` starts at 1).
 - Aegis: agrees (`link.md`: printed Link +1 "raising the base capacity from one to two").
-- Fix: base 1; ships with the replacement below (fixing the base alone turns the tests into refusals).
+- Fix: base 1; lands in one change with the replacement below (fixing the base alone turns the tests into refusals), in Plan 3 step 1 beside the §17-1-3-2-5 rule-check trim.
 
 **G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED**: `PDF-explicit` (chooser question W12)
 - Rules: §16-40-1, -2, -3 (keywords), with §4-9-5.
@@ -252,9 +253,9 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 
 ### keywords
 
-**G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS**: `PDF-explicit` (+ Q3868/Q3869; analogy question W3)
+**G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS**: `PDF-explicit` (+ Q3868/Q3869; confirmation question W3)
 - Rules: §16-44-2 (<Engage>), §16-38-2 (<Execute>), §16-33-2 (<Vortex>), §16-34-2 (<Overclock>).
-- Tests: `ch16_new_keywords::engage_kind_matches_rule`, `engage_timing_matches_rule`; `ch16_attack_keywords::execute_kind_matches_rule`, `execute_timing_matches_rule`, `vortex_kind_matches_rule`, `vortex_timing_matches_rule`, `overclock_kind_matches_rule`, `overclock_timing_matches_rule`. The kind tests pin declaration < other `[End of Your Turn]` effect < counter timing / security check (Q3869).
+- Tests: `ch16_new_keywords::engage_kind_matches_rule`, `engage_timing_matches_rule` (green); `ch16_attack_keywords::execute_kind_matches_rule`, `execute_timing_matches_rule` (green), `vortex_kind_matches_rule`, `vortex_timing_matches_rule` (green), `overclock_kind_matches_rule`, `overclock_timing_matches_rule` (green). The kind tests pin declaration < other `[End of Your Turn]` effect < counter timing / security check. The order follows from §11-1-4 ("After declaring an attack, the counter timing won't begin until any triggered [When Attacking] effects and other triggered effects have been resolved"), which holds for any end-of-turn "may attack" trigger, and Q3869 rules it for <Vortex>.
 - Cause: choosing <Engage>/<Execute> first only grants `MayAttack`, so the other end-of-turn effect resolves before the attack is even declared (post-drain `EndOfTurnAction` window); <Vortex>/<Overclock> are not triggers at all.
 - DCGO: partly disagrees (pools and orders them, as the rule requires, but runs the whole attack inside the activating coroutine, so the other effect waits for the whole attack, not just the declaration).
 - Aegis: partial (`engage-lifecycle.md`: optional End of Your Turn self-attack; `vortex-timing.md`: Vortex is an optional EndOfYourTurn effect ordered against Shoto's end-turn effect both ways; the Q3869 sub-order is not evidenced).
@@ -270,7 +271,7 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 
 **G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED**: `PDF-explicit`
 - Rules: §16-30-1, -2, -4.
-- Tests: `ch16_attack_keywords::collision_forces_block_whenever_possible`, `collision_kind_matches_rule`, `collision_blocker_grant_affects_digimon_forced_block_affects_player`.
+- Tests: `ch16_attack_keywords::collision_forces_block_whenever_possible` (green), `collision_kind_matches_rule`, `collision_blocker_grant_affects_digimon_forced_block_affects_player`.
 - Cause: `try_enter_block` special-cases Collision for candidacy instead of granting <Blocker>; an effect-immune Digimon is forced to block, and "with <Blocker>" readers miss the grant.
 - DCGO: agrees (`HasBlocker` grant guarded by `CanNotBeAffected`).
 - Aegis: agrees on the grant (`collision-iceclad.md`: "all opponent Digimon gain Blocker only while the Collision attacker is attacking"); immunity not evidenced.
@@ -278,7 +279,7 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 
 **G-ENGINE-ON-DELETION-DRAINED-BEFORE-DELETION-OBSERVERS**: `PDF-explicit`
 - Rule: §16-13-2 (with §15-4-3-2 / §15-4-3-5).
-- Tests: `ch16_attack_keywords::retaliation_kind_matches_rule`, `retaliation_timing_matches_rule`.
+- Tests: `ch16_attack_keywords::retaliation_kind_matches_rule`, `retaliation_timing_matches_rule` (green).
 - Cause: `run_deletion_batch_stages` drains `OnDeletion` (stage 5) before enqueuing `OnAnyDeletion` / `OnLeaveField` (stage 6), so every `[On Deletion]` (incl. <Retaliation>) resolves before the "when a Digimon is deleted" observers with no ordering choice.
 - DCGO: agrees (one `OnDestroyedAnyone` stack).
 - Aegis: agrees (`trigger-ordering.md`: "native On Deletion with deletion watchers" in one order request).
@@ -318,7 +319,7 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 
 **G-ENGINE-MATERIAL-SAVE-MAY-PLACE-FEWER**: `PDF-explicit`
 - Rule: §16-21-3.
-- Tests: `ch16_processing_keywords::material_save_optionality_matches_rule`, `material_save_places_the_full_number_whenever_possible`.
+- Tests: `ch16_processing_keywords::material_save_optionality_matches_rule` (green), `material_save_places_the_full_number_whenever_possible`.
 - Cause: the card pick is `min: 0, max: n` and stays optional after each pick.
 - DCGO: agrees (`canEndNotMax: false`).
 - Aegis: agrees in its tests ("saves four of six eligible sources"; "exactly the printed number … are placed"), though its audit prose says "up to".
@@ -352,19 +353,19 @@ The other 330 non-blocking mechanics-set gaps (and 279 outside it) are untriaged
 
 ## Owner-rulings worksheet
 
-Each item gives the question, the candidate readings, what DCGO does, and what the suite assumes today. W2 is the only one that holds up a blocking fix.
+Each item gives the question, the candidate readings, what DCGO does, and what the suite assumes today. None holds up a blocking fix: W2, W3, W5, W10, W11 and W12 attach to `PDF-explicit` gaps whose fix proceeds on the suite's reading.
 
-**W1. §15-8-5 (15-8-5-1 / -5-4 / -5-5-2): prevention after a prevention.** After one immediate-type effect has prevented a deletion, may the carrier's other pending prevention effects still be offered in the same window? (Sidecar TODO on 15-8-5-4, Task 13b concern.)
-- (a) Yes: each pending immediate effect activates if its condition holds at activation (§15-8-5-5-2); the engine does this today (the window keeps advancing with `cancelled = true`). Controller leans this way.
+**W1. §15-8-5 (15-8-5-1 / -5-4 / -5-5-2): prevention after a prevention.** After one immediate-type effect has prevented a deletion, may the carrier's other pending prevention effects still be offered in the same window? (TODO in the 15-8-5-4 sidecar note, `4609ca892`.)
+- (a) Yes: each pending immediate effect activates if its condition holds at activation (§15-8-5-5-2); the engine does this today (the window keeps advancing with `cancelled = true`). The 15-8-5-4 sidecar note leans this way (§15-8-5-1 / -5-4 / -5-5-2).
 - (b) No: the deletion is no longer about to happen, so the remaining "would be deleted" effects have no cause left and lapse.
 - DCGO: not checked for this case (BT11-041's once-per-cause record is a stub). Suite: unasserted either way.
 
-**W2. §16-33-1 <Vortex> attack target.** (Blocking: `G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON`.)
-- (a) Suspended Digimon only: §16-33-1 grants the attack, not a target rule, so §11-2-7-1 applies; contrast §16-38-1 <Execute>, which says "also allows for attacking an opponent's unsuspended Digimon". DCGO and Aegis's current scenario agree. Suite assumes (a).
-- (b) Any opponent Digimon: §16-33-1 reads "attack an opponent's Digimon", unqualified. Aegis's 2026-09-05 audit implemented (b); the engine does (b) today.
+**W2. Confirmation: §16-33-1 <Vortex> attack target.** (`G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON`, classified `PDF-explicit`; does not hold up the fix.)
+- (a) Suspended Digimon only: §11-2-7-1 names the legal targets; §16-33-1 grants the attack, not a target permission, while §16-38-1 <Execute> and the §15-1-3 example spell such a permission out. DCGO and Aegis's current scenario agree. Suite and fix assume (a).
+- (b) Any opponent Digimon, reading §16-33-1's "attack an opponent's Digimon" as unqualified. Aegis's 2026-09-05 audit once implemented (b); the engine does (b) today.
 
-**W3. Q3869 applied to <Engage>, <Execute>, <Overclock>.** Q3868/Q3869 are rulings on <Vortex> (EX7-064): another end-of-turn effect ordered after it resolves after the attack declaration and before the counter timing. (Confirmation; does not hold up the fix.)
-- (a) The same order for every trigger-type end-of-turn "may attack" keyword (declaration < other effect < counter timing). Suite assumes (a) for all four.
+**W3. Confirmation: end-of-turn attack order for <Engage>, <Execute>, <Overclock>.** Q3868/Q3869 are rulings on <Vortex> (EX7-064): another end-of-turn effect ordered after it resolves after the attack declaration and before the counter timing. For the other three this is not analogy alone: §11-1-4 ("After declaring an attack, the counter timing won't begin until any triggered [When Attacking] effects and other triggered effects have been resolved") gives the same order for any pending trigger once an attack is declared. (Does not hold up the fix.)
+- (a) The same order for every trigger-type end-of-turn "may attack" keyword (declaration < other effect < counter timing), per §11-1-4 + Q3869. Suite assumes (a) for all four.
 - (b) For the others the other effect waits for the whole attack (DCGO's coroutine shape for all of them, including <Vortex>, contrary to Q3869).
 
 **W4. §16-46-2 <Detach>: trigger-type or immediate-type?** The rule says "trigger-type" but defines the trigger as "would leave the battle area" and refers to §15-8-5.
@@ -378,9 +379,9 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 - (c) Neither colour unless the effect names the category.
 - DCGO: not checked. Suite: unasserted; the fix must pin whichever is chosen.
 
-**W6. Sign-off: §15-8-3-9-4 versus Q1009** (controller ruling, Task 7). §15-8-3-9-4 covers the removed card's own last-known state; references to general game state (e.g. your security count) are made when processing is performed (§15-8-3-9-3), as Q1009 rules for BT2-034. Proven on that reading (`pending_effect_whose_condition_lapsed_is_dropped`).
+**W6. Sign-off: §15-8-3-9-4 versus Q1009** (15-8-3-9-2 sidecar note, `05d39e4cb`). §15-8-3-9-4 covers the removed card's own last-known state; references to general game state (e.g. your security count) are made when processing is performed (§15-8-3-9-3), as Q1009 rules for BT2-034. Proven on that reading (`pending_effect_whose_condition_lapsed_is_dropped`).
 
-**W7. Sign-off: §15-8-5-4 "cause" is the interrupting event** (controller ruling, Task 8 review, which retracted `G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT`). Two deletions from one `[Main]` are two causes; an immediate-type effect may activate once for each. The alternative (the resolving `[Main]` is the cause) would make it once per `[Main]`. DCGO enforces neither for BT11-041.
+**W7. Sign-off: §15-8-5-4 "cause" is the interrupting event** (15-8-5-4 sidecar note, `b20297ec9`, which retracted `G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT`). Two deletions from one `[Main]` are two causes; an immediate-type effect may activate once for each. The alternative (the resolving `[Main]` is the cause) would make it once per `[Main]`. DCGO enforces neither for BT11-041.
 
 **W8. Sign-off: §9-1-5 reverses `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER`.** That earlier engine fix read §18-1-2 as making a used Option's trash orderable among its controller's triggered effects; the 4.3 §9-1-5 text ("Other effects and rule checks don't interrupt the period between [Main] effect activation and trashing") makes it uninterrupted. DCGO agrees with §9-1-5. The suite assumes the 4.3 reading.
 
@@ -388,17 +389,20 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 
 **W10. §18-3-3 loop representation in the action space.** §18-3-3 prescribes a repeat-count declaration (turn player, then non-turn player). Is a per-repetition optional prompt (keep accepting, then decline) an acceptable equivalent for the RL action space, or must the declaration be modelled as a bounded count action? The conformance test accepts either. A second design point: how the engine decides "neither player has the ability to stop it" (§18-3-2): no optional choice anywhere in the repeating cycle.
 
-**W11. `blocks_training` judgement calls.** Overflow (`G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT`: the outcome differs only when the memory marker hits ±10 mid-sequence) and DUAL search (`G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH`) are flagged blocking (Task 13a). Keep, or downgrade to non-blocking?
+**W11. `blocks_training` judgement calls.** Overflow (`G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT`: the outcome differs only when the memory marker hits ±10 mid-sequence) and DUAL search (`G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH`) are flagged blocking (`173375296`). Keep, or downgrade to non-blocking?
 
 **W12. Link-time replacement chooser (§4-9-5).** §4-9-5 says the same number of existing link cards are trashed but not who chooses which. Q6370 gives the choice to "the player" for the rule-check trim. Reading: the linking player (who controls the host, §10-1-3-1) chooses. DCGO: the owner chooses when the maximum is above 1. Confirmation only.
 
 ## Retracted or resolved during the campaign
 
-- `G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT`: retracted (Task 8 review). The engine's per-event `replacement_fired` scope is right; `ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause` now proves §15-8-5-4 (W7).
-- `G-ENGINE-COMPOUND-OPTIONAL-CONDITION-PARTIAL-PAYMENT`: retracted as an engine gap (Task 9 review); refiled as DSL vocabulary `G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK` (non-blocking list).
+- `G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT`: retracted (`b20297ec9`). The engine's per-event `replacement_fired` scope is right; `ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause` now proves §15-8-5-4 (W7).
+- `G-ENGINE-COMPOUND-OPTIONAL-CONDITION-PARTIAL-PAYMENT`: retracted as an engine gap (`ed7a9a9cb`); refiled as DSL vocabulary `G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK` (non-blocking list).
 - `G-REPLACEMENT-NO-ORDER-PROMPT`: no longer reproduces (checked 2026-10-16): `replacement_window.rs` installs an `EffectChoice` order for simultaneous immediate-type effects; `ch16_replacement_keywords::two_simultaneous_replacements_ordered_by_controller` proves §15-8-5-3.
 - `G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN`: resolved (fixed 2026-08-24 in `73733429d`, confirmed by `delay_scheduled_window_is_optional`); entry moved to `qa/resolved-gaps.md`.
-- `G-ENGINE-DNA-RESULT-KEEPS-BASE-ORIENTATION` (§8-2-2-1-1, design F3): reported fixed on main by the controller. Not re-verified from this branch, and its entry is still in the OPEN section of `docs/RUST_ENGINE_GAPS.md`; chapter 8 was not suited in Plan 1, so no obligation carries it.
+
+### Pending verification (fix on main, tests on another branch)
+
+- `G-ENGINE-DNA-RESULT-KEEPS-BASE-ORIENTATION` (§8-2-2-1-1, design F3): reported fixed in `98d4937a6` (PR #737, in this branch's history) per the F3 sibling session; conformance tests (`tests/dna_result_new_card.rs`) live on `refs/heads/claude/sharp-cori-670aed`, not merged here; the tracker entry stays OPEN until those tests land.
 
 ## Vocabulary gaps filed (`qa/dsl-vocab-gaps.md`, 2026-10-16)
 
@@ -415,12 +419,12 @@ By blast radius: substrate first, so later fixes land on the corrected loop.
    - `G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL` (Alliance + Raid windows) with `G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS`;
    - `G-ENGINE-PENDING-PROCESSING-OUTSIDE-TRIGGER-POOL`;
    - `G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE`;
-   - `G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE` + `G-ENGINE-RULE-CHECK-TARGETS-NOT-SIMULTANEOUS` (with `G-ENGINE-LINK-MAX-BASE` for §17-1-3-2-5);
+   - `G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE` + `G-ENGINE-RULE-CHECK-TARGETS-NOT-SIMULTANEOUS`, with `G-ENGINE-LINK-MAX-BASE` + `G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED` landing together in one change (§17-1-3-2-5 needs the base limit of 1, and the base alone turns the link tests into refusals);
    - `G-ENGINE-ON-DELETION-DRAINED-BEFORE-DELETION-OBSERVERS`;
    - `G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS` (#726 rework) and `F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE` (§9-1-5).
 2. **Optional-condition legality:** `G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED`, then `G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION` (shares the gate).
-3. **Attack procedure:** `G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES`, `G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED`, `G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE`, `G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK`, `G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK`, `G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON` (after W2), `G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED`.
-4. **Keyword implementations:** `G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED`; `G-ENGINE-MATERIAL-SAVE-AFTER-DELETION` + `G-ENGINE-MATERIAL-SAVE-MAY-PLACE-FEWER`; `G-ENGINE-BLAST-DNA-IGNORES-DNA-REQUIREMENTS`; De-Digivolve ×3 (`G-ENGINE-DEDIGIVOLVE-LEVEL-FLOOR-READS-NEXT-CARD`, `G-DEDIGIVOLVE-NO-DECLARATION`, `G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED` with `G-DSL-TOP-CARD-TRASHED-TIMING`); Link ×2 (`G-ENGINE-LINK-MAX-BASE` + `G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED`, together); `G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT`; `G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH` (after W5); `G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS` (Engage / Execute / Vortex / Overclock end-of-turn ordering, after the attack-procedure fixes).
-5. **Loops:** `G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED` (after W10).
+3. **Attack procedure:** `G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES`, `G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED`, `G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE`, `G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK`, `G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK`, `G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON`, `G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED`.
+4. **Keyword implementations:** `G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED`; `G-ENGINE-MATERIAL-SAVE-AFTER-DELETION` + `G-ENGINE-MATERIAL-SAVE-MAY-PLACE-FEWER`; `G-ENGINE-BLAST-DNA-IGNORES-DNA-REQUIREMENTS`; De-Digivolve ×3 (`G-ENGINE-DEDIGIVOLVE-LEVEL-FLOOR-READS-NEXT-CARD`, `G-DEDIGIVOLVE-NO-DECLARATION`, `G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED` with `G-DSL-TOP-CARD-TRASHED-TIMING`); `G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT`; `G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH` (the fix pins whichever reading W5 confirms); `G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS` (Engage / Execute / Vortex / Overclock end-of-turn ordering, after the attack-procedure fixes).
+5. **Loops:** `G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED` (either prompt shape in W10 passes the test).
 
 Each fix un-ignores its tests, flips the sidecar entries to `proven`, regenerates `qa/rules/cr_obligations.json`, and re-triages any DCGO exam that becomes `diverged` as a cited `dcgo_quirk` in the same PR (design §6).
