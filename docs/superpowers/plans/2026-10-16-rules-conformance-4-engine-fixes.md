@@ -480,3 +480,39 @@ Tasks 16–20 touch disjoint files and may run in parallel sessions (each on its
 - [ ] **Step 2: Docs** as above.
 - [ ] **Step 3: Verification set**; counts into the digest's Denominator section and the PR body draft at `<workspace>/pr-body-addendum.md`.
 - [ ] **Step 4: Commit** — `docs: rules-conformance Plan 4 closure — digest, tracker, DCGO quirks pre-registration, denominator`.
+
+---
+
+## Phase G — Owner-requested coverage (added 2026-10-16)
+
+### Task 24: §15-15-5 "isn't affected by effects": scope matrix, choosability, lapse, granted effects
+
+**Owner request (2026-10-16):** make sure protection is covered: Digimon-effect-only immunity (Atratusmon ST23-09: "Your opponent's Digimon effects don't affect this Digimon until their turn ends") versus full opponent-effect immunity (Magnamon (X Antibody) BT16-102: "isn't affected by your opponent's effects") against an Option such as Plasma Stake BT3-098 ("[Main] Delete 1 of your opponent's Digimon with 13000 DP or more", also via its [Security] activation) or Final Shining Burst BT13-104 ("[Main] 1 of your opponent's Digimon gets -12000 DP until the end of your opponent's turn").
+
+**Rules:** §15-15-5, §15-15-5-1 (not affected by processing caused by effects), §15-15-5-2 (when it can be affected again, effects immediately start affecting it; example: a -3000 DP applied to a suspended Digimon with suspended-only immunity applies as soon as it unsuspends), §15-15-5-3 (still choosable), §15-15-5-4 (gained effects not considered had); §16-39 <Progress> (proven in ch16); §17-1-3-1-1 (0 DP deletion is a rule, not an effect); §15-2 effect types (Digimon / Tamer / Option effects; [Security] activation of an Option's [Main] is still that Option card's effect).
+
+**What exists:** `Game::permanent_is_unaffected_by_effect(target, controller, EffectSourceKind)` with per-entry `EffectImmunityFilter { source_kind, controller }` (`game/queries.rs` ~L246); `EffectContext::can_affect_permanent` (`effect_context/mod.rs` ~L1657) SKIPS the application for an immune target (14 call sites); DP: `ImmuneFromDPMinus` is filtered at read time in `combat/dp.rs::effective_dp`, but `CannotBeAffected` is a skip-at-apply gate. `EffectSourceKind::Rule` is the kind used for token / card-less effects, not for rule processing (rule checks never consult the gate). Existing engine tests: `tests/effect_source_kind/immunity.rs` (4), `tests/judge_quiz/a_immunity_scope.rs` (Q1, Q2, Q17, Q18, Q28), `tests/dsl/effect_immunity_step.rs` (3). No `rules_conformance` test and no sidecar entry cites §15-15-5-*.
+
+**Files:**
+- Create: `code/digimon-engine/tests/rules_conformance/ch15_15_unaffected.rs`; fixtures `tests/rules_conformance/fixtures/ch15_15/*.yaml` (one card per file; synthetic cards shaped like the four above: `IMMUNE_DIGI_ONLY` (opponent Digimon effects don't affect this until their turn ends), `IMMUNE_ALL_OPP` (isn't affected by your opponent's effects), `IMMUNE_WHILE_SUSPENDED` (the §15-15-5-2 example), `OPT_DELETE_13K` (Plasma Stake shape incl. `[Security] Activate this card's [Main] effects`), `OPT_MINUS_12K` (Final Shining Burst shape), `TAMER_MINUS_3K`, `DIGI_MINUS_3K`, `DIGI_GRANT_SA_MINUS1` (§15-15-5-4), a token-producing card for the `Rule` source kind).
+- Modify: `tests/rules_conformance/meta.rs` (`CHAPTER_SOURCES` + the fixtures directory-count guard), `fixtures/mod.rs`, `main.rs` (mod).
+- Modify (only if a red test's fix is local): `effect_context/mod.rs::can_affect_permanent` callers / `modifiers.rs` — record-and-suppress instead of skip for modifiers (§15-15-5-2), keyed by the same `EffectImmunityFilter` so the modifier starts applying when the immunity entry expires or its condition lapses. A larger fix is filed as a gap and the test `#[ignore]`d with the gap id (discover-then-pin).
+- Sidecar: add `15-15-5`, `15-15-5-1`, `15-15-5-2`, `15-15-5-3`, `15-15-5-4` entries (proven, or gap + `blocks_training: true` + gap id).
+
+**Tests (discover-then-pin; each `cite!`s its rule):**
+1. `digimon_only_immunity_is_affected_by_opponent_option_main` — `IMMUNE_DIGI_ONLY` (12000+ DP) vs `OPT_DELETE_13K` from hand → deleted; vs `OPT_MINUS_12K` → DP 0 → rule-check deletion (§17-1-3-1-1).
+2. `digimon_only_immunity_is_affected_by_option_security_activation` — the same two Options hit from the security stack during the immune Digimon's attack → affected (the [Security] activation is still an Option effect).
+3. `digimon_only_immunity_is_affected_by_opponent_tamer_and_own_effects` — opponent Tamer -3000 applies; own Digimon -3000 applies; opponent Digimon -3000 does not.
+4. `full_opponent_immunity_blocks_option_tamer_digimon_and_token_effects` — `IMMUNE_ALL_OPP` vs each source kind (Option from hand, Option via [Security], Tamer, Digimon, token effect) → unaffected; own effects → affected.
+5. `full_opponent_immunity_does_not_block_rule_processing` — loses a battle → deleted; DP reduced to 0 by its OWN effect → rule-check deleted (rules are not effects).
+6. `immune_permanent_is_still_choosable_and_offered_as_only_candidate` (§15-15-5-3) — chosen, nothing happens; offered even when it is the only candidate.
+7. `effect_applied_while_immune_starts_affecting_when_immunity_lapses` (§15-15-5-2) — the rule's own example: `IMMUNE_WHILE_SUSPENDED` suspended, opponent Digimon -3000 applied, DP unchanged; unsuspend → DP -3000 immediately (same duration as the original effect). Also the Atratusmon shape: an opponent Digimon's "-3000 until the end of your next turn" applied during the immunity → applies when the immunity ends at the end of the opponent's turn if the modifier is still live.
+8. `granted_effect_not_considered_had_while_immune` (§15-15-5-4) — `<Security A. -1>` granted by an opponent Digimon → security check count unchanged while immune; counted once immunity lapses while the grant persists.
+9. `immunity_granted_mid_effect_covers_later_steps` — an opponent effect that first targets, then (after the target becomes immune through a derived trigger) tries to affect it: unaffected; the reverse (own "then" clause after self-immunity) per Q18's shape.
+
+**Regression:** `--test effect_source_kind`, `--test judge_quiz`, `--test dsl -- immunity`, `--test combat -- progress`, `--test cards_behavioral -- st23_09 bt16_102 immun`, `--test rules_conformance`; ledger checks.
+
+- [ ] **Step 1: Write the nine tests + fixtures; register the module; run → record which are red.**
+- [ ] **Step 2: For each red: fix if local (record-and-suppress for §15-15-5-2), else file `G-ENGINE-UNAFFECTED-…` gap entries in `docs/RUST_ENGINE_GAPS.md` + digest and `#[ignore]` with the id.**
+- [ ] **Step 3: Sidecar entries; regenerate; `--check`.**
+- [ ] **Step 4: Commit** — `tests: §15-15-5 "isn't affected by effects" conformance module (scope matrix, choosability, lapse, granted effects)` (+ `engine: …` commits for any fix).
