@@ -8,7 +8,7 @@
 //! pin); see `docs/RUST_ENGINE_GAPS.md` and `qa/rules/cr_obligations_status.yaml`.
 //!
 //! Fixture cards: `fixtures/common/*.yaml` + `fixtures/ch18/*.yaml` (plus the
-//! `ch15_08` cards `EOT_MEM`, `LV4_PLAIN` and `PLAIN_TAMER`), one synthetic
+//! `ch15_08` cards `EOT_MEM` and `PLAIN_TAMER`), one synthetic
 //! card per file, authored to printed-style text (each clause's `summary:` is
 //! that text).
 //!
@@ -25,6 +25,7 @@ use std::time::Duration;
 use crate::fixtures;
 use crate::support::*;
 use digimon_engine::action::space::ATTACK_START;
+use digimon_engine::count_choice::CountChoiceOperation;
 use digimon_engine::debug_runner::{DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{GamePhase, PlayerId};
 use digimon_engine::events::GameEvent;
@@ -118,7 +119,7 @@ fn within<T: Send + 'static>(
     scenario: impl FnOnce() -> T + Send + 'static,
 ) -> T {
     let (tx, rx) = mpsc::channel();
-    std::thread::Builder::new()
+    let handle = std::thread::Builder::new()
         .name(what.to_string())
         .stack_size(64 << 20)
         .spawn(move || {
@@ -130,7 +131,11 @@ fn within<T: Send + 'static>(
         Err(RecvTimeoutError::Timeout) => {
             panic!("{what}: the engine did not return within {limit:?} (an unbounded loop)")
         }
-        Err(RecvTimeoutError::Disconnected) => panic!("{what}: the scenario thread panicked"),
+        // The scenario panicked: re-raise its own message on the test thread.
+        Err(RecvTimeoutError::Disconnected) => match handle.join() {
+            Err(payload) => std::panic::resume_unwind(payload),
+            Ok(()) => panic!("{what}: the scenario thread ended without a result"),
+        },
     }
 }
 
@@ -619,7 +624,7 @@ fn infinite_loop_is_stopped_not_silently_cleared() {
         "18-3-2",
         "989de42a09e690aa1c0e80632ee1aeb9f94eb27d3fdfeff9b09fa784f38f29ca"
     );
-    let outcome = within("mandatory loop", Duration::from_secs(120), || {
+    let outcome = within("mandatory loop", Duration::from_secs(30), || {
         let (r, cp) = loop_board("LOOP_FLIP");
         LoopOutcome {
             game_over: r.game_over(),
@@ -646,14 +651,17 @@ fn infinite_loop_is_stopped_not_silently_cleared() {
 /// declared it would be repeated, then the player stops the processing when
 /// possible."
 ///
-/// `LOOP_FLIP_MAY` is the same loop with "you may suspend it": P0 can stop it,
-/// and each acceptance repeats it once more. P0 repeats it 40 times -- well
-/// past any fixed iteration cap -- then stops. Every repetition must still be
-/// offered, and once the loop stops, P1's `OBS_OPP_PLAY_MEM`, pending since
-/// the play, still activates.
+/// `LOOP_FLIP_MAY` is the same loop with "you may suspend it": P0 can stop it.
+/// P0 repeats it 40 times -- well past any fixed iteration cap -- then stops.
+/// Either prompt shape satisfies §18-3-3-3 as long as the count is honoured:
+/// - a repeat-count declaration (§18-3-3-1; a count choice), answered with the
+///   smallest offered count of at least 40, after which any further "you may"
+///   is declined (the player stops when possible); or
+/// - one optional prompt per repetition, accepted 40 times and then declined.
 ///
-/// (§18-3-3-1/-2's up-front declaration of a repeat count is not modelled:
-/// a per-repetition choice lets the player realise any declared count.)
+/// Either way, after the stop: the Digimon is unsuspended (the loop stops on
+/// "you may suspend it"), the game is not over, and P1's `OBS_OPP_PLAY_MEM`,
+/// pending since the play, activates exactly once.
 #[test]
 #[ignore = "G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED (§18-3-3)"]
 fn stoppable_loop_repeats_until_its_owner_stops_it() {
@@ -665,37 +673,81 @@ fn stoppable_loop_repeats_until_its_owner_stops_it() {
         "18-3-3-3",
         "ca1e36ce6f3f4e7299e9b32d4fe477ced92d86d03f8f391235592a23b66a6ca0"
     );
-    const REPEATS: usize = 40;
-    let (mut r, cp) = loop_board("LOOP_FLIP_MAY");
-    for i in 0..REPEATS {
-        let sel = r.pending_selection().unwrap_or_else(|| {
-            panic!(
-                "repetition {i} of {REPEATS} was not offered: the loop was abandoned (P1's \
-                 observer resolved: {})",
-                memory_event_index(&r, cp, "OBS_OPP_PLAY_MEM").is_some()
-            )
-        });
-        assert!(sel.is_optional, "repetition {i}: {sel:?}");
-        assert_eq!(sel.selecting_player, 0, "repetition {i}: {sel:?}");
-        accept(&mut r, 0);
-    }
-    assert!(
-        memory_event_index(&r, cp, "OBS_OPP_PLAY_MEM").is_none(),
-        "P1's observer waits while the loop goes on"
-    );
-    r.decline_optional_trigger().expect("P0 stops the loop");
-    resolve_prompts(&mut r);
-    assert!(!r.game_over(), "a stoppable loop does not end the game");
-    let loop_perm = r.perm_handle(0, 0);
-    assert!(
-        !is_suspended(&r, loop_perm),
-        "stopped after an unsuspend: it stays unsuspended"
-    );
-    assert_eq!(
-        memory_deltas(&r, cp),
-        vec![(1, "OBS_OPP_PLAY_MEM".to_string(), 1)],
-        "the trigger pending since the play still activates"
-    );
+    within("stoppable loop", Duration::from_secs(30), || {
+        const REPEATS: u64 = 40;
+        let (mut r, cp) = loop_board("LOOP_FLIP_MAY");
+        let mut declared: Option<u64> = None;
+        let mut accepted: u64 = 0;
+        // Hard step bound: 40 repetitions, a declaration and its pages, the stop.
+        for step in 0..200 {
+            let Some(sel) = r.pending_selection() else {
+                break;
+            };
+            let player = sel.selecting_player;
+            let counts: Vec<(u16, CountChoiceOperation)> = sel
+                .effect_choices
+                .iter()
+                .flatten()
+                .filter_map(|c| c.count_choice.map(|m| (c.action_id, m.operation)))
+                .collect();
+            if !counts.is_empty() {
+                // A repeat-count declaration: commit the smallest count >= 40,
+                // or page forward to find one.
+                let commit = counts
+                    .iter()
+                    .filter_map(|(a, op)| match op {
+                        CountChoiceOperation::Commit(v) if v.declared >= REPEATS => {
+                            Some((v.declared, *a))
+                        }
+                        _ => None,
+                    })
+                    .min();
+                let action = match commit {
+                    Some((n, a)) => {
+                        declared = Some(n);
+                        a
+                    }
+                    None => counts
+                        .iter()
+                        .find(|(_, op)| *op == CountChoiceOperation::NextPage)
+                        .map(|(a, _)| *a)
+                        .unwrap_or_else(|| panic!("no count of at least {REPEATS}: {sel:?}")),
+                };
+                r.execute_action(player, action)
+                    .unwrap_or_else(|e| panic!("declaration rejected: {e:?}"));
+            } else if sel.is_optional && player == 0 {
+                if declared.is_none() && accepted < REPEATS {
+                    accepted += 1;
+                    accept(&mut r, 0);
+                } else {
+                    r.decline_optional_trigger().expect("P0 stops the loop");
+                }
+            } else {
+                panic!("step {step}: unexpected decision: {sel:?}");
+            }
+        }
+        assert!(
+            r.pending_selection().is_none(),
+            "{:?}",
+            r.pending_selection()
+        );
+        assert!(
+            declared.is_some() || accepted == REPEATS,
+            "P0 could repeat the loop only {accepted} of {REPEATS} times before it was abandoned \
+             (no count declaration offered)"
+        );
+        assert!(!r.game_over(), "a stoppable loop does not end the game");
+        let loop_perm = r.perm_handle(0, 0);
+        assert!(
+            !is_suspended(&r, loop_perm),
+            "stopped on 'you may suspend it': it stays unsuspended"
+        );
+        assert_eq!(
+            memory_deltas(&r, cp),
+            vec![(1, "OBS_OPP_PLAY_MEM".to_string(), 1)],
+            "the trigger pending since the play activates once the loop stops"
+        );
+    });
 }
 
 // ─── §16-7-4 / §16-7-5 / §16-7-6 ────────────────────────────────────────────
@@ -762,8 +814,12 @@ fn piercing_is_pending_processing_before_end_of_attack() {
 ///
 /// P0's attacker has two <Piercing> instances: its own (`PIERCE_EOA`) and an
 /// inherited one (`INH_PIERCE`, its digivolution card). Deleting P1's
-/// `FILL` in battle yields ONE security check of 1 card. (The second
-/// sentence, a modified check count, is not staged here.)
+/// `FILL` in battle yields ONE security check of 1 card.
+///
+/// A regression pin only, so 16-7-5 stays a gap in the sidecar: the engine
+/// gates the <Piercing> check on a boolean `has_keyword`, so this test cannot
+/// tell one instance from two, and the second sentence (a modified check
+/// count, e.g. <Security A. +1> on the Piercing attacker) is not staged.
 #[test]
 fn piercing_checks_security_once_however_many_instances() {
     cite!(

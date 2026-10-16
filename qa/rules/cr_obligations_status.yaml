@@ -275,7 +275,7 @@
   blocks_training: true
   gap_id: F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE
   tests: ["ch18_pending_overwrite::used_option_trashed_immediately_after_first_main_uninterrupted"]
-  note: "Two interruptions, both red: (1) the rule check deletes a 0 DP Digimon the [Main] caused before the Option is trashed (its would-be-deleted decision parks with P0's trash empty); (2) a trigger the [Main] caused makes the engine offer 'Trash the used Option' as a TriggerOrder branch. Test is #[ignore]d."
+  note: "Two interruptions, both red: (1) the rule check deletes a 0 DP Digimon the [Main] caused before the Option is trashed (its would-be-deleted decision parks with P0's trash empty); (2) a trigger the [Main] caused makes the engine offer 'Trash the used Option' as a TriggerOrder branch. Test is #[ignore]d. The Option's trash itself emits no event (G-ENGINE-OPTION-TRASH-NO-EVENT, non-blocking), so the test reads the trash at parked decisions."
 "18-3-1":
   status: gap
   blocks_training: true
@@ -293,12 +293,12 @@
   blocks_training: true
   gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
   tests: ["ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it"]
-  note: "A loop with 'you may suspend it': after 24 acceptances the next repetition is not offered (the cap counts prompted iterations) and the opponent's pending trigger is discarded. Test is #[ignore]d."
+  note: "A loop with 'you may suspend it': after 24 acceptances the next repetition is not offered (the cap counts prompted iterations) and the opponent's pending trigger is discarded. The test accepts a repeat-count declaration or per-repetition prompts. Test is #[ignore]d."
 "18-3-3-1":
   status: gap
   blocks_training: true
   gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
-  note: "No declaration of a repeat count exists; the conformance test substitutes a per-repetition choice. Untested until the declaration procedure is built."
+  note: "No declaration of a repeat count exists. The stoppable-loop test accepts a declaration prompt when one is built, or per-repetition prompts; the turn-player-first order of declarations is not asserted."
 "18-3-3-2":
   status: gap
   blocks_training: true
@@ -315,9 +315,10 @@
   tests: ["ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack"]
   note: "The rule's example: <Piercing> deletes a Digimon with '[On Deletion] Gain 1 memory'; event order is the [On Deletion] memory, then the single SecurityReveal, then the attacker's [End of Attack] memory."
 "16-7-5":
-  status: proven
+  status: gap
+  blocks_training: false
   tests: ["ch18_pending_overwrite::piercing_checks_security_once_however_many_instances"]
-  note: "Printed + inherited <Piercing> give one security check of 1 card. The second sentence (a modified check count checked in that single check) is not staged; has_keyword is a boolean, so a second instance cannot add a check."
+  note: "first sentence pinned as a regression check by ch18_pending_overwrite::piercing_checks_security_once_however_many_instances; cannot discriminate (fire_piercing_or_finish gates on a boolean has_keyword); modified-count sentence unstaged (needs <Security A. +1> on the Piercing attacker)"
 "16-7-6":
   status: proven
   tests: ["ch18_pending_overwrite::piercing_without_the_attacker_checks_nothing"]

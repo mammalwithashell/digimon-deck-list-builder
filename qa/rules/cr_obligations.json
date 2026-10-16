@@ -7674,8 +7674,8 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "Printed + inherited <Piercing> give one security check of 1 card. The second sentence (a modified check count checked in that single check) is not staged; has_keyword is a boolean, so a second instance cannot add a check.",
-      "status": "proven",
+      "note": "first sentence pinned as a regression check by ch18_pending_overwrite::piercing_checks_security_once_however_many_instances; cannot discriminate (fire_piercing_or_finish gates on a boolean has_keyword); modified-count sentence unstaged (needs <Security A. +1> on the Piercing attacker)",
+      "status": "gap",
       "tests": [
         "ch18_pending_overwrite::piercing_checks_security_once_however_many_instances"
       ],
@@ -8183,7 +8183,7 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "A loop with 'you may suspend it': after 24 acceptances the next repetition is not offered (the cap counts prompted iterations) and the opponent's pending trigger is discarded. Test is #[ignore]d.",
+      "note": "A loop with 'you may suspend it': after 24 acceptances the next repetition is not offered (the cap counts prompted iterations) and the opponent's pending trigger is discarded. The test accepts a repeat-count declaration or per-repetition prompts. Test is #[ignore]d.",
       "status": "gap",
       "tests": [
         "ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it"
@@ -8198,7 +8198,7 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "No declaration of a repeat count exists; the conformance test substitutes a per-repetition choice. Untested until the declaration procedure is built.",
+      "note": "No declaration of a repeat count exists. The stoppable-loop test accepts a declaration prompt when one is built, or per-repetition prompts; the turn-player-first order of declarations is not asserted.",
       "status": "gap",
       "tests": [],
       "text": "The turn player declares to repeat the processing a certain number of times. If the turn player doesn't have the ability to stop the infinite loop, skip this step and go on to the next step."
@@ -14587,7 +14587,7 @@
       "mechanisms": [
         "card-use-and-costs"
       ],
-      "note": "Two interruptions, both red: (1) the rule check deletes a 0 DP Digimon the [Main] caused before the Option is trashed (its would-be-deleted decision parks with P0's trash empty); (2) a trigger the [Main] caused makes the engine offer 'Trash the used Option' as a TriggerOrder branch. Test is #[ignore]d.",
+      "note": "Two interruptions, both red: (1) the rule check deletes a 0 DP Digimon the [Main] caused before the Option is trashed (its would-be-deleted decision parks with P0's trash empty); (2) a trigger the [Main] caused makes the engine offer 'Trash the used Option' as a TriggerOrder branch. Test is #[ignore]d. The Option's trash itself emits no event (G-ENGINE-OPTION-TRASH-NO-EVENT, non-blocking), so the test reads the trash at parked decisions.",
       "status": "gap",
       "tests": [
         "ch18_pending_overwrite::used_option_trashed_immediately_after_first_main_uninterrupted"
@@ -14736,9 +14736,9 @@
         "total": 244
       },
       "16": {
-        "gap": 159,
+        "gap": 160,
         "not_testable": 44,
-        "proven": 3,
+        "proven": 2,
         "total": 206
       },
       "17": {
@@ -14802,15 +14802,15 @@
         "total": 13
       }
     },
-    "gap": 833,
+    "gap": 834,
     "mechanics": {
       "gap_blocking": 15,
-      "gap_nonblocking": 512,
+      "gap_nonblocking": 513,
       "not_testable": 152,
-      "proven": 36
+      "proven": 35
     },
     "not-testable": 246,
-    "proven": 40
+    "proven": 39
   },
   "version": 1
 }
