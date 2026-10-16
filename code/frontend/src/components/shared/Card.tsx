@@ -87,10 +87,8 @@ export function Card({
       onMouseLeave={onMouseLeave}
     >
       {faceDown ? (
-        <div
-          className="w-full h-full bg-gradient-to-br from-blue-900 to-blue-700 border border-blue-600 rounded flex items-center justify-center"
-        >
-          <span className="text-blue-300 text-xs font-bold">DCG</span>
+        <div className="dcg-card-back w-full h-full rounded flex items-center justify-center">
+          <span className="dcg-card-back__mark">DCG</span>
         </div>
       ) : isLoading ? (
         <div

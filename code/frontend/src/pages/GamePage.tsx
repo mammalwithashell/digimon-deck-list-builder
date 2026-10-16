@@ -1381,6 +1381,14 @@ export function GamePage() {
               onHandCardInspect={setInspectedCardId}
               actionTraces={store.actionTraces}
               latestTensorSummary={store.latestTensorSummary}
+              onEndTurn={
+                store.currentPhase === GamePhase.Main
+                && !store.isGameOver
+                && !store.agentPending
+                && store.actionMask[ACTION.PASS] === 1
+                  ? () => handleAction(ACTION.PASS)
+                  : undefined
+              }
             />
             <DragOverlayCard cardId={draggedCardId} isOverValid={isOverValid} />
           </DndContext>

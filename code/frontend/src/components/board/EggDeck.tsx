@@ -12,7 +12,7 @@ export function EggDeck({ count, canHatch = false, onClick }: EggDeckProps) {
         className="ib-zone__body ib-zone__body--egg"
         onClick={canHatch ? onClick : undefined}
       >
-        <span>{count}</span>
+        <span className="ib-zone__count">{count}</span>
       </div>
     </div>
   );

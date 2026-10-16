@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
+/** Shields drawn before the row collapses to a count alone. */
+const MAX_SHIELDS = 10;
+
 interface SecurityStackProps {
   count: number;
   isOpponent: boolean;
@@ -20,22 +23,22 @@ export function SecurityStack({ count, isOpponent }: SecurityStackProps) {
   }, [count]);
 
   return (
-    <div className={`ib-security ${isOpponent ? 'ib-security--opp' : 'ib-security--you'}`}>
-      <div className="ib-security__label">Security</div>
-      <div
-        className={`ib-security__shield ${
-          breaking ? 'animate-security-break' : ''
-        }`}
-      >
-        <span>{String(count).padStart(2, '0')}</span>
+    <div
+      className={`ib-security ${isOpponent ? 'ib-security--opp' : 'ib-security--you'}`}
+      aria-label={`${count} security cards`}
+    >
+      <div className="ib-security__label">Security · {count}</div>
+      <div className={`ib-security__shields relative ${breaking ? 'animate-security-break' : ''}`}>
+        {count === 0 ? (
+          <span className="ib-security__empty">No security</span>
+        ) : (
+          Array.from({ length: Math.min(count, MAX_SHIELDS) }).map((_, i) => (
+            <span key={i} className={`ib-security__shield ${i === 0 ? 'is-top' : ''}`} aria-hidden="true" />
+          ))
+        )}
         {breaking && (
           <div className="absolute inset-0 pointer-events-none animate-security-shatter" />
         )}
-      </div>
-      <div className="ib-security__tokens" aria-hidden="true">
-        {Array.from({ length: Math.min(count, 5) }).map((_, i) => (
-          <span key={i} className={i === 0 ? 'is-top' : ''} />
-        ))}
       </div>
     </div>
   );

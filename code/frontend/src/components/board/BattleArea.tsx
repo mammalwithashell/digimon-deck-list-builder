@@ -132,9 +132,17 @@ export function BattleArea({
     }
   }, [permanents]);
 
+  // Only filled slots are drawn, gathered in the centre. The one empty slot
+  // that can matter — the landing spot for a card being played — appears while
+  // a playable hand card is dragged (every empty slot plays the same action).
+  const landingSlot = !isOpponent && isDraggingHandCard && canPlayDragged
+    ? slots.find((i) => !permanents[i])
+    : undefined;
+  const drawnSlots = slots.filter((i) => permanents[i] || i === landingSlot);
+
   return (
-    <div className="ib-battle-area">
-      {slots.map((i) => {
+    <div className={`ib-battle-area ${isOpponent ? 'ib-battle-area--opp' : 'ib-battle-area--you'}`}>
+      {drawnSlots.map((i) => {
         const perm = permanents[i];
         const isEmpty = !perm;
 
@@ -163,7 +171,7 @@ export function BattleArea({
           >
             {isEmpty ? (
               <div className="ib-battle-slot ib-battle-slot--empty">
-                <span>SLOT {String(i + 1).padStart(2, '0')}</span>
+                <span>Play here</span>
               </div>
             ) : (
               <div

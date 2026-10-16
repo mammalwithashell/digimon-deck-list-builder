@@ -7,9 +7,24 @@ import type { HandCardInfo } from '@/types/game';
 
 const CARD_KIND = { Digimon: 0, Tamer: 1, Option: 2, DigiEgg: 3 } as const;
 
+/** Fan geometry for card `index` of `count`: a rotation that spreads the
+ *  cards around a pivot below the hand, a drop that curves the outer cards
+ *  down, and an overlap that tightens as the hand grows. */
+function fanLayout(index: number, count: number) {
+  const mid = (count - 1) / 2;
+  const offset = index - mid;
+  const step = Math.min(5, 34 / Math.max(count, 1));
+  return {
+    rotation: offset * step,
+    drop: Math.abs(offset) ** 2 * Math.min(2.2, 16 / Math.max(count, 1)),
+    overlap: count > 8 ? -44 : count > 5 ? -30 : -16,
+  };
+}
+
 interface DraggableHandCardProps {
   cardId: string;
   index: number;
+  count: number;
   isOpponent: boolean;
   highlighted: boolean;
   cardInfo?: HandCardInfo;
@@ -19,7 +34,7 @@ interface DraggableHandCardProps {
   onInspect?: (cardId: string) => void;
 }
 
-function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, onClick, onHover, onHoverIndex, onInspect }: DraggableHandCardProps) {
+function DraggableHandCard({ cardId, index, count, isOpponent, highlighted, cardInfo, onClick, onHover, onHoverIndex, onInspect }: DraggableHandCardProps) {
   const setHoveredCard = useGameStore((s) => s.setHoveredCard);
   const dragData: DragData = { type: 'hand-card', handIndex: index, cardId };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -28,6 +43,7 @@ function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, o
     disabled: isOpponent,
   });
 
+  const fan = fanLayout(index, count);
   const primaryColor = cardInfo?.colors[0];
   const colorName = primaryColor != null ? COLOR_NAMES[primaryColor] : undefined;
   const colorHex = colorName ? COLOR_HEX[colorName] ?? '#374151' : '#374151';
@@ -38,7 +54,12 @@ function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, o
       {...listeners}
       {...attributes}
       className={`ib-hand-card ${highlighted ? 'ib-hand-card--ready' : ''} ${isDragging ? 'ib-hand-card--dragging' : ''}`}
-      style={{ marginLeft: index > 0 ? '-12px' : 0, zIndex: isDragging ? 100 : index }}
+      style={{
+        marginLeft: index > 0 ? `${fan.overlap}px` : 0,
+        '--fan-rot': `${fan.rotation}deg`,
+        '--fan-y': `${fan.drop}px`,
+        '--fan-z': isDragging ? 100 : index,
+      } as React.CSSProperties}
       onContextMenu={(e) => {
         // DCGO parity: right-click inspects your own (visible) hand cards;
         // the opponent's face-down hand stays private. Always suppress the
@@ -136,6 +157,7 @@ export function HandZone({
           key={`${cardId}-${i}`}
           cardId={cardId}
           index={i}
+          count={cardIds.length}
           isOpponent={isOpponent}
           highlighted={highlightedIndices?.has(i) ?? false}
           cardInfo={handCards?.[i]}

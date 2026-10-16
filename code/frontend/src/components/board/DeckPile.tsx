@@ -7,7 +7,7 @@ export function DeckPile({ count }: DeckPileProps) {
     <div className="ib-zone">
       <div className="ib-zone__label">Deck</div>
       <div className="ib-zone__body ib-zone__body--deck">
-        <span>{count}</span>
+        <span className="ib-zone__count">{count}</span>
       </div>
     </div>
   );

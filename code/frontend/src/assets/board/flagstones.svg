@@ -1,0 +1,30 @@
+<!-- Seamless 240x240 flagstone tile for the in-game arena board (index.css .ib-board__mat).
+     White stones over a transparent ground: the board's grout colour shows through the gaps. -->
+<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240' stroke-linejoin='round'>
+  <path d='M6.5 0.7 L64.6 1.0 L67.2 10.0 L66.3 49.9 L62.6 56.4 L7.3 55.9 L3.2 54.2 L3.3 8.4Z' fill='white' fill-opacity='0.16'/>
+  <path d='M3.3 8.4 L6.5 0.7 L64.6 1.0' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+  <path d='M77.1 1.6 L150.9 1.2 L156.8 11.2 L157.2 49.3 L151.5 56.0 L79.8 56.2 L72.0 50.1 L73.2 11.6Z' fill='white' fill-opacity='0.1'/>
+  <path d='M73.2 11.6 L77.1 1.6 L150.9 1.2' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+  <path d='M170.8 2.8 L232.7 2.3 L236.4 9.4 L237.7 46.9 L229.6 57.0 L168.6 56.9 L163.3 46.9 L163.0 9.3Z' fill='white' fill-opacity='0.19'/>
+  <path d='M163.0 9.3 L170.8 2.8 L232.7 2.3' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+  <path d='M9.2 62.6 L45.3 60.9 L47.1 69.4 L47.8 111.2 L42.3 117.0 L8.5 115.9 L2.0 110.8 L3.5 65.8Z' fill='white' fill-opacity='0.16'/>
+  <path d='M3.5 65.8 L9.2 62.6 L45.3 60.9' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+  <path d='M58.3 62.4 L126.4 60.6 L131.9 69.3 L131.0 106.8 L126.9 116.1 L58.1 116.7 L53.9 106.9 L52.9 71.2Z' fill='white' fill-opacity='0.16'/>
+  <path d='M52.9 71.2 L58.3 62.4 L126.4 60.6' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+  <path d='M146.2 61.9 L185.2 62.3 L193.0 73.3 L191.1 107.4 L184.3 116.3 L144.3 117.2 L137.4 106.5 L137.8 70.3Z' fill='white' fill-opacity='0.13'/>
+  <path d='M137.8 70.3 L146.2 61.9 L185.2 62.3' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+  <path d='M205.5 64.0 L231.9 63.6 L237.4 67.3 L238.0 111.9 L233.7 117.7 L202.7 116.7 L197.0 111.2 L196.9 67.3Z' fill='white' fill-opacity='0.22'/>
+  <path d='M196.9 67.3 L205.5 64.0 L231.9 63.6' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+  <path d='M7.7 122.2 L83.4 120.5 L91.1 129.0 L91.7 166.6 L87.5 177.3 L7.6 176.4 L2.6 168.3 L2.1 132.7Z' fill='white' fill-opacity='0.13'/>
+  <path d='M2.1 132.7 L7.7 122.2 L83.4 120.5' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+  <path d='M104.3 120.9 L138.6 122.2 L146.4 132.6 L146.2 166.6 L142.9 177.1 L102.6 177.1 L96.8 169.1 L99.2 132.8Z' fill='white' fill-opacity='0.19'/>
+  <path d='M99.2 132.8 L104.3 120.9 L138.6 122.2' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+  <path d='M160.2 122.3 L230.4 123.2 L237.0 130.2 L237.3 171.9 L233.1 176.2 L156.9 176.8 L153.8 169.0 L153.0 130.7Z' fill='white' fill-opacity='0.16'/>
+  <path d='M153.0 130.7 L160.2 122.3 L230.4 123.2' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+  <path d='M8.1 181.5 L57.3 182.2 L62.8 190.6 L61.6 232.9 L54.7 236.0 L8.1 236.6 L3.0 232.9 L3.3 187.0Z' fill='white' fill-opacity='0.1'/>
+  <path d='M3.3 187.0 L8.1 181.5 L57.3 182.2' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+  <path d='M72.9 181.1 L133.2 184.1 L136.2 188.9 L136.8 233.7 L131.7 238.1 L72.3 236.9 L68.6 230.9 L67.1 189.5Z' fill='white' fill-opacity='0.16'/>
+  <path d='M67.1 189.5 L72.9 181.1 L133.2 184.1' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+  <path d='M147.5 182.8 L233.8 183.6 L237.2 187.9 L238.1 230.3 L233.2 235.8 L148.5 237.6 L142.0 233.2 L142.1 190.4Z' fill='white' fill-opacity='0.1'/>
+  <path d='M142.1 190.4 L147.5 182.8 L233.8 183.6' stroke='white' stroke-opacity='0.10' stroke-width='1.5' fill='none'/>
+</svg>

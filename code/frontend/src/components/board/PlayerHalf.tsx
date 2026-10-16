@@ -94,7 +94,11 @@ export function PlayerHalf({
       <div className="ib-player-half__resources">
         <DeckPile count={player.deckCount} />
         <SecurityStack count={player.securityCount} isOpponent={isOpponent} />
-        <TrashPile count={player.trashIds.length} onClick={onTrashClick} />
+        <TrashPile
+          count={player.trashIds.length}
+          topCardId={player.trashIds[player.trashIds.length - 1] ?? null}
+          onClick={onTrashClick}
+        />
       </div>
     </div>
   );

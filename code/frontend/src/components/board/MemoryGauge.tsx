@@ -10,12 +10,22 @@ interface MemoryGaugeProps {
   currentPhase: GamePhase;
   /** Preview cost — positive means memory moves toward opponent */
   previewCost?: number | null;
-  /** Latest decoded action label for the action pill */
-  latestActionLabel?: string | null;
+  /** End-turn handler; when absent the round button renders disabled. */
+  onEndTurn?: () => void;
+  /** Text on the round end-turn button. */
+  endTurnLabel?: string;
 }
 
-/** DCGO-style diamond memory gauge. Player's memory is always on the LEFT. */
-export function MemoryGauge({ value, localPlayer, currentPhase, previewCost, latestActionLabel }: MemoryGaugeProps) {
+/** Coin-track memory gauge with a phase plaque and a round End Turn button.
+ *  Player's memory is always on the LEFT. */
+export function MemoryGauge({
+  value,
+  localPlayer,
+  currentPhase,
+  previewCost,
+  onEndTurn,
+  endTurnLabel = 'End Turn',
+}: MemoryGaugeProps) {
   // Normalize: positive = local player has memory (shown on left)
   const orientedValue = localPlayer === 1 ? value : -value;
 
@@ -39,7 +49,6 @@ export function MemoryGauge({ value, localPlayer, currentPhase, previewCost, lat
       </div>
 
       <div className="ib-gauge-bar" aria-label={`Memory ${orientedValue}`}>
-        <div className="ib-gauge-label">Memory</div>
         <div className="ib-gauge-segments">
           {leftSegments.map((seg) => {
             const isActive = orientedValue >= seg;
@@ -89,10 +98,15 @@ export function MemoryGauge({ value, localPlayer, currentPhase, previewCost, lat
         </div>
       </div>
 
-      <div className="ib-gauge-pill ib-gauge-pill--action">
-        <span>Action</span>
-        {latestActionLabel ?? 'Resolve'}
-      </div>
+      <button
+        type="button"
+        data-testid="board-end-turn"
+        className="ib-end-turn"
+        disabled={!onEndTurn}
+        onClick={onEndTurn}
+      >
+        {endTurnLabel}
+      </button>
     </div>
   );
 }
@@ -107,8 +121,6 @@ interface GaugeSegmentProps {
 }
 
 function GaugeSegment({ number, isActive, isExact, side, isPreviewTarget, isPreviewTrail }: GaugeSegmentProps) {
-  const showNumber = number === 0 || number % 5 === 0 || number === 1 || isExact || isPreviewTarget;
-
   return (
     <div
       className={[
@@ -118,10 +130,9 @@ function GaugeSegment({ number, isActive, isExact, side, isPreviewTarget, isPrev
         isExact ? 'is-focal' : '',
         isPreviewTarget ? 'is-ghost' : '',
         isPreviewTrail ? 'is-trail' : '',
-        showNumber ? 'is-numbered' : 'is-tick',
       ].filter(Boolean).join(' ')}
     >
-      {showNumber ? number : ''}
+      {number}
     </div>
   );
 }

@@ -48,6 +48,10 @@ body {
   --ib-horizon: oklch(0.97 0.02 220);
   --ib-horizon-soft: oklch(0.97 0.02 220 / 0.44);
   --ib-warn: oklch(0.82 0.17 90);
+  /* Card back (Card faceDown, deck piles). */
+  --card-back: oklch(0.32 0.11 262);
+  --card-back-2: oklch(0.20 0.08 262);
+  --card-back-ring: oklch(0.80 0.14 70);
 }
 
 /* ── Light "Adventure '99" board palette ──────────────────────────────────
@@ -74,36 +78,6 @@ body {
   --ib-horizon: oklch(0.34 0.02 220);
   --ib-horizon-soft: oklch(0.34 0.02 220 / 0.32);
   --ib-warn: oklch(0.55 0.15 70);
-}
-
-[data-theme="light"] .ib-board__mat {
-  background:
-    radial-gradient(120% 12% at 50% 50%, var(--ib-horizon-soft), transparent 62%),
-    radial-gradient(56% 48% at 50% 20%, var(--ib-opp-soft), transparent 72%),
-    radial-gradient(56% 48% at 50% 82%, var(--ib-player-soft), transparent 72%),
-    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    var(--ib-obsidian);
-  background-size: auto, auto, auto, 32px 32px, 32px 32px, auto;
-}
-[data-theme="light"] .ib-board__mat::after {
-  opacity: 0;
-}
-[data-theme="light"] .ib-board__scanlines {
-  background: none;
-}
-[data-theme="light"] .ib-board__vignette {
-  background: radial-gradient(ellipse 88% 92% at 50% 50%, transparent 64%, rgba(0, 0, 0, 0.16) 100%);
-}
-[data-theme="light"] .ib-board__binary {
-  color: rgba(0, 0, 0, 0.05);
-}
-[data-theme="light"] .ib-board__horizon {
-  background: linear-gradient(to right, transparent, var(--ib-horizon-soft), var(--ib-horizon), var(--ib-horizon-soft), transparent);
-}
-[data-theme="light"] .ib-board__horizon::before {
-  background: linear-gradient(to right, transparent, var(--ib-horizon-soft), var(--ib-horizon-soft), var(--ib-horizon-soft), transparent);
-  opacity: 0.5;
 }
 
 /* Shared card-effect text — Mono Body highlighting for the in-game card
@@ -144,115 +118,130 @@ body {
   color: #5a4fbf;
 }
 
-/* In Between board redesign */
+/* ─── Arena board ──────────────────────────────────────────────────────────
+   A tabletop arena in the Hearthstone / Aegis mould: a lit flagstone plaza in
+   a water-and-moss rim, a coin-track memory gauge across the middle with a
+   round End Turn button, card-pile zones, a fanned hand that bleeds off the
+   bottom edge, and no visible empty slots (permanents gather in the centre).
+   The arena palette is the --arena-* set; dark is a dusk temple, light is a
+   sunlit terracotta plaza. The --ib-* furniture vars still drive text and
+   chrome so the rest of the game page (action bar, prompts) is unchanged. */
 .ib-board {
+  --arena-grout: oklch(0.24 0.03 45);
+  --arena-stone-tint: oklch(0.42 0.05 48 / 0.55);
+  --arena-light: oklch(0.80 0.12 70 / 0.28);
+  --arena-rim: oklch(0.30 0.07 190);
+  --arena-rim-2: oklch(0.36 0.09 150);
+  --arena-frame: oklch(0.17 0.03 60);
+  --arena-frame-edge: oklch(0.55 0.08 75 / 0.55);
+  --arena-shadow: oklch(0.08 0.02 250 / 0.75);
+  --arena-plate: oklch(0.15 0.02 250 / 0.82);
+  --arena-plate-ink: oklch(0.94 0.02 80);
+  --arena-coin: oklch(0.55 0.06 220);
+  --arena-coin-hi: oklch(0.78 0.06 220);
+  --arena-coin-ink: oklch(0.97 0.01 220);
+  --arena-gold: oklch(0.84 0.15 85);
+  --arena-ready: oklch(0.80 0.19 145);
+  --arena-end: oklch(0.66 0.20 28);
+  --arena-end-hi: oklch(0.80 0.15 40);
+
   position: relative;
   isolation: isolate;
   height: 100%;
-  /* min-height removed: the board must be free to shrink with its flex-1
-     container so the surrounding column (header/prompt/footer/action bar)
-     always fits the canvas. A floor here forced overflow and pushed the
-     action bar below the viewport when the container was short. */
+  /* min-height 0: the board must shrink with its flex-1 container so the
+     surrounding column (header/prompt/footer/action bar) always fits. */
   min-height: 0;
   overflow: hidden;
   color: var(--ib-bone);
-  background: var(--ib-obsidian);
+  background: var(--arena-grout);
   font-family: "Inter", system-ui, sans-serif;
 }
 
+[data-theme="light"] .ib-board {
+  --arena-grout: oklch(0.52 0.09 38);
+  --arena-stone-tint: oklch(0.74 0.09 45 / 0.6);
+  --arena-light: oklch(0.96 0.06 80 / 0.35);
+  --arena-rim: oklch(0.66 0.11 195);
+  --arena-rim-2: oklch(0.55 0.12 145);
+  --arena-frame: oklch(0.42 0.07 55);
+  --arena-frame-edge: oklch(0.85 0.08 80 / 0.7);
+  --arena-shadow: oklch(0.25 0.04 40 / 0.45);
+  --arena-plate: oklch(0.22 0.03 250 / 0.85);
+  --arena-coin: oklch(0.62 0.10 210);
+  --arena-coin-hi: oklch(0.84 0.08 205);
+  /* Light chrome sits on plates, so it keeps light-on-dark ink. */
+  --ib-bone: oklch(0.96 0.012 230);
+  --ib-bone-d: oklch(0.82 0.012 230);
+  --ib-bone-dd: oklch(0.72 0.012 230);
+}
+
+/* The plaza: centre light, stone tint, the flagstone tile, then the grout. */
 .ib-board__mat {
   position: absolute;
   inset: 0;
   z-index: -5;
   background:
-    radial-gradient(120% 12% at 50% 50%, var(--ib-horizon-soft), transparent 62%),
-    radial-gradient(56% 48% at 50% 20%, var(--ib-opp-soft), transparent 72%),
-    radial-gradient(56% 48% at 50% 82%, var(--ib-player-soft), transparent 72%),
-    linear-gradient(to right, rgba(255,255,255,0.025) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.025) 1px, transparent 1px),
-    var(--ib-obsidian);
-  background-size: auto, auto, auto, 32px 32px, 32px 32px, auto;
+    radial-gradient(ellipse 58% 62% at 50% 50%, var(--arena-light), transparent 72%),
+    linear-gradient(var(--arena-stone-tint), var(--arena-stone-tint)),
+    url("./assets/board/flagstones.svg") center / 400px 400px repeat,
+    var(--arena-grout);
+  background-blend-mode: normal, multiply, normal, normal;
 }
 
+/* Water-and-moss rim plus a carved frame — the "table edge". */
 .ib-board__mat::after {
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.055;
-  background-image:
-    radial-gradient(circle at 0 0, rgba(255,255,255,0.55) 1px, transparent 2px),
-    radial-gradient(circle at 24px 14px, rgba(255,255,255,0.55) 1px, transparent 2px);
-  background-size: 48px 28px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 34% 60% at 0% 50%, oklch(from var(--arena-rim) l c h / 0.85), transparent 70%),
+    radial-gradient(ellipse 34% 60% at 100% 50%, oklch(from var(--arena-rim) l c h / 0.85), transparent 70%),
+    radial-gradient(ellipse 22% 26% at 0% 0%, oklch(from var(--arena-rim-2) l c h / 0.9), transparent 75%),
+    radial-gradient(ellipse 22% 26% at 100% 0%, oklch(from var(--arena-rim-2) l c h / 0.9), transparent 75%),
+    radial-gradient(ellipse 22% 26% at 0% 100%, oklch(from var(--arena-rim-2) l c h / 0.9), transparent 75%),
+    radial-gradient(ellipse 22% 26% at 100% 100%, oklch(from var(--arena-rim-2) l c h / 0.9), transparent 75%);
+  box-shadow:
+    inset 0 0 0 6px var(--arena-frame),
+    inset 0 0 0 7px var(--arena-frame-edge),
+    inset 0 0 70px 20px var(--arena-shadow);
 }
 
-.ib-board__horizon {
+/* Carved medallions behind each player's hand, echoing a hero platform. */
+.ib-board__rings {
   position: absolute;
-  z-index: -2;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(to right, transparent, oklch(0.97 0.02 220 / 0.45), var(--ib-horizon), oklch(0.97 0.02 220 / 0.45), transparent);
+  inset: 0;
+  z-index: -4;
+  pointer-events: none;
 }
 
-.ib-board__horizon::before {
+.ib-board__rings::before,
+.ib-board__rings::after {
   content: "";
   position: absolute;
-  inset: -18px 0;
-  background: linear-gradient(to right, transparent, oklch(0.97 0.02 220 / 0.18), oklch(0.97 0.02 220 / 0.32), oklch(0.97 0.02 220 / 0.18), transparent);
-  filter: blur(10px);
+  left: 50%;
+  width: 760px;
+  height: 300px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(ellipse at center, transparent 54%, oklch(0 0 0 / 0.20) 55%, oklch(1 0 0 / 0.07) 57%, transparent 58%),
+    radial-gradient(ellipse at center, transparent 66%, oklch(0 0 0 / 0.22) 67%, oklch(1 0 0 / 0.08) 69%, transparent 70%),
+    radial-gradient(ellipse at center, oklch(0 0 0 / 0.10), transparent 70%);
 }
 
-.ib-board__scanlines {
-  position: absolute;
-  inset: 0;
-  z-index: 7;
-  pointer-events: none;
-  mix-blend-mode: multiply;
-  background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0,0,0,0.18) 3px, transparent 4px);
-}
-
-.ib-board__vignette {
-  position: absolute;
-  inset: 0;
-  z-index: 6;
-  pointer-events: none;
-  background: radial-gradient(ellipse 88% 92% at 50% 50%, transparent 58%, rgba(0,0,0,0.58) 100%);
-}
-
-.ib-board__binary {
-  position: absolute;
-  inset: 72px 16px 92px;
-  z-index: -1;
-  pointer-events: none;
-  color: rgba(255,255,255,0.04);
-  font-family: var(--ib-font-mono);
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  line-height: 1.45;
-  user-select: none;
-}
-
-.ib-board__binary > div {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-}
-
-.ib-board__binary > div:nth-child(1) { left: 0; top: 0; }
-.ib-board__binary > div:nth-child(2) { right: 0; top: 0; text-align: right; }
-.ib-board__binary > div:nth-child(3) { left: 0; bottom: 0; }
-.ib-board__binary > div:nth-child(4) { right: 0; bottom: 0; text-align: right; }
+.ib-board__rings::before { top: -170px; }
+.ib-board__rings::after { bottom: -170px; }
 
 .ib-board__top-chrome {
   position: absolute;
-  top: 10px;
+  top: 14px;
   left: 14px;
-  right: 14px;
+  right: 22px;
   z-index: 8;
   display: flex;
-  justify-content: center;
-  gap: 8px;
+  justify-content: flex-end;
+  gap: 6px;
   pointer-events: none;
 }
 
@@ -261,15 +250,16 @@ body {
   align-items: center;
   gap: 7px;
   height: 24px;
-  padding: 0 10px;
-  border: 1px solid var(--ib-line);
-  background: oklch(from var(--ib-panel) l c h / 0.72);
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid oklch(1 0 0 / 0.10);
+  background: var(--arena-plate);
   color: var(--ib-bone-d);
   font-family: var(--ib-font-mono);
   font-size: 10px;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 10px oklch(0 0 0 / 0.3);
 }
 
 .ib-action-trace {
@@ -278,26 +268,25 @@ body {
   gap: 8px;
   max-width: min(34vw, 360px);
   height: 24px;
-  padding: 0 10px;
-  border: 1px solid var(--ib-line);
-  background: oklch(from var(--ib-panel) l c h / 0.82);
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid oklch(1 0 0 / 0.10);
+  background: var(--arena-plate);
   color: var(--ib-bone);
   font-family: var(--ib-font-mono);
   font-size: 10px;
   text-transform: uppercase;
-  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 10px oklch(0 0 0 / 0.3);
   overflow: hidden;
   pointer-events: none;
 }
 
 .ib-action-trace--agent {
   border-color: oklch(0.74 0.17 50 / 0.55);
-  box-shadow: 0 0 18px oklch(0.74 0.17 50 / 0.18);
 }
 
 .ib-action-trace--human {
   border-color: oklch(0.72 0.12 205 / 0.55);
-  box-shadow: 0 0 18px oklch(0.72 0.12 205 / 0.16);
 }
 
 .ib-action-trace__actor {
@@ -317,57 +306,75 @@ body {
 }
 
 .ib-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--ib-player);
-  box-shadow: 0 0 10px var(--ib-player);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--arena-ready);
+  box-shadow: 0 0 8px var(--arena-ready);
 }
 
+/* Hero portraits: a round medallion in the side colour plus a name plate. */
 .ib-player-tag {
   position: absolute;
   z-index: 8;
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 178px;
-  padding: 8px 10px;
-  border: 1px solid var(--ib-line);
-  background: linear-gradient(180deg, oklch(from var(--ib-panel-2) l c h / 0.85), oklch(from var(--ib-panel) l c h / 0.82));
-  backdrop-filter: blur(8px);
   pointer-events: none;
 }
 
 .ib-player-tag--opp {
-  top: 42px;
-  left: 18px;
+  top: 46px;
+  left: 26px;
   color: var(--ib-opp);
 }
 
 .ib-player-tag--you {
-  right: 18px;
-  bottom: 44px;
+  right: 26px;
+  bottom: 60px;
+  flex-direction: row-reverse;
   color: var(--ib-player);
 }
 
 .ib-player-tag__avatar {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 62px;
+  height: 62px;
   place-items: center;
-  border: 1px solid currentColor;
-  background: oklch(from var(--ib-panel) l c h / 0.8);
+  border-radius: 50%;
+  border: 3px solid currentColor;
+  background:
+    radial-gradient(circle at 35% 30%, oklch(1 0 0 / 0.35), transparent 45%),
+    radial-gradient(circle, oklch(from currentColor calc(l - 0.25) c h), oklch(from currentColor calc(l - 0.45) c h));
+  color: var(--arena-plate-ink);
   font-family: var(--ib-font-display);
+  font-size: 24px;
   font-weight: 700;
+  box-shadow:
+    0 0 0 3px var(--arena-frame),
+    0 0 0 4px var(--arena-frame-edge),
+    0 8px 18px oklch(0 0 0 / 0.45);
 }
 
+.ib-player-tag--you .ib-player-tag__avatar { border-color: var(--ib-player); }
+.ib-player-tag--opp .ib-player-tag__avatar { border-color: var(--ib-opp); }
+
+.ib-player-tag__plate {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--arena-plate);
+  box-shadow: 0 4px 12px oklch(0 0 0 / 0.35);
+}
+
+.ib-player-tag--you .ib-player-tag__plate { text-align: right; }
+
 .ib-player-tag__name {
-  max-width: 132px;
+  max-width: 150px;
   overflow: hidden;
-  color: var(--ib-bone);
+  color: var(--arena-plate-ink);
   font-family: var(--ib-font-display);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  text-transform: uppercase;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -376,43 +383,34 @@ body {
   color: var(--ib-bone-dd);
   font-family: var(--ib-font-mono);
   font-size: 9px;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
+/* Opponent's hand: face-down fan peeking down from the top edge. */
 .ib-board__opponent-hand {
   position: absolute;
-  top: 8px;
+  top: -46px;
   left: 50%;
   z-index: 5;
-  width: 48%;
-  height: 58px;
-  transform: translateX(-50%);
-  overflow: hidden;
-  opacity: 0.72;
-}
-
-.ib-board__opponent-hand .ib-hand-zone {
-  transform: scale(0.48);
+  transform: translateX(-50%) scale(0.72);
   transform-origin: top center;
+  pointer-events: auto;
 }
 
-/* Flow stage: the three layout bands (opponent field, memory gauge, player
-   field) share the vertical space between the opponent hand (top) and the
-   player hand (bottom) via a flex column. Replaces the previous absolute
-   offsets (opp top:78 / player bottom:154 / gauge top:50%) which gave the two
-   fields unequal slices and smushed the player half on shorter boards. The
-   two fields are flex:1 (equal), the gauge is auto-height between them. */
+/* Flow stage: opponent field / memory track / player field share the height
+   between the opponent hand (top) and the player hand (bottom). The two
+   fields are flex:1 (equal), the track is auto-height between them. */
 .ib-board__stage {
   position: absolute;
   left: 16px;
   right: 16px;
-  top: 74px;     /* clears the top chrome + opponent hand */
-  bottom: 146px; /* reserves room for the player hand */
+  top: 66px;
+  bottom: 150px;
   z-index: 3;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .ib-board__side {
@@ -426,7 +424,7 @@ body {
 .ib-board__gauge {
   flex: 0 0 auto;
   z-index: 9;
-  width: min(96%, 1220px);
+  width: min(98%, 1500px);
   margin: 0 auto;
 }
 
@@ -443,17 +441,20 @@ body {
   position: absolute;
   z-index: 12;
   left: 50%;
-  bottom: 8px;
-  width: min(940px, calc(100% - 220px));
+  bottom: -26px;
+  width: min(1000px, calc(100% - 420px));
   transform: translateX(-50%);
 }
 
+/* Each half: raising/eggs on one flank, battle area centre, deck/trash/
+   security on the other flank. The opponent half is mirrored. */
 .ib-player-half {
   display: grid;
-  grid-template-columns: 116px minmax(0, 1fr) 116px;
-  gap: 12px;
+  grid-template-columns: 220px minmax(0, 1fr) 220px;
+  gap: 16px;
   align-items: center;
-  max-width: 1240px;
+  max-width: 1560px;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -461,53 +462,57 @@ body {
 .ib-player-half--opp .ib-player-half__battle { grid-column: 2; grid-row: 1; }
 .ib-player-half--opp .ib-player-half__resources { grid-column: 1; grid-row: 1; }
 
-/* DCGO-parity layout: player's raising area sits at the bottom-left of the
-   player field band. The gauge is now a separate flex band above the player
-   field (not a centered overlay), so the previous translateY(56px) nudge that
-   dodged the gauge overlap is no longer needed. */
-.ib-player-half--you .ib-player-half__raise {
-  align-self: end;
+.ib-player-half__raise {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 14px;
 }
 
-.ib-player-half__raise,
 .ib-player-half__resources {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto auto;
   justify-content: center;
-  gap: 8px;
+  align-items: end;
+  gap: 10px 14px;
 }
+
+.ib-player-half__resources .ib-security { grid-column: 1 / -1; }
+/* Security sits on the side nearer its owner's hand. */
+.ib-player-half--you .ib-player-half__resources .ib-zone { grid-row: 1; }
+.ib-player-half--you .ib-player-half__resources .ib-security { grid-row: 2; }
+.ib-player-half--opp .ib-player-half__resources .ib-security { grid-row: 1; }
+.ib-player-half--opp .ib-player-half__resources .ib-zone { grid-row: 2; }
 
 .ib-player-half__battle {
   min-width: 0;
 }
 
+/* Permanents gather in the centre and wrap; empty slots are not drawn
+   except the one landing spot shown while a playable card is dragged. */
 .ib-battle-area {
-  display: grid;
-  /* Exactly 7 columns × 2 rows = 14 slots. The canvas is fixed at
-     1920×1080 (see CanvasScaler), so this layout never needs to reflow —
-     it scales uniformly with the canvas. */
-  grid-template-columns: repeat(7, minmax(96px, 1fr));
-  grid-template-rows: repeat(2, auto);
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
-  min-height: 280px;
+  align-content: center;
+  gap: 12px 16px;
+  min-height: 150px;
 }
 
 .ib-drop-slot {
-  border-radius: 2px;
+  border-radius: 8px;
   transition: filter 160ms ease, transform 160ms ease;
 }
 
 .ib-drop-slot--play,
 .ib-drop-slot--digivolve,
 .ib-drop-slot--digivolve-soft {
-  filter: drop-shadow(0 0 14px oklch(0.78 0.16 150 / 0.65));
+  filter: drop-shadow(0 0 14px oklch(0.78 0.16 150 / 0.75));
 }
 
 .ib-drop-slot--digivolve,
 .ib-drop-slot--digivolve-soft {
-  filter: drop-shadow(0 0 14px oklch(0.70 0.18 300 / 0.7));
+  filter: drop-shadow(0 0 14px oklch(0.70 0.18 300 / 0.8));
 }
 
 .ib-battle-slot {
@@ -519,40 +524,20 @@ body {
 }
 
 .ib-battle-slot--empty {
-  border: 1px dashed oklch(0.42 0.012 250 / 0.42);
-  background:
-    linear-gradient(135deg, transparent 0 12px, oklch(from var(--ib-panel) l c h / 0.46) 12px),
-    oklch(from var(--ib-panel) l c h / 0.28);
-}
-
-.ib-battle-slot--empty::before,
-.ib-battle-slot--empty::after {
-  content: "";
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid oklch(0.82 0.012 230 / 0.38);
-}
-
-.ib-battle-slot--empty::before {
-  top: -1px;
-  left: -1px;
-  border-right: 0;
-  border-bottom: 0;
-}
-
-.ib-battle-slot--empty::after {
-  right: -1px;
-  bottom: -1px;
-  border-left: 0;
-  border-top: 0;
+  border-radius: 8px;
+  border: 2px dashed oklch(0.85 0.16 145 / 0.8);
+  background: oklch(0.80 0.19 145 / 0.12);
+  box-shadow: inset 0 0 24px oklch(0.80 0.19 145 / 0.25);
 }
 
 .ib-battle-slot--empty span {
-  color: var(--ib-bone-dd);
-  font-family: var(--ib-font-mono);
-  font-size: 9px;
-  letter-spacing: 0.16em;
+  color: oklch(0.92 0.10 145);
+  font-family: var(--ib-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px oklch(0 0 0 / 0.6);
 }
 
 .ib-permanent-slot {
@@ -563,29 +548,47 @@ body {
   gap: 2px;
 }
 
+/* A suspended (rotated) card is as wide as a card is tall. */
+.ib-permanent-slot--suspended {
+  margin: 0 19px;
+}
+
+/* Cards stand on the table: rounded, a contact shadow, a thin dark rim. */
 .ib-permanent-slot .relative.inline-block {
-  border-radius: 2px;
-  box-shadow: 0 12px 24px rgba(0,0,0,0.34);
+  border-radius: 7px;
+  box-shadow:
+    0 0 0 1.5px oklch(0 0 0 / 0.45),
+    0 3px 4px oklch(0 0 0 / 0.35),
+    0 14px 22px oklch(0 0 0 / 0.38);
 }
 
 .ib-source-count {
   position: absolute;
-  right: 4px;
-  bottom: 19px;
+  right: -6px;
+  top: -6px;
   z-index: 3;
-  padding: 1px 5px;
-  border: 1px solid var(--ib-line);
-  background: oklch(0.08 0.012 250 / 0.88);
-  color: var(--ib-bone);
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 2px solid var(--arena-frame);
+  background: var(--arena-gold);
+  color: oklch(0.2 0.03 70);
   font-family: var(--ib-font-mono);
-  font-size: 9px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px oklch(0 0 0 / 0.45);
 }
 
+/* ── Zones as physical piles ── */
 .ib-zone,
 .ib-security,
 .ib-raise-zone {
   position: relative;
+  display: grid;
+  justify-items: center;
   color: var(--ib-bone);
   font-family: var(--ib-font-mono);
   text-transform: uppercase;
@@ -594,153 +597,178 @@ body {
 .ib-zone__label,
 .ib-security__label,
 .ib-raise-zone__label {
-  margin-bottom: 4px;
-  color: var(--ib-bone-dd);
+  order: 2;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--arena-plate);
+  color: var(--ib-bone-d);
   font-size: 9px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   text-align: center;
 }
 
-.ib-zone__body,
-.ib-security__shield,
-.ib-raise-zone__empty {
+.ib-zone__body {
   position: relative;
-  display: grid;
-  width: 60px;
-  height: 84px;
-  place-items: center;
-  border: 1.5px solid var(--ib-line);
-  background: oklch(from var(--ib-panel) l c h / 0.48);
+  width: 72px;
+  height: 100px;
+  border-radius: 7px;
+  box-shadow:
+    1.5px 1.5px 0 oklch(0.85 0.01 250),
+    3px 3px 0 oklch(0.25 0.02 250),
+    4.5px 4.5px 0 oklch(0.85 0.01 250),
+    6px 6px 0 oklch(0.25 0.02 250),
+    0 14px 20px oklch(0 0 0 / 0.45);
 }
 
-.ib-zone__body::before,
-.ib-zone__body::after,
-.ib-security__shield::before,
-.ib-security__shield::after,
-.ib-raise-zone__empty::before,
-.ib-raise-zone__empty::after {
-  content: "";
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  border: 1.5px solid var(--ib-bone);
-  opacity: 0.78;
+.ib-zone__body--deck,
+.ib-zone__body--egg,
+.dcg-card-back {
+  background:
+    radial-gradient(circle at 50% 50%, transparent 15%, var(--card-back-ring) 16% 19%, transparent 20% 27%, oklch(from var(--card-back-ring) l c h / 0.5) 28% 29%, transparent 30%),
+    repeating-linear-gradient(45deg, oklch(1 0 0 / 0.05) 0 6px, transparent 6px 12px),
+    radial-gradient(ellipse at 50% 40%, var(--card-back), var(--card-back-2));
+  border: 3px solid oklch(0.92 0.02 250);
 }
 
-.ib-zone__body::before,
-.ib-security__shield::before,
-.ib-raise-zone__empty::before {
-  top: -1px;
-  left: -1px;
-  border-right: 0;
-  border-bottom: 0;
-}
-
-.ib-zone__body::after,
-.ib-security__shield::after,
-.ib-raise-zone__empty::after {
-  right: -1px;
-  bottom: -1px;
-  border-left: 0;
-  border-top: 0;
-}
-
-.ib-zone__body span,
-.ib-security__shield span {
-  color: var(--ib-bone);
-  font-size: 22px;
+.dcg-card-back__mark {
+  color: var(--card-back-ring);
+  font-family: var(--ib-font-display);
+  font-size: 10px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
 }
 
-.ib-zone__body--deck {
-  background: linear-gradient(145deg, oklch(from var(--ib-panel-3) l c h / 0.82), oklch(from var(--ib-panel) l c h / 0.75));
+.ib-zone__body--egg {
+  --card-back: oklch(0.70 0.13 75);
+  --card-back-2: oklch(0.48 0.12 55);
+  --card-back-ring: oklch(0.97 0.04 90);
+}
+
+.ib-zone__count {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  z-index: 2;
+  display: grid;
+  min-width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 2px solid var(--arena-frame-edge);
+  background: var(--arena-plate);
+  color: var(--arena-plate-ink);
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 3px 8px oklch(0 0 0 / 0.45);
 }
 
 .ib-zone__body--trash {
+  display: grid;
+  place-items: center;
+  border: 2px dashed oklch(1 0 0 / 0.28);
+  background: oklch(0 0 0 / 0.22);
+  box-shadow: inset 0 0 18px oklch(0 0 0 / 0.35);
   cursor: pointer;
-  color: oklch(0.68 0.17 24);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.ib-zone__body--trash.has-cards {
+  border: 0;
+  background: none;
+  box-shadow:
+    2px 2px 0 oklch(0.25 0.02 250),
+    0 14px 20px oklch(0 0 0 / 0.45);
+}
+
+.ib-zone__body--trash > .relative.inline-block {
+  border-radius: 7px;
+  transform: rotate(-4deg);
 }
 
 .ib-zone__body--trash:hover {
-  border-color: oklch(0.68 0.17 24);
-  box-shadow: 0 0 18px oklch(0.68 0.17 24 / 0.28);
-}
-
-.ib-zone--egg .ib-zone__body {
-  width: 56px;
-  height: 56px;
-  color: var(--ib-warn);
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 2px oklch(0.68 0.17 24), 0 0 18px oklch(0.68 0.17 24 / 0.45);
 }
 
 .ib-zone--ready .ib-zone__body,
 .ib-raise-zone__perm--ready,
 .ib-raise-zone__perm--target,
 .ib-raise-zone__empty--target {
-  border-color: oklch(0.78 0.16 150);
-  box-shadow: 0 0 18px oklch(0.78 0.16 150 / 0.35);
+  outline: 3px solid var(--arena-ready);
+  outline-offset: 2px;
+  filter: drop-shadow(0 0 12px oklch(from var(--arena-ready) l c h / 0.6));
+}
+
+.ib-zone--ready .ib-zone__body {
+  cursor: pointer;
 }
 
 .ib-raise-zone__empty {
+  display: grid;
   width: 96px;
   height: 134px;
+  place-items: center;
+  border-radius: 8px;
+  border: 2px dashed oklch(1 0 0 / 0.24);
+  background: oklch(0 0 0 / 0.18);
   color: var(--ib-bone-dd);
   font-size: 9px;
   letter-spacing: 0.18em;
 }
 
 .ib-raise-zone__perm {
-  border-radius: 2px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
+/* Security: a row of shield gems, the top one brightest. */
 .ib-security {
-  display: grid;
-  justify-items: center;
-  color: var(--ib-player);
+  --shield: var(--ib-player);
 }
 
 .ib-security--opp {
-  color: var(--ib-opp);
+  --shield: var(--ib-opp);
+}
+
+.ib-security__shields {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  max-width: 200px;
+  min-height: 34px;
 }
 
 .ib-security__shield {
-  width: 62px;
-  height: 68px;
-  color: currentColor;
-  clip-path: polygon(50% 0, 94% 24%, 84% 85%, 50% 100%, 16% 85%, 6% 24%);
+  width: 30px;
+  height: 34px;
+  clip-path: polygon(50% 0, 100% 16%, 92% 70%, 50% 100%, 8% 70%, 0 16%);
+  background:
+    linear-gradient(160deg, oklch(1 0 0 / 0.55), transparent 45%),
+    linear-gradient(to bottom, oklch(from var(--shield) calc(l + 0.06) c h), oklch(from var(--shield) calc(l - 0.18) c h));
+  filter: drop-shadow(0 3px 3px oklch(0 0 0 / 0.4));
 }
 
-.ib-security__shield span {
-  color: currentColor;
-  font-size: 18px;
+.ib-security__shield.is-top {
+  filter: drop-shadow(0 0 8px var(--shield));
 }
 
-.ib-security__tokens {
-  display: flex;
-  gap: 3px;
-  margin-top: 5px;
+.ib-security__empty {
+  color: var(--ib-bone-dd);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  line-height: 34px;
 }
 
-.ib-security__tokens span {
-  width: 5px;
-  height: 18px;
-  border: 1px solid currentColor;
-  background: oklch(from var(--ib-panel) l c h / 0.7);
-  opacity: 0.66;
-}
-
-.ib-security__tokens span.is-top {
-  opacity: 1;
-  box-shadow: 0 0 10px currentColor;
-}
-
+/* ── Memory track: a row of coins with a plaque and an End Turn button ── */
 .ib-gauge-frame {
   display: grid;
-  grid-template-columns: minmax(116px, 164px) minmax(520px, 1fr) minmax(116px, 164px);
+  grid-template-columns: 150px minmax(0, 1fr) 150px;
   align-items: center;
-  gap: 14px;
-  pointer-events: none;
+  gap: 18px;
 }
 
 .ib-gauge-bar {
@@ -748,136 +776,105 @@ body {
   display: flex;
   justify-content: center;
   min-width: 0;
-  height: 84px;
+  height: 64px;
   align-items: center;
+  pointer-events: none;
 }
 
-.ib-gauge-bar::before,
-.ib-gauge-bar::after {
+.ib-gauge-segments::before {
   content: "";
   position: absolute;
+  z-index: -1;
   top: 50%;
-  width: 14px;
+  left: -14px;
+  right: -14px;
   height: 14px;
-  border: 1.5px solid var(--ib-bone);
+  border-radius: 999px;
   transform: translateY(-50%);
-}
-
-.ib-gauge-bar::before {
-  left: -7px;
-  border-right: 0;
-  border-bottom: 0;
-}
-
-.ib-gauge-bar::after {
-  right: -7px;
-  border-left: 0;
-  border-top: 0;
-}
-
-.ib-gauge-label {
-  position: absolute;
-  top: -5px;
-  left: 50%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--ib-bone-dd);
-  font-family: var(--ib-font-mono);
-  font-size: 9px;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  transform: translateX(-50%);
-}
-
-.ib-gauge-label::before,
-.ib-gauge-label::after {
-  content: "";
-  width: 68px;
-  height: 1px;
-  background: linear-gradient(to right, transparent, var(--ib-line), transparent);
+  background: oklch(0 0 0 / 0.30);
+  box-shadow: inset 0 2px 4px oklch(0 0 0 / 0.4), 0 1px 0 oklch(1 0 0 / 0.10);
 }
 
 .ib-gauge-segments {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
   max-width: 100%;
 }
 
 .ib-gauge-seg {
+  --coin: var(--arena-coin);
+  --coin-hi: var(--arena-coin-hi);
   display: grid;
-  width: clamp(22px, 3vw, 38px);
-  height: clamp(36px, 4.9vw, 56px);
+  width: clamp(26px, 2.3vw, 40px);
+  height: clamp(26px, 2.3vw, 40px);
   place-items: center;
-  border: 1px solid var(--ib-line);
-  background: oklch(from var(--ib-panel) l c h / 0.86);
-  color: var(--ib-bone-dd);
-  clip-path: polygon(14% 0, 86% 0, 100% 50%, 86% 100%, 14% 100%, 0 50%);
-  font-family: var(--ib-font-mono);
-  font-size: clamp(9px, 1.1vw, 14px);
-  font-weight: 600;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, var(--coin-hi), var(--coin) 62%, oklch(from var(--coin) calc(l - 0.15) c h));
+  color: var(--arena-coin-ink);
+  box-shadow:
+    inset 0 -3px 0 oklch(0 0 0 / 0.25),
+    inset 0 2px 0 oklch(1 0 0 / 0.30),
+    0 0 0 2px oklch(0 0 0 / 0.35),
+    0 4px 6px oklch(0 0 0 / 0.35);
+  font-family: var(--ib-font-display);
+  font-size: clamp(11px, 1.1vw, 17px);
+  font-style: italic;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  transition: transform 160ms ease, color 160ms ease, background 160ms ease;
+  text-shadow: 0 1px 2px oklch(0 0 0 / 0.55);
+  transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
-.ib-gauge-seg.is-tick::after {
-  content: "";
-  width: 4px;
-  height: 4px;
-  background: currentColor;
-  opacity: 0.68;
+/* Coins on the side away from the marker go dim, like spent mana. */
+.ib-gauge-seg--player:not(.is-active),
+.ib-gauge-seg--opponent:not(.is-active) {
+  opacity: 0.78;
+}
+
+.ib-gauge-seg--opponent {
+  --coin: oklch(0.42 0.02 250);
+  --coin-hi: oklch(0.60 0.02 250);
 }
 
 .ib-gauge-seg--player.is-active {
-  border-color: oklch(0.65 0.15 50 / 0.88);
-  background: oklch(0.30 0.10 50 / 0.46);
-  color: oklch(0.90 0.07 50);
+  --coin: oklch(0.66 0.17 50);
+  --coin-hi: oklch(0.86 0.12 70);
+  opacity: 1;
 }
 
 .ib-gauge-seg--opponent.is-active {
-  border-color: oklch(0.55 0.13 230 / 0.88);
-  background: oklch(0.30 0.10 230 / 0.46);
-  color: oklch(0.88 0.07 230);
+  --coin: oklch(0.55 0.15 245);
+  --coin-hi: oklch(0.78 0.10 235);
+  opacity: 1;
 }
 
 .ib-gauge-seg--zero {
-  border-color: var(--ib-horizon);
+  --coin: oklch(0.70 0.14 85);
+  --coin-hi: oklch(0.92 0.10 95);
+  color: oklch(0.22 0.04 70);
+  text-shadow: none;
 }
 
 .ib-gauge-seg.is-focal {
   z-index: 2;
-  transform: scale(1.18);
-}
-
-.ib-gauge-seg--player.is-focal {
-  background: var(--ib-player);
-  color: var(--ib-obsidian);
-  box-shadow: 0 0 0 1.5px oklch(0.92 0.06 50), 0 0 24px oklch(0.74 0.17 50 / 0.85);
-}
-
-.ib-gauge-seg--opponent.is-focal {
-  background: var(--ib-opp);
-  color: var(--ib-obsidian);
-  box-shadow: 0 0 0 1.5px oklch(0.85 0.10 230), 0 0 24px oklch(0.72 0.15 230 / 0.85);
-}
-
-.ib-gauge-seg--zero.is-focal {
-  background: var(--ib-horizon);
-  color: var(--ib-obsidian);
-  box-shadow: 0 0 0 1.5px oklch(0.97 0.02 220 / 0.65), 0 0 24px oklch(0.97 0.02 220 / 0.4);
+  transform: scale(1.32);
+  box-shadow:
+    inset 0 -3px 0 oklch(0 0 0 / 0.25),
+    inset 0 2px 0 oklch(1 0 0 / 0.30),
+    0 0 0 3px var(--arena-gold),
+    0 0 18px oklch(from var(--arena-gold) l c h / 0.75);
 }
 
 .ib-gauge-seg.is-trail {
-  border-color: var(--ib-player);
-  box-shadow: inset 0 0 0 1px oklch(0.74 0.17 50 / 0.7);
+  box-shadow: 0 0 0 2px var(--ib-player), 0 4px 6px oklch(0 0 0 / 0.35);
   animation: trailPulse 900ms ease-in-out infinite;
 }
 
 .ib-gauge-seg.is-ghost {
-  border: 1.5px dashed var(--ib-player);
-  color: var(--ib-player);
-  box-shadow: 0 0 14px oklch(0.74 0.17 50 / 0.5);
+  box-shadow: 0 0 0 3px var(--ib-player), 0 0 16px oklch(0.74 0.17 50 / 0.8);
+  transform: scale(1.15);
 }
 
 @keyframes trailPulse {
@@ -886,76 +883,129 @@ body {
 }
 
 .ib-gauge-pill {
-  position: relative;
+  justify-self: end;
   display: grid;
-  min-height: 54px;
+  min-width: 112px;
+  padding: 6px 14px 7px;
   place-items: center;
-  border: 0;
-  color: var(--ib-bone);
-  background: oklch(from var(--ib-panel) l c h / 0.88);
-  clip-path: polygon(8% 0, 100% 0, 100% 100%, 0 100%, 0 30%);
+  border-radius: 8px;
+  border: 1px solid oklch(1 0 0 / 0.12);
+  background: var(--arena-plate);
+  color: var(--arena-gold);
+  box-shadow: 0 6px 14px oklch(0 0 0 / 0.4);
   font-family: var(--ib-font-display);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.ib-gauge-pill::before {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  border: 1.5px solid currentColor;
-  clip-path: inherit;
   pointer-events: none;
 }
 
 .ib-gauge-pill span {
-  position: absolute;
-  top: 5px;
   color: var(--ib-bone-dd);
   font-family: var(--ib-font-mono);
   font-size: 8px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
 }
 
-.ib-gauge-pill--phase {
-  color: var(--ib-warn);
-  box-shadow: 0 0 24px oklch(0.82 0.17 90 / 0.32);
+/* The End Turn button: a big round gem, lit when it's yours to press. */
+.ib-end-turn {
+  justify-self: start;
+  display: grid;
+  width: 92px;
+  height: 92px;
+  place-items: center;
+  padding: 10px;
+  border: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 38% 28%, oklch(1 0 0 / 0.45), transparent 40%),
+    radial-gradient(circle, var(--arena-end-hi), var(--arena-end) 70%, oklch(from var(--arena-end) calc(l - 0.18) c h));
+  color: white;
+  box-shadow:
+    inset 0 -6px 0 oklch(0 0 0 / 0.25),
+    0 0 0 5px var(--arena-frame),
+    0 0 0 6px var(--arena-frame-edge),
+    0 0 26px oklch(from var(--arena-end) l c h / 0.6),
+    0 10px 18px oklch(0 0 0 / 0.45);
+  font-family: var(--ib-font-display);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.05;
+  text-align: center;
+  text-shadow: 0 1px 2px oklch(0 0 0 / 0.5);
+  cursor: pointer;
+  transition: transform 120ms ease, filter 160ms ease;
 }
 
-.ib-gauge-pill--action {
-  color: var(--ib-player);
-  clip-path: polygon(0 0, 92% 0, 100% 30%, 100% 100%, 0 100%);
-  box-shadow: 0 0 28px oklch(0.74 0.17 50 / 0.38);
-  padding: 18px 12px 6px;
+.ib-end-turn:hover:not(:disabled) {
+  transform: scale(1.05);
+  filter: brightness(1.08);
 }
 
+.ib-end-turn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.ib-end-turn:focus-visible {
+  outline: 3px solid var(--arena-gold);
+  outline-offset: 6px;
+}
+
+.ib-end-turn:disabled {
+  --arena-end: oklch(0.42 0.02 250);
+  --arena-end-hi: oklch(0.55 0.02 250);
+  color: oklch(0.85 0.01 250);
+  cursor: default;
+}
+
+/* ── Hand: a fan that bleeds off the bottom edge ── */
 .ib-hand-zone {
   display: flex;
   justify-content: center;
+  align-items: flex-end;
   padding: 4px 0;
 }
 
 .ib-hand-card {
   position: relative;
+  z-index: var(--fan-z, 0);
+  transform: translateY(var(--fan-y, 0px)) rotate(var(--fan-rot, 0deg));
+  transform-origin: 50% 120%;
   transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
 }
 
-.ib-hand-card:hover {
-  transform: translateY(-12px);
-  filter: drop-shadow(0 16px 22px rgba(0,0,0,0.48));
+.ib-hand-card > .relative.inline-block {
+  border-radius: 8px;
+  box-shadow: 0 0 0 1.5px oklch(0 0 0 / 0.5), 0 10px 18px oklch(0 0 0 / 0.45);
 }
 
-.ib-hand-card--ready {
-  filter: drop-shadow(0 0 12px oklch(0.78 0.16 150 / 0.36));
+.ib-hand-zone--you .ib-hand-card:hover {
+  z-index: 60;
+  transform: translateY(-58px) scale(1.32);
+  filter: drop-shadow(0 18px 26px oklch(0 0 0 / 0.55));
+}
+
+.ib-hand-card--ready > .relative.inline-block {
+  box-shadow:
+    0 0 0 2px var(--arena-ready),
+    0 0 16px oklch(from var(--arena-ready) l c h / 0.7),
+    0 10px 18px oklch(0 0 0 / 0.45);
 }
 
 .ib-hand-card--dragging {
   opacity: 0.3;
+}
+
+/* The opponent's fan hangs from the top edge, so it pivots the other way. */
+.ib-hand-zone--opp {
+  align-items: flex-start;
+}
+
+.ib-hand-zone--opp .ib-hand-card {
+  transform: translateY(calc(var(--fan-y, 0px) * -1)) rotate(calc(var(--fan-rot, 0deg) * -1));
+  transform-origin: 50% -20%;
 }
 
 .ib-hand-card__cost,
@@ -964,8 +1014,8 @@ body {
   position: absolute;
   z-index: 4;
   pointer-events: none;
-  border: 1px solid rgba(255,255,255,0.24);
-  background: oklch(0.08 0.012 250 / 0.8);
+  border: 1.5px solid oklch(1 0 0 / 0.5);
+  background: oklch(0.12 0.02 250 / 0.88);
   color: white;
   font-family: var(--ib-font-mono);
   font-weight: 800;
@@ -973,36 +1023,40 @@ body {
 }
 
 .ib-hand-card__cost {
-  top: 3px;
-  left: 3px;
+  top: -6px;
+  left: -6px;
   display: grid;
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   place-items: center;
   border-radius: 999px;
-  font-size: 10px;
+  border: 2px solid oklch(0.95 0.02 90);
+  font-size: 12px;
+  box-shadow: 0 2px 6px oklch(0 0 0 / 0.5);
 }
 
 .ib-hand-card__tag {
   top: 3px;
   right: 3px;
   padding: 2px 4px;
+  border-radius: 4px;
   color: var(--ib-warn);
   font-size: 9px;
 }
 
-.ib-hand-card__tag--option { color: oklch(0.74 0.18 305); }
-.ib-hand-card__tag--tamer { color: var(--ib-opp); }
+.ib-hand-card__tag--option { color: oklch(0.80 0.15 305); }
+.ib-hand-card__tag--tamer { color: oklch(0.80 0.12 230); }
 
 .ib-hand-card__dp {
   right: 3px;
-  bottom: 3px;
+  bottom: 30px;
   padding: 2px 4px;
+  border-radius: 4px;
   font-size: 9px;
 }
 
 .ib-hand-zone__empty {
-  padding: 34px 0;
+  padding: 34px 0 60px;
   color: var(--ib-bone-dd);
   font-family: var(--ib-font-mono);
   font-size: 11px;
@@ -1012,24 +1066,25 @@ body {
 
 .ib-hand-count-chip {
   position: absolute;
-  right: 18px;
-  bottom: 8px;
+  right: 26px;
+  bottom: 14px;
   z-index: 13;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  border: 1px solid var(--ib-line);
-  background: oklch(from var(--ib-panel) l c h / 0.9);
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--arena-plate);
   font-family: var(--ib-font-mono);
   text-transform: uppercase;
+  box-shadow: 0 4px 10px oklch(0 0 0 / 0.35);
   pointer-events: none;
 }
 
 .ib-hand-count-chip__label {
   color: var(--ib-bone-dd);
   font-size: 9px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.2em;
 }
 
 .ib-hand-count-chip__value {
@@ -1037,6 +1092,16 @@ body {
   font-size: 18px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+}
+
+/* Live background (motion full + toggle): the rim light breathes slowly. */
+.ib-board.is-live .ib-board__mat::after {
+  animation: arena-rim-breathe 9s ease-in-out infinite;
+}
+
+@keyframes arena-rim-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.82; }
 }
 
 /* Dev-only debug overlay (mounted behind import.meta.env.DEV). Anchored
@@ -1356,31 +1421,6 @@ body {
 [data-motion="off"] .animate-security-break,
 [data-motion="off"] .animate-security-shatter {
   animation: none;
-}
-
-/* ─── Board atmosphere animation (animate-board-atmosphere) ──────────────────
-   The board's existing static atmosphere layers come alive only when effective
-   live-background is on. GameBoard adds `is-live` to `.ib-board` from the
-   effective-live-background selector (motion `full` + the Live-background
-   toggle), so these are inherently off at reduced/off motion — no extra gate.
-   Kept subtler than the menu atmosphere (slower, smaller amplitude): the board
-   rain itself is the reused LiveAtmosphere engine at board intensity. */
-.ib-board.is-live .ib-board__scanlines {
-  animation: ib-scanline-roll 8s linear infinite;
-}
-
-@keyframes ib-scanline-roll {
-  from { background-position: 0 0; }
-  to { background-position: 0 4px; }
-}
-
-.ib-board.is-live .ib-board__mat::after {
-  animation: ib-mat-drift 60s linear infinite;
-}
-
-@keyframes ib-mat-drift {
-  from { background-position: 0 0; }
-  to { background-position: 48px 28px; }
 }
 
 /* ─── Digivolution cut-in (upgrade-digivolve-cutin) ──────────────────────────

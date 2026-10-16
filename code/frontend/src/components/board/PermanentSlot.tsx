@@ -43,7 +43,7 @@ export function PermanentSlot({
 
   return (
     <div
-      className={`ib-permanent-slot ${
+      className={`ib-permanent-slot ${perm.isSuspended ? 'ib-permanent-slot--suspended' : ''} ${
         isEffectSource ? 'animate-effect-pulse ib-permanent-slot--effect' : ''
       }`}
       onClick={onClick}

@@ -1,7 +1,6 @@
 import { useGameStore } from '@/stores/gameStore';
 import { useEffectiveLiveBackground } from '@/stores/uiStore';
 import { usePeekStore } from '@/stores/peekStore';
-import { LiveAtmosphere } from '@/components/layout/LiveAtmosphere';
 import { PlayerHalf } from './PlayerHalf';
 import { HandZone } from './HandZone';
 import { MemoryGauge } from './MemoryGauge';
@@ -50,6 +49,9 @@ interface GameBoardProps {
   onHandCardInspect?: (cardId: string) => void;
   actionTraces?: ActionTrace[];
   latestTensorSummary?: TensorSummary | null;
+  /** End-turn (pass) handler for the round button on the memory track.
+   *  Omit when passing is not legal right now; the button then shows disabled. */
+  onEndTurn?: () => void;
 }
 
 export function GameBoard({
@@ -82,6 +84,7 @@ export function GameBoard({
   onHandCardInspect,
   actionTraces = [],
   latestTensorSummary = null,
+  onEndTurn,
 }: GameBoardProps) {
   const {
     player1,
@@ -96,8 +99,8 @@ export function GameBoard({
   } = useGameStore();
 
   // Board atmosphere animates only when effective live-background is on
-  // (motion full + toggle). Drives the `is-live` gate on the board's
-  // scanline-roll / grid-drift CSS (animate-board-atmosphere).
+  // (motion full + toggle). Drives the `is-live` gate on the arena's
+  // rim-light breathing (index.css).
   const liveBg = useEffectiveLiveBackground();
 
   // "Peek the board" also fades the centered revealed-cards strip (a reveal
@@ -141,15 +144,13 @@ export function GameBoard({
     ...fieldHighlights.enemy,
     ...anyFieldHighlights.enemy,
   ]);
-  const latestActionLabel = (actionTraces as unknown as { at(index: number): ActionTrace | undefined }).at(-1)?.decoded.label ?? null;
+  const isYourTurn = currentPlayer === 1;
+  const endTurnLabel = isYourTurn ? 'End Turn' : 'Enemy Turn';
 
   return (
     <div data-testid="game-board" className={`ib-board${liveBg ? ' is-live' : ''}`}>
       <div className="ib-board__mat" />
-      <LiveAtmosphere surface="board" />
-      <div className="ib-board__horizon" />
-      <div className="ib-board__scanlines" />
-      <div className="ib-board__vignette" />
+      <div className="ib-board__rings" />
 
       <div className="ib-board__top-chrome">
         <div className="ib-chrome-tag"><span className="ib-dot" />MATCH LIVE</div>
@@ -199,7 +200,8 @@ export function GameBoard({
             localPlayer={1}
             currentPhase={currentPhase}
             previewCost={previewCost}
-            latestActionLabel={latestActionLabel}
+            onEndTurn={isYourTurn ? onEndTurn : undefined}
+            endTurnLabel={endTurnLabel}
           />
         </div>
 
@@ -284,8 +286,8 @@ function PlayerTag({
 }) {
   return (
     <div className={`ib-player-tag ${className} ib-player-tag--${accent}`}>
-      <div className="ib-player-tag__avatar">{accent === 'you' ? 'Y' : 'O'}</div>
-      <div>
+      <div className="ib-player-tag__avatar">{label.charAt(0).toUpperCase() || (accent === 'you' ? 'Y' : 'O')}</div>
+      <div className="ib-player-tag__plate">
         <div className="ib-player-tag__name">{label}</div>
         <div className="ib-player-tag__sub">{sublabel}</div>
       </div>
