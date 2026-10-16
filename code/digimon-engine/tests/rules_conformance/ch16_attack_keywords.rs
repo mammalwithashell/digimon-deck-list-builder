@@ -30,10 +30,10 @@
 //!
 //! Fixture cards: `fixtures/common/*.yaml` + `fixtures/ch16_atk/*.yaml` (plus
 //! `BLOCKER` / `BLOCKER_CANNOT_SUSPEND` / `SA_PLUS1` / `EOA_OBS` from
-//! `ch11_14`, `WA_ALLIANCE` from `ch15_04`, `LV4_PLAIN` / `EOT_MEM` /
-//! `MAIN_DEL1` from `ch15_08` and `BARRIER` from `ch16_repl`), one synthetic
-//! card per file, authored to printed-style text (each clause's `summary:`
-//! is that text).
+//! `ch11_14`, `WA_ALLIANCE` from `ch15_04`, `MAIN_TRASH_SEC_DRAW` from
+//! `ch15_07`, `LV4_PLAIN` / `EOT_MEM` / `MAIN_DEL1` from `ch15_08` and
+//! `BARRIER` from `ch16_repl`), one synthetic card per file, authored to
+//! printed-style text (each clause's `summary:` is that text).
 //!
 //! Security stacks are listed bottom first: the LAST card of `.security(..)`
 //! is the top card. Stacks (`place_stack`) are listed bottom first too: the
@@ -56,6 +56,7 @@ fn ch16_atk() -> DebugRunnerBuilder {
     fixtures::builder(&[
         fixtures::ch11_14_cards(),
         fixtures::ch15_04_cards(),
+        fixtures::ch15_07_cards(),
         fixtures::ch15_08_cards(),
         fixtures::ch16_repl_cards(),
         fixtures::ch17_cards(),
@@ -186,16 +187,42 @@ fn legal(r: &DebugRunner, player: PlayerId, action: u16) -> bool {
     build_action_mask(&r.game, player)[action as usize] == 1.0
 }
 
-/// Whether P0, at its end-of-turn action window, may attack `target` with
-/// `attacker`.
+/// Whether `attacker`'s player may attack `target` with it at the end of its
+/// turn: either a pending selection of that player whose actions include the
+/// attack (an end-of-turn keyword offering its attack as its own decision),
+/// or the `EndOfTurnAction` window's mask.
 fn eot_attack_offered(r: &DebugRunner, attacker: PermanentHandle, target: u16) -> bool {
-    r.current_phase() == GamePhase::EndOfTurnAction
-        && r.turn_player() == attacker.player
-        && legal(
-            r,
-            attacker.player,
-            encode_attack(attacker.index as u16, target),
-        )
+    let attack = encode_attack(attacker.index as u16, target);
+    if r.turn_player() != attacker.player {
+        return false;
+    }
+    match r.pending_selection() {
+        Some(sel) => {
+            sel.selecting_player == attacker.player && sel.valid_action_ids.contains(&attack)
+        }
+        None => {
+            r.current_phase() == GamePhase::EndOfTurnAction && legal(r, attacker.player, attack)
+        }
+    }
+}
+
+/// Declare the attack `eot_attack_offered` found, in whichever representation
+/// it was offered.
+fn declare_eot_attack(r: &mut DebugRunner, attacker: PermanentHandle, target: u16) {
+    let attack = encode_attack(attacker.index as u16, target);
+    if r.pending_selection().is_some() {
+        r.execute_action(attacker.player, attack)
+            .unwrap_or_else(|e| panic!("the attack was rejected: {e:?}"));
+    } else {
+        r.game.decode_action(attack, attacker.player);
+    }
+}
+
+/// Index in the event log (since `cp`) of the first attack declaration.
+fn attack_event_index(r: &DebugRunner, cp: usize) -> Option<usize> {
+    r.events_since(cp)
+        .iter()
+        .position(|e| matches!(e, GameEvent::Attack { .. }))
 }
 
 /// After an end-of-turn attack, the engine may park in `EndOfTurnAction`
@@ -759,17 +786,40 @@ fn rush_kind_matches_rule() {
 }
 
 // ─── §16-16 <Blitz> ─────────────────────────────────────────────────────────
+//
+// The <Blitz> attack is checked BEFORE any prompt is settled, in either
+// representation a fix may choose: a pending selection for P0 whose actions
+// include the attack, or an attack / PASS window read from the action mask.
+// While that window is open, nothing but the <Blitz> Digimon's attacks and
+// the decline may be legal: the memory is on the opponent's side, so P0's
+// turn continues only for the <Blitz> processing. Each board carries a
+// playable `FILL` in the hand and `MAIN_TRASH_SEC_DRAW` ([Main] effect) on
+// the field as witnesses (both legal before the digivolution).
 
-/// P0 (memory `memory`, hand `["BLITZ_CARD"]`) has `FILL` (red Lv.3) on its
-/// field plus `extra`; P1 has 3 security cards. Returns the board and the
-/// `FILL` handle (the digivolution target).
-fn blitz_board(blitz: &str, memory: i16, extra: &[&str]) -> (DebugRunner, PermanentHandle) {
-    let mut r = board_with(&[blitz], &[FILL; 3], memory);
+/// P0 (memory `memory`, hand `[blitz, FILL]`) has `FILL` (red Lv.3, slot 0,
+/// the digivolution target), `MAIN_TRASH_SEC_DRAW` (slot 1) and `extra`; P1
+/// has 3 security cards. Returns the board, the `FILL` handle and the
+/// `MAIN_TRASH_SEC_DRAW` handle.
+fn blitz_board(
+    blitz: &str,
+    memory: i16,
+    extra: &[&str],
+) -> (DebugRunner, PermanentHandle, PermanentHandle) {
+    let mut r = board_with(&[blitz, FILL], &[FILL; 3], memory);
     let base = r.place_on_field(0, FILL, Some(0));
+    let main = r.place_on_field(0, "MAIN_TRASH_SEC_DRAW", Some(0));
     for id in extra {
         r.place_on_field(0, id, Some(0));
     }
-    (r, base)
+    assert!(
+        legal(&r, 0, PLAY_HAND_START + 1),
+        "witness: FILL is playable"
+    );
+    assert!(
+        legal(&r, 0, field_main_action(main)),
+        "witness: the [Main] effect is usable"
+    );
+    (r, base, main)
 }
 
 /// Digivolve P0's `base` into the hand card at index 0.
@@ -778,10 +828,76 @@ fn digivolve_from_hand(r: &mut DebugRunner, base: PermanentHandle) {
         .decode_action(encode_digivolve(0, base.index as u16), 0);
 }
 
-/// Whether P0 may (still) attack P1 with `h` now: it is P0's turn and the
-/// attack is a legal action.
-fn attack_offered(r: &DebugRunner, h: PermanentHandle) -> bool {
-    r.turn_player() == 0 && legal(r, 0, encode_attack(h.index as u16, SECURITY_TARGET))
+/// Whether `action` is an attack declared by P0's `h` (any target).
+fn is_attack_by(h: PermanentHandle, action: u16) -> bool {
+    action >= encode_attack(h.index as u16, 0)
+        && action <= encode_attack(h.index as u16, SECURITY_TARGET)
+}
+
+/// Whether P0 is offered the <Blitz> attack on P1 with `h` NOW (nothing
+/// settled): a pending selection for P0 whose actions include the attack, or
+/// (no selection pending) a legal attack action in P0's turn.
+fn blitz_offered(r: &DebugRunner, h: PermanentHandle) -> bool {
+    let attack = encode_attack(h.index as u16, SECURITY_TARGET);
+    if r.turn_player() != 0 {
+        return false;
+    }
+    match r.pending_selection() {
+        Some(sel) => sel.selecting_player == 0 && sel.valid_action_ids.contains(&attack),
+        None => legal(r, 0, attack),
+    }
+}
+
+/// While the <Blitz> window is open, only `h`'s attacks and the decline are
+/// legal: in particular not the `FILL` in the hand (index `hand_index`) and
+/// not `main`'s [Main] effect.
+fn assert_only_blitz_legal(
+    r: &DebugRunner,
+    h: PermanentHandle,
+    hand_index: u16,
+    main: PermanentHandle,
+) {
+    let mask = build_action_mask(&r.game, 0);
+    let stray: Vec<u16> = (0..mask.len())
+        .filter(|&i| mask[i] == 1.0)
+        .map(|i| i as u16)
+        .filter(|&a| a != PASS && !is_attack_by(h, a))
+        .collect();
+    assert!(
+        stray.is_empty(),
+        "only the <Blitz> attack and its decline are legal, also: {stray:?}"
+    );
+    assert_eq!(
+        mask[(PLAY_HAND_START + hand_index) as usize],
+        0.0,
+        "the hand card is not playable"
+    );
+    assert_eq!(
+        mask[field_main_action(main) as usize],
+        0.0,
+        "the [Main] effect is not usable"
+    );
+}
+
+/// Take the offered <Blitz> attack on P1 with `h`.
+fn take_blitz_attack(r: &mut DebugRunner, h: PermanentHandle) {
+    let attack = encode_attack(h.index as u16, SECURITY_TARGET);
+    if r.pending_selection().is_some() {
+        r.execute_action(0, attack)
+            .unwrap_or_else(|e| panic!("the <Blitz> attack was rejected: {e:?}"));
+    } else {
+        r.game.decode_action(attack, 0);
+    }
+}
+
+/// Decline the offered <Blitz> attack.
+fn decline_blitz(r: &mut DebugRunner) {
+    if r.pending_selection().is_some() {
+        r.decline_optional_trigger()
+            .unwrap_or_else(|e| panic!("declining <Blitz> was rejected: {e:?}"));
+    } else {
+        r.game.decode_action(PASS, 0);
+    }
 }
 
 /// §16-16-1 "<Blitz> is a keyword effect where a Digimon with this effect
@@ -792,9 +908,10 @@ fn attack_offered(r: &DebugRunner, h: PermanentHandle) -> bool {
 ///
 /// P0 (memory 2) digivolves `FILL` into `BLITZ` (cost 3): the memory moves
 /// to 1 on P1's side and `BLITZ`'s [When Digivolving] <Blitz> activates.
-/// - P0 is offered the attack and attacks: it checks P1's security, then the
-///   turn passes to P1.
-/// - Or P0 declines the attack (PASS): no attack; the turn passes to P1.
+/// Before anything is settled the attack is offered, and nothing else (the
+/// `FILL` in the hand, the [Main] effect) is legal.
+/// - P0 attacks: it checks P1's security, then the turn passes to P1.
+/// - Or P0 declines: no attack; the turn passes to P1.
 #[test]
 #[ignore = "G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK (§16-16-1)"]
 fn blitz_optionality_matches_rule() {
@@ -806,25 +923,23 @@ fn blitz_optionality_matches_rule() {
         "16-16-3",
         "60219343db57508a25e6f5734ecf8fa3a4505d9edd50bc8820b15b4b42e87e95"
     );
-    let (mut r, base) = blitz_board("BLITZ", 2, &[]);
+    let (mut r, base, main) = blitz_board("BLITZ", 2, &[]);
     let cp = r.event_checkpoint();
     digivolve_from_hand(&mut r, base);
-    settle_declining(&mut r);
-    assert_eq!(field_top_ids(&r, 0), owned(&["BLITZ"]));
-    assert!(attack_offered(&r, base), "<Blitz>: the attack is offered");
-    assert!(legal(&r, 0, PASS), "and may be declined");
-    r.game
-        .decode_action(encode_attack(base.index as u16, SECURITY_TARGET), 0);
+    assert_eq!(field_top_ids(&r, 0)[0], "BLITZ");
+    assert!(blitz_offered(&r, base), "<Blitz>: the attack is offered");
+    assert_only_blitz_legal(&r, base, 0, main);
+    take_blitz_attack(&mut r, base);
     settle_declining(&mut r);
     assert_eq!(revealed(&r, cp, 1), owned(&[FILL]), "the <Blitz> attack");
     assert_eq!(r.turn_player(), 1, "then the turn ended");
 
-    let (mut r, base) = blitz_board("BLITZ", 2, &[]);
+    let (mut r, base, main) = blitz_board("BLITZ", 2, &[]);
     let cp = r.event_checkpoint();
     digivolve_from_hand(&mut r, base);
-    settle_declining(&mut r);
-    assert!(attack_offered(&r, base));
-    r.game.decode_action(PASS, 0);
+    assert!(blitz_offered(&r, base));
+    assert_only_blitz_legal(&r, base, 0, main);
+    decline_blitz(&mut r);
     settle_declining(&mut r);
     assert!(revealed(&r, cp, 1).is_empty(), "declined: no attack");
     assert_eq!(r.turn_player(), 1);
@@ -833,12 +948,12 @@ fn blitz_optionality_matches_rule() {
 /// §16-16-2 "<Blitz> effects execute processing."
 ///
 /// <Blitz> is processing of the effect that contains it: its attack happens
-/// while that effect activates, before the next pending effect. P0 (memory
-/// 4) has `OBS_DIGI_LOSE2` ("[Your Turn] When one of your Digimon digivolves,
-/// lose 2 memory") and digivolves `FILL` into `BLITZ` (cost 3, memory 1 left):
-/// `BLITZ`'s [When Digivolving] and the observer pend in one `TriggerOrder`.
-/// P0 activates the observer first (memory 1 on P1's side), then `BLITZ`'s
-/// effect: <Blitz> offers the attack and P0 attacks.
+/// while that effect activates. P0 (memory 4) has `OBS_DIGI_LOSE2` ("[Your
+/// Turn] When one of your Digimon digivolves, lose 2 memory") and digivolves
+/// `FILL` into `BLITZ` (cost 3, memory 1 left): `BLITZ`'s [When Digivolving]
+/// and the observer pend in one `TriggerOrder`. P0 activates the observer
+/// first (memory 1 on P1's side), then `BLITZ`'s effect: <Blitz> offers the
+/// attack (only it and its decline are legal) and P0 attacks.
 #[test]
 #[ignore = "G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK (§16-16-2)"]
 fn blitz_kind_matches_rule() {
@@ -846,7 +961,7 @@ fn blitz_kind_matches_rule() {
         "16-16-2",
         "328603fde8002d1505f8afaf5078c58bef06791b58034c634d9da38918b24d68"
     );
-    let (mut r, base) = blitz_board("BLITZ", 4, &["OBS_DIGI_LOSE2"]);
+    let (mut r, base, main) = blitz_board("BLITZ", 4, &["OBS_DIGI_LOSE2"]);
     let cp = r.event_checkpoint();
     digivolve_from_hand(&mut r, base);
     let mut cards: Vec<String> = order_choices(&r, 0)
@@ -860,11 +975,10 @@ fn blitz_kind_matches_rule() {
         "both pend together"
     );
     choose(&mut r, "OBS_DIGI_LOSE2");
-    settle_declining(&mut r);
     assert_eq!(memory_for(&r, 1), 1, "1 memory on P1's side");
-    assert!(attack_offered(&r, base), "<Blitz> offers the attack");
-    r.game
-        .decode_action(encode_attack(base.index as u16, SECURITY_TARGET), 0);
+    assert!(blitz_offered(&r, base), "<Blitz> offers the attack");
+    assert_only_blitz_legal(&r, base, 0, main);
+    take_blitz_attack(&mut r, base);
     settle_declining(&mut r);
     assert_eq!(revealed(&r, cp, 1), owned(&[FILL]));
 }
@@ -883,13 +997,12 @@ fn blitz_attack_proceeds_after_memory_returns_to_zero_or_more() {
         "16-16-4",
         "0d42f6969a3ca7e86703ef08206e4c5c78f52328f8cb0fc420891bead538b350"
     );
-    let (mut r, base) = blitz_board("BLITZ_WA", 2, &[]);
+    let (mut r, base, main) = blitz_board("BLITZ_WA", 2, &[]);
     let cp = r.event_checkpoint();
     digivolve_from_hand(&mut r, base);
-    settle_declining(&mut r);
-    assert!(attack_offered(&r, base), "<Blitz>: the attack is offered");
-    r.game
-        .decode_action(encode_attack(base.index as u16, SECURITY_TARGET), 0);
+    assert!(blitz_offered(&r, base), "<Blitz>: the attack is offered");
+    assert_only_blitz_legal(&r, base, 0, main);
+    take_blitz_attack(&mut r, base);
     settle_declining(&mut r);
     assert!(
         memory_event_index(&r, cp, "BLITZ_WA").is_some(),
@@ -907,7 +1020,8 @@ fn blitz_attack_proceeds_after_memory_returns_to_zero_or_more() {
 /// together.
 /// - P0 activates <Blitz> first: the memory is 0 (not 1 or more on P1's
 ///   side), so no attack can be made with it. The observer then moves the
-///   memory to 2 on P1's side: the turn ends with no attack.
+///   memory to 2 on P1's side and the turn ends: no attack is offered at
+///   any point and nothing else is left for P0 to do.
 /// - Control: P0 activates the observer first (memory 2 on P1's side), then
 ///   <Blitz>: the attack is offered.
 #[test]
@@ -917,30 +1031,25 @@ fn blitz_cannot_attack_when_memory_already_zero_or_more() {
         "16-16-5",
         "3761cbb0148f1f0d343686eefb060b1103f687ebd03f0d5125cd9c3821887794"
     );
-    let (mut r, base) = blitz_board("BLITZ", 3, &["OBS_DIGI_LOSE2"]);
+    let (mut r, base, _) = blitz_board("BLITZ", 3, &["OBS_DIGI_LOSE2"]);
     let cp = r.event_checkpoint();
     digivolve_from_hand(&mut r, base);
     choose(&mut r, "BLITZ");
-    settle_declining(&mut r);
     assert!(
-        !attack_offered(&r, base),
+        !blitz_offered(&r, base),
         "memory 0 at activation: no attack"
     );
-    if r.turn_player() == 0 && r.current_phase() == GamePhase::Main {
-        r.game.decode_action(PASS, 0);
-        settle_declining(&mut r);
-    }
     assert!(revealed(&r, cp, 1).is_empty(), "no attack was made");
     assert_eq!(r.turn_player(), 1, "the turn ended");
 
-    let (mut r, base) = blitz_board("BLITZ", 3, &["OBS_DIGI_LOSE2"]);
+    let (mut r, base, main) = blitz_board("BLITZ", 3, &["OBS_DIGI_LOSE2"]);
     digivolve_from_hand(&mut r, base);
     choose(&mut r, "OBS_DIGI_LOSE2");
-    settle_declining(&mut r);
     assert!(
-        attack_offered(&r, base),
+        blitz_offered(&r, base),
         "control: memory 2 on P1's side at activation"
     );
+    assert_only_blitz_legal(&r, base, 0, main);
 }
 
 // ─── §16-23 <Raid> ──────────────────────────────────────────────────────────
@@ -1492,7 +1601,15 @@ fn vortex_timing_matches_rule() {
 /// P0 has `VORTEX` and `EOT_MEM` ("[End of Your Turn] Gain 2 memory"). At
 /// the end of P0's turn both pend in one `TriggerOrder`; P0 activates
 /// <Vortex> first: its attack is offered while `EOT_MEM` is still pending,
-/// and the battle happens before `EOT_MEM` gains memory.
+/// and `EOT_MEM` resolves only after the attack declaration.
+///
+/// Official Q&A Q3868 / Q3869 (EX7-064, <Vortex>): <Vortex> "triggers
+/// simultaneously with [End of Your Turn] effects, therefore you can choose
+/// the activation order"; activating <Vortex> first, "you can activate
+/// <Vortex> and make an attack declaration, [the other] effect that triggered
+/// simultaneously will activate, then the counter timing will occur." So the
+/// still-pending effect resolves AFTER the attack declaration and BEFORE the
+/// counter timing / battle; the test pins declaration < `EOT_MEM` < battle.
 #[test]
 #[ignore = "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS (§16-33-2)"]
 fn vortex_kind_matches_rule() {
@@ -1512,13 +1629,14 @@ fn vortex_kind_matches_rule() {
     choose(&mut r, "VORTEX");
     assert!(memory_sources(&r, cp).is_empty(), "EOT_MEM still pending");
     assert!(eot_attack_offered(&r, v, 0));
-    r.game.decode_action(encode_attack(v.index as u16, 0), 0);
+    declare_eot_attack(&mut r, v, 0);
     settle_declining(&mut r);
-    let battle = trash_event_index(&r, cp, 1, FILL).expect("FILL deleted in battle");
+    let declared = attack_event_index(&r, cp).expect("the <Vortex> attack was declared");
     let gain = memory_event_index(&r, cp, "EOT_MEM").expect("EOT_MEM resolved");
+    let battle = trash_event_index(&r, cp, 1, FILL).expect("FILL deleted in battle");
     assert!(
-        battle < gain,
-        "the attack (#{battle}) precedes EOT_MEM (#{gain})"
+        declared < gain && gain < battle,
+        "declaration (#{declared}) < EOT_MEM (#{gain}) < battle (#{battle})"
     );
 }
 
@@ -1564,9 +1682,13 @@ fn vortex_attack_target_is_a_suspended_digimon() {
 /// suspended `FILL` at the end of P0's turn: P1 is offered the block, blocks,
 /// and `BLOCKER` battles instead of `FILL`.
 ///
-/// DCGO: `SelectAttackEffect.SetIsVortex()` only relaxes `CanAttack`'s
-/// played-this-turn check; the attack runs the normal `AttackProcess`
-/// (`BlockTiming`).
+/// §11-4-1 "This is the timing when a non-turn player who is being attacked
+/// can use their Digimon with <Blocker> to perform a block."
+///
+/// Official Q&A Q3869 (EX7-064): after a <Vortex> attack declaration "the
+/// counter timing will occur". DCGO: `SelectAttackEffect.SetIsVortex()` only
+/// relaxes `CanAttack`'s played-this-turn check; the attack runs the normal
+/// `AttackProcess` (`BlockTiming`).
 #[test]
 #[ignore = "G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK (§16-33-1)"]
 fn vortex_attack_has_block_timing() {
@@ -1577,6 +1699,10 @@ fn vortex_attack_has_block_timing() {
     cite!(
         "11-1-5",
         "cd109077bced1cb39983cddfc3851c42da90acec2ee7c54922c7d0df6542d1c9"
+    );
+    cite!(
+        "11-4-1",
+        "922aa181a790d6caa663a5a8fbc1bf38f95b19960de5d80ca4ef38437043007f"
     );
     let (mut r, v) = vortex_board(&[]);
     r.place_on_field(1, "BLOCKER", Some(0));
@@ -1708,8 +1834,17 @@ fn overclock_timing_matches_rule() {
 ///
 /// P0 has `OVERCLOCK` and `EOT_MEM` ("[End of Your Turn] Gain 2 memory"). At
 /// the end of P0's turn both pend in one `TriggerOrder`; P0 activates
-/// <Overclock> first: its condition and attack happen while `EOT_MEM` is
-/// still pending, the security check before `EOT_MEM` gains memory.
+/// <Overclock> first: its condition is offered while `EOT_MEM` is still
+/// pending, and `EOT_MEM` resolves only after the attack declaration.
+///
+/// Official Q&A Q3868 / Q3869 (EX7-064, <Vortex>): <Vortex> "triggers
+/// simultaneously with [End of Your Turn] effects, therefore you can choose
+/// the activation order"; activating <Vortex> first, "you can activate
+/// <Vortex> and make an attack declaration, [the other] effect that triggered
+/// simultaneously will activate, then the counter timing will occur." So the
+/// still-pending effect resolves AFTER the attack declaration and BEFORE the
+/// counter timing / battle; the test pins declaration < `EOT_MEM` < security check (the same simultaneous-trigger order the rulings give for
+/// <Vortex>).
 #[test]
 #[ignore = "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS (§16-34-2)"]
 fn overclock_kind_matches_rule() {
@@ -1734,11 +1869,12 @@ fn overclock_kind_matches_rule() {
     assert!(memory_sources(&r, cp).is_empty(), "EOT_MEM still pending");
     pick_field(&mut r, 1);
     settle_declining(&mut r);
-    let check = first_reveal(&r, cp).expect("the <Overclock> attack checked security");
+    let declared = attack_event_index(&r, cp).expect("the <Overclock> attack was declared");
     let gain = memory_event_index(&r, cp, "EOT_MEM").expect("EOT_MEM resolved");
+    let check = first_reveal(&r, cp).expect("the <Overclock> attack checked security");
     assert!(
-        check < gain,
-        "the attack (#{check}) precedes EOT_MEM (#{gain})"
+        declared < gain && gain < check,
+        "declaration (#{declared}) < EOT_MEM (#{gain}) < security check (#{check})"
     );
 }
 
@@ -1995,8 +2131,16 @@ fn execute_timing_matches_rule() {
 /// P0 has `EXECUTE` and `EOT_MEM` ("[End of Your Turn] Gain 2 memory"). At
 /// the end of P0's turn both pend in one `TriggerOrder`; P0 activates
 /// <Execute> first: its attack is offered while `EOT_MEM` is still pending,
-/// and the attack (here on P1: a security check) happens before `EOT_MEM`
-/// gains memory.
+/// and `EOT_MEM` resolves only after the attack declaration (here on P1).
+///
+/// Official Q&A Q3868 / Q3869 (EX7-064, <Vortex>): <Vortex> "triggers
+/// simultaneously with [End of Your Turn] effects, therefore you can choose
+/// the activation order"; activating <Vortex> first, "you can activate
+/// <Vortex> and make an attack declaration, [the other] effect that triggered
+/// simultaneously will activate, then the counter timing will occur." So the
+/// still-pending effect resolves AFTER the attack declaration and BEFORE the
+/// counter timing / battle; the test pins declaration < `EOT_MEM` < security check (the same simultaneous-trigger order the rulings give for
+/// <Vortex>).
 #[test]
 #[ignore = "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS (§16-38-2)"]
 fn execute_kind_matches_rule() {
@@ -2016,14 +2160,14 @@ fn execute_kind_matches_rule() {
     choose(&mut r, "EXECUTE");
     assert!(memory_sources(&r, cp).is_empty(), "EOT_MEM still pending");
     assert!(eot_attack_offered(&r, e, SECURITY_TARGET));
-    r.game
-        .decode_action(encode_attack(e.index as u16, SECURITY_TARGET), 0);
+    declare_eot_attack(&mut r, e, SECURITY_TARGET);
     settle_declining(&mut r);
-    let check = first_reveal(&r, cp).expect("the <Execute> attack checked security");
+    let declared = attack_event_index(&r, cp).expect("the <Execute> attack was declared");
     let gain = memory_event_index(&r, cp, "EOT_MEM").expect("EOT_MEM resolved");
+    let check = first_reveal(&r, cp).expect("the <Execute> attack checked security");
     assert!(
-        check < gain,
-        "the attack (#{check}) precedes EOT_MEM (#{gain})"
+        declared < gain && gain < check,
+        "declaration (#{declared}) < EOT_MEM (#{gain}) < security check (#{check})"
     );
 }
 

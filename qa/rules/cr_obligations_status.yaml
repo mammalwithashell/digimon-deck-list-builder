@@ -328,8 +328,8 @@
   status: gap
   blocks_training: true
   gap_id: G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES
-  tests: ["ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution"]
-  note: "The rule's example: an attacker that deletes itself on its [When Attacking]. The end of attack timing arrives (EOA_OBS resolves), but the defender is never offered the counter timing: the engine abandons the attack as soon as the attacker leaves. Test is #[ignore]d."
+  tests: ["ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution", "ch16_attack_keywords::vortex_attack_has_block_timing"]
+  note: "The rule's example: an attacker that deletes itself on its [When Attacking]. The end of attack timing arrives (EOA_OBS resolves), but the defender is never offered the counter timing: the engine abandons the attack as soon as the attacker leaves. Test is #[ignore]d. Second, independent violation: a <Vortex> attack skips the counter and block timings altogether (G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK, linked through 11-4-1; vortex_attack_has_block_timing, #[ignore]d)."
 "12-1-6":
   status: proven
   tests: ["ch11_14_attack_procedure::block_not_offered_when_attacker_left_battle_area"]
@@ -806,7 +806,7 @@
   blocks_training: true
   gap_id: G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK
   tests: ["ch16_attack_keywords::blitz_cannot_attack_when_memory_already_zero_or_more"]
-  note: "The no-attack half holds (memory 0 at activation: no attack); the control (memory on the opponent's side at activation) is never offered the attack. #[ignore]d."
+  note: "Not proven, in either half. The no-attack half (memory 0 when <Blitz> activates, observer then moves it to the opponent's side) passes today only because the engine ends the turn after any digivolution that leaves the memory on the opponent's side, never offering a <Blitz> attack at all; the control (memory on the opponent's side when <Blitz> activates) is never offered the attack. #[ignore]d."
 "16-23-1":
   status: proven
   tests: ["ch16_attack_keywords::raid_switches_to_highest_dp_unsuspended_attacker_chooses_tie"]
@@ -955,3 +955,15 @@
   status: proven
   tests: ["ch16_attack_keywords::progress_persistent_only_while_attacking"]
   note: "Not attacking (another Digimon attacks), it can be chosen and gets -3000 DP."
+"11-2-7-1":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON
+  tests: ["ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon"]
+  note: "At the end of P0's turn a <Vortex> attack is offered against P1's UNSUSPENDED Digimon (only a suspended Digimon or the opponent is a legal target; <Vortex> adds no target permission, contrast <Execute> 16-38-1). #[ignore]d. Main-phase target legality is not covered here."
+"11-4-1":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK
+  tests: ["ch16_attack_keywords::vortex_attack_has_block_timing"]
+  note: "A <Vortex> attack at the end of P0's turn offers P1 no block timing (nor counter timing): the engine jumps from the declaration straight to the battle. Ordinary attacks' block timing is proven in ch11_14 (one_block_per_attack et al.). #[ignore]d."
