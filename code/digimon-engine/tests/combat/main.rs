@@ -27,6 +27,7 @@ mod redirect_and_cancel;
 mod rush_exemption;
 mod scenarios;
 mod security_attack_keyword;
+mod security_check_order;
 mod security_effects;
 mod track_c_deferred_modifiers;
 mod track_c_modifiers;

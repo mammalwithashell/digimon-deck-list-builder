@@ -5245,3 +5245,38 @@ Evidence targets: `bt25_simultaneous_nondeletion`, `decoy_partition_processing`,
 The bounded Examon audit of the original 52 cards plus witness pools (92 authored cards) found no reachable dual-role Blast pair: its only Blast producer, BT20-045, requires distinct Breakdramon and Slayerdramon roles, and the scanned printed identities and result-scoped identity effects did not create both roles on one material. This does not prove closure for external cards or future modifiers. Two legacy Counter tests used identical synthetic requirements with an unjustified fixed-order assertion; disambiguating those fixtures is separate from implementing this capability.
 
 Required follow-up: public-mask tests for both assignments, clone and physical-incarnation revalidation, preserved source blocks, and exactly-once digivolution/payment/observers. Use an existing typed pending choice without expanding the action space; a uniquely matched route must not gain an extra prompt. Draft discriminators have not run, and no generic ambiguity repair or live confirmation is claimed.
+
+### G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE — RESOLVED (2026-10-15)
+
+- **Found by:** the 2026-10-15 rules-conformance investigation
+  (`docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md`, finding F2).
+- **Rule:** Comprehensive Rules §13-1-8 (Ver. 4.3; §13-1-7 in the Ver. 3.6 PDF) orders each
+  checked card: reveal (§13-1-8-1) → *effects triggered by the security check* resolve
+  (§13-1-8-2, the checked card's `[Security]` effect first per §15-16-10-2) → battle against a
+  Security Digimon (§13-1-8-3-1; skipped for a non-Digimon card, §13-1-8-3-2) → trash
+  (§13-1-8-4) → next check (§13-1-8-5).
+- **Was:** `drive_security_resolution` ran `SecuritySkillDrain → BattleResolved →
+  OnSecurityCheckDrain`, so a "when a security check is performed" observer's DP / keyword grant
+  landed *after* the battle it was printed to influence. The observer scan also covered only the
+  defender's battle area, although attacker-side observers exist (DCGO BT20-005 "gain `<Jamming>`
+  for the turn" ESS, BT12-088 "Memory +2" ESS) and DCGO collects `OnSecurityCheck` skill infos from
+  both players (`AutoProcessing.GetSkillInfos` → `Players_ForTurnPlayer`, turn player first) before
+  `#region battle with security Digimon` (`CardController.cs`, `ISecurityCheck.SecurityCheck`).
+- **Now:** `SecuritySkillDrain → OnSecurityCheckDrain → BattleResolved → (EndOfSecurityBattle*) →
+  WhenWouldLoseSecurity → OnLoseSecurityDrain → Dispose → DisposeFinalize`
+  (`code/digimon-engine/src/combat/mod.rs`, `SecurityPhase` in `src/selection.rs`).
+  `TriggerSource::OnSecurityCheck` now scans both players' battle areas, turn player first
+  (`src/effect_queue.rs`). The §13-1-6 removal timing, the 0-security win check, and the
+  park-and-resume path (`advance_security_resolution` re-enters `OnSecurityCheckDrain` with its
+  `phase_enqueue_done` guard) are unchanged.
+- **Tests:** `code/digimon-engine/tests/combat/security_check_order.rs` —
+  `defender_observer_dp_penalty_resolves_before_security_battle` (a),
+  `attacker_observer_dp_bonus_resolves_before_security_battle` (b),
+  `security_effect_resolves_before_observers_and_both_before_battle` (c),
+  `non_digimon_security_card_runs_observers_skips_battle_and_trashes` (d). All four were red
+  before the reorder.
+- **Oracle exams:** no scenario under `qa/dcgo-exams/` scripts a "when a security check is
+  performed" observer (every `security check` hit is a `<Piercing>` / `<Security A.>` clause), and
+  no production YAML uses `when: on_security_check` yet, so no exam expected row depends on this
+  order. The first card authored on that timing (BT20-005 / BT12-088 are the DCGO exemplars) should
+  get an exam that pins observer-before-battle against the oracle.

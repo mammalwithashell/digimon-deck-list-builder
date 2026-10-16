@@ -3386,7 +3386,15 @@ impl Game {
                     if self.pending_selection.is_some() {
                         return None;
                     }
-                    self.set_security_phase(SecurityPhase::BattleResolved);
+                    // §13-1-8-2: every effect triggered by the security
+                    // check resolves — the [Security] effect first
+                    // (§15-16-10-2, just drained), then the observers —
+                    // BEFORE the §13-1-8-3 battle against a Security
+                    // Digimon. DCGO: `ISecurityCheck.SecurityCheck` drains
+                    // `triggeredSkillInfos` (OnSecurityCheck) through
+                    // `AutoProcessCheck` and only then enters
+                    // `#region battle with security Digimon`.
+                    self.set_security_phase(SecurityPhase::OnSecurityCheckDrain);
                 }
                 SecurityPhase::BattleResolved => {
                     // Only Digimon security runs the DP battle; Option /
@@ -3486,7 +3494,7 @@ impl Game {
                             }
                         }
                     }
-                    self.set_security_phase(SecurityPhase::OnSecurityCheckDrain);
+                    self.set_security_phase(SecurityPhase::WhenWouldLoseSecurity);
                 }
                 SecurityPhase::EndOfSecurityBattleDrain {
                     attacker,
@@ -3537,11 +3545,18 @@ impl Game {
                     if self.pending_selection.is_some() {
                         return None;
                     }
-                    self.set_security_phase(SecurityPhase::OnSecurityCheckDrain);
+                    self.set_security_phase(SecurityPhase::WhenWouldLoseSecurity);
                 }
                 SecurityPhase::OnSecurityCheckDrain => {
-                    // Scan the defender's battle area for `OnSecurityCheck`
-                    // observer effects. Requires an attacker — non-combat
+                    // §13-1-8-2: scan BOTH players' battle areas for
+                    // `OnSecurityCheck` observer effects (turn player's
+                    // first — `enqueue_triggered` orders the collection and
+                    // the drainer resolves the turn player's bundle first).
+                    // Runs after the revealed card's own `[Security]` effect
+                    // (§15-16-10-2) and before the §13-1-8-3 battle, so an
+                    // observer's DP / keyword grant (e.g. BT20-005's "gain
+                    // <Jamming> for the turn" ESS) shapes the battle it is
+                    // printed to shape. Requires an attacker — non-combat
                     // security reveals skip this phase.
                     let Some(state) = self.security_resolution.as_ref() else {
                         break;
@@ -3580,10 +3595,17 @@ impl Game {
                         }
                         self.drain_effect_queue();
                         if self.pending_selection.is_some() {
+                            // Parked on an observer's choice; resume
+                            // re-enters this phase (enqueue guarded by
+                            // `phase_enqueue_done`) and only then proceeds
+                            // to the battle.
                             return None;
                         }
                     }
-                    self.set_security_phase(SecurityPhase::WhenWouldLoseSecurity);
+                    // §13-1-8-3: now the battle against a Security Digimon
+                    // (or straight through when the checked card isn't a
+                    // Digimon — §13-1-8-3-2).
+                    self.set_security_phase(SecurityPhase::BattleResolved);
                 }
                 SecurityPhase::WhenWouldLoseSecurity => {
                     let Some(state) = self.security_resolution.as_ref() else {

@@ -594,9 +594,11 @@ impl Effect {
     }
 
     /// Builder constructor for an observer that fires **once per security
-    /// check** after the revealed card's own `SecuritySkill` effects resolve.
-    /// Used for field/trash/hand effects that react to security checks
-    /// globally. Mirrors Python's `EffectTiming.OnSecurityCheck`.
+    /// check** after the revealed card's own `SecuritySkill` effects resolve
+    /// and before the battle against a Security Digimon (§13-1-8-2 →
+    /// §13-1-8-3). Collected from both players' battle areas. Used for
+    /// field effects that react to security checks globally. Mirrors
+    /// Python's `EffectTiming.OnSecurityCheck`.
     pub fn on_security_check(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnSecurityCheck)
     }
