@@ -718,6 +718,14 @@ color: [red, black]
 cost: 9
 dp: 15000
 alt_paths:
+  # The printed DNA requirement <Blast DNA Digivolve> can't ignore (16-31-5,
+  # 8-2-1). It needs TWO field Digimon, so the Main-phase route is unavailable
+  # here (only one is on the field): the counter window must still offer Blast.
+  - kind: dna_digivolve
+    materials:
+      - { name_is: Field Mat }
+      - { name_is: Hand Mat }
+    cost: 0
   - kind: blast_dna_digivolve
     materials:
       - { name_is: Field Mat }
