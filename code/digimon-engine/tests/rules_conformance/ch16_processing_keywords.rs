@@ -2286,7 +2286,6 @@ fn blast_dna_optionality_matches_rule() {
 /// a [Leftmon] but level 4: it doesn't meet the requirement, so <Blast DNA
 /// Digivolve> is not offered with it. Control: `LEFT5` (level 5) is.
 #[test]
-#[ignore = "G-ENGINE-BLAST-DNA-IGNORES-DNA-REQUIREMENTS (§16-31-5)"]
 fn blast_dna_cannot_ignore_dna_requirements() {
     cite!(
         "16-31-5",

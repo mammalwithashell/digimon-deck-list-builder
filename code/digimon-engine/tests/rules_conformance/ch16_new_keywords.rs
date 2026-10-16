@@ -1728,7 +1728,6 @@ fn dual_effects_are_digimon_or_option_effects_by_information() {
 /// The two negatives rule out a "Digimon colors and Option colors together"
 /// reading, which would offer illegal picks.
 #[test]
-#[ignore = "G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH (§4-6-6-2)"]
 fn dual_option_information_referenced_as_option_card() {
     cite!(
         "4-6-6-2",
@@ -1767,6 +1766,52 @@ fn dual_option_information_referenced_as_option_card() {
         settle_after_option(&mut r);
         assert_eq!(hand_ids(&r, 0), owned(&["DUAL_ARTS"]), "{picker}: {why}");
     }
+}
+
+/// §4-6-1 "A DUAL card is a card that can be treated as being in either the
+/// Digimon card category or the Option card category."
+///
+/// An UNQUALIFIED reference ("Trash 1 purple card from your hand") names
+/// neither category, so it picks neither information: the DUAL matches when
+/// EITHER information has the color (owner-pending ruling W5 reading (a);
+/// `qa/rules/mechanics-gaps-2026-10.md`). `DUAL_ARTS`: Digimon information
+/// red, Option information purple.
+/// - "purple card" (Option information) and "red card" (Digimon information)
+///   can both choose it;
+/// - "blue card" (neither) can't.
+#[test]
+fn dual_unqualified_colour_reference_matches_either_information() {
+    cite!(
+        "4-6-1",
+        "71e521e2421527fc20a64b564c7792b256d164651256c309effe1e311448eee7"
+    );
+    for picker in ["HAND_PICK_PURPLE_ANY", "HAND_PICK_RED_ANY"] {
+        let mut r = board(&[picker, "DUAL_ARTS"]);
+        red_anchor(&mut r);
+        use_option(&mut r, 0, picker);
+        assert!(
+            r.pending_selection().is_some(),
+            "{picker}: one of DUAL_ARTS's informations has the color: a legal pick (no pick offered)"
+        );
+        pick_hand_card(&mut r, 0, "DUAL_ARTS");
+        settle_after_option(&mut r);
+        assert!(hand_ids(&r, 0).is_empty(), "{picker}");
+        assert!(
+            trash_ids(&r, 0).contains(&"DUAL_ARTS".to_string()),
+            "{picker}"
+        );
+    }
+
+    let mut r = board(&["HAND_PICK_BLUE_ANY", "DUAL_ARTS"]);
+    red_anchor(&mut r);
+    use_option(&mut r, 0, "HAND_PICK_BLUE_ANY");
+    assert!(
+        r.pending_selection().is_none(),
+        "neither information is blue: {:?}",
+        r.pending_selection()
+    );
+    settle_after_option(&mut r);
+    assert_eq!(hand_ids(&r, 0), owned(&["DUAL_ARTS"]));
 }
 
 /// §4-6-3 "A DUAL card placed on the field is treated as a Digimon. It can't
