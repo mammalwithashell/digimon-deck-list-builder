@@ -147,6 +147,24 @@ const CH16_NEW: &[&str] = &[
     include_str!("ch16_new/USE_REQ_OPT.yaml"),
 ];
 
+/// §16-18..§16-37 replacement (immediate-type) keyword cards
+/// (`ch16_replacement_keywords.rs`).
+const CH16_REPL: &[&str] = &[
+    include_str!("ch16_repl/ARMOR.yaml"),
+    include_str!("ch16_repl/BARRIER.yaml"),
+    include_str!("ch16_repl/BARRIER_INH.yaml"),
+    include_str!("ch16_repl/BLACK_LV3.yaml"),
+    include_str!("ch16_repl/BLUE_LV4.yaml"),
+    include_str!("ch16_repl/DECODE.yaml"),
+    include_str!("ch16_repl/DECOY.yaml"),
+    include_str!("ch16_repl/EVADE.yaml"),
+    include_str!("ch16_repl/EVADE_FRAG1.yaml"),
+    include_str!("ch16_repl/FRAG2.yaml"),
+    include_str!("ch16_repl/GREEN_LV4.yaml"),
+    include_str!("ch16_repl/PARTITION.yaml"),
+    include_str!("ch16_repl/SCAPEGOAT.yaml"),
+];
+
 /// §17 "Rule Checks" chapter cards (`ch17_rule_checks.rs`).
 const CH17: &[&str] = &[
     include_str!("ch17/LINK_A.yaml"),
@@ -214,6 +232,11 @@ pub fn ch16_new_cards() -> &'static [&'static str] {
     CH16_NEW
 }
 
+/// Every `ch16_repl/` card's YAML source.
+pub fn ch16_repl_cards() -> &'static [&'static str] {
+    CH16_REPL
+}
+
 /// Every `ch17/` card's YAML source.
 pub fn ch17_cards() -> &'static [&'static str] {
     CH17
@@ -263,6 +286,7 @@ fn every_fixture_file_is_listed() {
         ("ch15_07", CH15_07.len()),
         ("ch15_08", CH15_08.len()),
         ("ch16_new", CH16_NEW.len()),
+        ("ch16_repl", CH16_REPL.len()),
         ("ch17", CH17.len()),
         ("ch18", CH18.len()),
     ] {

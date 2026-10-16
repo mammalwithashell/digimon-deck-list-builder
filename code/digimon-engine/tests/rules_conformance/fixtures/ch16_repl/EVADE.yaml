@@ -1,0 +1,15 @@
+# EVADE -- Digimon, Lv.4, red, 4000 DP, play cost 4.
+#   <Evade> (When this Digimon would be deleted, by suspending it, it isn't
+#   deleted.)
+# The §16-22 keyword card.
+card: EVADE
+name: Dodgemon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+effects:
+  - kind: grant_keyword
+    keyword: Evade
+    summary: "<Evade> (When this Digimon would be deleted, by suspending it, it isn't deleted.)"

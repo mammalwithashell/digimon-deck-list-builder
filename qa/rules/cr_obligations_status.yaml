@@ -134,11 +134,11 @@
   tests: ["ch15_08_effect_categories::immediate_effect_interrupts_before_cause"]
 "15-8-5-3":
   status: proven
-  tests: ["ch15_08_effect_categories::immediate_effects_only_simultaneous_with_immediate_effects"]
-  note: "A would-be-deleted effect is offered alone before the deletion; the [On Deletion] of the other simultaneously deleted Digimon triggers after it. The positive half (two immediates sharing one ordering choice) is G-REPLACEMENT-NO-ORDER-PROMPT territory and is not asserted here."
+  tests: ["ch15_08_effect_categories::immediate_effects_only_simultaneous_with_immediate_effects", "ch16_replacement_keywords::two_simultaneous_replacements_ordered_by_controller"]
+  note: "A would-be-deleted effect is offered alone before the deletion; the [On Deletion] of the other simultaneously deleted Digimon triggers after it. Positive half: <Evade> and <Fragment (1)> on one Digimon are offered to their controller as one 'Choose the next immediate replacement effect' choice, and the order chosen decides the outcome (replacement_window.rs install_window_order); G-REPLACEMENT-NO-ORDER-PROMPT no longer reproduces."
 "15-8-5-4":
   status: proven
-  tests: ["ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause"]
+  tests: ["ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause", "ch16_replacement_keywords::multiple_instances_of_one_keyword_each_offered_once_per_event"]
   note: "Controller ruling (task 8 review, PDF governs; reverses the earlier [Main]-scope ruling): the cause is the interrupting event, i.e. each 'would be deleted' (15-8-5-1/-2; the example closes the window 'until the deletion is resolved'). Two deletions from one [Main] are two causes: the Sukamon effect activates for each. One-event witness: two non-preventing would-be-deleted effects on one Digimon each activate once in that event, then the deletion proceeds. DCGO enforces neither reading for BT11-041 (ChainActivations -1; IsCutInEffectHasUsed stub). G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT retracted."
 "15-8-5-5-2":
   status: proven
@@ -475,6 +475,118 @@
   status: proven
   tests: ["ch16_new_keywords::engage_optionality_matches_rule"]
   note: "PASS declines: no attack, the turn passes. Matrix row Engage (optional) agrees."
+"16-1":
+  status: proven
+  tests: ["ch16_replacement_keywords::multiple_instances_of_one_keyword_each_offered_once_per_event"]
+  note: "Bracketed keyword icons (<Barrier>, <Fragment (n)>, <Decoy>, <Decoy (Black)>) parse to keyword effects; each printed/inherited instance is its own effect: a Digimon with <Barrier> on its top card and an inherited <Barrier> is offered each instance once in one battle deletion."
+"16-2":
+  status: proven
+  tests: ["ch16_replacement_keywords::multiple_instances_of_one_keyword_each_offered_once_per_event"]
+  note: "<Fragment (1)>/<Fragment (2)> and <Decoy>/<Decoy (Black)> parse to one Keyword variant each (value / specified card are parameters, same type)."
+"16-3":
+  status: proven
+  tests: ["ch16_replacement_keywords::specified_cards_follow_the_icon_note"]
+  note: "The parenthetical decides: <Decoy (Black)> protects a black Digimon, not a red one; <Decode (blue Lv.4)> can't choose a red Lv.4 source; <Partition (blue Lv.4 & green Lv.4)> doesn't trigger with a red Lv.4 in place of the green one."
+"16-18-1":
+  status: proven
+  tests: ["ch16_replacement_keywords::decoy_only_for_specified_digimon_deleted_by_opponent_effect"]
+  note: "Opponent's deletion effect on another own black Digimon: offered; accepting deletes the <Decoy> Digimon and the other stays. Not offered for a non-specified (red) Digimon, the owner's own effect, or a battle."
+"16-18-2":
+  status: proven
+  tests: ["ch16_replacement_keywords::decoy_only_for_specified_digimon_deleted_by_opponent_effect", "ch16_replacement_keywords::decoy_kind_matches_rule", "ch16_replacement_keywords::decoy_timing_matches_rule"]
+  note: "Immediate-type: offered while the threatened Digimon is still in the battle area, nothing trashed; it never leaves. Not offered for a return to the hand (not a deletion) or for the <Decoy> Digimon itself."
+"16-18-3":
+  status: proven
+  tests: ["ch16_replacement_keywords::decoy_optional_cost_then_mandatory_prevention", "ch16_replacement_keywords::decoy_optionality_matches_rule"]
+  note: "Declining: the specified Digimon is deleted. Accepting: <Decoy> is deleted and the prevention follows with no further decision. Matrix row Decoy: optional_cost_then_mandatory, agrees."
+"16-19-1":
+  status: proven
+  tests: ["ch16_replacement_keywords::armor_purge_requires_a_digivolution_card_and_keeps_modifiers"]
+  note: "Accepting trashes only the top card; the Digimon is not deleted and keeps a -3000 DP for-the-turn modifier (matrix: surviving modifiers carry over). A lone card (no digivolution card) is not offered (DCGO ArmorPurge.cs:13 DigivolutionCards.Count >= 1). The 4.3 text itself says nothing about modifiers."
+"16-19-2":
+  status: proven
+  tests: ["ch16_replacement_keywords::armor_purge_kind_matches_rule", "ch16_replacement_keywords::armor_purge_timing_matches_rule"]
+  note: "Immediate-type: offered with the stack intact and nothing trashed. Any deletion (effect or battle) triggers it; a return to the hand does not."
+"16-19-3":
+  status: proven
+  tests: ["ch16_replacement_keywords::armor_purge_requires_a_digivolution_card_and_keeps_modifiers", "ch16_replacement_keywords::armor_purge_optionality_matches_rule"]
+  note: "Declining: the whole stack is deleted. Accepting: no further decision. Matrix row ArmorPurge: optional_cost_then_mandatory, agrees."
+"16-22-1":
+  status: proven
+  tests: ["ch16_replacement_keywords::evade_suspends_to_prevent_deletion"]
+  note: "Accepting suspends the Digimon and it is not deleted. Already suspended (condition can't be executed, 15-7-4): not offered."
+"16-22-2":
+  status: proven
+  tests: ["ch16_replacement_keywords::evade_kind_matches_rule", "ch16_replacement_keywords::evade_timing_matches_rule"]
+  note: "Immediate-type: offered while unsuspended in the battle area, nothing trashed. Triggers for its owner's own effect and for a battle (battle_digimon); not for a return to the hand."
+"16-22-3":
+  status: proven
+  tests: ["ch16_replacement_keywords::evade_suspends_to_prevent_deletion", "ch16_replacement_keywords::evade_optionality_matches_rule"]
+  note: "Declining: deleted. Accepting: no further decision. Matrix row Evade: optional_cost_then_mandatory, agrees."
+"16-25-1":
+  status: proven
+  tests: ["ch16_replacement_keywords::barrier_trashes_top_security_only_for_battle_deletion"]
+  note: "Battle deletion: accepting trashes the TOP security card and the Digimon survives. Effect deletion: not offered. 0 security cards: not offered (15-7-4)."
+"16-25-2":
+  status: proven
+  tests: ["ch16_replacement_keywords::barrier_trashes_top_security_only_for_battle_deletion", "ch16_replacement_keywords::barrier_kind_matches_rule", "ch16_replacement_keywords::barrier_timing_matches_rule"]
+  note: "Immediate-type: offered with the Digimon in the battle area and the security stack intact. Triggers for the attacker losing its battle too."
+"16-25-3":
+  status: proven
+  tests: ["ch16_replacement_keywords::barrier_optionality_matches_rule"]
+  note: "Declining: deleted, security untouched. Matrix row Barrier: optional_cost_then_mandatory, agrees."
+"16-29-1":
+  status: proven
+  tests: ["ch16_replacement_keywords::partition_plays_one_of_each_specified_all_or_nothing"]
+  note: "Opponent's deletion effect: offered; accepting plays the blue Lv.4 and the green Lv.4 for free. Not offered without 1 of each specified card, for the owner's own effect, or in battle. Proven via the AD1-011 `kind: partition` idiom."
+"16-29-2":
+  status: proven
+  tests: ["ch16_replacement_keywords::partition_kind_matches_rule", "ch16_replacement_keywords::partition_timing_matches_rule"]
+  note: "Immediate-type: offered with the full stack in the battle area, nothing trashed. Triggers for a return to the hand too (removal, not only deletion). The plays are sequential, not one simultaneous play: G-ENGINE-PARTITION-PLAYS-NOT-SIMULTANEOUS (not asserted here)."
+"16-29-3":
+  status: proven
+  tests: ["ch16_replacement_keywords::partition_optionality_matches_rule"]
+  note: "Declining: nothing played, the stack is deleted. Matrix row Partition: optional, agrees."
+"16-29-4":
+  status: proven
+  tests: ["ch16_replacement_keywords::partition_plays_one_of_each_specified_all_or_nothing"]
+  note: "Once accepted, the only decision is which specified card is played first (mandatory, 2 candidates); both are always played."
+"16-32-1":
+  status: proven
+  tests: ["ch16_replacement_keywords::scapegoat_other_than_your_own_effect"]
+  note: "Opponent's effect and battle: offered; accepting deletes the other own Digimon and the <Scapegoat> Digimon stays. Owner's own effect: not offered. Staged via the printed-keyword parse (not DSL-grantable)."
+"16-32-2":
+  status: proven
+  tests: ["ch16_replacement_keywords::scapegoat_other_than_your_own_effect", "ch16_replacement_keywords::scapegoat_kind_matches_rule", "ch16_replacement_keywords::scapegoat_timing_matches_rule"]
+  note: "Immediate-type: offered while in the battle area, nothing trashed. Not offered for a return to the hand, or with no other own Digimon (15-7-4)."
+"16-32-3":
+  status: proven
+  tests: ["ch16_replacement_keywords::scapegoat_optionality_matches_rule"]
+  note: "Declining: deleted. Accepting with two other Digimon: a mandatory pick of which to delete, then no further decision. Matrix row Scapegoat: optional_cost_then_mandatory, agrees."
+"16-36-1":
+  status: proven
+  tests: ["ch16_replacement_keywords::decode_plays_specified_card_not_in_battle"]
+  note: "Opponent's return-to-hand and the owner's own deletion: offered; accepting plays the blue Lv.4 source for free. Battle: not offered. Proven via the EX12-031 `replacement` idiom (Keyword::Decode has no generic body)."
+"16-36-2":
+  status: proven
+  tests: ["ch16_replacement_keywords::decode_plays_specified_card_not_in_battle", "ch16_replacement_keywords::decode_kind_matches_rule", "ch16_replacement_keywords::decode_timing_matches_rule"]
+  note: "Immediate-type: offered with the stack in the battle area. Deletion by an effect is leaving the battle area: offered."
+"16-36-3":
+  status: proven
+  tests: ["ch16_replacement_keywords::decode_optionality_matches_rule"]
+  note: "One optional decision (the clause); declining plays nothing. Matrix row Decode: optional, agrees. (G-DECODE-DOUBLE-OPTIONAL concerns the EX12-036 card spec, not this idiom.)"
+"16-37-1":
+  status: proven
+  tests: ["ch16_replacement_keywords::fragment_trashes_exact_count_of_chosen_sources"]
+  note: "<Fragment (2)> with 3 sources: accepting asks two mandatory picks among the 3 sources, trashes exactly those, and the Digimon is not deleted. 1 source: not offered (15-7-4)."
+"16-37-2":
+  status: proven
+  tests: ["ch16_replacement_keywords::fragment_kind_matches_rule", "ch16_replacement_keywords::fragment_timing_matches_rule"]
+  note: "Immediate-type: offered with the stack intact, nothing trashed. Battle deletion triggers it; a return to the hand does not."
+"16-37-3":
+  status: proven
+  tests: ["ch16_replacement_keywords::fragment_trashes_exact_count_of_chosen_sources", "ch16_replacement_keywords::fragment_optionality_matches_rule"]
+  note: "Declining: the stack is deleted. Accepting: the picks can't be skipped and no further decision follows. Matrix row Fragment: optional_cost_then_mandatory, agrees."
 "16-45-1":
   status: proven
   tests: ["ch16_new_keywords::guard_immediate_optional_other_digimon_leave_by_opp_effect"]

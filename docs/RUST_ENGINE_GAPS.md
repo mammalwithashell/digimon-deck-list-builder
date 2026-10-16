@@ -2710,6 +2710,8 @@ If confirmed this is a missing decision, not merely an ordering difference: with
 
 Reproducer not yet written.
 
+**No longer reproduces (checked 2026-10-16).** `replacement_window.rs` `advance_replacement_window` now installs an ordering choice (`install_window_order`: `SelectionKind::EffectChoice`, "Choose the next immediate replacement effect") whenever more than one candidate of the same controller is eligible, turn player's side first. `rules_conformance/ch16_replacement_keywords::two_simultaneous_replacements_ordered_by_controller` (green) puts `<Evade>` and `<Fragment (1)>` on one Digimon: the controller is offered both as one choice and the order picked decides the result (suspended vs. a source trashed). Not re-checked: same-subject candidates owned by BOTH players in one window.
+
 
 ## `PermanentHandle.index` goes stale across a battle-area removal, and it blocks the 15-8-5-4 ordering fix  [G-PERMANENT-HANDLE-POSITIONAL-STALENESS]
 

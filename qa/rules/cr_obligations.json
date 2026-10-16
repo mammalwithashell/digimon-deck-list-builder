@@ -4993,10 +4993,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "A would-be-deleted effect is offered alone before the deletion; the [On Deletion] of the other simultaneously deleted Digimon triggers after it. The positive half (two immediates sharing one ordering choice) is G-REPLACEMENT-NO-ORDER-PROMPT territory and is not asserted here.",
+      "note": "A would-be-deleted effect is offered alone before the deletion; the [On Deletion] of the other simultaneously deleted Digimon triggers after it. Positive half: <Evade> and <Fragment (1)> on one Digimon are offered to their controller as one 'Choose the next immediate replacement effect' choice, and the order chosen decides the outcome (replacement_window.rs install_window_order); G-REPLACEMENT-NO-ORDER-PROMPT no longer reproduces.",
       "status": "proven",
       "tests": [
-        "ch15_08_effect_categories::immediate_effects_only_simultaneous_with_immediate_effects"
+        "ch15_08_effect_categories::immediate_effects_only_simultaneous_with_immediate_effects",
+        "ch16_replacement_keywords::two_simultaneous_replacements_ordered_by_controller"
       ],
       "text": "Immediate-type effects will only trigger simultaneously with other immediate-type effects."
     },
@@ -5011,7 +5012,8 @@
       "note": "Controller ruling (task 8 review, PDF governs; reverses the earlier [Main]-scope ruling): the cause is the interrupting event, i.e. each 'would be deleted' (15-8-5-1/-2; the example closes the window 'until the deletion is resolved'). Two deletions from one [Main] are two causes: the Sukamon effect activates for each. One-event witness: two non-preventing would-be-deleted effects on one Digimon each activate once in that event, then the deletion proceeds. DCGO enforces neither reading for BT11-041 (ChainActivations -1; IsCutInEffectHasUsed stub). G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT retracted.",
       "status": "proven",
       "tests": [
-        "ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause"
+        "ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause",
+        "ch16_replacement_keywords::multiple_instances_of_one_keyword_each_offered_once_per_event"
       ],
       "text": "Each immediate-type effect can be activated once until the cause that first interrupted the immediate- type effect is resolved. (Example: If \"[Main] Delete 1 of your opponent's Digimon\" causes \"[All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, it isn't deleted\" to activate, until the deletion is resolved, the already activated \"[All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, it isn't deleted\" can't activate again.)"
     },
@@ -5155,9 +5157,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Bracketed keyword icons (<Barrier>, <Fragment (n)>, <Decoy>, <Decoy (Black)>) parse to keyword effects; each printed/inherited instance is its own effect: a Digimon with <Barrier> on its top card and an inherited <Barrier> is offered each instance once in one battle deletion.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::multiple_instances_of_one_keyword_each_offered_once_per_event"
+      ],
       "text": "Keyword effects are effects indicated by icons enclosed in brackets."
     },
     "16-10": {
@@ -5714,9 +5718,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Opponent's deletion effect on another own black Digimon: offered; accepting deletes the <Decoy> Digimon and the other stays. Not offered for a non-specified (red) Digimon, the owner's own effect, or a battle.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::decoy_only_for_specified_digimon_deleted_by_opponent_effect"
+      ],
       "text": "<Decoy> is a keyword effect. When another of your specified Digimon would be deleted by an opponent's effect, by deleting the Digimon with this effect, <Decoy> prevents the Digimon specified by this effect from being deleted. This is shown on cards using text such as <Decoy (Black)>."
     },
     "16-18-2": {
@@ -5727,9 +5733,13 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Immediate-type: offered while the threatened Digimon is still in the battle area, nothing trashed; it never leaves. Not offered for a return to the hand (not a deletion) or for the <Decoy> Digimon itself.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::decoy_only_for_specified_digimon_deleted_by_opponent_effect",
+        "ch16_replacement_keywords::decoy_kind_matches_rule",
+        "ch16_replacement_keywords::decoy_timing_matches_rule"
+      ],
       "text": "<Decoy> is an immediate-type effect that triggers when another of your Digimon specified by this effect would be deleted by an opponent's effect (For details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-18-3": {
@@ -5740,9 +5750,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Declining: the specified Digimon is deleted. Accepting: <Decoy> is deleted and the prevention follows with no further decision. Matrix row Decoy: optional_cost_then_mandatory, agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::decoy_optional_cost_then_mandatory_prevention",
+        "ch16_replacement_keywords::decoy_optionality_matches_rule"
+      ],
       "text": "\"By deleting this Digimon\" in <Decoy> is an optional processing condition. If the content of that condition is executed, the processing for \"<Decoy> prevents the Digimon specified by this effect from being deleted\" will be mandatory."
     },
     "16-19": {
@@ -5766,9 +5779,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Accepting trashes only the top card; the Digimon is not deleted and keeps a -3000 DP for-the-turn modifier (matrix: surviving modifiers carry over). A lone card (no digivolution card) is not offered (DCGO ArmorPurge.cs:13 DigivolutionCards.Count >= 1). The 4.3 text itself says nothing about modifiers.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::armor_purge_requires_a_digivolution_card_and_keeps_modifiers"
+      ],
       "text": "<Armor Purge> is a keyword effect. When a Digimon with <Armor Purge> would be deleted, by trashing the top card of the Digimon with this effect, this effect prevents the deletion."
     },
     "16-19-2": {
@@ -5779,9 +5794,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Immediate-type: offered with the stack intact and nothing trashed. Any deletion (effect or battle) triggers it; a return to the hand does not.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::armor_purge_kind_matches_rule",
+        "ch16_replacement_keywords::armor_purge_timing_matches_rule"
+      ],
       "text": "<Armor Purge> is an immediate-type effect that triggers when the Digimon with this effect would be deleted. (For details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-19-3": {
@@ -5792,9 +5810,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Declining: the whole stack is deleted. Accepting: no further decision. Matrix row ArmorPurge: optional_cost_then_mandatory, agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::armor_purge_requires_a_digivolution_card_and_keeps_modifiers",
+        "ch16_replacement_keywords::armor_purge_optionality_matches_rule"
+      ],
       "text": "\"By trashing the top card of the Digimon\" in <Armor Purge> is an optional processing condition. If the content of that condition is executed, the processing for \"prevents the deletion\" will be mandatory."
     },
     "16-2": {
@@ -5805,9 +5826,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "<Fragment (1)>/<Fragment (2)> and <Decoy>/<Decoy (Black)> parse to one Keyword variant each (value / specified card are parameters, same type).",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::multiple_instances_of_one_keyword_each_offered_once_per_event"
+      ],
       "text": "A keyword effect is considered to be the same type even if it has a different numerical value or specified card included in the icon enclosed in brackets."
     },
     "16-20": {
@@ -5974,9 +5997,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Accepting suspends the Digimon and it is not deleted. Already suspended (condition can't be executed, 15-7-4): not offered.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::evade_suspends_to_prevent_deletion"
+      ],
       "text": "<Evade> is a keyword effect. By suspending a Digimon with this effect when it would be deleted, this effect prevents the deletion."
     },
     "16-22-2": {
@@ -5987,9 +6012,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Immediate-type: offered while unsuspended in the battle area, nothing trashed. Triggers for its owner's own effect and for a battle (battle_digimon); not for a return to the hand.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::evade_kind_matches_rule",
+        "ch16_replacement_keywords::evade_timing_matches_rule"
+      ],
       "text": "<Evade> is an immediate-type effect that triggers when the Digimon with this effect would be deleted. (For39 details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-22-3": {
@@ -6000,9 +6028,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Declining: deleted. Accepting: no further decision. Matrix row Evade: optional_cost_then_mandatory, agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::evade_suspends_to_prevent_deletion",
+        "ch16_replacement_keywords::evade_optionality_matches_rule"
+      ],
       "text": "\"By suspending a Digimon with this effect\" in <Evade> is an optional processing condition. If the content of that condition is executed, the processing for \"prevents the deletion\" will be mandatory."
     },
     "16-23": {
@@ -6171,9 +6202,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Battle deletion: accepting trashes the TOP security card and the Digimon survives. Effect deletion: not offered. 0 security cards: not offered (15-7-4).",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::barrier_trashes_top_security_only_for_battle_deletion"
+      ],
       "text": "<Barrier> is a keyword effect. When a Digimon with this effect would be deleted in battle, by trashing the top card of your security stack, this effect prevents that deletion."
     },
     "16-25-2": {
@@ -6184,9 +6217,13 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Immediate-type: offered with the Digimon in the battle area and the security stack intact. Triggers for the attacker losing its battle too.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::barrier_trashes_top_security_only_for_battle_deletion",
+        "ch16_replacement_keywords::barrier_kind_matches_rule",
+        "ch16_replacement_keywords::barrier_timing_matches_rule"
+      ],
       "text": "<Barrier> is an immediate-type effect that triggers when the Digimon with this effect would be deleted in battle. (For details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-25-3": {
@@ -6197,9 +6234,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Declining: deleted, security untouched. Matrix row Barrier: optional_cost_then_mandatory, agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::barrier_optionality_matches_rule"
+      ],
       "text": "\"By trashing the top card of your security stack\" in <Barrier> is an optional processing condition. If the content of that condition is executed, the processing for \"prevents the deletion\" will be mandatory."
     },
     "16-26": {
@@ -6392,9 +6431,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Opponent's deletion effect: offered; accepting plays the blue Lv.4 and the green Lv.4 for free. Not offered without 1 of each specified card, for the owner's own effect, or in battle. Proven via the AD1-011 `kind: partition` idiom.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::partition_plays_one_of_each_specified_all_or_nothing"
+      ],
       "text": "<Partition> is a keyword effect. When a Digimon with40 this effect and 1 of each of the specified cards in its digivolution cards would be removed from the battle area other than by one of your effects or a battle, you may play 1 of each of the specified cards from the digivolution cards without paying their costs. This is shown on cards using text such as \"<Partition (blue Lv.4 & green Lv.4)>.\""
     },
     "16-29-2": {
@@ -6405,9 +6446,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Immediate-type: offered with the full stack in the battle area, nothing trashed. Triggers for a return to the hand too (removal, not only deletion). The plays are sequential, not one simultaneous play: G-ENGINE-PARTITION-PLAYS-NOT-SIMULTANEOUS (not asserted here).",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::partition_kind_matches_rule",
+        "ch16_replacement_keywords::partition_timing_matches_rule"
+      ],
       "text": "<Partition> is an immediate-type effect that triggers \"when a Digimon with this effect and 1 of each of the specified cards in its digivolution cards would be removed from the battle area other than by one of your effects or a battle.\" (For details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-29-3": {
@@ -6418,9 +6462,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Declining: nothing played, the stack is deleted. Matrix row Partition: optional, agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::partition_optionality_matches_rule"
+      ],
       "text": "The processing from <Partition> is optional."
     },
     "16-29-4": {
@@ -6431,9 +6477,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Once accepted, the only decision is which specified card is played first (mandatory, 2 candidates); both are always played.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::partition_plays_one_of_each_specified_all_or_nothing"
+      ],
       "text": "When <Partition> is activated, 1 of each of the specified cards is played from digivolution cards without paying their costs. A player can't choose to only play one or some of the specified cards."
     },
     "16-3": {
@@ -6444,9 +6492,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "The parenthetical decides: <Decoy (Black)> protects a black Digimon, not a red one; <Decode (blue Lv.4)> can't choose a red Lv.4 source; <Partition (blue Lv.4 & green Lv.4)> doesn't trigger with a red Lv.4 in place of the green one.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::specified_cards_follow_the_icon_note"
+      ],
       "text": "\"Specified cards\" for a keyword effect refers to the cards that meet the conditions shown in parentheses for icons that use angle brackets."
     },
     "16-30": {
@@ -6626,9 +6676,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Opponent's effect and battle: offered; accepting deletes the other own Digimon and the <Scapegoat> Digimon stays. Owner's own effect: not offered. Staged via the printed-keyword parse (not DSL-grantable).",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::scapegoat_other_than_your_own_effect"
+      ],
       "text": "<Scapegoat> is a keyword effect. By deleting 1 of your other Digimon when a Digimon with this effect would be deleted other than by one of your effects, this effect prevents the deletion."
     },
     "16-32-2": {
@@ -6639,9 +6691,13 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Immediate-type: offered while in the battle area, nothing trashed. Not offered for a return to the hand, or with no other own Digimon (15-7-4).",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::scapegoat_other_than_your_own_effect",
+        "ch16_replacement_keywords::scapegoat_kind_matches_rule",
+        "ch16_replacement_keywords::scapegoat_timing_matches_rule"
+      ],
       "text": "<Scapegoat> is an immediate-type effect that triggers when the Digimon with this effect would be deleted other than by one of your effects. (For details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-32-3": {
@@ -6652,9 +6708,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Declining: deleted. Accepting with two other Digimon: a mandatory pick of which to delete, then no further decision. Matrix row Scapegoat: optional_cost_then_mandatory, agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::scapegoat_optionality_matches_rule"
+      ],
       "text": "\"By deleting 1 of your other Digimon\" in <Scapegoat> is an optional processing condition. If the content of that condition is executed, the processing for \"prevents the deletion\" will be mandatory."
     },
     "16-33": {
@@ -6886,9 +6944,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Opponent's return-to-hand and the owner's own deletion: offered; accepting plays the blue Lv.4 source for free. Battle: not offered. Proven via the EX12-031 `replacement` idiom (Keyword::Decode has no generic body).",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::decode_plays_specified_card_not_in_battle"
+      ],
       "text": "<Decode> is a keyword effect. When the Digimon with this effect would leave the battle area other than by a battle, you may play 1 specified Digimon card from that Digimon's digivolution cards without paying the cost. This is shown on cards using text such as \"<Decode (blue Lv.4)>.\""
     },
     "16-36-2": {
@@ -6899,9 +6959,13 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Immediate-type: offered with the stack in the battle area. Deletion by an effect is leaving the battle area: offered.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::decode_plays_specified_card_not_in_battle",
+        "ch16_replacement_keywords::decode_kind_matches_rule",
+        "ch16_replacement_keywords::decode_timing_matches_rule"
+      ],
       "text": "<Decode> is an immediate-type effect that triggers when the Digimon with this effect would leave the battle area other than by a battle. (For details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-36-3": {
@@ -6912,9 +6976,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "One optional decision (the clause); declining plays nothing. Matrix row Decode: optional, agrees. (G-DECODE-DOUBLE-OPTIONAL concerns the EX12-036 card spec, not this idiom.)",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::decode_optionality_matches_rule"
+      ],
       "text": "The processing from <Decode> is optional."
     },
     "16-37": {
@@ -6938,9 +7004,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "<Fragment (2)> with 3 sources: accepting asks two mandatory picks among the 3 sources, trashes exactly those, and the Digimon is not deleted. 1 source: not offered (15-7-4).",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::fragment_trashes_exact_count_of_chosen_sources"
+      ],
       "text": "<Fragment> is a keyword effect. When a Digimon with this effect would be deleted, by choosing and trashing the specified number of this Digimon's digivolution cards, it isn't deleted. The effect is indicated on cards by icons such as <Fragment (3)>."
     },
     "16-37-2": {
@@ -6951,9 +7019,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Immediate-type: offered with the stack intact, nothing trashed. Battle deletion triggers it; a return to the hand does not.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::fragment_kind_matches_rule",
+        "ch16_replacement_keywords::fragment_timing_matches_rule"
+      ],
       "text": "<Fragment> is an immediate-type effect that triggers when the Digimon with this effect would be deleted. (For details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-37-3": {
@@ -6964,9 +7035,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Declining: the stack is deleted. Accepting: the picks can't be skipped and no further decision follows. Matrix row Fragment: optional_cost_then_mandatory, agrees.",
+      "status": "proven",
+      "tests": [
+        "ch16_replacement_keywords::fragment_trashes_exact_count_of_chosen_sources",
+        "ch16_replacement_keywords::fragment_optionality_matches_rule"
+      ],
       "text": "The processing from <Fragment> for choosing and trashing the specified number of this Digimon's digivolution cards is optional. If the content of that condition is executed, the processing for \"prevents the deletion\" will be mandatory."
     },
     "16-38": {
@@ -14871,9 +14945,9 @@
         "total": 244
       },
       "16": {
-        "gap": 142,
+        "gap": 114,
         "not_testable": 44,
-        "proven": 20,
+        "proven": 48,
         "total": 206
       },
       "17": {
@@ -14937,15 +15011,15 @@
         "total": 13
       }
     },
-    "gap": 784,
+    "gap": 756,
     "mechanics": {
       "gap_blocking": 22,
-      "gap_nonblocking": 471,
+      "gap_nonblocking": 443,
       "not_testable": 152,
-      "proven": 70
+      "proven": 98
     },
     "not-testable": 246,
-    "proven": 89
+    "proven": 117
   },
   "version": 1
 }

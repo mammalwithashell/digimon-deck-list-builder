@@ -1,0 +1,16 @@
+# SCAPEGOAT -- Digimon, Lv.4, red, 4000 DP, play cost 4.
+#   <Scapegoat> (When this Digimon would be deleted other than by one of your
+#   effects, by deleting 1 of your other Digimon, it isn't deleted.)
+# The §16-32 keyword card. The DSL cannot grant <Scapegoat> (it is not in
+# `KNOWN_KEYWORD_KEYS`): production drives it from the printed-keyword parse,
+# so this file only registers the plain body. The tests
+# (`ch16_replacement_keywords::scapegoat_card`) override this card's CardData
+# with the printed text run through `card_data::parse_printed_keywords`, as
+# `ch15_08/TRAIN.yaml` does for <Training>.
+card: SCAPEGOAT
+name: Goatmon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
