@@ -71,8 +71,16 @@
   tests: ["ch15_04_effect_states::digivolving_mid_pending_cancels_sibling_when_attacking"]
 "15-4-4-5":
   status: proven
+  tests: ["ch15_04_effect_states::pending_effect_whose_trigger_condition_lapsed_cannot_activate"]
+  note: "Trigger-condition qualifier ('When one of your Digimon with 4000 DP or less is played'): a sibling [On Play] raising the played Digimon to 6000 DP first makes the pending observer unable to activate; control ordering activates it."
+"15-8-3-9-2":
+  status: proven
   tests: ["ch15_04_effect_states::pending_effect_whose_condition_lapsed_is_dropped"]
-  note: "Witness is official Q&A Q1009 (BT2-034: two [On Deletion] 'if you have 3 or fewer security cards' copies; the first's Recovery makes the second's condition no longer apply)."
+  note: "Witness is official Q&A Q1009 (BT2-034: two simultaneously deleted '[On Deletion] If you have 3 or fewer security cards, <Recovery +1 (Deck)>'; the first brings security to 4, so the second's processing condition is not met at activation). Reading of 15-8-3-9-4 (controller ruling, PDF governs): it covers the removed card's own last-known state (its example: 'this Digimon has digivolution cards'); references to general game state such as your security count are made when processing is performed (15-8-3-9-3), which is what Q1009 rules."
+"15-6-3":
+  status: proven
+  tests: ["ch15_04_effect_states::pending_effect_whose_condition_lapsed_is_dropped"]
+  note: "Same Q1009 witness as 15-8-3-9-2: the second copy's only processing condition is unmet at activation, so it can't be activated."
 "15-4-5-2":
   status: proven
   tests: ["ch15_04_effect_states::derived_trigger_resolves_before_pending_siblings"]

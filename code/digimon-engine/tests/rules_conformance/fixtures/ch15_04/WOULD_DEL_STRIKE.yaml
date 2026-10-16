@@ -1,0 +1,21 @@
+# WOULD_DEL_STRIKE -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+# An immediate-type effect (§15-8-5-1 "when X would") that deletes a Digimon:
+#   [All Turns] When this Digimon would be deleted, delete 1 of your
+#   opponent's Digimon.
+card: WOULD_DEL_STRIKE
+name: Revengemon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - kind: replacement
+    timing: when_would_be_deleted
+    summary: "[All Turns] When this Digimon would be deleted, delete 1 of your opponent's Digimon."
+    process:
+      - select_opponent_permanent:
+          bind_as: strike
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: strike }

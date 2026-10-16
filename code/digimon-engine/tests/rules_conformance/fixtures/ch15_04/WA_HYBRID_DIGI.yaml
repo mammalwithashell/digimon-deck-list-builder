@@ -1,0 +1,40 @@
+# WA_HYBRID_DIGI -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+# The §15-4-4-4 example card, both texts printed on the one card:
+#   [When Attacking] <Draw 1>.
+#   [When Attacking] This Digimon may digivolve into a Digimon card with the
+#   [Hybrid] trait in the hand with the digivolution cost reduced by 1.
+# The "may" lives in the optional hand pick (AD1-011 [When Attacking] idiom):
+# declining the pick skips the digivolve.
+card: WA_HYBRID_DIGI
+name: Hybridcallmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] <Draw 1> (Draw 1 card from your deck.)"
+    process:
+      - draw: { of: you, count: 1 }
+  - when: when_attacking
+    summary: "[When Attacking] This Digimon may digivolve into a Digimon card with the [Hybrid] trait in the hand with the digivolution cost reduced by 1."
+    process:
+      - select_hand:
+          of: you
+          bind_as: hybrid
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Hybrid
+              - can_digivolve_onto: source
+          prompt: "This Digimon may digivolve into a [Hybrid] trait Digimon card in the hand with the digivolution cost reduced by 1"
+      - if:
+          condition: { binding_present: hybrid }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: hybrid
+                cost: { reduce: 1 }
+                ignore_requirements: false

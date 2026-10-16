@@ -4198,10 +4198,10 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Witness is official Q&A Q1009 (BT2-034: two [On Deletion] 'if you have 3 or fewer security cards' copies; the first's Recovery makes the second's condition no longer apply).",
+      "note": "Trigger-condition qualifier ('When one of your Digimon with 4000 DP or less is played'): a sibling [On Play] raising the played Digimon to 6000 DP first makes the pending observer unable to activate; control ordering activates it.",
       "status": "proven",
       "tests": [
-        "ch15_04_effect_states::pending_effect_whose_condition_lapsed_is_dropped"
+        "ch15_04_effect_states::pending_effect_whose_trigger_condition_lapsed_cannot_activate"
       ],
       "text": "When a card with an effect that's pending activation no longer meets the trigger conditions of that effect before it activates, the effect can no longer be activated."
     },
@@ -4360,9 +4360,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Same Q1009 witness as 15-8-3-9-2: the second copy's only processing condition is unmet at activation, so it can't be activated.",
+      "status": "proven",
+      "tests": [
+        "ch15_04_effect_states::pending_effect_whose_condition_lapsed_is_dropped"
+      ],
       "text": "An effect can't be activated when none of its processing conditions are met. (Example: An effect that reads \"[When Digivolving] If you don't have [Marcus Damon], you may play 1 [Marcus Damon] from your hand without paying the cost\" can't be activated when you have [Marcus Damon] in the battle area.)"
     },
     "15-7": {
@@ -4737,9 +4739,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Witness is official Q&A Q1009 (BT2-034: two simultaneously deleted '[On Deletion] If you have 3 or fewer security cards, <Recovery +1 (Deck)>'; the first brings security to 4, so the second's processing condition is not met at activation). Reading of 15-8-3-9-4 (controller ruling, PDF governs): it covers the removed card's own last-known state (its example: 'this Digimon has digivolution cards'); references to general game state such as your security count are made when processing is performed (15-8-3-9-3), which is what Q1009 rules.",
+      "status": "proven",
+      "tests": [
+        "ch15_04_effect_states::pending_effect_whose_condition_lapsed_is_dropped"
+      ],
       "text": "Trigger-type effects will trigger if their trigger conditions are met, regardless of whether or not their processing conditions are met. However, the processing conditions must be met at the time of activation in order for the effect to activate."
     },
     "15-8-3-9-3": {
@@ -14630,9 +14634,9 @@
         "total": 10
       },
       "15": {
-        "gap": 170,
+        "gap": 168,
         "not_testable": 66,
-        "proven": 8,
+        "proven": 10,
         "total": 244
       },
       "16": {
@@ -14702,15 +14706,15 @@
         "total": 13
       }
     },
-    "gap": 865,
+    "gap": 863,
     "mechanics": {
       "gap_blocking": 4,
-      "gap_nonblocking": 551,
+      "gap_nonblocking": 549,
       "not_testable": 152,
-      "proven": 8
+      "proven": 10
     },
     "not-testable": 246,
-    "proven": 8
+    "proven": 10
   },
   "version": 1
 }
