@@ -1,0 +1,17 @@
+# Hand-maintained status sidecar for the Comprehensive Rules obligation denominator.
+# Consumed by `python -m tools.rules.build_obligations` to generate cr_obligations.json.
+#
+# Schema: a mapping of rule id -> entry. An id that is ABSENT here is `gap` with
+# `blocks_training: false`; heading-only units (no sentence terminator and at most
+# 6 words, or a bare keyword icon such as <Blocker>) are seeded `not-testable`
+# automatically and need no entry. An entry overrides those defaults.
+#
+#   "<rule-id>":
+#     status: gap | proven | not-testable     # required
+#     tests: ["<module>::<test_fn>", ...]     # optional; proving tests (status: proven)
+#     gap_id: "<tracker id>"                  # optional; entry in the gap tracker
+#     blocks_training: true | false           # optional; default false
+#     note: "free text"                       # optional
+#
+# Ids must exist in the rules source; unknown ids make the build fail.
+{}
