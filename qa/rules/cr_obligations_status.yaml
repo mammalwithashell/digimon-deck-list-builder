@@ -37,29 +37,21 @@
   tests: ["ch15_04_effect_states::pending_effects_activate_one_at_a_time"]
   note: "Same sentence as 15-4-2-3, restated for pending activation."
 "15-4-3-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL
+  status: proven
   tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool"]
-  note: "<Alliance> resolves in its own AllianceOpen window after the [When Attacking] drain instead of joining the simultaneous pool (design F4). Test is #[ignore]d."
+  note: "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved)."
 "16-24-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL
+  status: proven
   tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool", "ch16_attack_keywords::alliance_kind_matches_rule"]
-  note: "<Alliance> is not a queued trigger-type effect; see 15-4-3-2. Both tests are #[ignore]d."
+  note: "<Alliance> is a [When Attacking] trigger-type body (keyword_to_auto_effect) pending with the attack declaration's other triggers; its ally pick is the body."
 "15-4-3-5-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS
+  status: proven
   tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"]
-  note: "The turn-player half behaves correctly in the test (P0 orders only its own effects and resolves all of them first), but the test is #[ignore]d because the non-turn-player half fails; proven once the gap is fixed and the test un-ignored."
+  note: "P0 orders only its own simultaneously triggered attack effects and resolves all of them before the non-turn player chooses."
 "15-4-3-5-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS
+  status: proven
   tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"]
-  note: "When the turn player's [When Attacking] effects park on a TriggerOrder prompt, the non-turn player's 'when an opponent's Digimon attacks' effects are never enqueued. Test is #[ignore]d."
+  note: "After the turn player's [When Attacking] effects resolve from their TriggerOrder, the non-turn player orders its 'when an opponent's Digimon attacks' effects (one declaration bundle; G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS resolved)."
 "15-4-4-3":
   status: proven
   tests: ["ch15_04_effect_states::pending_on_play_lost_when_card_leaves_before_activation"]
@@ -812,11 +804,9 @@
   tests: ["ch16_attack_keywords::raid_switches_to_highest_dp_unsuspended_attacker_chooses_tie"]
   note: "The switch offers only the highest-DP unsuspended Digimon; the attack battles the chosen one and checks nothing."
 "16-23-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL
+  status: proven
   tests: ["ch16_attack_keywords::raid_kind_matches_rule", "ch16_attack_keywords::raid_timing_matches_rule"]
-  note: "Timing half proven: another Digimon's attack offers no <Raid>. Kind half fails: <Raid> opens its own RaidOpen window after the [When Attacking] drain instead of pending with it in one TriggerOrder (same substrate as <Alliance>). raid_kind_matches_rule is #[ignore]d."
+  note: "Another Digimon's attack offers no <Raid>; <Raid> is a [When Attacking] trigger-type body pending with the attacker's [When Attacking] effect in one TriggerOrder."
 "16-23-3":
   status: proven
   tests: ["ch16_attack_keywords::raid_optionality_matches_rule"]

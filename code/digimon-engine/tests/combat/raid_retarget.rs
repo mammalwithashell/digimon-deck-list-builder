@@ -22,7 +22,7 @@ use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{Expiry, Keyword, ModifierType};
+use digimon_engine::enums::{EffectTiming, Expiry, Keyword, ModifierType};
 use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{AttackTarget, SelectionKind};
@@ -91,6 +91,27 @@ impl CardEffect for WitnessTargetChangePayload {
             })
             .build()]
     }
+}
+
+/// §16-23-2: `<Raid>` is a trigger-type effect, so the attacker's `OnAttack`
+/// (which deletes the declared target here) and `<Raid>` trigger together on
+/// the declaration and pend in one `TriggerOrder` (§15-4-3-2). Resolve the
+/// `OnAttack` first, so `<Raid>`'s switch is offered with the declared target
+/// already gone — the order these tests exercise.
+fn resolve_on_attack_first(r: &mut DebugRunner) {
+    let sel = r.game.pending_selection.as_ref().expect("the declaration's TriggerOrder");
+    assert_eq!(sel.kind, SelectionKind::TriggerOrder, "{sel:?}");
+    let action = sel
+        .effect_choices
+        .as_ref()
+        .expect("TriggerOrder branches")
+        .iter()
+        .find(|c| c.timing == Some(EffectTiming::OnAttack))
+        .expect("the OnAttack branch")
+        .action_id;
+    r.game
+        .resolve_selection(0, action)
+        .expect("resolve the OnAttack first");
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────
@@ -230,8 +251,9 @@ fn raid_attacker_retargets_when_original_target_leaves() {
     assert_eq!(
         result,
         AttackResult::InProgress,
-        "Raid retarget installs a PendingSelection; attack pauses"
+        "OnAttack and <Raid> pend together; attack pauses"
     );
+    resolve_on_attack_first(&mut r);
 
     let sel = r
         .game
@@ -271,6 +293,7 @@ fn raid_retarget_prompt_clones_faithfully() {
 
     let result = r.attack_digimon(atk, victim, false);
     assert_eq!(result, AttackResult::InProgress);
+    resolve_on_attack_first(&mut r);
     assert!(
         r.game.pending_selection_resume.is_some(),
         "Raid retarget prompt must park a data frame for clone-faithful prompts"
@@ -433,6 +456,7 @@ fn raid_retarget_fires_on_attack_target_change() {
     let _witness = r.place_on_field(0, "WITNESS", Some(0));
 
     let _result = r.attack_digimon(atk, victim, false);
+    resolve_on_attack_first(&mut r);
 
     // Retarget selection is pending — resolve it by picking DEF (slot 0).
     let retarget_action = encode_attack(0, 0);
@@ -479,6 +503,7 @@ fn raid_retarget_payload_carries_old_new_and_raid_reason() {
     let _witness = r.place_on_field(0, "WITNESS", Some(0));
 
     let _result = r.attack_digimon(atk, victim, false);
+    resolve_on_attack_first(&mut r);
 
     let retarget_action = encode_attack(0, 0);
     r.game

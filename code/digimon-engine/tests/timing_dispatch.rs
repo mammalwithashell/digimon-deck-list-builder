@@ -2265,12 +2265,22 @@ fn on_ally_attack_does_not_fire_if_attacker_left_during_on_attack() {
     let before = r.memory();
 
     let result = r.attack_player(attacker, 1, false);
+    // §15-4-3-2 / §15-4-3-5-1: the attacker's OnAttack and both allies'
+    // observers trigger on the same declaration and pend in one TriggerOrder
+    // for the turn player; `auto_resolve` takes its first branch, the OnAttack.
+    assert_eq!(result, digimon_engine::combat::AttackResult::InProgress);
+    let first = r
+        .pending_selection()
+        .filter(|s| s.kind == SelectionKind::TriggerOrder)
+        .and_then(|s| s.effect_choices.as_ref())
+        .and_then(|c| c.first())
+        .and_then(|c| c.timing);
+    assert_eq!(first, Some(EffectTiming::OnAttack), "OnAttack is offered first");
     r.auto_resolve()
         .expect("attack prompts should auto-resolve");
 
-    assert_eq!(
-        result,
-        digimon_engine::combat::AttackResult::Invalid,
+    assert!(
+        r.game.pending_attack.is_none(),
         "attack should stop after the attacker leaves during OnAttack"
     );
     assert_eq!(

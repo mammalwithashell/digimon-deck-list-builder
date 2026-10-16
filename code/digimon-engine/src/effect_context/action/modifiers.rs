@@ -627,6 +627,12 @@ impl<'a> EffectContext<'a> {
             Some(perm) => perm.top_card().handle(),
             None => return,
         };
+        // `<Alliance>` / `<Raid>` grants fire from the keyword registry at the
+        // attack declaration (see `keyword_trigger_dispatched_from_registry`);
+        // a body here would make them fire twice.
+        if crate::cards::keyword_effects::keyword_trigger_dispatched_from_registry(keyword) {
+            return;
+        }
         let autos = crate::cards::keyword_effects::keyword_to_auto_effect(keyword, card);
         for effect in autos {
             // Only plain-process triggered timings route through the

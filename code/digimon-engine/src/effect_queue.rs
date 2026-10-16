@@ -2841,7 +2841,17 @@ impl Game {
         // declarative tick, so the keyword is absent from the registry here.
         // Per-keyword gates (e.g. `<Retaliation>`'s Battle-only deletion-cause
         // filter) live inside the auto-effect body and are unchanged.
-        let aura_keywords = self.modifiers.aura_granted_keywords(handle);
+        let mut aura_keywords = self.modifiers.aura_granted_keywords(handle);
+        // `<Alliance>` / `<Raid>`: EVERY registry grant (runtime
+        // `grant_keyword` included, which installs no body for them) is
+        // dispatched here — see `keyword_trigger_dispatched_from_registry`.
+        for keyword in self.modifiers.granted_keywords(handle) {
+            if crate::cards::keyword_effects::keyword_trigger_dispatched_from_registry(keyword)
+                && !aura_keywords.contains(&keyword)
+            {
+                aura_keywords.push(keyword);
+            }
+        }
         for keyword in aura_keywords {
             if self.has_keyword_from_card_sources(handle, keyword) {
                 continue;
@@ -3397,7 +3407,7 @@ impl Game {
             return false;
         };
         if qe.granted_effect_id.is_some() {
-            return true;
+            return !self.attack_observer_trigger_lapsed(qe);
         }
         let Some(effects) = self.effects_for_queued(qe) else {
             return true;
@@ -3618,6 +3628,9 @@ impl Game {
     /// effect removed from the registry, etc.) — same tolerance the legacy
     /// `fire_*` loops had.
     fn run_queued_effect(&mut self, mut qe: QueuedEffect) {
+        if self.attack_observer_trigger_lapsed(&qe) {
+            return;
+        }
         qe.source_kind = self.queued_effect_activation_kind(&qe);
         if qe.trigger_context.as_ref().is_some_and(|c| !c.simultaneous_play_members.is_empty()) {
             let members = self.matching_simultaneous_play_contexts(&qe);
@@ -4061,11 +4074,33 @@ impl Game {
         });
     }
 
+    /// §15-4-4-5: a "when one of your / an opponent's Digimon attacks"
+    /// observer no longer meets its trigger condition once the attacker has
+    /// left the battle area (DCGO `CanTriggerOnPermanentAttack` needs the
+    /// attacking permanent to still have a top card at activation). The whole
+    /// declaration bundle pends together (`Game::fire_on_attack`), so an
+    /// earlier activation in it can remove the attacker. Applies to granted
+    /// observer bodies too. Judged against the in-flight attack (its
+    /// attacker handle tracks field compaction); an observer staged with no
+    /// attack in flight (a direct `enqueue_triggered`) is not judged.
+    fn attack_observer_trigger_lapsed(&self, qe: &QueuedEffect) -> bool {
+        matches!(
+            qe.timing,
+            EffectTiming::OnAllyAttack | EffectTiming::OnOpponentAttack
+        ) && self
+            .pending_attack
+            .as_ref()
+            .is_some_and(|pa| !self.handle_still_attacking(pa.attacker))
+    }
+
     fn queued_effect_source_is_live(
         &self,
         qe: &QueuedEffect,
         effect: &crate::effect::Effect,
     ) -> bool {
+        if self.attack_observer_trigger_lapsed(qe) {
+            return false;
+        }
         // Source permanent may have been deleted by a prior effect in this
         // batch or by a parked pay-cost selection callback. Skip silently —
         // matches Python behavior.

@@ -582,6 +582,20 @@ pub(crate) fn partition_extract_and_play(
 /// effect GRANTS this keyword" and is read that way at `game/queries.rs`,
 /// `game/triggers.rs` and `game_phases.rs`; setting it here would make every
 /// synthesized `<Barrier>` body claim to grant `<Barrier>` to its carrier.
+/// Attack-declaration trigger keywords (`<Alliance>`, `<Raid>`) whose
+/// modifier-registry grants are dispatched from the registry itself when the
+/// attack triggers (`Game::enqueue_from_permanent`'s granted-keyword scan),
+/// rather than through the granted-triggered body store
+/// (`EffectContext::grant_keyword_triggered_auto_effects`). Every registry
+/// grant then fires exactly once, keeps the keyword body's activation
+/// `condition` (the body store drops it), and reaches the trigger pool the
+/// same way whether it came from a runtime grant or a direct registry entry —
+/// the reach the former `AllianceOpen` / `RaidOpen` windows had through
+/// `Game::has_keyword`.
+pub(crate) fn keyword_trigger_dispatched_from_registry(keyword: Keyword) -> bool {
+    matches!(keyword, Keyword::Alliance | Keyword::Raid)
+}
+
 pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect> {
     keyword_to_auto_effect_inner(keyword, card)
         .into_iter()
@@ -2357,6 +2371,52 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // be strictly worse for the player. Cards using the printed keyword
         // must author the `[Main]` body via DSL or hand-rolled `CardEffect`.
         Keyword::DigiBurst(_) => Vec::new(),
+
+        // §16-24-2 (Ver. 4.3): "<Alliance> is a trigger-type effect that
+        // triggers when a Digimon with this effect attacks", so it pends with
+        // every other effect the attack declaration triggers and the turn
+        // player orders them together (§15-4-3-2, §15-4-3-5-1). DCGO
+        // `CardEffectFactory/KeyWordEffects/Alliance.cs`: a non-optional
+        // `ActivateClass` stacked in the attack's `OnAllyAttack` batch,
+        // activatable only while an ally can pay the suspension
+        // (`CanActivateAlliance`) — hence the condition. §16-24-3: "by
+        // suspending 1 of your other Digimon" is an optional processing
+        // condition, so the body's ally pick is optional (PASS = not
+        // executed) and the DP / <Security A. +1> grant after it is mandatory.
+        Keyword::Alliance => vec![Effect::when_attacking(card)
+            .name("<Alliance>")
+            .condition(|ctx| {
+                ctx.source_permanent
+                    .is_some_and(|attacker| !ctx.game.alliance_ally_candidates(attacker).is_empty())
+            })
+            .process(|ctx| {
+                if let Some(attacker) = ctx.source_permanent {
+                    ctx.game.install_alliance_ally_selection(attacker);
+                }
+            })
+            .build()],
+
+        // §16-23-2 (Ver. 4.3): "<Raid> is a trigger-type effect that triggers
+        // when a Digimon with this effect attacks"; §16-23-3: its processing
+        // is optional. DCGO `CardEffectFactory/KeyWordEffects/Raid.cs`: an
+        // optional `ActivateClass` in the same `OnAllyAttack` batch,
+        // activatable only while a switch target exists (`CanActivateRaid`).
+        // The body is the optional switch pick among the opponent's
+        // unsuspended Digimon with the highest DP (§16-23-4: ties are the
+        // activating player's choice).
+        Keyword::Raid => vec![Effect::when_attacking(card)
+            .name("<Raid>")
+            .optional()
+            .condition(|ctx| {
+                ctx.source_permanent
+                    .is_some_and(|attacker| !ctx.game.raid_switch_options(attacker).is_empty())
+            })
+            .process(|ctx| {
+                if let Some(attacker) = ctx.source_permanent {
+                    ctx.game.install_raid_switch_selection(attacker);
+                }
+            })
+            .build()],
 
         // Non-replacement keywords — handled elsewhere (combat, mask, etc.).
         _ => Vec::new(),

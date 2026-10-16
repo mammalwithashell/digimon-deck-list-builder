@@ -4093,15 +4093,15 @@
       "text": "Simultaneous triggering refers to when multiple effects trigger at the same timing."
     },
     "15-4-3-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 15,
       "fingerprint": "9806b36822f7fbe00db55ccc91fbb1cd9e2988f7064073bf57491efb6f425b57",
-      "gap_id": "G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL",
+      "gap_id": null,
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "<Alliance> resolves in its own AllianceOpen window after the [When Attacking] drain instead of joining the simultaneous pool (design F4). Test is #[ignore]d.",
-      "status": "gap",
+      "note": "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved).",
+      "status": "proven",
       "tests": [
         "ch15_04_effect_states::when_attacking_and_alliance_share_one_pool"
       ],
@@ -4149,30 +4149,30 @@
       "text": "Effects that trigger simultaneously are processed by performing the following procedure."
     },
     "15-4-3-5-1": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 15,
       "fingerprint": "d89bb63cefda9cf4c0485d6d3b9c0c7f799c40b360e7255e3e91e64c3cfd0616",
-      "gap_id": "G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS",
+      "gap_id": null,
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "The turn-player half behaves correctly in the test (P0 orders only its own effects and resolves all of them first), but the test is #[ignore]d because the non-turn-player half fails; proven once the gap is fixed and the test un-ignored.",
-      "status": "gap",
+      "note": "P0 orders only its own simultaneously triggered attack effects and resolves all of them before the non-turn player chooses.",
+      "status": "proven",
       "tests": [
         "ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"
       ],
       "text": "The turn player chooses 1 of their effects to activate from among the effects that triggered simultaneously. This step is repeated until there are no more pending activation effects for the turn player."
     },
     "15-4-3-5-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 15,
       "fingerprint": "e71f29e0e84022ff4c506913e8c99313a93bc72e23d18d5a0a140dcf63c3235d",
-      "gap_id": "G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS",
+      "gap_id": null,
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "When the turn player's [When Attacking] effects park on a TriggerOrder prompt, the non-turn player's 'when an opponent's Digimon attacks' effects are never enqueued. Test is #[ignore]d.",
-      "status": "gap",
+      "note": "After the turn player's [When Attacking] effects resolve from their TriggerOrder, the non-turn player orders its 'when an opponent's Digimon attacks' effects (one declaration bundle; G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS resolved).",
+      "status": "proven",
       "tests": [
         "ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"
       ],
@@ -6168,15 +6168,15 @@
       "text": "<Raid> is a keyword effect that can switch the target of attack to the opponent's unsuspended Digimon with the highest DP when a Digimon with this keyword effect attacks."
     },
     "16-23-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "4522f354b5a17616ecdab28334b9b6b8f785d5453bc43f20ea49449a060d6657",
-      "gap_id": "G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Timing half proven: another Digimon's attack offers no <Raid>. Kind half fails: <Raid> opens its own RaidOpen window after the [When Attacking] drain instead of pending with it in one TriggerOrder (same substrate as <Alliance>). raid_kind_matches_rule is #[ignore]d.",
-      "status": "gap",
+      "note": "Another Digimon's attack offers no <Raid>; <Raid> is a [When Attacking] trigger-type body pending with the attacker's [When Attacking] effect in one TriggerOrder.",
+      "status": "proven",
       "tests": [
         "ch16_attack_keywords::raid_kind_matches_rule",
         "ch16_attack_keywords::raid_timing_matches_rule"
@@ -6242,15 +6242,15 @@
       "text": "<Alliance> is a keyword effect. When a Digimon with this effect attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to the attacking Digimon and it gains <Security A. +1> for the attack."
     },
     "16-24-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "bd670d479e92a9d73ac4a88f81b37040639fd11848da35490e846b59ffb112dc",
-      "gap_id": "G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "<Alliance> is not a queued trigger-type effect; see 15-4-3-2. Both tests are #[ignore]d.",
-      "status": "gap",
+      "note": "<Alliance> is a [When Attacking] trigger-type body (keyword_to_auto_effect) pending with the attack declaration's other triggers; its ally pick is the body.",
+      "status": "proven",
       "tests": [
         "ch15_04_effect_states::when_attacking_and_alliance_share_one_pool",
         "ch16_attack_keywords::alliance_kind_matches_rule"
@@ -15200,15 +15200,15 @@
         "total": 10
       },
       "15": {
-        "gap": 151,
+        "gap": 148,
         "not_testable": 66,
-        "proven": 27,
+        "proven": 30,
         "total": 244
       },
       "16": {
-        "gap": 34,
+        "gap": 32,
         "not_testable": 44,
-        "proven": 128,
+        "proven": 130,
         "total": 206
       },
       "17": {
@@ -15272,15 +15272,15 @@
         "total": 13
       }
     },
-    "gap": 672,
+    "gap": 667,
     "mechanics": {
-      "gap_blocking": 51,
+      "gap_blocking": 46,
       "gap_nonblocking": 330,
       "not_testable": 152,
-      "proven": 182
+      "proven": 187
     },
     "not-testable": 246,
-    "proven": 201
+    "proven": 206
   },
   "version": 1
 }

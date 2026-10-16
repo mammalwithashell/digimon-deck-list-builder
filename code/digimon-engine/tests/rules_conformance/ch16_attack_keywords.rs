@@ -1164,7 +1164,6 @@ fn raid_timing_matches_rule() {
 /// optional `ActivateClass` on `OnAllyAttack`, stacked with the [When
 /// Attacking] effects in one `StackSkillInfos` batch (`AttackProcess.cs`).
 #[test]
-#[ignore = "G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL (§16-23-2)"]
 fn raid_kind_matches_rule() {
     cite!(
         "16-23-2",
@@ -1291,7 +1290,6 @@ fn alliance_timing_matches_rule() {
 /// P1 with an unsuspended `LV4_PLAIN` beside it: <Alliance> and the [When
 /// Attacking] effect pend in one `TriggerOrder` before either activates.
 #[test]
-#[ignore = "G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL (§16-24-2)"]
 fn alliance_kind_matches_rule() {
     cite!(
         "16-24-2",

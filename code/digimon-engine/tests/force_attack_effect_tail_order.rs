@@ -187,6 +187,10 @@ fn prompt_is(r: &DebugRunner, text: &str, actor: u8) {
     assert!(p.prompt.contains(text), "wanted {text}, got {}", p.prompt);
     assert_eq!(p.selecting_player, actor);
 }
+// The card's printed (non-keyword) trigger from `id`. EX13-045's <Raid> is a
+// trigger-type effect (§16-23-2) pending in the same TriggerOrder as its
+// effect-battle payout; it is left for last here, so the line below still
+// reaches the Raid switch after both printed triggers.
 fn ordered_source(r: &DebugRunner, id: &str) -> u16 {
     let p = r.game.pending_selection.as_ref().unwrap();
     assert_eq!(p.kind, SelectionKind::TriggerOrder);
@@ -194,6 +198,7 @@ fn ordered_source(r: &DebugRunner, id: &str) -> u16 {
         .as_ref()
         .unwrap()
         .iter()
+        .filter(|e| e.keyword.is_none())
         .find(|e| {
             e.source_card
                 .and_then(|h| r.game.card_data_for_handle(h))

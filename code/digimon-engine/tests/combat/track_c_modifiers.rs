@@ -296,6 +296,21 @@ fn cannot_be_redirected_filters_raid_retarget_candidate() {
     let result = r.attack_digimon(atk, victim, false);
     assert_eq!(result, AttackResult::InProgress);
 
+    // §16-23-2: <Raid> is a trigger-type effect, so it pends with the
+    // attacker's OnAttack in one TriggerOrder (§15-4-3-2). Resolve the
+    // OnAttack (which deletes VICTIM) first; <Raid>'s switch follows.
+    let order = r.game.pending_selection.as_ref().expect("TriggerOrder");
+    assert_eq!(order.kind, digimon_engine::selection::SelectionKind::TriggerOrder);
+    let on_attack = order
+        .effect_choices
+        .as_ref()
+        .unwrap()
+        .iter()
+        .find(|c| c.timing == Some(digimon_engine::enums::EffectTiming::OnAttack))
+        .expect("the OnAttack branch")
+        .action_id;
+    r.game.resolve_selection(0, on_attack).expect("OnAttack first");
+
     let sel = r
         .game
         .pending_selection

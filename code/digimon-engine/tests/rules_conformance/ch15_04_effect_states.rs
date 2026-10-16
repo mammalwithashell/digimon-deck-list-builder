@@ -100,7 +100,6 @@ fn pending_effects_activate_one_at_a_time() {
 /// stacks both in one `StackSkillInfos(..., EffectTiming.OnAllyAttack)` batch;
 /// `Alliance.cs` builds `<Alliance>` as an `ActivateClass` in that batch.)
 #[test]
-#[ignore = "G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL (§15-4-3-2, §16-24-2)"]
 fn when_attacking_and_alliance_share_one_pool() {
     cite!(
         "15-4-3-2",
@@ -165,7 +164,6 @@ fn when_attacking_and_alliance_share_one_pool() {
 /// gain 1 memory"). All four trigger on the attack. P0 orders and activates
 /// both of theirs first; only then does P1 get to order theirs.
 #[test]
-#[ignore = "G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS (§15-4-3-5-2)"]
 fn turn_player_orders_first_then_non_turn_player() {
     cite!(
         "15-4-3-5-1",

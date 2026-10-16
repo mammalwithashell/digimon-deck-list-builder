@@ -8,9 +8,12 @@
 //!    in `AttackState::Declared`, fires OnAttack.
 //! 2. `advance_pending_attack` drives the state machine:
 //!    `Declared → RaidOpen → AllianceOpen → CounterOpen → BlockOpen → Battle → Cleanup`.
-//!    At each open-window state the attempt helper (`try_enter_*`) either
-//!    installs a `PendingSelection` and pauses, or auto-advances when no
-//!    candidates exist.
+//!    `RaidOpen` / `AllianceOpen` are pass-through: `<Raid>` and `<Alliance>`
+//!    are trigger-type effects resolved in the declaration's trigger pool
+//!    (`fire_on_attack`, §16-23-2 / §16-24-2). At each remaining open-window
+//!    state the attempt helper (`try_enter_*`) either installs a
+//!    `PendingSelection` and pauses, or auto-advances when no candidates
+//!    exist.
 //! 3. When a selection resolves, its callback mutates `PendingAttack.state`
 //!    and re-enters `advance_pending_attack` to continue.
 //! 4. `resolve_pending_battle` reads `effective_target` (which Counter or
@@ -18,8 +21,9 @@
 //! 5. `cleanup_attack` clears `is_attacking`, expires end-of-attack
 //!    modifiers, and drops `pending_attack`.
 //!
-//! Alliance, Counter, Raid, and Blocker windows all park through
-//! `PendingSelection` when they create player-visible choices.
+//! Counter and Blocker windows, and the `<Alliance>` / `<Raid>` trigger
+//! bodies, all park through `PendingSelection` when they create
+//! player-visible choices.
 //!
 //! Vortex short-circuits directly from `Declared` to `Battle` after OnAttack
 //! — Vortex attacks are uninterruptible per Digimon TCG rules.
@@ -768,15 +772,16 @@ impl Game {
                     // immediately. If we're still here, fall through.
                     self.transition_attack_state(AttackState::RaidOpen);
                 }
+                // Pass-through: `<Raid>` and `<Alliance>` are trigger-type
+                // effects resolved in the attack declaration's trigger pool
+                // (`fire_on_attack`; §16-23-2, §16-24-2), not windows. The
+                // states stay in the enum for serialization / tensor
+                // compatibility.
                 AttackState::RaidOpen => {
-                    if !self.try_enter_raid_switch() {
-                        self.transition_attack_state(AttackState::AllianceOpen);
-                    }
+                    self.transition_attack_state(AttackState::AllianceOpen);
                 }
                 AttackState::AllianceOpen => {
-                    if !self.try_enter_alliance() {
-                        self.transition_attack_state(AttackState::CounterOpen);
-                    }
+                    self.transition_attack_state(AttackState::CounterOpen);
                 }
                 AttackState::CounterOpen => {
                     if !self.try_enter_counter() {
@@ -1285,6 +1290,11 @@ impl Game {
         Ok(())
     }
 
+    /// Resolve the `<Alliance>` ally pick (resume frame
+    /// `ResumeFrame::AllianceSelection`). PASS = the optional processing
+    /// condition is not executed (§16-24-3); nothing else happens. The attack
+    /// state machine is resumed by the selection resolver once the trigger
+    /// pool has drained.
     pub(crate) fn run_alliance_selection_step(
         &mut self,
         attacker: PermanentHandle,
@@ -1292,25 +1302,33 @@ impl Game {
         is_pass: bool,
     ) {
         if is_pass {
-            if let Some(pa) = self.pending_attack.as_mut() {
-                pa.state = AttackState::CounterOpen;
-            }
-            self.advance_pending_attack();
             return;
         }
-
         use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
-        use crate::enums::{Expiry, ModifierType};
-        use crate::modifiers::ModifierEntry;
-
-        let attacker_player = attacker.player;
-        let offset = action_id.saturating_sub(ATTACK_START);
-        let ally_index = (offset % TARGETS_PER_ATTACKER) as u8;
         let ally = PermanentHandle {
-            player: attacker_player,
-            index: ally_index,
+            player: attacker.player,
+            index: (action_id.saturating_sub(ATTACK_START) % TARGETS_PER_ATTACKER) as u8,
         };
+        self.apply_alliance_ally(attacker, ally);
+    }
 
+    /// `<Alliance>` after its ally is chosen (§16-24-1), in DCGO
+    /// `AllianceProcess` order (judge-quiz Q24):
+    ///   1. Suspend the ally THROUGH the canonical chokepoint — a keyword
+    ///      effect's "by suspending" condition is effect-initiated, so OnSuspend
+    ///      observers ("when an EFFECT suspends…", EX6-004) see the event. The
+    ///      deferred-drain scope parks those observers (and the ≤0-DP rules
+    ///      check) until the grant below completes.
+    ///   2. Read the ally's DP AFTER suspension (§16-24-4: the value upon the
+    ///      suspension) — a suspended-Digimon debuff (BT16-101's −4000)
+    ///      applies first and `effective_dp` floors at 0 (judge Q24).
+    ///   3. Grant the attacker +DP and <Security A. +1> until end of attack
+    ///      (the <Security A. +1> lands even when the DP added is 0).
+    ///      §16-24-5: both stay if the ally later leaves.
+    /// Flushing afterwards lets the rules check delete a ≤0-DP ally BEFORE its
+    /// parked OnSuspend observers activate (judge Q24).
+    pub(crate) fn apply_alliance_ally(&mut self, attacker: PermanentHandle, ally: PermanentHandle) {
+        let attacker_player = attacker.player;
         self.enter_deferred_drain();
         self.suspend_with_cause(ally, true);
         let ally_dp = self.effective_dp(ally).unwrap_or(0);
@@ -1333,161 +1351,82 @@ impl Game {
             ),
         );
         self.exit_deferred_drain_and_flush();
-
-        if let Some(pa) = self.pending_attack.as_mut() {
-            pa.state = AttackState::CounterOpen;
-        }
-        self.advance_pending_attack();
     }
 
-    /// If the ATTACKER has `<Alliance>`, scan its side for unsuspended
-    /// allies to declare. Install a `PendingSelection` in `AllianceTiming`
-    /// if any candidate exists. Returns `true` if a selection was installed.
-    ///
-    /// Official keyword (16-x / DCGO `AllianceSelfEffect`): the keyword is
-    /// on the ATTACKING Digimon — "When this Digimon attacks, by suspending
-    /// 1 of your OTHER Digimon, add the suspended Digimon's DP to this
-    /// Digimon and it gains <Security Attack +1> for the attack." Any other
-    /// unsuspended own Digimon is a legal ally (DCGO
-    /// `CanSelectPermanentCondition` requires only own battle-area Digimon ≠
-    /// carrier + `CanActivateSuspendCostEffect`); the ally itself does NOT
-    /// need the keyword. (The pre-judge-quiz-Q24 model had this inverted —
-    /// gating on the ALLY carrying Alliance.)
-    fn try_enter_alliance(&mut self) -> bool {
+    /// Field indices of the `<Alliance>` ally candidates for `attacker`: empty
+    /// unless `attacker` is the Digimon currently attacking (the grant is "for
+    /// the attack"; DCGO `CanTriggerOnPermanentAttack`); otherwise any OTHER
+    /// unsuspended Digimon of its controller that can be suspended (DCGO
+    /// `CanActivateAlliance` / `CanSelectPermanentCondition`: own battle-area
+    /// Digimon ≠ carrier + `CanActivateSuspendCostEffect`). The ally itself
+    /// does NOT need the keyword (judge-quiz Q24). A `CannotSuspend` ally
+    /// can't pay the suspension (prohibition precedence 15-1-3).
+    pub(crate) fn alliance_ally_candidates(&self, attacker: PermanentHandle) -> Vec<u8> {
+        if !self
+            .pending_attack
+            .as_ref()
+            .is_some_and(|pa| pa.attacker == attacker)
+        {
+            return Vec::new();
+        }
+        let Some(player) = self.players.get(attacker.player as usize) else {
+            return Vec::new();
+        };
+        (0..player.battle_area.len() as u8)
+            .filter(|&i| i != attacker.index)
+            .filter(|&i| {
+                let h = PermanentHandle {
+                    player: attacker.player,
+                    index: i,
+                };
+                !player.battle_area[i as usize].is_suspended
+                    && self.permanent_is_digimon_for_rules(h)
+                    && !self.modifiers.has(h, ModifierType::CannotSuspend)
+            })
+            .collect()
+    }
+
+    /// `<Alliance>`'s trigger body (`keyword_to_auto_effect`): park the
+    /// optional ally pick for the attacker's controller. PASS = the optional
+    /// processing condition is not executed (§16-24-3). No candidates → no
+    /// prompt (the trigger's condition normally keeps it out of the pool).
+    pub(crate) fn install_alliance_ally_selection(&mut self, attacker: PermanentHandle) {
         use crate::action::space::encode_attack;
 
-        let Some(pa) = self.pending_attack.as_ref() else {
-            return false;
-        };
-        let attacker = pa.attacker;
-        let attacker_player = attacker.player;
-
-        // The keyword lives on the attacker.
-        if !self.has_keyword(attacker, Keyword::Alliance) {
-            return false;
-        }
-
-        let battle_area_len = self.player(attacker_player).battle_area.len();
-        let mut candidates: Vec<u8> = Vec::new();
-        for i in 0..battle_area_len {
-            // Attacker can't ally with itself.
-            if (i as u8) == attacker.index {
-                continue;
-            }
-            let h = PermanentHandle {
-                player: attacker_player,
-                index: i as u8,
-            };
-            let perm = &self.player(attacker_player).battle_area[i];
-            if perm.is_suspended {
-                continue;
-            }
-            if !self.permanent_is_digimon_for_rules(h) {
-                continue;
-            }
-            // The ally's suspension is a COST — a CannotSuspend ally can't
-            // pay it (DCGO `Alliance.cs:18` `CanActivateSuspendCostEffect`
-            // → `CanSuspend`; prohibition precedence 15-1-3).
-            if self.modifiers.has(h, ModifierType::CannotSuspend) {
-                continue;
-            }
-            candidates.push(i as u8);
-        }
-
+        let candidates = self.alliance_ally_candidates(attacker);
         if candidates.is_empty() {
-            return false;
+            return;
         }
-
-        let valid_action_ids: Vec<u16> = candidates
-            .iter()
-            .map(|&i| encode_attack(0, i as u16))
-            .collect();
-        let source_card = self.player(attacker_player).battle_area[attacker.index as usize]
-            .top_card()
-            .handle();
-
+        let Some(source_card) = self
+            .player(attacker.player)
+            .battle_area
+            .get(attacker.index as usize)
+            .map(|p| p.top_card().handle())
+        else {
+            return;
+        };
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::AllianceTiming;
-
         self.pending_selection = Some(PendingSelection {
             zone_owner: None,
             kind: SelectionKind::OwnField,
-            selecting_player: attacker_player,
+            selecting_player: attacker.player,
             previous_phase,
-            valid_action_ids,
-            is_optional: true, // Alliance is always a "may" declaration.
+            valid_action_ids: candidates
+                .iter()
+                .map(|&i| encode_attack(0, i as u16))
+                .collect(),
+            is_optional: true,
             prompt: "Declare an ally (Alliance)".to_string(),
             effect_choices: None,
             source_card,
             source_permanent: Some(attacker),
             source_kind: crate::enums::EffectSourceKind::Digimon,
+            // Resume-driven (frame below); the closures mirror it.
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
-                use crate::enums::{Expiry, ModifierType};
-                use crate::modifiers::ModifierEntry;
-
-                let offset = action_id.saturating_sub(ATTACK_START);
-                let ally_index = (offset % TARGETS_PER_ATTACKER) as u8;
-                let ally = PermanentHandle {
-                    player: attacker_player,
-                    index: ally_index,
-                };
-
-                // DCGO `AllianceProcess` order (judge-quiz Q24):
-                //   1. Suspend the ally THROUGH the canonical chokepoint —
-                //      a keyword effect's "by suspending" cost is
-                //      effect-initiated, so OnSuspend observers ("when an
-                //      EFFECT suspends…", EX6-004) see the event. The
-                //      deferred-drain scope parks those observers (and the
-                //      ≤0-DP rules check) until the Alliance grant below
-                //      completes — official timing: rule processing and
-                //      trigger activation wait for the resolving effect.
-                //   2. Read the ally's DP AFTER suspension — a
-                //      suspended-Digimon debuff (BT16-101's −4000) applies
-                //      first, and `effective_dp` floors at 0, so a debuffed
-                //      ally can contribute +0 (judge Q24: "Tentomon won't
-                //      give any DP to Hudiemon").
-                //   3. Grant the attacker +DP and <Security Attack +1>
-                //      until end of attack (the Sec.A.+1 lands even when
-                //      the DP contribution is 0 — judge Q24 bonus tip).
-                game.enter_deferred_drain();
-                game.suspend_with_cause(ally, true);
-                let ally_dp = game.effective_dp(ally).unwrap_or(0);
-                game.modifiers.add(
-                    attacker,
-                    ModifierEntry::simple(
-                        ModifierType::ChangeDp,
-                        ally_dp,
-                        Expiry::EndOfAttack,
-                        attacker_player,
-                    ),
-                );
-                game.modifiers.add(
-                    attacker,
-                    ModifierEntry::simple(
-                        ModifierType::SecurityAttackChange,
-                        1,
-                        Expiry::EndOfAttack,
-                        attacker_player,
-                    ),
-                );
-                // Alliance has fully resolved — flush: the rules check
-                // deletes a ≤0-DP ally BEFORE its parked OnSuspend
-                // observers activate (judge Q24: Kokomon's trigger fires
-                // but the carrier dies before the inherited effect runs).
-                game.exit_deferred_drain_and_flush();
-
-                if let Some(pa) = game.pending_attack.as_mut() {
-                    pa.state = AttackState::CounterOpen;
-                }
-                game.advance_pending_attack();
+                game.run_alliance_selection_step(attacker, action_id, false);
             }),
-            on_decline: Some(Box::new(move |game: &mut Game| {
-                if let Some(pa) = game.pending_attack.as_mut() {
-                    pa.state = AttackState::CounterOpen;
-                }
-                game.advance_pending_attack();
-            })),
+            on_decline: Some(Box::new(|_game: &mut Game| {})),
         });
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::AllianceSelection(
@@ -1497,8 +1436,6 @@ impl Game {
                 },
             )],
         });
-
-        true
     }
 
     /// Scan the defender's hand + battle area for Counter-window
@@ -2477,37 +2414,28 @@ impl Game {
         self.advance_pending_attack();
     }
 
-    /// Open Raid's printed optional attack-target switch immediately after
-    /// attack declaration. This is distinct from the post-Block Raid retarget
-    /// rider below, which only rescues an attack whose Digimon target became
-    /// invalid before battle.
-    fn try_enter_raid_switch(&mut self) -> bool {
-        let Some(pa) = self.pending_attack.as_ref() else {
-            return false;
+    /// `<Raid>`'s switch options for `attacker` (§16-23-1 / §16-23-4): empty
+    /// unless `attacker` is the Digimon currently attacking and its target can
+    /// be switched. Gates the `<Raid>` trigger (DCGO `CanActivateRaid`) and
+    /// feeds its body. Distinct from the post-Block Raid retarget rider below,
+    /// which only rescues an attack whose Digimon target became invalid.
+    pub(crate) fn raid_switch_options(&self, attacker: PermanentHandle) -> Vec<u8> {
+        let Some(pa) = self.pending_attack.as_ref().filter(|pa| pa.attacker == attacker) else {
+            return Vec::new();
         };
-        let attacker = pa.attacker;
-        if !self.has_keyword(attacker, Keyword::Raid) {
-            return false;
-        }
         // Track C: `CannotSwitchAttackTarget` locks the attack onto its
-        // declared target. Raid's printed switch window would rewrite that
-        // target, so suppress the optional selection entirely.
+        // declared target, so <Raid> has nothing to switch to.
         if self
             .modifiers
             .has(attacker, ModifierType::CannotSwitchAttackTarget)
         {
-            return false;
+            return Vec::new();
         }
-
-        let candidates = self.raid_switch_candidates(
-            attacker, pa.effective_target, pa.effective_target_removed_by_dna,
-        );
-        if candidates.is_empty() {
-            return false;
-        }
-
-        self.install_raid_switch_selection(attacker, candidates);
-        true
+        self.raid_switch_candidates(
+            attacker,
+            pa.effective_target,
+            pa.effective_target_removed_by_dna,
+        )
     }
 
     /// Enumerate Raid's printed candidates: opponent unsuspended Digimon tied
@@ -2560,19 +2488,27 @@ impl Game {
             .collect()
     }
 
-    fn install_raid_switch_selection(&mut self, attacker: PermanentHandle, candidates: Vec<u8>) {
-        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
+    /// `<Raid>`'s trigger body (`keyword_to_auto_effect`): park the optional
+    /// switch pick for the attacker's controller (§16-23-3: optional; PASS
+    /// keeps the target). No options → no prompt (the trigger's condition
+    /// normally keeps it out of the pool).
+    pub(crate) fn install_raid_switch_selection(&mut self, attacker: PermanentHandle) {
+        use crate::action::space::encode_attack;
 
+        let candidates = self.raid_switch_options(attacker);
+        if candidates.is_empty() {
+            return;
+        }
         let attacker_player = attacker.player;
         let opp_id = 1 - attacker_player;
-        let valid_action_ids: Vec<u16> = candidates
-            .iter()
-            .map(|&index| encode_attack(0, index as u16))
-            .collect();
-
-        let source_card = self.player(attacker_player).battle_area[attacker.index as usize]
-            .top_card()
-            .handle();
+        let Some(source_card) = self
+            .player(attacker_player)
+            .battle_area
+            .get(attacker.index as usize)
+            .map(|p| p.top_card().handle())
+        else {
+            return;
+        };
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
 
@@ -2581,38 +2517,27 @@ impl Game {
             kind: SelectionKind::OppField,
             selecting_player: attacker_player,
             previous_phase,
-            valid_action_ids,
+            valid_action_ids: candidates
+                .iter()
+                .map(|&index| encode_attack(0, index as u16))
+                .collect(),
             is_optional: true,
             prompt: "Raid - switch attack target".to_string(),
             effect_choices: None,
             source_card,
             source_permanent: Some(attacker),
             source_kind: crate::enums::EffectSourceKind::Digimon,
+            // Resume-driven (frame below); the closures mirror it.
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                let offset = action_id.saturating_sub(ATTACK_START);
-                let new_index = (offset % TARGETS_PER_ATTACKER) as u8;
-                let new_target = PermanentHandle {
-                    player: opp_id,
-                    index: new_index,
-                };
-                if game
-                    .validate_attack_redirect_target(attacker, AttackTarget::Digimon(new_target))
-                    .is_ok()
-                {
-                    game.apply_attack_target_substitution_with_reason(
-                        AttackTarget::Digimon(new_target),
-                        AttackTargetChangeReason::Raid,
-                    );
-                }
-                game.transition_attack_state(AttackState::AllianceOpen);
-                game.advance_pending_attack();
+                game.run_raid_selection_step(
+                    attacker,
+                    opp_id,
+                    crate::resume::CombatRaidSelectionMode::Switch,
+                    action_id,
+                    false,
+                );
             }),
-            on_decline: Some(Box::new(move |game: &mut Game| {
-                if let Some(pa) = game.pending_attack.as_mut() {
-                    pa.state = AttackState::AllianceOpen;
-                }
-                game.advance_pending_attack();
-            })),
+            on_decline: Some(Box::new(|_game: &mut Game| {})),
         });
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::RaidSelection(
@@ -2634,13 +2559,9 @@ impl Game {
         action_id: u16,
         is_pass: bool,
     ) {
+        // Switch (the `<Raid>` trigger body): PASS keeps the target; the
+        // attack state machine resumes once the trigger pool has drained.
         if is_pass {
-            if mode == crate::resume::CombatRaidSelectionMode::Switch {
-                if let Some(pa) = self.pending_attack.as_mut() {
-                    pa.state = AttackState::AllianceOpen;
-                }
-                self.advance_pending_attack();
-            }
             return;
         }
 
@@ -2665,15 +2586,10 @@ impl Game {
             return;
         }
 
-        match mode {
-            crate::resume::CombatRaidSelectionMode::Switch => {
-                self.transition_attack_state(AttackState::AllianceOpen);
-            }
-            crate::resume::CombatRaidSelectionMode::Retarget => {
-                self.transition_attack_state(AttackState::Battle);
-            }
+        if mode == crate::resume::CombatRaidSelectionMode::Retarget {
+            self.transition_attack_state(AttackState::Battle);
+            self.advance_pending_attack();
         }
-        self.advance_pending_attack();
     }
 
     /// Phase 9 Task 4 — Raid target-switch rider. Evaluates the
@@ -4153,7 +4069,7 @@ impl Game {
         }
     }
 
-    fn handle_still_attacking(&self, handle: PermanentHandle) -> bool {
+    pub(crate) fn handle_still_attacking(&self, handle: PermanentHandle) -> bool {
         self.player(handle.player)
             .battle_area
             .get(handle.index as usize)
@@ -4212,78 +4128,63 @@ impl Game {
         None
     }
 
-    /// Fire OnAttack effects for the attacker, then WhenAttacking for every
-    /// permanent in the attacker's battle area (observer timing).
+    /// Enqueue every effect the attack declaration triggers, then drain once.
     ///
-    /// Thin wrapper over the effect-queue drainer. Single-trigger cases
-    /// fire in one step; multi-trigger cases park on a `TriggerOrder`
-    /// selection for the attacker's controller to order.
+    /// §15-4-3-2 (Ver. 4.3): effects triggered before a single rule or effect
+    /// is resolved trigger simultaneously and pend together; §15-4-3-5-1/-2:
+    /// the turn player orders all of theirs, then the non-turn player orders
+    /// theirs. So the attacker's `OnAttack` and `[When Attacking]` effects
+    /// (incl. the synthesized `<Alliance>` / `<Raid>` bodies, §16-24-2 /
+    /// §16-23-2), the declaration suspension's `OnSuspend` observers, the
+    /// attacker's allies' "when one of your Digimon attacks" observers and the
+    /// opponent's "when an opponent's Digimon attacks" observers form ONE
+    /// bundle drained by a single `maybe_drain_effect_queue` — DCGO
+    /// `AttackProcess.cs` stacks them in one `StackSkillInfos(...,
+    /// EffectTiming.OnAllyAttack)` batch. Draining between fan-outs used to
+    /// lose every later observer as soon as an earlier one parked a prompt
+    /// (G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS) and kept
+    /// `<Alliance>` / `<Raid>` out of the pool
+    /// (G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL).
     ///
     /// `suspend_event` is the attacker's declaration-suspension `OnSuspend`
-    /// event card (None for Overclock / an already-suspended attacker). It is
-    /// enqueued in the SAME batch as `[When Attacking]` -- both trigger on the
-    /// attack declaration (11-2-1 / 11-1-4), so the turn player orders them
-    /// together -- rather than drained ahead of the attack triggers.
+    /// event card (None for Overclock / an already-suspended attacker).
     fn fire_on_attack(
         &mut self,
         handle: PermanentHandle,
         suspend_event: Option<crate::card_source::CardHandle>,
     ) {
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::OnAttack,
-            crate::selection::TriggerSource::Permanent(handle),
-        );
-        // G-DSL-OUTER-TAIL-NESTED-PARK: defer when inside select/outer-tail scope.
-        self.maybe_drain_effect_queue();
-        if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {
-            return;
-        }
+        use crate::selection::TriggerSource;
 
-        // WhenAttacking: the `[When Attacking]` keyword is carrier-scoped
-        // ("when THIS Digimon attacks") — it must fire ONLY for the attacker's
-        // own stack (its top card + inherited digivolution sources), exactly
-        // like OnAttack. Cross-Digimon "when one of your (other) Digimon
-        // attacks" observers are a DIFFERENT timing (OnAllyAttack, fanned out
-        // below). Scoping to the attacker via `Permanent(handle)` (not the
-        // battle-area-wide `PlayerBattleArea`) prevents a non-attacking stack's
-        // inherited `[When Attacking]` from firing on a different Digimon's
-        // attack. Fires before the Alliance window opens.
+        self.enqueue_triggered(EffectTiming::OnAttack, TriggerSource::Permanent(handle));
         if let Some(card) = suspend_event {
             self.enqueue_on_suspend(handle, card, false);
         }
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::WhenAttacking,
-            crate::selection::TriggerSource::Permanent(handle),
-        );
-        self.maybe_drain_effect_queue();
-        if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {
-            return;
-        }
+        // `[When Attacking]` is carrier-scoped ("when THIS Digimon attacks"):
+        // only the attacker's own stack (top card + inherited sources), never
+        // a battle-area-wide scan — other Digimon observe via OnAllyAttack.
+        self.enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(handle));
 
-        // Phase 9 Task 8 — OnAllyAttack fan-out. Observer timing firing on
-        // every permanent in the attacker-controller's battle area EXCEPT
-        // the attacker itself. We piggyback on the PlayerBattleArea scan
-        // and filter the attacker's own slot from the queue after enqueue.
-        let attacker_queue_start = self.effect_queue.len();
         let attacker_card = self
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)
             .map(|perm| perm.top_card().handle());
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::OnAllyAttack,
-            attacker_card.map_or(
-                crate::selection::TriggerSource::PlayerBattleArea(handle.player),
-                |card| crate::selection::TriggerSource::PlayerBattleAreaAttack {
-                    player: handle.player,
+        let attack_source = |player: PlayerId| {
+            attacker_card.map_or(TriggerSource::PlayerBattleArea(player), |card| {
+                TriggerSource::PlayerBattleAreaAttack {
+                    player,
                     attacker: handle,
                     card,
-                },
-            ),
-        );
-        // Drop any entries whose source_permanent is the attacker itself
-        // — the attacker does not fire its own OnAllyAttack observer.
-        let mut i = attacker_queue_start;
+                }
+            })
+        };
+
+        // OnAllyAttack: every permanent of the attacker's controller EXCEPT
+        // the attacker itself — drop the attacker's own entries from this
+        // fan-out only (its own OnAttack / [When Attacking] above stay).
+        let ally_fanout_start = self.effect_queue.len();
+        self.enqueue_triggered(EffectTiming::OnAllyAttack, attack_source(handle.player));
+        let mut i = ally_fanout_start;
         while i < self.effect_queue.len() {
             if self.effect_queue[i].source_permanent == Some(handle) {
                 self.effect_queue.remove(i);
@@ -4291,28 +4192,14 @@ impl Game {
                 i += 1;
             }
         }
-        self.maybe_drain_effect_queue();
-        if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {
-            return;
-        }
 
-        // Phase 9 Task 8 — OnOpponentAttack fan-out. Observer timing on
-        // every permanent in the non-attacker controller's battle area.
         let opp = 1 - handle.player;
         if (opp as usize) < self.players.len() {
-            self.enqueue_triggered(
-                crate::enums::EffectTiming::OnOpponentAttack,
-                attacker_card.map_or(
-                    crate::selection::TriggerSource::PlayerBattleArea(opp),
-                    |card| crate::selection::TriggerSource::PlayerBattleAreaAttack {
-                        player: opp,
-                        attacker: handle,
-                        card,
-                    },
-                ),
-            );
-            self.maybe_drain_effect_queue();
+            self.enqueue_triggered(EffectTiming::OnOpponentAttack, attack_source(opp));
         }
+
+        // G-DSL-OUTER-TAIL-NESTED-PARK: defer when inside select/outer-tail scope.
+        self.maybe_drain_effect_queue();
     }
 
     /// Resolve battle between two permanents by DP comparison.
