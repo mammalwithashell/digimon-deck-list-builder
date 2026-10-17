@@ -118,6 +118,10 @@ pub enum Timing {
     WhenDigivolving,
     WhenAttacking,
     EndOfAttack,
+    /// "[All Turns] At the end of a battle, …" -- the end of the battle timing
+    /// (§14-2-5): after every effect triggered by the battle (the loser's
+    /// [On Deletion], `on_ally_won_battle`) has resolved. Lowers to
+    /// `EffectTiming::EndOfBattle`.
     EndOfBattle,
     OnAttack,
     OnBlock,
@@ -127,7 +131,9 @@ pub enum Timing {
     OnAnyDeletion,
     /// Board-wide battle-winner observer: "[All Turns] When any of your [X]
     /// Digimon win a battle, …" (`when: on_ally_won_battle`, BT25-020 Marsmon;
-    /// G-DSL-BATTLE-WINNER-BOARDWIDE). Rides the `EndOfBattle` dispatch with NO
+    /// G-DSL-BATTLE-WINNER-BOARDWIDE). Triggered by the battle (§14-2-4): rides
+    /// the `BattleResult` dispatch, pending with the loser's [On Deletion] in
+    /// one pool, turn player first (§15-4-3-5-1). NO
     /// forced self-filter (unlike the carrier-scoped
     /// `source_deleted_battle_opponent` idiom on `on_any_deletion`). Gate scope
     /// via `active_when:` — `event_winner_owner: you` (the winner's controller)

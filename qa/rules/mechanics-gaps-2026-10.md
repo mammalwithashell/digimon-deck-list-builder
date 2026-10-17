@@ -179,6 +179,19 @@ Grouped by the mechanism the defect lives in; when the obligation's Aegis taxono
 - DCGO: agrees with the rule (one `AutoProcessCheck` over the `OnDestroyedAnyone` and `OnEndBattle` stacks).
 - Fix: enqueue the battle-result observers into the deletion batch's single `TriggerFlush` pool (with the §18-1-2 end-of-battle pending processing); invert the pinning test.
 
+**G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER**: `PDF-explicit` — filed 2026-10-17 (Plan 4 Task 28 review round)
+- Rules: §15-8-3-1, §15-8-3-8, §15-4-4-5.
+- Test: `dsl::battle_deleter::winner_predicates_follow_ordinary_evolution_during_opponents_on_deletion` pins the wrong outcome (P1-turn staging: the observer activates after the loser's [On Deletion] made the winner [Evolved]); no conformance test yet.
+- Cause: `BattleResult` entries are queued without evaluating their trigger condition; the drainer's transient non-firing filter lets one whose condition failed at the battle activate once a sibling makes it true.
+- DCGO: agrees with the rule (`StackSkillInfos` evaluates `CanTrigger` when the battle stacks it).
+- Fix: evaluate the trigger condition at the battle's enqueue and drop entries that did not trigger; keep the §15-4-4-5 activation re-check.
+
+**G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS**: `needs-reading` — filed 2026-10-17 (Plan 4 Task 28 review round)
+- Rules: §4-7-7 (bottom cards are part of the top card's information) vs DCGO's top-card trait read (`BT25_020.cs`).
+- Test: `dsl::battle_deleter::turn_players_observer_reads_the_winners_top_card_before_de_digivolution` (ignored).
+- Cause: `TriggerContext::battle_winner_has_trait` reads the live winner through `Permanent::has_trait`, which scans every card in the stack.
+- Fix: read the winner's synthesized identity (top card + trait modifiers), once the reading is confirmed.
+
 (§14 is 7 of 10 proven.)
 
 ### blocking

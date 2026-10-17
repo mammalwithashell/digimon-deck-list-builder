@@ -1558,7 +1558,7 @@ SecuritySkill, OnSecurityCheck, OnLoseSecurity, OnDiscardSecurity, CounterEffect
 // Turn-based
 StartOfYourTurn, StartOfOpponentsTurn, StartOfYourMainPhase,
 EndOfYourTurn, EndOfOpponentsTurn, EndOfYourNextTurn, EndOfOpponentsNextTurn,
-UntilNextUnsuspend, EndOfAttack, EndOfBattle
+UntilNextUnsuspend, EndOfAttack, EndOfBattle, BattleResult
 
 // Event-triggered
 OnAllyAttack, OnOpponentAttack, OnDrawCard, OnTrash, OnReturn, OnSuspend, OnUnsuspend,
@@ -4455,7 +4455,8 @@ Added in Phase 1 to wire every declared-but-unfired `EffectTiming` variant + 2 n
 |--------|---------|-----------|
 | `OnAttack` | `Effect::on_attack(card)` | `fire_on_attack` (already wired; per-attacker) |
 | `WhenAttacking` | `Effect::when_attacking(card)` | `fire_on_attack` (observer — attacker's battle area) |
-| `EndOfBattle` | `Effect::end_of_battle(card)` | `resolve_battle` (Digimon-vs-Digimon only) |
+| `BattleResult` | `Effect::battle_result(card)` | Triggered by the battle (§14-2-4): "wins a battle", "deletes in battle" (DSL `on_ally_won_battle`), `<Piercing>`. Enqueued once per battle by the battle deletion batch's stage 4d (`Game::enqueue_pending_battle_result_triggers`), so it pends in ONE pool with the loser's `[On Deletion]`, turn player first (§15-4-3-5-1, Q3931); when no Digimon is deleted, by `resume_pending_battle_resolutions`; security battles: `SecurityPhase::EndOfSecurityBattleDrain`. Source `TriggerSource::BattleResolved` |
+| `EndOfBattle` | `Effect::end_of_battle(card)` | The end of the battle timing (§14-2-5: "At the end of a battle"), with the §18-1-2 pending processing due then, AFTER the `BattleResult` / `[On Deletion]` pool: `resume_pending_battle_resolutions`; security battles: `SecurityPhase::EndOfSecurityBattleTimingDrain` |
 | `EndOfAttack` | `Effect::end_of_attack(card)` | `cleanup_attack` (global) |
 | `OnAttackTargetChange` | `Effect::on_attack_target_change(card)` | Block interrupt, after `effective_target` rewrite |
 
