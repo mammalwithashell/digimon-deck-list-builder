@@ -1,0 +1,16 @@
+# MAIN_TRASH_BOTTOM_SRC -- Option, red, use cost 0.
+#   [Main] Trash the bottom digivolution card of 1 of your Digimon.
+card: MAIN_TRASH_BOTTOM_SRC
+name: Undermine
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash the bottom digivolution card of 1 of your Digimon."
+    process:
+      - select_own_permanent:
+          bind_as: host
+          filter: { kind: digimon }
+          prompt: "Trash the bottom digivolution card of 1 of your Digimon"
+      - trash_bottom_sources: { target: host, count: 1 }
