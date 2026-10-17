@@ -172,7 +172,14 @@ Grouped by the mechanism the defect lives in; when the obligation's Aegis taxono
 
 ### battle
 
-No blocking gap. (§14 is 7 of 10 proven.)
+**G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION**: `PDF-explicit` — filed 2026-10-17 (Plan 4 Task 27 review round 1)
+- Rules: §14-2-4; §15-4-3-2, §15-4-3-5-1 (effects-and-ordering); §16-7-4 (keywords, <Piercing>); official Q&A Q3931 (EX8-045).
+- Test: `dsl::battle_deleter::on_deletion_choice_finishes_before_end_of_battle_observer_after_clone` pins the wrong order (P0 is the turn player, yet P1's [On Deletion] choice comes first); no conformance test is red yet, and the obligations keep their status.
+- Cause: the battle deletion's trigger flush drains the loser's [On Deletion] / `OnAnyDeletion` pool to completion before `resume_pending_battle_resolutions` enqueues the `EndOfBattle` battle-result observers ("wins a battle", "deletes in battle"), so the turn player's battle-result triggers activate after the non-turn player's [On Deletion].
+- DCGO: agrees with the rule (one `AutoProcessCheck` over the `OnDestroyedAnyone` and `OnEndBattle` stacks).
+- Fix: enqueue the battle-result observers into the deletion batch's single `TriggerFlush` pool (with the §18-1-2 end-of-battle pending processing); invert the pinning test.
+
+(§14 is 7 of 10 proven.)
 
 ### blocking
 
