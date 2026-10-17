@@ -89,12 +89,7 @@ impl PartitionRequirement {
 }
 
 fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
-    match kind {
-        CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual => EffectSourceKind::Digimon,
-        CardKind::Tamer => EffectSourceKind::Tamer,
-        CardKind::Option => EffectSourceKind::Option,
-        CardKind::Token => EffectSourceKind::Rule,
-    }
+    EffectSourceKind::for_card_kind(kind)
 }
 
 fn infer_effect_source_kind(
@@ -776,8 +771,11 @@ impl<'a> EffectReadContext<'a> {
     /// Retaliation (cause == Battle, hence false here).
     pub fn was_deleted_by_effect(&self) -> bool {
         use crate::replacement::ReplacementCause;
+        // Snapshot-first, like `deletion_cause` (rule 25): the live slot is
+        // already restored when the bundle is deferred past the deleting
+        // effect (a token's [On Deletion] that deletes, for one).
         matches!(
-            self.game.current_deletion_cause,
+            observed_deletion_cause(self.game),
             Some(ReplacementCause::OwnEffect | ReplacementCause::OpponentEffect)
         )
     }
@@ -787,7 +785,7 @@ impl<'a> EffectReadContext<'a> {
     /// deleted by your opponent's effect" riders.
     pub fn was_deleted_by_opponent(&self) -> bool {
         matches!(
-            self.game.current_deletion_cause,
+            observed_deletion_cause(self.game),
             Some(crate::replacement::ReplacementCause::OpponentEffect)
         )
     }
@@ -1542,8 +1540,11 @@ impl<'a> EffectContext<'a> {
     /// cause == Battle, returns false).
     pub fn was_deleted_by_effect(&self) -> bool {
         use crate::replacement::ReplacementCause;
+        // Snapshot-first, like `deletion_cause` (rule 25): the live slot is
+        // already restored when the bundle is deferred past the deleting
+        // effect (a token's [On Deletion] that deletes, for one).
         matches!(
-            self.game.current_deletion_cause,
+            observed_deletion_cause(self.game),
             Some(ReplacementCause::OwnEffect | ReplacementCause::OpponentEffect)
         )
     }
@@ -1551,7 +1552,7 @@ impl<'a> EffectContext<'a> {
     /// See `EffectReadContext::was_deleted_by_opponent`.
     pub fn was_deleted_by_opponent(&self) -> bool {
         matches!(
-            self.game.current_deletion_cause,
+            observed_deletion_cause(self.game),
             Some(crate::replacement::ReplacementCause::OpponentEffect)
         )
     }

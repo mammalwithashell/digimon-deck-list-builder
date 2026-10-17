@@ -81,8 +81,10 @@ effects:
           modifier: CannotAttack
           value: 1
           expiry: end_of_opponents_turn
-      # "isn't affected by your opponent's effects" = the 4-source-kind
-      # opponent immunity idiom (EX6-011 / BT16-102), until end of opp turn.
+      # "isn't affected by your opponent's effects" = the opponent immunity
+      # idiom over every effect kind (§15-2-1: digimon / tamer / option; a
+      # token's effect is a Digimon effect, §15-2-1-1), until end of opp turn
+      # (EX6-011 / BT16-102).
       - grant_effect_immunity:
           target: self
           source_kind: digimon
@@ -96,11 +98,6 @@ effects:
       - grant_effect_immunity:
           target: self
           source_kind: option
-          source_controller: opponent
-          expiry: end_of_opponents_turn
-      - grant_effect_immunity:
-          target: self
-          source_kind: rule
           source_controller: opponent
           expiry: end_of_opponents_turn
 

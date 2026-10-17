@@ -1389,14 +1389,8 @@ impl Game {
         let top = perm.top_card();
         let card_id = top.card_id(&self.card_data).to_string();
         let source_card = top.handle();
-        let source_kind = match top.card_kind(&self.card_data) {
-            CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual => {
-                crate::enums::EffectSourceKind::Digimon
-            }
-            CardKind::Tamer => crate::enums::EffectSourceKind::Tamer,
-            CardKind::Option => crate::enums::EffectSourceKind::Option,
-            CardKind::Token => crate::enums::EffectSourceKind::Rule,
-        };
+        let source_kind =
+            crate::enums::EffectSourceKind::for_card_kind(top.card_kind(&self.card_data));
         let controller = handle.player;
 
         // Owned clone, so the condition closures can be evaluated against

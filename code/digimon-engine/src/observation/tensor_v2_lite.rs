@@ -536,4 +536,13 @@ mod dual_effect_source_metadata_tests {
         }
         assert_eq!(source_kind_bucket(EffectSourceKind::DigimonAndTamer), None);
     }
+
+    /// A Digimon token's effect is a Digimon effect (§15-2-1-1, §4-21-1), so
+    /// it lands in the Digimon bucket, not the Rule bucket (semantics note in
+    /// docs/TENSOR_SPEC.md, 2026-10-17). G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE.
+    #[test]
+    fn token_effects_use_the_digimon_bucket() {
+        let kind = EffectSourceKind::for_card_kind(crate::enums::CardKind::Token);
+        assert_eq!(source_kind_bucket(kind), Some(0));
+    }
 }

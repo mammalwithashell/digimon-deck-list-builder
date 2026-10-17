@@ -25,9 +25,9 @@
 //! Engine reality: the immunities are filtered `ModifierType::CannotBeAffected`
 //! entries (`grant_effect_immunity` steps for the [On Play] grants -- the
 //! Atratusmon / Magnamon production idioms -- and an `effect_immunity` aura
-//! for the "while suspended" card). `EffectSourceKind::Rule` is the engine's
-//! kind for token and card-less effects, which is why the Magnamon idiom
-//! grants it alongside digimon / tamer / option.
+//! for the "while suspended" card). A token's effect is a Digimon effect
+//! (§15-2-1-1); `EffectSourceKind::Rule` is kept for card-less processing
+//! only, so the Magnamon idiom grants digimon / tamer / option.
 //!
 //! Fixture cards: `fixtures/common/*.yaml` + `fixtures/ch15_15/*.yaml` (plus
 //! `TAMER_PLAIN` from `ch17`) and the engine's registered Familiar Token
@@ -762,7 +762,6 @@ fn progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking() {
 /// for the turn" can only choose the immune Digimon, and doesn't affect it:
 /// 12000 DP.
 #[test]
-#[ignore = "G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE (§15-2-1-1)"]
 fn digimon_only_immunity_blocks_a_digimon_tokens_effect() {
     cite!(
         "15-2-1-1",
