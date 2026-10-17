@@ -5524,15 +5524,15 @@
       "text": "<Retaliation> is a keyword effect where a battled opponent's Digimon is deleted when a Digimon with this effect is deleted in battle."
     },
     "16-13-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "e0808def8b55cd54b6651e11816946c6e64f1e9f0f3bf60ba4eb9618f7f87999",
-      "gap_id": "G-ENGINE-ON-DELETION-DRAINED-BEFORE-DELETION-OBSERVERS",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Timing half proven: an effect deletion does not trigger it, a battle deletion does. Kind half fails: <Retaliation> (an OnDeletion effect) and a simultaneously triggered 'when one of your Digimon is deleted' observer are drained in two separate stages with no TriggerOrder (Retaliation always first). retaliation_kind_matches_rule is #[ignore]d.",
-      "status": "gap",
+      "note": "Timing: an effect deletion does not trigger it, a battle deletion does. Kind: <Retaliation> (an OnDeletion effect) and a 'when one of your Digimon is deleted' observer triggered by the same deletion pend in one pool (one flush per deletion batch); P1 orders them through TriggerOrder.",
+      "status": "proven",
       "tests": [
         "ch16_attack_keywords::retaliation_kind_matches_rule",
         "ch16_attack_keywords::retaliation_timing_matches_rule"
@@ -11635,45 +11635,45 @@
       "text": "<Overflow> isn't processed when a card is moved from another area to under a card. (For details, refer to 4-5 \"Stacked Cards\")4-7"
     },
     "4-19-5": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 4,
       "fingerprint": "db673babf873b635f4000e8a40250beca96b214ad6f7a98c2ae89cc342169865",
-      "gap_id": "G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT",
+      "gap_id": null,
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": "Simultaneous <Overflow> from one 'delete all Digimon' is applied per deleted permanent in batch order. Test is #[ignore]d.",
-      "status": "gap",
+      "note": "A deletion batch (mutual battle deletion, 'delete all Digimon') collects every leaving card and processes its <Overflow> instances in one pass after the removals, before the batch's trigger flush.",
+      "status": "proven",
       "tests": [
         "ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player"
       ],
       "text": "When multiple instances of <Overflow> are processed simultaneously, they are processed using the following procedure."
     },
     "4-19-5-1": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 4,
       "fingerprint": "2aa92cc4fda8bccbd05ada27cdaf868a00a675960ba19d78d3fc8cbaaf9dee81",
-      "gap_id": "G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT",
+      "gap_id": null,
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": "Observed in a mutual battle deletion of two ACEs (memory 9 -> 10 capped -> 7; rule 9 -> 6 -> 9) and in 'delete all Digimon' (9 -> 10 -> 4; rule 9 -> 3 -> 6): P1's instance first. Both route through combat/deletion.rs trash_batch_survivors. The turn player's choice among their own instances is unobservable (same direction). Test is #[ignore]d.",
-      "status": "gap",
+      "note": "The turn player's instances go first: mutual battle deletion of two ACEs at memory 9 gives 9 -> 6 -> 9; 'delete all Digimon' (two P0 ACEs, one P1 ACE) gives 9 -> 6 -> 3 -> 6. The turn player's choice among their own instances is unobservable (same direction), so no prompt.",
+      "status": "proven",
       "tests": [
         "ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player"
       ],
       "text": "The turn player chooses 1 instance of <Overflow> on their cards and processes it. The turn player repeats this procedure until there are no more unresolved instances of <Overflow> on their cards."
     },
     "4-19-5-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 4,
       "fingerprint": "a60b917e4326f91400b6ec0304d6d0fca2db87be4de9c94faf18251a4c08d765",
-      "gap_id": "G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT",
+      "gap_id": null,
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": "The non-turn player's instance is not deferred until the turn player's are processed. Test is #[ignore]d.",
-      "status": "gap",
+      "note": "The non-turn player's instances are processed after all of the turn player's (one apply_ace_overflow_for_sources pass per deletion batch).",
+      "status": "proven",
       "tests": [
         "ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player"
       ],
@@ -15227,9 +15227,9 @@
         "total": 244
       },
       "16": {
-        "gap": 24,
+        "gap": 23,
         "not_testable": 44,
-        "proven": 138,
+        "proven": 139,
         "total": 206
       },
       "17": {
@@ -15257,9 +15257,9 @@
         "total": 66
       },
       "4": {
-        "gap": 89,
+        "gap": 86,
         "not_testable": 34,
-        "proven": 16,
+        "proven": 19,
         "total": 139
       },
       "5": {
@@ -15293,15 +15293,15 @@
         "total": 13
       }
     },
-    "gap": 656,
+    "gap": 652,
     "mechanics": {
-      "gap_blocking": 38,
+      "gap_blocking": 37,
       "gap_nonblocking": 330,
       "not_testable": 152,
-      "proven": 195
+      "proven": 196
     },
     "not-testable": 246,
-    "proven": 217
+    "proven": 221
   },
   "version": 1
 }

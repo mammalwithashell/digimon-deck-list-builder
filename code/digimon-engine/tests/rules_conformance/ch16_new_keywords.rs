@@ -1388,7 +1388,6 @@ fn overflow_not_processed_entering_under_a_card() {
 /// they all move the marker the same way, so any order gives the same result
 /// (the engine offers no prompt for it; nothing is lost).
 #[test]
-#[ignore = "G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT (§4-19-5-1)"]
 fn overflow_turn_player_orders_then_non_turn_player() {
     cite!(
         "4-19-5",

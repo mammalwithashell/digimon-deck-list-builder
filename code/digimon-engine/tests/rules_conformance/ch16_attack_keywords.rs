@@ -651,7 +651,6 @@ fn retaliation_mandatory_deletes_battled_digimon() {
 /// pend in one `TriggerOrder` for P1. P1 activates `OBS_OWN_DEL_MEM` first:
 /// its memory gain happens before <Retaliation> deletes `LV5_PLAIN`.
 #[test]
-#[ignore = "G-ENGINE-ON-DELETION-DRAINED-BEFORE-DELETION-OBSERVERS (§16-13-2)"]
 fn retaliation_kind_matches_rule() {
     cite!(
         "16-13-2",

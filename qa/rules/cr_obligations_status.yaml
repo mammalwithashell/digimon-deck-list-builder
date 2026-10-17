@@ -632,23 +632,17 @@
   tests: ["ch16_new_keywords::overflow_not_processed_entering_under_a_card"]
   note: "An ACE placed from the hand as a bottom digivolution card moves no memory."
 "4-19-5":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT
+  status: proven
   tests: ["ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player"]
-  note: "Simultaneous <Overflow> from one 'delete all Digimon' is applied per deleted permanent in batch order. Test is #[ignore]d."
+  note: "A deletion batch (mutual battle deletion, 'delete all Digimon') collects every leaving card and processes its <Overflow> instances in one pass after the removals, before the batch's trigger flush."
 "4-19-5-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT
+  status: proven
   tests: ["ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player"]
-  note: "Observed in a mutual battle deletion of two ACEs (memory 9 -> 10 capped -> 7; rule 9 -> 6 -> 9) and in 'delete all Digimon' (9 -> 10 -> 4; rule 9 -> 3 -> 6): P1's instance first. Both route through combat/deletion.rs trash_batch_survivors. The turn player's choice among their own instances is unobservable (same direction). Test is #[ignore]d."
+  note: "The turn player's instances go first: mutual battle deletion of two ACEs at memory 9 gives 9 -> 6 -> 9; 'delete all Digimon' (two P0 ACEs, one P1 ACE) gives 9 -> 6 -> 3 -> 6. The turn player's choice among their own instances is unobservable (same direction), so no prompt."
 "4-19-5-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT
+  status: proven
   tests: ["ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player"]
-  note: "The non-turn player's instance is not deferred until the turn player's are processed. Test is #[ignore]d."
+  note: "The non-turn player's instances are processed after all of the turn player's (one apply_ace_overflow_for_sources pass per deletion batch)."
 "4-20-1":
   status: proven
   tests: ["ch16_new_keywords::arts_digivolve_replaces_option_trash_with_free_digivolve"]
@@ -752,11 +746,9 @@
   tests: ["ch16_attack_keywords::retaliation_mandatory_deletes_battled_digimon"]
   note: "Deleted as the attack target or as the attacker, <Retaliation> deletes the Digimon it battled."
 "16-13-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ON-DELETION-DRAINED-BEFORE-DELETION-OBSERVERS
+  status: proven
   tests: ["ch16_attack_keywords::retaliation_kind_matches_rule", "ch16_attack_keywords::retaliation_timing_matches_rule"]
-  note: "Timing half proven: an effect deletion does not trigger it, a battle deletion does. Kind half fails: <Retaliation> (an OnDeletion effect) and a simultaneously triggered 'when one of your Digimon is deleted' observer are drained in two separate stages with no TriggerOrder (Retaliation always first). retaliation_kind_matches_rule is #[ignore]d."
+  note: "Timing: an effect deletion does not trigger it, a battle deletion does. Kind: <Retaliation> (an OnDeletion effect) and a 'when one of your Digimon is deleted' observer triggered by the same deletion pend in one pool (one flush per deletion batch); P1 orders them through TriggerOrder."
 "16-13-3":
   status: proven
   tests: ["ch16_attack_keywords::retaliation_mandatory_deletes_battled_digimon"]
