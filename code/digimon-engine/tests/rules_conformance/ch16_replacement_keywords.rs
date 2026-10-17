@@ -109,9 +109,8 @@ fn current_prompt(r: &DebugRunner) -> Option<Prompt> {
     })
 }
 
-/// Settle every pending decision: trash a used Option first whenever the
-/// engine asks to order it, DECLINE every optional prompt, and take the only
-/// option of every other prompt. Returns the decisions offered, in order.
+/// Settle every pending decision: DECLINE every optional prompt, and take the
+/// only option of every other prompt. Returns the decisions offered, in order.
 fn settle_declining(r: &mut DebugRunner) -> Vec<Prompt> {
     let mut seen = Vec::new();
     for _ in 0..24 {
@@ -119,9 +118,6 @@ fn settle_declining(r: &mut DebugRunner) -> Vec<Prompt> {
             return seen;
         };
         seen.push(p.clone());
-        if trash_used_option_first(r) {
-            continue;
-        }
         if p.optional {
             r.decline_optional_trigger()
                 .unwrap_or_else(|e| panic!("decline {p:?}: {e:?}"));
@@ -141,9 +137,6 @@ fn advance_to(r: &mut DebugRunner, want: impl Fn(&Prompt) -> bool) -> bool {
         };
         if want(&p) {
             return true;
-        }
-        if trash_used_option_first(r) {
-            continue;
         }
         if p.optional {
             r.decline_optional_trigger()

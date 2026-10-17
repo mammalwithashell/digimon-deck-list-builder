@@ -158,43 +158,6 @@ pub fn use_option(r: &mut DebugRunner, player: PlayerId, card_id: &str) {
     );
 }
 
-/// Workaround for `F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE`: the engine
-/// currently offers the turn player a trigger-order choice that includes
-/// "Trash the used Option" when triggered effects are pending after the
-/// Option's [Main] effect resolves. Per §9-1-5 the used Option is trashed as
-/// pending processing once the effect resolves, with no ordering choice, so a
-/// conforming engine would never present this prompt. Until that gap is fixed
-/// this helper picks the trash first, so the scenario continues with only the
-/// triggered effects.
-pub fn trash_used_option_first(r: &mut DebugRunner) -> bool {
-    let is_option_trash_order = r.pending_selection().is_some_and(|sel| {
-        sel.kind == SelectionKind::TriggerOrder
-            && sel
-                .effect_choices
-                .iter()
-                .flatten()
-                .any(|c| c.label.starts_with("Trash the used Option"))
-    });
-    if is_option_trash_order {
-        choose(r, "Trash the used Option");
-    }
-    is_option_trash_order
-}
-
-/// `resolve_prompts`, trashing a used Option first whenever the engine asks
-/// to order it among pending triggered effects.
-pub fn settle_after_option(r: &mut DebugRunner) {
-    for _ in 0..16 {
-        if r.pending_selection().is_none() {
-            return;
-        }
-        if !trash_used_option_first(r) {
-            step_prompt(r);
-        }
-    }
-    panic!("prompts did not settle after 16 picks");
-}
-
 /// `(player, source card id)` of every effect-sourced memory change since `cp`,
 /// in event order.
 pub fn memory_sources(r: &DebugRunner, cp: usize) -> Vec<(PlayerId, String)> {

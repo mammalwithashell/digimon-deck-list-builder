@@ -15111,15 +15111,15 @@
       "text": "A used Option card is treated as not being in any area during the period from activation of its 1st [Main] effect until it's been resolved."
     },
     "9-1-5": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 9,
       "fingerprint": "2886ba315f2847fdd735e7c839b0b9c80cd0bf7391a1596460851d82cc7eb003",
-      "gap_id": "F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE",
+      "gap_id": null,
       "mechanisms": [
         "card-use-and-costs"
       ],
-      "note": "Two interruptions, both red: (1) the rule check deletes a 0 DP Digimon the [Main] caused before the Option is trashed (its would-be-deleted decision parks with P0's trash empty); (2) a trigger the [Main] caused makes the engine offer 'Trash the used Option' as a TriggerOrder branch. Test is #[ignore]d. The Option's trash itself emits no event (G-ENGINE-OPTION-TRASH-NO-EVENT, non-blocking), so the test reads the trash at parked decisions.",
-      "status": "gap",
+      "note": "The used Option is disposed in the step that finishes its [Main] body (drain_effect_queue_inner right after the OptionMain entry; the top of drain_effect_queue when the body's last selection has just resolved), before the rules check and any trigger, and logs a GameEvent::Trash. Both halves green: a 0 DP rule-check deletion's would-be-deleted decision parks with the Option already trashed, and a triggered [On Play]'s decision is the next one (no 'Trash the used Option' TriggerOrder branch); the event log orders the Option's Trash before the rule check's effect and deletion and before the [On Play]'s memory gain (F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE, G-ENGINE-OPTION-TRASH-NO-EVENT resolved). Proven for a player-used Option only: an Option used by an effect from inside a selection callback can still see a rules check before its trash, and only the last queued [Main] (not the 1st) ends the period; both are recorded as residuals in the F- entry, untested.",
+      "status": "proven",
       "tests": [
         "ch18_pending_overwrite::used_option_trashed_immediately_after_first_main_uninterrupted"
       ],
@@ -15327,21 +15327,21 @@
         "total": 55
       },
       "9": {
-        "gap": 11,
+        "gap": 10,
         "not_testable": 1,
-        "proven": 1,
+        "proven": 2,
         "total": 13
       }
     },
-    "gap": 626,
+    "gap": 625,
     "mechanics": {
-      "gap_blocking": 23,
+      "gap_blocking": 22,
       "gap_nonblocking": 322,
       "not_testable": 152,
-      "proven": 218
+      "proven": 219
     },
     "not-testable": 246,
-    "proven": 247
+    "proven": 248
   },
   "version": 1
 }

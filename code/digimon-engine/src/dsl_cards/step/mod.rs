@@ -377,7 +377,6 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::DigiXrosMaterialSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::OuterOptionalTrigger(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::TriggerOrderSelection(s)) => s.outer_conts.push(cont),
-            Some(ResumeFrame::OptionTrashOrder(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::OptionalReplacement(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ReplacementBody {outer_conts,..}) => outer_conts.push(cont),
             Some(ResumeFrame::FieldTopSourceBatch { outer_conts, .. }) => outer_conts.push(cont),

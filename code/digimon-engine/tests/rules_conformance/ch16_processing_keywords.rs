@@ -116,16 +116,8 @@ fn current_prompt(r: &DebugRunner) -> Option<Prompt> {
     })
 }
 
-/// Whether `p` is the engine's "order the used Option's trash" decision.
-fn is_option_trash_order(p: &Prompt) -> bool {
-    p.labels
-        .iter()
-        .any(|l| l.starts_with("Trash the used Option"))
-}
-
-/// Settle every pending decision: trash a used Option first whenever the
-/// engine asks to order it, DECLINE every optional prompt, and take the only
-/// option of every other prompt. Returns the decisions offered, in order.
+/// Settle every pending decision: DECLINE every optional prompt, and take the
+/// only option of every other prompt. Returns the decisions offered, in order.
 fn settle_declining(r: &mut DebugRunner) -> Vec<Prompt> {
     let mut seen = Vec::new();
     for _ in 0..24 {
@@ -133,9 +125,6 @@ fn settle_declining(r: &mut DebugRunner) -> Vec<Prompt> {
             return seen;
         };
         seen.push(p.clone());
-        if trash_used_option_first(r) {
-            continue;
-        }
         if p.optional {
             r.decline_optional_trigger()
                 .unwrap_or_else(|e| panic!("decline {p:?}: {e:?}"));
@@ -156,9 +145,6 @@ fn advance_to(r: &mut DebugRunner, want: impl Fn(&Prompt) -> bool) -> bool {
         if want(&p) {
             return true;
         }
-        if trash_used_option_first(r) {
-            continue;
-        }
         if p.optional {
             r.decline_optional_trigger()
                 .unwrap_or_else(|e| panic!("decline {p:?}: {e:?}"));
@@ -178,13 +164,10 @@ fn offered_to(prompts: &[Prompt], player: PlayerId) -> bool {
     prompts.iter().any(|p| optional_for(player)(p))
 }
 
-/// Decisions other than the engine's used-Option trash ordering.
+/// Every decision offered. (§9-1-5: the used Option's trash is never one,
+/// so nothing is filtered out.)
 fn decisions(prompts: &[Prompt]) -> Vec<Prompt> {
-    prompts
-        .iter()
-        .filter(|p| !is_option_trash_order(p))
-        .cloned()
-        .collect()
+    prompts.to_vec()
 }
 
 /// Whether `player` may take `action` now (its mask bit).
@@ -1016,9 +999,6 @@ fn settle_declaring_max(r: &mut DebugRunner) {
         let Some(p) = current_prompt(r) else {
             return;
         };
-        if trash_used_option_first(r) {
-            continue;
-        }
         if p.optional {
             r.decline_optional_trigger()
                 .unwrap_or_else(|e| panic!("decline {p:?}: {e:?}"));
@@ -1072,7 +1052,7 @@ fn de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3() 
     let (mut r, target) = dedigi_board("DEDIGI2_OPT", &[FILL, "LV4_PLAIN", "LV5_PLAIN"], None);
     use_on_opponent_slot(&mut r, "DEDIGI2_OPT", target.index as u16);
     let p = current_prompt(&r)
-        .filter(|p| p.player == 0 && !is_option_trash_order(p))
+        .filter(|p| p.player == 0)
         .expect("P0 declares how many cards to trash");
     assert!(!p.optional, "once activated, 0 can't be chosen: {p:?}");
     assert_eq!(p.actions.len(), 2, "the numbers 1 and 2: {p:?}");
@@ -1358,9 +1338,6 @@ fn settle_accepting(r: &mut DebugRunner) -> Vec<Prompt> {
             return seen;
         };
         seen.push(p.clone());
-        if trash_used_option_first(r) {
-            continue;
-        }
         if p.optional && p.actions.len() != 1 {
             r.accept_optional_trigger()
                 .unwrap_or_else(|e| panic!("accept {p:?}: {e:?}"));
@@ -1648,7 +1625,6 @@ fn save_kind_matches_rule() {
     let mut r = save_board(&["INH_OD_MEM", "SAVE"], true);
     let cp = r.event_checkpoint();
     use_on_opponent_slot(&mut r, "MAIN_DEL1", 0);
-    trash_used_option_first(&mut r);
     let mut ids: Vec<String> = order_choices(&r, 1)
         .iter()
         .map(|l| branch_card(l).to_string())
@@ -2125,7 +2101,6 @@ fn fortitude_kind_matches_rule() {
     let mut r = save_board(&["INH_OD_MEM", "FORT"], false);
     let cp = r.event_checkpoint();
     use_on_opponent_slot(&mut r, "MAIN_DEL1", 0);
-    trash_used_option_first(&mut r);
     let mut ids: Vec<String> = order_choices(&r, 1)
         .iter()
         .map(|l| branch_card(l).to_string())

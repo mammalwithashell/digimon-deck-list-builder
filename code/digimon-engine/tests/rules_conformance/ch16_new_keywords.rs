@@ -112,9 +112,8 @@ fn current_prompt(r: &DebugRunner) -> Option<Prompt> {
     })
 }
 
-/// Settle every pending decision: trash a used Option first whenever the
-/// engine asks to order it, DECLINE every optional prompt, and take the only
-/// option of every other prompt. Returns the decisions offered, in order.
+/// Settle every pending decision: DECLINE every optional prompt, and take the
+/// only option of every other prompt. Returns the decisions offered, in order.
 fn settle_declining(r: &mut DebugRunner) -> Vec<Prompt> {
     let mut seen = Vec::new();
     for _ in 0..24 {
@@ -122,9 +121,6 @@ fn settle_declining(r: &mut DebugRunner) -> Vec<Prompt> {
             return seen;
         };
         seen.push(p.clone());
-        if trash_used_option_first(r) {
-            continue;
-        }
         if p.optional {
             r.decline_optional_trigger()
                 .unwrap_or_else(|e| panic!("decline {p:?}: {e:?}"));
@@ -144,9 +140,6 @@ fn advance_to(r: &mut DebugRunner, want: impl Fn(&Prompt) -> bool) -> bool {
         };
         if want(&p) {
             return true;
-        }
-        if trash_used_option_first(r) {
-            continue;
         }
         if p.optional {
             r.decline_optional_trigger()
@@ -298,7 +291,7 @@ fn use_req_ignores_color_requirements_with_specified_cards() {
         );
         let cp = r.event_checkpoint();
         use_option(&mut r, 0, "USE_REQ_OPT");
-        settle_after_option(&mut r);
+        resolve_prompts(&mut r);
         assert_eq!(
             memory_sources(&r, cp),
             vec![(0, "USE_REQ_OPT".to_string())],
@@ -387,7 +380,7 @@ fn use_req_timing_matches_rule() {
     assert!(can_use_from_hand(&r, 0), "TS_DIGI is on the field");
 
     use_option(&mut r, 0, "MAIN_DEL_OWN_MEM");
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert!(field_top_ids(&r, 0).is_empty(), "TS_DIGI was deleted");
     assert_eq!(hand_ids(&r, 0), owned(&["USE_REQ_OPT"]));
     assert!(
@@ -1628,7 +1621,7 @@ fn dual_traits_belong_to_both_informations() {
             "{picker}: DUAL_ARTS is a legal pick (no pick offered)"
         );
         pick_hand_card(&mut r, 0, "DUAL_ARTS");
-        settle_after_option(&mut r);
+        resolve_prompts(&mut r);
         assert!(hand_ids(&r, 0).is_empty(), "{picker}");
         assert!(
             trash_ids(&r, 0).contains(&"DUAL_ARTS".to_string()),
@@ -1740,7 +1733,7 @@ fn dual_option_information_referenced_as_option_card() {
         "DUAL_ARTS is a purple Option card: a legal pick (no pick offered)"
     );
     pick_hand_card(&mut r, 0, "DUAL_ARTS");
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert!(hand_ids(&r, 0).is_empty());
     assert!(trash_ids(&r, 0).contains(&"DUAL_ARTS".to_string()));
 
@@ -1762,7 +1755,7 @@ fn dual_option_information_referenced_as_option_card() {
             "{picker}: {why}: {:?}",
             r.pending_selection()
         );
-        settle_after_option(&mut r);
+        resolve_prompts(&mut r);
         assert_eq!(hand_ids(&r, 0), owned(&["DUAL_ARTS"]), "{picker}: {why}");
     }
 }
@@ -1793,7 +1786,7 @@ fn dual_unqualified_colour_reference_matches_either_information() {
             "{picker}: one of DUAL_ARTS's informations has the color: a legal pick (no pick offered)"
         );
         pick_hand_card(&mut r, 0, "DUAL_ARTS");
-        settle_after_option(&mut r);
+        resolve_prompts(&mut r);
         assert!(hand_ids(&r, 0).is_empty(), "{picker}");
         assert!(
             trash_ids(&r, 0).contains(&"DUAL_ARTS".to_string()),
@@ -1809,7 +1802,7 @@ fn dual_unqualified_colour_reference_matches_either_information() {
         "neither information is blue: {:?}",
         r.pending_selection()
     );
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert_eq!(hand_ids(&r, 0), owned(&["DUAL_ARTS"]));
 }
 
@@ -1837,7 +1830,7 @@ fn dual_unqualified_reference_holds_through_one_information() {
         "no single information is both purple and Lv.6: {:?}",
         r.pending_selection()
     );
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert_eq!(hand_ids(&r, 0), owned(&["DUAL_ARTS"]));
 
     let mut r = board(&["HAND_PICK_NOT_RED_ANY", "DUAL_ARTS"]);
@@ -1848,7 +1841,7 @@ fn dual_unqualified_reference_holds_through_one_information() {
         "the Option information is not red: a legal pick (no pick offered)"
     );
     pick_hand_card(&mut r, 0, "DUAL_ARTS");
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert!(hand_ids(&r, 0).is_empty());
     assert!(trash_ids(&r, 0).contains(&"DUAL_ARTS".to_string()));
 }
@@ -1884,7 +1877,7 @@ fn dual_digivolution_card_on_field_reads_digimon_information() {
         "the DUAL digivolution card is red: a legal pick (no pick offered)"
     );
     step_prompt(&mut r);
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert!(trash_ids(&r, 1).contains(&"DUAL_ARTS".to_string()));
 
     let mut r = staged("SRC_PICK_PURPLE_ANY");
@@ -1894,7 +1887,7 @@ fn dual_digivolution_card_on_field_reads_digimon_information() {
         "purple is only the Option information, not readable on the field: {:?}",
         r.pending_selection()
     );
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert!(trash_ids(&r, 1).is_empty());
 }
 
