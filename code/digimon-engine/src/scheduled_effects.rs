@@ -92,7 +92,11 @@ fn timing_controller_matches(game: &Game, effect: &ScheduledEffect) -> bool {
         EffectTiming::EndOfYourNextTurn | EffectTiming::UntilNextUnsuspend => {
             effect.controller == game.turn_player()
         }
-        EffectTiming::EndOfOpponentsNextTurn => effect.controller != game.turn_player(),
+        // "At the end of your opponent's turn": the controller's opponent is
+        // the turn player whose turn is ending.
+        EffectTiming::EndOfOpponentsTurn | EffectTiming::EndOfOpponentsNextTurn => {
+            effect.controller != game.turn_player()
+        }
         _ => true,
     }
 }

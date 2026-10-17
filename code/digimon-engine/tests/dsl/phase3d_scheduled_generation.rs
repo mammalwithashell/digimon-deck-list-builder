@@ -133,3 +133,34 @@ fn until_next_unsuspend_skips_current_unsuspend_window() {
     assert_eq!(runner.game.memory, 5);
     assert!(runner.game.scheduled_effects.is_empty());
 }
+
+/// "At the end of your opponent's turn" scheduled during its controller's own
+/// turn waits for the opponent's turn end: it is not due at the end of the
+/// controller's turn.
+#[test]
+fn end_of_opponents_turn_skips_controllers_own_turn_end() {
+    let mut runner = runner();
+    schedule(
+        &mut runner,
+        CompiledTiming::EndOfOpponentsTurn,
+        vec![CompiledStep::GainMemory(4)],
+    );
+
+    digimon_engine::scheduled_effects::fire_scheduled_for_timing(
+        &mut runner.game,
+        EffectTiming::EndOfOpponentsTurn,
+    );
+    assert_eq!(runner.game.memory, 0, "its controller's own turn end");
+    assert_eq!(runner.game.scheduled_effects.len(), 1);
+
+    set_turn(&mut runner, 2, 1);
+    digimon_engine::scheduled_effects::fire_scheduled_for_timing(
+        &mut runner.game,
+        EffectTiming::EndOfOpponentsTurn,
+    );
+    assert_eq!(
+        runner.game.memory, -4,
+        "scheduled body gains memory for its controller at the opponent's turn end"
+    );
+    assert!(runner.game.scheduled_effects.is_empty());
+}

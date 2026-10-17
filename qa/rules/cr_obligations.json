@@ -8492,13 +8492,14 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "The 18-1-1 board plus EOT_MEM ([End of Your Turn] Gain 2 memory): at the end of P0's turn the pending -3 and EOT_MEM are offered in ONE TriggerOrder to P0 before either is processed, and both orders are honoured. Every timing site enqueues its due ScheduledEffects (Game::enqueue_scheduled_for_timing) into the same batch as the printed triggers before draining. The provenance-keyed turn-end deletion (delete the Digimon this effect played) pools the same way; an optional effect ordered first keeps its accept/decline; the end-of-opponent's-turn pool resolves before the turn passes (no turn advance or TurnStart while it waits).",
+      "note": "The 18-1-1 board plus EOT_MEM ([End of Your Turn] Gain 2 memory): at the end of P0's turn the pending -3 and EOT_MEM are offered in ONE TriggerOrder to P0 before either is processed, and both orders are honoured. Every timing site enqueues its due ScheduledEffects (Game::enqueue_scheduled_for_timing) into the same batch as the printed triggers before draining. The provenance-keyed turn-end deletion (delete the Digimon this effect played) pools the same way; an optional effect ordered first keeps its accept/decline; the end-of-opponent's-turn pool resolves before the turn passes (no turn advance or TurnStart while it waits); a pending deletion whose Digimon already left is not offered.",
       "status": "proven",
       "tests": [
         "ch18_pending_overwrite::pending_processing_orders_with_simultaneous_triggers",
         "ch18_pending_overwrite::pending_deletion_orders_with_simultaneous_triggers",
         "ch18_pending_overwrite::optional_effect_ordered_first_in_the_pool_keeps_its_choice",
-        "ch18_pending_overwrite::end_of_opponents_turn_pool_resolves_before_the_turn_passes"
+        "ch18_pending_overwrite::end_of_opponents_turn_pool_resolves_before_the_turn_passes",
+        "ch18_pending_overwrite::departed_pending_deletion_is_not_an_ordering_item"
       ],
       "text": "If other processing will be performed at the same time as pending processing, it is performed similar to effects that trigger simultaneously. For details, refer to 15-4-3 \"Simultaneous Triggering\")15-4-3"
     },

@@ -388,6 +388,53 @@ fn pending_deletion_orders_with_simultaneous_triggers() {
     }
 }
 
+/// A pending "delete the Digimon this effect played" whose Digimon already
+/// left the battle area has nothing left to process, so it is not an item of
+/// the end-of-turn pool: P0 plays `VANILLA_LV3` with `MAIN_PLAY_LV3_DEL_EOT`,
+/// the Digimon is deleted before the turn ends, and at the end of the turn
+/// `EOT_MEM` resolves on its own (no ordering choice with a dead branch).
+#[test]
+fn departed_pending_deletion_is_not_an_ordering_item() {
+    cite!(
+        "18-1-2",
+        "1b5f8339dafb6d36f24a37380b4ccbcf4131788de779f4d1800da5a65bbd3372"
+    );
+    let mut r = ch18()
+        .hand(0, &["MAIN_PLAY_LV3_DEL_EOT", FILL])
+        .deck(0, &[FILL; 4])
+        .deck(1, &[FILL; 4])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "EOT_MEM", Some(0));
+    use_option(&mut r, 0, "MAIN_PLAY_LV3_DEL_EOT");
+    pick_hand_card(&mut r, 0, FILL);
+    resolve_prompts(&mut r);
+    assert_eq!(field_top_ids(&r, 0), owned(&["EOT_MEM", FILL]));
+    let played = r.perm_handle(0, 1);
+    r.game.delete_permanent_with_cause(
+        played,
+        digimon_engine::replacement::ReplacementCause::OwnEffect,
+    );
+    resolve_prompts(&mut r);
+    assert_eq!(field_top_ids(&r, 0), owned(&["EOT_MEM"]), "it left first");
+    let cp = r.event_checkpoint();
+    r.pass_turn();
+    assert!(
+        r.pending_selection().is_none(),
+        "no ordering choice with a dead pending deletion: {:?}",
+        r.pending_selection()
+    );
+    assert_eq!(
+        memory_deltas(&r, cp)
+            .into_iter()
+            .filter(|(_, id, _)| id == "EOT_MEM")
+            .count(),
+        1,
+        "EOT_MEM resolved on its own"
+    );
+    assert_eq!(r.turn_player(), 1, "the turn passed");
+}
+
 /// The pool at the end of the opponent's turn (§18-1-2) resolves before the
 /// turn passes. P0 used `MAIN_MEM_AT_EOONT` ("At the end of your opponent's
 /// next turn, gain 2 memory") and has the Tamer `EOOT_MEM` ("[End of

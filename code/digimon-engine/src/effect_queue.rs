@@ -1790,14 +1790,11 @@ impl Game {
             // range. Overflow auto-fires in collection order after the prompt
             // completes (rare; see the cap handling inside install_*).
             //
-            // Note: the pre-cost decline prompt above is only installed for a
-            // single-trigger bundle (`bundle.len() == 1`). For a multi-copy
-            // bundle (`bundle.len() >= 2`), once the player picks the first
-            // trigger here, that trigger's `activation_cost_fn` fires inside
-            // `run_queued_effect` without a separate per-trigger decline.
-            // This is a pre-existing limitation, kept intentional: the
-            // TriggerOrder PASS bit declines the whole bundle, not a single
-            // copy mid-resolution.
+            // The pick only decides the ORDER: an optional pick keeps its own
+            // decline (outer-optional prompt, or the pre-cost decline for an
+            // activation-cost effect) via `run_picked_trigger`. The
+            // TriggerOrder PASS bit (all-optional bundles only) declines the
+            // whole bundle.
             let any_mandatory = bundle.iter().any(|&i| !self.effect_queue[i].is_optional);
             self.install_trigger_order_selection(chooser, &bundle, !any_mandatory);
             return;
@@ -3557,10 +3554,17 @@ impl Game {
     /// looked up report `true` (the run-time path decides those).
     pub(crate) fn queued_effect_condition_passes(&mut self, i: usize) -> bool {
         let Some(qe) = self.effect_queue.get(i).cloned() else { return false; };
+        self.queued_entry_condition_passes(&qe)
+    }
+
+    /// [`Self::queued_effect_condition_passes`] for an entry already taken
+    /// out of the queue: a simultaneous-play group passes when any member's
+    /// context does.
+    fn queued_entry_condition_passes(&mut self, qe: &QueuedEffect) -> bool {
         if qe.trigger_context.as_ref().is_some_and(|c| !c.simultaneous_play_members.is_empty()) {
-            return !self.matching_simultaneous_play_contexts(&qe).is_empty();
+            return !self.matching_simultaneous_play_contexts(qe).is_empty();
         }
-        self.queued_single_effect_condition_passes(&qe)
+        self.queued_single_effect_condition_passes(qe)
     }
 
     fn matching_simultaneous_play_contexts(&mut self, qe: &QueuedEffect) -> Vec<TriggerContext> {
@@ -3573,8 +3577,20 @@ impl Game {
     }
 
     fn queued_single_effect_condition_passes(&mut self, qe: &QueuedEffect) -> bool {
+        // A provenance deletion whose played Digimon already left the battle
+        // area has nothing to delete: DCGO attaches it to that permanent
+        // (`EX11_022.cs`), so it vanishes with it. Not an orderable branch.
+        if let Some(crate::scheduled_effects::PendingProcessing::ProvenanceDeletion(entry)) =
+            &qe.pending_processing
+        {
+            return matches!(
+                self.resolve_provenance_token(entry.token),
+                Some(crate::trigger_context::EventSubject::Permanent(_))
+            );
+        }
         if qe.granted_effect_id.is_some() || qe.pending_processing.is_some() {
-            // Granted effects have no clause condition — keep them.
+            // Granted effects and scheduled bodies have no clause condition —
+            // keep them.
             return true;
         }
         // Snapshot the fields we need; release the borrow before
@@ -5341,7 +5357,7 @@ impl Game {
                     .map(|effect| effect.activation_cost_fn.is_some())
             })
             .unwrap_or(false);
-        has_activation_cost && self.queued_single_effect_condition_passes(qe)
+        has_activation_cost && self.queued_entry_condition_passes(qe)
     }
 
     /// Resolve any pending selection — `TriggerOrder`, `Target`, `Hand`,

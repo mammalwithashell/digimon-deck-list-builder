@@ -1198,8 +1198,9 @@ pub struct Game {
     pub scheduled_provenance_deletions: Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
     /// PUPPETS-G016 â€” provenance-keyed deletions scheduled for the end of the
     /// **opponent's** turn. Mirror of `scheduled_provenance_deletions` but
-    /// drained from `rotate_turn_player` (after `EndOfOpponentsTurn` observers
-    /// and scheduled-effect drains) rather than from `fire_end_of_your_turn`.
+    /// enqueued into `rotate_turn_player`'s `EndOfOpponentsTurn` pool
+    /// (`Game::enqueue_provenance_deletions_at_opponents_turn_end`, §18-1-2)
+    /// rather than the `EndOfYourTurn` one.
     /// Used by P-165 ShoeShoemon ("At the end of your opponent's turn, delete
     /// that token").
     pub scheduled_provenance_deletions_opp:
