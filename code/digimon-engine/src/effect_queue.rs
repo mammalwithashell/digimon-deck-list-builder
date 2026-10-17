@@ -17,8 +17,9 @@
 //!
 //! §18-3 infinite loops: before each resolution step the drainer records a
 //! loop signature (`Game::watch_for_infinite_loop`, `game::infinite_loop`);
-//! the same state recurring `LOOP_SIGNATURE_REPEATS` times with no player
-//! decision in between ends the game in the §18-3-2 draw. A loop with an
+//! the same state recurring `LOOP_SIGNATURE_REPEATS` times with no
+//! declinable decision in between (a forced pick does not count) ends the
+//! game in the §18-3-2 draw. A loop with an
 //! optional decision in it repeats for as long as its owner keeps accepting
 //! (§18-3-3-3, ruling W10). `MAX_CHAIN_DEPTH` is a far backstop behind the
 //! signature watch that ends in the same draw; nothing is ever silently
@@ -1414,10 +1415,11 @@ impl Game {
             }
         }
         self.effect_drain_depth = self.effect_drain_depth.saturating_sub(1);
-        if self.effect_drain_depth == 0 {
-            // §18-3: the outermost drain has settled (or parked on a player
-            // decision, whose resolution starts a new watch anyway), so this
-            // processing is over; a later drain starts its own loop watch.
+        if self.effect_drain_depth == 0 && self.pending_selection.is_none() {
+            // §18-3: the outermost drain has settled with nothing parked, so
+            // this processing is over; a later drain starts its own loop
+            // watch. A drain parked on a decision keeps its watch: whether it
+            // starts over depends on that decision (declinable or forced).
             self.reset_loop_watch();
         }
         // G-ENGINE-TURN-END-MID-EFFECT: a turn end that `check_turn_end` held
@@ -1507,10 +1509,11 @@ impl Game {
 
             self.effect_chain_depth = self.effect_chain_depth.saturating_add(1);
             // §18-3-1 / §18-3-2: the same pending entries over the same board
-            // again, with no player decision since, is an infinite loop
-            // neither player can stop (a decision resets the watch, so a loop
-            // with an optional "you may" in it keeps repeating while its owner
-            // accepts, §18-3-3-3). The game ends in a draw; the queue is never
+            // again, with no declinable decision since, is an infinite loop
+            // neither player can stop (a declinable decision resets the
+            // watch, so a loop with an optional "you may" in it keeps
+            // repeating while its owner accepts, §18-3-3-3; a forced pick
+            // does not). The game ends in a draw; the queue is never
             // dropped with the game going on.
             if self.loop_step_ends_game(
                 crate::game::infinite_loop::LoopSite::Queue,
@@ -5487,13 +5490,23 @@ impl Game {
         }
         let was_attack_pending = self.pending_attack.is_some();
 
-        // §18-3-3-3 / gap G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED: a player
-        // decision resolves here (page navigation returned above). What
-        // repeats after it had a decision in its cycle, so the §18-3 loop
-        // watch starts over and the chain count restarts -- at 1, not 0, when
-        // a chain is running, keeping the "inside a chain" marker that
-        // attack-cancel and until-condition re-evaluation read.
-        self.reset_loop_watch();
+        // §18-3 / gap G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED: a player
+        // decision resolves here (page navigation returned above).
+        // - The far `MAX_CHAIN_DEPTH` backstop counts resolutions between
+        //   decisions, so ANY decision restarts the chain count -- at 1, not
+        //   0, when a chain is running, keeping the "inside a chain" marker
+        //   that attack-cancel and until-condition re-evaluation read.
+        // - The loop-signature watch starts over only after a DECLINABLE
+        //   decision: §18-3-3-3's stop is the player's optional decision, so a
+        //   loop whose repetitions only ask forced questions is still one
+        //   neither player can stop (§18-3-2) and keeps its watch.
+        let declinable = self
+            .pending_selection
+            .as_ref()
+            .is_some_and(crate::game::infinite_loop::selection_can_stop_a_loop);
+        if declinable {
+            self.reset_loop_watch();
+        }
         if self.effect_chain_depth > 0 {
             self.effect_chain_depth = 1;
         }

@@ -20,10 +20,13 @@
 //! signature: the pending effect entries (source card, controller, timing,
 //! slot) plus the board (every zone's card handles, suspension, memory) --
 //! the state a repeating set of processing keeps returning to. Resolving a
-//! player decision clears the watch, and so does the outermost drain settling,
-//! so a signature seen [`LOOP_SIGNATURE_REPEATS`] times means the same state
-//! recurred with no decision offered within the cycle: neither player can
-//! stop it, and the game ends in the §18-3-2 draw (`GameEvent::InfiniteLoop`,
+//! DECLINABLE player decision (`selection_can_stop_a_loop`) clears the watch,
+//! and so does the outermost drain settling with nothing parked; a forced
+//! decision (a mandatory pick, a trigger order) does not, since it gives no
+//! ability to stop the loop. A signature seen [`LOOP_SIGNATURE_REPEATS`]
+//! times therefore means the same state recurred with no optional decision
+//! offered within the cycle: neither player can stop it, and the game ends in
+//! the §18-3-2 draw (`GameEvent::InfiniteLoop`,
 //! then `GameOver { winner: None, reason: InfiniteLoopDraw }`). A chain that
 //! makes progress (consumes a queued entry, moves a card, changes memory)
 //! never repeats a signature, so a long finite chain runs to its end.
@@ -73,6 +76,18 @@ fn hash_permanent<H: Hasher>(permanent: &Permanent, h: &mut H) {
     hash_cards(&permanent.card_sources, h);
     hash_cards(&permanent.linked_cards, h);
     permanent.is_suspended.hash(h);
+}
+
+/// Whether resolving `sel` gives its player the ability to stop a loop
+/// (§18-3-3-3: "the player stops the processing when possible"): a prompt
+/// that can be declined (`is_optional`, PASS legal), or an effect choice
+/// between two or more branches (the DSL's "you may X instead" shape). A
+/// forced decision -- a mandatory pick, a trigger order, a single-branch
+/// choice -- cannot stop it, so the loop watch survives it.
+pub(crate) fn selection_can_stop_a_loop(sel: &crate::selection::PendingSelection) -> bool {
+    sel.is_optional
+        || (sel.kind == crate::selection::SelectionKind::EffectChoice
+            && sel.effect_choices.as_ref().is_some_and(|c| c.len() >= 2))
 }
 
 impl Game {
@@ -134,9 +149,9 @@ impl Game {
         false
     }
 
-    /// A player decision resolved, or the outermost drain settled: whatever
-    /// repeats from here on had a decision (or fresh processing) in between,
-    /// so it starts a new watch.
+    /// A declinable player decision resolved, or the outermost drain settled
+    /// with nothing parked: whatever repeats from here on had an optional
+    /// decision (or fresh processing) in between, so it starts a new watch.
     pub(crate) fn reset_loop_watch(&mut self) {
         self.loop_watch.clear();
     }

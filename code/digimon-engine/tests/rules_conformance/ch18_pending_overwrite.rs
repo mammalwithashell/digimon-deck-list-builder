@@ -992,6 +992,66 @@ fn stoppable_loop_repeats_until_its_owner_stops_it() {
     });
 }
 
+/// §18-3-2 "If an infinite loop occurs and neither player has the ability to
+/// stop it, that game ends in a draw."
+///
+/// A forced decision is not the ability to stop a loop: §18-3-3-3's stop is an
+/// optional decision. P0's `LOOP_FLIP_PICK` suspends itself on play; "[All
+/// Turns] When this Digimon suspends, unsuspend 1 of your Digimon" (with this
+/// Digimon P0's only Digimon, a mandatory pick with one option) and "[All
+/// Turns] When this Digimon unsuspends, suspend it" re-trigger each other
+/// forever. P0 answers every pick (the only legal answer); the board returns
+/// to the same state each time, so the game still ends in a draw
+/// (`InfiniteLoop`, then `GameOver` with no winner) instead of asking the same
+/// forced question forever.
+#[test]
+fn forced_prompt_loop_still_ends_in_a_draw() {
+    cite!(
+        "18-3-2",
+        "989de42a09e690aa1c0e80632ee1aeb9f94eb27d3fdfeff9b09fa784f38f29ca"
+    );
+    within("forced-prompt loop", Duration::from_secs(30), || {
+        let (mut r, cp, _) = loop_board("LOOP_FLIP_PICK");
+        let mut picks = 0;
+        // Hard step bound: a correct engine draws after a few repetitions.
+        for _ in 0..100 {
+            if r.game_over() {
+                break;
+            }
+            let Some(sel) = r.pending_selection() else {
+                break;
+            };
+            assert!(!sel.is_optional, "the pick is mandatory: {sel:?}");
+            assert_eq!(
+                sel.valid_action_ids.len(),
+                1,
+                "the pick has a single option: {sel:?}"
+            );
+            let (player, action) = (sel.selecting_player, sel.valid_action_ids[0]);
+            r.execute_action(player, action)
+                .unwrap_or_else(|e| panic!("forced pick rejected: {e:?}"));
+            picks += 1;
+        }
+        assert!(picks >= 1, "the forced pick is offered");
+        let events = r.events_since(cp);
+        let loop_at = events
+            .iter()
+            .position(|e| matches!(e, GameEvent::InfiniteLoop { .. }));
+        let over_at = events
+            .iter()
+            .position(|e| matches!(e, GameEvent::GameOver { winner: None, .. }));
+        assert!(
+            r.game_over() && r.winner().is_none(),
+            "a forced-prompt loop nobody can stop ends in a draw ({picks} picks; pending: {:?})",
+            r.pending_selection()
+        );
+        assert!(
+            matches!((loop_at, over_at), (Some(l), Some(o)) if l < o),
+            "InfiniteLoop then GameOver {{ winner: None }}: {loop_at:?} / {over_at:?}"
+        );
+    });
+}
+
 /// §18-3-1 "An infinite loop refers to a state where a set of processing will
 /// continue infinitely or must be continued infinitely as a result of
 /// processing for a rule or effect, and game progress is no longer possible."
