@@ -14,8 +14,10 @@ fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
         serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     assert_eq!(rec.engine_schema_version, 1, "schema retained; only reviewed source-attribution step53 migrated");
     let digest_version = digimon_engine::recorder::VerificationDigestVersion::from_engine_schema(rec.engine_schema_version).unwrap();
-    assert_eq!(rec.actions.len(), 64);
-    assert_eq!(rec.digests.len(), 64);
+    // Migrated 2026-10-17 for the §15-7-1 optional-condition prompt (da93979e8): one accept
+    // action (59) inserted after step 44, so the recorded path now has 65 actions and digests.
+    assert_eq!(rec.actions.len(), 65);
+    assert_eq!(rec.digests.len(), 65);
     let deck = |d: &ReplayDeckRef| match d {
         ReplayDeckRef::Inline { cards } => cards.clone(),
         _ => panic!("regression fixture requires inline decks"),
@@ -73,7 +75,7 @@ fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
                 i + 1
             );
         }
-        if i == 52 {
+        if i == 53 {
             use digimon_engine::enums::EffectTiming;
             use digimon_engine::trigger_context::EventCause;
             let affected: Vec<_> = runner.game.effect_queue.iter()
@@ -89,10 +91,10 @@ fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
                 assert_eq!(source.source_permanent, Some(digimon_engine::permanent::PermanentHandle {player:0,index:0}));
             }
         }
-        if i == 55 {
+        if i == 56 {
             assert!(
                 runner.game.pending_selection.is_some(),
-                "clone actual pending step56"
+                "clone actual pending step57"
             );
             let mut branch = make();
             branch.game = runner.game.clone();
