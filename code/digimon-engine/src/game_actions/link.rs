@@ -1170,6 +1170,10 @@ impl Game {
                 .is_some_and(|d| !d.link_text.trim().is_empty());
         }
         let read_ctx = EffectReadContext::new(self, card, None, reader);
+        // `any`, not the chosen requirement: a card with two link requirements
+        // at different costs could be offered a host only the second admits
+        // while the declared link pays the first one's cost (§10-1-3-1 has the
+        // player choose 1 requirement). No lowered card has two today.
         requirements.any(|e| e.link_filter.as_ref().map_or(true, |f| f(&read_ctx, host)))
     }
 
@@ -1268,10 +1272,12 @@ impl Game {
     }
 
     /// §4-9-5 in a declared link: when the new card replaces existing link
-    /// cards and there is a choice (2+ existing), park the linking player's
-    /// choice of exactly that many; `purpose` finishes the link after the
-    /// picks are trashed. Returns `false` when nothing needs choosing (the
-    /// attach primitive then trims a forced single card).
+    /// cards and there is a choice (fewer to trash than there are), park the
+    /// linking player's choice of exactly that many; `purpose` finishes the
+    /// link after the picks are trashed. Returns `false` when nothing needs
+    /// choosing: every existing card goes (trashed here, e.g. a host already
+    /// over its limit), or a lone card the attach primitive trims, or nothing
+    /// could be parked; the caller then attaches directly.
     pub(crate) fn park_link_replacement_choice(
         &mut self,
         chooser: PlayerId,
@@ -1288,6 +1294,11 @@ impl Game {
         if excess == 0 || cards.len() <= 1 {
             return false;
         }
+        if excess >= cards.len() {
+            // No choice: every existing link card is replaced.
+            self.trash_link_cards_by_rule(host, &cards);
+            return false;
+        }
         self.install_link_card_trash_choice(LinkCardTrashChoiceState {
             chooser,
             host,
@@ -1296,13 +1307,14 @@ impl Game {
             chosen: Vec::new(),
             purpose,
             outer_conts: Vec::new(),
-        });
-        true
+        })
     }
 
     /// §17-1-3-2-5 (Q6370): the first host over its link limit has its
-    /// controller choose exactly the excess (never a tail trim). A single
-    /// removable card is trashed directly. Returns `true` if it acted.
+    /// controller choose exactly the excess (never a tail trim). When every
+    /// removable card is excess (a lone card, or a limit of 0) they are
+    /// trashed directly: there is nothing to choose. Returns `true` if it
+    /// acted.
     pub(crate) fn park_first_link_excess_trim(&mut self) -> bool {
         let targets = self.collect_link_rule_targets();
         let Some((host, excess)) = targets.iter().find_map(|(h, t)| match t {
@@ -1325,9 +1337,9 @@ impl Game {
             .map(|c| c.handle())
             .filter(|c| !unqualified.contains(c))
             .collect();
-        if remaining.len() == 1 {
+        if excess >= remaining.len() {
             self.trash_link_cards_by_rule(host, &remaining);
-            return true;
+            return !remaining.is_empty();
         }
         self.install_link_card_trash_choice(LinkCardTrashChoiceState {
             chooser: host.player,
@@ -1337,14 +1349,14 @@ impl Game {
             chosen: Vec::new(),
             purpose: LinkTrashPurpose::RuleExcess,
             outer_conts: Vec::new(),
-        });
-        true
+        })
     }
 
     /// Park one pick of a link-card trash choice: an `EffectChoice` over
     /// `remaining` (each entry carries its card, so the choice reaches the RL
-    /// action space), resumed by the `LinkCardTrashChoice` frame.
-    fn install_link_card_trash_choice(&mut self, state: LinkCardTrashChoiceState) {
+    /// action space), resumed by the `LinkCardTrashChoice` frame. Returns
+    /// `false` (nothing installed) when the host is gone or has no stack.
+    fn install_link_card_trash_choice(&mut self, state: LinkCardTrashChoiceState) -> bool {
         use crate::action::space::{HAND_EFFECT_START, HAND_MAIN_LIMIT};
         let Some(host_card) = self
             .player(state.host.player)
@@ -1353,7 +1365,7 @@ impl Game {
             .filter(|p| !p.card_sources.is_empty())
             .map(|p| p.top_card().handle())
         else {
-            return;
+            return false;
         };
         let mut valid_action_ids = Vec::new();
         let mut choices = Vec::new();
@@ -1397,11 +1409,12 @@ impl Game {
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::LinkCardTrashChoice(state)],
         });
+        true
     }
 
     /// Resume a link-card trash choice: record the pick, ask again until the
-    /// count is met (a lone remaining card is no choice), then trash every
-    /// pick together and finish `purpose`.
+    /// count is met (when every remaining card must go there is no choice),
+    /// then trash every pick together and finish `purpose`.
     pub(crate) fn run_link_card_trash_choice_step(
         &mut self,
         mut state: LinkCardTrashChoiceState,
@@ -1413,8 +1426,9 @@ impl Game {
             state.picks_left = state.picks_left.saturating_sub(1);
         }
         if state.picks_left > 0 && !state.remaining.is_empty() {
-            if state.remaining.len() > 1 {
-                self.install_link_card_trash_choice(state);
+            if state.picks_left < state.remaining.len()
+                && self.install_link_card_trash_choice(state.clone())
+            {
                 return;
             }
             state.chosen.append(&mut state.remaining);

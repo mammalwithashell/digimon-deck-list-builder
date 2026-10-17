@@ -1378,8 +1378,10 @@ impl Game {
     /// wrapper, which calls this only at top-level resolution boundaries — never
     /// mid-effect.
     ///
-    /// Returns `true` if it deleted at least one Digimon (drives the wrapper's
-    /// fixpoint). Deletion routes through `delete_permanent_with_effects` (the
+    /// Returns `true` if it applied at least one target: deleted or trashed a
+    /// permanent, trashed link cards, or parked the §17-1-3-2-5 excess choice
+    /// (drives the wrapper's fixpoint, which stops on a parked selection).
+    /// `false` means the board had no rule-check target. Deletion routes through `delete_permanent_with_effects` (the
     /// batched flow + inferred cause), so `OnDeletion` handlers fire post-trash
     /// per CLAUDE.md §25.
     ///
@@ -1488,6 +1490,7 @@ impl Game {
         }
         actions.sort_by_key(|(h, _)| (h.player, h.index));
         let mut trim_pending = false;
+        let mut acted = false;
         // Apply in descending (player, index) order so each removal — which
         // shifts higher battle-area indices via `Vec::remove` — does not
         // invalidate the handles still pending.
@@ -1495,13 +1498,14 @@ impl Game {
             match &action {
                 RuleAction::TrashUnqualifiedLinks(cards) => {
                     self.trash_link_cards_by_rule(handle, cards);
+                    acted = true;
                     continue;
                 }
                 RuleAction::TrimLinks(excess) => {
                     trim_pending |= *excess > 0;
                     continue;
                 }
-                RuleAction::DeleteZeroDp | RuleAction::TrashDpLess => {}
+                RuleAction::DeleteZeroDp | RuleAction::TrashDpLess => acted = true,
             }
             if let RuleAction::TrashDpLess = action {
                 let movement_snapshot = self.movement_snapshot(handle);
@@ -1558,10 +1562,10 @@ impl Game {
         }
         // §17-1-3-2-5: the controller's choice of excess link cards, from a
         // fresh scan (removals above may have shifted hosts).
-        if trim_pending && self.pending_selection.is_none() {
-            self.park_first_link_excess_trim();
+        if trim_pending && self.pending_selection.is_none() && self.park_first_link_excess_trim() {
+            acted = true;
         }
-        true
+        acted
     }
 
     /// Dispose an Option that has finished resolving its `OptionMain`

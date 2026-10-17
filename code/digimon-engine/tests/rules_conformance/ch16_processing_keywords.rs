@@ -2658,6 +2658,80 @@ fn link_max_base_is_one() {
 
 /// §4-9-5 "When linking to a Digimon that has already reached the link
 /// limit, the same number of the existing link cards are trashed at the same
+/// time as the newly linked cards." -- for a declared link (the twin of
+/// `effect_link_at_limit_replaces_existing_link_card_by_choice`).
+///
+/// P0's `LINKPLUS2` (max 3) holds 3 `LINK_B`; P0 declares the link of
+/// `LINK_A` from hand onto it. Before anything is trashed or plugged in, P0
+/// (the linking player) is asked which EXISTING link card is replaced: the 3
+/// `LINK_B`, never `LINK_A`, and the host never holds 4. The pick trashes it in
+/// the link step itself: nothing is left for a later §17-1-3-2-5 trim.
+#[test]
+fn declared_link_at_limit_replaces_existing_link_card_by_choice() {
+    cite!(
+        "4-9-5",
+        "fcec093c198b9ce1bb55b9d769eefe9b189ae82d63c7002091435e834fb2c980"
+    );
+    let mut r = link_board("LINKPLUS2", 3, false);
+    let link_a = r.game.player(0).hand[0].handle();
+    let existing: Vec<_> = r.game.player(0).battle_area[0]
+        .linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert!(can_link(&r), "at its limit the host still takes the link");
+    r.game.decode_action(HAND_EFFECT_START, 0);
+    let mut choice = None;
+    for _ in 0..8 {
+        let Some(sel) = r.pending_selection() else {
+            break;
+        };
+        if sel.prompt.starts_with("Choose a link card to trash") {
+            choice = Some((
+                sel.selecting_player,
+                sel.effect_choices.clone().unwrap_or_default(),
+            ));
+            break;
+        }
+        let (player, action) = (sel.selecting_player, sel.valid_action_ids[0]);
+        r.execute_action(player, action)
+            .unwrap_or_else(|e| panic!("pick rejected: {e:?}"));
+    }
+    let (chooser, options) = choice.expect("P0 chooses the replaced link card");
+    assert_eq!(chooser, 0, "the linking player chooses");
+    let offered: Vec<_> = options.iter().filter_map(|c| c.source_card).collect();
+    assert_eq!(
+        offered, existing,
+        "exactly the existing link cards are offered"
+    );
+    assert!(!offered.contains(&link_a), "the new card is not an option");
+    assert_eq!(
+        r.game.player(0).battle_area[0].linked_cards.len(),
+        3,
+        "nothing trashed or plugged in before the choice; never 4"
+    );
+    assert!(trash_ids(&r, 0).is_empty(), "{:?}", trash_ids(&r, 0));
+
+    let pick = r.pending_selection().unwrap().valid_action_ids[0];
+    r.execute_action(0, pick).expect("pick the first LINK_B");
+    assert!(
+        r.pending_selection().is_none(),
+        "the trash happened in the link step; no §17-1-3-2-5 trim follows: {:?}",
+        r.pending_selection()
+    );
+    let linked: Vec<_> = r.game.player(0).battle_area[0]
+        .linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(linked.len(), 3);
+    assert!(linked.contains(&link_a), "LINK_A plugged in");
+    assert!(!linked.contains(&existing[0]), "the picked LINK_B left");
+    assert_eq!(trash_ids(&r, 0), vec!["LINK_B".to_string()]);
+}
+
+/// §4-9-5 "When linking to a Digimon that has already reached the link
+/// limit, the same number of the existing link cards are trashed at the same
 /// time as the newly linked cards." -- for a link made by an effect.
 ///
 /// P0's `LINKPLUS2` (max 3) holds 3 `LINK_B`. P0 plays `EFFLINK` ("[On Play]
