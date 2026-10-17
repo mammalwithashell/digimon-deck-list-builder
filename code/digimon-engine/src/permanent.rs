@@ -525,9 +525,11 @@ impl Permanent {
     /// into one "without [Free] in its traits" while the [Free] EX1-038 is
     /// still one of its digivolution cards. DCGO reads `permanent.TopCard`
     /// (`BT25_020.cs` `CanTriggerWhenWinBattle`, `EX8_047.cs`).
-    /// Trait-changing effects are layered on by [`Self::has_trait_for_rules`].
+    /// Trait-changing effects are layered on by [`Self::has_trait_for_rules`],
+    /// the reader every rules check must use; this one is crate-private and
+    /// named "printed" so no caller skips them by accident.
     /// G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS.
-    pub fn has_trait(&self, trait_name: &str, data: &[CardData]) -> bool {
+    pub(crate) fn has_printed_trait(&self, trait_name: &str, data: &[CardData]) -> bool {
         self.top_card()
             .traits(data)
             .iter()
@@ -538,7 +540,7 @@ impl Permanent {
     /// identity's traits (the top card plus trait-changing effects:
     /// `ChangeTraits`, `TreatAsDigimon`) or its top card's printed traits --
     /// the same reading as the DSL `trait_has` permanent predicate. Never a
-    /// digivolution card's traits (see [`Self::has_trait`]).
+    /// digivolution card's traits (see [`Self::has_printed_trait`]).
     pub fn has_trait_for_rules(
         &self,
         trait_name: &str,
@@ -552,7 +554,7 @@ impl Permanent {
             .traits
             .iter()
             .any(|trait_name| trait_name.to_lowercase() == needle)
-            || self.has_trait(trait_name, data)
+            || self.has_printed_trait(trait_name, data)
     }
 
     /// Digivolve: push a new card on top of the stack.
