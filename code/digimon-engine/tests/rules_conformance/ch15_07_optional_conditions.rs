@@ -380,7 +380,6 @@ fn main_trash_sec_draw_mask_bit(security: &[&str]) -> f32 {
 ///   action mask (§15-8-4-4-1); with 1 it is (control). §15-8-4-4-1's own
 ///   <Training> example passes in `ch15_08_effect_categories`.
 #[test]
-#[ignore = "G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED (§15-7-4)"]
 fn unpayable_optional_condition_cannot_be_chosen() {
     cite!(
         "15-7-4",

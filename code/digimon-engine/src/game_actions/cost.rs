@@ -833,6 +833,20 @@ impl Game {
         }
     }
 
+    /// The reducer's optional processing condition (its `pay_cost`'s leading
+    /// cost steps, `Effect::optional_condition_guard`) can be executed now
+    /// (§15-7-4). A reducer without a recognised cost shape passes.
+    /// G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+    pub(crate) fn cost_reducer_condition_payable(
+        &self,
+        key: &CostReductionKey,
+        effect: &crate::effect::Effect,
+    ) -> bool {
+        effect.optional_condition_guard.as_ref().is_none_or(|guard| {
+            self.cost_guard_holds_at(guard, key.source_card, key.source_permanent, key.controller)
+        })
+    }
+
     pub(crate) fn run_interactive_digivolve_cost_reduction_prompt_step(
         &mut self,
         state: InteractiveDigivolveCostReductionPromptState,
@@ -1273,6 +1287,13 @@ impl Game {
             let Some(effect) = effects.get(key.effect_slot as usize) else {
                 continue;
             };
+            // §15-7-4 (Ver. 4.3): an optional reducer whose "by X" condition
+            // can't be executed can't be chosen -- it is not a candidate at
+            // all (no "Cost reduction" choice, no accept prompt).
+            // G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+            if effect.optional && !self.cost_reducer_condition_payable(&key, effect) {
+                continue;
+            }
             if effect.cost_assignment.is_some() {
                 if cost_kind != CostReductionKind::Play {
                     continue;

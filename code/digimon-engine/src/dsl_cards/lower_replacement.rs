@@ -139,6 +139,17 @@ pub fn lower_with_raw_and_slot(
         .as_ref()
         .is_some_and(predicate_reads_replacement_subject);
     let preflight_process = process.clone();
+    // §15-7-4 (Ver. 4.3): an optional replacement's "by X" condition that
+    // can't be executed can't be chosen, so the replacement is not offered
+    // (e.g. "When this Digimon would leave the battle area, by trashing 2
+    // cards in your hand, it doesn't leave" with 1 card in hand). Same
+    // payability guard as the triggered path (`leading_cost_guard`).
+    // G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+    let cost_guard = if optional {
+        crate::dsl_cards::lower_triggered::leading_cost_guard(&process)
+    } else {
+        None
+    };
     let field_dna_flow = DelayFieldDnaDigivolveFlow::from_process(&process);
     let requires_ready_delay = field_dna_flow.is_some();
     builder = builder.replacement_condition(move |ctx, subject| {
@@ -153,6 +164,7 @@ pub fn lower_with_raw_and_slot(
                 )
             })
             && replacement_process_has_payable_required_selection(&preflight_process, ctx, *subject)
+            && cost_guard.as_ref().is_none_or(|guard| guard.holds(ctx))
     });
 
     if let Some(flow) = field_dna_flow {
