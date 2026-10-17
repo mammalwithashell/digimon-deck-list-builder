@@ -696,4 +696,22 @@ Tasks 16–20 touch disjoint files and may run in parallel sessions (each on its
 - [ ] **Step 4: Sidecar:** `15-8-3-4` → proven (remove `blocks_training` / `gap_id`), tests listed under 15-8-3-1 and 15-8-3-9-3. Regenerate; `--check`. Entry RESOLVED. Note the DSL vocabulary addition in `qa/dsl-vocab-gaps.md` (closing the "trigger qualifier vs processing condition" entry if one exists).
 - [ ] **Step 5: Commit** — `engine+dsl: trigger qualifiers (trigger_if:) are checked when an observer triggers and again at activation (§15-8-3-1, §15-8-3-4, §15-4-4-5; G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER)`.
 
-**Phase G in Task 23's closure:** the digest headline and the "blocking gaps with no task" list are updated to reflect Tasks 25-34; W5 and W12 are recorded as owner-decided; the §4-7-7 trait ruling (Task 31) is listed for owner sign-off.
+### Task 35: a Digimon's name is its top card's — re-author the carrier-name predicates
+
+**Gap:** `G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS` (blocking; filed by the Task 31 review). **Ruling:** the same as Task 31's — a Digimon's characteristics (name, traits, level, colour) are its top card's; §4-7-7 governs stack membership; §4-8-2 says digivolution-card information is read only when digivolution cards are referenced; DCGO reads `TopCard.ContainsCardName` / `TopCard.HasGreymonName`; official Q3225 (EX1-038) treats "[Imperialdramon] in its name" as the top card's name.
+
+**Ours:** `Permanent::contains_card_name` (`permanent.rs` ~L482-494) checks the top card and then every digivolution card; the DSL predicate `self_digivolution_contains_name` (`dsl_cards/predicate.rs` ~L654-662) exposes it, and four cards use it for "this Digimon's name / is [X]": BT12-059 Agumon (inherited "While this Digimon has [Greymon] or [Omnimon] in its name, +1000 DP"), EX1-014 ExVeemon (inherited "[Imperialdramon] in its name or [Free] in its traits"), BT20-059 ("While this Digimon is [Jesmon GX]"), BT17-102 ("If this Digimon's name is [Koromon]"). A non-matching top card with a matching digivolution card wrongly gains the buff. BT16-027 and BT20-020 read "if [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards" through the same top-card-and-sources scan (harmless today: their top card is Fighter Mode) where `self_digivolution_sources_contain_name` is the right predicate.
+
+**Files:**
+- Modify: the four YAMLs above — switch the name test to a top-card name predicate (`source_name_contains` exists; if its subject is the effect's source rather than "this Digimon" for an inherited clause, add the missing vocabulary `self_name_contains` to `code/digimon-dsl` + `predicate.rs` rather than route around it); BT16-027 / BT20-020 → `self_digivolution_sources_contain_name`. Do NOT change `contains_card_name` itself.
+- Add a `dsl-lint` rule: `self_digivolution_contains_name` used in a "this Digimon's name / is [X]" clause warns (its legitimate use is "[X] in this Digimon's digivolution cards or name" shapes — check each remaining user against printed text and list them).
+- Tests: a behavioural test per re-authored card staging a non-matching top card over a matching digivolution card (no buff) and the matching top card (buff); un-ignore or add a conformance test in `ch15_08_effect_categories.rs` or the §4-7 chapter if one exists (`digimon_name_is_the_top_cards_name`, cite 4-8-2 with a valid fingerprint; list under 4-8-2 and the 4-7-7 note — status per the Task 31 ruling: 4-7-7 stays gap).
+- Keep green: `--test dsl`, `cards_behavioral` filter `bt12_059 ex1_014 bt20_059 bt17_102 bt16_027 bt20_020 greymon imperialdramon jesmon`, whole `rules_conformance`, `--test judge_quiz`, then the FULL `cards_behavioral`.
+
+- [ ] **Step 1: Write the card tests; run → FAIL on the non-matching-top-card cases.**
+- [ ] **Step 2: Re-author** the six cards; add the lint rule (and `self_name_contains` if needed).
+- [ ] **Step 3: Run → PASS**; regression list; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** list the test under `4-8-2` (flip to proven if gap and the test proves the text). Regenerate; `--check`. Entry RESOLVED.
+- [ ] **Step 5: Commit** — `cards+dsl: a Digimon's name is its top card's; carrier-name predicates re-authored (§4-7-7, §4-8-2; G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS)`.
+
+**Phase G in Task 23's closure:** the digest headline and the "blocking gaps with no task" list are updated to reflect Tasks 25-35; W5 and W12 are recorded as owner-decided; the §4-7-7 / top-card characteristics ruling (Tasks 31, 35) is listed for owner sign-off.
