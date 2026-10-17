@@ -651,7 +651,6 @@ fn retaliation_mandatory_deletes_battled_digimon() {
 /// pend in one `TriggerOrder` for P1. P1 activates `OBS_OWN_DEL_MEM` first:
 /// its memory gain happens before <Retaliation> deletes `LV5_PLAIN`.
 #[test]
-#[ignore = "G-ENGINE-ON-DELETION-DRAINED-BEFORE-DELETION-OBSERVERS (§16-13-2)"]
 fn retaliation_kind_matches_rule() {
     cite!(
         "16-13-2",
@@ -720,6 +719,57 @@ fn retaliation_timing_matches_rule() {
     assert!(
         field_top_ids(&r, 0).is_empty(),
         "battle deletion: <Retaliation>"
+    );
+}
+
+/// §16-13-2 (with §15-4-3-2 / §15-4-3-5): the effects one deletion in battle
+/// triggers pend in ONE pool, so a "when a Digimon is deleted" observer still
+/// activates after an `[On Deletion]` of the same deletion has paused for a
+/// player decision.
+///
+/// P0's `OD_TRASH_HAND_MEM` ("[On Deletion] By trashing 1 card in the hand,
+/// gain 1 memory") attacks P1's suspended `LV5_PLAIN` and is deleted in
+/// battle. P1 has `OBS_OPP_DEL_MEM` ("When one of your opponent's Digimon is
+/// deleted, gain 1 memory"). The turn player's `[On Deletion]` activates
+/// first and waits on P0's optional hand pick; P1's observer has not
+/// resolved yet. Once P0 pays, P1's observer still activates (before Task 5
+/// of the 2026-10 engine fixes it was dropped whenever the `[On Deletion]`
+/// paused at a top-level deletion).
+#[test]
+fn deletion_observer_activates_after_on_deletion_pauses_for_a_decision() {
+    cite!(
+        "16-13-2",
+        "e0808def8b55cd54b6651e11816946c6e64f1e9f0f3bf60ba4eb9618f7f87999"
+    );
+    let mut r = board_with(&[FILL], &[FILL; 3], 5);
+    let attacker = r.place_on_field(0, "OD_TRASH_HAND_MEM", Some(0));
+    let target = place_suspended(&mut r, 1, "LV5_PLAIN");
+    r.place_on_field(1, "OBS_OPP_DEL_MEM", Some(0));
+    let cp = r.event_checkpoint();
+    r.attack_digimon(attacker, target, false);
+
+    assert!(
+        field_top_ids(&r, 0).is_empty(),
+        "OD_TRASH_HAND_MEM lost the battle"
+    );
+    let sel = r.pending_selection().expect("the [On Deletion] hand pick");
+    assert_eq!(sel.selecting_player, 0, "{sel:?}");
+    assert!(sel.is_optional, "'By trashing' is optional: {sel:?}");
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "nothing has resolved yet: {:?}",
+        memory_sources(&r, cp)
+    );
+
+    pick_hand_card(&mut r, 0, FILL);
+    settle_declining(&mut r);
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![
+            (0, "OD_TRASH_HAND_MEM".to_string()),
+            (1, "OBS_OPP_DEL_MEM".to_string()),
+        ],
+        "the turn player's [On Deletion], then the non-turn player's observer"
     );
 }
 

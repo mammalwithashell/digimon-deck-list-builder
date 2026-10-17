@@ -2174,7 +2174,7 @@ fn eval_event_fields(
         // `PermanentHandle` is (player, battle-area INDEX), and the battle
         // area COMPACTS when a permanent is removed. A deletion trigger's
         // `event_permanent` is therefore a DANGLING handle by the time the
-        // observer is evaluated: `drain_batch_on_any_deletion` enqueues the
+        // observer is evaluated: `enqueue_batch_on_any_deletion` enqueues the
         // pre-trash handle, but the surviving permanents have already slid
         // down. Every survivor that sat ABOVE the deleted one now answers to
         // a lower index â€” and the one that inherits the dead permanent's

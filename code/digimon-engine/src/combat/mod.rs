@@ -4553,16 +4553,10 @@ impl Game {
         let prior_cause = self.current_deletion_cause;
         self.current_deletion_cause = Some(cause);
 
+        // Snapshot → trash → one flush pooling `[On Deletion]` with the
+        // deletion observers (§16-13-2), the same tail as an ordinary batch.
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            self.capture_batch_snapshots();
-            self.enter_deferred_drain();
-            self.enqueue_batch_on_deletion();
-            self.trash_batch_survivors();
-            self.exit_deferred_drain_and_flush();
-            if self.pending_selection.is_some() {
-                return;
-            }
-            self.drain_batch_on_any_deletion();
+            self.complete_deletion_batch_after_replacements();
         }));
 
         self.current_deletion_cause = prior_cause;

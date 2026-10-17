@@ -334,9 +334,9 @@ fn q9_gatomon_not_in_battle_area_during_removal_no_memory() {
 ///    controller's trash (tokens always activate). Re-checked at activation, so a
 ///    returned carrier suppresses the whole bundle (own + every inherited source,
 ///    which all share the carrier's top-card snapshot).
-///  - **Part B** (`drain_batch_on_any_deletion`): the batch's post-deletion
-///    trigger drain is gated on `maybe_drain_effect_queue` (only at
-///    `draining_deferred == 0`). Inside CFtD's resolution window the OnDeletion /
+///  - **Part B** (`exit_deferred_drain_and_flush`): a deletion batch's single
+///    post-deletion trigger flush drains only when its deferred-drain counter
+///    returns to 0 (`draining_deferred == 0`). Inside CFtD's resolution window the OnDeletion /
 ///    OnAnyDeletion / OnLeaveField entries stay queued until the causing effect's
 ///    later steps (the return-to-hand) finish, then resolve under Part A's gate.
 ///
