@@ -1434,13 +1434,14 @@ impl Game {
             }
         }
         self.effect_drain_depth = self.effect_drain_depth.saturating_sub(1);
-        if self.effect_drain_depth == 0 && self.pending_selection.is_none() {
-            // §18-3: the outermost drain has settled with nothing parked, so
-            // this processing is over; a later drain starts its own loop
-            // watch. A drain parked on a decision keeps its watch: whether it
-            // starts over depends on that decision (declinable or forced).
-            self.reset_loop_watch();
-        }
+        // §18-3: the loop watch is NOT reset when the outermost drain settles.
+        // A loop can span several outermost drains with no decision between
+        // them (an effect that starts a new attack, a turn-structure step that
+        // re-fires the same triggers); only a player's decision -- a
+        // declinable prompt (`resolve_generic_selection`) or a turn action
+        // (`decode_action`, `end_turn`, a declared attack or play) -- starts a
+        // new watch. Nothing that happens between two player decisions can
+        // legitimately return the whole game to the same state three times.
         // G-ENGINE-TURN-END-MID-EFFECT: a turn end that `check_turn_end` held
         // back while an effect was resolving runs now that the outermost
         // drain has settled with nothing parked (6-1-4-1).

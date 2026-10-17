@@ -323,6 +323,85 @@ mod tests {
 }
 
 #[cfg(test)]
+mod loop_watch_tests {
+    use std::sync::Arc;
+
+    use super::{LOOP_SIGNATURE_REPEATS, LOOP_WATCH_START};
+    use crate::card_source::CardHandle;
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    use crate::effect::{CardEffect, Effect};
+    use crate::game::TerminalOutcomeReason;
+
+    /// "[On Play] Suspend this Digimon." -- mandatory; a no-op once suspended,
+    /// so every drain that resolves it returns the board to the same state.
+    struct SuspendSelfOnPlay;
+
+    impl CardEffect for SuspendSelfOnPlay {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            vec![Effect::on_play(card)
+                .name("[On Play] Suspend this Digimon")
+                .process(|ctx| {
+                    if let Some(me) = ctx.source_permanent {
+                        ctx.suspend(me);
+                    }
+                })
+                .build()]
+        }
+    }
+
+    fn runner() -> (DebugRunner, crate::permanent::PermanentHandle) {
+        let card = make_test_card("LOOP-DRAIN", "Drainmon");
+        let mut r = DebugRunner::builder().add_card(card).start();
+        r.register_effect("LOOP-DRAIN", Arc::new(SuspendSelfOnPlay));
+        let h = r.place_on_field(0, "LOOP-DRAIN", None);
+        (r, h)
+    }
+
+    /// §18-3-1 / §18-3-2: a loop that spans several OUTERMOST drains with no
+    /// decision between them is still a loop neither player can stop. Each
+    /// `Game::fire_on_play` is its own outermost drain (the engine-internal
+    /// stand-in for processing that re-fires the same trigger, e.g. an effect
+    /// that starts a new attack with no decision); nothing is parked and no
+    /// decision is made, so the watch spans the drains and the repeating
+    /// state ends the game in the draw.
+    #[test]
+    fn loop_across_outermost_drains_with_no_decision_ends_in_a_draw() {
+        let (mut r, h) = runner();
+        let budget = u32::from(LOOP_WATCH_START) + u32::from(LOOP_SIGNATURE_REPEATS) + 2;
+        let mut drains = 0;
+        for _ in 0..budget {
+            r.game.fire_on_play(0, h.index as usize);
+            drains += 1;
+            if r.game.game_over {
+                break;
+            }
+        }
+        assert!(
+            r.game.game_over,
+            "the same state recurred across {drains} outermost drains with no decision: a loop"
+        );
+        assert_eq!(r.game.winner, None, "the §18-3-2 draw");
+        assert_eq!(
+            r.game.terminal_outcome_reason,
+            Some(TerminalOutcomeReason::InfiniteLoopDraw)
+        );
+    }
+
+    /// The same repetitions driven as PLAYER DECISIONS (the DebugRunner's
+    /// wrapper, like a runner's `decode_action`) start a new watch each
+    /// time: no loop, the game goes on.
+    #[test]
+    fn repeated_player_decisions_are_not_a_loop() {
+        let (mut r, h) = runner();
+        let budget = u32::from(LOOP_WATCH_START) + u32::from(LOOP_SIGNATURE_REPEATS) + 10;
+        for _ in 0..budget {
+            r.fire_on_play(0, h.index as usize);
+        }
+        assert!(!r.game.game_over, "each wrapper call is a decision: no loop");
+    }
+}
+
+#[cfg(test)]
 mod rule_check_fixpoint_tests {
     use crate::debug_runner::{make_test_card, DebugRunner};
     use crate::enums::{Expiry, ModifierType};

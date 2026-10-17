@@ -521,6 +521,15 @@ impl Game {
         if self.game_over {
             return AttackResult::Invalid;
         }
+        // §18-3: a player-declared attack is a decision (an effect-forced
+        // attack is not); the loop watch starts over (see
+        // `drain_effect_queue`).
+        if matches!(
+            initiator,
+            AttackInitiator::NaturalMainPhase | AttackInitiator::Vortex | AttackInitiator::Overclock
+        ) {
+            self.reset_loop_watch();
+        }
         let TargetConstraint::Forced(target) = target_constraint else {
             return AttackResult::Invalid;
         };

@@ -59,6 +59,9 @@ impl Game {
             self.tick_declarative_effects();
             return;
         }
+        // §18-3: a turn action is the player's decision; whatever repeats
+        // from here on is new processing (see `drain_effect_queue`).
+        self.reset_loop_watch();
         match self.current_phase {
             GamePhase::Mulligan => self.decode_mulligan(action_id, player_id),
             GamePhase::Main => self.decode_main(action_id),

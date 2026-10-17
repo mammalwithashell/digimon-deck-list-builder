@@ -100,23 +100,36 @@ impl DebugRunner {
 
     // ─── Action helpers ───────────────────────────────────────────────
 
+    /// §18-3: every DebugRunner action wrapper stands for a player's decision
+    /// (a test drives the game the way a player would), so the loop watch
+    /// starts over before it runs -- as `decode_action` does for a runner's
+    /// action. A test that wants to exercise engine-internal processing with
+    /// no decision in between calls the `Game` method directly.
+    fn player_decision(&mut self) {
+        self.game.reset_loop_watch();
+    }
+
     /// Play a card from a player's hand. Returns the new field index.
     pub fn play(&mut self, player: PlayerId, hand_index: usize) -> Option<usize> {
+        self.player_decision();
         self.game.play_from_hand(player, hand_index)
     }
 
     /// Move from breeding to battle for a player.
     pub fn move_from_breeding(&mut self, player: PlayerId) -> bool {
+        self.player_decision();
         self.game.move_from_breeding(player)
     }
 
     /// End the current turn.
     pub fn end_turn(&mut self) {
+        self.player_decision();
         self.game.end_turn();
     }
 
     /// Pass turn (memory to -3).
     pub fn pass_turn(&mut self) {
+        self.player_decision();
         self.game.pass_turn();
     }
 
@@ -130,6 +143,7 @@ impl DebugRunner {
     /// should migrate to `fire_play_event_triggers` so they match the
     /// production play-flow semantics.
     pub fn fire_on_play(&mut self, player: PlayerId, field_index: usize) {
+        self.player_decision();
         self.game.fire_on_play(player, field_index);
     }
 
@@ -150,6 +164,7 @@ impl DebugRunner {
         effect_initiated: bool,
         suppress_on_play: bool,
     ) {
+        self.player_decision();
         self.game
             .fire_play_event_triggers(player, field_index, effect_initiated, suppress_on_play);
     }
@@ -594,6 +609,7 @@ impl DebugRunner {
         defender: PermanentHandle,
         vortex: bool,
     ) -> crate::combat::AttackResult {
+        self.player_decision();
         self.game.attack_digimon(attacker, defender, vortex)
     }
 
@@ -603,6 +619,7 @@ impl DebugRunner {
         attacker: PermanentHandle,
         defender: PermanentHandle,
     ) -> crate::combat::AttackResult {
+        self.player_decision();
         self.game.battle_digimon(attacker, defender)
     }
 
@@ -615,6 +632,7 @@ impl DebugRunner {
         defender: PermanentHandle,
         comparison: crate::combat::BattleComparison,
     ) -> crate::combat::AttackResult {
+        self.player_decision();
         self.game.battle_digimon_with(attacker, defender, comparison)
     }
 
@@ -626,6 +644,7 @@ impl DebugRunner {
         defender_player: PlayerId,
         vortex: bool,
     ) -> crate::combat::AttackResult {
+        self.player_decision();
         self.game.attack_player(attacker, defender_player, vortex)
     }
 

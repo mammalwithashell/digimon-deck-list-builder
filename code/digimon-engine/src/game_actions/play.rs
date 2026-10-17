@@ -103,6 +103,10 @@ impl Game {
         if self.game_over {
             return None;
         }
+        // §18-3: a player's play is a decision; the loop watch starts over.
+        if matches!(source, PlaySource::ByHand) {
+            self.reset_loop_watch();
+        }
         self.play_from_hand_with_cost_result(player_id, hand_index, cost_delta, source, true)
             .into_option()
     }

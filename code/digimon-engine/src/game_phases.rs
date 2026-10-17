@@ -407,6 +407,9 @@ impl Game {
         if self.game_over {
             return;
         }
+        // §18-3: the turn change hands the next decision to the other
+        // player; the loop watch starts over (see `drain_effect_queue`).
+        self.reset_loop_watch();
         self.turn_end_check_deferred = false;
 
         self.set_turn_phase(GamePhase::EndTurn);
