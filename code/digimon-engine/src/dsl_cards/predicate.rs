@@ -58,37 +58,26 @@ pub fn eval_predicate_with_bindings(
 ) -> bool {
     // §4-6-1: a DUAL card can be treated as either a Digimon card or an Option
     // card. A reference that names neither category (no `kind:` Digimon /
-    // Option anywhere in its conjunction) matches when the WHOLE predicate
-    // holds read through either information -- not leaf by leaf (a "purple
-    // Lv.6 card" needs one information that is both purple and Lv.6).
-    // Only a DUAL card in a card zone has two readings: on the field it is a
-    // Digimon (§4-6-3) and `eval_card_fields` reads it as one.
-    // (`if let`, not a `match` with a wildcard arm: `dsl_eval_arm_coverage`
-    // forbids wildcard catch-alls inside this function so new subjects get an
-    // explicit decision.)
-    let is_dual_card = if let PredicateSubject::Card(c) | PredicateSubject::RevealedCard(c) = subject {
-        rctx.game
-            .card_data_for_handle(c)
-            .is_some_and(|d| d.dual.is_some())
-            && !rctx.game.card_is_on_field(c)
-    } else {
-        false
-    };
-    if is_dual_card && conjunct_dual_ref(pred) == DualRef::Either {
-        return eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Digimon)
-            || eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Option);
-    }
-    eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Either)
+    // Option anywhere in its conjunction) reads the DUAL card's Digimon
+    // information only, as a `kind: digimon` reference does (§4-6-5-2; owner
+    // ruling W5 (b), 2026-10-17: "This would be the Digimon colour/s"). The
+    // Option information is read only under a `kind: option` qualifier
+    // (§4-6-6-2), which `conjunct_dual_ref` resolves node by node. A DUAL card
+    // on the field is a Digimon (§4-6-3); `eval_card_fields` enforces that
+    // from the card's location whatever reference reaches it.
+    eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Digimon)
 }
 
 /// Which information of a DUAL card a card-zone search reads (§4-6-5-2,
 /// §4-6-6-2). `kind: digimon` references the card as a Digimon card (Digimon
 /// information only), `kind: option` as an Option card (Option information
-/// only). `Either` is the unresolved state of a reference that names neither
-/// category: `eval_predicate_with_bindings` resolves it for a DUAL card by
-/// evaluating the whole predicate once per information (§4-6-1; owner-pending
-/// ruling W5, reading (a)), so a leaf only ever sees `Digimon` or `Option` for
-/// a DUAL. A card that is not a DUAL has one set of information.
+/// only). `Either` is what `conjunct_dual_ref` returns for a node that names
+/// neither category; such a node inherits its enclosing node's reference, and
+/// the root reference (`eval_predicate_with_bindings`) is `Digimon`, so an
+/// unqualified reference reads the Digimon information (§4-6-1, §4-6-5-2;
+/// owner ruling W5 (b)) and a leaf only ever sees `Digimon` or `Option`. A
+/// card that is not a DUAL has one set of information, read whatever the
+/// reference.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DualRef {
     Either,

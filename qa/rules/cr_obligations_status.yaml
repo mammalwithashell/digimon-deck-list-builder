@@ -661,8 +661,8 @@
   note: "Overwrite: the card is not in the trash at the decision and never reaches it when accepted. Matrix row ArtsDigivolve (optional) agrees."
 "4-6-1":
   status: proven
-  tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information", "ch16_new_keywords::dual_traits_belong_to_both_informations", "ch16_new_keywords::dual_unqualified_colour_reference_matches_either_information", "ch16_new_keywords::dual_unqualified_reference_holds_through_one_information"]
-  note: "In the hand a DUAL is offered both as an Option (use) and as a Digimon (digivolve), and matches both 'Digimon card' and 'Option card' trait searches; an unqualified reference (no category named) matches if the WHOLE reference holds through either information (ruling W5 reading (a)): 'purple card' and 'red card' find the DUAL, 'purple Lv.6 card' does not, 'card that is not red' does."
+  tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information", "ch16_new_keywords::dual_traits_belong_to_both_informations", "ch16_new_keywords::dual_unqualified_colour_reference_reads_digimon_information", "ch16_new_keywords::dual_unqualified_reference_holds_through_one_information"]
+  note: "In the hand a DUAL is offered both as an Option (use) and as a Digimon (digivolve), and matches both 'Digimon card' and 'Option card' trait searches; an unqualified reference (no category named) reads the Digimon information only (owner ruling W5 (b), 2026-10-17; Task 29 superseded the provisional reading (a)): 'red card' finds the red-Digimon / purple-Option DUAL, 'purple card', 'blue card', 'purple Lv.6 card' and 'card that is not red' do not (test renamed from dual_unqualified_colour_reference_matches_either_information)."
 "4-6-2":
   status: proven
   tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information"]
