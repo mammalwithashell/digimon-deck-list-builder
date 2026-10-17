@@ -6689,15 +6689,15 @@
       "text": "<Collision>"
     },
     "16-30-1": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "b98f2cdcdfd77f46069943046dfa3ee618912ff173dfbd42fdc5a6f56c577631",
-      "gap_id": "G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Forced-block half proven (mandatory block window over every unsuspended opponent Digimon; one that can't suspend isn't forced). Gain-<Blocker> half fails: no <Blocker> is granted (has_keyword false during the attack); block candidacy short-circuits on the attacker's <Collision>. collision_kind_matches_rule is #[ignore]d.",
-      "status": "gap",
+      "note": "Both halves proven: has_keyword(h, Blocker) is true for each opponent Digimon during the attack (Game::collision_grants_blocker), and the block window is mandatory. G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED resolved.",
+      "status": "proven",
       "tests": [
         "ch16_attack_keywords::collision_forces_block_whenever_possible",
         "ch16_attack_keywords::collision_kind_matches_rule"
@@ -6705,15 +6705,15 @@
       "text": "<Collision> is a keyword effect. While a Digimon with this effect is attacking, all of your opponent's Digimon gain <Blocker> and the opponent player is forced to block whenever possible during the block timing."
     },
     "16-30-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "1511ba084735ea3cd9f9de5d009337204841f504177a579b5b3481287a254f7e",
-      "gap_id": "G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "The persistent grant is not applied at all (see 16-30-1). #[ignore]d.",
-      "status": "gap",
+      "note": "The grant is persistent and live-computed from the current attack (no activation, no modifier that could outlive it); absent before the attack, present at the block timing.",
+      "status": "proven",
       "tests": [
         "ch16_attack_keywords::collision_kind_matches_rule"
       ],
@@ -6735,15 +6735,15 @@
       "text": "<Collision> will activate while the Digimon with this effect is attacking."
     },
     "16-30-4": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "94657e983f0ec20140f6912a2ad374c65d16a7c9ad897b176a39ee14129157fe",
-      "gap_id": "G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "A Digimon unaffected by the opponent's effects is still forced into the block window (engine: [0, 1], rule: [1]) and, alone, is still offered. #[ignore]d.",
-      "status": "gap",
+      "note": "A Digimon unaffected by the attacker's Digimon effects does not gain <Blocker> (effect_can_affect gate) and is not a forced candidate; the forced block still falls on the opponent player.",
+      "status": "proven",
       "tests": [
         "ch16_attack_keywords::collision_blocker_grant_affects_digimon_forced_block_affects_player"
       ],
@@ -15251,9 +15251,9 @@
         "total": 244
       },
       "16": {
-        "gap": 19,
+        "gap": 16,
         "not_testable": 44,
-        "proven": 143,
+        "proven": 146,
         "total": 206
       },
       "17": {
@@ -15317,15 +15317,15 @@
         "total": 13
       }
     },
-    "gap": 641,
+    "gap": 638,
     "mechanics": {
-      "gap_blocking": 33,
+      "gap_blocking": 30,
       "gap_nonblocking": 323,
       "not_testable": 152,
-      "proven": 207
+      "proven": 210
     },
     "not-testable": 246,
-    "proven": 232
+    "proven": 235
   },
   "version": 1
 }
