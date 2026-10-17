@@ -105,8 +105,9 @@ pub struct Permanent {
     /// §17-1-3-2-3: this permanent was placed in the breeding area by an
     /// effect (`Game::play_to_breeding_from_hand`), so a non-Digimon top here
     /// is exempt from the rule check's breeding-area trash target. `false`
-    /// for a hatched Digi-Egg and for every battle-area entry (the battle
-    /// area's analogue for Options is `option_state`).
+    /// for a hatched Digi-Egg and for every battle-area permanent: the move
+    /// from the breeding area clears it (the battle area's analogue for
+    /// Options is `option_state`).
     pub placed_by_effect: bool,
 }
 

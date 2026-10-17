@@ -69,7 +69,11 @@ impl Game {
         }
 
         let player = self.player_mut(player_id);
-        if let Some(perm) = player.breeding_area.take() {
+        if let Some(mut perm) = player.breeding_area.take() {
+            // §17-1-3-2-3's "placed in the breeding area by an effect" marker
+            // describes the breeding area only; it does not follow the
+            // permanent into the battle area.
+            perm.placed_by_effect = false;
             player.battle_area.push(perm);
             let moved_handle = PermanentHandle {
                 player: player_id,
@@ -211,6 +215,7 @@ impl Game {
         &mut self,
         player: PlayerId,
     ) -> Vec<CardSource> {
+        let movement_snapshot = self.breeding_movement_snapshot(player);
         let Some(perm) = self.player_mut(player).breeding_area.take() else {
             return Vec::new();
         };
@@ -220,8 +225,10 @@ impl Game {
         };
         self.clear_permanent_full(handle);
         self.modifiers.expire_player_on_permanent_leave(handle);
-        // A token stack drops whole (parity with `trash_permanent_stack`);
-        // its link cards are real cards and still go to the trash.
+        // A token stack's cards leave no trash entry (as in
+        // `trash_permanent_stack`); unlike that helper, which also drops the
+        // link cards of a token stack, its link cards are real cards and go
+        // to their owners' trash here.
         let stack = if perm.card_sources.first().is_some_and(|c| c.is_token) {
             Vec::new()
         } else {
@@ -235,6 +242,9 @@ impl Game {
             self.trash_card(owner, card);
         }
         self.mark_until_condition_dirty();
+        // Recorder parity with the battle-area rule trash
+        // (`trash_battle_permanent_by_rule`).
+        self.observe_rule_trash_completed(movement_snapshot);
         leaving
     }
 
@@ -593,5 +603,9 @@ mod rule_check_breeding_tests {
         let index = r.add_to_hand(0, "RC-BODY");
         assert!(r.game.play_to_breeding_from_hand(0, index));
         assert!(r.game.players[0].breeding_area.as_ref().unwrap().placed_by_effect);
+        // The marker describes the breeding area only: moving out clears it.
+        assert!(r.game.move_from_breeding(0));
+        let moved = r.game.players[0].battle_area.last().unwrap();
+        assert!(!moved.placed_by_effect);
     }
 }

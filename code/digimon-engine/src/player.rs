@@ -196,7 +196,9 @@ impl Player {
         if self.battle_area.len() >= rules.field_slots as usize {
             return false;
         }
-        if let Some(perm) = self.breeding_area.take() {
+        if let Some(mut perm) = self.breeding_area.take() {
+            // §17-1-3-2-3's marker describes the breeding area only.
+            perm.placed_by_effect = false;
             self.battle_area.push(perm);
             true
         } else {
