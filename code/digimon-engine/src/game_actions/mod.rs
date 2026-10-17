@@ -1564,11 +1564,24 @@ impl Game {
             }
         }
         // <Overflow> observes the trashed cards' physical movement (§4-19-1)
-        // even though nothing here is a deletion: one pass for every trash
-        // target, turn player first (§4-19-5). The deletion batch below runs
-        // its own single pass for the deleted stacks.
-        if !overflow_sources.is_empty() {
-            self.apply_ace_overflow_for_sources(&overflow_sources);
+        // even though nothing here is a deletion. The deletion batch below
+        // runs its own single pass for the deleted stacks, so the trash
+        // targets' instances are split around it by owner: the turn player's
+        // BEFORE the batch, the non-turn player's AFTER it. Every
+        // turn-player instance of this rule check (trashed, then deleted)
+        // is processed before every non-turn-player instance (deleted, then
+        // trashed), as §4-19-5-1 / -2 require; within one player the order
+        // is immaterial (every instance moves the marker the same way).
+        // When the batch parks on a replacement window, the parked members'
+        // instances follow on resume, after the non-turn player's trashed
+        // ones: that sequence is already non-simultaneous (pre-existing,
+        // the batch's own park path).
+        let turn_player = self.turn_player();
+        let (turn_player_overflow, other_overflow): (Vec<_>, Vec<_>) = overflow_sources
+            .into_iter()
+            .partition(|card| card.owner == turn_player);
+        if !turn_player_overflow.is_empty() {
+            self.apply_ace_overflow_for_sources(&turn_player_overflow);
         }
         if !deletions.is_empty() {
             acted = true;
@@ -1609,11 +1622,25 @@ impl Game {
             self.delete_permanents_batch(kill_list, cause);
             self.current_deletion_event_cause_override = previous;
         }
+        if !other_overflow.is_empty() {
+            self.apply_ace_overflow_for_sources(&other_overflow);
+        }
         // §17-1-3-2-5: the controller's choice of excess link cards, from a
         // fresh scan (removals above may have shifted hosts). Skipped while a
         // replacement window the batch opened is parked: the drain that
         // resumes after it runs the rule check before any trigger activates,
         // and parks the choice then.
+        //
+        // Order dependence: this relies on `resolve_generic_selection`
+        // calling `drain_effect_queue` BEFORE `resume_pending_deletion`, and
+        // on the outermost drain running this rule check BEFORE
+        // `drain_effect_queue_inner` activates any queued `[On Deletion]`.
+        // That re-run parks the choice before any trigger of this check
+        // activates, and it also deletes any 0 DP batch member still on the
+        // field (with the `EventCause::Rule` override set here; the
+        // rest-of-batch stash carries only a `ReplacementCause`), so
+        // `resume_deletion_batch_rest_for_receipt` then finds them gone. If
+        // those two calls are ever reordered, both guarantees break.
         if trim_pending && self.pending_selection.is_none() && self.park_first_link_excess_trim() {
             acted = true;
         }
