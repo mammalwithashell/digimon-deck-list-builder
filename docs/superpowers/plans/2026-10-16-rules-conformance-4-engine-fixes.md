@@ -516,3 +516,65 @@ Tasks 16–20 touch disjoint files and may run in parallel sessions (each on its
 - [ ] **Step 2: For each red: fix if local (record-and-suppress for §15-15-5-2), else file `G-ENGINE-UNAFFECTED-…` gap entries in `docs/RUST_ENGINE_GAPS.md` + digest and `#[ignore]` with the id.**
 - [ ] **Step 3: Sidecar entries; regenerate; `--check`.**
 - [ ] **Step 4: Commit** — `tests: §15-15-5 "isn't affected by effects" conformance module (scope matrix, choosability, lapse, granted effects)` (+ `engine: …` commits for any fix).
+
+---
+
+## Phase G — Gaps filed during execution (owner request 2026-10-17: each of the three blocking gaps filed during Plan 4 gets its own task)
+
+### Task 25: `<Progress>` is a read-time shield: opponent effects applied before the attack stop applying while it attacks
+
+**Gap:** `G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS` (blocking; filed by Task 24). **Rules:** §16-39-1, §15-15-5-1, §15-15-5-2; official Q&A Q6178 (an effect already affecting a card stops affecting it as soon as the card cannot be affected). DCGO: read-time `CanNotBeAffected` re-checked on every DP/effect read (`Permanent.cs`).
+
+**What exists (Task 24):** `EffectContext::held_for_progress_attack` holds an opponent modifier installed DURING the attack (`ModifierEntry::held_while_attacking`) and `cleanup_attack` releases it after `expire_end_of_attack`; `ModifierRegistry::get` filters by `affecting_source_kind` / `immunity_filter_covers` at read time but cannot evaluate `Game::progress_excludes` (needs `pending_attack` + the printed/inherited keywords, which live on `Game`). A modifier installed BEFORE the attack therefore keeps applying while the `<Progress>` Digimon attacks.
+
+**Files:**
+- Modify: `code/digimon-engine/src/modifiers.rs` — `ModifierRegistry` gains `progress_shield: Option<PermanentHandle>` (plus the shielded permanent's identity, so battle-area compaction cannot retarget it); `get` (and every read path that already applies the immunity filter) hides every opponent-controlled, effect-tagged entry on the shielded permanent while the shield is set. `held_while_attacking` becomes redundant: remove it and its release in `cleanup_attack`, or keep it only as the install-time record (choose one; no double mechanism).
+- Modify: `code/digimon-engine/src/game/queries.rs::progress_excludes` and `code/digimon-engine/src/combat/mod.rs` — refresh the shield wherever `progress_excludes` can change: attack declaration (after the attacker is fixed), `tick_declarative_effects` (a `<Progress>` grant gained or lost mid-attack), `cleanup_attack` (→ `None`), battle-area index shifts (resolve by identity via `live_attack_attacker`). Keep the Task 24 invariant: the rule-check drain after `expire_end_of_attack` runs on every path incl. the resumed park, then `check_turn_end`.
+- Modify: `code/digimon-engine/src/effect_context/action/modifiers.rs` — drop `held_for_progress_attack` if the shield supersedes it.
+- Tests to un-ignore: `ch15_15_unaffected.rs::progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking`.
+- New tests (ch15_15_unaffected.rs, each `cite!`): `progress_lost_mid_attack_applies_held_opponent_effects_immediately` (§15-15-5-2: the attacker loses `<Progress>` mid-attack → the hidden -3000 applies at once, before the battle); `progress_shield_follows_the_attacker_through_compaction` (a lower-index Digimon on the attacker's side leaves mid-attack → the shield still hides the opponent effect on the attacker, not on the Digimon that slid into the slot).
+- Keep green: the whole `ch15_15_unaffected` module, `ch16_attack_keywords` progress tests, `--test combat` (`progress_partial`), `--test effect_context`, `--test dsl -- immunity`, `--test cards_behavioral -- progress bt24_017 medusamon immun` (filter), then the FULL `cards_behavioral`.
+
+- [ ] **Step 1: Un-ignore; write the two new tests; run → FAIL.**
+- [ ] **Step 2: Implement** the registry shield and its refresh points; remove the superseded hold.
+- [ ] **Step 3: Run → PASS**; regression list; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** `16-39-1` → proven (demoted to gap by Task 24; re-add its original tests); the new tests listed under `15-15-5-2`. Regenerate; `--check`. Entry RESOLVED.
+- [ ] **Step 5: Commit** — `engine: <Progress> shields the attacker from earlier opponent effects at read time (§16-39-1, §15-15-5-1, §15-15-5-2; G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS)`.
+
+### Task 26: a token's effect is a Digimon effect
+
+**Gap:** `G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE` (blocking; filed by Task 24). **Rules:** §15-2-1-1 (an effect activated by a Digimon card, Digimon, or Security Digimon is a Digimon effect), §4-21-1 (a Digimon token is a Digimon with card information). DCGO: `AutoProcessing.cs` (~L79) sets `IsDigimonEffect` for token effects.
+
+**Ruling (controller, provisional):** the observation tensor keeps its shape; the `source_kind_bucket` semantics change (token effects move from bucket 3 "rule" to bucket 0 "Digimon") is recorded as a dated note in `docs/TENSOR_SPEC.md` without a profile version bump (token effects are rare; existing checkpoints are not invalidated for the owner's purposes). Cost if wrong: a profile bump later.
+
+**Files:**
+- Modify: the four `source_kind_for_card_kind` sites — `code/digimon-engine/src/effect_queue.rs` (~L80), `effect_context/mod.rs` (~L96), `game_actions/mod.rs` (~L195), `game_phases.rs` (~L1347): `CardKind::Token => EffectSourceKind::Digimon`. Keep `Rule` for genuinely card-less effects (`replacement.rs`, `replacement_departure_batch.rs`, `game/lifecycle.rs`). Prefer ONE shared helper if the four sites can share it without a facade-lint violation.
+- Modify: `code/digimon-engine/src/observation/tensor_v2_lite.rs` (~L346) `source_kind_bucket` follows the kind (no special-casing tokens back); update `docs/TENSOR_SPEC.md` with the dated semantic note; update any tensor/parity test that pinned bucket 3 for a token (`--test tensor_and_mask`, `code/tests/engine/test_tensor*.py` if present).
+- Audit (same change): the five `source_kind: rule` immunity grants authored to cover tokens — BT13-088, BT16-102, EX11-046, EX13-062, EX6-011 — re-read each printed text in `data/card_bundles/<ID>.md`; where the text says "opponent's effects" / "opponent's Digimon's effects" the `rule` arm is now redundant: remove it and re-run that card's tests. Keep a `rule` arm only where the printed text genuinely covers card-less effects (expected: none; report each decision).
+- Attribution: every "by your opponent's Digimon's effect" reader (deletion cause, `was_deleted_by_opponent`, Scapegoat / Mephistomon-style riders) now counts token effects — this is the rule; add one test proving a token's `[On Deletion]` DP reduction that deletes counts as "deleted by your opponent's Digimon's effect".
+- Tests to un-ignore: `ch15_15_unaffected.rs::digimon_only_immunity_blocks_a_digimon_tokens_effect`.
+- Keep green: `--test effect_source_kind`, `--test tensor_and_mask`, `--test dsl -- immunity source_kind`, `--test judge_quiz`, `--test cards_behavioral -- token familiar st23 bt13_088 bt16_102 ex11_046 ex13_062 ex6_011` (filter), then the FULL `cards_behavioral` (the attribution shift is pool-wide).
+
+- [ ] **Step 1: Un-ignore; write the attribution test; run → FAIL.**
+- [ ] **Step 2: Implement** the kind change, the tensor note, the YAML audit.
+- [ ] **Step 3: Run → PASS**; regression list; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** `15-2-1-1` → proven. Regenerate; `--check`. Entry RESOLVED (list the five YAML decisions in the Resolution line).
+- [ ] **Step 5: Commit** — `engine: a token's effect is a Digimon effect (§15-2-1-1, §4-21-1; G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE)`.
+
+### Task 27: the battle-winner qualifier resolves the winner by identity with last-known information
+
+**Gap:** `G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX` (blocking; filed by the Task 1 review). **Rules:** §15-8-3-1, §15-8-3-8 (a reference in the triggered state is read as it was then), §15-4-4-5 (the Task 1 model: a departed referent keeps its last-known information; live while present — `Game::gate_trigger_context`). Reachable: BT25-020 Marsmon when the deleted attacker's `[On Deletion]` removes the winner (or a lower-index Digimon) before the observer activates.
+
+**Files:**
+- Modify: `code/digimon-engine/src/combat/mod.rs` — carry `PendingBattleResolution::winner_identity` (already recorded) onto the `TriggerContext` of every battle-result trigger (winner / loser observers), alongside a last-known snapshot of the winner (traits, names, level, DP) populated the way `event_snapshot` is for the event Digimon.
+- Modify: `code/digimon-engine/src/effect_queue.rs` (`TriggerContext::battle_winner` → identity + snapshot) and `code/digimon-engine/src/dsl_cards/predicate.rs::event_winner_trait_has` (~L1975) and its siblings (`event_winner_*`): resolve by identity while present; read the snapshot once the winner has left the field (same rule as Task 1: live while present, last-known after departure).
+- Tests (new, each `cite!`): `ch15_08_effect_categories.rs::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves` (§15-8-3-8: winner deleted by the loser's `[On Deletion]` before the observer activates → the observer still activates on the winner's last-known trait); `..._does_not_read_the_digimon_that_slid_into_the_slot` (a lower-index Digimon leaves; the qualifier still reads the real winner); a BT25-020-shaped card test in `tests/cards_behavioral/bt25/bt25_020.rs`.
+- Keep green: `ch15_08_effect_categories` (all), `--test event_permanent_identity`, `--test combat`, `--test timing_dispatch`, `--test cards_behavioral -- bt25_020 wins_a_battle battle_winner ts_` (filter).
+
+- [ ] **Step 1: Write the tests; run → FAIL on the departed-winner cases.**
+- [ ] **Step 2: Implement** identity + snapshot for the winner referent.
+- [ ] **Step 3: Run → PASS**; regression list.
+- [ ] **Step 4: Sidecar:** `15-8-3-8` → proven if it is a gap today, else add the tests to its list; `15-8-3-1` likewise. Regenerate; `--check`. Entry RESOLVED.
+- [ ] **Step 5: Commit** — `engine: battle-winner qualifier resolves the winner by identity with last-known information (§15-8-3-1, §15-8-3-8, §15-4-4-5; G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX)`.
+
+**Phase G in Task 23's closure:** the digest headline and the "blocking gaps with no task" list are updated to reflect these three.
