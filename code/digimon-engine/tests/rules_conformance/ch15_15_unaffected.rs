@@ -748,17 +748,20 @@ fn progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking() {
     assert_eq!(dp(&r, attacker), 3000, "affected again after the attack");
 }
 
-/// §15-15-5-2 (as above). §16-39-1 (as above).
+/// §15-15-5-2 (as above). §16-39-1 (as above). §17-1-3-1-1 (a Digimon whose
+/// DP is 0 is deleted by the rule check).
 ///
 /// P0 (4 security cards) has `TAMER_PROGRESS_SEC4` (while P0 has 4 or more
-/// security cards, all of P0's Digimon gain <Progress>) and
-/// `WA_TRASH_OWN_SEC` (6000 DP). During P0's turn P1's `DIGI_MINUS_3K` gives
-/// `WA_TRASH_OWN_SEC` -3000 DP until the end of P0's turn: 3000 DP. It
-/// attacks P1's suspended `DIGI_MINUS_3K` (4000 DP). While its optional
-/// [When Attacking] waits on P0 the attack is under way and the -3000 DP
-/// doesn't affect it: 6000 DP. P0 trashes its top security card: 3 security
-/// cards, it no longer has <Progress>, and the -3000 DP affects it at once --
-/// it battles at 3000 DP, loses and is deleted; the 4000-DP Digimon survives.
+/// security cards, all of P0's Digimon gain <Progress>) and a 4000-DP
+/// `DIGI_MINUS_3K`. During P0's turn P1's `DIGI_MINUS_3K` gives it -3000 DP
+/// until the end of P0's turn: 1000 DP. It attacks P1. P1's
+/// `OPP_WA_MINUS3000` and `OPP_ATK_TRASH_OPP_SEC` trigger; while P1 orders
+/// them the attack is under way and the earlier -3000 DP doesn't affect it:
+/// 4000 DP. `OPP_WA_MINUS3000` gives it another -3000 DP, which doesn't affect
+/// it either; then `OPP_ATK_TRASH_OPP_SEC` trashes P0's top security card
+/// (it affects P0, not the Digimon): 3 security cards, no <Progress>, and
+/// both -3000 DP affect it at once -- 0 DP, deleted by the rule check before
+/// any security check (P1 still has 3 security cards).
 #[test]
 fn progress_lost_mid_attack_applies_held_opponent_effects_immediately() {
     cite!(
@@ -777,26 +780,28 @@ fn progress_lost_mid_attack_applies_held_opponent_effects_immediately() {
         .memory(10)
         .start();
     r.place_on_field(0, "TAMER_PROGRESS_SEC4", Some(0));
-    let attacker = r.place_on_field(0, "WA_TRASH_OWN_SEC", Some(0));
-    let target = play_and_resolve(&mut r, 1, "DIGI_MINUS_3K");
-    assert_eq!(dp(&r, attacker), 3000, "precondition: affected before attacking");
-    set_suspended(&mut r, target, true);
-    r.attack_digimon(attacker, target, false);
+    let attacker = r.place_on_field(0, "DIGI_MINUS_3K", Some(0));
+    play_and_resolve(&mut r, 1, "DIGI_MINUS_3K");
+    assert_eq!(dp(&r, attacker), 1000, "precondition: affected before attacking");
+    r.place_on_field(1, "OPP_WA_MINUS3000", Some(0));
+    r.place_on_field(1, "OPP_ATK_TRASH_OPP_SEC", Some(0));
+    r.attack_player(attacker, 1, false);
     assert_eq!(
         dp(&r, attacker),
-        6000,
+        4000,
         "attacking with <Progress>: the earlier -3000 DP doesn't affect it"
     );
-    accept(&mut r, 0);
+    choose(&mut r, "OPP_WA_MINUS3000");
     resolve_prompts(&mut r);
-    assert_eq!(r.security_count(0), 3, "it trashed its top security card");
+    assert_eq!(r.security_count(0), 3, "P1's effect trashed P0's top security card");
     assert!(
-        !on_field(&r, 0, "WA_TRASH_OWN_SEC"),
-        "no <Progress> any more: 3000 DP at once, it loses the battle"
+        !on_field(&r, 0, "DIGI_MINUS_3K"),
+        "no <Progress> any more: both -3000 DP apply at once, 0 DP, deleted"
     );
-    assert!(
-        on_field(&r, 1, "DIGI_MINUS_3K"),
-        "the 4000-DP Digimon wins the battle"
+    assert_eq!(
+        r.security_count(1),
+        3,
+        "deleted by the rule check before any security check"
     );
 }
 
