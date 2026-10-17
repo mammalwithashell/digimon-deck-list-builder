@@ -319,6 +319,8 @@ fn ex13_060_chronicle_trigger_is_once_per_turn() {
     let mut runner = builder()
         .hand(0, &["CHR-TAMER", "CHR-TAMER-2"])
         .memory(10)
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
         .start();
     runner.skip_mulligan();
     runner.place_on_field(0, CARD_ID, Some(0));

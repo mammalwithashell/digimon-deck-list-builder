@@ -499,6 +499,8 @@ fn bt24_008_inherited_does_not_fire_on_opponents_turn() {
             ],
         )
         .memory(10)
+        .deck(0, &["SEC-FILLER"; 8])
+        .deck(1, &["SEC-FILLER"; 8])
         .start();
 
     // P0 has BT24-008 as the top card on its field.

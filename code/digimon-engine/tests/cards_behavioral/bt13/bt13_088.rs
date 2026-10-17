@@ -505,6 +505,8 @@ fn bt13_088_opp_attack_with_one_hand_card_does_not_install_prompt() {
         .add_card(make_filler("SECURITY"))
         .hand(0, &["HAND1"])
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_on_field(0, "BT13-088", Some(0));
     let attacker = runner.place_on_field(1, "ATTACKER", Some(0));
@@ -539,6 +541,8 @@ fn bt13_088_opp_attack_trash_two_ends_attack() {
         .add_card(make_filler("SECURITY"))
         .hand(0, &["HAND1", "HAND2"])
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_on_field(0, "BT13-088", Some(0));
     let attacker = runner.place_on_field(1, "ATTACKER", Some(0));
@@ -601,6 +605,8 @@ fn bt13_088_opp_attack_decline_lets_attack_resolve() {
         .add_card(make_filler("SECURITY"))
         .hand(0, &["HAND1", "HAND2"])
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_on_field(0, "BT13-088", Some(0));
     let attacker = runner.place_on_field(1, "ATTACKER", Some(0));
@@ -637,6 +643,8 @@ fn bt13_088_opp_attack_opt_locks_second_attack_same_turn() {
         .add_card(make_filler("SEC2"))
         .hand(0, &["HAND1", "HAND2", "HAND3", "HAND4"])
         .security(0, &["SEC1", "SEC2"])
+        .deck(0, &["SEC1"; 8])
+        .deck(1, &["SEC1"; 8])
         .start();
     runner.place_on_field(0, "BT13-088", Some(0));
     let attacker1 = runner.place_on_field(1, "ATTACKER1", Some(0));

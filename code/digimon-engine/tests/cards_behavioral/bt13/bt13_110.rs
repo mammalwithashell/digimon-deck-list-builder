@@ -58,6 +58,8 @@ fn runner() -> DebugRunner {
         .add_card(digimon("MAGNAMON", "Magnamon", &["Royal Knight"]))
         .add_card(make_test_card("DRAW", "Draw Filler"))
         .memory(10)
+        .deck(0, &["DRAW"; 8])
+        .deck(1, &["DRAW"; 8])
         .start()
 }
 

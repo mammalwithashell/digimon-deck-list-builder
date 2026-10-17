@@ -111,6 +111,8 @@ fn metalgrey_runner() -> DebugRunner {
         .add_card(make_digimon("LV3-PLAT", "Lv3Platform", 3, 3000))
         .add_card(make_filler("FILL"))
         .memory(12)
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
         .start()
 }
 

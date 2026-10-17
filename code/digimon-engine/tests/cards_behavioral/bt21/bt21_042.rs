@@ -139,6 +139,8 @@ fn geogrey_runner() -> DebugRunner {
         .expect("BT21-042 found in embedded DSL pack")
         .add_card(make_filler("FILL"))
         .memory(12)
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
         .start()
 }
 
