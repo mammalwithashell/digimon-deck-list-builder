@@ -1828,7 +1828,9 @@ impl Game {
                 let candidates = self.link_host_candidates(owner, source_card, &effects);
 
                 if candidates.is_empty() {
-                    self.player_mut(owner).trash.push(pending.card);
+                    // §9-1-5: no host to link to -- trashed like any used
+                    // Option, with its `GameEvent::Trash`.
+                    self.trash_card(owner, pending.card);
                     return;
                 }
 
@@ -1905,7 +1907,10 @@ impl Game {
     /// installed a selection that has since resolved).
     ///
     /// Outcome routing (per Phase 7 spec §7.6):
-    /// - `None` — commit the original event: trash the card.
+    /// - `None` — commit the original event: trash the card (§9-1-5) through
+    ///   `Game::trash_card`, which logs the `GameEvent::Trash`
+    ///   (G-ENGINE-OPTION-TRASH-NO-EVENT). The hand / deck redirects log no
+    ///   event: `GameEvent` has no hand- or deck-move variant.
     /// - `Cancelled` / `CustomHandled` — return the Option to the owner's
     ///   hand (cancel restores the original zone for Card subjects).
     /// - `Redirected(Deck)` — insert at the bottom of the owner's deck.
@@ -1921,7 +1926,7 @@ impl Game {
         use crate::replacement::ReplacementOutcome;
         match outcome {
             ReplacementOutcome::None => {
-                self.player_mut(pending.owner).trash.push(pending.card);
+                self.trash_card(pending.owner, pending.card);
             }
             ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
                 self.player_mut(pending.owner).hand.push(pending.card);
@@ -1938,14 +1943,14 @@ impl Game {
                     "unexpected Redirected({:?}) for Option trash — only Deck/Hand supported in v1",
                     other
                 );
-                self.player_mut(pending.owner).trash.push(pending.card);
+                self.trash_card(pending.owner, pending.card);
             }
             ReplacementOutcome::Substituted(_) => {
                 debug_assert!(
                     false,
                     "Substituted not supported for Option WhenWouldBeTrashed v1"
                 );
-                self.player_mut(pending.owner).trash.push(pending.card);
+                self.trash_card(pending.owner, pending.card);
             }
         }
     }

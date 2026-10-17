@@ -560,7 +560,7 @@ fn instead_overwrites_the_normal_processing() {
         "without a [Greymon]: the 6000-or-less Digimon"
     );
     pick_field(&mut r, 1);
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert_eq!(field_top_ids(&r, 1), owned(&[FILL, "LV5_PLAIN"]));
 
     // Mandatory overwrite.
@@ -572,12 +572,12 @@ fn instead_overwrites_the_normal_processing() {
          choice to keep the normal processing"
     );
     pick_field(&mut r, 0);
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert_eq!(field_top_ids(&r, 1), owned(&["OP_MEM", "LV5_PLAIN"]));
 
     // A lone 7000 DP Digimon.
     let mut r = instead_board(false, &["LV5_PLAIN"]);
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert_eq!(
         field_top_ids(&r, 1),
         owned(&["LV5_PLAIN"]),
@@ -588,7 +588,7 @@ fn instead_overwrites_the_normal_processing() {
         assert_eq!(offered_opp_slots(&r), vec![0]);
         pick_field(&mut r, 0);
     }
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert!(
         field_top_ids(&r, 1).is_empty(),
         "the overwriting processing deletes the lowest DP Digimon, 7000 DP"
@@ -707,8 +707,9 @@ fn used_option_is_in_no_area_during_its_main() {
 /// and trashing."
 ///
 /// Both halves read the board at a decision that parks while the
-/// interrupting processing is under way (the engine logs no event for the
-/// Option's trash):
+/// interrupting processing is under way, and the event log once it has
+/// finished (the Option's trash is a `GameEvent::Trash`,
+/// G-ENGINE-OPTION-TRASH-NO-EVENT):
 /// - Rule check: P0's `MAIN_MINUS3000` leaves P1's 3000 DP
 ///   `WOULD_DEL_MAY_MEM` ("[All Turns] When this Digimon would be deleted,
 ///   you may gain 1 memory") at 0 DP. When the rule check is about to delete
@@ -720,7 +721,6 @@ fn used_option_is_in_no_area_during_its_main() {
 ///   the trash as one of P0's pending items, and the Option is already in the
 ///   trash when it is asked.
 #[test]
-#[ignore = "F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE (§9-1-5)"]
 fn used_option_trashed_immediately_after_first_main_uninterrupted() {
     cite!(
         "9-1-5",
@@ -739,6 +739,7 @@ fn used_option_trashed_immediately_after_first_main_uninterrupted() {
     .start();
     r.place_on_field(0, FILL, Some(0));
     r.place_on_field(1, "WOULD_DEL_MAY_MEM", Some(0));
+    let cp1 = r.event_checkpoint();
     use_option(&mut r, 0, "MAIN_MINUS3000");
     pick_field(&mut r, 0);
     let sel = r
@@ -758,11 +759,26 @@ fn used_option_trashed_immediately_after_first_main_uninterrupted() {
         owned(&["MAIN_MINUS3000"]),
         "the rule check did not interrupt: the Option was trashed before it"
     );
+    assert!(
+        trash_event_index(&r, cp1, "MAIN_MINUS3000").is_some(),
+        "the Option's trash is logged before the rule check's decision"
+    );
     accept(&mut r, 1);
     resolve_prompts(&mut r);
     assert!(
         field_top_ids(&r, 1).is_empty(),
         "the 0 DP Digimon was deleted"
+    );
+    let option_trashed = trash_event_index(&r, cp1, "MAIN_MINUS3000")
+        .expect("GameEvent::Trash for the used Option");
+    let would_del = memory_event_index(&r, cp1, "WOULD_DEL_MAY_MEM")
+        .expect("the would-be-deleted effect gained 1 memory");
+    let deleted = trash_event_index(&r, cp1, "WOULD_DEL_MAY_MEM")
+        .expect("GameEvent::Trash for the deleted Digimon");
+    assert!(
+        option_trashed < would_del && option_trashed < deleted,
+        "event order: the Option's trash ({option_trashed}) precedes the rule check's \
+         would-be-deleted effect ({would_del}) and deletion ({deleted})"
     );
 
     // A triggered effect caused by the [Main].
@@ -791,11 +807,23 @@ fn used_option_trashed_immediately_after_first_main_uninterrupted() {
         owned(&["MAIN_PLAY_LV3"]),
         "the Option was trashed before the triggered [On Play] activated"
     );
+    assert!(
+        trash_event_index(&r, cp, "MAIN_PLAY_LV3").is_some(),
+        "the Option's trash is logged before the [On Play]'s decision"
+    );
     accept(&mut r, 0);
     resolve_prompts(&mut r);
     assert_eq!(
         memory_deltas(&r, cp),
         vec![(0, "OP_MAY_MEM".to_string(), 1)]
+    );
+    let option_trashed = trash_event_index(&r, cp, "MAIN_PLAY_LV3")
+        .expect("GameEvent::Trash for the used Option");
+    let on_play = memory_event_index(&r, cp, "OP_MAY_MEM").expect("the [On Play] resolved");
+    assert!(
+        option_trashed < on_play,
+        "event order: the Option's trash ({option_trashed}) precedes the triggered [On Play] \
+         ({on_play})"
     );
 }
 

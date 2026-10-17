@@ -315,7 +315,7 @@ fn option_in_battle_area_not_placed_by_effect_is_trashed() {
         .start();
     r.place_on_field(0, FILL, Some(0)); // a red Digimon to use the red Option
     use_option(&mut r, 0, "MAIN_PLACE_SELF");
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     rule_check_timing(&mut r);
     assert_eq!(
         field_top_ids(&r, 0),

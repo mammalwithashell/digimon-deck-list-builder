@@ -110,11 +110,6 @@ steps:
       dcgo_only: true
   expect:
     prompt: OptionalSkill
-- actor: 0
-  do:
-    select:
-      choice: Trash the used Option
-      sim_only: true
 - actor: 1
   do:
     pass: {}
@@ -128,7 +123,7 @@ expect_ruling:
       memory: 1
       p0.selection_candidates:
       - BT13-020
-  - at: 15
+  - at: 14
     that:
       memory: -1
       p0.field:

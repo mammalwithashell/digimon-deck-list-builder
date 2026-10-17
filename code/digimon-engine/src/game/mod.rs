@@ -869,24 +869,15 @@ pub struct Game {
     /// `complete_option_body_if_done` once the body has fully resolved and the
     /// Option has been disposed. While set, triggered effects the body caused
     /// (e.g. an opponent's `[On Deletion]`) are held back so the used Option is
-    /// trashed FIRST: rules 9-1-5 (the Option is trashed "at the timing when
-    /// its 1st [Main] effect has been resolved as pending processing") +
-    /// 18-1-2 (pending processing at the same time as triggered effects is
-    /// ordered like simultaneous triggering) + 15-4-3-5 (turn player's first).
+    /// trashed FIRST, uninterrupted by rule checks or other effects: §9-1-5
+    /// (Ver. 4.3) "A used Option card is immediately trashed as pending
+    /// processing as soon as the timing when its 1st [Main] effect has been
+    /// resolved ... Other effects and rule checks don't interrupt the period
+    /// between [Main] effect activation and trashing."
     /// DCGO: `UseOptionClass.UseOption` calls `AddTrashCard` right after the
     /// `OptionSkill` process, before the stacked triggers resolve.
     /// G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS.
     pub(crate) option_body_pending: bool,
-
-    /// The used Option's pending trash (9-1-5) is being ORDERED by its user
-    /// against their own simultaneously-pending triggered effects: set when
-    /// that player answered the `install_option_trash_order_selection` prompt
-    /// with "resolve my triggered effect first". Cleared as soon as one queued
-    /// entry actually resolves (`run_queued_effect`), so the choice is
-    /// re-offered before each remaining item â€” 15-4-3-5-1 repeats the pick
-    /// until the turn player has no pending items left.
-    /// G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
-    pub(crate) option_trash_order_deferred: bool,
 
     /// VARIABLE-amount interactive cost reduction driven by the printed play
     /// cost of a permanent deleted DURING an interactive cost's `pay_cost`

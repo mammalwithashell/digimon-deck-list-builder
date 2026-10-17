@@ -277,11 +277,9 @@
   tests: ["ch18_pending_overwrite::used_option_is_in_no_area_during_its_main"]
   note: "While the used Option's [Main] waits on its hand pick, the Option is in neither the hand, the trash nor the battle area."
 "9-1-5":
-  status: gap
-  blocks_training: true
-  gap_id: F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE
+  status: proven
   tests: ["ch18_pending_overwrite::used_option_trashed_immediately_after_first_main_uninterrupted"]
-  note: "Two interruptions, both red: (1) the rule check deletes a 0 DP Digimon the [Main] caused before the Option is trashed (its would-be-deleted decision parks with P0's trash empty); (2) a trigger the [Main] caused makes the engine offer 'Trash the used Option' as a TriggerOrder branch. Test is #[ignore]d. The Option's trash itself emits no event (G-ENGINE-OPTION-TRASH-NO-EVENT, non-blocking), so the test reads the trash at parked decisions."
+  note: "The used Option is disposed in the step that finishes its [Main] body (drain_effect_queue_inner right after the OptionMain entry; the top of drain_effect_queue when the body's last selection has just resolved), before the rules check and any trigger, and logs a GameEvent::Trash. Both halves green: a 0 DP rule-check deletion's would-be-deleted decision parks with the Option already trashed, and a triggered [On Play]'s decision is the next one (no 'Trash the used Option' TriggerOrder branch); the event log orders the Option's Trash before the rule check's effect and deletion and before the [On Play]'s memory gain (F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE, G-ENGINE-OPTION-TRASH-NO-EVENT resolved)."
 "18-3-1":
   status: proven
   tests: ["ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared", "ch18_pending_overwrite::long_finite_chain_is_not_an_infinite_loop", "ch18_pending_overwrite::dp_progress_chain_is_not_an_infinite_loop"]
