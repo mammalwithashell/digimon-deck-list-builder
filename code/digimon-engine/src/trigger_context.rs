@@ -256,6 +256,19 @@ pub struct TriggerContext {
     /// `event_permanent_identity`), so it is left out of `Debug` and the
     /// verification digest built from it.
     pub(crate) event_snapshot: Option<std::sync::Arc<DeletedObjectSnapshot>>,
+    /// Identity of the battle WINNER (`battle_winner`), recorded when the
+    /// battle was compared (`PendingBattleResolution::winner_identity`) and
+    /// carried on every `EndOfBattle` firing even when the winner has left
+    /// the field before the event was emitted. The `event_winner_*` reads
+    /// resolve the winner by it (never by the slot `battle_winner` named at
+    /// enqueue, which a lower-index departure shifts) and, once it no longer
+    /// resolves, read the winner's last-known information: the battle's
+    /// `event_snapshot` (the winner is the event Digimon), exposed as
+    /// `deleted_object` by `Game::gate_trigger_context` (§15-8-3-1,
+    /// §15-8-3-8, §15-4-4-5; G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX).
+    /// Equal to `event_permanent_identity` on these firings, so it is left
+    /// out of `Debug` and the verification digest built from it.
+    pub(crate) battle_winner_identity: Option<(PlayerId, u64)>,
 }
 
 impl TriggerContext {
@@ -268,6 +281,29 @@ impl TriggerContext {
                 .map(|index| PermanentHandle { player, index: index as u8 });
         }
         self.event_permanent
+    }
+
+    /// The battle winner of an `EndOfBattle` firing while it is on the field:
+    /// found by identity, so a lower-index departure that shifted its slot
+    /// does not redirect the read to the Digimon that slid in. `None` once it
+    /// has left the field (read `deleted_object` -- its last-known
+    /// information -- then), on a tie, or on any other event. Legacy contexts
+    /// without a captured identity keep the compatibility handle.
+    pub fn resolve_battle_winner(&self, game: &crate::game::Game) -> Option<PermanentHandle> {
+        if let Some((player, identity)) = self.battle_winner_identity {
+            return game.player(player).battle_area.iter()
+                .position(|permanent| permanent.battle_identity == Some(identity))
+                .map(|index| PermanentHandle { player, index: index as u8 });
+        }
+        self.battle_winner
+    }
+
+    /// The controller of the battle winner (whether or not it is still on the
+    /// field), or `None` when the event has no winner.
+    pub fn battle_winner_controller(&self) -> Option<PlayerId> {
+        self.battle_winner_identity
+            .map(|(player, _)| player)
+            .or_else(|| self.battle_winner.map(|winner| winner.player))
     }
 
     /// The cards an effect just trashed from the event player's hand

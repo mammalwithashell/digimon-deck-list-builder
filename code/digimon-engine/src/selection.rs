@@ -789,6 +789,14 @@ pub enum TriggerSource {
         /// Immutable identities of every combatant that actually deleted
         /// its battle opponent, including both sides of mutual deletion.
         deleters: Vec<crate::trigger_context::BattleCombatantSnapshot>,
+        /// The winner's identity and last-known information, taken when the
+        /// battle was compared. Present whenever the battle had a permanent
+        /// winner, including one that left the field (e.g. to the loser's
+        /// `[On Deletion]`) before this event was emitted, when `winner` is
+        /// `None` (§15-8-3-1, §15-8-3-8;
+        /// G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX).
+        winner_identity: Option<(PlayerId, u64)>,
+        winner_snapshot: Option<std::sync::Arc<crate::trigger_context::DeletedObjectSnapshot>>,
     },
     /// `OnDiscardHand` observer fan-out fired after an EFFECT trashes one or
     /// more cards from a player's hand (G-ENGINE-ON-DISCARD-HAND). Scans EVERY

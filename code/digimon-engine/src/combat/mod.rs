@@ -227,6 +227,10 @@ pub(crate) struct PendingBattleResolution {
     attacker_deleted: bool,
     defender_deleted: bool,
     winner_identity: Option<(PlayerId, u64)>,
+    /// The winner's last-known information at the comparison (§15-8-3-8:
+    /// the battle is the state the "wins a battle" trigger references),
+    /// read by the `event_winner_*` qualifiers once the winner has left.
+    winner_snapshot: Option<std::sync::Arc<crate::trigger_context::DeletedObjectSnapshot>>,
     is_attack: bool,
     in_call: bool,
 }
@@ -3450,6 +3454,8 @@ impl Game {
                         if let Some(st) = self.security_resolution.as_mut() {
                             st.phase_enqueue_done = true;
                         }
+                        let (winner_identity, winner_snapshot) =
+                            self.battle_winner_referent(winner);
                         self.enqueue_triggered(
                             EffectTiming::EndOfBattle,
                             TriggerSource::BattleResolved {
@@ -3457,6 +3463,8 @@ impl Game {
                                 // Rule 14-2-3: beating a Security Digimon does
                                 // not delete it, so no permanent is a deleter.
                                 deleters: Vec::new(),
+                                winner_identity,
+                                winner_snapshot,
                             },
                         );
                         // §18-1-2: pending processing due at the end of the
@@ -4365,27 +4373,11 @@ impl Game {
         });
         let attacker_snapshot = snapshot(attacker);
         let defender_snapshot = snapshot(defender);
-        let winner_identity = match outcome {
-            AttackResult::AttackerWins => Some(attacker),
-            AttackResult::DefenderWins => Some(defender),
-            _ => None,
-        }
-        .map(|winner| {
-            let identity = match self.player(winner.player).battle_area[winner.index as usize]
-                .battle_identity
-            {
-                Some(identity) => identity,
-                None => {
-                    let identity = self.next_battle_identity;
-                    self.next_battle_identity =
-                        identity.checked_add(1).expect("battle identity exhausted");
-                    self.player_mut(winner.player).battle_area[winner.index as usize]
-                        .battle_identity = Some(identity);
-                    identity
-                }
-            };
-            (winner.player, identity)
-        });
+        let (winner_identity, winner_snapshot) = match outcome {
+            AttackResult::AttackerWins => self.battle_winner_referent(Some(attacker)),
+            AttackResult::DefenderWins => self.battle_winner_referent(Some(defender)),
+            _ => (None, None),
+        };
         let state = PendingBattleResolution {
             attacker: attacker_snapshot,
             defender: defender_snapshot,
@@ -4393,6 +4385,7 @@ impl Game {
             attacker_deleted: false,
             defender_deleted: false,
             winner_identity,
+            winner_snapshot,
             is_attack,
             in_call: true,
         };
@@ -4415,6 +4408,45 @@ impl Game {
         } else {
             outcome
         }
+    }
+
+    /// The battle winner's identity (allocated if it has none yet) and its
+    /// last-known information, taken at the comparison. Every `EndOfBattle`
+    /// firing carries both, so a "wins a battle" qualifier resolves the
+    /// winner by identity and, once it has left the field, still reads what
+    /// it was when the battle was won (§15-8-3-1, §15-8-3-8, §15-4-4-5;
+    /// DCGO keeps a copy of each winner in the battle hashtable's
+    /// `WinnerPermanents`). `(None, None)` when there is no permanent winner.
+    pub(crate) fn battle_winner_referent(
+        &mut self,
+        winner: Option<PermanentHandle>,
+    ) -> (
+        Option<(PlayerId, u64)>,
+        Option<std::sync::Arc<crate::trigger_context::DeletedObjectSnapshot>>,
+    ) {
+        let Some(winner) = winner else {
+            return (None, None);
+        };
+        let Some(permanent) = self
+            .player(winner.player)
+            .battle_area
+            .get(winner.index as usize)
+        else {
+            return (None, None);
+        };
+        let identity = match permanent.battle_identity {
+            Some(identity) => identity,
+            None => {
+                let identity = self.next_battle_identity;
+                self.next_battle_identity =
+                    identity.checked_add(1).expect("battle identity exhausted");
+                self.player_mut(winner.player).battle_area[winner.index as usize]
+                    .battle_identity = Some(identity);
+                identity
+            }
+        };
+        let snapshot = self.build_snapshot_for_handle(winner).map(std::sync::Arc::new);
+        (Some((winner.player, identity)), snapshot)
     }
 
     /// Record only a committed battle-cause deletion of an original combatant.
@@ -4522,7 +4554,16 @@ impl Game {
             }
             self.enqueue_triggered(
                 EffectTiming::EndOfBattle,
-                TriggerSource::BattleResolved { winner, deleters },
+                TriggerSource::BattleResolved {
+                    winner,
+                    deleters,
+                    // Carried even when `winner` no longer resolves: the
+                    // loser's `[On Deletion]` (drained before this event) may
+                    // have removed the winner, and its "wins a battle"
+                    // qualifiers then read its last-known information.
+                    winner_identity: state.winner_identity,
+                    winner_snapshot: state.winner_snapshot.take(),
+                },
             );
             // §18-1-2: pending processing due at the end of the battle pools
             // with the `EndOfBattle` observers.

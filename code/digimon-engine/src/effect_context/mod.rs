@@ -490,27 +490,22 @@ impl<'a> EffectReadContext<'a> {
     }
 
     /// The battle WINNER carried by an `EndOfBattle` firing (board-wide
-    /// battle-winner observer, G-DSL-BATTLE-WINNER-BOARDWIDE). `None` on a tie
-    /// or a non-battle trigger.
+    /// battle-winner observer, G-DSL-BATTLE-WINNER-BOARDWIDE), found by
+    /// identity. `None` on a tie, a non-battle trigger, or once the winner
+    /// has left the field (G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX).
     pub fn battle_winner(&self) -> Option<PermanentHandle> {
         self.game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.battle_winner)
+            .and_then(|trigger| trigger.resolve_battle_winner(self.game))
     }
 
-    /// True when the battle winner is live and its top card carries
-    /// `trait_name` (case-insensitive).
+    /// True when the battle winner carries `trait_name` (case-insensitive):
+    /// read live while it is on the field, and from its last-known
+    /// information once it has left (a clause-level gate's `deleted_object`,
+    /// §15-8-3-8).
     pub fn battle_winner_has_trait(&self, trait_name: &str) -> bool {
-        let Some(handle) = self.battle_winner() else {
-            return false;
-        };
-        self.game
-            .player(handle.player)
-            .battle_area
-            .get(handle.index as usize)
-            .map(|perm| perm.has_trait(trait_name, self.card_data()))
-            .unwrap_or(false)
+        battle_winner_has_trait_in(self.game, trait_name)
     }
 
     /// The player whose HAND lost cards in the current `OnDiscardHand` batch.
@@ -1300,20 +1295,12 @@ impl<'a> EffectContext<'a> {
         self.game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.battle_winner)
+            .and_then(|trigger| trigger.resolve_battle_winner(self.game))
     }
 
     /// See [`EffectReadContext::battle_winner_has_trait`].
     pub fn battle_winner_has_trait(&self, trait_name: &str) -> bool {
-        let Some(handle) = self.battle_winner() else {
-            return false;
-        };
-        self.game
-            .player(handle.player)
-            .battle_area
-            .get(handle.index as usize)
-            .map(|perm| perm.has_trait(trait_name, &self.game.card_data))
-            .unwrap_or(false)
+        battle_winner_has_trait_in(self.game, trait_name)
     }
 
     /// See [`EffectReadContext::discard_hand_player`]. G-ENGINE-ON-DISCARD-HAND.
@@ -1946,5 +1933,30 @@ mod tests {
             before + 1,
             "one Familiar Token permanent is created"
         );
+    }
+}
+
+/// Shared body of the two `battle_winner_has_trait` readers: the winner by
+/// identity, live while on the field; its last-known traits (the gate's
+/// `deleted_object`) once it has left. G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX.
+fn battle_winner_has_trait_in(game: &Game, trait_name: &str) -> bool {
+    let Some(trigger) = game.current_trigger_context.as_ref() else {
+        return false;
+    };
+    match trigger.resolve_battle_winner(game) {
+        Some(handle) => game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .is_some_and(|perm| perm.has_trait(trait_name, &game.card_data)),
+        None => {
+            trigger.battle_winner_identity.is_some()
+                && trigger.deleted_object.as_ref().is_some_and(|snapshot| {
+                    snapshot
+                        .traits
+                        .iter()
+                        .any(|t| t.eq_ignore_ascii_case(trait_name))
+                })
+        }
     }
 }

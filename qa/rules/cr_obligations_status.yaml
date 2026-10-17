@@ -78,6 +78,10 @@
   tests: ["ch15_04_effect_states::non_turn_player_derived_trigger_precedes_turn_player_pending"]
 
 # ── ch15-08 Effect Categories (§15-8) — tests/rules_conformance/ch15_08_effect_categories.rs ──
+"15-8-3-1":
+  status: proven
+  tests: ["ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves"]
+  note: "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not. G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX."
 "15-8-3-2":
   status: gap
   blocks_training: true
@@ -101,8 +105,8 @@
   note: "Security count read at processing: ordering the sibling <Recovery +1> first makes a level 4 Digimon returnable; ordering the observer first does not."
 "15-8-3-8":
   status: proven
-  tests: ["ch15_08_effect_categories::trigger_reference_tied_to_condition_uses_trigger_time_state", "ch15_08_effect_categories::trigger_condition_qualifier_read_in_triggered_state_after_attacker_leaves"]
-  note: "The rule's example: the played level 4 Digimon digivolves to level 5 before the observer activates; only the opponent's level 4 Digimon is a legal deletion target."
+  tests: ["ch15_08_effect_categories::trigger_reference_tied_to_condition_uses_trigger_time_state", "ch15_08_effect_categories::trigger_condition_qualifier_read_in_triggered_state_after_attacker_leaves", "ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves", "ch15_08_effect_categories::battle_winner_qualifier_does_not_read_the_digimon_that_slid_into_the_slot"]
+  note: "The rule's example: the played level 4 Digimon digivolves to level 5 before the observer activates; only the opponent's level 4 Digimon is a legal deletion target. 'When any of your [TS] trait Digimon win a battle' (BT25-020 Marsmon shape): the winner is resolved by identity while on the field (a lower-index Digimon returning first does not redirect the read) and read through its last-known information once the loser's [On Deletion] has deleted it."
 "15-8-3-9-1":
   status: proven
   tests: ["ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger"]

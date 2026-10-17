@@ -1,0 +1,21 @@
+# OD_DEL_ALL_OPP -- Digimon, Lv.3, red, 2000 DP, play cost 3.
+#   [On Deletion] Delete all of your opponent's Digimon.
+# A battle loser whose [On Deletion] removes the battle winner before the
+# winner's "wins a battle" observers activate (the §15-8-3-8 departed-winner
+# test).
+card: OD_DEL_ALL_OPP
+name: Spitemon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - when: on_deletion
+    summary: "[On Deletion] Delete all of your opponent's Digimon."
+    process:
+      - delete_all_permanents:
+          over:
+            all_of:
+              - of: opponent
+              - kind: digimon
