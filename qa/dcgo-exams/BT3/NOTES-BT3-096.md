@@ -62,3 +62,11 @@ and leaves the DCGO-corpus replay path untouched. Re-diff post-fix: **CLEAN**,
 compared 8 of 9 ours / 8 dcgo steps (1 sim-only row with no DCGO prompt). Verdict
 re-recorded `confirmed` 2026-09-21. Full write-up:
 `G-TOOLING-EXAM-AUTO-ANSWER-EATS-NEXT-PROMPT` in `qa/resolved-gaps.md`.
+
+### 2026-10-17 — the trash-order row is gone (§9-1-5)
+`F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE` (Plan 4 Task 7): §9-1-5 (Ver. 4.3)
+makes the used Option's trash uninterrupted, so our engine no longer asks the
+"Trash the used Option" ordering pick (and `ReplayDriver::auto_answer_option_trash_order`
+is gone). The scenario's `sim_only` `choice:` row was dropped and its `assert: at:`
+index moved down by one; no compared row changed. Re-run the oracle diff at the
+next dispatch to re-earn the verdict on the current engine.

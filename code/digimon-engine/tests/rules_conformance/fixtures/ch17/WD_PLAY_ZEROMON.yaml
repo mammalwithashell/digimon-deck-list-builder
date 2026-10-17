@@ -1,0 +1,29 @@
+# WD_PLAY_ZEROMON -- Digimon, Lv.3, red, 0 DP, play cost 2.
+# The §17-1-2-1 example shape:
+#   [All Turns] When this Digimon would be deleted, you may play 1 [Zeromon]
+#   from your hand without paying the cost.
+# An immediate-type effect ("would", §15-8-5-1). With 0 printed DP this
+# Digimon is a rule-check deletion target, so the effect activates DURING
+# rule-check processing and plays a 0 DP Digimon.
+card: WD_PLAY_ZEROMON
+name: Summonzeromon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 0
+effects:
+  - kind: replacement
+    timing: when_would_be_deleted
+    optional: true
+    summary: "[All Turns] When this Digimon would be deleted, you may play 1 [Zeromon] from your hand without paying the cost."
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: Zeromon
+          prompt: "Play 1 [Zeromon] from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }

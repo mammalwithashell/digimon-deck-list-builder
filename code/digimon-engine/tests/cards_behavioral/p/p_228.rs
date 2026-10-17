@@ -29,7 +29,7 @@
 //! - Event-gated <Delay> on a matching [Suzune Kazuki] play after the placing
 //!   turn: trash-this-card cost, then optional digivolve of one of your Digimon
 //!   into a level <= 6 [LIBERATOR] card from hand at cost -3.
-//! - Negative gates: placing turn (16-16-3), non-Suzune plays, and an
+//! - Negative gates: placing turn (16-17-3), non-Suzune plays, and an
 //!   opponent-owned Suzune play on the opponent's turn ([Your Turn] + "any of
 //!   YOUR [Suzune Kazuki]s") must all leave the Delay parked.
 //! - Behavioral [Security] drive: a real security check runs the [Main] search
@@ -824,7 +824,7 @@ fn p_228_delay_triggers_after_suzune_is_played_and_offers_reduced_cost_digivolve
     );
 
     // The <Delay> timing is reached: first the optional ACTIVATION choice
-    // (16-16-2) — accept it to activate the Delay.
+    // (16-17-2) — accept it to activate the Delay.
     {
         let view = runner
             .pending_selection_view()
@@ -832,7 +832,7 @@ fn p_228_delay_triggers_after_suzune_is_played_and_offers_reduced_cost_digivolve
         assert_eq!(view.kind, SelectionKind::Replacement);
         assert!(
             runner.pending_is_optional(),
-            "the <Delay> activation itself is optional (16-16-2)"
+            "the <Delay> activation itself is optional (16-17-2)"
         );
         runner
             .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
@@ -901,7 +901,7 @@ fn p_228_delay_triggers_after_suzune_is_played_and_offers_reduced_cost_digivolve
 }
 
 /// Negative gate (placing turn): the `<Delay>` is only activatable "after the
-/// placing turn" (rules manual 16-16-3). A [Suzune Kazuki] played on the same
+/// placing turn" (rules manual 16-17-3). A [Suzune Kazuki] played on the same
 /// turn P-228 was placed must NOT fire the Delay body.
 #[test]
 fn p_228_delay_does_not_fire_on_the_placing_turn() {
@@ -1035,7 +1035,7 @@ fn p_228_delay_does_not_fire_when_opponent_plays_their_own_suzune() {
     );
     runner.auto_resolve().expect("resolve Main and placement");
 
-    // Pass the turn: it is now AFTER the placing turn (the 16-16-3 gate
+    // Pass the turn: it is now AFTER the placing turn (the 16-17-3 gate
     // passes), so only the [Your Turn] / event-owner gates can reject the
     // opponent's play.
     runner.end_turn();
@@ -1067,7 +1067,7 @@ fn p_228_delay_does_not_fire_when_opponent_plays_their_own_suzune() {
     );
 }
 
-/// Rules manual 16-16-2: "The processing from <Delay> is optional." When a
+/// Rules manual 16-17-2: "The processing from <Delay> is optional." When a
 /// [Suzune Kazuki] play reaches the <Delay> timing, the controller must be
 /// offered an ACTIVATION choice (activate = trash P-228 + run the body /
 /// decline = do nothing). Declining must leave P-228 parked in the battle
@@ -1126,7 +1126,7 @@ fn p_228_delay_activation_is_optional_and_declining_leaves_it_parked() {
     );
     assert!(
         runner.pending_is_optional(),
-        "16-16-2: the <Delay> activation is optional — PASS must be legal"
+        "16-17-2: the <Delay> activation is optional — PASS must be legal"
     );
     assert_eq!(
         view.valid_action_ids,
@@ -1232,7 +1232,7 @@ fn p_228_delay_trashes_self_as_cost_even_when_digivolve_is_declined() {
     let suzune_idx = hand_index_of(&runner, 0, "SUZUNE");
     assert!(runner.game.play_from_hand(0, suzune_idx).is_some());
 
-    // ACCEPT the (optional, 16-16-2) Delay activation itself...
+    // ACCEPT the (optional, 16-17-2) Delay activation itself...
     let view = runner
         .pending_selection_view()
         .expect("playing Suzune after the placing turn offers the Delay activation");

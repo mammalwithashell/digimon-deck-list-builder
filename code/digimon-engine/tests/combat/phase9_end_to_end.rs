@@ -30,7 +30,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Expiry, GamePhase, Keyword};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::AttackTarget;
+use digimon_engine::selection::{AttackTarget, SelectionKind};
 
 fn dgmn(id: &str, dp: i32) -> CardData {
     let mut c = make_test_card(id, id);
@@ -274,10 +274,33 @@ fn counter_redirect_into_collision_forced_block_end_to_end() {
         .resolve_selection(1, encode_attack(0, 0))
         .expect("defender declares forced block");
 
+    // §15-4-3-2: the block (§12-1-1, §12-1-7-1) switches the attack target
+    // to the blocker AND is the block event, so W-TC's target-change
+    // observer and W-OB's OnBlock trigger together and pend in one
+    // TriggerOrder for their controller (P0).
+    let order = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("the block's triggered effects pend together");
+    assert_eq!(order.kind, SelectionKind::TriggerOrder, "{order:?}");
+    assert_eq!(order.selecting_player, 0);
+    assert_eq!(order.effect_choices.as_ref().map(|c| c.len()), Some(2));
+    assert_eq!(*on_block_fired.lock().unwrap(), 0, "nothing activated yet");
+    r.auto_resolve().expect("activate both");
+
     assert_eq!(
         *on_block_fired.lock().unwrap(),
         1,
         "OnBlock fires on the forced-block declaration"
+    );
+    assert!(
+        target_change_log
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|t| matches!(t, AttackTarget::Digimon(h) if *h == def_a)),
+        "the target-change observer saw the blocker as the target"
     );
 
     // ─── 5. Final state: no leaks ────────────────────────────────────

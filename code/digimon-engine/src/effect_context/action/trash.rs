@@ -394,7 +394,7 @@ impl<'a> EffectContext<'a> {
     /// `delete_permanent` step. Returns `false` if the source permanent has
     /// already left the field.
     ///
-    /// No-approximations note: per Comprehensive Rules 16-16-2 the processing
+    /// No-approximations note: per Comprehensive Rules 16-17-2 the processing
     /// of a `<Delay>` is optional; the player's accept/decline prompt belongs
     /// to [`crate::effect::EffectBuilder::optional`] and runs BEFORE this cost.
     pub fn trash_self_as_cost(&mut self) -> bool {
@@ -605,11 +605,12 @@ impl<'a> EffectContext<'a> {
     /// `armor_purge_top` (which is reserved for the `<Armor Purge>` keyword
     /// auto-install body and panics on insufficient stack).
     ///
-    /// Mirrors `armor_purge_top`'s observer dispatch: after the trash, fires
-    /// `OnDigivolutionCardTrashed` and drains the queue, so observers
-    /// (e.g. Rocks-archetype source-trash listeners) see the trashed top with
-    /// source/host event context. The trashed card moves through the standard
-    /// owner trash path.
+    /// After the trash it fires `OnDigivolutionCardTrashed` and drains the
+    /// queue. That is WRONG for this primitive (it trashes the visible TOP
+    /// card, which is not a digivolution card, §4-8-1) and no longer matches
+    /// `armor_purge_top`, which fires `OnTopCardTrashed`; tracked as
+    /// G-ENGINE-TRASH-TOP-SOURCE-FIRES-DIGIVOLUTION-CARD-TRASHED. The trashed
+    /// card moves through the standard owner trash path.
     ///
     /// Reject-before-mutate discipline: invalid handle and empty stack both
     /// return `false` before any state change.
@@ -657,10 +658,10 @@ impl<'a> EffectContext<'a> {
                 .unwrap_or_else(|| removed.handle());
             (removed, host_card)
         };
-        // Fire OnDigivolutionCardTrashed for the trashed top card. Mirrors
-        // `armor_purge_top` and the sources-below-top dispatch in
-        // `Game::return_to_hand` / `Game::return_to_deck`. Host known
-        // pre-push → use the shared Tier-2 push+fire primitive.
+        // Fires OnDigivolutionCardTrashed for the trashed TOP card (shared
+        // Tier-2 push+fire primitive). Known wrong timing, §4-8-1:
+        // G-ENGINE-TRASH-TOP-SOURCE-FIRES-DIGIVOLUTION-CARD-TRASHED (unlike
+        // `armor_purge_top`, which fires OnTopCardTrashed).
         self.game
             .trash_source_and_fire(removed.owner, target, removed, host_card);
         let _ = self.cleanup_exposed_battle_area_digi_egg(target);

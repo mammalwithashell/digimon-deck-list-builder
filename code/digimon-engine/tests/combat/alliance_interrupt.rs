@@ -1,6 +1,8 @@
-//! Alliance interrupt tests.
+//! Alliance tests.
 //!
-//! Exercises the `try_enter_alliance` path. The `<Alliance>` keyword lives
+//! `<Alliance>` is a trigger-type effect resolved in the attack declaration's
+//! trigger pool (§16-24-2; `keyword_to_auto_effect` + `fire_on_attack`); its
+//! body is the optional ally pick tested here. The `<Alliance>` keyword lives
 //! on the ATTACKER ("When THIS Digimon attacks, by suspending 1 of your
 //! other Digimon, add the suspended Digimon's DP to this Digimon and it
 //! gains <Security Attack +1>" — DCGO `AllianceSelfEffect`; corrected for
@@ -15,7 +17,7 @@
 //!     (post-suspension, floored at 0), +1 SA
 //!   - declined: attack proceeds to Counter/Block with no changes
 //!   - Alliance modifiers expire at end of attack
-//!   - Vortex skips Alliance too
+//!   - a Vortex attack triggers Alliance too (§16-24-2)
 
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::combat::AttackResult;
@@ -247,23 +249,33 @@ fn alliance_declined_preserves_board_state() {
     assert!(!r.game.players[0].battle_area[1].is_suspended);
 }
 
+/// §16-24-2: "<Alliance> is a trigger-type effect that triggers when a
+/// Digimon with this effect attacks" — a `<Vortex>` attack is an attack, so
+/// <Alliance> triggers on it like any other (it used to be an attack-state
+/// window the Vortex short-circuit skipped). Declining it, the attack
+/// resolves as before.
 #[test]
-fn vortex_bypasses_alliance() {
+fn vortex_attack_triggers_alliance() {
     let mut r = DebugRunner::builder()
         .add_card(dgmn("ATK", 5000))
         .add_card(dgmn("DEF", 3000))
         .add_card(dgmn("ALLY", 4000))
         .start();
     let atk = r.place_on_field(0, "ATK", Some(0));
-    let ally = r.place_on_field(0, "ALLY", Some(0));
+    let _ally = r.place_on_field(0, "ALLY", Some(0));
     let def = r.place_on_field(1, "DEF", Some(0));
     r.game
         .modifiers
         .grant_keyword(atk, Keyword::Alliance, Expiry::Permanent, 0);
 
     let result = r.attack_digimon(atk, def, /* vortex = */ true);
-    assert_eq!(result, AttackResult::AttackerWins);
-    assert!(r.game.pending_selection.is_none());
+    assert_eq!(result, AttackResult::InProgress);
+    let sel = r.game.pending_selection.as_ref().expect("<Alliance> ally pick");
+    assert_eq!(sel.selecting_player, 0);
+    assert_eq!(sel.valid_action_ids, vec![encode_attack(0, 1)]);
+    r.game.resolve_selection(0, PASS).expect("decline alliance");
+    assert!(r.game.pending_attack.is_none());
+    assert_eq!(r.battle_area_size(1), 0, "ATK 5000 beats DEF 3000");
 }
 
 #[test]

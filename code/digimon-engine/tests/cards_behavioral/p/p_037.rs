@@ -376,7 +376,7 @@ fn p_037_delay_activation_gains_2_memory_via_main_phase_action() {
         })
         .expect("playing P-037 should park it as a MainPhaseActivated delayed option");
 
-    // Same turn it was placed: the Delay activation is NOT legal (16-16-3).
+    // Same turn it was placed: the Delay activation is NOT legal (16-17-3).
     let bit = (FIELD_EFFECT_START
         + delay_idx as u16 * EFFECTS_PER_PERMANENT
         + FIELD_EFFECT_SLOT_FOR_MAIN) as usize;

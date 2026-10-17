@@ -27,8 +27,9 @@
 #     +3000 DP UntilOwnerTurnEnd.
 #
 # DSL notes:
-#   - "Your opponent's effects don't affect" = the 4-source-kind opponent
-#     immunity idiom (BT13-088 / EX6-011): digimon + tamer + option + rule.
+#   - "Your opponent's effects don't affect" = the opponent immunity idiom
+#     over every effect kind (BT13-088 / EX6-011): digimon + tamer + option
+#     (§15-2-1; a token's effect is a Digimon effect, §15-2-1-1).
 #   - "delete all ... lowest play cost" = batched `delete_all_permanents` over
 #     opponent Digimon whose play cost ≤ the opponent-scoped `lowest_play_cost`
 #     aggregate (BT23-058 Craniamon idiom, now batched).
@@ -109,11 +110,6 @@ effects:
       - grant_effect_immunity:
           target: source
           source_kind: option
-          source_controller: opponent
-          expiry: end_of_opponents_turn
-      - grant_effect_immunity:
-          target: source
-          source_kind: rule
           source_controller: opponent
           expiry: end_of_opponents_turn
 

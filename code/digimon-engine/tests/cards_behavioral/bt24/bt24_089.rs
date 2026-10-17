@@ -937,7 +937,7 @@ fn bt24_089_delay_opens_when_owen_dreadnought_suspends() {
     runner.game.enter_main_phase();
 
     // Owen Dreadnought suspends — opens the event-gated Delay with the
-    // optional ACTIVATION choice first (16-16-2).
+    // optional ACTIVATION choice first (16-17-2).
     runner.game.suspend(owen);
 
     let view = runner
@@ -946,7 +946,7 @@ fn bt24_089_delay_opens_when_owen_dreadnought_suspends() {
     assert_eq!(view.kind, SelectionKind::Replacement);
     assert!(
         runner.pending_is_optional(),
-        "the <Delay> activation itself is optional (16-16-2)"
+        "the <Delay> activation itself is optional (16-17-2)"
     );
     runner
         .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
@@ -1041,7 +1041,7 @@ fn bt24_089_delay_body_digivolves_reptile_dragonkin_with_cost_reduction() {
 
     runner.game.suspend(owen);
 
-    // Accept the optional Delay activation (16-16-2).
+    // Accept the optional Delay activation (16-17-2).
     {
         let view = runner
             .pending_selection_view()

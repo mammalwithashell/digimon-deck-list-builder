@@ -1,0 +1,26 @@
+# BASEMON_A -- Digimon, Lv.5, red, 7000 DP, play cost 7. Name: Basemon.
+#   <Security A. +1> (This Digimon checks 1 additional security card.)
+#   <Succession ([Lowmon])> (This Digimon gains all effects other than
+#   <Succession> on its topmost [Lowmon] digivolution card.)
+#   [When Attacking] Gain 1 memory.
+# The upper [Basemon] of the §16-47 stack: its face text is what <Succession
+# ([Basemon])> adopts -- except its own <Succession>.
+card: BASEMON_A
+name: Basemon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1> (This Digimon checks 1 additional security card.)"
+  - kind: succession
+    filter: { name_is: "Lowmon" }
+    summary: "<Succession ([Lowmon])> (This Digimon gains all effects other than <Succession> on its topmost [Lowmon] digivolution card.)"
+  - when: when_attacking
+    summary: "[When Attacking] Gain 1 memory."
+    process:
+      - gain_memory: 1

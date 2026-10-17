@@ -3,7 +3,7 @@
 //! A card declaring ONLY `keywords: vec![Keyword::Retaliation]` (no
 //! hand-rolled `CardEffect`) must, when self is deleted by Battle, delete
 //! the opposing combatant. Mandatory; no "may" clause (RULES_CONTEXT
-//! 16-12). Cause filter: `deletion_cause() == Some(ReplacementCause::Battle)`.
+//! 16-13). Cause filter: `deletion_cause() == Some(ReplacementCause::Battle)`.
 //!
 //! Mirrors DCGO `Retaliation.cs` — fires from `OnDestroyedAnyone` with
 //! `IsByBattle(hashtable)` cause filter, targets the opposing combatant

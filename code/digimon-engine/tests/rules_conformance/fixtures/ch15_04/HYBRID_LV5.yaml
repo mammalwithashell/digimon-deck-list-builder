@@ -1,0 +1,24 @@
+# HYBRID_LV5 -- Digimon, Lv.5, red, 8000 DP, play cost 7. Trait [Hybrid].
+#   Digivolve: red Lv.4, cost 3.
+#   [When Digivolving] You may gain 1 memory.
+# The optional [When Digivolving] gives the §15-4-4-4 test an observation
+# point right after the digivolve (a derived trigger activates before the
+# still-pending sibling, §15-4-5-2).
+card: HYBRID_LV5
+name: Hybridmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 8000
+traits: [Hybrid]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+effects:
+  - when: when_digivolving
+    optional: true
+    summary: "[When Digivolving] You may gain 1 memory."
+    process:
+      - gain_memory: 1

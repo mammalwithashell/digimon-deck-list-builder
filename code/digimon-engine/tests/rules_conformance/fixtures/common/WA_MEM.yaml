@@ -1,0 +1,14 @@
+# WA_MEM -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+#   [When Attacking] Gain 1 memory.
+card: WA_MEM
+name: Memattackmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Gain 1 memory."
+    process:
+      - gain_memory: 1

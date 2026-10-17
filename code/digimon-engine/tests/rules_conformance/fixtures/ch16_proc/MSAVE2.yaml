@@ -1,0 +1,29 @@
+# MSAVE2 -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   DigiXros -2: [Xrossa] x [Xrossb]
+#   <Material Save 2> (When this Digimon would be deleted, you may place 2
+#   cards specified in its DigiXros requirements from this Digimon's
+#   digivolution cards under 1 of your Tamers.)
+# The §16-21 keyword card (production idiom: `grant_keyword: MaterialSave`,
+# BT11-018).
+card: MSAVE2
+name: Fusemon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+alt_paths:
+  - kind: digixros
+    materials:
+      - filter: { name_is: "Xrossa" }
+        zones: [hand, battle_area]
+        cost_delta: -1
+      - filter: { name_is: "Xrossb" }
+        zones: [hand, battle_area]
+        cost_delta: -1
+    cost: 7
+effects:
+  - kind: grant_keyword
+    keyword: MaterialSave
+    value: 2
+    summary: "<Material Save 2> (When this Digimon would be deleted, you may place 2 cards specified in its DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)"

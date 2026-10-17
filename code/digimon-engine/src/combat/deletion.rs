@@ -45,17 +45,20 @@ impl Game {
     ///    redirected, and substituted outcomes mutate the surviving list.
     /// 3. **Snapshot** — capture each surviving permanent's pre-removal
     ///    state (`DeletedObjectSnapshot` with `dp_just_before`,
-    ///    `level_just_before`, etc.) while the carrier is still on field.
-    /// 4. **Trash** — linked-card cascade, ACE overflow, `delete_permanent`,
-    ///    modifier cleanup. After this step the carrier is gone from
-    ///    `battle_area` and its top card is in trash.
-    /// 5. **OnDeletion drain** — enqueue per-survivor OnDeletion triggers
-    ///    carrying the snapshot in the trigger context. Handlers that park
-    ///    selections (printed `<Save>`) unwind through `pending_selection`;
-    ///    the resume hook (`Game::resume_pending_deletion`) continues the
-    ///    drain via the active batch after each selection resolves.
-    /// 6. **OnAnyDeletion / OnLeaveField** — global broadcast with each
-    ///    snapshot. Drain.
+    ///    `level_just_before`, etc.) while the carrier is still on field,
+    ///    then (still in this stage, inside a deferred-drain scope) enqueue
+    ///    per-survivor OnDeletion triggers carrying the snapshot in the
+    ///    trigger context, since their effects are read from the live slot.
+    /// 4. **Trash** — linked-card cascade, `delete_permanent`, modifier
+    ///    cleanup, and ONE ACE <Overflow> pass for every leaving card, turn
+    ///    player first (§4-19-5). After this step the carriers are gone from
+    ///    `battle_area` and their top cards are in trash.
+    /// 5. **OnAnyDeletion / OnLeaveField** — global broadcast with each
+    ///    snapshot, enqueued (not drained).
+    /// 6. **One flush** — the OnDeletion and observer entries drain as ONE
+    ///    simultaneous trigger pool (§16-13-2 / §15-4-3-2). Handlers that
+    ///    park selections (printed `<Save>`) unwind through
+    ///    `pending_selection`; the post-selection drain resumes the rest.
     ///
     /// Callers:
     /// - Single-target callers (`delete_permanent_with_effects`,
@@ -222,8 +225,9 @@ impl Game {
         self.enqueue_batch_on_deletion();
 
         // Stage 4b: Trashing. Move carriers to trash; linked-card cascade;
-        // modifier cleanup. Highest-index-first within each player so
-        // removals don't shift later handles.
+        // modifier cleanup; then one <Overflow> pass for the whole batch
+        // (§4-19-5). Highest-index-first within each player so removals
+        // don't shift later handles.
         {
             let batch = self
                 .active_deletion_batch
@@ -233,35 +237,33 @@ impl Game {
         }
         self.trash_batch_survivors();
 
-        // Stage 5: OnDeletion drain. Exit the deferred-drain scope to flush
-        // the queued OnDeletion handlers. Handlers run post-trash and read
-        // pre-removal state via the snapshot.
+        // Stage 4c: OnAnyDeletion / OnLeaveField observers of the same
+        // deletion, enqueued post-trash (the observers are the permanents
+        // still on the field when the deletion happened) into the SAME
+        // deferred scope as the stage-4a `[On Deletion]` entries.
+        self.enqueue_batch_on_any_deletion();
+
+        // Stage 5: one flush for the whole deletion. §16-13-2 / §15-4-3-2:
+        // every effect this deletion triggered -- `[On Deletion]` (incl.
+        // <Retaliation>) and the "when a Digimon is deleted" observers --
+        // triggers simultaneously and pends in ONE pool: the drainer stamps
+        // them as one trigger batch, the turn player orders theirs first and
+        // a player with 2+ gets a `TriggerOrder` pick (§15-4-3-5). DCGO: one
+        // `OnDestroyedAnyone` stack (`CardController.cs`). Handlers run
+        // post-trash and read pre-removal state via the snapshot threaded
+        // into each entry's trigger context (rule 25).
+        // G-ENGINE-ON-DELETION-DRAINED-BEFORE-DELETION-OBSERVERS.
         {
             let batch = self
                 .active_deletion_batch
                 .as_mut()
-                .expect("active batch must persist into OnDeletion stage");
-            batch.stage = BatchStage::OnDeletionDrain;
+                .expect("active batch must persist into the deletion-trigger stage");
+            batch.stage = BatchStage::TriggerFlush;
         }
         self.exit_deferred_drain_and_flush();
-
-        // If an OnDeletion handler parked a selection, control unwinds
-        // here with `pending_selection.is_some()`. The resume hook
-        // (`resume_pending_deletion`) continues into the OnAnyDeletion
-        // stage when the selection resolves.
-        if self.pending_selection.is_some() {
-            return;
-        }
-
-        // Stage 6: OnAnyDeletion / OnLeaveField global broadcasts.
-        {
-            let batch = self
-                .active_deletion_batch
-                .as_mut()
-                .expect("active batch must persist into OnAnyDeletion stage");
-            batch.stage = BatchStage::OnAnyDeletionDrain;
-        }
-        self.drain_batch_on_any_deletion();
+        // A park unwinds with every remaining entry (either kind) still
+        // queued; the post-selection drain resumes them.
+        self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     /// Run one replacement stage (`WhenWouldLeaveBattleArea` or
@@ -592,6 +594,8 @@ impl Game {
         // we look up by handle, not by position.
         let mut sorted = kill_list.clone();
         sorted.sort_by(|a, b| b.player.cmp(&a.player).then(b.index.cmp(&a.index)));
+        // Every card leaving with the batch, for ONE <Overflow> pass below.
+        let mut overflow_sources: Vec<crate::card_source::CardSource> = Vec::new();
         for handle in sorted {
             // Skip if already gone (defensive — substitute targets that
             // were already cancelled, etc.).
@@ -603,7 +607,17 @@ impl Game {
             {
                 continue;
             }
-            self.trash_single_for_batch(handle);
+            overflow_sources.extend(self.trash_single_for_batch(handle));
+        }
+        // §4-19-5: the batch's <Overflow> instances are processed
+        // simultaneously -- every instance on the turn player's cards, then
+        // the non-turn player's (`apply_ace_overflow_for_sources` orders
+        // them) -- not per permanent in removal order (which is player
+        // DESCENDING for index-safe removal). §4-19-2: immediately, i.e.
+        // after the removals and before the batch's trigger flush.
+        // G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT.
+        if !overflow_sources.is_empty() {
+            self.apply_ace_overflow_for_sources(&overflow_sources);
         }
         // Record what completed (everything that's now gone from battle_area
         // among the kill_list).
@@ -623,9 +637,16 @@ impl Game {
         self.capture_pending_battle_survival();
     }
 
-    /// Trash one permanent: linked-card cascade, ACE overflow, delete,
-    /// modifier cleanup. No OnDeletion enqueue here — that's stage 5.
-    pub(crate) fn trash_single_for_batch(&mut self, handle: PermanentHandle) {
+    /// Trash one permanent: linked-card cascade, delete, modifier cleanup.
+    /// No OnDeletion enqueue here — that's stage 4a. Returns the stack's
+    /// cards for the batch's single <Overflow> pass (empty for a token
+    /// stack or a vanished slot); the caller applies it once for the whole
+    /// batch (§4-19-5).
+    pub(crate) fn trash_single_for_batch(
+        &mut self,
+        handle: PermanentHandle,
+    ) -> Vec<crate::card_source::CardSource> {
+        let mut overflow_sources = Vec::new();
         // Linked-card cascade — drain BEFORE removing the permanent so
         // OnLinkedCardTrashed observers see the host still in place.
         let had_linked = {
@@ -685,9 +706,6 @@ impl Game {
             let sources = self.player(handle.player).battle_area[handle.index as usize]
                 .card_sources
                 .clone();
-            if !sources.first().is_some_and(|source| source.is_token) {
-                self.apply_ace_overflow_for_sources(&sources);
-            }
             self.clear_permanent_full(handle);
             self.modifiers.expire_player_on_permanent_leave(handle);
             // Route stack-to-trash through emission helper so every
@@ -717,11 +735,17 @@ impl Game {
                 .shift_after_battle_area_remove(handle.player, handle.index);
             self.shift_pending_attack_after_battle_area_remove(handle.player, handle.index);
             self.shift_effect_queue_after_battle_area_remove(handle.player, handle.index);
+            // The leaving stack, for the batch's single <Overflow> pass
+            // (a token stack processes none).
+            if !sources.first().is_some_and(|source| source.is_token) {
+                overflow_sources = sources;
+            }
         } else {
             self.clear_permanent_full(handle);
             self.modifiers.expire_player_on_permanent_leave(handle);
         }
         self.mark_until_condition_dirty();
+        overflow_sources
     }
 
     /// Enqueue OnDeletion for each survivor in the active batch with its
@@ -744,7 +768,7 @@ impl Game {
         self.observe_deletion_dispatch_batch(&kill_list);
         for (handle, snapshot) in kill_list.iter().zip(snapshots.iter()) {
             let queue_start = self.effect_queue.len();
-            // 16-12: capture WHO this carrier battled now, while the attack is
+            // 16-13: capture WHO this carrier battled now, while the attack is
             // live and the carrier is still in its slot -- see
             // `TriggerContext::battle_opponent_card`.
             let battle_opponent_card = (snapshot.cause
@@ -835,11 +859,13 @@ impl Game {
     }
 
     /// Enqueue global OnAnyDeletion and OnLeaveField per survivor with
-    /// snapshots, drain. Phase 5 (2026-05-23) retired the legacy
-    /// `pending_post_deletion_replays` slot — Fortitude/Partition now play
-    /// from trash inline during their OnDeletion handlers, so no
-    /// post-finalize drain hook is needed here.
-    pub(crate) fn drain_batch_on_any_deletion(&mut self) {
+    /// snapshots. No drain: the entries pool with the batch's `[On
+    /// Deletion]` entries and are flushed together by the caller's single
+    /// `exit_deferred_drain_and_flush` (§16-13-2 / §15-4-3-2). Phase 5
+    /// (2026-05-23) retired the legacy `pending_post_deletion_replays` slot
+    /// — Fortitude/Partition now play from trash inline during their
+    /// OnDeletion handlers, so no post-finalize drain hook is needed here.
+    pub(crate) fn enqueue_batch_on_any_deletion(&mut self) {
         let (kill_list, snapshots, top_cards) = {
             let batch = self
                 .active_deletion_batch
@@ -908,22 +934,20 @@ impl Game {
                 }
             }
         }
-        // Defer the post-deletion trigger drain to the outermost deferred
-        // scope. `maybe_drain_effect_queue` drains only when
-        // `draining_deferred == 0`; inside an effect's resolution window
+        // The post-deletion trigger drain is the caller's scope exit
+        // (`exit_deferred_drain_and_flush`), which drains only when the
+        // deferred counter reaches 0. Inside an effect's resolution window
         // (e.g. an option like Calling From the Darkness that deletes a
-        // Digimon and THEN returns cards from trash) it leaves the
-        // OnDeletion / OnAnyDeletion / OnLeaveField entries queued so they
-        // resolve only AFTER the causing effect's later steps complete.
-        // Combined with the top-card-in-trash gate in `run_queued_effect_inner`
-        // (Q19 Part A), an [On Deletion] bundle whose top card was returned to
-        // hand by the same effect is then suppressed — DCGO `TriggeredSkillProcess`
+        // Digimon and THEN returns cards from trash) the OnDeletion /
+        // OnAnyDeletion / OnLeaveField entries stay queued so they resolve
+        // only AFTER the causing effect's later steps complete. Combined with
+        // the top-card-in-trash gate in `run_queued_effect_inner` (Q19 Part
+        // A), an [On Deletion] bundle whose top card was returned to hand by
+        // the same effect is then suppressed — DCGO `TriggeredSkillProcess`
         // drains the [On Deletion] stack after the deleting effect resolves,
         // and `CanActivateOnDeletion` re-checks `IsExistOnTrash(TopCard)` at
-        // that point. At a top-level deletion (`draining_deferred == 0`, e.g.
-        // combat) this drains immediately, matching prior behavior.
-        self.maybe_drain_effect_queue();
-        self.reevaluate_until_condition_modifiers_if_dirty();
+        // that point. At a top-level deletion (e.g. combat) the flush drains
+        // immediately.
     }
 
     /// Cause-aware deletion entry point. **Post-batched-refactor (2026-05-23):**
@@ -952,9 +976,11 @@ impl Game {
     /// **Post-batched-refactor (2026-05-23):** when an OnDeletion handler
     /// parked a selection during the OnDeletion drain of
     /// `delete_permanents_batch`, `active_deletion_batch.is_some()` and
-    /// the batch is mid-stage. Resume by continuing the OnDeletion drain
-    /// until either the queue is empty or another handler parks. If
-    /// drained cleanly, advance to the OnAnyDeletion stage.
+    /// the batch is mid-stage. Resume by continuing the batch's trigger
+    /// drain until either the queue is empty or another handler parks. The
+    /// OnAnyDeletion / OnLeaveField observers were enqueued with the
+    /// `[On Deletion]` entries before the flush (one pool, §16-13-2), so
+    /// they are already in the queue: there is no later stage to advance to.
     pub(crate) fn resume_pending_deletion(&mut self) {
         use crate::deletion_batch::BatchStage;
 
@@ -966,7 +992,7 @@ impl Game {
         let in_batch = self
             .active_deletion_batch
             .as_ref()
-            .is_some_and(|b| matches!(b.stage, BatchStage::OnDeletionDrain));
+            .is_some_and(|b| matches!(b.stage, BatchStage::TriggerFlush));
         if in_batch {
             self.drain_effect_queue();
             if self.pending_selection.is_some() {
@@ -974,12 +1000,8 @@ impl Game {
                 // call (after this selection resolves) continues the drain.
                 return;
             }
-            // OnDeletion drain settled — advance to OnAnyDeletion stage.
-            if let Some(batch) = self.active_deletion_batch.as_mut() {
-                batch.stage = BatchStage::OnAnyDeletionDrain;
-            }
-            self.drain_batch_on_any_deletion();
-            // After OnAnyDeletion stage, clear the batch.
+            // The batch's trigger pool settled: close the batch.
+            self.reevaluate_until_condition_modifiers_if_dirty();
             self.active_deletion_batch = None;
         }
 

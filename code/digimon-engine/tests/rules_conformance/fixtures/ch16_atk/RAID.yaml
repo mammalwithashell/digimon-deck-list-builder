@@ -1,0 +1,14 @@
+# RAID -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   <Raid> (When this Digimon attacks, you may switch the attack target to 1
+#   of your opponent's unsuspended Digimon with the highest DP.)
+card: RAID
+name: Swoopmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid> (When this Digimon attacks, you may switch the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"

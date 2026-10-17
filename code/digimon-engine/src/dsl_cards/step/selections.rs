@@ -850,6 +850,42 @@ pub(crate) fn run_resume(
                         return;
                     }
                 }
+                ResumeSelectKind::DeDigivolveCount { mut page, state } => {
+                    // §16-12-1: trash the declared number from the top, then
+                    // continue the clause. G-DEDIGIVOLVE-NO-DECLARATION.
+                    let Some(crate::count_choice::CountChoiceOperation::Commit(value)) =
+                        page.resolve(action_id)
+                    else {
+                        game.dsl_clause_aborted = true;
+                        return;
+                    };
+                    let previous = std::mem::replace(
+                        &mut game.current_trigger_context,
+                        trigger_context.clone(),
+                    );
+                    let previous_source = game.effect_source_player.replace(prov.controller);
+                    game.de_digivolve_commit_declared(&state, value.declared);
+                    game.effect_source_player = previous_source;
+                    {
+                        let mut ctx = EffectContext::new_with_source_kind_and_override(
+                            game,
+                            prov.source_card,
+                            prov.source_permanent,
+                            prov.source_kind,
+                            prov.controller,
+                            prov.override_pin,
+                        );
+                        let mut b = bindings;
+                        run_tail_preserving_trigger_context(
+                            &mut ctx,
+                            trigger_context,
+                            &inner_tail,
+                            &mut b,
+                            &runtime,
+                        );
+                    }
+                    game.current_trigger_context = previous;
+                }
                 ResumeSelectKind::CountChoice(mut page) => {
                     let Some(crate::count_choice::CountChoiceOperation::Commit(value)) =
                         page.resolve(action_id)
@@ -1220,11 +1256,6 @@ pub(crate) fn run_resume(
             game.run_trigger_order_selection_step(state, action_id, is_pass);
             run_outer_conts(game, outer_conts);
         }
-        ResumeFrame::OptionTrashOrder(mut state) => {
-            let outer_conts = std::mem::take(&mut state.outer_conts);
-            game.run_option_trash_order_step(state, action_id, is_pass);
-            run_outer_conts(game, outer_conts);
-        }
         ResumeFrame::FieldTopSourceBatch {
             inner,
             prov,
@@ -1434,6 +1465,9 @@ pub(crate) fn run_resume(
         }
         ResumeFrame::DigimonLinkHostSelection(state) => {
             game.run_digimon_link_host_selection_step(state, action_id);
+        }
+        ResumeFrame::LinkCardTrashChoice(state) => {
+            game.run_link_card_trash_choice_step(state, action_id);
         }
         ResumeFrame::PlayFromHandCostReductionPrompt(mut state) => {
             let outer_conts = std::mem::take(&mut state.outer_conts);
@@ -1939,44 +1973,16 @@ fn run_keyword_material_save_tamer_selection_step(
         state.prov.controller,
         state.prov.override_pin,
     );
-    let eligible_sources = state.eligible_sources.clone();
-    ctx.select_count_capped_multi(
+    // §16-21-3: the Tamer pick was the optional decision; the card pick is
+    // now exact (`min = max = min(N, eligible)`) over the carrier's live stack.
+    crate::cards::keyword_effects::start_material_save_card_pick(
+        &mut ctx,
+        state.prov,
         state.owner,
-        CountCappedZone::Trash,
+        state.carrier,
+        tamer,
         state.max,
-        "select Material Save sources to place under Tamer",
-        true,
-        None,
-        move |_g, card| eligible_sources.contains(&card.handle()),
-        move |ctx, picks| {
-            for source in picks {
-                ctx.place_card_under_permanent_bottom(source, tamer, false);
-            }
-        },
     );
-    if let Some(pending) = ctx.game.pending_selection.as_ref() {
-        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
-            frames: vec![crate::resume::ResumeFrame::NonDslCountCappedStep(
-                crate::resume::NonDslCountCappedState {
-                    prov: state.prov,
-                    of_player: state.owner,
-                    zone: CountCappedZone::Trash,
-                    min: 0,
-                    max: state.max,
-                    is_optional_zero: true,
-                    distinct_by: None,
-                    candidate_actions: pending.valid_action_ids.clone(),
-                    accum: Vec::new(),
-                    prompt: pending.prompt.clone(),
-                    previous_phase: pending.previous_phase,
-                    terminal: crate::resume::NonDslCountCappedTerminal::KeywordMaterialSave {
-                        tamer,
-                    },
-                    outer_conts: Vec::new(),
-                },
-            )],
-        });
-    }
     run_outer_conts(ctx.game, state.outer_conts);
 }
 
@@ -2011,6 +2017,8 @@ fn run_keyword_mind_link_selection_step(
     action_id: u16,
     is_pass: bool,
 ) {
+    // Unreachable since the pick became mandatory (§16-28-3); kept for the
+    // sibling-step signature.
     if is_pass {
         return;
     }
@@ -2769,10 +2777,11 @@ fn per_color_delete_candidates(
         if !colors.contains(&color) {
             continue;
         }
-        // <Progress> / immunity: a Digimon the effect can't affect is no target.
-        if game.progress_excludes(handle, Some(state.prov.controller)) {
-            continue;
-        }
+        // §15-15-5-3: a Digimon the effect can't affect (e.g. a `<Progress>`
+        // attacker, §16-39-1) is still a legal target; the processing then
+        // skips it or records a modifier the read path hides
+        // (`EffectContext::can_affect_permanent`,
+        // `ModifierRegistry::progress_shield`).
         // Extra author restriction (default: none).
         if let Some(filter) = &state.filter {
             if !eval_predicate_with_bindings(
@@ -2817,7 +2826,18 @@ fn run_per_color_delete_terminal(
     game: &mut crate::game::Game,
     state: crate::resume::PerColorDeleteState,
 ) {
-    if !state.picked.is_empty() {
+    // §15-15-5-3 / §15-15-5-1: an unaffected Digimon (a `<Progress>`
+    // attacker, a `CannotBeAffected` immunity) can be picked, but the delete
+    // doesn't affect it; the other picks are still deleted together.
+    let deletable: Vec<PermanentHandle> = state
+        .picked
+        .iter()
+        .copied()
+        .filter(|h| {
+            game.effect_can_affect(*h, state.prov.controller, state.prov.source_kind)
+        })
+        .collect();
+    if !deletable.is_empty() {
         // Attribute the deletion to the controller's effect so the cause is the
         // opponent's-Digimon-deleted-by-your-effect one DCGO uses (`OpponentEffect`
         // from the target's perspective). Pin `effect_source_player` = controller
@@ -2826,8 +2846,8 @@ fn run_per_color_delete_terminal(
         // `delete_permanent_with_effects`.
         let prev_source = game.effect_source_player;
         game.effect_source_player = Some(state.prov.controller);
-        let cause = game.infer_deletion_cause(state.picked[0]);
-        game.delete_permanents_batch(state.picked.clone(), cause);
+        let cause = game.infer_deletion_cause(deletable[0]);
+        game.delete_permanents_batch(deletable, cause);
         game.effect_source_player = prev_source;
     }
     let mut ctx = EffectContext::new_with_source_kind_and_override(
@@ -7006,10 +7026,9 @@ fn install_select_opponent_permanent(
     // Pre-filter candidates using the compiled predicate so that an empty
     // result short-circuits without installing a PendingSelection.
     let opponent = ctx.game.next_clockwise(ctx.player);
-    let candidates: Vec<_> = collect_matching_permanents(ctx, opponent, &filter, Some(&bindings))
-        .into_iter()
-        .filter(|handle| !ctx.game.progress_excludes(*handle, Some(ctx.player)))
-        .collect();
+    // §15-15-5-3: an unaffected Digimon (a `<Progress>` attacker) stays a
+    // candidate; it is chosen and not affected.
+    let candidates: Vec<_> = collect_matching_permanents(ctx, opponent, &filter, Some(&bindings));
     let selected_field = select_field_extreme(ctx.game, &candidates, selector);
     if candidates.is_empty() {
         return;
@@ -7045,14 +7064,12 @@ fn install_select_opponent_permanent(
                 source_kind,
                 player,
             );
-            !game.progress_excludes(handle, Some(player))
-                && eval_predicate_with_bindings(
-                    &filter,
-                    &read_ctx,
-                    PredicateSubject::Permanent(handle),
-                    Some(&filter_bindings),
-                )
-                && matches_selected_field(game, handle, selector, selected_field)
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Permanent(handle),
+                Some(&filter_bindings),
+            ) && matches_selected_field(game, handle, selector, selected_field)
         },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
@@ -8066,6 +8083,9 @@ fn install_select_effect_choice(
     // Park the data frame (coexistence): driven by run_resume's EffectChoice arm.
     // Not optional (a branch must be picked) → decline None.
     if ctx.game.pending_selection.is_some() {
+        // The effect-text choose-one is how "you may X instead" is authored:
+        // choosing the other branch is the ability to stop a loop (§18-3-3-3).
+        ctx.game.mark_pending_selection_as_optional_decision();
         ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::RunTail {
                 prov: crate::resume::ResumeProvenance {

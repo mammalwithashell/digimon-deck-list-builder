@@ -1,0 +1,13 @@
+# LV5_PLAIN -- Digimon, Lv.5, red, 7000 DP, play cost 7. No text.
+#   Digivolve: red Lv.4, cost 3.
+card: LV5_PLAIN
+name: Fivemon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3

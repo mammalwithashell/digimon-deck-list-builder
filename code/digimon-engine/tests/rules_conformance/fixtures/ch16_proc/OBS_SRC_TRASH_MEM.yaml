@@ -1,0 +1,20 @@
+# OBS_SRC_TRASH_MEM -- Tamer, red, play cost 3.
+#   [All Turns] When cards are trashed from the digivolution cards of one of
+#   your Digimon, gain 1 memory.
+# The witness that <De-Digivolve> does NOT trash digivolution cards: it
+# trashes the top card each time (§16-12-1), and digivolution cards are the
+# cards under it (§4-8-1). DCGO's `IDegeneration` stacks
+# `WhenTopCardTrashed`, never `OnDigivolutionCardDiscarded`.
+card: OBS_SRC_TRASH_MEM
+name: Loss Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_digivolution_card_trashed
+    active_when: { all_turns: true }
+    condition:
+      event_host_is_own_digimon: true
+    summary: "[All Turns] When cards are trashed from the digivolution cards of one of your Digimon, gain 1 memory."
+    process:
+      - gain_memory: 1

@@ -1,0 +1,34 @@
+# IMMUNE_ALL_OPP -- Digimon, Lv.6, yellow, 12000 DP, play cost 12.
+#   [On Play] This Digimon isn't affected by your opponent's effects until the
+#   end of their turn.
+# The Magnamon (X Antibody) (BT16-102) immunity clause, authored with its
+# production idiom: three opponent-scoped `grant_effect_immunity` steps, one
+# per effect kind (§15-2-1: digimon / tamer / option; a token's effect is a
+# Digimon effect, §15-2-1-1). DCGO BT16_102.cs: CanNotAffectedClass
+# (UntilOpponentTurnEnd) over every opponent effect.
+card: IMMUNE_ALL_OPP
+name: Aegismon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 12
+dp: 12000
+effects:
+  - when: on_play
+    summary: "[On Play] This Digimon isn't affected by your opponent's effects until the end of their turn."
+    process:
+      - grant_effect_immunity:
+          target: self
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: tamer
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: option
+          source_controller: opponent
+          expiry: end_of_opponents_turn

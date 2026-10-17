@@ -1,0 +1,14 @@
+# JAMMING -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   <Jamming> (This Digimon can't be deleted in battles against Security
+#   Digimon.)
+card: JAMMING
+name: Staticmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming> (This Digimon can't be deleted in battles against Security Digimon.)"

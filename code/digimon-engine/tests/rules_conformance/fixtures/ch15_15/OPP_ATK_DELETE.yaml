@@ -1,0 +1,21 @@
+# OPP_ATK_DELETE -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   [All Turns] When an opponent's Digimon attacks, delete 1 of your
+#   opponent's Digimon.
+# An opponent's effect that removes a Digimon from the attacker's field in the
+# middle of the attack, so the attacker's battle-area slot shifts.
+card: OPP_ATK_DELETE
+name: Shiftmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - when: on_opponent_attack
+    summary: "[All Turns] When an opponent's Digimon attacks, delete 1 of your opponent's Digimon."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: victim }

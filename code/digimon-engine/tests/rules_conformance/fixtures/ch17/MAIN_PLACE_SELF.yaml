@@ -1,0 +1,20 @@
+# MAIN_PLACE_SELF -- Option, red, use cost 0.
+#   [Main] Place this card in the battle area.
+# An Option placed in the battle area BY AN EFFECT (§4-28-1): a legal "Option
+# card in the battle area" that rule checks leave alone (§17-1-3-2-2).
+# Lowering note: the printed text has no <Delay>, but the DSL's only
+# "place this card in the battle area" step is `place_self_as_delay_option`
+# (BT13-110 uses it for the same printed phrase). With no `kind: delay` clause
+# the card just stays in the battle area (no <Delay> window, no auto-trash);
+# that is the only property the test reads. There is no plain field-option
+# placement step.
+card: MAIN_PLACE_SELF
+name: Standing Plan
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Place this card in the battle area."
+    process:
+      - place_self_as_delay_option: {}

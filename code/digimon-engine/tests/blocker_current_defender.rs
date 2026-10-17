@@ -1,4 +1,4 @@
-//! Official general_rule.pdf page21 §12-1-5; DCGO AttackProcess excludes DefendingPermanent.
+//! Official general_rule.pdf p.23 §12-1-5; DCGO AttackProcess excludes DefendingPermanent.
 use digimon_engine::{debug_runner::DebugRunner, action::{build_action_mask,space::{encode_attack,SECURITY_TARGET,PASS}},enums::GamePhase,selection::SelectionKind};
 fn setup(two:bool)->DebugRunner {
  let mut b=DebugRunner::builder();for id in ["EX13-045","ST2-07","ST1-03"] {b=b.dsl_card(id).unwrap();}

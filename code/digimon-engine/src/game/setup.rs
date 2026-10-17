@@ -226,6 +226,9 @@ impl Game {
             pending_option_placed_link_resume: None,
             security_resolution: None,
             effect_chain_depth: 0,
+            loop_watch: std::collections::BTreeMap::new(),
+            loop_watch_steps: 0,
+            optional_decision_mark: None,
             trigger_batch_seq: 0,
             effect_drain_depth: 0,
             logger: Box::new(SilentLogger),
@@ -261,7 +264,6 @@ impl Game {
             interactive_option_use_reducer_prompted: false,
             on_use_option_armed: None,
             option_body_pending: false,
-            option_trash_order_deferred: false,
             pending_cost_reduction_amount_override: None,
             cost_payment_receipts: Vec::new(),
             next_cost_payment_receipt: 1,
@@ -290,6 +292,8 @@ impl Game {
             pending_battle_resolutions: Vec::new(),
             pending_attack_battle_result: None,
             next_battle_identity: 1,
+            attack_attacker_identity: None,
+            event_snapshot_cache: None,
             native_play_observation: None,
             pending_deletion_batch_rest: Vec::new(),
             pending_deletion_batch_parked: None,
@@ -297,13 +301,13 @@ impl Game {
             dsl_resolved_tail_bindings: None,
             dsl_clause_aborted: false,
             scheduled_effects: Vec::new(),
-            scheduled_drain_tail: None,
             scheduled_provenance_deletions: Vec::new(),
             scheduled_provenance_deletions_opp: Vec::new(),
             pending_delayed_option_lifecycle: None,
             declined_delay_option: None,
             pending_delayed_option_lifecycle_stack: Vec::new(),
             pending_end_turn_resume: None,
+            pending_turn_boundary_resume: None,
             pending_enter_main_after_selection: false,
             draining_deferred: 0,
             turn_end_check_deferred: false,
@@ -406,6 +410,12 @@ impl Game {
         self.pending_option_placed_link_resume = None;
         self.security_resolution = None;
         self.effect_chain_depth = 0;
+        self.loop_watch.clear();
+        self.loop_watch_steps = 0;
+        self.optional_decision_mark = None;
+        self.pending_hand_discard = None;
+        self.pending_deck_add = None;
+        self.pending_added_sources.clear();
         // logger intentionally preserved (session owns the logger choice).
         self.events = Vec::new();
         self.event_seq = 0;
@@ -438,7 +448,6 @@ impl Game {
         self.interactive_option_use_reducer_prompted = false;
         self.on_use_option_armed = None;
         self.option_body_pending = false;
-        self.option_trash_order_deferred = false;
         self.pending_cost_reduction_amount_override = None;
         self.cost_payment_receipts.clear();
         self.next_cost_payment_receipt = 1;
@@ -464,6 +473,8 @@ impl Game {
         self.pending_battle_resolutions.clear();
         self.pending_attack_battle_result = None;
         self.next_battle_identity = 1;
+        self.attack_attacker_identity = None;
+        self.event_snapshot_cache = None;
         self.native_play_observation = None;
         self.pending_deletion_batch_rest.clear();
         self.pending_deletion_batch_parked = None;
@@ -471,13 +482,13 @@ impl Game {
         self.dsl_resolved_tail_bindings = None;
         self.dsl_clause_aborted = false;
         self.scheduled_effects = Vec::new();
-        self.scheduled_drain_tail = None;
         self.scheduled_provenance_deletions = Vec::new();
         self.scheduled_provenance_deletions_opp = Vec::new();
         self.pending_delayed_option_lifecycle = None;
         self.declined_delay_option = None;
         self.pending_delayed_option_lifecycle_stack = Vec::new();
         self.pending_end_turn_resume = None;
+        self.pending_turn_boundary_resume = None;
         self.pending_enter_main_after_selection = false;
         self.draining_deferred = 0;
         self.turn_end_check_deferred = false;

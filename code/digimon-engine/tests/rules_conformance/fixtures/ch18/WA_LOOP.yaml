@@ -1,0 +1,33 @@
+# WA_LOOP -- Digimon, Lv.4, red, 4000 DP, play cost 4.
+#   [When Attacking] Unsuspend this Digimon.
+#   [All Turns] When this Digimon unsuspends, suspend it.
+#   [All Turns] When this Digimon suspends, unsuspend it.
+# A mandatory infinite loop (§18-3-1) that starts inside an attack: the
+# attack's own suspension and its [When Attacking] effect re-trigger the two
+# [All Turns] effects forever. Neither player can stop it (§18-3-2).
+card: WA_LOOP
+name: Spinmon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Unsuspend this Digimon."
+    process:
+      - unsuspend: { target: source }
+  - when: on_unsuspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon unsuspends, suspend it."
+    process:
+      - suspend: { target: source }
+  - when: on_suspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon suspends, unsuspend it."
+    process:
+      - unsuspend: { target: source }

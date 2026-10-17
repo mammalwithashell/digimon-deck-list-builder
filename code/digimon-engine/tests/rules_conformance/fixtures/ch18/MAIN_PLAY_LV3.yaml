@@ -1,0 +1,20 @@
+# MAIN_PLAY_LV3 -- Option, red, use cost 0.
+#   [Main] Play 1 level 3 Digimon card from your hand without paying the cost.
+card: MAIN_PLAY_LV3
+name: Summon Three
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Play 1 level 3 Digimon card from your hand without paying the cost."
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+          prompt: "Play 1 level 3 Digimon card from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }

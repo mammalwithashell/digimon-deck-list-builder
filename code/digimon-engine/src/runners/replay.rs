@@ -739,8 +739,11 @@ pub trait RecordingSource: Send {
     ///
     /// `false` for every recording-backed source: a DCGO JSONL can only carry
     /// answers to decisions DCGO asked, so an engine-only prompt has to be
-    /// auto-answered on the oracle's behalf (see
-    /// [`ReplayDriver::auto_answer_option_trash_order`]).
+    /// auto-answered on the oracle's behalf. No driver auto-answer exists
+    /// today: the only one, `ReplayDriver::auto_answer_option_trash_order`,
+    /// answered the 9-1-5 trash-order pick, which §9-1-5 (Ver. 4.3) removed
+    /// (F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE). A future one must
+    /// return early when this is `true`.
     ///
     /// The exam's `ScenarioAdapter` is the exception and overrides this to
     /// `true`: a scenario author writes such a decision explicitly as a
@@ -749,14 +752,16 @@ pub trait RecordingSource: Send {
     /// and every later row is shifted one decision forward — silently eating a
     /// real choice and measuring the wrong state.
     ///
-    /// Measured witness: `qa/dcgo-exams/BT25/BT25-091-effect2.yaml`. The
+    /// Historical witness (before the auto-answer and its prompt were
+    /// removed): `qa/dcgo-exams/BT25/BT25-091-effect2.yaml`. The
     /// auto-answer took the 9-1-5 trash-order pick, so the scenario's own
     /// `choice: "Trash the used Option"` row landed on Monica Simmons'
-    /// §15-7-4 "by suspending this Tamer" decline gate and spent it. The
+    /// §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] "by suspending this Tamer" decline gate and spent it. The
     /// `select: { yes: true }` row that was written for that gate then
     /// answered the target pick, and the oracle diff reported
     /// `p0.field[0].suspended: ours=true dcgo=false` — a divergence
-    /// manufactured entirely by the double answer.
+    /// manufactured entirely by the double answer. The rule stands for any
+    /// future engine-only prompt.
     fn answers_engine_only_prompts(&self) -> bool {
         false
     }
@@ -1754,36 +1759,6 @@ impl ReplayDriver {
     /// each resolved engine action. Advances the cursor once for the whole
     /// payload. Resolution failure records a
     /// [`DivergenceKind::SelectionResolution`] and pauses.
-    /// Answer our engine-only 9-1-5 trash-ordering prompt the way DCGO
-    /// behaves (trash first). See the call site in `step`.
-    fn auto_answer_option_trash_order(&mut self, game: &mut Game) {
-        // A source that authors engine-only prompts itself already has an
-        // answer for this one; answering it here too would spend the NEXT
-        // prompt on that row. See `RecordingSource::answers_engine_only_prompts`.
-        if self.source.answers_engine_only_prompts() {
-            return;
-        }
-        for _ in 0..8 {
-            let is_ours = matches!(
-                game.pending_selection_resume
-                    .as_ref()
-                    .and_then(|s| s.frames.last()),
-                Some(crate::resume::ResumeFrame::OptionTrashOrder(_))
-            );
-            if !is_ours {
-                return;
-            }
-            let Some(sel) = game.pending_selection.as_ref() else {
-                return;
-            };
-            let actor = sel.selecting_player;
-            let Some(&action_id) = sel.valid_action_ids.first() else {
-                return;
-            };
-            game.decode_action(action_id, actor);
-        }
-    }
-
     fn apply_selection_step(
         &mut self,
         game: &mut Game,
@@ -1884,17 +1859,6 @@ impl ReplayDriver {
         if self.is_complete() || self.paused {
             return self.no_progress_result(game);
         }
-
-        // ENGINE-ONLY PROMPT. 9-1-5 + 18-1-2 -> 15-4-3-5-1 let the Option's
-        // user order the used card's pending trash against their own pending
-        // triggers, so our engine parks that pick
-        // (G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER). DCGO makes no such
-        // decision -- `UseOptionClass.UseOption` trashes before the stacked
-        // skills resolve -- so no recording can carry an answer. Take the
-        // oracle's order (entry 0, "trash now") and continue, exactly as the
-        // exam's `sim_only` rows do; anything else would manufacture a
-        // divergence out of a prompt the corpus cannot contain.
-        self.auto_answer_option_trash_order(game);
 
         let cur = self.cursor as usize;
 

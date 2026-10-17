@@ -1,0 +1,9 @@
+# RIGHT5 -- Digimon, Lv.5, blue, 7000 DP, play cost 7. No text.
+# [Rightmon] meeting BDNA's DNA requirement (blue Lv.5).
+card: RIGHT5
+name: Rightmon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000

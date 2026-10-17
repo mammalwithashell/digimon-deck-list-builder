@@ -533,6 +533,8 @@ fn bt25_085_trash_option_link_card_unsuspends() {
     let mut runner = base().memory(3).start();
     let beel = runner.place_on_field(0, CARD_ID, Some(0));
     let other = runner.place_on_field(0, "PLAIN-DIGI", Some(0));
+    // A linked Option carries [Link] (§17-1-3-2-6 / -7).
+    runner.give_link_requirement("PLAIN-OPT", 0);
     runner.push_linked_owned(other, "PLAIN-OPT", 0);
     runner.game.players[0].battle_area[beel.index as usize].is_suspended = true;
     fire(&mut runner, EffectTiming::WhenAttacking, beel);

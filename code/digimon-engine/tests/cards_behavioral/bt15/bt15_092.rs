@@ -120,7 +120,7 @@ fn base() -> DebugRunnerBuilder {
         .add_card(yellow_digimon("Y-LV5", 5, 6000))
         .add_card(blue_digimon("B-LV4", 4, 4000))
         // High-DP opponent Digimon: 8000 DP so they survive the -5000 debuff
-        // (a 5000-DP Digimon would floor to 0 and be deleted per rule 17-1-3-1).
+        // (a 5000-DP Digimon would floor to 0 and be deleted per rule 17-1-3-1-1).
         .add_card(blue_digimon("OPP-DGM", 4, 8000))
         .add_card(blue_digimon("OPP-DGM-2", 4, 8000))
         .add_card(blue_digimon("OPP-SEC-DGM", 4, 8000))

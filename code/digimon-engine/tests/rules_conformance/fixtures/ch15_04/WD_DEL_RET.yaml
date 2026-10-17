@@ -1,0 +1,36 @@
+# WD_DEL_RET -- Digimon, Lv.6, red, 12000 DP, play cost 12.
+#   Digivolve: red Lv.5, cost 3.
+# The §15-4-1-2 example card:
+#   [When Digivolving] Delete 1 of your opponent's Digimon with 8000 DP or less
+#   and return 1 of their level 6 or higher Digimon to the bottom of the deck.
+card: WD_DEL_RET
+name: Sweepreturnmon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Delete 1 of your opponent's Digimon with 8000 DP or less and return 1 of their level 6 or higher Digimon to the bottom of the deck."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 8000
+          prompt: "Delete 1 of your opponent's Digimon with 8000 DP or less"
+      - delete_permanent: { target: victim }
+      - select_opponent_permanent:
+          bind_as: big
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 6
+          prompt: "Return 1 of your opponent's level 6 or higher Digimon to the bottom of the deck"
+      - return_to_deck: { target: big, position: bottom }

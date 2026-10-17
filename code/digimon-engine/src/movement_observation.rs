@@ -207,6 +207,21 @@ impl Game {
             .get(h.player as usize)?
             .battle_area
             .get(h.index as usize)?;
+        self.permanent_movement_snapshot(p)
+    }
+    /// The breeding-area permanent's snapshot (its rule-check trash,
+    /// §17-1-3-2-3 / -4, is observed like a battle-area one).
+    pub(crate) fn breeding_movement_snapshot(
+        &self,
+        player: crate::enums::PlayerId,
+    ) -> Option<MovementSnapshot> {
+        let p = self.players.get(player as usize)?.breeding_area.as_ref()?;
+        self.permanent_movement_snapshot(p)
+    }
+    fn permanent_movement_snapshot(
+        &self,
+        p: &crate::permanent::Permanent,
+    ) -> Option<MovementSnapshot> {
         let (top, lower) = p.card_sources.split_last()?;
         let snapshot = (|| Some(MovementSnapshot {
             top: self.observation_card(top)?,

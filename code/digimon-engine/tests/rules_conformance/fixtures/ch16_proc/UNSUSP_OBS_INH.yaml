@@ -1,0 +1,21 @@
+# UNSUSP_OBS_INH -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   Inherited Effect: [All Turns] When this Digimon unsuspends, gain 1 memory.
+# Counts and times the unsuspensions of the Digimon it is under (§16-11-3,
+# §16-11-5). Self-gated like BT24-020 (the OnUnsuspend dispatch is a
+# board-wide observer scan).
+card: UNSUSP_OBS_INH
+name: Wakewatchmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - scope: inherited
+    when: on_unsuspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "Inherited: [All Turns] When this Digimon unsuspends, gain 1 memory."
+    process:
+      - gain_memory: 1

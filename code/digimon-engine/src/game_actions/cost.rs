@@ -480,6 +480,21 @@ impl Game {
                 reducer: reducer.clone(),
             })
             .collect();
+        // §16-10-1/-2: `<Digisorption -N>` is an immediate-type effect of the
+        // card in the HAND that a digivolution would occur into, offered
+        // before the cost is paid. One entry per printed instance (§16-10-4).
+        if cost_target.from_hand && cost_target.is_digivolve {
+            if let Some(data) = self.card_data_for_handle(cost_target.card) {
+                for keyword in crate::game::face_keywords(data) {
+                    if let Keyword::Digisorption(n) = keyword {
+                        remaining.push(DigivolveReducerChoice::Digisorption {
+                            source_card: cost_target.card,
+                            amount: i32::from(n),
+                        });
+                    }
+                }
+            }
+        }
         let field_candidates = self.collect_before_pay_cost_reducers(
             acting_player,
             Some(cost_target),

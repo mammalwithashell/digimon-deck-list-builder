@@ -102,6 +102,13 @@ pub struct Permanent {
     /// Phase 8: additional state when the top card is an Option.
     /// For Digimon/Tamer/DigiEgg permanents this is always `Standard`.
     pub option_state: OptionState,
+    /// §17-1-3-2-3: this permanent was placed in the breeding area by an
+    /// effect (`Game::play_to_breeding_from_hand`), so a non-Digimon top here
+    /// is exempt from the rule check's breeding-area trash target. `false`
+    /// for a hatched Digi-Egg and for every battle-area permanent: the move
+    /// from the breeding area clears it (the battle area's analogue for
+    /// Options is `option_state`).
+    pub placed_by_effect: bool,
 }
 
 impl std::fmt::Debug for Permanent {
@@ -136,6 +143,7 @@ impl Permanent {
             is_attacking: false,
             effect_activations: HashMap::new(),
             option_state: OptionState::Standard,
+            placed_by_effect: false,
         }
     }
 
@@ -389,7 +397,7 @@ impl Permanent {
     /// The Petrification Token prints as `(Digimon/white/3000 DP/...)`.
     ///
     /// Leaving it out made every rule phrased "your opponent's Digimon" skip
-    /// tokens. Measured case: `<Raid>` (general_rule.pdf 16-22-1 switches the
+    /// tokens. Measured case: `<Raid>` (general_rule.pdf 16-23-1 switches the
     /// attack to the opponent's unsuspended DIGIMON with the highest DP) never
     /// offered a Petrification Token, because `raid_switch_candidates` gates on
     /// this predicate -- every other filter passed (unsuspended, Standard option

@@ -1,0 +1,7 @@
+# TAMER_PLAIN -- Tamer, red, play cost 2. No text.
+# A card other than a Digimon, for the breeding-area rule check (§17-1-3-2-3).
+card: TAMER_PLAIN
+name: Idle Tamer
+kind: tamer
+color: [red]
+cost: 2

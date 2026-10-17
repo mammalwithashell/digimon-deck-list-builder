@@ -377,7 +377,6 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::DigiXrosMaterialSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::OuterOptionalTrigger(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::TriggerOrderSelection(s)) => s.outer_conts.push(cont),
-            Some(ResumeFrame::OptionTrashOrder(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::OptionalReplacement(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ReplacementBody {outer_conts,..}) => outer_conts.push(cont),
             Some(ResumeFrame::FieldTopSourceBatch { outer_conts, .. }) => outer_conts.push(cont),
@@ -404,6 +403,7 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::AppFuseResultSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ArtsDigivolveSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkOptionHostSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::LinkCardTrashChoice(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DigimonLinkHostSelection(_))
             | Some(ResumeFrame::OptionHandLinkHostSelection(_)) => unreachable!(
                 "Link declaration prompts are top-level player actions, never nested in a DSL clause"
@@ -712,6 +712,14 @@ fn run_steps_with_runtime_inner(
             expanded.extend_from_slice(&steps[i + 1..]);
             return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
         }
+        // "<De-Digivolve 1> for each ..." -> that many separate instances
+        // (§16-12-7 / §16-12-8). G-DEDIGIVOLVE-NO-DECLARATION.
+        if let Some(mut expanded) =
+            permanent_mutations::expand_de_digivolve_instances(step, ctx, bindings)
+        {
+            expanded.extend_from_slice(&steps[i + 1..]);
+            return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        }
 
         if let Some(outcome) = simultaneous_play::try_run(step, ctx, bindings, runtime) {
             if matches!(outcome, RunOutcome::Parked) { park_outer_tail(ctx, bindings, steps, i, runtime); return outcome; }
@@ -846,6 +854,10 @@ pub fn run_step_with_runtime(
         return;
     }
     if source_play_batch::try_run(step, ctx, bindings, runtime) {
+        return;
+    }
+    if let Some(expanded) = permanent_mutations::expand_de_digivolve_instances(step, ctx, bindings) {
+        run_steps_with_runtime(&expanded, ctx, bindings, runtime);
         return;
     }
     if let CompiledStep::RawRust { fn_name, .. } = step {
@@ -994,7 +1006,7 @@ fn try_run_link_step(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
         // effects" — the card is then the one resolving from security
         // (`Game::pending_security`), not a `pending_option`. DCGO links it
         // straight out of the security stack (`Permanent.AddLinkCard` →
-        // `RemoveFromAllArea`), and §13-1-7-4 trashes a checked security
+        // `RemoveFromAllArea`), and §13-1-8-4 trashes a checked security
         // card only "unless it belongs to an area", so the link is legal.
         // G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON (BT25-100 / BT25-093).
         return try_run_link_step_from_security(ctx, *optional, filter);
@@ -1019,7 +1031,11 @@ fn try_run_link_step(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
                 player: owner,
                 index: i as u8,
             };
-            eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle)).then_some(handle)
+            // The card's own link requirement (Q4533; DCGO
+            // `CanLinkToTargetPermanent`), as the rule check reads it.
+            (eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle))
+                && ctx.game.link_card_qualifies_for(handle, source_card))
+            .then_some(handle)
         })
         .collect();
 
@@ -1086,7 +1102,11 @@ fn try_run_link_step_from_security(
                 player: owner,
                 index: i as u8,
             };
-            eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle)).then_some(handle)
+            // The card's own link requirement (Q4533; DCGO
+            // `CanLinkToTargetPermanent`), as the rule check reads it.
+            (eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle))
+                && ctx.game.link_card_qualifies_for(handle, source_card))
+            .then_some(handle)
         })
         .collect();
 

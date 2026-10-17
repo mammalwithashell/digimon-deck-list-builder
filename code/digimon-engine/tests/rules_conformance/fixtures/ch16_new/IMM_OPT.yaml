@@ -1,0 +1,17 @@
+# IMM_OPT -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [All Turns] This Digimon isn't affected by the effects of your opponent's
+#   Option cards.
+card: IMM_OPT
+name: Planproofmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: aura
+    target: {}
+    effect_immunity:
+      source_kind: option
+      source_controller: opponent
+    summary: "[All Turns] This Digimon isn't affected by the effects of your opponent's Option cards."

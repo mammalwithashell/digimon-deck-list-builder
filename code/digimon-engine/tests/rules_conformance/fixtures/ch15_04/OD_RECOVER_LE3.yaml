@@ -1,0 +1,17 @@
+# OD_RECOVER_LE3 -- Digimon, Lv.3, yellow, 2000 DP, play cost 4.
+# Same text as BT2-034 Salamon (official Q&A Q1009 rules on two copies):
+#   [On Deletion] If you have 3 or fewer security cards, <Recovery +1 (Deck)>.
+#   (Place the top card of your deck on top of your security stack.)
+card: OD_RECOVER_LE3
+name: Recovermon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 4
+dp: 2000
+effects:
+  - when: on_deletion
+    condition: { security_count_lte: 3 }
+    summary: "[On Deletion] If you have 3 or fewer security cards, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack.)"
+    process:
+      - recover: { of: you, count: 1 }

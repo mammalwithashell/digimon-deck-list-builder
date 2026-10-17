@@ -1,0 +1,16 @@
+# WA_DEL_SELF -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+#   [When Attacking] Delete this Digimon.
+# The attacker leaves the battle area right after its attack declaration
+# (§11-1-5, §12-1-6).
+card: WA_DEL_SELF
+name: Kamikazemon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Delete this Digimon."
+    process:
+      - delete_permanent: { target: source }

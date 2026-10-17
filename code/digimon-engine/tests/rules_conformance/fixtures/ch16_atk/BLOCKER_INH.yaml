@@ -1,0 +1,17 @@
+# BLOCKER_INH -- Digimon, Lv.3, red, 2000 DP, play cost 3.
+#   Inherited Effect: <Blocker> (When an opponent's Digimon attacks, you may
+#   suspend this Digimon to force the opponent to attack it instead.)
+# A second <Blocker> instance under a <Blocker> Digimon (§16-5-3), or the only
+# one under a plain Digimon.
+card: BLOCKER_INH
+name: Underwallmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "Inherited: <Blocker> (When an opponent's Digimon attacks, you may suspend this Digimon to force the opponent to attack it instead.)"

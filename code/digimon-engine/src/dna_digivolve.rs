@@ -1060,16 +1060,6 @@ impl Game {
         let material = player_state.hand.get(material_hand_index)?;
         let field = player_state.battle_area.get(field_idx)?;
 
-        if let Some(route) =
-            self.registered_blast_dna_route_for_hand_card(player, result, material, field_idx)
-        {
-            return Some(route);
-        }
-
-        if self.has_registered_blast_dna_paths(result) {
-            return None;
-        }
-
         let result_meta = &self.card_data[result.data_index];
         let material_meta = &self.card_data[material.data_index];
         let field_extras = self.dna_material_extras(
@@ -1080,25 +1070,47 @@ impl Game {
             result,
         );
 
-        for cost in &result_meta.dna_costs {
-            if perm_matches_req_ext(field, &field_extras, &cost.requirement1, &self.card_data)
-                && card_data_matches_req(material_meta, &cost.requirement2)
-            {
-                return Some(DnaRouteMatch {
-                    first_is_top: true,
-                    memory_cost: cost.memory_cost,
-                });
-            }
-            if perm_matches_req_ext(field, &field_extras, &cost.requirement2, &self.card_data)
-                && card_data_matches_req(material_meta, &cost.requirement1)
-            {
-                return Some(DnaRouteMatch {
-                    first_is_top: false,
-                    memory_cost: cost.memory_cost,
-                });
-            }
+        // §16-31-5: "A Digimon card's DNA digivolution requirements can't be
+        // ignored for <Blast DNA Digivolve>." The (field, hand) pair must meet
+        // one of the result card's DNA requirements, and the requirement's
+        // order (not the blast path's material order) decides which material
+        // is stacked on top (§8-2-2-2).
+        let requirement_match: Option<(bool, i16)> =
+            result_meta.dna_costs.iter().find_map(|cost| {
+                if perm_matches_req_ext(field, &field_extras, &cost.requirement1, &self.card_data)
+                    && card_data_matches_req(material_meta, &cost.requirement2)
+                {
+                    return Some((true, cost.memory_cost));
+                }
+                if perm_matches_req_ext(field, &field_extras, &cost.requirement2, &self.card_data)
+                    && card_data_matches_req(material_meta, &cost.requirement1)
+                {
+                    return Some((false, cost.memory_cost));
+                }
+                None
+            });
+
+        if let Some(route) =
+            self.registered_blast_dna_route_for_hand_card(player, result, material, field_idx)
+        {
+            // A blast path is only offered for materials that also meet a DNA
+            // requirement (§16-31-4, §8-2-1): a result card with none can't be
+            // DNA-digivolved into at all (DCGO `CanPlayJogress` is false when
+            // `jogressCondition` is null).
+            return requirement_match.map(|(first_is_top, _)| DnaRouteMatch {
+                first_is_top,
+                memory_cost: route.memory_cost,
+            });
         }
-        None
+
+        if self.has_registered_blast_dna_paths(result) {
+            return None;
+        }
+
+        requirement_match.map(|(first_is_top, memory_cost)| DnaRouteMatch {
+            first_is_top,
+            memory_cost,
+        })
     }
 
     fn has_registered_blast_dna_paths(&self, result: &CardSource) -> bool {
@@ -1654,17 +1666,11 @@ fn card_data_matches_req_ext(
         }
     }
     if !req.text_contains.is_empty() {
-        // Python's `_perm_matches_dna_req` searches effect + inherited +
-        // security text concatenated (digivolve_validator.py:189-199).
-        let needle = req.text_contains.to_lowercase();
-        let haystack = [
-            meta.effect_text.as_str(),
-            meta.inherited_text.as_str(),
-            meta.security_text.as_str(),
-        ]
-        .join(" ")
-        .to_lowercase();
-        if !haystack.contains(&needle) {
+        // "w/[X] in text" is the whole-card text scan (name, traits, printed
+        // text and digivolution-requirement wording), the same surface as the
+        // `in_text_contains` predicate (official Q&A counts the digivolution
+        // requirement as text).
+        if !meta.in_text_contains(&req.text_contains) {
             return false;
         }
     }

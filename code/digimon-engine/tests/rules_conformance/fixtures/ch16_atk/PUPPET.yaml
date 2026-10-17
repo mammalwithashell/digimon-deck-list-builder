@@ -1,0 +1,10 @@
+# PUPPET -- Digimon, Lv.3, red, 1000 DP, play cost 2. Trait [Puppet]. No text.
+# A Digimon <Overclock ([Puppet] trait)> can delete (§16-34-1).
+card: PUPPET
+name: Stringmon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 1000
+traits: [Puppet]

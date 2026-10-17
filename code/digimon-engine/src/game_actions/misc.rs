@@ -1430,6 +1430,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                pending_processing: None,
             });
         }
     }
@@ -1476,6 +1477,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                pending_processing: None,
             });
         }
     }
@@ -1506,6 +1508,15 @@ impl Game {
             self.check_turn_end();
             return;
         }
+
+        // §4-9-5: at the link limit the Option replaces existing link cards;
+        // with a choice, the linking player picks them, then this resumes.
+        let purpose = LinkTrashPurpose::OptionLink(resume);
+        if self.park_link_replacement_choice(pending.owner, host, purpose) {
+            self.pending_option = Some(pending);
+            return;
+        }
+        self.trash_forced_link_replacement(host);
 
         // Attach.
         let linked_card = pending.card.handle();

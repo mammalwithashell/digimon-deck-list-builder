@@ -1,0 +1,20 @@
+# LINKPLUS_AURA -- Tamer, red, play cost 3.
+#   [All Turns] Your Digimon gain <Link +1> (Add 1 to this Digimon's maximum
+#   links.)
+# A granted <Link +1> (§16-40-2: a persistent effect, applied as soon as it is
+# gained; production idiom: a `ChangeLinkMax` aura over your Digimon, BT25-102).
+card: LINKPLUS_AURA
+name: Network Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+    modifier: ChangeLinkMax
+    modifier_value: 1
+    summary: "[All Turns] Your Digimon gain <Link +1> (Add 1 to this Digimon's maximum links.)"

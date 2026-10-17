@@ -14,6 +14,7 @@ use crate::enums::{
 };
 use crate::game::{
     DelayedOptionLifecycleResume, DelayedOptionLifecycleResumeKind, EndTurnResume, Game,
+    TurnBoundaryResume,
     OverclockError,
 };
 use crate::permanent::PermanentHandle;
@@ -82,7 +83,24 @@ impl Game {
             turn_count: self.turn_count,
         });
 
-        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::UntilNextUnsuspend);
+        // Pending processing due at the turn player's next unsuspend phase
+        // (§18-1-1). Several due at once are one simultaneous pool (§18-1-2).
+        // A decision in it (a `TriggerOrder`, a body's own pick) holds the
+        // turn here until it resolves.
+        if self.enqueue_scheduled_for_timing(EffectTiming::UntilNextUnsuspend) > 0 {
+            self.drain_effect_queue();
+            if self.pending_selection.is_some() {
+                self.pending_turn_boundary_resume =
+                    Some(TurnBoundaryResume::BeginTurnAfterUntilNextUnsuspend);
+                return;
+            }
+        }
+
+        self.continue_begin_turn_after_until_next_unsuspend();
+    }
+
+    fn continue_begin_turn_after_until_next_unsuspend(&mut self) {
+        let tp = self.turn_player();
 
         // Reset per-turn state. [Once Per Turn] counters reset for BOTH
         // players — "per turn" is per GAME turn, so an [All Turns][Once Per
@@ -504,24 +522,29 @@ impl Game {
                 );
             }
         }
+        // §18-1-2: pending processing due at the end of the opponent's turn
+        // pools with the printed `EndOfOpponentsTurn` effects above: the
+        // scheduled bodies and the provenance-keyed deletions ("At the end of
+        // your opponent's turn, delete that token" — P-165 ShoeShoemon; only
+        // entries whose controller is an opponent of `ending_player`).
+        self.enqueue_scheduled_for_timing(EffectTiming::EndOfOpponentsTurn);
+        self.enqueue_scheduled_for_timing(EffectTiming::EndOfOpponentsNextTurn);
+        self.enqueue_provenance_deletions_at_opponents_turn_end(ending_player);
         self.drain_effect_queue();
+        // The turn does not end until that pool has resolved: a decision in
+        // it (a `TriggerOrder`, a body's own pick) holds the rotation here.
+        if self.pending_selection.is_some() {
+            self.pending_turn_boundary_resume =
+                Some(TurnBoundaryResume::FinishTurnRotation { ending_player });
+            return;
+        }
 
-        // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
-        // EndOfOpponentsTurn after the printed-observer fan-out.
-        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfOpponentsTurn);
-        crate::scheduled_effects::fire_scheduled_for_timing(
-            self,
-            EffectTiming::EndOfOpponentsNextTurn,
-        );
+        self.finish_turn_rotation(ending_player);
+    }
 
-        // PUPPETS-G016: drain provenance-keyed deletions scheduled for
-        // the end of the opponent's turn ("At the end of your opponent's
-        // turn, delete that token" — P-165 ShoeShoemon). Runs after the
-        // printed EndOfOpponentsTurn observers and scheduled-effect drains.
-        // Only drains entries whose controller != ending_player (i.e. effects
-        // scheduled by the ending player's opponents that fire at this boundary).
-        crate::scheduled_effects::fire_scheduled_provenance_deletions_opp(self, ending_player);
-
+    /// The rest of `rotate_turn_player` once the `EndOfOpponentsTurn` pool
+    /// has resolved: memory floor, turn advance, seesaw flip, `begin_turn`.
+    fn finish_turn_rotation(&mut self, ending_player: PlayerId) {
         if let Some(floor) = self.modifiers.end_turn_min_memory_floor(ending_player) {
             let floor = floor.clamp(i16::MIN as i32, i16::MAX as i32) as i16;
             if self.memory < floor {
@@ -586,6 +609,38 @@ impl Game {
             return;
         }
         self.enter_main_phase();
+    }
+
+    /// Resume the turn machine parked at a turn boundary by a decision in a
+    /// §18-1-2 pool (`TurnBoundaryResume`). Called from the
+    /// `resolve_selection` tail once nothing is pending.
+    pub(crate) fn resume_pending_turn_boundary(&mut self) {
+        if self.pending_selection.is_some() {
+            return;
+        }
+        let Some(resume) = self.pending_turn_boundary_resume.take() else {
+            return;
+        };
+        // The pool may still hold entries the resolved decision did not
+        // reach (the resolver's drain stops at the next decision).
+        if !self.effect_queue.is_empty() {
+            self.drain_effect_queue();
+            if self.pending_selection.is_some() {
+                self.pending_turn_boundary_resume = Some(resume);
+                return;
+            }
+        }
+        if self.game_over {
+            return;
+        }
+        match resume {
+            TurnBoundaryResume::FinishTurnRotation { ending_player } => {
+                self.finish_turn_rotation(ending_player)
+            }
+            TurnBoundaryResume::BeginTurnAfterUntilNextUnsuspend => {
+                self.continue_begin_turn_after_until_next_unsuspend()
+            }
+        }
     }
 
     pub(crate) fn resume_pending_end_turn(&mut self) {
@@ -1043,28 +1098,24 @@ impl Game {
                 crate::selection::TriggerSource::SecurityStackCard { player, card },
             );
         }
-        self.drain_effect_queue();
-
-        // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
-        // EndOfYourTurn here. Printed observers fire first (above);
-        // scheduled bodies fire AFTER — they're the turn-end
-        // housekeeping that printed text scheduled when its own observer
-        // ran earlier.
+        // §18-1-2: pending processing due at the end of this turn
+        // (`ScheduledEffect`s for `EndOfYourTurn` / `EndOfYourNextTurn`)
+        // joins the printed `[End of Your Turn]` effects in ONE simultaneous
+        // pool, ordered by the turn player (§15-4-3-5-1) -- not run after
+        // them. G-ENGINE-PENDING-PROCESSING-OUTSIDE-TRIGGER-POOL.
         //
         // Note: `EffectTiming` does not have a unified `EndOfTurn`
         // variant — the enum collapses to `EndOfYourTurn` (active
         // player) and `EndOfOpponentsTurn` (inactive players, fired
-        // from `rotate_turn_player`). Both peer drains are wired
+        // from `rotate_turn_player`). Both peer pools are built
         // separately at their respective observer-fire sites.
-        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfYourTurn);
-        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfYourNextTurn);
-
-        // PUPPETS-G003: drain provenance-keyed turn-end self-deletions ("At
-        // turn end, delete the Digimon this effect played"). Runs after the
-        // printed `EndOfYourTurn` observers and scheduled-effect drains —
-        // the played Digimon's own end-of-turn window has already closed —
-        // and before turn rotation flips memory.
-        crate::scheduled_effects::fire_scheduled_provenance_deletions(self);
+        // PUPPETS-G003: the provenance-keyed turn-end deletions ("At turn
+        // end, delete the Digimon this effect played") are pending processing
+        // of this timing too, so they join the same pool.
+        self.enqueue_scheduled_for_timing(EffectTiming::EndOfYourTurn);
+        self.enqueue_scheduled_for_timing(EffectTiming::EndOfYourNextTurn);
+        self.enqueue_provenance_deletions_at_turn_end();
+        self.drain_effect_queue();
     }
 
     /// Phase 8 Task 3: fire and trash every Delayed Option (across all
@@ -1179,10 +1230,10 @@ impl Game {
             // `card.Owner.Enemy.GetBattleAreaDigimons().Count >= 1` for the
             // printed "If your opponent has a Digimon, <Delay>". When that
             // printed gate is FALSE the Delay is simply not activatable this
-            // turn, and §16-16-1 makes the trash of the carrier the
+            // turn, and §16-17-1 makes the trash of the carrier the
             // ACTIVATION ("by trashing that card, the effect specified in
             // <Delay> will activate") — so an un-activated Delay must not pay
-            // it. The carrier STAYS in the battle area, where §16-16-1 keeps
+            // it. The carrier STAYS in the battle area, where §16-17-1 keeps
             // the Delay available, and its window moves to the next one.
             //
             // Before this guard the scan enqueued a body that the queue's
@@ -1251,14 +1302,14 @@ impl Game {
         }
     }
 
-    /// If the just-resolved turn-scheduled `<Delay>` at `key` had its §16-16-2
+    /// If the just-resolved turn-scheduled `<Delay>` at `key` had its §16-17-2
     /// cost DECLINED, leave the carrier alone and move its window forward.
     ///
     /// Returns `true` when the caller must NOT delete the carrier.
     ///
     /// Rescheduling is not optional politeness: the scan matches on
     /// `trash_on_turn == turn`, so an Option left at its spent turn number
-    /// would sit on the field forever, never offered again. §16-16-1 keeps the
+    /// would sit on the field forever, never offered again. §16-17-1 keeps the
     /// Delay available "while a card with this effect is in the battle area",
     /// and these are recurring printed windows ([Start of Your Turn],
     /// [End of Your Turn]), so the next window is the controller's next turn —
@@ -1276,7 +1327,7 @@ impl Game {
     /// its next printed occurrence.
     ///
     /// Shared by the two ways a scheduled window can close without the Delay
-    /// activating: the controller DECLINED its §16-16-2 cost, or the clause's
+    /// activating: the controller DECLINED its §16-17-2 cost, or the clause's
     /// printed condition was FALSE so the window never opened
     /// (DCGO `CanUseCondition`). Both leave the carrier in the battle area,
     /// and the scan matches on `trash_on_turn == turn`, so a carrier left at
@@ -1311,7 +1362,7 @@ impl Game {
     ///
     /// Returns `false` only when every `DelayEffect` clause matching this
     /// scan's `triggers` is gated by a condition that is currently false —
-    /// i.e. the window does not open, so the §16-16-1 activation (and with it
+    /// i.e. the window does not open, so the §16-17-1 activation (and with it
     /// the trash of the carrier) must not happen.
     ///
     /// Conservative in every ambiguous case (carrier gone, effects missing, no
@@ -1338,14 +1389,8 @@ impl Game {
         let top = perm.top_card();
         let card_id = top.card_id(&self.card_data).to_string();
         let source_card = top.handle();
-        let source_kind = match top.card_kind(&self.card_data) {
-            CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual => {
-                crate::enums::EffectSourceKind::Digimon
-            }
-            CardKind::Tamer => crate::enums::EffectSourceKind::Tamer,
-            CardKind::Option => crate::enums::EffectSourceKind::Option,
-            CardKind::Token => crate::enums::EffectSourceKind::Rule,
-        };
+        let source_kind =
+            crate::enums::EffectSourceKind::for_card_kind(top.card_kind(&self.card_data));
         let controller = handle.player;
 
         // Owned clone, so the condition closures can be evaluated against

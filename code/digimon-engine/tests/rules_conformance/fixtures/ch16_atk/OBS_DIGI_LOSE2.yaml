@@ -1,0 +1,19 @@
+# OBS_DIGI_LOSE2 -- Tamer, red, play cost 3.
+#   [Your Turn] When one of your Digimon digivolves, lose 2 memory.
+# Triggers with a [When Digivolving] <Blitz>; its order decides the memory
+# <Blitz> sees when it activates (§16-16-5).
+card: OBS_DIGI_LOSE2
+name: Drain Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_digivolve
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    summary: "[Your Turn] When one of your Digimon digivolves, lose 2 memory."
+    process:
+      - lose_memory: 2

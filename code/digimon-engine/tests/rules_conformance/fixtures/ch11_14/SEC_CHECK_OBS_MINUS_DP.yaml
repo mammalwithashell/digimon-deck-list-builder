@@ -1,0 +1,20 @@
+# SEC_CHECK_OBS_MINUS_DP -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [All Turns] When your opponent's Digimon checks your security, that
+#   Digimon gets -3000 DP for the turn.
+# A check-triggered effect (§13-1-8-2) that changes the outcome of the
+# battle against the Security Digimon that follows it (§13-1-8-3).
+card: SEC_CHECK_OBS_MINUS_DP
+name: Wardmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_security_check
+    summary: "[All Turns] When your opponent's Digimon checks your security, that Digimon gets -3000 DP for the turn."
+    process:
+      - add_dp_modifier:
+          target: event_target
+          value: -3000
+          expiry: end_of_turn

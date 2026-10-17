@@ -1,0 +1,36 @@
+# MAIN_DEL_6000_OR_LOWEST_IF_GREYMON -- Option, red, use cost 0.
+# The §18-2-1 example text (mandatory overwrite processing, §18-2-3):
+#   [Main] Delete 1 of your opponent's Digimon with 6000 DP or less. If you
+#   have a Digimon with [Greymon] in its name, instead delete 1 of your
+#   opponent's Digimon with the lowest DP.
+card: MAIN_DEL_6000_OR_LOWEST_IF_GREYMON
+name: Flame Verdict
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Delete 1 of your opponent's Digimon with 6000 DP or less. If you have a Digimon with [Greymon] in its name, instead delete 1 of your opponent's Digimon with the lowest DP."
+    process:
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              kind: digimon
+              name_contains: "Greymon"
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                selector: lowest_dp
+                filter: { kind: digimon }
+                prompt: "Delete 1 of your opponent's Digimon with the lowest DP"
+            - delete_permanent: { target: victim }
+          else:
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 6000
+                prompt: "Delete 1 of your opponent's Digimon with 6000 DP or less"
+            - delete_permanent: { target: victim }

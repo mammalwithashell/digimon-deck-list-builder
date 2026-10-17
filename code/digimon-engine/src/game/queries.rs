@@ -54,7 +54,42 @@ impl Game {
         if self.modifiers.has_keyword(handle, keyword) {
             return true;
         }
+        if keyword == crate::enums::Keyword::Blocker && self.collision_grants_blocker(handle) {
+            return true;
+        }
         self.has_keyword_from_card_sources(handle, keyword)
+    }
+
+    /// §16-30-1 / §16-30-2 / §16-30-4: while a Digimon with `<Collision>` is
+    /// attacking, ALL of its controller's opponent's Digimon gain
+    /// `<Blocker>` -- a persistent keyword effect, computed live from the
+    /// current attack (so it can never outlive the attack), applied with no
+    /// activation. "Gain <Blocker>" is processing that affects Digimon
+    /// (§16-30-4), so a Digimon the attacker's Digimon effects can't affect
+    /// (§15-15-5) does not gain it; the forced block, which affects the
+    /// opponent PLAYER, is `try_enter_block`'s mandatory window.
+    ///
+    /// DCGO `Permanent.HasBlocker`: true for every opponent Digimon during a
+    /// `<Collision>` attack unless `TopCard.CanNotBeAffected(collisionEffect)`.
+    pub(crate) fn collision_grants_blocker(&self, handle: PermanentHandle) -> bool {
+        // `live_attack_attacker` (stack identity), not `current_attacker`
+        // (the slot handle): the grant vanishes exactly when the <Collision>
+        // Digimon leaves the attack, and field compaction can't aim it at
+        // another Digimon that slid into the attacker's old slot.
+        let Some(attacker) = self.live_attack_attacker() else {
+            return false;
+        };
+        if attacker.player == handle.player
+            || !self.permanent_is_digimon_for_rules(handle)
+            || !self.has_keyword(attacker, crate::enums::Keyword::Collision)
+        {
+            return false;
+        }
+        self.effect_can_affect(
+            handle,
+            attacker.player,
+            crate::enums::EffectSourceKind::Digimon,
+        )
     }
 
     /// The card-source half of [`Game::has_keyword`]: `keyword` reaches
@@ -75,6 +110,19 @@ impl Game {
         handle: PermanentHandle,
         keyword: crate::enums::Keyword,
     ) -> bool {
+        self.card_source_keyword_matches(handle, &|k| k == keyword)
+    }
+
+    /// The one walk over every card-source origin of a permanent's keywords
+    /// (face, inherited, `<Succession>`-adopted, declarative grants, link
+    /// cards), with the keyword compare supplied by the caller: exact value
+    /// for [`Game::has_keyword_from_card_sources`], keyword type for
+    /// [`Game::has_keyword_type`] (Comprehensive Rules 4.3 §16-2).
+    fn card_source_keyword_matches(
+        &self,
+        handle: PermanentHandle,
+        matches: &dyn Fn(crate::enums::Keyword) -> bool,
+    ) -> bool {
         // Native printed on the top card's face.
         let Some(player) = self.players.get(handle.player as usize) else {
             return false;
@@ -85,7 +133,7 @@ impl Game {
         let top = perm.top_card();
         // `data_index` is a direct Vec index — O(1), no iteration needed.
         let card_data = &self.card_data[top.data_index];
-        if face_keywords(card_data).contains(&keyword) {
+        if face_keywords(card_data).iter().any(|k| matches(*k)) {
             return true;
         }
         // Inherited keyword grants from digivolution sources. Only cards
@@ -111,10 +159,18 @@ impl Game {
         for (source_index, data_index, src_id, src_handle) in source_ids {
             let is_under = source_index + 1 < stack_size;
             let is_adopted = adopted.contains(&source_index);
-            if is_under && inherited_keywords(&self.card_data[data_index]).contains(&keyword) {
+            if is_under
+                && inherited_keywords(&self.card_data[data_index])
+                    .iter()
+                    .any(|k| matches(*k))
+            {
                 return true;
             }
-            if is_adopted && face_keywords(&self.card_data[data_index]).contains(&keyword) {
+            if is_adopted
+                && face_keywords(&self.card_data[data_index])
+                    .iter()
+                    .any(|k| matches(*k))
+            {
                 return true;
             }
             let Some(effects) = self.effects_for_card(&src_id, src_handle) else {
@@ -126,7 +182,7 @@ impl Game {
                 {
                     continue;
                 }
-                if effect.granted_keyword != Some(keyword) {
+                if !effect.granted_keyword.is_some_and(matches) {
                     continue;
                 }
                 if let Some(cond) = &effect.condition {
@@ -148,7 +204,7 @@ impl Game {
         // `linked_cards`, so a linked Option's `<Piercing>` (BT25-100) or any
         // other link-card keyword grant would not register at query time.
         // Fold in every link card: both its PRINTED link keywords
-        // (`link_text`, 4-2-6) and its `.inherited()` / `.linked()`
+        // (`link_text`, 4-3-5) and its `.inherited()` / `.linked()`
         // `grant_keyword` clauses count. A single
         // clause is `.inherited()` XOR `.linked()` (scope-driven), so accepting
         // either cannot double-fire. (Materializing `grant_keyword` clauses also
@@ -161,7 +217,10 @@ impl Game {
             .map(|c| (c.data_index, c.handle()))
             .collect();
         for (data_index, linked_handle) in linked_ids {
-            if link_keywords(&self.card_data[data_index]).contains(&keyword) {
+            if link_keywords(&self.card_data[data_index])
+                .iter()
+                .any(|k| matches(*k))
+            {
                 return true;
             }
             let linked_id = self.card_data[data_index].card_id.clone();
@@ -172,7 +231,7 @@ impl Game {
                 if !effect.declarative || !(effect.inherited || effect.linked) {
                     continue;
                 }
-                if effect.granted_keyword != Some(keyword) {
+                if !effect.granted_keyword.is_some_and(matches) {
                     continue;
                 }
                 if let Some(cond) = &effect.condition {
@@ -199,7 +258,8 @@ impl Game {
     /// to one branch).
     ///
     /// Returns `true` when:
-    ///   - `target` is the current attacker (`current_attacker() == Some(target)`), AND
+    ///   - `target` is the attacker (`progress_shield_target`: the attack's
+    ///     attacker, resolved by stack identity once declared), AND
     ///   - `source` is `Some(pid)` where `pid != target.player`, AND
     ///   - `target` has either `Keyword::Progress` (printed or granted) **or**
     ///     `ModifierType::ImmunityToOpponentEffects`.
@@ -233,44 +293,81 @@ impl Game {
         if src == target.player {
             return false;
         }
-        if self.current_attacker() != Some(target) {
-            return false;
-        }
-        self.has_keyword(target, crate::enums::Keyword::Progress)
-            || self.modifiers.has(
-                target,
-                crate::enums::ModifierType::ImmunityToOpponentEffects,
-            )
+        self.progress_shield_target() == Some(target)
     }
 
+    /// §16-39-1 / §16-39-3: the Digimon `<Progress>` currently shields -- the
+    /// attacker, while it attacks and has `<Progress>` (printed, inherited,
+    /// linked or granted) or `ImmunityToOpponentEffects`. The one predicate
+    /// behind both [`Game::progress_excludes`] (one-shot processing) and the
+    /// read-time shield on the modifier registry
+    /// ([`Game::refresh_progress_shield`]).
+    ///
+    /// The attacker is the `pending_attack` slot until the declaration
+    /// captured its stack identity; from then on it is resolved by identity
+    /// (`live_attack_attacker`), so a Digimon that slides into the attacker's
+    /// slot after a battle-area compaction is never taken for it (DCGO keys
+    /// `<Progress>` to `attackProcess.AttackingPermanent`, an object).
+    pub(crate) fn progress_shield_target(&self) -> Option<PermanentHandle> {
+        let pa = self.pending_attack.as_ref()?;
+        let attacker = if pa.declaration_committed && self.attack_attacker_identity.is_some() {
+            self.live_attack_attacker()?
+        } else {
+            pa.attacker
+        };
+        (self.has_keyword(attacker, crate::enums::Keyword::Progress)
+            || self.modifiers.has(
+                attacker,
+                crate::enums::ModifierType::ImmunityToOpponentEffects,
+            ))
+        .then_some(attacker)
+    }
+
+    /// §16-39-1 / §15-15-5-1 / §15-15-5-2: re-evaluate `<Progress>` and hand
+    /// the result to the modifier registry, whose read path hides every
+    /// opponent effect's entry on the shielded attacker. Called wherever
+    /// [`Game::progress_shield_target`] can change: the attack declaration,
+    /// every declarative tick (a `<Progress>` gained or lost mid-attack, by a
+    /// grant or a changed stack or condition), a battle-area compaction, each
+    /// battle's DP comparison, an effect's modifier install, and the end of
+    /// the attack (`cleanup_attack`, where it drops to `None`).
+    pub(crate) fn refresh_progress_shield(&mut self) {
+        let shield = self.progress_shield_target();
+        if self.modifiers.progress_shield() != shield {
+            self.modifiers.set_progress_shield(shield);
+        }
+    }
+
+    /// §15-15-5-1 / §16-39-1: whether an effect of category `source_kind`
+    /// controlled by `effect_controller` can affect `target` right now -- not
+    /// shielded by `<Progress>` while attacking, and not covered by a
+    /// `CannotBeAffected` immunity. The single gate for one-shot processing;
+    /// `EffectContext::can_affect_permanent` is this with the context's
+    /// controller and kind, and resume terminals that run outside an
+    /// `EffectContext` (e.g. the per-color batch delete) call it directly.
+    pub fn effect_can_affect(
+        &self,
+        target: PermanentHandle,
+        effect_controller: crate::enums::PlayerId,
+        source_kind: crate::enums::EffectSourceKind,
+    ) -> bool {
+        !self.progress_excludes(target, Some(effect_controller))
+            && !self.permanent_is_unaffected_by_effect(target, effect_controller, source_kind)
+    }
+
+    /// §15-15-5-1: whether `target` is unaffected by an effect of category
+    /// `source_kind` controlled by `effect_controller`. Thin wrapper over
+    /// [`crate::modifiers::ModifierRegistry::is_unaffected_by`], whose
+    /// predicate also drives the read-time suppression of modifiers that
+    /// were applied to `target` (§15-15-5-2).
     pub fn permanent_is_unaffected_by_effect(
         &self,
         target: PermanentHandle,
         effect_controller: crate::enums::PlayerId,
         source_kind: crate::enums::EffectSourceKind,
     ) -> bool {
-        use crate::modifiers::EffectControllerFilter;
-
         self.modifiers
-            .get(target, crate::enums::ModifierType::CannotBeAffected)
-            .into_iter()
-            .any(|entry| {
-                let Some(filter) = entry.effect_immunity_filter else {
-                    return true;
-                };
-                let source_kind_matches = filter
-                    .source_kind
-                    .map(|expected| source_kind.includes(expected))
-                    .unwrap_or(true);
-                if !source_kind_matches {
-                    return false;
-                }
-                match filter.controller {
-                    EffectControllerFilter::Any => true,
-                    EffectControllerFilter::OpponentOnly => effect_controller != target.player,
-                    EffectControllerFilter::OwnOnly => effect_controller == target.player,
-                }
-            })
+            .is_unaffected_by(target, effect_controller, source_kind)
     }
 
     /// Returns `true` when an effect is currently resolving AND its
@@ -526,5 +623,25 @@ impl Game {
             }
         }
         total
+    }
+}
+
+impl Game {
+    /// Keyword query by TYPE: `true` when the permanent has ANY keyword of the
+    /// same type as `kind`, whatever its numerical value or specified card
+    /// (Comprehensive Rules 4.3 §16-2: "A keyword effect is considered to be
+    /// the same type even if it has a different numerical value or specified
+    /// card included in the icon enclosed in brackets"). So `<Fragment (1)>`
+    /// and `<Fragment (2)>` both answer `has_keyword_type(h, &Fragment(0))`.
+    ///
+    /// Scans the same origins as [`Game::has_keyword`] (modifier grants, face,
+    /// inherited, adopted, declarative grants, link cards). Use this for a
+    /// reference that names a keyword without a parameter ("a Digimon with
+    /// <Fragment>"); keep [`Game::has_keyword`] where the exact value matters.
+    pub fn has_keyword_type(&self, handle: PermanentHandle, kind: &crate::enums::Keyword) -> bool {
+        self.modifiers.has_keyword_type(handle, kind)
+            || (kind.same_type(&crate::enums::Keyword::Blocker)
+                && self.collision_grants_blocker(handle))
+            || self.card_source_keyword_matches(handle, &|k| k.same_type(kind))
     }
 }

@@ -76,6 +76,9 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT21-101 YAML parses and compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("APPMON-HAND", 0)
+        .link_requirement("APPMON-HAND2", 0)
         .add_card(make_appmon("APPMON-HAND"))
         .add_card(make_appmon("APPMON-HAND2"))
         .add_card(make_appmon("APPMON-HOST"))

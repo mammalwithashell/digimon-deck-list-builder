@@ -105,7 +105,7 @@ fn digimon_card(card_id: &str, color: CardColor) -> digimon_engine::CardData {
 
 /// Digitama-deck card for hatch/promote staging. Deliberately Digimon-kind
 /// (Lv3, `make_test_card` default) rather than `CardKind::DigiEgg`: the
-/// §17-1-3-2 rules check trashes any battle-area permanent whose live top is
+/// §17-1-3-2-1 rules check trashes any battle-area permanent whose live top is
 /// a DP-less Digi-Egg, so promoting a bare egg-kind card is an impossible
 /// real-game state (a real promotion requires digivolving to Lv3+ first,
 /// which leaves a Digimon on top). Same staging shortcut as

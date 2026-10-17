@@ -70,6 +70,10 @@ pub enum TerminalOutcomeReason {
     /// `Game::concede`). Emitted with a winner equal to the conceder's
     /// opponent. Surfaces to Python as `win_reason = "concede"`.
     Concede,
+    /// §18-3-2 (Ver. 4.3): "If an infinite loop occurs and neither player has
+    /// the ability to stop it, that game ends in a draw." Emitted with no
+    /// winner, after a `GameEvent::InfiniteLoop`.
+    InfiniteLoopDraw,
 }
 
 impl TerminalOutcomeReason {
@@ -83,12 +87,13 @@ impl TerminalOutcomeReason {
             Self::Crash => "crash",
             Self::UnknownDraw => "unknown_draw",
             Self::Concede => "concede",
+            Self::InfiniteLoopDraw => "infinite_loop_draw",
         }
     }
 
     pub fn result(self) -> &'static str {
         match self {
-            Self::Crash | Self::UnknownDraw => "draw",
+            Self::Crash | Self::UnknownDraw | Self::InfiniteLoopDraw => "draw",
             Self::SecurityAttack | Self::DeckOut | Self::EngineDeclared | Self::UnknownWin => "win",
             Self::StepLimit => "win",
             Self::Concede => "win",
@@ -96,7 +101,7 @@ impl TerminalOutcomeReason {
     }
 }
 
-fn face_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
+pub(crate) fn face_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
     if card_data.effect_text.is_empty()
         && card_data.inherited_text.is_empty()
         && card_data.security_text.is_empty()
@@ -114,7 +119,7 @@ fn inherited_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
 }
 
 /// Keywords printed in a link card's link effect: a Digimon gains them while the
-/// card is one of its link cards (general_rule.pdf 4-2-6), and only then.
+/// card is one of its link cards (general_rule.pdf 4-3-5), and only then.
 fn link_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
     if card_data.link_text.is_empty() {
         return Vec::new();
@@ -164,6 +169,19 @@ pub(crate) struct DelayedOptionLifecycleResume {
     pub(crate) kind: DelayedOptionLifecycleResumeKind,
     pub(crate) pending_delete_key: Option<(PlayerId, u16)>,
     pub(crate) skip_key: Option<(PlayerId, u16)>,
+}
+
+/// Where the turn machine resumes after a decision in a turn-boundary
+/// simultaneous pool (§18-1-2: pending processing + triggered effects)
+/// parked it. The boundary does not pass until that pool has resolved.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TurnBoundaryResume {
+    /// The `EndOfOpponentsTurn` pool of `rotate_turn_player`: finish the
+    /// rotation (memory floor, turn advance, seesaw flip, `begin_turn`).
+    FinishTurnRotation { ending_player: PlayerId },
+    /// The `UntilNextUnsuspend` pool at the start of a turn: continue into
+    /// the per-turn reset and the unsuspend phase.
+    BeginTurnAfterUntilNextUnsuspend,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -641,12 +659,30 @@ pub struct Game {
     /// driven by `Game::advance_security_resolution`, called from
     /// `resolve_generic_selection`. See RUST_PYTHON_PARITY Â§2.5j.
     pub security_resolution: Option<SecurityResolutionState>,
-    /// Safety rail matching Python's `_resolve_effect_stack` max-iterations=50
-    /// cap. Incremented per drain step; reset to 0 when the queue empties.
-    /// Prevents a self-triggering chain from hanging the engine.
-    /// Consumed by the drainer in PR2.
-    #[allow(dead_code)]
+    /// Resolutions in the current chain: incremented per drain step, reset to
+    /// 0 when the queue empties, and restarted (to 1, keeping the "inside a
+    /// chain" marker that `cancel_pending_attack_from_effect_checked` and
+    /// `reevaluate_until_condition_modifiers_if_dirty` read) whenever a
+    /// player decision resolves, so a loop its owner keeps choosing to repeat
+    /// (§18-3-3-3) is never mistaken for an unbounded one. Past
+    /// `effect_queue::MAX_CHAIN_DEPTH` (a far backstop behind the §18-3
+    /// signature watch) the game ends in the §18-3-2 draw.
     pub(crate) effect_chain_depth: u16,
+    /// §18-3 infinite-loop watch: how many times each loop signature
+    /// (`Game::loop_signature`) has been seen since the last DECLINABLE
+    /// decision resolved or the outermost drain settled with nothing parked.
+    /// See `game::infinite_loop`. It survives forced decisions, so a clone
+    /// taken at a forced prompt carries a non-empty watch; clones stay
+    /// deterministic because it is a `BTreeMap` of fixed-key hashes over
+    /// handles and values (no pointers, RNG or allocation order).
+    pub(crate) loop_watch: std::collections::BTreeMap<u64, u8>,
+    /// Steps since the loop watch last started over; signatures are taken
+    /// only from `game::infinite_loop::LOOP_WATCH_START` steps on.
+    pub(crate) loop_watch_steps: u16,
+    /// Marks the pending prompt as an optional decision when it is not
+    /// `is_optional` (DSL choose-one, `<Ascension>` Yes/No); consumed when the
+    /// next decision resolves. See `game::infinite_loop::OptionalDecisionMark`.
+    pub(crate) optional_decision_mark: Option<infinite_loop::OptionalDecisionMark>,
     /// Last Â§15-4-5 trigger-batch id handed out by the drainer (see
     /// `QueuedEffect::trigger_batch`). Monotonic within a game.
     pub(crate) trigger_batch_seq: u32,
@@ -833,24 +869,15 @@ pub struct Game {
     /// `complete_option_body_if_done` once the body has fully resolved and the
     /// Option has been disposed. While set, triggered effects the body caused
     /// (e.g. an opponent's `[On Deletion]`) are held back so the used Option is
-    /// trashed FIRST: rules 9-1-5 (the Option is trashed "at the timing when
-    /// its 1st [Main] effect has been resolved as pending processing") +
-    /// 18-1-2 (pending processing at the same time as triggered effects is
-    /// ordered like simultaneous triggering) + 15-4-3-5 (turn player's first).
+    /// trashed FIRST, uninterrupted by rule checks or other effects: §9-1-5
+    /// (Ver. 4.3) "A used Option card is immediately trashed as pending
+    /// processing as soon as the timing when its 1st [Main] effect has been
+    /// resolved ... Other effects and rule checks don't interrupt the period
+    /// between [Main] effect activation and trashing."
     /// DCGO: `UseOptionClass.UseOption` calls `AddTrashCard` right after the
     /// `OptionSkill` process, before the stacked triggers resolve.
     /// G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS.
     pub(crate) option_body_pending: bool,
-
-    /// The used Option's pending trash (9-1-5) is being ORDERED by its user
-    /// against their own simultaneously-pending triggered effects: set when
-    /// that player answered the `install_option_trash_order_selection` prompt
-    /// with "resolve my triggered effect first". Cleared as soon as one queued
-    /// entry actually resolves (`run_queued_effect`), so the choice is
-    /// re-offered before each remaining item â€” 15-4-3-5-1 repeats the pick
-    /// until the turn player has no pending items left.
-    /// G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
-    pub(crate) option_trash_order_deferred: bool,
 
     /// VARIABLE-amount interactive cost reduction driven by the printed play
     /// cost of a permanent deleted DURING an interactive cost's `pay_cost`
@@ -969,9 +996,11 @@ pub struct Game {
     /// The cause of the deletion currently being observed by `OnDeletion`
     /// effects. Set by `commit_permanent_deletion` immediately before
     /// `enqueue_triggered(OnDeletion, ...)`; cleared after the drain via a
-    /// panic-safe `catch_unwind` scope at the fire-site. Read by
+    /// panic-safe `catch_unwind` scope at the fire-site. The fallback for
     /// `EffectContext::deletion_cause()` / `was_deleted_by_effect()` /
-    /// `was_deleted_by_opponent()`.
+    /// `was_deleted_by_opponent()`: all three read the deleted object's
+    /// snapshot cause first (`observed_deletion_cause`, rule 25), since this
+    /// slot is already restored when the `[On Deletion]` bundle is deferred.
     ///
     /// `None` outside an OnDeletion observer body. Phase B Â§B5.
     #[doc(hidden)]
@@ -1080,6 +1109,16 @@ pub struct Game {
     /// resumes after the battle's triggered choices have finished.
     pub(crate) pending_attack_battle_result: Option<crate::combat::AttackResult>,
     pub(crate) next_battle_identity: u64,
+    /// Stack identity (`Permanent::battle_identity`) of the declared
+    /// attacker, captured when the declaration's triggers are enqueued
+    /// (`fire_on_attack`). `Game::live_attack_attacker` uses it to tell the
+    /// attacker from a later occupant of its compacted slot.
+    pub(crate) attack_attacker_identity: Option<(PlayerId, u64)>,
+    /// Scratch cache scoped to one `enqueue_triggered` call (empty outside
+    /// it): the event Digimon's last-known snapshot, built once per event
+    /// and shared by every context of that event.
+    pub(crate) event_snapshot_cache:
+        Option<((PlayerId, u64), std::sync::Arc<crate::trigger_context::DeletedObjectSnapshot>)>,
     /// Optional harness ledger, excluded from gameplay and verification state.
     pub(crate) native_play_observation: Option<native_play_observation::NativePlayObservation>,
 
@@ -1159,26 +1198,25 @@ pub struct Game {
     pub(crate) dsl_clause_aborted: bool,
 
     /// Phase 2f4 Task 1 â€” one-shot delayed-effect queue. Entries are scheduled
-    /// via `EffectContext::schedule_delayed` and drained by
-    /// `scheduled_effects::fire_scheduled_for_timing` whose `when:` matches.
-    /// Task 2 wires the drain into observer-fire boundaries (turn end, etc.).
+    /// via `EffectContext::schedule_delayed` and moved into the effect queue by
+    /// `Game::enqueue_scheduled_for_timing` when their `when:` timing occurs,
+    /// joining that timing's printed triggers in one pool (§18-1-2).
     pub scheduled_effects: Vec<crate::scheduled_effects::ScheduledEffect>,
-    /// Continuation for a scheduled-effect drain paused by a DSL selection.
-    pub scheduled_drain_tail: Option<crate::scheduled_effects::ScheduledDrainTail>,
 
     /// PUPPETS-G003 â€” provenance-keyed deletions scheduled for this turn's
     /// end. An effect that plays a Digimon and must delete *that specific
     /// permanent* at turn end ("At turn end, delete the Digimon this effect
     /// played") pushes one entry here, keyed by a stable `ProvenanceToken`
     /// (the played card's identity) rather than a battle-area index that can
-    /// shift. Drained by `scheduled_effects::fire_scheduled_provenance_deletions`
+    /// shift. Enqueued into the end-of-turn pool by `Game::enqueue_provenance_deletions_at_turn_end`
     /// from `fire_end_of_your_turn`; the queue is cleared each turn so a
     /// played permanent that already left is a silent no-op.
     pub scheduled_provenance_deletions: Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
     /// PUPPETS-G016 â€” provenance-keyed deletions scheduled for the end of the
     /// **opponent's** turn. Mirror of `scheduled_provenance_deletions` but
-    /// drained from `rotate_turn_player` (after `EndOfOpponentsTurn` observers
-    /// and scheduled-effect drains) rather than from `fire_end_of_your_turn`.
+    /// enqueued into `rotate_turn_player`'s `EndOfOpponentsTurn` pool
+    /// (`Game::enqueue_provenance_deletions_at_opponents_turn_end`, §18-1-2)
+    /// rather than the `EndOfYourTurn` one.
     /// Used by P-165 ShoeShoemon ("At the end of your opponent's turn, delete
     /// that token").
     pub scheduled_provenance_deletions_opp:
@@ -1187,7 +1225,7 @@ pub struct Game {
     /// delete/replacement selection. Re-entered from `resolve_selection`.
     pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
     /// Stable key `(owner, bottom_card_index)` of a turn-scheduled `<Delay>`
-    /// Option whose Â§16-16-2 cost the controller just DECLINED.
+    /// Option whose Â§16-17-2 cost the controller just DECLINED.
     ///
     /// The turn scan (`resolve_delayed_options_matching`) trashes the Option
     /// after running its body, because the trash IS the Delay's cost. When the
@@ -1201,6 +1239,9 @@ pub struct Game {
     /// Continuation for the regular EndTurn state machine when an
     /// EndOfYourTurn effect parks a player selection.
     pub(crate) pending_end_turn_resume: Option<EndTurnResume>,
+    /// Continuation for a turn boundary whose §18-1-2 pool parked on a
+    /// decision (`resume_pending_turn_boundary`).
+    pub(crate) pending_turn_boundary_resume: Option<TurnBoundaryResume>,
     /// Parked Breeding â†’ Main phase advance. Set by `enter_main_phase` when a
     /// breeding-action trigger (e.g. an `[When Moving]` selection fired by
     /// `move_from_breeding`) parked a `PendingSelection` before the phase
@@ -1342,6 +1383,7 @@ pub struct Game {
 
 // Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md Â§3).
 mod handles;
+pub mod infinite_loop;
 mod lifecycle;
 mod memory;
 mod opt;
@@ -1642,11 +1684,11 @@ impl Game {
         sources: &[crate::card_source::CardSource],
     ) {
         // <Overflow> is OWNER-relative: "lose X memory" (4-1-4) is applied to
-        // the card's owner (4-17-1; DCGO `AceOverflowClass.Overflow()` ->
+        // the card's owner (4-19-1; DCGO `AceOverflowClass.Overflow()` ->
         // `cardSource.Owner.AddMemory(-OverflowMemory)`, CardController.cs
         // ~6151). The raw `self.memory` seesaw is turn-player relative, so
         // adding the signed value directly made a non-turn-player owner GAIN
-        // memory. Simultaneous instances resolve turn player's first (4-17-5).
+        // memory. Simultaneous instances resolve turn player's first (4-19-5).
         let turn_player = self.turn_player();
         let mut penalties: Vec<(PlayerId, i16)> = sources
             .iter()
@@ -2572,6 +2614,10 @@ impl Game {
 
     /// Handle deck-out for a player.
     pub(crate) fn handle_deckout(&mut self, player_id: PlayerId) {
+        // The first terminal outcome stands (see `finish_game`).
+        if self.game_over {
+            return;
+        }
         if self.rules.player_count == 2 {
             // Standard: deck-out = loss
             self.game_over = true;
@@ -3789,7 +3835,7 @@ impl Game {
                         // pair opened a phantom TriggerOrder prompt, and the
                         // park outlived the battle the keyword needed. DCGO
                         // registers exactly one `RetaliationSelfEffect`
-                        // (BT25_078.cs); 16-12-4 treats instances per
+                        // (BT25_078.cs); 16-12-4 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md] treats instances per
                         // printed keyword, and this card prints one. The
                         // embedded DSL pack leaves the text fields empty, which
                         // is why only live games / the exam ever saw this.
@@ -3817,7 +3863,7 @@ impl Game {
                 }
 
                 // Printed LINK keywords reach the host only while this card is
-                // one of its link cards (4-2-6), so they synthesize as
+                // one of its link cards (4-3-5), so they synthesize as
                 // `.linked()` auto-effects: the linked-card trigger and
                 // replacement passes collect them, the top-card and inherited
                 // scans skip them. De-duped against an unconditional
@@ -3871,7 +3917,7 @@ impl Game {
         // conditionally granted trigger keyword installed NO body anywhere:
         // granted <Execute> never fired at end of turn and the printed "may
         // attack" choice never reached the action space (rule-17 violation â€”
-        // Â§16-37-2/-3, Â§15-9-2-2).
+        // Â§16-38-2/-3, Â§15-9-2-2).
         if let Some(es) = registry_effects.as_ref() {
             for grant in es {
                 let Some(kw) = grant.granted_keyword else {
@@ -3893,7 +3939,7 @@ impl Game {
                             effect.inherited = grant.inherited;
                             // A `scope: linked` grant (Link-ESS) fires for the
                             // host through the linked-card scans, never as the
-                            // card's own face effect (4-2-6): BT24-067
+                            // card's own face effect (4-3-5): BT24-067
                             // Hackmon's link-box <Retaliation>.
                             effect.linked = grant.linked;
                             if let Some(gc) = grant_condition.clone() {

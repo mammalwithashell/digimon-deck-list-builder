@@ -21,7 +21,7 @@
 //! - [Main] mandatory lowest-play-cost delete (`lowest_play_cost` aggregate)
 //!   + `place_self_as_delay_option` (BT23-096 shape).
 //! - Event-gated `<Delay>` on `on_ally_attack` gated by attacker name
-//!   (`event_target_name_contains: Galacticmon`), optional per 16-16-2.
+//!   (`event_target_name_contains: Galacticmon`), optional per 16-17-2.
 //! - "If this effect didn't delete" → `effect_deleted_any_opponent_digimon:
 //!   false` → `trash_top_security { leave: 1 }`.
 //! - Option [Security] union-zone free play (`in_text_contains: Vemmon`,
@@ -276,7 +276,7 @@ fn bt21_098_delay_galacticmon_attack_deletes_lowest_cost() {
         .pending_selection_view()
         .expect("<Delay> activation prompt");
     assert_eq!(view.kind, SelectionKind::Replacement);
-    assert!(r.pending_is_optional(), "<Delay> is optional (16-16-2)");
+    assert!(r.pending_is_optional(), "<Delay> is optional (16-17-2)");
     r.execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
         .expect("accept");
     let view = r.pending_selection_view().expect("delete target prompt");

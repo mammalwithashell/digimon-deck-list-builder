@@ -1,0 +1,26 @@
+# SELF_IMM_THEN_UP -- Digimon, Lv.5, blue, 7000 DP, play cost 7.
+#   [On Play] This Digimon isn't affected by the effects of Digimon for the
+#   turn. Then, this Digimon gets +3000 DP for the turn.
+# Immunity to ALL Digimon effects, its controller's own included (the
+# Quantumon LM-020 / judge-quiz Q18 shape: `source_controller: any`), granted
+# by the first step of the effect whose next step then tries to affect it.
+card: SELF_IMM_THEN_UP
+name: Aloofmon X
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+effects:
+  - when: on_play
+    summary: "[On Play] This Digimon isn't affected by the effects of Digimon for the turn. Then, this Digimon gets +3000 DP for the turn."
+    process:
+      - grant_effect_immunity:
+          target: self
+          source_kind: digimon
+          source_controller: any
+          expiry: end_of_turn
+      - add_dp_modifier:
+          target: source
+          value: 3000
+          expiry: end_of_turn

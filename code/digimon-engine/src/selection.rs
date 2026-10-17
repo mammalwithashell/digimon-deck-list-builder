@@ -493,6 +493,19 @@ pub struct QueuedEffect {
     /// resolved) — derived triggers resolve before the still-pending ones
     /// (DCGO `MultipleSkills.cs` nested `TriggeredSkillProcess`).
     pub trigger_batch: u32,
+    /// §18-1-2 — when `Some`, this entry is PENDING PROCESSING (a
+    /// `schedule_delayed` body, or a provenance-keyed turn-end deletion) that
+    /// joined its timing's simultaneous pool (`Game::enqueue_scheduled_for_timing`,
+    /// `Game::enqueue_provenance_deletions_at_turn_end`, …). The drainer orders
+    /// it like any trigger, then performs it
+    /// (`scheduled_effects::run_pending_processing`) instead of looking up
+    /// `effects_for_card(card_id)[effect_slot]`: it has no `Effect` metadata
+    /// (no condition, cost, OPT or optionality) and no source-liveness gate,
+    /// since pending processing is performed at its timing even when its
+    /// source has left (§18-1-1). `card_id` only labels the `TriggerOrder`
+    /// branch, which names it as pending processing. Plain data, so
+    /// `Game: Clone` stays faithful.
+    pub pending_processing: Option<crate::scheduled_effects::PendingProcessing>,
 }
 
 /// Queued triggered effect parked after its `pay_cost_fn` installed a
@@ -691,6 +704,20 @@ pub enum TriggerSource {
         card: CardHandle,
         cause: crate::trigger_context::EventCause,
     },
+    /// Observer timing (`OnTopCardTrashed`) fired ONCE after one event trashed
+    /// the TOP card(s) of `host`'s stack: every card of one <De-Digivolve>
+    /// instance (§16-12-1 / §16-12-5) or <Armor Purge>'s top card. Scans all
+    /// players' battle areas (and event-gated `<Delay>` Options) while carrying
+    /// the host (`host` / `host_card`, the host's new top card) and the trashed
+    /// `cards`. DCGO `EffectTiming.WhenTopCardTrashed` +
+    /// `CanTriggerWhenTopCardTrashed`. G-DSL-TOP-CARD-TRASHED-TIMING.
+    TopCardsTrashed {
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: CardHandle,
+        cards: Vec<CardHandle>,
+        cause: crate::trigger_context::EventCause,
+    },
     /// Observer timing (`OnLinkedCardTrashed`) fired after an EFFECT trashes a
     /// link card from a host that stays in the battle area
     /// (`Game::trash_specific_link_card`). Scans all players' battle areas
@@ -762,6 +789,15 @@ pub enum TriggerSource {
         /// Immutable identities of every combatant that actually deleted
         /// its battle opponent, including both sides of mutual deletion.
         deleters: Vec<crate::trigger_context::BattleCombatantSnapshot>,
+        /// The winner's identity and last-known information, taken when the
+        /// battle was compared (on the security-battle path, at this enqueue:
+        /// nothing is deleted in between, §14-2-3). Present whenever the battle had a permanent
+        /// winner, including one that left the field (e.g. to the loser's
+        /// `[On Deletion]`) before this event was emitted, when `winner` is
+        /// `None` (§15-8-3-1, §15-8-3-8;
+        /// G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX).
+        winner_identity: Option<(PlayerId, u64)>,
+        winner_snapshot: Option<std::sync::Arc<crate::trigger_context::DeletedObjectSnapshot>>,
     },
     /// `OnDiscardHand` observer fan-out fired after an EFFECT trashes one or
     /// more cards from a player's hand (G-ENGINE-ON-DISCARD-HAND). Scans EVERY
@@ -956,28 +992,34 @@ pub enum OptionResolutionPhase {
 /// `pending_selection` installed inside a `SecuritySkill` process can pause
 /// the flow and resume from the same phase after the selection resolves.
 ///
-/// The security battle and all of its triggered/scheduled processing finish
-/// before check disposal or the next check (general_rule.pdf 13-1-7 / 14-2).
+/// Phase order follows Comprehensive Rules §13-1-8 (Ver. 4.3; §13-1-7 in the
+/// Ver. 3.6 PDF): reveal → effects triggered by the check (the `[Security]`
+/// effect first per §15-16-10-2, then the `OnSecurityCheck` observers on both
+/// battle areas) → battle vs a Security Digimon → trash → next check. The
+/// security battle and all of its triggered/scheduled processing finish
+/// before check disposal or the next check (§13-1-8-3 / §14-2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SecurityPhase {
-    /// Enqueue + drain `SecuritySkill` effects on the revealed card.
+    /// Enqueue + drain `SecuritySkill` effects on the revealed card
+    /// (§13-1-8-2 + §15-16-10-2).
     SecuritySkillDrain,
-    /// Digimon-vs-security DP battle (skipped for non-Digimon security).
+    /// Enqueue + drain `OnSecurityCheck` observer effects over BOTH players'
+    /// battle areas, turn player first (§13-1-8-2). Precedes the battle so
+    /// an observer's DP/keyword grant shapes it.
+    OnSecurityCheckDrain,
+    /// Digimon-vs-security DP battle (§13-1-8-3-1; skipped for non-Digimon
+    /// security per §13-1-8-3-2).
     BattleResolved,
     /// Finish deletion/replacement processing, then notify battle observers
-    /// before disposing of the revealed card or starting another check.
+    /// (with the pending processing due at the end of the battle in the same
+    /// pool, §18-1-2) before disposing of the revealed card or starting
+    /// another check.
     /// The comparison is captured once; a paused effect must not rerun it.
     EndOfSecurityBattleDrain {
         attacker: PermanentHandle,
         attacker_top: Option<CardHandle>,
         winner: Option<PermanentHandle>,
     },
-    /// Scheduled battle effects wait for ordinary battle observers and have
-    /// their own one-shot enqueue guard across parked choices.
-    EndOfSecurityBattleScheduledDrain,
-    /// Enqueue + drain `OnSecurityCheck` observer effects over the defender's
-    /// battle area.
-    OnSecurityCheckDrain,
     /// Offer `WhenWouldLoseSecurity` replacements before the revealed card is
     /// finally removed from the security stack.
     WhenWouldLoseSecurity,

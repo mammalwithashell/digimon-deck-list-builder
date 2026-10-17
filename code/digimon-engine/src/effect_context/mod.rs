@@ -89,12 +89,7 @@ impl PartitionRequirement {
 }
 
 fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
-    match kind {
-        CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual => EffectSourceKind::Digimon,
-        CardKind::Tamer => EffectSourceKind::Tamer,
-        CardKind::Option => EffectSourceKind::Option,
-        CardKind::Token => EffectSourceKind::Rule,
-    }
+    EffectSourceKind::for_card_kind(kind)
 }
 
 fn infer_effect_source_kind(
@@ -116,7 +111,7 @@ fn infer_effect_source_kind(
             if perm.card_sources.iter().any(|card| card.handle() == source_card)
                 || perm.linked_cards.iter().any(|card| card.handle() == source_card) {
                 // Inherited effects: 15-3-2. Links are gained by the Digimon
-                // (4-2-6), so its activated effects use 15-2-1-1 regardless
+                // (4-3-5), so its activated effects use 15-2-1-1 regardless
                 // of the physical link card's printed category.
                 return EffectSourceKind::Digimon;
             }
@@ -490,27 +485,25 @@ impl<'a> EffectReadContext<'a> {
     }
 
     /// The battle WINNER carried by an `EndOfBattle` firing (board-wide
-    /// battle-winner observer, G-DSL-BATTLE-WINNER-BOARDWIDE). `None` on a tie
-    /// or a non-battle trigger.
+    /// battle-winner observer, G-DSL-BATTLE-WINNER-BOARDWIDE), found by
+    /// identity. `None` on a tie, a non-battle trigger, or once the winner
+    /// has left the field (G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX).
     pub fn battle_winner(&self) -> Option<PermanentHandle> {
         self.game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.battle_winner)
+            .and_then(|trigger| trigger.resolve_battle_winner(self.game))
     }
 
-    /// True when the battle winner is live and its top card carries
-    /// `trait_name` (case-insensitive).
+    /// True when the battle winner carries `trait_name` (case-insensitive):
+    /// read live while it is on the field, and from its last-known
+    /// information once it has left (a clause-level gate's `deleted_object`,
+    /// §15-8-3-8).
     pub fn battle_winner_has_trait(&self, trait_name: &str) -> bool {
-        let Some(handle) = self.battle_winner() else {
-            return false;
-        };
         self.game
-            .player(handle.player)
-            .battle_area
-            .get(handle.index as usize)
-            .map(|perm| perm.has_trait(trait_name, self.card_data()))
-            .unwrap_or(false)
+            .current_trigger_context
+            .as_ref()
+            .is_some_and(|trigger| trigger.battle_winner_has_trait(self.game, trait_name))
     }
 
     /// The player whose HAND lost cards in the current `OnDiscardHand` batch.
@@ -727,10 +720,7 @@ impl<'a> EffectReadContext<'a> {
     }
 
     pub fn attack_attacker(&self) -> Option<PermanentHandle> {
-        self.game
-            .pending_attack
-            .as_ref()
-            .map(|attack| attack.attacker)
+        self.game.live_attack_attacker()
     }
 
     pub fn attack_target(&self) -> Option<crate::AttackTarget> {
@@ -779,8 +769,11 @@ impl<'a> EffectReadContext<'a> {
     /// Retaliation (cause == Battle, hence false here).
     pub fn was_deleted_by_effect(&self) -> bool {
         use crate::replacement::ReplacementCause;
+        // Snapshot-first, like `deletion_cause` (rule 25): the live slot is
+        // already restored when the bundle is deferred past the deleting
+        // effect (a token's [On Deletion] that deletes, for one).
         matches!(
-            self.game.current_deletion_cause,
+            observed_deletion_cause(self.game),
             Some(ReplacementCause::OwnEffect | ReplacementCause::OpponentEffect)
         )
     }
@@ -790,7 +783,7 @@ impl<'a> EffectReadContext<'a> {
     /// deleted by your opponent's effect" riders.
     pub fn was_deleted_by_opponent(&self) -> bool {
         matches!(
-            self.game.current_deletion_cause,
+            observed_deletion_cause(self.game),
             Some(crate::replacement::ReplacementCause::OpponentEffect)
         )
     }
@@ -809,7 +802,7 @@ impl<'a> EffectReadContext<'a> {
     /// Direct player attacks (`AttackTarget::Player`) return `None` because
     /// there is no opposing Digimon.
     pub fn battle_opponent_of(&self, self_handle: PermanentHandle) -> Option<PermanentHandle> {
-        // Trigger-time identity first (16-12; survives a parked TriggerOrder
+        // Trigger-time identity first (16-13; survives a parked TriggerOrder
         // prompt), live `pending_attack` otherwise. See
         // `Game::resolving_battle_opponent_of`.
         self.game.resolving_battle_opponent_of(self_handle)
@@ -1303,20 +1296,15 @@ impl<'a> EffectContext<'a> {
         self.game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.battle_winner)
+            .and_then(|trigger| trigger.resolve_battle_winner(self.game))
     }
 
     /// See [`EffectReadContext::battle_winner_has_trait`].
     pub fn battle_winner_has_trait(&self, trait_name: &str) -> bool {
-        let Some(handle) = self.battle_winner() else {
-            return false;
-        };
         self.game
-            .player(handle.player)
-            .battle_area
-            .get(handle.index as usize)
-            .map(|perm| perm.has_trait(trait_name, &self.game.card_data))
-            .unwrap_or(false)
+            .current_trigger_context
+            .as_ref()
+            .is_some_and(|trigger| trigger.battle_winner_has_trait(self.game, trait_name))
     }
 
     /// See [`EffectReadContext::discard_hand_player`]. G-ENGINE-ON-DISCARD-HAND.
@@ -1496,10 +1484,7 @@ impl<'a> EffectContext<'a> {
     }
 
     pub fn attack_attacker(&self) -> Option<PermanentHandle> {
-        self.game
-            .pending_attack
-            .as_ref()
-            .map(|attack| attack.attacker)
+        self.game.live_attack_attacker()
     }
 
     pub fn attack_target(&self) -> Option<crate::AttackTarget> {
@@ -1548,8 +1533,11 @@ impl<'a> EffectContext<'a> {
     /// cause == Battle, returns false).
     pub fn was_deleted_by_effect(&self) -> bool {
         use crate::replacement::ReplacementCause;
+        // Snapshot-first, like `deletion_cause` (rule 25): the live slot is
+        // already restored when the bundle is deferred past the deleting
+        // effect (a token's [On Deletion] that deletes, for one).
         matches!(
-            self.game.current_deletion_cause,
+            observed_deletion_cause(self.game),
             Some(ReplacementCause::OwnEffect | ReplacementCause::OpponentEffect)
         )
     }
@@ -1557,14 +1545,14 @@ impl<'a> EffectContext<'a> {
     /// See `EffectReadContext::was_deleted_by_opponent`.
     pub fn was_deleted_by_opponent(&self) -> bool {
         matches!(
-            self.game.current_deletion_cause,
+            observed_deletion_cause(self.game),
             Some(crate::replacement::ReplacementCause::OpponentEffect)
         )
     }
 
     /// See [`EffectReadContext::battle_opponent_of`].
     pub fn battle_opponent_of(&self, self_handle: PermanentHandle) -> Option<PermanentHandle> {
-        // Trigger-time identity first (16-12; survives a parked TriggerOrder
+        // Trigger-time identity first (16-13; survives a parked TriggerOrder
         // prompt), live `pending_attack` otherwise. See
         // `Game::resolving_battle_opponent_of`.
         self.game.resolving_battle_opponent_of(self_handle)
@@ -1657,10 +1645,8 @@ impl<'a> EffectContext<'a> {
     // ─── Field mutations ──────────────────────────────────────────────
 
     pub fn can_affect_permanent(&self, target: PermanentHandle) -> bool {
-        !self.game.progress_excludes(target, Some(self.player))
-            && !self
-                .game
-                .permanent_is_unaffected_by_effect(target, self.player, self.source_kind)
+        self.game
+            .effect_can_affect(target, self.player, self.source_kind)
     }
 
     /// Snapshot of the current reveal pool. Scripts inspect this to decide

@@ -1,0 +1,17 @@
+# WA_MEM_INH -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   Inherited Effect: [When Attacking] Gain 1 memory.
+# Placed under another card, it gives the stack a second simultaneous
+# [When Attacking] effect.
+card: WA_MEM_INH
+name: Memsourcemon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - scope: inherited
+    when: when_attacking
+    summary: "Inherited: [When Attacking] Gain 1 memory."
+    process:
+      - gain_memory: 1

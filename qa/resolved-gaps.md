@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-10-03
+Last updated: 2026-10-16
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,17 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## Turn-scheduled <Delay> options fired as a mandatory scan (G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN) — RESOLVED 2026-08-24
+
+Surfaced: 2026-07-09 bug-list faithfulness campaign, while fixing "Delay trigger is mandatory when it should be optional (observed on P-228)" (§16-16-2: "The processing from <Delay> is optional", general_rule.pdf p.35).
+
+- **What's fixed already:** event-gated `<Delay>` (`DelayTrigger::OnEvent`) now lowers with `.optional().needs_outer_optional_prompt()` — P-228, P-229, BT22-098, BT24-089, EX10-069, BT23-096 all surface an accept/decline `pending_selection`. Main-phase-activated delays (`MainPhaseActivated`) are already player-initiated actions (no prompt needed; double-prompt guarded by tests/dsl/delay.rs).
+- **What's still wrong:** turn-scheduled delays (`start_of_your_turn` / `end_of_your_next_turn` triggers: LM-027/029/030/031/032/034, BT15-096, BT21-093, BT22-099, BT24-100, P-206, ST23-15, ST24-15, LM-055) resolve through the legacy `resolve_delayed_options_matching` scan (game_phases.rs), which fires them WITHOUT an accept/decline choice — a §16-16-2 violation (the player may keep the Delay parked) and a missing RL action-space choice (no-approximations).
+- **Suggested fix:** route the scheduled scan through the same outer-optional prompt machinery (`install_outer_optional_trigger_selection`) the OnEvent path now uses; decline leaves the Delay parked and re-armable at the next matching boundary.
+- **Blast radius:** any scheduled-delay card where declining is strategically meaningful (e.g. keeping the option in the battle area as Decode/Partition fodder or to dodge a punish window).
+- **Resolution (2026-08-24, `73733429d`):** `dsl_cards/lower_delay.rs` (~L181-191) marks every non-marker Delay trigger -- `OnEvent`, `EndOfThisTurn`, `EndOfYourNextTurn`, `StartOfYourNextTurn` -- `.optional().needs_outer_optional_prompt()`, so the scheduled window offers the trash-this-card cost; on a decline the scan leaves the carrier on the field and reschedules it (`game_phases.rs` `take_declined_delay_reschedule`). Decline tests on LM-030 and BT21-097 (commit message).
+- **Conformance pin (2026-10-16, Ver. 4.3 §16-17-2):** `code/digimon-engine/tests/rules_conformance/ch16_processing_keywords.rs::delay_scheduled_window_is_optional` -- `DELAY_SOYT` ("[Start of Your Turn] <Delay> ・Gain 1 memory") placed on P0's turn: at the start of P0's next turn the first decision is an optional accept/decline for P0; declining keeps it in the battle area with no memory gained, accepting trashes it and gains 1. Moved here from `docs/RUST_ENGINE_GAPS.md` on 2026-10-16.
 
 ## DSL field [Counter] abilities were never offered; Counter timing skipped attacks on the player; a [Counter] body could not end the attack (G-ENGINE-DSL-FIELD-COUNTER-WINDOW) — RESOLVED 2026-10-03
 - **Discovered in:** BT25-103 GraceNovamon ("[When Attacking] [Counter] [Once Per Turn] … Then, you may end this attack.").

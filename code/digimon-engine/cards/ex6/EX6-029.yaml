@@ -13,6 +13,15 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: yellow }
     cost: 4
+  # Printed: [DNA Digivolve] Yellow Lv.5 + purple Lv.5: Cost 0 (stack the 2
+  # specified Digimon and digivolve unsuspended). <Blast DNA Digivolve> can't
+  # ignore it (CR 4.3 §16-31-5).
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 5, color_is: yellow }
+      - { level_eq: 5, color_is: purple }
+    cost: 0
+    stacks_unsuspended: true
   - kind: blast_dna_digivolve
     materials:
       - { kind: digimon, name_is: "Angewomon" }

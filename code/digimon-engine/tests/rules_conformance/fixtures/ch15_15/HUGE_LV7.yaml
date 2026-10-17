@@ -1,0 +1,9 @@
+# HUGE_LV7 -- Digimon, Lv.7, red, 15000 DP, play cost 14. No text.
+# A battle winner over the 12000-DP immune fixtures.
+card: HUGE_LV7
+name: Hugemon
+kind: digimon
+level: 7
+color: [red]
+cost: 14
+dp: 15000

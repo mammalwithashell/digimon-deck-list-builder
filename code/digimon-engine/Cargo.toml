@@ -33,6 +33,8 @@ serde_yml = "0.0.12"
 # serde_json is used by tests/alt_path_printed_cost_guard.rs to read the
 # official Bandai DB mirror (data/card_official.json).
 serde_json = "1"
+# regex is used by tests/rules_conformance/cite.rs (Rust port of the Python rules normaliser).
+regex = "1"
 strum = "0.26"
 # EXPERIMENT (2026-08-24): test-only global allocator. The suite's thread
 # scaling is pathological -- at opt-level 2 the 484-test `bt24` subset runs
@@ -129,6 +131,11 @@ required-features = ["dsl-yaml-loader"]
 [[test]]
 name = "judge_quiz"
 path = "tests/judge_quiz/main.rs"
+required-features = ["dsl-yaml-loader"]
+
+[[test]]
+name = "rules_conformance"
+path = "tests/rules_conformance/main.rs"
 required-features = ["dsl-yaml-loader"]
 
 [[test]]

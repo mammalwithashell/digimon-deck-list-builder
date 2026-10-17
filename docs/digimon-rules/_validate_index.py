@@ -21,4 +21,13 @@ for key, v in idx["keywords"].items():
     sec = v["section"].split("-")[0]
     assert sec in idx["sections"], (key, v["section"])
 
+# the committed text copy (cr-<ver>.txt), when present, must carry the same version stamp
+copies = sorted(base.glob("cr-*.txt"))
+if copies:
+    head = copies[-1].read_text(encoding="utf-8", errors="replace")[:600]
+    ver = re.search(r"Ver\.\s*(\d+\.\d+)", head)
+    date = re.search(r"Last Updated:\s*(\d{4}/\d{2}/\d{2})", head)
+    assert ver and ver.group(1) in idx["source"]["version"], (copies[-1].name, idx["source"]["version"])
+    assert date and date.group(1) == idx["source"]["last_updated"], (copies[-1].name, idx["source"]["last_updated"])
+
 print(f"rules-index.json OK ({len(idx['keywords'])} keywords, {len(idx['topics'])} topics, {len(idx['sections'])} sections)")

@@ -1131,7 +1131,7 @@ fn lm_027_security_adds_card_to_hand_after_play() {
     );
 }
 
-/// Accept the §16-16-2 `<Delay>` cost confirm that now precedes the body.
+/// Accept the §16-17-2 `<Delay>` cost confirm that now precedes the body.
 ///
 /// Added 2026-08-24: the scheduled window used to auto-pay the trash-this-card
 /// cost and run the body straight away. It is optional processing, so the

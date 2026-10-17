@@ -1,0 +1,32 @@
+# OPT_DELETE_13K -- Option, red, use cost 4.
+#   [Main] Delete 1 of your opponent's Digimon with 13000 DP or more.
+#   [Security] Activate this card's [Main] effects.
+# The Plasma Stake (BT3-098) shape.
+card: OPT_DELETE_13K
+name: Plasma Spike
+kind: option
+color: [red]
+cost: 4
+effects:
+  - when: main_from_hand
+    summary: "[Main] Delete 1 of your opponent's Digimon with 13000 DP or more."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_gte: 13000
+          prompt: "Delete 1 of your opponent's Digimon with 13000 DP or more"
+      - delete_permanent: { target: victim }
+  - when: on_security
+    summary: "[Security] Activate this card's [Main] effects."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_gte: 13000
+          prompt: "Delete 1 of your opponent's Digimon with 13000 DP or more"
+      - delete_permanent: { target: victim }

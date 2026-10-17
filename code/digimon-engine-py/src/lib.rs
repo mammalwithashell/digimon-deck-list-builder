@@ -1781,6 +1781,28 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             meta.set_item("source_zone", format!("{:?}", source_zone))?;
             d.set_item("meta", meta)?;
         }
+        GameEvent::InfiniteLoop {
+            player,
+            card_id,
+            card_name,
+            repetitions,
+            backstop,
+            ..
+        } => {
+            if let Some(player) = player {
+                d.set_item("player", py_pid(*player))?;
+            }
+            if let Some(card_id) = card_id {
+                d.set_item("source_card_id", card_id.as_str())?;
+            }
+            if let Some(card_name) = card_name {
+                d.set_item("source_card_name", card_name.as_str())?;
+            }
+            let meta = PyDict::new_bound(py);
+            meta.set_item("repetitions", *repetitions)?;
+            meta.set_item("backstop", *backstop)?;
+            d.set_item("meta", meta)?;
+        }
         GameEvent::GameOver { winner, reason, .. } => {
             let meta = PyDict::new_bound(py);
             meta.set_item("winner", winner.map(|w| py_pid(w)))?;

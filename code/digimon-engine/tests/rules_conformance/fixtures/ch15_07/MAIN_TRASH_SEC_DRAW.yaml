@@ -1,0 +1,20 @@
+# MAIN_TRASH_SEC_DRAW -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [Main] By trashing your top security card, <Draw 1> (Draw 1 card from
+#   your deck.)
+# An activation-type effect (§15-8-4) with an optional processing condition
+# (§15-7-1): activation can be declared only while the condition can be
+# performed (§15-8-4-4-1), and an unpayable condition can't be chosen
+# (§15-7-4). Payability is not hand-authored (see WA_TRASH_SEC_MINUS5000).
+card: MAIN_TRASH_SEC_DRAW
+name: Spendmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: main_on_field
+    summary: "[Main] By trashing your top security card, <Draw 1> (Draw 1 card from your deck.)"
+    process:
+      - trash_top_security: { of: you }
+      - draw: { of: you, count: 1 }

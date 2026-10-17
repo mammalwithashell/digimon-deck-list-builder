@@ -1,0 +1,15 @@
+# SEVEN_LINK -- Digimon, Lv.3, red, 2000 DP, play cost 3. Trait: [Seven Code].
+#   [Link] Link requirement: 1 level 4 Digimon. Link cost: 1.
+# A <Detach ([Seven Code] trait)> payment: a link card with the specified trait.
+card: SEVEN_LINK
+name: Sevenlinkmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Seven Code]
+effects:
+  - kind: link_condition
+    cost: 1
+    filter: { level_eq: 4 }

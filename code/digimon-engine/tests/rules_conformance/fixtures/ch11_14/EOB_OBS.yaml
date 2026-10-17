@@ -1,0 +1,15 @@
+# EOB_OBS -- Digimon, Lv.3, red, 1000 DP, play cost 2.
+#   [All Turns] At the end of a battle, gain 1 memory.
+# The end-of-battle witness (§14-2-5): it resolves only if a battle happened.
+card: EOB_OBS
+name: Afterbattlemon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 1000
+effects:
+  - when: end_of_battle
+    summary: "[All Turns] At the end of a battle, gain 1 memory."
+    process:
+      - gain_memory: 1

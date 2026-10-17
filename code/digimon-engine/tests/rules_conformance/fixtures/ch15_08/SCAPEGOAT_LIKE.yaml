@@ -1,0 +1,30 @@
+# SCAPEGOAT_LIKE -- Digimon, Lv.4, yellow, 5000 DP, play cost 5.
+# The §15-8-5-4 example text (BT11-041's inherited effect, printed face-up
+# here):
+#   [All Turns] When this Digimon would be deleted, by deleting 1 other
+#   Digimon with [Sukamon] in its name, it isn't deleted.
+# An immediate-type effect ("would", §15-8-5-1). "by deleting ..." is an
+# optional processing condition (§15-7-1), so the effect is optional.
+card: SCAPEGOAT_LIKE
+name: Shieldmon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 5000
+effects:
+  - kind: replacement
+    timing: when_would_be_deleted
+    optional: true
+    summary: "[All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, it isn't deleted."
+    process:
+      - select_own_permanent:
+          bind_as: payment
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+              - name_contains: Sukamon
+          prompt: "Delete 1 other Digimon with [Sukamon] in its name"
+      - delete_permanent: { target: payment }
+      - cancel_replacement: {}

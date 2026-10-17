@@ -143,14 +143,20 @@ fn reduced_link_cost(
 /// Per-card link gates beyond the author's `filter` (BT26 Appmon slice):
 /// - `cost_reduce`: the controller must be able to pay the reduced link cost
 ///   (DCGO `CanLink(payCost: true)`).
-/// - `self_host`: for `to: self`, a card that carries its own `<Link>`
-///   condition may only be linked if that condition accepts the host (and the
-///   host has link room) — DCGO `CanLinkToTargetPermanent(host, ...)`. A card
-///   with no link condition is unrestricted (legacy behaviour).
+/// - the card's link requirement (Q4533: an effect can't link a card without
+///   `[Link]`; DCGO `CanLinkToTargetPermanent(host, ...)`), the same test the
+///   §17-1-3-2-6 / -7 rule check applies (`Game::link_card_qualifies_for`):
+///   for `to: self` against the effect's own permanent (`self_host`); for
+///   `to: own_digimon` against at least one standing own Digimon
+///   (`own_hosts`, minus the source when `exclude_source`). A host at its
+///   link limit qualifies; the link replaces (§4-9-5).
 #[derive(Debug, Clone, Copy)]
 struct LinkGate {
     cost_reduce: Option<u8>,
     self_host: Option<PermanentHandle>,
+    /// `to: own_digimon` (the controller's Digimon): the excluded source
+    /// permanent, if `exclude_source`.
+    own_hosts: Option<Option<PermanentHandle>>,
 }
 
 impl LinkGate {
@@ -160,6 +166,8 @@ impl LinkGate {
             self_host: matches!(spec.to, CompiledLinkTo::SelfPermanent)
                 .then_some(source_permanent)
                 .flatten(),
+            own_hosts: matches!(spec.to, CompiledLinkTo::OwnDigimon)
+                .then(|| source_permanent.filter(|_| spec.exclude_source)),
         }
     }
 
@@ -176,17 +184,23 @@ impl LinkGate {
             }
         }
         if let Some(host) = self.self_host {
-            let effects = game
-                .card_data_for_handle(card)
-                .and_then(|d| game.effects_for_card(&d.card_id, card));
-            if let Some(effects) = effects {
-                if effects.iter().any(|e| e.link_cost.is_some())
-                    && !game
-                        .link_host_candidates(host.player, card, &effects)
-                        .contains(&host)
-                {
-                    return false;
-                }
+            if !game.link_card_qualifies_for(host, card) {
+                return false;
+            }
+        }
+        if let Some(excluded) = self.own_hosts {
+            let owner = player;
+            let any = (0..game.player(owner).battle_area.len()).any(|i| {
+                let host = PermanentHandle {
+                    player: owner,
+                    index: i as u8,
+                };
+                Some(host) != excluded
+                    && game.player(owner).battle_area[i].option_state == OptionState::Standard
+                    && game.link_card_qualifies_for(host, card)
+            });
+            if !any {
+                return false;
             }
         }
         true
@@ -1051,7 +1065,9 @@ fn install_host_select(
                     && matches!(p.option_state, OptionState::Standard)
             })
             .unwrap_or(false);
-        if !base_ok {
+        // The chosen card's own link requirement (Q4533; DCGO
+        // `CanLinkToTargetPermanent`), as the rule check reads it.
+        if !base_ok || !game.link_card_qualifies_for(handle, card) {
             return false;
         }
         match &auth_host_filter {
@@ -1224,9 +1240,14 @@ pub fn try_run_relink(
     let source_card = ctx.source_card;
     let source_kind = ctx.source_kind;
     let fbinds = bindings.clone();
+    // The relinked top card's own link requirement (Q4533; DCGO
+    // `CanLinkToTargetPermanent`), as the rule check reads it.
+    let source_top = ctx.game.player(source.player).battle_area[source.index as usize]
+        .top_card()
+        .handle();
     let host_filter_fn = move |game: &crate::game::Game, handle: PermanentHandle| -> bool {
         // "1 of your OTHER Digimon" — never the source itself.
-        if handle == source {
+        if handle == source || !game.link_card_qualifies_for(handle, source_top) {
             return false;
         }
         let base_ok = game

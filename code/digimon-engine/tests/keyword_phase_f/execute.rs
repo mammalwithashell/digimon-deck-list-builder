@@ -35,7 +35,7 @@
 //! filter — both produce the same observable outcome via the existing
 //! end-of-turn-attack mask emitter (§4.6 in `action/mask.rs`).
 //!
-//! Where the "may" lives. RULES_CONTEXT 16-37 marks Execute Optional;
+//! Where the "may" lives. RULES_CONTEXT 16-38 marks Execute Optional;
 //! DCGO surfaces this as an OnEndYourTurn accept dialog. The Rust
 //! engine's effect-queue drainer auto-fires single optional triggers
 //! WITHOUT a dialog, and nesting an inner may-pick parks AFTER
@@ -297,7 +297,7 @@ fn execute_attack_target_filter_includes_unsuspended() {
 
 // ─── Test 4 (task_69f10a66): a MAIN-phase attack must NOT self-delete ───────
 
-/// §16-37 scopes the self-delete to "the end of THAT attack" — the attack
+/// §16-38 scopes the self-delete to "the end of THAT attack" — the attack
 /// Execute itself granted at end of turn. DCGO registers the delete inside
 /// `ExecuteProcess` (`UntilEndAttackEffects`), so an ordinary Main-phase
 /// attack by a Digimon that merely HAS `<Execute>` survives its attack.
@@ -335,7 +335,7 @@ fn execute_main_phase_attack_does_not_self_delete() {
     assert_eq!(
         r.game.players[0].battle_area.len(),
         1,
-        "EXEC must SURVIVE its Main-phase attack — §16-37's self-delete \
+        "EXEC must SURVIVE its Main-phase attack — §16-38's self-delete \
          applies only to the end-of-turn attack Execute granted"
     );
     assert!(

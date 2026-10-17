@@ -1,0 +1,33 @@
+# OP_DIGI_LV4 -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   [On Play] This Digimon may digivolve into a level 5 Digimon card in your
+#   hand without paying the cost.
+# The "may" lives in the optional hand pick (declining skips the digivolve).
+card: OP_DIGI_LV4
+name: Climbmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - when: on_play
+    summary: "[On Play] This Digimon may digivolve into a level 5 Digimon card in your hand without paying the cost."
+    process:
+      - select_hand:
+          of: you
+          bind_as: up
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 5
+              - can_digivolve_onto: source
+          prompt: "This Digimon may digivolve into a level 5 Digimon card in your hand without paying the cost"
+      - if:
+          condition: { binding_present: up }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: up
+                cost: free
+                ignore_requirements: false

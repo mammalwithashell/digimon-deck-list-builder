@@ -194,7 +194,10 @@ fn ex6_011_on_play_trashes_security_and_grants_opponent_effect_immunity() {
         EffectSourceKind::Digimon,
         EffectSourceKind::Tamer,
         EffectSourceKind::Option,
-        EffectSourceKind::Rule,
+        // No `Rule` arm: "your opponent's effects" are Digimon / Tamer /
+        // Option effects (§15-2-1); a token's effect is a Digimon effect
+        // (§15-2-1-1), so the Rule kind no longer stands in for tokens.
+        // G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE.
     ] {
         assert!(
             runner

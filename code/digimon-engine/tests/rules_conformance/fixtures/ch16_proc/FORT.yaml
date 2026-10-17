@@ -1,0 +1,16 @@
+# FORT -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   <Fortitude> (When this Digimon with digivolution cards is deleted, play
+#   this card without paying the cost.)
+# The §16-27 keyword card (production idiom: `grant_keyword: Fortitude`,
+# BT25-015).
+card: FORT
+name: Steadfastmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - kind: grant_keyword
+    keyword: Fortitude
+    summary: "<Fortitude> (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)"

@@ -60,7 +60,7 @@ fn p_134_inherited_when_attacking_gives_minus_2000_dp() {
         .expect("choose opponent Digimon");
     runner.auto_resolve().expect("finish DP modifier");
 
-    // The 2000 DP opponent drops to 0 DP, so rule 17-1-3-1 deletes it on the
+    // The 2000 DP opponent drops to 0 DP, so rule 17-1-3-1-1 deletes it on the
     // rule check that follows the inherited -2000 DP effect.
     assert_eq!(
         runner.game.effective_dp(opp),
@@ -70,7 +70,7 @@ fn p_134_inherited_when_attacking_gives_minus_2000_dp() {
     assert_eq!(
         runner.battle_area_size(1),
         0,
-        "0 DP opponent Digimon is deleted (rule 17-1-3-1)"
+        "0 DP opponent Digimon is deleted (rule 17-1-3-1-1)"
     );
     assert_eq!(
         runner.trash_size(1),

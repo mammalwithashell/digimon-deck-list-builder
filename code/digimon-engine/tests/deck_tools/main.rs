@@ -233,7 +233,7 @@ fn dual_metadata_preserves_dual_identity() {
 }
 
 /// A link card's link box is its link effect, not an inherited effect
-/// (general_rule.pdf 2-3-12): BT21-009 Gatchmon prints <Raid> in its link box
+/// (general_rule.pdf 2-3-11-4): BT21-009 Gatchmon prints <Raid> in its link box
 /// and has no inherited effect.
 #[test]
 fn tested_card_metadata_shows_a_link_box_as_the_link_effect() {

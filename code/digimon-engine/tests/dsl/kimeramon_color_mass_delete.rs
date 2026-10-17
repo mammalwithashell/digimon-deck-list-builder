@@ -355,6 +355,48 @@ fn per_color_delete_one_per_distinct_opponent_color_batch_deletes() {
     );
 }
 
+/// §15-15-5-3 / §15-15-5-1 (Plan 4 Task 24): an opponent Digimon that isn't
+/// affected by the controller's Digimon effects can still be picked for its
+/// color, but the batch delete doesn't affect it; the other picks are deleted.
+#[test]
+fn per_color_delete_does_not_delete_an_unaffected_pick() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::ModifierEntry;
+
+    let mut runner = per_color_setup();
+    let _red = runner.place_on_field(1, "O-RED", None); // idx 0
+    let blue = runner.place_on_field(1, "O-BLUE", None); // idx 1
+    let _green = runner.place_on_field(1, "O-GREEN", None); // idx 2
+    // O-BLUE: "isn't affected by the effects of your opponent's Digimon".
+    runner.game.modifiers.add(
+        blue,
+        ModifierEntry::cannot_be_affected_by_opponents_source_kind(
+            EffectSourceKind::Digimon,
+            Expiry::EndOfTurn,
+            1,
+        ),
+    );
+
+    runner.play(0, 0).expect("play per-color-delete");
+    resolve_pick(&mut runner, 0); // Red
+    resolve_pick(&mut runner, 1); // Blue: the immune Digimon is offered and chosen
+    resolve_pick(&mut runner, 2); // Green
+    assert!(runner.game.pending_selection.is_none());
+
+    let survivors: Vec<String> = runner
+        .game
+        .player(1)
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        survivors,
+        vec!["O-BLUE".to_string()],
+        "the unaffected pick survives; Red and Green are deleted; got {survivors:?}"
+    );
+}
+
 #[test]
 fn per_color_delete_skips_colors_with_no_target_and_excludes_picked() {
     // Opponent: one Red, one RedBlue (Red+Blue two-color). Colors present:

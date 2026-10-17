@@ -128,6 +128,25 @@ impl Game {
         None
     }
 
+    /// Whether `handle` is a card placed on the field: the top card or a
+    /// digivolution card of a battle-area stack, a link card, or a card of the
+    /// breeding area (§4-6-3: a DUAL card there is a Digimon).
+    pub(crate) fn card_is_on_field(&self, handle: crate::card_source::CardHandle) -> bool {
+        let target_index = handle.0;
+        self.players.iter().any(|player| {
+            player.battle_area.iter().any(|perm| {
+                perm.card_sources
+                    .iter()
+                    .chain(perm.linked_cards.iter())
+                    .any(|c| c.card_index == target_index)
+            }) || player.breeding_area.as_ref().is_some_and(|perm| {
+                perm.card_sources
+                    .iter()
+                    .any(|c| c.card_index == target_index)
+            })
+        })
+    }
+
     /// Resolve a `CardHandle` to its live `CardSource` instance.
     pub fn card_source_for_handle(
         &self,

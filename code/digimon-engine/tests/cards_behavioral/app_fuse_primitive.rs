@@ -106,6 +106,8 @@ fn builder() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .from_dsl_yaml(SRC_HAND)
         .expect("SRC_HAND compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("TEST-GOMIMON", 0)
         .from_dsl_yaml(SRC_TRASH)
         .expect("SRC_TRASH compiles")
         .from_dsl_yaml(SRC_FILTER)

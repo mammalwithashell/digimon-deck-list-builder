@@ -1,0 +1,18 @@
+# BDNA_NOREQ -- Digimon, Lv.6, red/blue, 12000 DP, play cost 10.
+#   {Hand} [Counter] <Blast DNA Digivolve> <[Leftmon] + [Rightmon]>
+# A <Blast DNA Digivolve> card that prints NO DNA digivolution requirement.
+# §16-31-4: <Blast DNA Digivolve> performs a DNA digivolution (§8-2-1), which
+# needs a requirement to be met; with none there is nothing to perform.
+card: BDNA_NOREQ
+name: Reqless Unionmon
+kind: digimon
+level: 6
+color: [red, blue]
+cost: 10
+dp: 12000
+alt_paths:
+  - kind: blast_dna_digivolve
+    materials:
+      - { kind: digimon, name_is: "Leftmon" }
+      - { kind: digimon, name_is: "Rightmon" }
+    cost: 0

@@ -1,0 +1,30 @@
+# BLITZ_WA -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   [When Digivolving] <Blitz> (If your opponent has 1 or more memory, this
+#   Digimon may attack.)
+#   [When Attacking] Gain 2 memory.
+#   Digivolve: red Lv.3, cost 3.
+# The §16-16-4 card: its attack moves the memory back to 0 or more. <Blitz>
+# authored as in BLITZ (EX3-063 idiom).
+card: BLITZ_WA
+name: Rebounddigimon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] <Blitz> (If your opponent has 1 or more memory, this Digimon may attack.)"
+    process:
+      - grant_keyword:
+          target: source
+          keyword: Blitz
+          expiry: end_of_turn
+  - when: when_attacking
+    summary: "[When Attacking] Gain 2 memory."
+    process:
+      - gain_memory: 2

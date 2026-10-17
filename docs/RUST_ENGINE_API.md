@@ -333,7 +333,7 @@ ctx.bounce_self() -> Option<CardHandle>
 ctx.trash_card_source(perm, card)            // trash one source by handle
 ctx.trash_all_sources(target) -> bool         // strip every digivolution source
 ctx.trash_top_source(target) -> bool          // strip only the topmost source under the visible top
-ctx.armor_purge_top(perm)                     // <ArmorPurge> trash of the top printed card
+ctx.armor_purge_top(perm)                     // <ArmorPurge> trash of the top printed card (fires OnTopCardTrashed)
 
 ctx.return_card_source_to_hand(perm, card) -> bool            // return one source by handle to its OWNER's hand
 ctx.return_selected_sources_to_hand(selected: Vec<SourceSelectionRef>) -> bool
@@ -450,11 +450,19 @@ transaction state (clone-safe). Distinctness is slot-scoped.
 
 `delete_permanent` removes the permanent and moves all cards in its stack to trash. It also clears modifiers attached to that handle. **Does not fire OnDeletion** — use `Game::delete_permanent_with_effects` for that when you're calling from combat paths. From a card script, `ctx.delete_permanent` is usually what you want (OnDeletion is handled by combat, not effect).
 
-`de_digivolve` (`effect_context/mod.rs:1966`) pops up to `amount` sources off
-`target`'s stack, trashing each into the target owner's trash. `stop_at_level`
-clamps the pop so the resulting top card's level is ≥ the floor; `None` for
-no floor (TS Olympos Ikkakumon-style pop-to-base). Returns the actual count
-popped. See §Phase 10 for printed examples.
+`de_digivolve` (`effect_context/action/digivolve.rs`, rules machinery in
+`Game::de_digivolve_core`) implements `<De-Digivolve N>` (§16-12). With a
+printed `amount` and at least 2 trashable cards, the effect's controller
+declares 1..=min(N, trashable) through a non-optional count choice
+(`ResumeSelectKind::DeDigivolveCount`, §16-12-1 / §16-12-3) and the call
+returns 0; the declared cards are trashed when the choice resolves. The cards
+are trashed one at a time from the top into the target owner's trash;
+`stop_at_level = Some(3)` stops at a TOP card of level 3 or lower (§16-12-4; a
+level-less top card does not stop it); `None` for no floor (TS Olympos
+Ikkakumon-style pop-to-base, never declared). Each instance enqueues
+`OnTopCardTrashed` ONCE with every trashed card, never
+`OnDigivolutionCardTrashed` (§4-8-1: a top card is not a digivolution card).
+Returns the count trashed now. See §Phase 10 for printed examples.
 
 `return_to_hand` (`effect_context/mod.rs:3329`) bounces a permanent: top
 card → owner's hand, sources under → owner's trash. Routed through
@@ -1587,6 +1595,7 @@ MainFromHand, MainOnField, MainFromTrash
 
 // Archetype observers
 OnOpponentSecurityRemoved, OnOwnSecurityRemoved, OnDigivolutionCardTrashed,
+OnTopCardTrashed                         // the TOP stacked card was trashed: once per <De-Digivolve> instance (all its cards) / <Armor Purge>; DSL `when: on_top_card_trashed`
 OnAddDigivolutionCards                   // an EFFECT placed cards into a permanent's digivolution cards (BT7-056 / EX7-005 / BT25-005); DSL `when: on_add_digivolution_cards`
 OnDigivolutionCardReturnedToDeckBottom   // source returned to deck BOTTOM (BT21-058 / BT18-065); DSL `when: on_source_returned_to_deck_bottom`
 

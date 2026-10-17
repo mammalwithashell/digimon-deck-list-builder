@@ -1715,7 +1715,7 @@ pub struct ActivationCostArgs {
     pub return_self_to_deck_bottom: bool,
     /// "by trashing this card ..." — pays the cost by trashing the source
     /// permanent (the `<Delay>` Option). Declinable, per Comprehensive Rules
-    /// 16-16-2. G-ACTIVATION-COST-TRASH-SELF.
+    /// 16-17-2. G-ACTIVATION-COST-TRASH-SELF.
     #[serde(default, skip_serializing_if = "is_false")]
     pub trash_self: bool,
     /// "by placing this Digimon as the bottom security card ..." — pays the
@@ -2259,6 +2259,12 @@ pub struct DeDigivolveArgs {
     /// `amount_fn` key survives as a deserialize alias. At compile time a
     /// literal routes to the compiled `amount` integer and any other formula to
     /// `amount_fn`, byte-identical to the pre-unification form.
+    ///
+    /// Semantics (§16-12): a literal `amount: N` is one `<De-Digivolve N>`,
+    /// whose count the effect's controller declares (1..=min(N, trashable),
+    /// non-optional) when 2 or more cards are trashable. A formula is printed
+    /// "`<De-Digivolve 1>` for each …" and runs as that many SEPARATE
+    /// `<De-Digivolve 1>` instances (§16-12-7 / §16-12-8), with no declaration.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "amount_fn")]
     pub amount: Option<FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

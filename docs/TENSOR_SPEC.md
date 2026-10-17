@@ -88,6 +88,16 @@ applies to profiles that reuse these pending-choice rows. Encoding compound
 membership requires a versioned observation-contract change; it must not be
 silently assigned to one existing category.
 
+> **Semantics note — 2026-10-17 (no profile version bump):** a Digimon token's
+> effects now carry the Digimon source kind (§15-2-1-1, §4-21-1;
+> `G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE`), so a pending effect-choice row
+> whose source is a token sets the Digimon bucket (0) where it used to set the
+> Rule bucket (3). The tensor shape, offsets and layout hash are unchanged; the
+> Rule bucket now means genuinely card-less processing only. Token effects are
+> rare, so existing checkpoints are kept (controller ruling for Plan 4 Task 26);
+> if a trained policy turns out to depend on the old meaning, the remedy is a
+> versioned profile.
+
 ### `standard_lite_deck_v2`
 
 `standard_lite_deck_v2` is the Rust engine default fair-information profile, including the composition of the player's original deck. In `DigimonEnv` and pilot training it is an explicit opt-in; their default remains `standard_lite_v2`. It reuses all `standard_lite_v2` sections and appends `own_original_decklist[55][8]` before `reserved`. Choosing it does not change `ACTION_SPACE_SIZE`, action masks, or action decoding.

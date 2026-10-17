@@ -670,6 +670,38 @@ impl DebugRunner {
         self.game.effect_registry.insert(card_id, effect);
     }
 
+    /// Fixture helper: give `card_id` a printed-style link requirement,
+    /// "[Link] Cost `cost`" accepting any Digimon (what a `kind:
+    /// link_condition` clause with no filter lowers to), on top of whatever
+    /// effects it already has. A synthetic card a test links needs one: a card
+    /// with no `[Link]` can't be linked by an effect (Q4533) and is trashed at
+    /// the rule check (§17-1-3-2-6 / -7).
+    pub fn give_link_requirement(&mut self, card_id: &str, cost: u16) {
+        let inner = self.game.effect_registry.get(card_id);
+        self.game
+            .effect_registry
+            .insert(card_id, Arc::new(WithLinkRequirement { inner, cost }));
+        self.game.effects_cache = Default::default();
+    }
+
+    /// Fixture helper: a granted `<Link +n>` on `host` (a permanent
+    /// `ChangeLinkMax` modifier), so a test can stage more than the base 1
+    /// link card (§4-9-5, §16-40-1) without the rule check trimming them
+    /// (§17-1-3-2-5).
+    pub fn give_link_plus(&mut self, host: PermanentHandle, n: i32) {
+        use crate::modifiers::{ModifierEntry, ModifierPayload};
+        self.game.modifiers.add(
+            host,
+            ModifierEntry::simple(
+                crate::enums::ModifierType::ChangeLinkMax,
+                0,
+                crate::enums::Expiry::Permanent,
+                host.player,
+            )
+            .with_payload(ModifierPayload::LinkMax { delta: n }),
+        );
+    }
+
     pub fn set_formula_extensions(&mut self, registry: FormulaExtensionRegistry) {
         self.game.formula_extensions = registry;
     }
@@ -847,6 +879,77 @@ impl DebugRunner {
         Ok(())
     }
 
+    /// Whether the pending selection is a count declaration from the count
+    /// choice VM (e.g. the §16-12-1 `<De-Digivolve N>` declaration).
+    pub fn pending_is_count_declaration(&self) -> bool {
+        self.pending_selection()
+            .and_then(|sel| sel.effect_choices.as_ref())
+            .is_some_and(|choices| choices.iter().any(|c| c.count_choice.is_some()))
+    }
+
+    /// Answer a pending count declaration with its LARGEST value (paging
+    /// forward first when needed). Returns whether a declaration was pending.
+    pub fn declare_max_count(&mut self) -> Result<bool, SelectionError> {
+        use crate::count_choice::CountChoiceOperation;
+        if !self.pending_is_count_declaration() {
+            return Ok(false);
+        }
+        loop {
+            let Some(sel) = self.pending_selection() else {
+                return Ok(true);
+            };
+            let player = sel.selecting_player;
+            let rows: Vec<_> = sel
+                .effect_choices
+                .as_ref()
+                .map(|choices| {
+                    choices
+                        .iter()
+                        .filter_map(|c| c.count_choice.map(|m| (c.action_id, m.operation)))
+                        .collect()
+                })
+                .unwrap_or_default();
+            if let Some((next, _)) = rows
+                .iter()
+                .find(|(_, op)| matches!(op, CountChoiceOperation::NextPage))
+            {
+                self.execute_action(player, *next)?;
+                continue;
+            }
+            let best = rows
+                .iter()
+                .filter_map(|(id, op)| match op {
+                    CountChoiceOperation::Commit(v) => Some((v.declared, *id)),
+                    _ => None,
+                })
+                .max()
+                .map(|(_, id)| id)
+                .ok_or(SelectionError::InvalidAction)?;
+            self.execute_action(player, best)?;
+            return Ok(true);
+        }
+    }
+
+    /// [`Self::auto_resolve`], except that a count declaration (e.g. the
+    /// §16-12-1 `<De-Digivolve N>` declaration) is answered with its largest
+    /// value instead of the first (smallest) one.
+    pub fn auto_resolve_declaring_max(&mut self) -> Result<(), SelectionError> {
+        while let Some(sel) = self.pending_selection() {
+            if self.pending_is_count_declaration() {
+                self.declare_max_count()?;
+                continue;
+            }
+            let player = sel.selecting_player;
+            let action_id = match sel.valid_action_ids.first().copied() {
+                Some(id) => id,
+                None if sel.is_optional => crate::action::space::PASS,
+                None => return Err(SelectionError::InvalidAction),
+            };
+            self.execute_action(player, action_id)?;
+        }
+        Ok(())
+    }
+
     // ─── Event helpers ──────────────────────────────────────────────
 
     pub fn event_checkpoint(&self) -> usize {
@@ -890,6 +993,9 @@ pub struct DebugRunnerBuilder {
     /// Initial memory value applied after `start()`. Useful for tests that
     /// want to play non-zero-cost cards without thinking about the seesaw.
     initial_memory: Option<i16>,
+    /// `(card_id, cost)` fixture link requirements applied once the registry
+    /// is built (see [`DebugRunner::give_link_requirement`]).
+    link_requirements: Vec<(String, u16)>,
 }
 
 impl Default for DebugRunnerBuilder {
@@ -906,6 +1012,7 @@ impl Default for DebugRunnerBuilder {
             registry: None,
             player_count: None,
             initial_memory: None,
+            link_requirements: Vec::new(),
         }
     }
 }
@@ -1002,6 +1109,15 @@ impl DebugRunnerBuilder {
     /// at memory 0 and most non-zero-cost plays would be unaffordable.
     pub fn memory(mut self, value: i16) -> Self {
         self.initial_memory = Some(value);
+        self
+    }
+
+    /// Fixture: give `card_id` a printed-style link requirement ("[Link] Cost
+    /// `cost`", any Digimon) once the runner is built. See
+    /// [`DebugRunner::give_link_requirement`]; a test that registers the
+    /// card's effects after `start()` calls that instead.
+    pub fn link_requirement(mut self, card_id: &str, cost: u16) -> Self {
+        self.link_requirements.push((card_id.to_string(), cost));
         self
     }
 
@@ -1136,11 +1252,15 @@ impl DebugRunnerBuilder {
             let _ = build_registry; // silence unused-import if path changes
         }
 
-        DebugRunner {
+        let mut runner = DebugRunner {
             game,
             #[cfg(feature = "dsl-yaml-loader")]
             compiled_cards: std::mem::take(&mut self.compiled_cards),
+        };
+        for (card_id, cost) in std::mem::take(&mut self.link_requirements) {
+            runner.give_link_requirement(&card_id, cost);
         }
+        runner
     }
 
     fn make_card(
@@ -1226,7 +1346,8 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
                 continue;
             }
             if let Some(kw) = lookup_keyword(keyword, *value) {
-                if !keywords.contains(&kw) {
+                // Every `<Digisorption>` instance is its own effect (§16-10-4).
+                if matches!(kw, Keyword::Digisorption(_)) || !keywords.contains(&kw) {
                     keywords.push(kw);
                 }
             }
@@ -1424,7 +1545,13 @@ fn material_to_dna_requirement(
         .clone()
         .or_else(|| f.name_contains.clone())
         .unwrap_or_default();
-    let text_contains = f.effect_text_contains.clone().unwrap_or_default();
+    // `in_text_contains` ("w/[X] in text") is the requirement's text match;
+    // `effect_text_contains` keeps its historical mapping.
+    let text_contains = f
+        .in_text_contains
+        .clone()
+        .or_else(|| f.effect_text_contains.clone())
+        .unwrap_or_default();
     Some(DnaRequirement {
         level: f.level_eq.unwrap_or(0),
         card_colors,
@@ -1599,6 +1726,42 @@ mod tests {
     use super::*;
 
     #[test]
+    fn dna_material_in_text_contains_lowers_to_the_requirement_text() {
+        // "[DNA Digivolve] [Fenriloogamon] + yellow Lv.6 w/[Pulsemon] in text":
+        // the text constraint must reach the DNA requirement, not degrade to
+        // "any yellow Lv.6".
+        let r = DebugRunner::builder()
+            .from_dsl_yaml(
+                r#"
+card: TEST-INTEXT-DNA
+name: In Text DNA
+kind: digimon
+level: 7
+color: [yellow, purple]
+cost: 9
+dp: 16000
+alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - { name_is: "Fenriloogamon" }
+      - { level_eq: 6, color_is: yellow, in_text_contains: "Pulsemon" }
+    cost: 0
+"#,
+            )
+            .unwrap()
+            .start();
+        let card = r
+            .game
+            .card_data
+            .iter()
+            .find(|c| c.card_id == "TEST-INTEXT-DNA")
+            .expect("card registered");
+        assert_eq!(card.dna_costs.len(), 1);
+        assert_eq!(card.dna_costs[0].requirement2.text_contains, "Pulsemon");
+        assert_eq!(card.dna_costs[0].requirement2.level, 6);
+    }
+
+    #[test]
     fn builder_starts_in_turn_1() {
         let r = DebugRunner::builder()
             .add_card(make_test_card("TEST-001", "TestOne"))
@@ -1622,5 +1785,37 @@ mod tests {
         r.play(0, 0); // -3 for cost, +1 for OnPlay = net -2
         assert_eq!(r.memory(), m_before - 3 + 1);
         assert_eq!(r.battle_area_size(0), 1);
+    }
+}
+
+/// [`DebugRunner::give_link_requirement`]'s wrapper: the card's registered
+/// effects plus one unfiltered link requirement.
+struct WithLinkRequirement {
+    inner: Option<Arc<dyn crate::effect::CardEffect>>,
+    cost: u16,
+}
+
+impl crate::effect::CardEffect for WithLinkRequirement {
+    fn effects(&self, card: CardHandle) -> Vec<crate::effect::Effect> {
+        let mut out = self
+            .inner
+            .as_ref()
+            .map(|e| e.effects(card))
+            .unwrap_or_default();
+        out.push(
+            crate::effect::Effect::link_condition(card)
+                .link_host(self.cost, |_, _| true)
+                .build(),
+        );
+        out
+    }
+
+    fn partition_slots(
+        &self,
+        inherited: bool,
+    ) -> Option<Arc<Vec<digimon_dsl::compiled::CompiledPredicate>>> {
+        self.inner
+            .as_ref()
+            .and_then(|e| e.partition_slots(inherited))
     }
 }

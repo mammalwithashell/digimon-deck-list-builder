@@ -1,0 +1,23 @@
+# OPP_WA_MINUS3000 -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [All Turns] When an opponent's Digimon attacks, 1 of your opponent's
+#   Digimon gets -3000 DP for the turn.
+# An opponent's effect that resolves during the attack (§16-39).
+card: OPP_WA_MINUS3000
+name: Hexmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_opponent_attack
+    summary: "[All Turns] When an opponent's Digimon attacks, 1 of your opponent's Digimon gets -3000 DP for the turn."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -3000 DP for the turn"
+      - add_dp_modifier:
+          target: victim
+          value: -3000
+          expiry: end_of_turn

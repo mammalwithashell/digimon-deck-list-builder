@@ -64,6 +64,8 @@ fn de_digivolve_2_pops_two_and_stops_at_lvl3() {
     let trash_before = r.trash_size(1);
 
     r.play(0, 0);
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(r.declare_max_count().expect("declare 2"));
 
     let perm = &r.game.player(1).battle_area[base.index as usize];
     assert_eq!(perm.stack_size(), 1, "popped 2, left the Lv3 base");

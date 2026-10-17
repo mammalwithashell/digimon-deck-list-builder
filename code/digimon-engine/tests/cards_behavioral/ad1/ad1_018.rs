@@ -436,6 +436,8 @@ fn ad1_018_dedigivolve_fires_when_played_ally_has_lucemon_in_text() {
     runner
         .execute_action(view.selecting_player, pick)
         .expect("De-Digivolve it");
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(runner.declare_max_count().expect("declare 2"));
     runner.game.drain_effect_queue();
 
     assert_eq!(

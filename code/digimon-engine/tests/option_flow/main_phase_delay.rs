@@ -1,9 +1,9 @@
 //! PUPPETS-G009 — Standard `<Delay>` `[Main]`-phase activation action.
 //!
-//! Per the printed `<Delay>` reminder text and RULES_CONTEXT 16-16:
+//! Per the printed `<Delay>` reminder text and RULES_CONTEXT 16-17:
 //! "By trashing this card after the placing turn, activate the effect below."
-//! Processing is optional (16-16-2) and cannot happen the turn the card was
-//! placed (16-16-3).
+//! Processing is optional (16-17-2) and cannot happen the turn the card was
+//! placed (16-17-3).
 //!
 //! A standard `<Delay>` Option that has been placed on the battle area is NOT
 //! an auto-firing scheduled effect. Its controller chooses, on any later main
@@ -130,7 +130,7 @@ fn park_delayed_option(
 // ─── Tests ─────────────────────────────────────────────────────────────
 
 /// On the same turn the standard `<Delay>` Option was placed, no activation
-/// action is legal (RULES_CONTEXT 16-16-3).
+/// action is legal (RULES_CONTEXT 16-17-3).
 #[test]
 fn standard_delay_not_activatable_on_placing_turn() {
     let mut r = DebugRunner::builder()
@@ -153,7 +153,7 @@ fn standard_delay_not_activatable_on_placing_turn() {
     assert_eq!(
         mask[field_main_bit(idx)],
         0.0,
-        "Delay activation must NOT be legal on the placing turn (16-16-3)"
+        "Delay activation must NOT be legal on the placing turn (16-17-3)"
     );
     assert_eq!(mask[PASS as usize], 1.0, "PASS stays legal");
 }
@@ -198,7 +198,7 @@ fn standard_delay_main_phase_action_visible_after_placing_turn() {
     );
     assert_eq!(
         mask[PASS as usize], 1.0,
-        "PASS stays legal — activating a Delay is optional (16-16-2)"
+        "PASS stays legal — activating a Delay is optional (16-17-2)"
     );
 }
 

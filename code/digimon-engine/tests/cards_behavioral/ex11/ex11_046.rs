@@ -468,7 +468,10 @@ fn ex11_046_four_vemmon_sources_grants_blocker_and_opponent_immunity() {
         EffectSourceKind::Digimon,
         EffectSourceKind::Tamer,
         EffectSourceKind::Option,
-        EffectSourceKind::Rule,
+        // No `Rule` arm: "your opponent's effects" are Digimon / Tamer /
+        // Option effects (§15-2-1); a token's effect is a Digimon effect
+        // (§15-2-1-1), so the Rule kind no longer stands in for tokens.
+        // G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE.
     ] {
         assert!(
             runner

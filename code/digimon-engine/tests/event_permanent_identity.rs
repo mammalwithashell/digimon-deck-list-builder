@@ -1,5 +1,5 @@
 //! Event subjects retain permanent identity through ordinary stack edits (rules
-//! 8-1-2-3/8), but DNA makes a new Digimon (8-2-2-1, official manual pp.16-17).
+//! 3-4-4/3-4-5, which absorbed 3.6's 8-1-2-3/-8), but DNA makes a new Digimon (8-2-2-1, official manual pp.18-20).
 use digimon_dsl::compiled::CompiledBindingRef;
 use digimon_engine::{debug_runner::{DebugRunner, make_test_card, make_test_card_with_level}, effect_context::EffectContext,
     enums::EffectTiming, game::Game, permanent::{Permanent, PermanentHandle},

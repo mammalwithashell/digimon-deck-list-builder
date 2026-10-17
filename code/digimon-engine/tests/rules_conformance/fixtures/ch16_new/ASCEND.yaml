@@ -1,0 +1,15 @@
+# ASCEND -- Digimon, Lv.4, yellow, 4000 DP, play cost 4.
+#   <Ascension> (When this Digimon is deleted, you may place this card as the
+#   top security card.)
+# The §16-43 keyword card.
+card: ASCEND
+name: Ascendmon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+effects:
+  - kind: grant_keyword
+    keyword: Ascension
+    summary: "<Ascension> (When this Digimon is deleted, you may place this card as the top security card.)"

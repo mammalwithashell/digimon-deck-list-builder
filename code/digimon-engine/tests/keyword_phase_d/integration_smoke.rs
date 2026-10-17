@@ -170,7 +170,7 @@ fn save_and_decoy_coexist_on_one_printed_only_card() {
     let _tamer = r.place_on_field(0, "TAMER", None);
     let ally = r.place_on_field(0, "ALLY", None);
 
-    // Decoy replaces only a deletion by an OPPONENT's effect (rules 16-17).
+    // Decoy replaces only a deletion by an OPPONENT's effect (rules 16-18).
     r.game.set_effect_source_player_for_test(Some(1));
     r.game.delete_permanent_with_effects(ally);
     r.game.set_effect_source_player_for_test(None);

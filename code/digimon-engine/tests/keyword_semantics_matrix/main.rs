@@ -75,6 +75,7 @@ fn keyword_for_id(keyword_id: &str) -> Keyword {
         "Save" => Keyword::Save,
         "MaterialSave" => Keyword::MaterialSave(1),
         "DigiBurst" => Keyword::DigiBurst(1),
+        "Digisorption" => Keyword::Digisorption(1),
         "Fortitude" => Keyword::Fortitude,
         "Overclock" => Keyword::Overclock,
         "Barrier" => Keyword::Barrier,

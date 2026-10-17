@@ -84,6 +84,10 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT21-073 YAML parses and compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("APPMON-LV4", 0)
+        .link_requirement("APPMON-LV5", 0)
+        .link_requirement("NON-APPMON-LV4", 0)
         .add_card(make_test_card("DECK-PAD", "Filler"))
         .add_card(make_digimon("APPMON-LV4", 4, 4000, 4, &["Appmon"]))
         .add_card(make_digimon("APPMON-LV5", 5, 6000, 7, &["Appmon"]))
@@ -668,6 +672,8 @@ fn bt21_073_linked_leave_replacement_opt_lockout_same_turn() {
     // carrier) linked.
     let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(0).start();
     let host = r.place_on_field(0, "APPMON-LV4", Some(0));
+    // Two link cards need <Link +1> (base limit 1, §4-9-5).
+    r.give_link_plus(host, 1);
     r.push_linked_owned(host, "NON-APPMON-LV4", 0);
     r.push_linked_owned(host, CARD_ID, 0);
     advance_to_main(&mut r);
@@ -725,6 +731,8 @@ fn bt21_073_linked_leave_replacement_offered_again_next_turn() {
     // the NEXT turn (opponent's) is offered again.
     let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(0).start();
     let host = r.place_on_field(0, "APPMON-LV4", Some(0));
+    // Two link cards need <Link +1> (base limit 1, §4-9-5).
+    r.give_link_plus(host, 1);
     r.push_linked_owned(host, "NON-APPMON-LV4", 0);
     r.push_linked_owned(host, CARD_ID, 0);
     advance_to_main(&mut r);

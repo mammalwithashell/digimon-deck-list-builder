@@ -125,8 +125,11 @@ fn payable_two_selections_trash_fires_onlinked_and_runs_tail() {
         .add_card(digimon("HOST-B"))
         .add_card(digimon("WITNESS"))
         .add_card(link_option("LINK-A1"))
+        .link_requirement("LINK-A1", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(link_option("LINK-A2"))
+        .link_requirement("LINK-A2", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(link_option("LINK-B1"))
+        .link_requirement("LINK-B1", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .hand(0, &["TST-TLCOD"])
         .start();
     // Register the OnLinkedCardTrashed witness before placing the bystander.
@@ -135,6 +138,8 @@ fn payable_two_selections_trash_fires_onlinked_and_runs_tail() {
 
     // Two own Digimon each carry link cards; a bystander witnesses OnLinkedCardTrashed.
     let host_a = runner.place_on_field(0, "HOST-A", Some(0));
+    // Two link cards need <Link +1> (base limit 1, §4-9-5).
+    runner.give_link_plus(host_a, 1);
     let host_b = runner.place_on_field(0, "HOST-B", Some(0));
     runner.place_on_field(0, "WITNESS", Some(0));
 
@@ -273,6 +278,7 @@ fn optional_decline_on_first_pick_skips_trash_and_tail() {
         .add_card(digimon("TST-TLCOD-OPT"))
         .add_card(digimon("HOST-A"))
         .add_card(link_option("LINK-A1"))
+        .link_requirement("LINK-A1", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .hand(0, &["TST-TLCOD-OPT"])
         .start();
     let host_a = runner.place_on_field(0, "HOST-A", Some(0));
@@ -322,6 +328,7 @@ fn optional_decline_on_second_pick_skips_trash_and_tail() {
         .add_card(digimon("TST-TLCOD-OPT"))
         .add_card(digimon("HOST-A"))
         .add_card(link_option("LINK-A1"))
+        .link_requirement("LINK-A1", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .hand(0, &["TST-TLCOD-OPT"])
         .start();
     let host_a = runner.place_on_field(0, "HOST-A", Some(0));
@@ -393,6 +400,7 @@ fn clone_safe_across_both_selections() {
         .add_card(digimon("TST-TLCOD"))
         .add_card(digimon("HOST-A"))
         .add_card(link_option("LINK-A1"))
+        .link_requirement("LINK-A1", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .hand(0, &["TST-TLCOD"])
         .start();
     let host_a = runner.place_on_field(0, "HOST-A", Some(0));

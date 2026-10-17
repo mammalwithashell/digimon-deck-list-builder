@@ -1,0 +1,9 @@
+# LEFT4 -- Digimon, Lv.4, red, 5000 DP, play cost 5. No text.
+# A [Leftmon] that does NOT meet BDNA's DNA requirement (it is level 4).
+card: LEFT4
+name: Leftmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000

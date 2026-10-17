@@ -1,0 +1,17 @@
+# NOSUSP3 -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [All Turns] This Digimon can't suspend.
+# A red Lv.3 base for `DIGISORB` that can't pay <Digisorption>'s "by
+# suspending 1 of your Digimon" itself (§16-10-5 candidates are the Digimon
+# that CAN suspend). `kind: aura` + `CannotSuspend`, as `BLOCKER_CANNOT_SUSPEND`.
+card: NOSUSP3
+name: Stiffmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: aura
+    target: {}
+    modifier: CannotSuspend
+    summary: "[All Turns] This Digimon can't suspend."

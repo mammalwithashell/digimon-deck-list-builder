@@ -269,7 +269,7 @@ fn ex3_024_once_per_turn_resets_and_cannot_unsuspend_is_respected() {
     assert!(r.game.players[0].battle_area[h2.index as usize].is_suspended);
 }
 
-// Official general_rule.pdf 15-15-6-1: an unaffected card can be selected,
+// Official general_rule.pdf 15-15-5-1: an unaffected card can be selected,
 // but the effect's processing does not affect it. DCGO EX3_024 also checks
 // CanNotBeAffected after opponent selection and before SelectAttackEffect.
 fn immune_attacker_case(inherited: bool) {

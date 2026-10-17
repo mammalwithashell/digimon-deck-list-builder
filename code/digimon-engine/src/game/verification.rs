@@ -442,6 +442,11 @@ fn write_permanent(hasher: &mut Sha256, game: &Game, permanent: &Permanent) {
     field(hasher, "attacks_this_turn", permanent.attacks_this_turn);
     field(hasher, "is_attacking", permanent.is_attacking);
     debug_field(hasher, "option_state", &permanent.option_state);
+    // Hashed only when set, so states without an effect-placed breeding
+    // permanent keep their digest (§17-1-3-2-3 marker).
+    if permanent.placed_by_effect {
+        token(hasher, "placed_by_effect");
+    }
 
     let mut activations: Vec<_> = permanent.effect_activations.iter().collect();
     activations.sort_by_key(|((card, slot), _)| (card.0, *slot));
@@ -514,6 +519,31 @@ fn write_effect_queue(hasher: &mut Sha256, queue: &std::collections::VecDeque<Qu
             "queued.granted_effect_id",
             &effect.granted_effect_id,
         );
+        // Pending processing (§18-1-2). Written only when present, so the
+        // digest of a queue without it is unchanged. Not the body's `Debug`
+        // dump: its `Bindings` keep a `HashMap` (unstable order).
+        match &effect.pending_processing {
+            None => {}
+            Some(crate::scheduled_effects::PendingProcessing::Scheduled(scheduled)) => {
+                token(hasher, "queued.scheduled");
+                debug_field(hasher, "queued.scheduled.when", &scheduled.when);
+                field(
+                    hasher,
+                    "queued.scheduled.scheduled_at_turn",
+                    scheduled.scheduled_at_turn,
+                );
+                field(hasher, "queued.scheduled.body_len", scheduled.body.len());
+            }
+            Some(crate::scheduled_effects::PendingProcessing::ProvenanceDeletion(entry)) => {
+                token(hasher, "queued.provenance_deletion");
+                field(hasher, "queued.provenance_deletion.token", entry.token.0);
+                field(
+                    hasher,
+                    "queued.provenance_deletion.controller",
+                    entry.controller,
+                );
+            }
+        }
     }
 }
 
@@ -597,6 +627,10 @@ fn write_resume_stack(
                 }
                 crate::resume::ResumeSelectKind::SourcePrefixCount { state, .. } => {
                     debug_field(hasher, "resume.source_prefix_count", state)
+                }
+                crate::resume::ResumeSelectKind::DeDigivolveCount { page, state } => {
+                    debug_field(hasher, "resume.de_digivolve_count", page);
+                    debug_field(hasher, "resume.de_digivolve_count_state", state)
                 }
                 _ => {}
             }

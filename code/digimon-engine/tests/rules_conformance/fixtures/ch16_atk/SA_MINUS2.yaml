@@ -1,0 +1,15 @@
+# SA_MINUS2 -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   <Security A. -2> (This Digimon checks 2 fewer security cards.)
+# The §16-4-4 card: its one check modified by -2 floors at 0 checks.
+card: SA_MINUS2
+name: Shortcheckmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - kind: grant_keyword
+    keyword: SecurityAttackMinus
+    value: 2
+    summary: "<Security A. -2> (This Digimon checks 2 fewer security cards.)"

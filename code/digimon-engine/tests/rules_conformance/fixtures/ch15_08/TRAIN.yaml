@@ -1,0 +1,22 @@
+# TRAIN -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   <Training> (In the main phase, by suspending this Digimon, place your top
+#   deck card face down as this Digimon's bottom digivolution card.)
+# The §15-8-4-4-1 example: an activation-type effect with an optional
+# processing condition ("by suspending this Digimon").
+# NOTE: inert on its own. `grant_keyword: Training` is a declaration only (by
+# design: digimon-dsl validator.rs "Training" note; modifier_map has no arm),
+# because production drives <Training> from the printed-keyword parse. The
+# test (ch15_08_effect_categories::activation_type_declarable_only_when_
+# optional_condition_payable) overrides this card's CardData with the printed
+# text run through `card_data::parse_printed_keywords`.
+card: TRAIN
+name: Drillmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: grant_keyword
+    keyword: Training
+    summary: "<Training> (In the main phase, by suspending this Digimon, place your top deck card face down as this Digimon's bottom digivolution card.)"

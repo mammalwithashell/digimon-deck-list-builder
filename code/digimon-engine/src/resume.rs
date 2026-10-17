@@ -242,6 +242,15 @@ pub enum ResumeSelectKind {
         page: crate::count_choice::CountChoicePage,
         state: crate::dsl_cards::step::source_prefix_payment::SourcePrefixCountState,
     },
+    /// §16-12-1 `<De-Digivolve>` count declaration (1..=min(N, trashable),
+    /// non-optional, §16-12-3). On commit the declared number of cards is
+    /// trashed from the top of the declared Digimon
+    /// (`Game::de_digivolve_commit_declared`), then `inner_tail` / outer
+    /// continuations run. G-DEDIGIVOLVE-NO-DECLARATION.
+    DeDigivolveCount {
+        page: crate::count_choice::CountChoicePage,
+        state: crate::game_actions::DeDigivolveCountState,
+    },
     EffectChoice {
         post: Option<EffectChoicePostAction>,
     },
@@ -568,13 +577,6 @@ pub enum ResumeFrame {
     /// Accept runs the chosen queued effect; optional PASS drops every
     /// remaining optional queued effect for that chooser.
     TriggerOrderSelection(TriggerOrderSelectionState),
-    /// Ordering pick between the used Option's PENDING TRASH (9-1-5) and the
-    /// using player's own simultaneously-pending triggered effects. 18-1-2
-    /// performs pending processing that coincides with other processing like
-    /// simultaneously triggering effects (15-4-3), and 15-4-3-5-1 has that
-    /// player choose one of their own items at a time — so the trash is not
-    /// automatically first. G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
-    OptionTrashOrder(OptionTrashOrderState),
     /// Optional replacement-effect accept/decline prompt. Accept re-runs the
     /// parked replacement process and commits its outcome; PASS commits the
     /// original event with no replacement.
@@ -649,7 +651,7 @@ pub enum ResumeFrame {
         continuation: crate::dsl_cards::lower_replacement::DelayPlayFromUnionContinuation,
         outer_conts: Vec<OuterContinuation>,
     },
-    /// A turn-scheduled / event / `[Main]` `<Delay>` body whose 16-16-1
+    /// A turn-scheduled / event / `[Main]` `<Delay>` body whose 16-17-1
     /// trash-this-card cost parked a selection first. Resolve that inner
     /// selection as data, then run the body iff the carrier reached the trash.
     DelayBodyAfterCost {
@@ -679,6 +681,11 @@ pub enum ResumeFrame {
     /// Field Digimon Link host prompt. Top-level player action; accept begins
     /// the WhenWouldLink window and then commits/resumes the Digimon link.
     DigimonLinkHostSelection(crate::game_actions::DigimonLinkHostSelectionState),
+    /// Choice of which link cards to trash: the §4-9-5 replacement in a
+    /// declared link (the linking player) or the §17-1-3-2-5 rule-check trim
+    /// (the host's controller). One pick per decision until the count is met;
+    /// the picks are trashed together, then the link (if any) finishes.
+    LinkCardTrashChoice(crate::game_actions::LinkCardTrashChoiceState),
     /// Interactive play-from-hand cost-reduction accept/decline prompt.
     /// Accept applies the reducer and continues the recursive reducer chain;
     /// PASS skips this reducer and continues the chain.
@@ -724,8 +731,9 @@ pub enum ResumeFrame {
     PlayOrderSelection,
     /// `<Save>` Tamer destination prompt.
     KeywordSaveSelection(KeywordSaveSelectionState),
-    /// `<Material Save>` first-stage Tamer destination prompt. Accept installs
-    /// a non-DSL count-capped source prompt.
+    /// `<Material Save>` first-stage Tamer destination prompt (the optional
+    /// decision, §16-21-3). Accept installs the exact `min(N, eligible)`
+    /// non-DSL count-capped pick over the carrier's live stack.
     KeywordMaterialSaveTamerSelection(KeywordMaterialSaveTamerSelectionState),
     /// `<Scapegoat>` inner replacement-substitute prompt.
     KeywordScapegoatSelection(KeywordScapegoatSelectionState),
@@ -903,17 +911,6 @@ pub struct TriggerOrderSelectionState {
     pub(crate) outer_conts: Vec<OuterContinuation>,
 }
 
-/// Data for `ResumeFrame::OptionTrashOrder`: the Option's user picks whether
-/// the card's pending trash or one of their own pending triggered effects
-/// resolves next.
-#[derive(Debug, Clone)]
-pub struct OptionTrashOrderState {
-    /// The player who used the Option — the one whose pending items are being
-    /// ordered (15-4-3-5-1 / -2 bucket owner).
-    pub(crate) owner: PlayerId,
-    pub(crate) outer_conts: Vec<OuterContinuation>,
-}
-
 #[derive(Debug, Clone)]
 pub struct KeywordSaveSelectionState {
     pub prov: ResumeProvenance,
@@ -926,7 +923,10 @@ pub struct KeywordSaveSelectionState {
 pub struct KeywordMaterialSaveTamerSelectionState {
     pub prov: ResumeProvenance,
     pub owner: PlayerId,
-    pub eligible_sources: Vec<CardHandle>,
+    /// The `<Material Save>` carrier, still in the battle area: the effect is
+    /// immediate-type (general_rule.pdf §16-21-2), so the card pick reads its
+    /// live digivolution cards.
+    pub carrier: PermanentHandle,
     pub max: u8,
     pub outer_conts: Vec<OuterContinuation>,
 }
@@ -1095,7 +1095,7 @@ pub enum NonDslCountCappedTerminal {
         subject: PermanentHandle,
     },
     /// Slot-enforced `<Partition (A & B)>`: ONE pick toward the printed slot
-    /// set (general_rule.pdf §16-28-5/-6 — one card per parenthetical,
+    /// set (general_rule.pdf §16-3 / §16-29-4 — one card per parenthetical,
     /// all-or-nothing). Every pick must keep a complete slot assignment
     /// reachable; the terminal chains to the next pick, or plays
     /// `picked_so_far` once one card is held for every slot. Mirrors the
@@ -1245,8 +1245,9 @@ pub struct SourceMultiState {
     /// are candidates. `target_resolution_failed` rejects all (binding missing).
     pub target_permanent: Option<PermanentHandle>,
     pub target_resolution_failed: bool,
-    /// `select_own_sources` evaluates the predicate on `PredicateSubject::Source`;
-    /// `select_opponent_sources` on `PredicateSubject::Card(source.card)`.
+    /// Both `select_own_sources` and `select_opponent_sources` evaluate the
+    /// predicate on `PredicateSubject::Source` (a digivolution card is on the
+    /// field, §4-6-3); this flag is kept only for frame compatibility.
     pub eval_on_card: bool,
     pub prompt: String,
     // ── data terminal (bind the picked source-ref list, then run the tail) ──

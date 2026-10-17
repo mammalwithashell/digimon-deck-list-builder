@@ -1,0 +1,21 @@
+# DELAY_SOYT -- Option, red, use cost 0.
+#   [Main] Place this card in the battle area.
+#   [Start of Your Turn] <Delay> (Trash this card in your battle area to
+#   activate the effect below. You can't activate this effect the turn this
+#   card enters play.) ・Gain 1 memory.
+# A turn-scheduled <Delay> (production idiom LM-027): §16-17-2 optional.
+card: DELAY_SOYT
+name: Morning Reserve
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Place this card in the battle area."
+    process:
+      - place_self_as_delay_option: {}
+  - kind: delay
+    trigger: start_of_your_turn
+    summary: "[Start of Your Turn] <Delay> (Trash this card in your battle area to activate the effect below. You can't activate this effect the turn this card enters play.) ・Gain 1 memory."
+    process:
+      - gain_memory: 1

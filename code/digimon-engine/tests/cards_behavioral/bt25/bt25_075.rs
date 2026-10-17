@@ -81,6 +81,9 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT25-075 YAML parses and compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("LINK-OPT-A", 0)
+        .link_requirement("LINK-OPT-B", 0)
         .add_card(make_test_card("DECK-PAD", "Filler"))
         // Generic own Digimon (link host candidate).
         .add_card(make_digimon("OWN-ALLY", 4, 5000, 4, &["Beast"]))
@@ -503,8 +506,12 @@ fn bt25_075_on_play_links_two_then_de_digivolves_opponents_by_two() {
         .start();
     let vulcan = r.place_on_field(0, CARD_ID, Some(0));
     let ally = r.place_on_field(0, "OWN-ALLY", Some(1));
+    // Two link cards need <Link +1> (base limit 1, §4-9-5).
+    r.give_link_plus(ally, 1);
     // Opponent stack with 3 sources so a -2 de-digivolve is observable.
-    let opp = r.place_stack(1, &["OPP-LV3", "OPP-LV3", "OPP-LV5"]);
+    // Two level 5 cards above the level 3 base: a level 3 top card can't be
+    // trashed (§16-12-4).
+    let opp = r.place_stack(1, &["OPP-LV3", "OPP-LV5", "OPP-LV5"]);
     let opp_sources_before = r.game.player(1).battle_area[opp.index as usize]
         .card_sources
         .len();

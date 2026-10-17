@@ -1,0 +1,13 @@
+# RUSH_AURA -- Tamer, red, play cost 2.
+#   [All Turns] All of your Digimon gain <Rush>.
+# A <Rush> that applies without activation (§16-15-2, persistent).
+card: RUSH_AURA
+name: Hurry Tamer
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - kind: aura
+    target: { of: you, kind: digimon }
+    grant_keyword: { keyword: Rush }
+    summary: "[All Turns] All of your Digimon gain <Rush>."

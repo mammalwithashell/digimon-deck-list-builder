@@ -53,7 +53,7 @@ use super::super::dsl_card_data::{card_data_from_compiled as card_data, compiled
 /// fire on `on_opp_security_removed` without wanting an incidental
 /// security-DP battle (which, post-fix, mutual-destructs same-DP
 /// attackers per RULES_CONTEXT 14-2-1-3). Non-Digimon security skips
-/// the battle compare entirely (13-1-7-3 / 14-2-3).
+/// the battle compare entirely (13-1-8-3 / 14-2-3).
 fn make_non_digimon_security_filler(id: &str) -> digimon_engine::card_data::CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = _BehavioralCardKind::Tamer;

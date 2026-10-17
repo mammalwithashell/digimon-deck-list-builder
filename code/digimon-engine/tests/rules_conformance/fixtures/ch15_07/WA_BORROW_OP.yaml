@@ -1,0 +1,29 @@
+# WA_BORROW_OP -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   [When Attacking] Place 1 card with the [Lender] trait from your trash as
+#   this Digimon's bottom digivolution card. Activate 1 of that card's
+#   [On Play] effects as an effect of this Digimon.
+# A MANDATORY effect that activates another effect (§15-15-7-1 shape; the
+# BT15-102 idiom: `place_as_bottom_source` + `refire_card_effect`).
+card: WA_BORROW_OP
+name: Borrowmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Place 1 card with the [Lender] trait from your trash as this Digimon's bottom digivolution card. Activate 1 of that card's [On Play] effects as an effect of this Digimon."
+    process:
+      - select_trash:
+          of: you
+          bind_as: lent
+          filter: { trait_has: Lender }
+          prompt: "Place 1 card with the [Lender] trait from your trash as this Digimon's bottom digivolution card"
+      - place_as_bottom_source:
+          source: lent
+          target: source
+          bind_placed_as: lent_card
+      - refire_card_effect:
+          card: lent_card
+          timing: on_play

@@ -1,0 +1,15 @@
+# REC_PLAY -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] <Recovery +1 (Deck)> (Place the top card of your deck on top of
+#   your security stack.)
+card: REC_PLAY
+name: Wardmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack.)"
+    process:
+      - recover: { of: you, count: 1 }

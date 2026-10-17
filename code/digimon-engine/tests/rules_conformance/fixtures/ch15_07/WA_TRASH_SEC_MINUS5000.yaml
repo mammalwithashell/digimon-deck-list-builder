@@ -1,0 +1,30 @@
+# WA_TRASH_SEC_MINUS5000 -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+# The §15-7-4 / §15-7-5 example text:
+#   [When Attacking] By trashing your top security card, 1 of your opponent's
+#   Digimon gets -5000 DP for the turn.
+# "By trashing your top security card" is an optional processing condition
+# (§15-7-1), so the effect is optional. Its payability is deliberately NOT
+# hand-authored as a `condition:` (production cards such as BT22-041 add
+# `security_count_gte: 1`): §15-7-4 is a rule about the optional processing
+# condition itself, so the test asks whether the engine derives it.
+card: WA_TRASH_SEC_MINUS5000
+name: Sacrificemon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - when: when_attacking
+    optional: true
+    summary: "[When Attacking] By trashing your top security card, 1 of your opponent's Digimon gets -5000 DP for the turn."
+    process:
+      - trash_top_security: { of: you }
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -5000 DP for the turn"
+      - add_dp_modifier:
+          target: victim
+          value: -5000
+          expiry: end_of_turn

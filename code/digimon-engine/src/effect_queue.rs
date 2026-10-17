@@ -15,9 +15,15 @@
 //!   triggers for the current chooser are all optional, the prompt carries
 //!   a PASS bit that declines **all of them at once**.
 //!
-//! The drainer has a hard cap of `MAX_CHAIN_DEPTH` iterations as a safety
-//! rail against self-triggering loops. Matches Python's
-//! `_resolve_effect_stack` max=50 bound.
+//! §18-3 infinite loops: before each resolution step the drainer records a
+//! loop signature (`Game::watch_for_infinite_loop`, `game::infinite_loop`);
+//! the same state recurring `LOOP_SIGNATURE_REPEATS` times with no
+//! declinable decision in between (a forced pick does not count) ends the
+//! game in the §18-3-2 draw. A loop with an
+//! optional decision in it repeats for as long as its owner keeps accepting
+//! (§18-3-3-3, ruling W10). `MAX_CHAIN_DEPTH` is a far backstop behind the
+//! signature watch that ends in the same draw; nothing is ever silently
+//! cleared.
 
 use crate::action::space::{
     BREEDING_TARGET, HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS, REPLACEMENT_ACCEPT,
@@ -38,9 +44,13 @@ use crate::selection::{
 };
 use crate::trigger_context::TriggerContext;
 
-/// Max iterations the drainer will take before aborting a suspected infinite
-/// chain. Matches Python's `_resolve_effect_stack` limit.
-pub const MAX_CHAIN_DEPTH: u16 = 50;
+/// Far backstop behind the §18-3 loop-signature watch: a chain that resolves
+/// this many entries with no player decision in between, without ever
+/// repeating a state, is treated as an infinite loop nobody can stop and ends
+/// in the §18-3-2 draw (`GameEvent::InfiniteLoop`, `GameOver { winner: None }`).
+/// It is never a silent clear. Long but finite chains (a deck's worth of
+/// chained triggers) stay far below it.
+pub const MAX_CHAIN_DEPTH: u16 = 10_000;
 
 /// RAII guard that installs a `TriggerContext` onto `Game.current_trigger_context`
 /// for the lifetime of the guard and restores the previous value on drop —
@@ -73,12 +83,7 @@ impl Drop for TriggerContextGuard<'_> {
 }
 
 fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
-    match kind {
-        CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual => EffectSourceKind::Digimon,
-        CardKind::Tamer => EffectSourceKind::Tamer,
-        CardKind::Option => EffectSourceKind::Option,
-        CardKind::Token => EffectSourceKind::Rule,
-    }
+    EffectSourceKind::for_card_kind(kind)
 }
 
 fn security_activation_blocked_for_timing(
@@ -201,6 +206,11 @@ impl Game {
         &self,
         qe: &QueuedEffect,
     ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
+        // Pending processing (§18-1-2) carries its own body and has no
+        // `Effect` in any card's list; slot 0 of the source card is NOT it.
+        if qe.pending_processing.is_some() {
+            return None;
+        }
         match qe.keyword_effect {
             Some(keyword) => Some(std::sync::Arc::new(
                 crate::cards::keyword_effects::keyword_to_auto_effect(keyword, qe.source_card),
@@ -230,6 +240,7 @@ impl Game {
             granted_effect_id: None,
             keyword_effect: None,
             trigger_batch: 0,
+            pending_processing: None,
         }
     }
 
@@ -355,6 +366,45 @@ impl Game {
     }
 
     pub fn enqueue_triggered(&mut self, timing: EffectTiming, source: TriggerSource) {
+        self.event_snapshot_cache = None;
+        self.enqueue_triggered_scan(timing, source);
+        self.event_snapshot_cache = None;
+    }
+
+    /// The trigger context a CLAUSE-LEVEL gate (an effect's `condition`,
+    /// which carries a DSL clause's `active_when` and `condition`) reads, or
+    /// `None` to read `context` as is.
+    ///
+    /// While the event Digimon is still on the field the gate reads it live:
+    /// a pending effect whose trigger conditions are no longer met can't
+    /// activate (§15-4-4-5). Once it has LEFT the field, the gate reads its
+    /// last-known information captured when the effect triggered
+    /// (`TriggerContext::event_snapshot`, exposed as `deleted_object`): the
+    /// event happened and does not un-happen, so the trigger's references
+    /// keep their triggered-state values (§15-8-3-1; the §15-8-3-9-4 model of
+    /// last-known information). Effect bodies always read live
+    /// (§15-8-3-9-3).
+    pub(crate) fn gate_trigger_context(&self, context: &TriggerContext) -> Option<TriggerContext> {
+        if context.deleted_object.is_some() || context.event_permanent_identity.is_none() {
+            return None;
+        }
+        // An attack-target change names the attacker as `event_permanent`,
+        // but its `event_target_*` reads are about the NEW target
+        // (`attack_target_change.new_target`, e.g. ST5-14 "when you use
+        // <Blocker>"): a departed attacker's snapshot must not stand in for it.
+        if context.attack_target_change.is_some() {
+            return None;
+        }
+        let snapshot = context.event_snapshot.as_ref()?;
+        if context.resolve_event_permanent(self).is_some() {
+            return None;
+        }
+        let mut gate = context.clone();
+        gate.deleted_object = Some((**snapshot).clone());
+        Some(gate)
+    }
+
+    fn enqueue_triggered_scan(&mut self, timing: EffectTiming, source: TriggerSource) {
         match source {
             TriggerSource::Permanent(handle) => {
                 let trigger_context =
@@ -424,22 +474,35 @@ impl Game {
                 let trigger_context = self.trigger_context_for_source(&source, None, timing);
                 self.enqueue_from_security_stack_card(timing, player, card, Some(trigger_context));
             }
-            TriggerSource::OnSecurityCheck { defender, .. } => {
-                // Observer timing: scan every permanent in the defender's
-                // battle area for `OnSecurityCheck`-timed effects. Attacker
-                // + revealed card metadata are carried through
-                // `game.security_resolution` for the drained effects to
-                // read via `EffectContext::attacker` / `security_digimon`
-                // / the defender's `last_security_reveal` snapshot.
-                let count = self.player(defender).battle_area.len();
-                for i in 0..count {
-                    let handle = PermanentHandle {
-                        player: defender,
-                        index: i as u8,
-                    };
-                    let trigger_context =
-                        self.trigger_context_for_source(&source, Some(handle), timing);
-                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+            TriggerSource::OnSecurityCheck { .. } => {
+                // Observer timing (§13-1-8-2): scan every permanent in BOTH
+                // players' battle areas for `OnSecurityCheck`-timed effects,
+                // turn player first — DCGO `AutoProcessing.GetSkillInfos`
+                // walks `Players_ForTurnPlayer`, and attacker-side observers
+                // exist (BT20-005 "gain <Jamming> for the turn", BT12-088
+                // "Memory +2" ESS). Attacker + revealed card metadata are
+                // carried through `game.security_resolution` for the drained
+                // effects to read via `EffectContext::attacker` /
+                // `security_digimon` / the defender's `last_security_reveal`
+                // snapshot.
+                let turn_player = self.turn_player();
+                let mut scan_order: Vec<PlayerId> = vec![turn_player];
+                for p in 0..self.players.len() as PlayerId {
+                    if p != turn_player {
+                        scan_order.push(p);
+                    }
+                }
+                for player in scan_order {
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
                 }
             }
             TriggerSource::OnCheckFaceUpSecurity { attacker, .. } => {
@@ -660,6 +723,26 @@ impl Game {
                     }
                 }
             }
+            TriggerSource::TopCardsTrashed { .. } => {
+                // Board-wide observer scan with the host / trashed-cards
+                // context attached. The trashed top cards are in the trash and
+                // are not observers of their own trashing (they are not
+                // digivolution cards, §4-8-1). Event-gated Delays (BT21-094)
+                // are fanned out below. G-DSL-TOP-CARD-TRASHED-TIMING.
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
             TriggerSource::LinkCardTrashed { .. } => {
                 // Board-wide observer scan (same shape as the PlayerBattleArea
                 // fan-out this dispatch replaced) with the host / trashed-card
@@ -847,6 +930,10 @@ impl Game {
                 // ("When effects trash any of your Digimon's link cards").
                 // G-DSL-ON-LINK-CARD-TRASHED-DELAY.
                 | TriggerSource::LinkCardTrashed { .. }
+                // BT21-094's `<Delay>` observes "When the top stacked card of
+                // any of your [Armor Form] trait Digimon is trashed".
+                // G-DSL-TOP-CARD-TRASHED-TIMING.
+                | TriggerSource::TopCardsTrashed { .. }
         ) {
             let trigger_context = self.trigger_context_for_source(&source, None, timing);
             self.enqueue_event_gated_delayed_options(timing, trigger_context);
@@ -900,6 +987,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                pending_processing: None,
             });
         }
     }
@@ -972,6 +1060,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
+                    pending_processing: None,
                 });
             }
         }
@@ -1044,6 +1133,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                pending_processing: None,
             });
         }
     }
@@ -1220,6 +1310,17 @@ impl Game {
     /// the selection resolves.
     pub fn drain_effect_queue(&mut self) {
         self.effect_drain_depth = self.effect_drain_depth.saturating_add(1);
+        // §9-1-5: a used Option whose `[Main]` body has just finished (its
+        // last selection resolved, and the resolving callback's deferred-drain
+        // scope has closed) is trashed before anything else happens -- "Other
+        // effects and rule checks don't interrupt the period between [Main]
+        // effect activation and trashing" -- so before the rules check below.
+        if self.option_body_pending
+            && self.draining_deferred == 0
+            && self.pending_selection.is_none()
+        {
+            self.complete_option_body_if_done();
+        }
         // Official timing: complete rule processing BEFORE activating queued
         // triggered effects (judge-quiz Q24 — a Digimon driven to ≤0 DP
         // while its trigger was parked is deleted by the rules check first,
@@ -1229,7 +1330,9 @@ impl Game {
             self.run_state_based_rules_check();
         }
         self.drain_effect_queue_inner();
-        if self.effect_drain_depth == 1 {
+        // A §18-3-2 infinite-loop draw ends the game: no flush or rules
+        // processing runs after it.
+        if self.effect_drain_depth == 1 && !self.halted_by_infinite_loop() {
             // Flush the OnDiscardHand batch window (G-ENGINE-ON-DISCARD-HAND):
             // the causing effect body has finished, so the whole discard batch
             // is known. Fire the trigger ONCE per affected owner (DCGO
@@ -1238,15 +1341,21 @@ impl Game {
             // a selection (a park means the effect body is not finished — the
             // resuming drain flushes it). Loop-guarded because an OnDiscardHand
             // observer can itself trash a hand (a nested batch).
-            if self.pending_selection.is_none() {
+            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
                 let mut discard_guard: u16 = 0;
-                while self.pending_hand_discard.is_some() && self.pending_selection.is_none() {
+                while self.pending_hand_discard.is_some()
+                    && self.pending_selection.is_none()
+                    && !self.halted_by_infinite_loop()
+                {
                     self.flush_pending_hand_discard();
                     if !self.effect_queue.is_empty() {
                         self.drain_effect_queue_inner();
                     }
                     discard_guard += 1;
-                    if discard_guard > MAX_CHAIN_DEPTH {
+                    if self.loop_step_ends_game(
+                        crate::game::infinite_loop::LoopSite::DiscardFlush,
+                        discard_guard,
+                    ) {
                         break;
                     }
                 }
@@ -1255,15 +1364,23 @@ impl Game {
             // (G-ENGINE-ON-ADD-TO-DECK): the effect body that added cards to a
             // deck has finished, so fire the observer ONCE (DCGO
             // `FireOnAddLibraryAnyone` once per added list), then drain.
-            if self.pending_selection.is_none() {
+            // Every later block re-checks for the §18-3-2 draw: a pass above
+            // may have ended the game in it, and nothing runs after that.
+            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
                 let mut deck_guard: u16 = 0;
-                while self.pending_deck_add.is_some() && self.pending_selection.is_none() {
+                while self.pending_deck_add.is_some()
+                    && self.pending_selection.is_none()
+                    && !self.halted_by_infinite_loop()
+                {
                     self.flush_pending_deck_add();
                     if !self.effect_queue.is_empty() {
                         self.drain_effect_queue_inner();
                     }
                     deck_guard += 1;
-                    if deck_guard > MAX_CHAIN_DEPTH {
+                    if self.loop_step_ends_game(
+                        crate::game::infinite_loop::LoopSite::DeckAddFlush,
+                        deck_guard,
+                    ) {
                         break;
                     }
                 }
@@ -1274,29 +1391,36 @@ impl Game {
             // ONCE per host (DCGO `AddDigivolutionCards*` once per list;
             // rule 15-5-2), then drain the observers. Loop-guarded because an
             // observer can itself place sources (a nested batch).
-            if self.pending_selection.is_none() {
+            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
                 let mut added_guard: u16 = 0;
-                while !self.pending_added_sources.is_empty() && self.pending_selection.is_none() {
+                while !self.pending_added_sources.is_empty()
+                    && self.pending_selection.is_none()
+                    && !self.halted_by_infinite_loop()
+                {
                     self.flush_pending_added_sources();
                     if !self.effect_queue.is_empty() {
                         self.drain_effect_queue_inner();
                     }
                     added_guard += 1;
-                    if added_guard > MAX_CHAIN_DEPTH {
+                    if self.loop_step_ends_game(
+                        crate::game::infinite_loop::LoopSite::AddedSourcesFlush,
+                        added_guard,
+                    ) {
                         break;
                     }
                 }
             }
             let mut guard: u16 = 0;
             loop {
-                if self.pending_selection.is_some() {
+                if self.pending_selection.is_some() || self.halted_by_infinite_loop() {
                     break;
                 }
                 if !self.run_state_based_rules_check() {
                     break;
                 }
                 guard += 1;
-                if guard > MAX_CHAIN_DEPTH {
+                if self.loop_step_ends_game(crate::game::infinite_loop::LoopSite::RulesCheck, guard)
+                {
                     break;
                 }
                 // The batched deletion drains its own OnDeletion handlers, but
@@ -1308,6 +1432,13 @@ impl Game {
             }
         }
         self.effect_drain_depth = self.effect_drain_depth.saturating_sub(1);
+        if self.effect_drain_depth == 0 && self.pending_selection.is_none() {
+            // §18-3: the outermost drain has settled with nothing parked, so
+            // this processing is over; a later drain starts its own loop
+            // watch. A drain parked on a decision keeps its watch: whether it
+            // starts over depends on that decision (declinable or forced).
+            self.reset_loop_watch();
+        }
         // G-ENGINE-TURN-END-MID-EFFECT: a turn end that `check_turn_end` held
         // back while an effect was resolving runs now that the outermost
         // drain has settled with nothing parked (6-1-4-1).
@@ -1333,6 +1464,26 @@ impl Game {
         }
     }
 
+    /// One step of drain processing at `site`, the `steps`-th since the
+    /// count last restarted. Returns `true` when processing must stop because
+    /// the game has ended in the §18-3-2 infinite-loop draw: the step
+    /// completed a repeating state (`watch_for_infinite_loop`), or the count
+    /// passed the far `MAX_CHAIN_DEPTH` backstop.
+    fn loop_step_ends_game(
+        &mut self,
+        site: crate::game::infinite_loop::LoopSite,
+        steps: u16,
+    ) -> bool {
+        if self.watch_for_infinite_loop(site) {
+            return true;
+        }
+        if steps > MAX_CHAIN_DEPTH {
+            self.declare_infinite_loop_draw(steps, true);
+            return true;
+        }
+        false
+    }
+
     /// Inner queue-drain loop (the historical `drain_effect_queue` body).
     /// Resolves triggered effects until the queue empties or a selection parks.
     /// Runs the state-based rules-check between top-level queued effects via
@@ -1343,10 +1494,16 @@ impl Game {
             if self.pending_selection.is_some() {
                 return;
             }
-            // 9-1-5 / 18-1-2: a used Option whose `[Main]` body has just
-            // finished is disposed before any trigger that body caused
-            // resolves. Skipped inside a deferred-drain scope (the body is
-            // still running there); the flush at scope exit re-enters here.
+            // §18-3-2: the game ended in an infinite-loop draw (possibly in a
+            // nested drain an effect body performed); nothing more resolves.
+            if self.halted_by_infinite_loop() {
+                self.effect_queue.clear();
+                return;
+            }
+            // §9-1-5: a used Option whose `[Main]` body has just finished is
+            // disposed before any trigger that body caused resolves. Skipped
+            // inside a deferred-drain scope (the body is still running there);
+            // the flush at scope exit re-enters here.
             if self.option_body_pending && self.draining_deferred == 0 {
                 self.complete_option_body_if_done();
                 if self.pending_selection.is_some() {
@@ -1368,11 +1525,17 @@ impl Game {
             }
 
             self.effect_chain_depth = self.effect_chain_depth.saturating_add(1);
-            if self.effect_chain_depth > MAX_CHAIN_DEPTH {
-                // Suspected self-triggering loop — drop the remaining queue.
-                // Matches Python's defensive behavior.
-                self.effect_queue.clear();
-                self.effect_chain_depth = 0;
+            // §18-3-1 / §18-3-2: the same pending entries over the same board
+            // again, with no declinable decision since, is an infinite loop
+            // neither player can stop (a declinable decision resets the
+            // watch, so a loop with an optional "you may" in it keeps
+            // repeating while its owner accepts, §18-3-3-3; a forced pick
+            // does not). The game ends in a draw; the queue is never
+            // dropped with the game going on.
+            if self.loop_step_ends_game(
+                crate::game::infinite_loop::LoopSite::Queue,
+                self.effect_chain_depth,
+            ) {
                 return;
             }
 
@@ -1418,6 +1581,15 @@ impl Game {
                     self.enter_deferred_drain();
                     self.run_queued_effect(qe);
                     self.draining_deferred = self.draining_deferred.saturating_sub(1);
+                    // §9-1-5: the used Option is trashed in the step that
+                    // finishes its `[Main]` body, uninterrupted -- before the
+                    // rules check below and before any trigger the body
+                    // caused is offered. (A body that parked a selection is
+                    // disposed once that selection's resolution has finished
+                    // the body: see the top of `drain_effect_queue`.)
+                    if self.draining_deferred == 0 {
+                        self.complete_option_body_if_done();
+                    }
                     self.rules_check_between_queued_effects();
                     continue;
                 }
@@ -1705,14 +1877,11 @@ impl Game {
             // range. Overflow auto-fires in collection order after the prompt
             // completes (rare; see the cap handling inside install_*).
             //
-            // Note: the pre-cost decline prompt above is only installed for a
-            // single-trigger bundle (`bundle.len() == 1`). For a multi-copy
-            // bundle (`bundle.len() >= 2`), once the player picks the first
-            // trigger here, that trigger's `activation_cost_fn` fires inside
-            // `run_queued_effect` without a separate per-trigger decline.
-            // This is a pre-existing limitation, kept intentional: the
-            // TriggerOrder PASS bit declines the whole bundle, not a single
-            // copy mid-resolution.
+            // The pick only decides the ORDER: an optional pick keeps its own
+            // decline (outer-optional prompt, or the pre-cost decline for an
+            // activation-cost effect) via `run_picked_trigger`. The
+            // TriggerOrder PASS bit (all-optional bundles only) declines the
+            // whole bundle.
             let any_mandatory = bundle.iter().any(|&i| !self.effect_queue[i].is_optional);
             self.install_trigger_order_selection(chooser, &bundle, !any_mandatory);
             return;
@@ -2058,6 +2227,40 @@ impl Game {
                 }],
                 ..TriggerContext::default()
             },
+            TriggerSource::TopCardsTrashed {
+                player,
+                host,
+                host_card,
+                ref cards,
+                cause,
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Permanent(host)),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                // The host whose top card(s) were trashed (`event_host_*`
+                // leaves). The trashed batch rides in `moved_card_sets`; the
+                // single-card `event_card` is set only for a one-card batch
+                // (<Armor Purge>, <De-Digivolve> trashing 1) so a multi-card
+                // instance is never mis-gated by a one-card alias.
+                event_card: if cards.len() == 1 { Some(cards[0]) } else { None },
+                event_host_card: Some(host_card),
+                event_host_permanent: Some(host),
+                event_permanent: Some(host),
+                affected_player: Some(player),
+                source_player: Some(player),
+                cause: Some(cause),
+                effect_initiated: !matches!(
+                    cause,
+                    crate::trigger_context::EventCause::Rule
+                        | crate::trigger_context::EventCause::BattleDeletion
+                ),
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: cards.clone(),
+                    from: Some(crate::enums::Zone::BattleArea),
+                    to: Some(crate::enums::Zone::Trash),
+                }],
+                ..TriggerContext::default()
+            },
             TriggerSource::LinkCardTrashed {
                 player,
                 host,
@@ -2192,12 +2395,25 @@ impl Game {
             TriggerSource::BattleResolved {
                 winner,
                 ref deleters,
+                winner_identity,
+                ref winner_snapshot,
             } => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 // The battle winner (owner + trait read by the observer's
-                // `event_winner_*` predicates). `None` on a tie — no winner.
+                // `event_winner_*` predicates). `None` on a tie — no winner —
+                // and when the winner left the field before this event.
                 battle_winner: winner,
+                // The winner's identity and last-known information from the
+                // battle: the `event_winner_*` reads resolve it by identity,
+                // and `Game::gate_trigger_context` exposes the snapshot as
+                // `deleted_object` once it has left (§15-8-3-8; the Task 1
+                // event-referent model). Pre-set here, so the generic
+                // capture below does not retake them from the later board.
+                // G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX.
+                battle_winner_identity: winner_identity,
+                event_permanent_identity: winner_identity,
+                event_snapshot: winner_snapshot.clone(),
                 // G-DSL-BATTLE-DELETER — read by `event_battle_deleter`.
                 battle_deleters: deleters.clone(),
                 event_permanent: winner,
@@ -2287,7 +2503,7 @@ impl Game {
         // Capture before any observer resolves. The existing stack identity is
         // shared with battle/replacement tracking: it survives ordinary stack
         // edits, is invalidated by every DNA path, and is absent on a new play.
-        if context.deleted_object.is_none() {
+        if context.deleted_object.is_none() && context.event_permanent_identity.is_none() {
             if let Some(handle) = context.event_permanent {
                 if let Some(permanent) = self
                     .player(handle.player)
@@ -2306,6 +2522,20 @@ impl Game {
                         }
                     };
                     context.event_permanent_identity = Some((handle.player, identity));
+                    let key = (handle.player, identity);
+                    let cached = self
+                        .event_snapshot_cache
+                        .as_ref()
+                        .filter(|(cached_key, _)| *cached_key == key)
+                        .map(|(_, snapshot)| snapshot.clone());
+                    context.event_snapshot = match cached {
+                        Some(snapshot) => Some(snapshot),
+                        None => self.build_snapshot_for_handle(handle).map(|snapshot| {
+                            let snapshot = std::sync::Arc::new(snapshot);
+                            self.event_snapshot_cache = Some((key, snapshot.clone()));
+                            snapshot
+                        }),
+                    };
                 }
             }
         }
@@ -2452,6 +2682,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                pending_processing: None,
             });
         }
     }
@@ -2470,7 +2701,8 @@ impl Game {
         };
 
         let prev_trigger_context = self.current_trigger_context.clone();
-        self.current_trigger_context = Some(trigger_context);
+        let gate = self.gate_trigger_context(&trigger_context);
+        self.current_trigger_context = Some(gate.unwrap_or(trigger_context));
         let ctx = EffectReadContext::new_with_source_kind(
             self,
             source_card,
@@ -2521,7 +2753,7 @@ impl Game {
             }
             // `SecuritySkill` / `OnLoseSecurity`: only `[Security]`-scoped
             // effects are live on a card that is leaving / has left the
-            // security stack — it is not a battle-area permanent (§13-1-5 "in
+            // security stack — it is not a battle-area permanent (§13-1-6 "in
             // no area"; §15-14-5). In particular a removed card's own
             // `[All Turns]` "when your security stack is removed from"
             // observer (BT24-101, BT25-044) must not fire for its own
@@ -2558,6 +2790,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                pending_processing: None,
             });
         }
     }
@@ -2630,6 +2863,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                pending_processing: None,
             });
         }
     }
@@ -2736,6 +2970,7 @@ impl Game {
                 granted_effect_id: Some(body_id),
                 keyword_effect: None,
                 trigger_batch: 0,
+                pending_processing: None,
             });
         }
 
@@ -2785,6 +3020,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
+                    pending_processing: None,
                 });
             }
         }
@@ -2802,7 +3038,7 @@ impl Game {
         // was that PERSISTENT granted keywords worked — the mask reads them
         // through `Game::has_keyword` — while TRIGGER keywords were inert: the
         // engine knew the recipient had `<Retaliation>` and had no `Effect` to
-        // fire. §16-12 makes `<Retaliation>` mandatory, and the DCGO oracle
+        // fire. §16-13 makes `<Retaliation>` mandatory, and the DCGO oracle
         // deletes the battle winner, so silence was a faithfulness bug.
         //
         // Fixing it at trigger DISPATCH (rather than in
@@ -2828,7 +3064,17 @@ impl Game {
         // declarative tick, so the keyword is absent from the registry here.
         // Per-keyword gates (e.g. `<Retaliation>`'s Battle-only deletion-cause
         // filter) live inside the auto-effect body and are unchanged.
-        let aura_keywords = self.modifiers.aura_granted_keywords(handle);
+        let mut aura_keywords = self.modifiers.aura_granted_keywords(handle);
+        // `<Alliance>` / `<Raid>`: EVERY registry grant (runtime
+        // `grant_keyword` included, which installs no body for them) is
+        // dispatched here — see `keyword_trigger_dispatched_from_registry`.
+        for keyword in self.modifiers.granted_keywords(handle) {
+            if crate::cards::keyword_effects::keyword_trigger_dispatched_from_registry(keyword)
+                && !aura_keywords.contains(&keyword)
+            {
+                aura_keywords.push(keyword);
+            }
+        }
         for keyword in aura_keywords {
             if self.has_keyword_from_card_sources(handle, keyword) {
                 continue;
@@ -2871,6 +3117,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: Some(keyword),
                     trigger_batch: 0,
+                    pending_processing: None,
                 });
             }
         }
@@ -2937,6 +3184,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
+                    pending_processing: None,
                 });
             }
         }
@@ -3029,6 +3277,7 @@ impl Game {
                         granted_effect_id: None,
                         keyword_effect: None,
                         trigger_batch: 0,
+                        pending_processing: None,
                     });
                 }
             }
@@ -3103,6 +3352,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
+                    pending_processing: None,
                 });
             }
         }
@@ -3170,6 +3420,7 @@ impl Game {
                 granted_effect_id: Some(body_id),
                 keyword_effect: None,
                 trigger_batch: 0,
+                pending_processing: None,
             });
         }
 
@@ -3200,6 +3451,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
+                    pending_processing: None,
                 });
             }
         }
@@ -3248,6 +3500,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
+                    pending_processing: None,
                 });
             }
         }
@@ -3401,10 +3654,17 @@ impl Game {
     /// looked up report `true` (the run-time path decides those).
     pub(crate) fn queued_effect_condition_passes(&mut self, i: usize) -> bool {
         let Some(qe) = self.effect_queue.get(i).cloned() else { return false; };
+        self.queued_entry_condition_passes(&qe)
+    }
+
+    /// [`Self::queued_effect_condition_passes`] for an entry already taken
+    /// out of the queue: a simultaneous-play group passes when any member's
+    /// context does.
+    fn queued_entry_condition_passes(&mut self, qe: &QueuedEffect) -> bool {
         if qe.trigger_context.as_ref().is_some_and(|c| !c.simultaneous_play_members.is_empty()) {
-            return !self.matching_simultaneous_play_contexts(&qe).is_empty();
+            return !self.matching_simultaneous_play_contexts(qe).is_empty();
         }
-        self.queued_single_effect_condition_passes(&qe)
+        self.queued_single_effect_condition_passes(qe)
     }
 
     fn matching_simultaneous_play_contexts(&mut self, qe: &QueuedEffect) -> Vec<TriggerContext> {
@@ -3417,8 +3677,20 @@ impl Game {
     }
 
     fn queued_single_effect_condition_passes(&mut self, qe: &QueuedEffect) -> bool {
-        if qe.granted_effect_id.is_some() {
-            // Granted effects have no clause condition — keep them.
+        // A provenance deletion whose played Digimon already left the battle
+        // area has nothing to delete: DCGO attaches it to that permanent
+        // (`EX11_022.cs`), so it vanishes with it. Not an orderable branch.
+        if let Some(crate::scheduled_effects::PendingProcessing::ProvenanceDeletion(entry)) =
+            &qe.pending_processing
+        {
+            return matches!(
+                self.resolve_provenance_token(entry.token),
+                Some(crate::trigger_context::EventSubject::Permanent(_))
+            );
+        }
+        if qe.granted_effect_id.is_some() || qe.pending_processing.is_some() {
+            // Granted effects and scheduled bodies have no clause condition —
+            // keep them.
             return true;
         }
         // Snapshot the fields we need; release the borrow before
@@ -3464,7 +3736,11 @@ impl Game {
         let condition_passes = if let Some(effects) = looked_up {
             if let Some(eff) = effects.get(effect_slot) {
                 if let Some(cond) = &eff.condition {
-                    let trigger_guard = TriggerContextGuard::install(self, trigger_context);
+                    let gate = trigger_context
+                        .as_ref()
+                        .and_then(|context| self.gate_trigger_context(context));
+                    let trigger_guard =
+                        TriggerContextGuard::install(self, gate.or(trigger_context));
                     let ctx = EffectContext::new_with_source_kind(
                         &mut *trigger_guard.game,
                         source_card,
@@ -3574,7 +3850,7 @@ impl Game {
         // Q2229 classifies native field effects on activation, after earlier
         // simultaneous effects. Cost/body continuations retain this capture.
         // Inherited effects use 15-3-2; link effects are gained by the Digimon
-        // (4-2-6), whose activation is a Digimon effect (15-2-1-1). Explicit
+        // (4-3-5), whose activation is a Digimon effect (15-2-1-1). Explicit
         // Option or cross-card refire attribution is not promoted.
         // A granted body belongs to its carrier. The queued source_card is
         // retained as grant provenance and can be a different physical card.
@@ -3612,10 +3888,6 @@ impl Game {
             if members.len() > 1 { selected.simultaneous_play_members = members; }
             qe.trigger_context = Some(selected);
         }
-        // A queued entry is resolving, so the Option user's "my trigger first"
-        // pick (G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER) is spent: 15-4-3-5-1
-        // re-chooses before each remaining item.
-        self.option_trash_order_deferred = false;
         // Set the effect-source attribution for replacement-cause inference.
         // Saved on entry, restored on exit — supports nested drains (an
         // effect queues another effect that recursively drains before this
@@ -3642,7 +3914,14 @@ impl Game {
         out
     }
 
-    fn run_queued_effect_inner(&mut self, qe: QueuedEffect) {
+    fn run_queued_effect_inner(&mut self, mut qe: QueuedEffect) {
+        // §18-1-2 pending processing: the captured `schedule_delayed` body,
+        // performed at its timing whatever happened to its source (§18-1-1)
+        // -- no condition / cost / OPT / liveness gates.
+        if let Some(payload) = qe.pending_processing.take() {
+            crate::scheduled_effects::run_pending_processing(self, payload, qe.source_permanent);
+            return;
+        }
         // Track H §3 Phase 4i — granted-triggered-effect branch.
         // Granted bodies are inline closures with no Effect metadata
         // (no condition, pay_cost, optional, max_per_turn). We fetch
@@ -3733,14 +4012,34 @@ impl Game {
         let skip_condition = qe.timing == EffectTiming::SecuritySkill;
         if !skip_condition {
             if let Some(cond) = &effect.condition {
-                let ctx = EffectContext::new_with_source_kind(
-                    self,
-                    attribution_source_card,
-                    qe.source_permanent,
-                    attribution_source_kind,
-                    qe.controller,
-                );
-                if !cond(&ctx.as_read()) {
+                // The clause-level gate reads the gate view of the installed
+                // trigger context; the body below reads it as is.
+                let gate = self
+                    .current_trigger_context
+                    .as_ref()
+                    .and_then(|context| self.gate_trigger_context(context));
+                let passes = if let Some(gate) = gate {
+                    // The guard restores the live context for the body.
+                    let guard = TriggerContextGuard::install(self, Some(gate));
+                    let ctx = EffectContext::new_with_source_kind(
+                        &mut *guard.game,
+                        attribution_source_card,
+                        qe.source_permanent,
+                        attribution_source_kind,
+                        qe.controller,
+                    );
+                    cond(&ctx.as_read())
+                } else {
+                    let ctx = EffectContext::new_with_source_kind(
+                        self,
+                        attribution_source_card,
+                        qe.source_permanent,
+                        attribution_source_kind,
+                        qe.controller,
+                    );
+                    cond(&ctx.as_read())
+                };
+                if !passes {
                     return;
                 }
             }
@@ -4037,8 +4336,16 @@ impl Game {
     /// OnDeletion snapshots intentionally activate from the deleted object;
     /// zone-scoped entries without a field carrier retain their own liveness.
     pub(crate) fn invalidate_pending_field_effects(&mut self, carriers: &[PermanentHandle]) {
-        self.effect_queue.retain(|qe| {
+        self.effect_queue.retain_mut(|qe| {
             let source_changed = qe.source_permanent.is_some_and(|h| carriers.contains(&h));
+            // Pending processing outlives its source: it is performed at its
+            // timing (§18-1-1), not activated from the carrier (15-4-4-3).
+            // The carrier is a new card now, so the body no longer refers to
+            // it (and the stale slot must not address whatever shifts in).
+            if source_changed && qe.pending_processing.is_some() {
+                qe.source_permanent = None;
+                return true;
+            }
             !source_changed
                 || (qe.timing == EffectTiming::OnDeletion
                     && qe
@@ -4744,6 +5051,26 @@ impl Game {
         // the previous value even on panic. See
         // `G-OUTER-OPTIONAL-TRIGGER-CTX` (proposal
         // `fix-outer-optional-prompt-trigger-ctx`).
+        if qe.timing != EffectTiming::SecuritySkill {
+            if let Some(cond) = &effect.condition {
+                let gate = qe
+                    .trigger_context
+                    .as_ref()
+                    .and_then(|context| self.gate_trigger_context(context));
+                let guard =
+                    TriggerContextGuard::install(self, gate.or_else(|| qe.trigger_context.clone()));
+                let rctx = EffectReadContext::new_with_source_kind(
+                    &*guard.game,
+                    attribution_source_card,
+                    qe.source_permanent,
+                    attribution_source_kind,
+                    qe.controller,
+                );
+                if !cond(&rctx) {
+                    return false;
+                }
+            }
+        }
         let guard = TriggerContextGuard::install(self, qe.trigger_context.clone());
         let rctx = EffectReadContext::new_with_source_kind(
             &*guard.game,
@@ -4752,13 +5079,6 @@ impl Game {
             attribution_source_kind,
             qe.controller,
         );
-        if qe.timing != EffectTiming::SecuritySkill {
-            if let Some(cond) = &effect.condition {
-                if !cond(&rctx) {
-                    return false;
-                }
-            }
-        }
         // Body-actionability guard: when the body's first step is a
         // selection, only prompt if it has at least one candidate — DCGO
         // does not prompt for an optional ability with no legal target.
@@ -4818,7 +5138,7 @@ impl Game {
             //
             // One exception has to be recorded rather than dropped: a
             // turn-scheduled `<Delay>`. Its carrier is trashed by the turn scan
-            // AFTER the body runs, because the trash is the §16-16-2 cost — so a
+            // AFTER the body runs, because the trash is the §16-17-2 cost — so a
             // decline must suppress that trash too (§15-7-2). `note_declined_delay`
             // leaves the key for `resolve_delayed_options_matching` /
             // `resume_pending_delayed_option_lifecycle` to reschedule instead.
@@ -4853,7 +5173,7 @@ impl Game {
         self.run_queued_effect(state.queued_effect);
     }
 
-    /// Record that a turn-scheduled `<Delay>`'s §16-16-2 cost was declined, so
+    /// Record that a turn-scheduled `<Delay>`'s §16-17-2 cost was declined, so
     /// the turn scan reschedules its carrier instead of trashing it.
     ///
     /// A no-op for every other timing: only `DelayEffect` has a carrier the
@@ -4932,14 +5252,20 @@ impl Game {
             let qe_idx = bundle[pos];
             let qe = &self.effect_queue[qe_idx];
             let action_id = HAND_EFFECT_START + pos as u16;
-            let observation_metadata = self
-                .effects_for_queued(qe)
-                .and_then(|effects| {
-                    effects
-                        .get(qe.effect_slot as usize)
-                        .map(|effect| effect.observation_metadata)
-                })
-                .unwrap_or_default();
+            // Pending processing (§18-1-2) has no `Effect`: its metadata and
+            // label come from the payload, so its branch never reads as the
+            // source card's printed slot-0 effect.
+            let observation_metadata = match &qe.pending_processing {
+                Some(payload) => payload.observation_metadata(),
+                None => self
+                    .effects_for_queued(qe)
+                    .and_then(|effects| {
+                        effects
+                            .get(qe.effect_slot as usize)
+                            .map(|effect| effect.observation_metadata)
+                    })
+                    .unwrap_or_default(),
+            };
             // Which KEYWORD this branch is, if any -- the only thing that tells
             // the branches of a same-card trigger stack apart (see
             // `EffectChoiceEntry::keyword`). Two sources, because a keyword
@@ -4972,16 +5298,21 @@ impl Game {
             valid_action_ids.push(action_id);
             choices.push(EffectChoiceEntry {
                 count_choice: None,
-                label: format!(
-                    "{} slot {} ({})",
-                    qe.card_id,
-                    qe.effect_slot,
-                    if qe.is_optional {
-                        "optional"
-                    } else {
-                        "mandatory"
-                    },
-                ),
+                label: match &qe.pending_processing {
+                    Some(payload) => {
+                        format!("{} slot - ({})", qe.card_id, payload.describe(self))
+                    }
+                    None => format!(
+                        "{} slot {} ({})",
+                        qe.card_id,
+                        qe.effect_slot,
+                        if qe.is_optional {
+                            "optional"
+                        } else {
+                            "mandatory"
+                        },
+                    ),
+                },
                 action_id,
                 source_card: Some(qe.source_card),
                 source_kind: Some(qe.source_kind),
@@ -5026,7 +5357,7 @@ impl Game {
                     // shifted).
                     if let Some(&idx) = bundle.get(pos) {
                         if let Some(qe) = game.effect_queue.remove(idx) {
-                            game.run_queued_effect(qe);
+                            game.run_picked_trigger(qe, bundle.len() > 1);
                         }
                     }
                     // Generic resolver will call `drain_effect_queue` after we
@@ -5085,9 +5416,44 @@ impl Game {
         let pos = action_id.saturating_sub(HAND_EFFECT_START) as usize;
         if let Some(&idx) = state.bundle.get(pos) {
             if let Some(qe) = self.effect_queue.remove(idx) {
-                self.run_queued_effect(qe);
+                self.run_picked_trigger(qe, state.bundle.len() > 1);
             }
         }
+    }
+
+    /// Run the entry picked from a `TriggerOrder`. Picking only decides the
+    /// ORDER (§15-4-3-5-1): an OPTIONAL effect keeps its "you may" decision
+    /// (§15-7), so when the single-trigger path would have parked an outer
+    /// accept / decline prompt (`queued_effect_wants_outer_optional_prompt`)
+    /// or a pre-cost decline (an optional effect with an `activation_cost`
+    /// whose condition passes), the pick parks the accept / decline prompt
+    /// instead: accept runs `run_queued_effect`, decline drops the entry.
+    /// `gate_optional` is false for a one-entry `TriggerOrder`: that prompt
+    /// IS the pre-cost decline gate, and its pick is the acceptance.
+    fn run_picked_trigger(&mut self, qe: QueuedEffect, gate_optional: bool) {
+        if gate_optional && self.picked_trigger_needs_optional_gate(&qe) {
+            self.install_outer_optional_trigger_selection(qe);
+            return;
+        }
+        self.run_queued_effect(qe);
+    }
+
+    fn picked_trigger_needs_optional_gate(&mut self, qe: &QueuedEffect) -> bool {
+        if !qe.is_optional {
+            return false;
+        }
+        if self.queued_effect_wants_outer_optional_prompt(qe) {
+            return true;
+        }
+        let has_activation_cost = self
+            .effects_for_queued(qe)
+            .and_then(|effects| {
+                effects
+                    .get(qe.effect_slot as usize)
+                    .map(|effect| effect.activation_cost_fn.is_some())
+            })
+            .unwrap_or(false);
+        has_activation_cost && self.queued_entry_condition_passes(qe)
     }
 
     /// Resolve any pending selection — `TriggerOrder`, `Target`, `Hand`,
@@ -5158,6 +5524,27 @@ impl Game {
             return Ok(());
         }
         let was_attack_pending = self.pending_attack.is_some();
+
+        // §18-3 / gap G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED: a player
+        // decision resolves here (page navigation returned above).
+        // - The far `MAX_CHAIN_DEPTH` backstop counts resolutions between
+        //   decisions, so ANY decision restarts the chain count -- at 1, not
+        //   0, when a chain is running, keeping the "inside a chain" marker
+        //   that attack-cancel and until-condition re-evaluation read.
+        // - The loop-signature watch starts over only after a DECLINABLE
+        //   decision: §18-3-3-3's stop is the player's optional decision, so a
+        //   loop whose repetitions only ask forced questions is still one
+        //   neither player can stop (§18-3-2) and keeps its watch.
+        let mark = self.optional_decision_mark.take();
+        let declinable = self.pending_selection.as_ref().is_some_and(|sel| {
+            crate::game::infinite_loop::selection_can_stop_a_loop(sel, mark.as_ref())
+        });
+        if declinable {
+            self.reset_loop_watch();
+        }
+        if self.effect_chain_depth > 0 {
+            self.effect_chain_depth = 1;
+        }
 
         // Take the selection, restore phase, invoke the appropriate callback.
         let sel = self.pending_selection.take().expect("checked Some above");
@@ -5276,7 +5663,7 @@ impl Game {
         // was the last nested pick of a replacement process (e.g. <Decode>'s
         // source pick, which PLAYS a Digimon), the parked replacement's commit
         // — the original event completing, e.g. the carrier leaving — is
-        // still part of the same immediate-effect processing (§16-35; an
+        // still part of the same immediate-effect processing (§16-36; an
         // immediate effect's processing completes before waiting triggered
         // effects resolve). Commit it INSIDE the deferred-drain scope so
         // triggers the process raised (the played Digimon's [On Play]) wait
@@ -5304,10 +5691,6 @@ impl Game {
 
         if self.pending_selection.is_none() {
             self.resume_pending_effect_security_removal();
-        }
-
-        if self.pending_selection.is_none() {
-            crate::scheduled_effects::resume_scheduled_drain(self);
         }
 
         // If the callback parked a fresh selection, leave the drainer alone.
@@ -5360,6 +5743,9 @@ impl Game {
         }
         if self.pending_selection.is_none() {
             self.resume_pending_end_turn();
+        }
+        if self.pending_selection.is_none() {
+            self.resume_pending_turn_boundary();
         }
         // Parked Breeding → Main advance (user bug 2026-07-09): a breeding
         // action (HATCH / MOVE_FROM_BREEDING) whose trigger drain installed a
@@ -5514,28 +5900,24 @@ impl Game {
     }
 
     /// Dispose the used Option as soon as its `[Main]` (`OptionMain`) body
-    /// has fully resolved — BEFORE the triggered effects that body caused.
+    /// has fully resolved — BEFORE the rules check and the triggered effects
+    /// that body caused.
     ///
-    /// Rules: 9-1-5 "A used Option card is trashed if it isn't in an area at
-    /// the timing when its 1st [Main] effect has been resolved as pending
-    /// processing"; 18-1-2 pending processing performed at the same time as
-    /// other processing is ordered like simultaneous triggering (15-4-3); and
-    /// 15-4-3-5 the turn player's pending items go first. The Option's owner
-    /// is the turn player on every Main-phase use, so its trash precedes the
-    /// non-turn player's `[On Deletion]` etc. DCGO
+    /// §9-1-5 (Ver. 4.3): "A used Option card is immediately trashed as
+    /// pending processing as soon as the timing when its 1st [Main] effect
+    /// has been resolved, unless that Option card is considered to be placed
+    /// in an area. Other effects and rule checks don't interrupt the period
+    /// between [Main] effect activation and trashing." The trash is therefore
+    /// not one of its user's orderable items: no `TriggerOrder` is offered,
+    /// whoever's triggers are pending (this reverses the 18-1-2 reading of
+    /// `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER`;
+    /// F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE). DCGO agrees
     /// (`CardController.cs` `UseOptionClass.UseOption`): `AddTrashCard(card)`
-    /// runs straight after the `OptionSkill` `ActivateEffectProcess`, while
-    /// the triggers stacked during the body resolve only after `UseOption`
-    /// returns — including the `OnUseOption` observers it stacked before the
-    /// body, which is why those are ENQUEUED here (not drained) and so resolve
-    /// after the disposal too.
-    ///
-    /// When the Option's USER has their OWN triggered effects pending
-    /// alongside the trash, both are that player's simultaneous items, so
-    /// 18-1-2 -> 15-4-3-5-1 gives THEM the order:
-    /// `install_option_trash_order_selection` surfaces that pick instead of
-    /// trashing unconditionally (DCGO hard-codes trash-first, which stays one
-    /// of the two legal answers). G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
+    /// runs straight after the `OptionSkill` resolution, while the triggers
+    /// stacked during the body resolve only after `UseOption` returns —
+    /// including the `OnUseOption` observers it stacked before the body,
+    /// which is why those are ENQUEUED here (not drained) and so resolve after
+    /// the disposal too.
     ///
     /// No-op unless `option_body_pending` is set, a `MainEffectDrain`
     /// `pending_option` is in flight, no `OptionMain` entry for it is still
@@ -5561,7 +5943,6 @@ impl Game {
             return;
         }
         let card = pending.card.handle();
-        let owner = pending.owner;
         if self
             .effect_queue
             .iter()
@@ -5577,23 +5958,6 @@ impl Game {
         }
         if self.pending_option_can_arts_digivolve() && self.install_arts_digivolve_selection() {
             self.option_body_pending = false;
-            return;
-        }
-        // 18-1-2 -> 15-4-3-5-1: when the Option's USER also has their own
-        // triggered effects pending at this same timing, the trash is just one
-        // of that player's simultaneous items and THEY choose which resolves
-        // next. `option_body_pending` stays set across the prompt so the drain
-        // loop re-enters this function after each pick.
-        if self.option_trash_order_deferred {
-            if !self.option_orderable_trigger_indices(owner).is_empty() {
-                // The player asked for one of their triggers first; the drain
-                // resolves it (with its own optional / activation-cost gates
-                // intact) and `run_queued_effect` clears the deferral, so the
-                // choice is offered again before the next item.
-                return;
-            }
-            self.option_trash_order_deferred = false;
-        } else if self.install_option_trash_order_selection(owner) {
             return;
         }
         self.option_body_pending = false;
@@ -5612,168 +5976,6 @@ impl Game {
         self.effect_queue
             .iter()
             .position(|q| q.timing == EffectTiming::OptionMain && q.source_card == card)
-    }
-
-    /// Queue indices of the Option user's OWN pending triggered effects that
-    /// would fire right now -- the items 15-4-3-5-1 lets them order against
-    /// the used Option's pending trash. Empty unless that player is also the
-    /// next chooser, so the turn player's bucket still resolves ahead of a
-    /// non-turn player's Option trash (15-4-3-5-2).
-    fn option_orderable_trigger_indices(&mut self, owner: PlayerId) -> Vec<usize> {
-        // The newest §15-4-5 batch: still-unstamped entries (caused by the
-        // Option body that just finished) when there are any, else the
-        // highest stamped batch.
-        let batch = if self.effect_queue.iter().any(|qe| qe.trigger_batch == 0) {
-            0
-        } else {
-            self.effect_queue
-                .iter()
-                .map(|qe| qe.trigger_batch)
-                .max()
-                .unwrap_or(0)
-        };
-        if self.effect_queue.is_empty() || self.next_chooser_in_batch(batch) != Some(owner) {
-            return Vec::new();
-        }
-        let non_firing = self.non_firing_queued_effect_indices_for(owner, batch);
-        self.effect_queue
-            .iter()
-            .enumerate()
-            .filter(|(i, qe)| {
-                qe.controller == owner && qe.trigger_batch == batch && !non_firing.contains(i)
-            })
-            .map(|(i, _)| i)
-            .collect()
-    }
-
-    /// Install the 9-1-5 trash-vs-own-trigger ordering pick. Returns false (no
-    /// prompt; the caller trashes straight away) when the user has no pending
-    /// item of their own -- a lone pending processing is not a choice.
-    ///
-    /// The pick is a TWO-entry `TriggerOrder`: "trash the used Option now" or
-    /// "resolve one of my triggered effects first". Choosing a trigger only
-    /// DEFERS the trash by one item; the drain then runs that trigger through
-    /// the ordinary single-entry path, so its outer-optional prompt and
-    /// `activation_cost` decline gate (15-7-1) survive, and the pick is
-    /// re-offered before the next item. G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
-    fn install_option_trash_order_selection(&mut self, owner: PlayerId) -> bool {
-        let pending_triggers = self.option_orderable_trigger_indices(owner);
-        let Some(&first_idx) = pending_triggers.first() else {
-            return false;
-        };
-        let Some(pending) = self.pending_option.as_ref() else {
-            return false;
-        };
-        let source_card = pending.card.handle();
-        let option_id = pending.card.card_id(&self.card_data).to_string();
-        let (
-            trigger_card_id,
-            trigger_slot,
-            trigger_source_card,
-            trigger_source_kind,
-            trigger_timing,
-            trigger_optional,
-        ) = {
-            let qe = &self.effect_queue[first_idx];
-            (
-                qe.card_id.clone(),
-                qe.effect_slot,
-                qe.source_card,
-                qe.source_kind,
-                qe.timing,
-                qe.is_optional,
-            )
-        };
-        let trigger_label = if pending_triggers.len() == 1 {
-            format!("Resolve your triggered effect first ({trigger_card_id} slot {trigger_slot})")
-        } else {
-            format!(
-                "Resolve one of your {} triggered effects first",
-                pending_triggers.len()
-            )
-        };
-        let trash_action = HAND_EFFECT_START;
-        let trigger_action = HAND_EFFECT_START + 1;
-        let choices = vec![
-            EffectChoiceEntry {
-                count_choice: None,
-                label: format!("Trash the used Option ({option_id})"),
-                action_id: trash_action,
-                source_card: Some(source_card),
-                source_kind: Some(EffectSourceKind::Option),
-                timing: None,
-                is_optional: false,
-                keyword: None,
-                observation_metadata: Default::default(),
-            },
-            EffectChoiceEntry {
-                count_choice: None,
-                label: trigger_label,
-                action_id: trigger_action,
-                source_card: Some(trigger_source_card),
-                source_kind: Some(trigger_source_kind),
-                timing: Some(trigger_timing),
-                is_optional: trigger_optional,
-                keyword: None,
-                observation_metadata: Default::default(),
-            },
-        ];
-        let previous_phase = self.current_phase;
-        self.current_phase = GamePhase::EffectChoice;
-        self.pending_selection = Some(PendingSelection {
-            zone_owner: None,
-            kind: SelectionKind::TriggerOrder,
-            selecting_player: owner,
-            previous_phase,
-            valid_action_ids: vec![trash_action, trigger_action],
-            is_optional: false,
-            prompt: "Choose which of your pending items resolves next: the used Option's trash, or one of your triggered effects".to_string(),
-            effect_choices: Some(choices),
-            source_card,
-            source_permanent: None,
-            source_kind: EffectSourceKind::Option,
-            callback: Box::new(move |game: &mut Game, action_id: u16| {
-                game.apply_option_trash_order_choice(action_id);
-            }),
-            on_decline: None,
-        });
-        self.pending_selection_resume = Some(crate::resume::ResumeStack {
-            frames: vec![crate::resume::ResumeFrame::OptionTrashOrder(
-                crate::resume::OptionTrashOrderState {
-                    owner,
-                    outer_conts: Vec::new(),
-                },
-            )],
-        });
-        true
-    }
-
-    fn apply_option_trash_order_choice(&mut self, action_id: u16) {
-        if action_id == HAND_EFFECT_START + 1 {
-            // A triggered effect goes first; the trash stays pending.
-            self.option_trash_order_deferred = true;
-            return;
-        }
-        self.option_trash_order_deferred = false;
-        self.option_body_pending = false;
-        self.dispose_option();
-    }
-
-    /// Resume step for `ResumeFrame::OptionTrashOrder`.
-    pub(crate) fn run_option_trash_order_step(
-        &mut self,
-        state: crate::resume::OptionTrashOrderState,
-        action_id: u16,
-        is_pass: bool,
-    ) {
-        let _ = state;
-        if is_pass {
-            // The prompt is not optional; a PASS reaching here resolves as the
-            // rules-legal default both engines used before (trash first).
-            self.apply_option_trash_order_choice(HAND_EFFECT_START);
-            return;
-        }
-        self.apply_option_trash_order_choice(action_id);
     }
 
     /// Shared post-body tail of an Option use: offer <Arts Digivolve>, then
@@ -5810,44 +6012,70 @@ mod tests {
     use super::*;
     use crate::debug_runner::{make_test_card, DebugRunner};
 
-    /// Chain cap safety rail: if the chain_depth counter has reached the
-    /// cap (simulating a long sequence of recursive triggers), the next
-    /// drain iteration trips the guard, clears the remaining queue, and
-    /// resets the counter. Prevents a pathological self-triggering chain
-    /// from hanging the engine.
+    /// Far chain-depth backstop. §18-3-2 (Comprehensive Rules Ver. 4.3): "If
+    /// an infinite loop occurs and neither player has the ability to stop it,
+    /// that game ends in a draw." A chain that has resolved `MAX_CHAIN_DEPTH`
+    /// entries with no player decision is treated as such a loop: the next
+    /// drain step emits `GameEvent::InfiniteLoop` and ends the game in a draw.
+    /// (This test used to assert the opposite -- a SILENT clear of the queue
+    /// with the game going on, gap G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED,
+    /// which no rule allows.)
     #[test]
-    fn chain_cap_terminates_runaway_queue() {
+    fn chain_depth_backstop_ends_in_an_infinite_loop_draw() {
         let mut r = DebugRunner::builder()
             .add_card(make_test_card("TEST-006", "TestSix"))
             .start();
         r.place_on_field(0, "TEST-006", Some(0));
 
-        // Simulate having just finished 50 chained resolutions — the next
-        // resolution should be capped.
+        // Simulate having just finished MAX_CHAIN_DEPTH chained resolutions
+        // with no decision in between.
         r.game.effect_chain_depth = MAX_CHAIN_DEPTH;
 
         // Enqueue a fresh mandatory trigger; single-bundle, would normally
-        // auto-fire. With the cap already reached, drain should abort.
+        // auto-fire. Past the backstop the game ends instead.
         r.game.enqueue_triggered(
             EffectTiming::EndOfYourTurn,
             TriggerSource::PlayerBattleArea(0),
         );
         let memory_before = r.game.memory;
+        let cp = r.game.events.len();
 
         r.game.drain_effect_queue();
 
-        assert!(
-            r.game.effect_queue.is_empty(),
-            "runaway queue must be cleared after hitting the cap"
-        );
+        let events = &r.game.events[cp..];
+        let loop_at = events
+            .iter()
+            .position(|e| {
+                matches!(
+                    e,
+                    crate::events::GameEvent::InfiniteLoop { backstop: true, .. }
+                )
+            })
+            .unwrap_or_else(|| panic!("an InfiniteLoop event: {events:?}"));
+        let over_at = events
+            .iter()
+            .position(|e| {
+                matches!(
+                    e,
+                    crate::events::GameEvent::GameOver {
+                        winner: None,
+                        reason: crate::game::TerminalOutcomeReason::InfiniteLoopDraw,
+                        ..
+                    }
+                )
+            })
+            .unwrap_or_else(|| panic!("a GameOver draw: {events:?}"));
+        assert!(loop_at < over_at, "the loop event precedes the GameOver");
+        assert!(r.game.game_over);
+        assert_eq!(r.game.winner, None, "§18-3-2: the game is a draw");
         assert_eq!(
-            r.game.effect_chain_depth, 0,
-            "chain depth must reset after the cap clears the queue"
+            r.game.terminal_outcome_reason,
+            Some(crate::game::TerminalOutcomeReason::InfiniteLoopDraw)
         );
         assert!(r.game.pending_selection.is_none());
         assert_eq!(
             r.game.memory, memory_before,
-            "capped effect must not have fired"
+            "the effect past the backstop must not have fired"
         );
     }
 

@@ -15,7 +15,7 @@ pub struct ReplacementWindow {
     deletion_receipt: Option<u64>,
     turn_player: PlayerId,
     remaining: Vec<WindowCandidate>,
-    // Preventing departure does not resolve the interrupted cause (Q7274; 16-24-4).
+    // Preventing departure does not resolve the interrupted cause (Q7274; 16-24-4 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md]).
     cancelled: bool,
     deletion_batch: Option<DeletionWindowBatch>,
     departure: Option<DepartureWindow>,
