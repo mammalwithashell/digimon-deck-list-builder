@@ -87,6 +87,9 @@ struct TrashQueuedSourceOnce {
     target: PermanentHandle,
     queued_source: CardHandle,
     fired: Arc<Mutex<bool>>,
+    /// Whether the observer's own trash of `queued_source` found it still
+    /// under the host (recorded on the one firing).
+    trashed_it: Arc<Mutex<Option<bool>>>,
 }
 
 impl CardEffect for TrashQueuedSourceOnce {
@@ -94,6 +97,7 @@ impl CardEffect for TrashQueuedSourceOnce {
         let target = self.target;
         let queued_source = self.queued_source;
         let fired = self.fired.clone();
+        let trashed_it = self.trashed_it.clone();
         vec![Effect::on_digivolution_card_trashed(card)
             .name("trash queued source once")
             .process(move |ctx| {
@@ -107,7 +111,8 @@ impl CardEffect for TrashQueuedSourceOnce {
                     }
                 };
                 if should_fire {
-                    ctx.trash_card_source(target, queued_source);
+                    let trashed = ctx.trash_card_source(target, queued_source);
+                    *trashed_it.lock().expect("trashed mutex poisoned") = Some(trashed);
                 }
             })
             .build()]
@@ -410,8 +415,14 @@ fn trash_all_sources_dispatches_one_event_with_host_context() {
     );
 }
 
+/// §15-8-3-2: the observer can't activate while `trash_all_sources` is still
+/// trashing, so it runs after every source has gone and its own attempt to
+/// trash `queued_source` finds nothing to trash. (Before
+/// G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS the observer ran mid-loop and this
+/// test pinned the loop skipping a source the observer had already removed;
+/// that interleaving can no longer happen.)
 #[test]
-fn trash_all_sources_skips_sources_already_removed_by_observers() {
+fn trash_all_sources_observer_runs_after_every_source_is_trashed() {
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("BASE", "Base"))
         .add_card(make_test_card("MID", "Mid"))
@@ -425,12 +436,14 @@ fn trash_all_sources_skips_sources_already_removed_by_observers() {
     let queued_source = push_source(&mut runner, target, "MID");
     let top = push_source(&mut runner, target, "TOP");
     let fired = Arc::new(Mutex::new(false));
+    let trashed_it = Arc::new(Mutex::new(None));
     runner.register_effect(
         "OBSERVER",
         Arc::new(TrashQueuedSourceOnce {
             target,
             queued_source,
             fired: fired.clone(),
+            trashed_it: trashed_it.clone(),
         }),
     );
     runner.place_on_field(0, "OBSERVER", None);
@@ -449,6 +462,11 @@ fn trash_all_sources_skips_sources_already_removed_by_observers() {
         .collect();
     assert_eq!(remaining, vec![top]);
     assert!(*fired.lock().expect("fired mutex poisoned"));
+    assert_eq!(
+        *trashed_it.lock().expect("trashed mutex poisoned"),
+        Some(false),
+        "the observer ran after the whole trash: the source was already gone"
+    );
     assert!(runner.game.players[0]
         .trash
         .iter()
