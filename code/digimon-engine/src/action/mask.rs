@@ -467,8 +467,8 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // other `MainOnField` effect surfaces from breeding (RULES_CONTEXT
             // 16-41 specifies that ONLY `<Training>` activates from breeding
             // — surfacing all `MainOnField` effects from breeding would
-            // inadvertently expose Save/MaterialSave/MindLink from breeding
-            // too, which is wrong).
+            // inadvertently expose MindLink from breeding too, which is
+            // wrong).
             //
             // Gate: same `CannotActivateMainEffects` short-circuit as the
             // battle-area emitter, then check that the breeding-area

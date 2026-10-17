@@ -84,8 +84,9 @@
 //! triggers that observe a state change without modifying it. Currently
 //! installed: Fortitude (`OnDeletion`, mandatory; uses the post-deletion
 //! replay substrate to play self from trash after `delete_permanent`
-//! finalizes) and Partition (`OnDeletion` with cause filter, trigger-based
-//! play of digivolution source cards).
+//! finalizes). Partition and Material Save are NOT here: both are
+//! immediate-type ("would leave" / "would be deleted") effects on the
+//! replacement window — see their sections below.
 //!
 //! ## Material Save
 //!
@@ -100,14 +101,14 @@
 //!
 //! ## Partition (Phase D Task 9)
 //!
-//! Printed `<Partition>` is a leave-field trigger (not a replacement) that
-//! plays cards from the deleted permanent's digivolution sources back to
-//! the field, free + unsuspended. The auto-install mounts as an
-//! `OnDeletion` trigger with a cause filter (`!Battle && !OwnEffect`) and
-//! a 2-pick selection over the carrier's `card_sources`. Picked cards are
-//! stashed in `Game.pending_post_deletion_replays` so they replay from
-//! trash (via `play_from_trash_free_unsuspended`) AFTER `delete_permanent`
-//! finalizes the carrier but BEFORE the `OnAnyDeletion` broadcast.
+//! Printed `<Partition>` plays cards from the leaving Digimon's digivolution
+//! cards, free + unsuspended. It is an immediate-type effect (§16-29: "when
+//! a Digimon with this effect ... WOULD be removed from the battle area"):
+//! the auto-install is an optional, NON-cancelling `WhenWouldLeaveBattleArea`
+//! replacement with a cause filter (`!Battle && !OwnEffect`) that picks from
+//! the carrier's LIVE stack while it still stands and plays the picks before
+//! the leave proceeds (judge-quiz Q30 re-timing; the earlier post-trash
+//! `OnDeletion` + `pending_post_deletion_replays` model is retired).
 //!
 //! Color grouping (`firstSources`/`secondSources` in DCGO) is per-card and
 //! comes from injected `partitionConditions`. Since
@@ -259,12 +260,36 @@ pub(crate) fn material_save_eligible_sources(
         .collect()
 }
 
-/// Whether `player` has a Tamer in the battle area to receive the cards.
+/// Whether `h` is one of `owner`'s Tamers that can receive the cards: a
+/// non-token Tamer in the battle area (§4-21-3 "Cards can't be stacked with
+/// tokens"; DCGO `MaterialSaveEffect` `CanSelectPermanentCondition`:
+/// `permanent.IsTamer && !permanent.IsToken`).
+fn material_save_tamer_ok(
+    game: &crate::game::Game,
+    owner: crate::enums::PlayerId,
+    h: crate::permanent::PermanentHandle,
+) -> bool {
+    h.player == owner
+        && game
+            .player(h.player)
+            .battle_area
+            .get(h.index as usize)
+            .is_some_and(|p| p.is_tamer(&game.card_data))
+        && !game.is_token_source_destination(h)
+}
+
+/// Whether `player` has a Tamer that can receive the cards.
 fn material_save_has_tamer(game: &crate::game::Game, player: crate::enums::PlayerId) -> bool {
-    game.player(player)
-        .battle_area
-        .iter()
-        .any(|p| p.is_tamer(&game.card_data))
+    (0..game.player(player).battle_area.len()).any(|index| {
+        material_save_tamer_ok(
+            game,
+            player,
+            crate::permanent::PermanentHandle {
+                player,
+                index: index as u8,
+            },
+        )
+    })
 }
 
 /// After the Tamer pick: the mandatory, exact card pick (§16-21-3 "the number
@@ -1719,13 +1744,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 rctx.effect.select_own_permanent(
                     "you may place Material Save sources under one of your Tamers",
                     /*is_optional=*/ true,
-                    move |g, h| {
-                        h.player == owner
-                            && g.players[h.player as usize]
-                                .battle_area
-                                .get(h.index as usize)
-                                .is_some_and(|p| p.is_tamer(&g.card_data))
-                    },
+                    move |g, h| material_save_tamer_ok(g, owner, h),
                     move |ctx, tamer| {
                         let prov = resume_provenance(ctx);
                         start_material_save_card_pick(ctx, prov, owner, carrier, tamer, n);
@@ -2216,8 +2235,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // ## Cost
         //
         // Zero. `[Main]` active skill — `EffectTiming::MainOnField` exposes
-        // the activation in the action mask without any cost gating, mirroring
-        // MaterialSave's parity treatment.
+        // the activation in the action mask without any cost gating.
         //
         // ## Self-scope
         //
@@ -2326,7 +2344,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // (`effect_queue.rs:524`), not on the synchronous `[Main]` activation
         // path (`activate_field_main`). For `MainOnField` skills the cost
         // must be folded into the body — the precedent here is implicit
-        // since MaterialSave / MindLink are zero-cost; Training is the first
+        // since MindLink is zero-cost; Training is the first
         // `MainOnField` auto-install with a state-cost (suspend).
         //
         // ## Self-scope
@@ -2344,8 +2362,8 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // index `BREEDING_TARGET (=14)` — which is gated to Training-bearing
         // carriers only, since RULES_CONTEXT 16-41 specifies that ONLY
         // `<Training>` activates from breeding (surfacing all `MainOnField`
-        // effects from breeding would inadvertently expose Save / MaterialSave
-        // / MindLink from breeding too, which would be wrong).
+        // effects from breeding would inadvertently expose MindLink from
+        // breeding too, which would be wrong).
         Keyword::Training => vec![Effect::declarative(card)
             .name("<Training>")
             .timing(EffectTiming::MainOnField)
