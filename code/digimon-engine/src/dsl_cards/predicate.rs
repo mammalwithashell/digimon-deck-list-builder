@@ -3418,7 +3418,11 @@ fn eval_card_fields(
         let Some(kw) = lookup_keyword(keyword, None) else {
             return false;
         };
-        if !crate::card_data::parse_printed_keywords(&data.effect_text, "", "").contains(&kw) {
+        // Name-only reference: matches every value of the keyword (§16-2).
+        if !crate::card_data::parse_printed_keywords(&data.effect_text, "", "")
+            .iter()
+            .any(|k| k.same_type(&kw))
+        {
             return false;
         }
     }
@@ -4366,7 +4370,10 @@ fn eval_permanent_fields(
         let Some(kw) = lookup_keyword(keyword, None) else {
             return false;
         };
-        if !rctx.game.has_keyword(handle, kw) {
+        // A DSL keyword reference names the keyword with no parameter, so it
+        // matches every value of it (§16-2); `lookup_keyword`'s default
+        // parameter is only a placeholder for the type.
+        if !rctx.game.has_keyword_type(handle, &kw) {
             return false;
         }
     }

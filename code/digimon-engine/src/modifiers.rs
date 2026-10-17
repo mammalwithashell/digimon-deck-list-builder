@@ -1245,6 +1245,15 @@ impl ModifierRegistry {
             .unwrap_or(false)
     }
 
+    /// Whether the permanent has a granted keyword of the same TYPE as
+    /// `keyword`, whatever its value (Comprehensive Rules 4.3 §16-2).
+    pub fn has_keyword_type(&self, target: PermanentHandle, keyword: &Keyword) -> bool {
+        self.permanent_keywords
+            .get(&target)
+            .map(|kws| kws.iter().any(|entry| entry.keyword.same_type(keyword)))
+            .unwrap_or(false)
+    }
+
     /// Active keywords granted to a permanent by modifiers/declarative auras.
     pub fn granted_keywords(&self, target: PermanentHandle) -> Vec<Keyword> {
         let mut out = Vec::new();

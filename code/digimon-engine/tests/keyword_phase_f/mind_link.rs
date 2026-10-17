@@ -7,14 +7,15 @@
 //!   - Target Digimon must have NO non-face-down Tamer cards in its
 //!     digivolution stack (DCGO line 25:
 //!     `cardSource.IsTamer && !cardSource.IsFlipped`).
-//!   - Optional pick (DCGO `canNoSelect: true`, line 60).
+//!   - Mandatory pick once activated (§16-28-3; DCGO's `canNoSelect: true`,
+//!     line 60, is overruled by the rules manual).
 //!
 //! ## Auto-install shape (Phase F §F3)
 //!
 //! `EffectTiming::MainOnField` declarative skill on the Tamer carrier:
 //!   - Activation gate: self is a Tamer on battle area AND controller has
 //!     ≥1 own non-Tamer permanent with no non-face-down Tamer source.
-//!   - Body: optional pick (`is_optional=true`); on accept, the Tamer's
+//!   - Body: mandatory pick (`is_optional=false`, §16-28-3); on the pick, the Tamer's
 //!     top card is moved to the bottom of the chosen Digimon's stack
 //!     and the Tamer permanent is removed from battle area.
 //!
@@ -116,8 +117,8 @@ fn mind_link_attaches_tamer_to_digimon_with_no_tamer_source() {
             .expect("MindLink target pick must be parked");
         assert_eq!(pending.selecting_player, 0);
         assert!(
-            pending.is_optional,
-            "MindLink target pick is optional (DCGO canNoSelect: true)"
+            !pending.is_optional,
+            "MindLink target pick is mandatory once activated (§16-28-3)"
         );
         // Only one valid target: the Digimon.
         assert_eq!(pending.valid_action_ids.len(), 1);
@@ -358,13 +359,15 @@ fn mind_link_targets_digimon_with_only_facedown_tamer_source() {
     );
 }
 
-// ─── Test 4: optional pick can be declined → no state change ───────────────
+// ─── Test 4: the pick can NOT be declined (§16-28-3) ───────────────────────
 
-/// Activation surfaces, but the player declines (PASS). Expected:
-///   - Tamer remains on field.
-///   - Digimon's stack is unchanged.
+/// §16-28-3 "The processing from <Mind Link> is mandatory": once the [Main]
+/// is activated the player must place the Tamer, so PASS is not a legal answer
+/// to the pick (this test previously asserted the DCGO `canNoSelect: true`
+/// decline, which the rules manual overrules). Expected: PASS is rejected, the
+/// selection stays parked, and nothing moved.
 #[test]
-fn mind_link_optional_pick_can_be_declined() {
+fn mind_link_pick_cannot_be_declined() {
     use digimon_engine::action::space::PASS;
 
     let mut r = DebugRunner::builder()
@@ -386,18 +389,23 @@ fn mind_link_optional_pick_can_be_declined() {
     let fired = r.game.activate_field_main(0, tamer_field_index);
     assert!(fired);
     assert!(
-        r.game
+        !r.game
             .pending_selection
             .as_ref()
             .expect("pick parked")
             .is_optional,
-        "MindLink target pick must be optional"
+        "MindLink target pick must be mandatory"
     );
 
-    // Decline via PASS.
-    r.game.resolve_selection(0, PASS).expect("PASS to decline");
-
-    assert!(r.game.pending_selection.is_none());
+    // PASS is not a legal answer to a mandatory pick.
+    assert!(
+        r.game.resolve_selection(0, PASS).is_err(),
+        "PASS must be rejected for the mandatory <Mind Link> placement"
+    );
+    assert!(
+        r.game.pending_selection.is_some(),
+        "the pick stays parked after the rejected PASS"
+    );
 
     // Tamer still on field, DIGI's stack unchanged.
     assert_eq!(
