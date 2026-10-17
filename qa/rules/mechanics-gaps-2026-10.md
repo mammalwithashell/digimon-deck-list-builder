@@ -231,6 +231,7 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 - DCGO: agrees (`UseOptionClass.UseOption` calls `AddTrashCard` straight after the skill).
 - Aegis: agrees (`ch09`: "9-1-5: a used Option … is trashed as pending processing once its [Main] effect resolves").
 - Fix: dispose the Option in the step that finishes its `[Main]` body, before `rules_check_between_queued_effects` and any trigger; drop the trash-vs-trigger `TriggerOrder` and `option_trash_order_deferred`; retire `support::trash_used_option_first` / `settle_after_option`. Reverses the earlier `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER` reading (W8).
+- **Fixed** (Plan 4 Task 7, `c2b25d0b5`): §9-1-5 `proven`.
 
 ### link
 
@@ -353,7 +354,7 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 - `G-ENGINE-MIND-LINK-PLACEMENT-OPTIONAL` (§16-28-3): the placement pick can be declined after activation; outcome-equal to not declaring. DCGO also has `canNoSelect: true`; the rule governs.
 - `G-ENGINE-KEYWORD-REFERENCE-MATCHES-ONE-VALUE` (§16-2): "with <Fragment>" matches only <Fragment (1)>; no production YAML references a parametric keyword this way yet.
 - `G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK` (§15-7-3, DSL vocabulary): a compound optional condition can be paid in part; production card BT18-019 is affected and needs a both-names gate.
-- `G-ENGINE-OPTION-TRASH-NO-EVENT` (§9-1-5, no obligation of its own): a used Option's trash emits no `GameEvent`.
+- `G-ENGINE-OPTION-TRASH-NO-EVENT` (§9-1-5, no obligation of its own): a used Option's trash emits no `GameEvent`. **Fixed** (Plan 4 Task 7, `c2b25d0b5`): `GameEvent::Trash` is logged.
 - `G-ENGINE-ENGAGE-EOT-PASS-ONLY-STEP` (§16-44-1, no obligation of its own): after an <Engage> attack the turn parks once more with PASS as the only legal action.
 - `G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP` (§15-15-5-2 / §15-15-5-4): a keyword granted (`grant_keyword`) to an immune Digimon is skipped instead of suppressed, so it never applies after the immunity ends; no authored opponent-side keyword grant (BT22-029 grants <Blocker> to its own Puppet Digimon); reachable only as an own grant under an own-effect immunity (the Quantumon shape), in both directions (granted while immune is lost; granted before keeps applying, against Q6178). Modifier-backed gains and granted triggered effects are fixed (`G-ENGINE-UNAFFECTED-SKIPS-INSTEAD-OF-SUPPRESSES`).
 
@@ -393,6 +394,7 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 **W7. Sign-off: §15-8-5-4 "cause" is the interrupting event** (15-8-5-4 sidecar note, `b20297ec9`, which retracted `G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT`). Two deletions from one `[Main]` are two causes; an immediate-type effect may activate once for each. The alternative (the resolving `[Main]` is the cause) would make it once per `[Main]`. DCGO enforces neither for BT11-041.
 
 **W8. Sign-off: §9-1-5 reverses `G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER`.** That earlier engine fix read §18-1-2 as making a used Option's trash orderable among its controller's triggered effects; the 4.3 §9-1-5 text ("Other effects and rule checks don't interrupt the period between [Main] effect activation and trashing") makes it uninterrupted. DCGO agrees with §9-1-5. The suite assumes the 4.3 reading.
+- **Fixed on the 4.3 reading.** Task 7 of Plan 4 (`c2b25d0b5`) trashes the used Option in the step that finishes its `[Main]`, before the rules check and any trigger, with a `GameEvent::Trash`; the ordering prompt is gone. `ch18_pending_overwrite::used_option_trashed_immediately_after_first_main_uninterrupted` is un-ignored and §9-1-5 is `proven`; `G-ENGINE-OPTION-TRASH-NO-EVENT` is resolved with it.
 
 **W9. Sign-off: rule text versus DCGO for <Mind Link> (§16-28-3).** The rule says the processing is mandatory once activated; DCGO lets the pick be declined. Filed as a non-blocking gap on the rule's reading (the PDF governs).
 
