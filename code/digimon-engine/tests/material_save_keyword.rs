@@ -1,6 +1,7 @@
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
-    encode_attack, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, TRASH_EFFECT_START,
+    encode_attack, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, SOURCES_PER_FIELD,
+    SOURCE_SELECT_START,
 };
 use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -136,6 +137,12 @@ fn material_save_decline_leaves_sources_in_trash() {
     assert!(saved_source_ids.iter().any(|id| id == "SRC-BALLISTA"));
 }
 
+// general_rule.pdf Ver. 4.3 §16-21-2: <Material Save> is an IMMEDIATE-type
+// effect ("when the Digimon with this effect WOULD be deleted"), so it is
+// offered while the carrier still stands (slot 0, the Tamer in slot 1) and
+// the cards are picked from the carrier's live digivolution cards, not from
+// the trash. (This test used to pin the post-deletion, from-trash timing:
+// G-ENGINE-MATERIAL-SAVE-AFTER-DELETION.)
 #[test]
 fn material_save_filters_recipe_sources_and_enforces_cap() {
     let mut runner = runner_with_material_save(1, true);
@@ -150,12 +157,19 @@ fn material_save_filters_recipe_sources_and_enforces_cap() {
         .pending_selection()
         .expect("Material Save should ask for a Tamer destination");
     assert!(tamer_prompt.is_optional);
+    assert_eq!(
+        runner.game.players[0].battle_area[carrier.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "MS-TEST",
+        "the carrier still stands while Material Save is offered (§16-21-2)"
+    );
     assert!(
-        tamer_prompt.valid_action_ids.contains(&encode_attack(0, 0)),
-        "remaining Tamer should be selectable after the carrier leaves"
+        tamer_prompt.valid_action_ids.contains(&encode_attack(0, 1)),
+        "the Tamer (slot 1, beside the still-standing carrier) is selectable"
     );
     runner
-        .execute_action(0, encode_attack(0, 0))
+        .execute_action(0, encode_attack(0, 1))
         .expect("choose Tamer destination");
 
     let source_prompt = runner
@@ -169,8 +183,14 @@ fn material_save_filters_recipe_sources_and_enforces_cap() {
         .valid_action_ids
         .iter()
         .map(|action| {
-            let trash_index = action.saturating_sub(TRASH_EFFECT_START) as usize;
-            runner.game.players[0].trash[trash_index]
+            let k = action - SOURCE_SELECT_START;
+            assert_eq!(
+                k / SOURCES_PER_FIELD,
+                carrier.index as u16,
+                "picked from the carrier's own digivolution cards"
+            );
+            runner.game.players[0].battle_area[carrier.index as usize].card_sources
+                [(k % SOURCES_PER_FIELD) as usize]
                 .card_id(&runner.game.card_data)
                 .to_string()
         })
@@ -197,6 +217,25 @@ fn material_save_filters_recipe_sources_and_enforces_cap() {
         .count();
     assert_eq!(saved_count, 1);
     assert!(!tamer_sources.iter().any(|id| id == "SRC-OTHER"));
+    // Non-cancelling: the deletion then proceeds with the rest of the stack.
+    let trash_ids: Vec<_> = runner.game.players[0]
+        .trash
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(trash_ids.iter().any(|id| id == "MS-TEST"), "{trash_ids:?}");
+    assert!(
+        trash_ids.iter().any(|id| id == "SRC-OTHER"),
+        "{trash_ids:?}"
+    );
+    assert_eq!(
+        trash_ids
+            .iter()
+            .filter(|id| *id == "SRC-SHOUT" || *id == "SRC-BALLISTA")
+            .count(),
+        1,
+        "the unplaced recipe card is trashed with the carrier: {trash_ids:?}"
+    );
 }
 
 #[test]

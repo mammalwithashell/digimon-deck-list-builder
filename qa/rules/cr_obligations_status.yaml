@@ -1094,19 +1094,15 @@
 "16-21-1":
   status: proven
   tests: ["ch16_processing_keywords::material_save_timing_matches_rule", "ch16_processing_keywords::material_save_allows_duplicate_specified_cards_and_places_at_bottom", "ch16_processing_keywords::material_save_player_chooses_placement_order"]
-  note: "Only DigiXros-specified cards from the digivolution cards are offered; not offered on a bounce. Processed after the deletion rather than before it (16-21-2)."
+  note: "Only DigiXros-specified cards from the digivolution cards are offered; not offered on a bounce."
 "16-21-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-MATERIAL-SAVE-AFTER-DELETION
+  status: proven
   tests: ["ch16_processing_keywords::material_save_kind_matches_rule"]
-  note: "Offered after the Digimon and its cards are in the trash. #[ignore]d."
+  note: "Offered as a non-cancelling 'would be deleted' immediate effect while the Digimon and its digivolution cards are still in the battle area; nothing is in the trash yet."
 "16-21-3":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-MATERIAL-SAVE-MAY-PLACE-FEWER
+  status: proven
   tests: ["ch16_processing_keywords::material_save_optionality_matches_rule", "ch16_processing_keywords::material_save_places_the_full_number_whenever_possible"]
-  note: "The optional half (decline) is proven; after 1 card the multi-select stays optional, so fewer than the specified number can be placed. The second test is #[ignore]d."
+  note: "The Tamer pick is the optional decision (declinable); once taken, exactly min(N, specified cards) must be placed: the card pick is not optional until full."
 "16-21-4":
   status: proven
   tests: ["ch16_processing_keywords::material_save_player_chooses_placement_order"]

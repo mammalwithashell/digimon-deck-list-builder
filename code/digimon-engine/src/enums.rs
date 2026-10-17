@@ -553,8 +553,9 @@ pub enum Keyword {
     Alliance,
     BlastDigivolve,
     Save,
-    /// Printed `<Material Save N>` — optional deletion/removal-timed source
-    /// rescue that moves up to N recipe-eligible sources under a Tamer.
+    /// Printed `<Material Save N>` — immediate-type ("would be deleted",
+    /// §16-21-2) optional source rescue that moves exactly `min(N, eligible)`
+    /// recipe-eligible sources under a Tamer (§16-21-3).
     MaterialSave(u8),
     /// Printed `<Digi-Burst N>` — an active effect cost marker. The keyword
     /// parser carries the parameter; card bodies still author the "effect
