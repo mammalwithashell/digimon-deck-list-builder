@@ -738,8 +738,9 @@ pub enum ResumeFrame {
     PlayOrderSelection,
     /// `<Save>` Tamer destination prompt.
     KeywordSaveSelection(KeywordSaveSelectionState),
-    /// `<Material Save>` first-stage Tamer destination prompt. Accept installs
-    /// a non-DSL count-capped source prompt.
+    /// `<Material Save>` first-stage Tamer destination prompt (the optional
+    /// decision, §16-21-3). Accept installs the exact `min(N, eligible)`
+    /// non-DSL count-capped pick over the carrier's live stack.
     KeywordMaterialSaveTamerSelection(KeywordMaterialSaveTamerSelectionState),
     /// `<Scapegoat>` inner replacement-substitute prompt.
     KeywordScapegoatSelection(KeywordScapegoatSelectionState),
@@ -940,7 +941,10 @@ pub struct KeywordSaveSelectionState {
 pub struct KeywordMaterialSaveTamerSelectionState {
     pub prov: ResumeProvenance,
     pub owner: PlayerId,
-    pub eligible_sources: Vec<CardHandle>,
+    /// The `<Material Save>` carrier, still in the battle area: the effect is
+    /// immediate-type (general_rule.pdf §16-21-2), so the card pick reads its
+    /// live digivolution cards.
+    pub carrier: PermanentHandle,
     pub max: u8,
     pub outer_conts: Vec<OuterContinuation>,
 }

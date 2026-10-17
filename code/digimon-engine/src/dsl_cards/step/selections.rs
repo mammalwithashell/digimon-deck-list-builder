@@ -1978,44 +1978,16 @@ fn run_keyword_material_save_tamer_selection_step(
         state.prov.controller,
         state.prov.override_pin,
     );
-    let eligible_sources = state.eligible_sources.clone();
-    ctx.select_count_capped_multi(
+    // §16-21-3: the Tamer pick was the optional decision; the card pick is
+    // now exact (`min = max = min(N, eligible)`) over the carrier's live stack.
+    crate::cards::keyword_effects::start_material_save_card_pick(
+        &mut ctx,
+        state.prov,
         state.owner,
-        CountCappedZone::Trash,
+        state.carrier,
+        tamer,
         state.max,
-        "select Material Save sources to place under Tamer",
-        true,
-        None,
-        move |_g, card| eligible_sources.contains(&card.handle()),
-        move |ctx, picks| {
-            for source in picks {
-                ctx.place_card_under_permanent_bottom(source, tamer, false);
-            }
-        },
     );
-    if let Some(pending) = ctx.game.pending_selection.as_ref() {
-        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
-            frames: vec![crate::resume::ResumeFrame::NonDslCountCappedStep(
-                crate::resume::NonDslCountCappedState {
-                    prov: state.prov,
-                    of_player: state.owner,
-                    zone: CountCappedZone::Trash,
-                    min: 0,
-                    max: state.max,
-                    is_optional_zero: true,
-                    distinct_by: None,
-                    candidate_actions: pending.valid_action_ids.clone(),
-                    accum: Vec::new(),
-                    prompt: pending.prompt.clone(),
-                    previous_phase: pending.previous_phase,
-                    terminal: crate::resume::NonDslCountCappedTerminal::KeywordMaterialSave {
-                        tamer,
-                    },
-                    outer_conts: Vec::new(),
-                },
-            )],
-        });
-    }
     run_outer_conts(ctx.game, state.outer_conts);
 }
 

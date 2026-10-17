@@ -1708,7 +1708,6 @@ fn material_save_board() -> DebugRunner {
 /// When P1 is offered <Material Save>, `MSAVE2` is still in the battle area
 /// and nothing of it is in P1's trash.
 #[test]
-#[ignore = "G-ENGINE-MATERIAL-SAVE-AFTER-DELETION (§16-21-2)"]
 fn material_save_kind_matches_rule() {
     cite!(
         "16-21-2",
@@ -1789,7 +1788,6 @@ fn material_save_allows_duplicate_specified_cards_and_places_at_bottom() {
 /// 2 cards end up under the Tamer. (DCGO `MaterialSaveProcess`:
 /// `canEndNotMax: false` with `maxCount = min(2, matching cards)`.)
 #[test]
-#[ignore = "G-ENGINE-MATERIAL-SAVE-MAY-PLACE-FEWER (§16-21-3)"]
 fn material_save_places_the_full_number_whenever_possible() {
     cite!(
         "16-21-3",

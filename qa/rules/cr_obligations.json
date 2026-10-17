@@ -6024,7 +6024,7 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "Only DigiXros-specified cards from the digivolution cards are offered; not offered on a bounce. Processed after the deletion rather than before it (16-21-2).",
+      "note": "Only DigiXros-specified cards from the digivolution cards are offered; not offered on a bounce.",
       "status": "proven",
       "tests": [
         "ch16_processing_keywords::material_save_timing_matches_rule",
@@ -6034,30 +6034,30 @@
       "text": "<Material Save> is a keyword effect. When a Digimon with this effect is deleted, this effect allows you to place a number of the cards specified in the top card's DigiXros requirements from among the digivolution cards under 1 of your Tamers. The number of cards placed is the number specified in this keyword effect. This is shown on cards using text such as <Material Save 1>."
     },
     "16-21-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "b4eebc4754207c3b4d0f8c7f5d648e87f8e3801229f1881a7d24cf554fb3a534",
-      "gap_id": "G-ENGINE-MATERIAL-SAVE-AFTER-DELETION",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Offered after the Digimon and its cards are in the trash. #[ignore]d.",
-      "status": "gap",
+      "note": "Offered as a non-cancelling 'would be deleted' immediate effect while the Digimon and its digivolution cards are still in the battle area; nothing is in the trash yet.",
+      "status": "proven",
       "tests": [
         "ch16_processing_keywords::material_save_kind_matches_rule"
       ],
       "text": "<Material Save> is an immediate-type effect that triggers when the Digimon with this effect would be deleted. (For details, refer to 15-8-5 \"Immediate-Type Effects\")15-8-5"
     },
     "16-21-3": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "a6b45d1101b59e1daac87590542d11d809faa7d23c7bfdd40b56b1980cba3acd",
-      "gap_id": "G-ENGINE-MATERIAL-SAVE-MAY-PLACE-FEWER",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "The optional half (decline) is proven; after 1 card the multi-select stays optional, so fewer than the specified number can be placed. The second test is #[ignore]d.",
-      "status": "gap",
+      "note": "The Tamer pick is the optional decision (declinable); once taken, exactly min(N, specified cards) must be placed: the card pick is not optional until full.",
+      "status": "proven",
       "tests": [
         "ch16_processing_keywords::material_save_optionality_matches_rule",
         "ch16_processing_keywords::material_save_places_the_full_number_whenever_possible"
@@ -15251,9 +15251,9 @@
         "total": 244
       },
       "16": {
-        "gap": 16,
+        "gap": 14,
         "not_testable": 44,
-        "proven": 146,
+        "proven": 148,
         "total": 206
       },
       "17": {
@@ -15317,15 +15317,15 @@
         "total": 13
       }
     },
-    "gap": 638,
+    "gap": 633,
     "mechanics": {
-      "gap_blocking": 30,
+      "gap_blocking": 25,
       "gap_nonblocking": 323,
       "not_testable": 152,
-      "proven": 210
+      "proven": 215
     },
     "not-testable": 246,
-    "proven": 235
+    "proven": 240
   },
   "version": 1
 }

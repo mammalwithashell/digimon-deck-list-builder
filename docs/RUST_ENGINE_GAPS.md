@@ -5598,21 +5598,23 @@ no dedicated clause test in `dna_result_new_card.rs`.
 - **Blocks training:** yes. An illegal trash changes the board (a level 3 Digimon stacked on another level 3 card loses its top card).
 - **Resolution:** the pop loop (`de_digivolve_trash_from_top`) now tests the TOP card's level (`level_for_rules`) before each trash and stops at `<= 3`; a level-less top (a Tamer in the stack) does not stop it; the next-card read is gone. `ch16_processing_keywords::de_digivolve_cannot_trash_level_3_or_lower` un-ignored and green; fixtures that relied on trashing a level 3 top (their "Lv4/Lv5" cards were level 3) given real levels: `timing_dispatch`, `titan_bt25`, `bt23_077`, `bt24_010`, `bt25_075`, `p_220` (6e5298de5).
 
-### `<Material Save>` is processed after the deletion, from the trash  [G-ENGINE-MATERIAL-SAVE-AFTER-DELETION]
+### `<Material Save>` is processed after the deletion, from the trash  [G-ENGINE-MATERIAL-SAVE-AFTER-DELETION] — RESOLVED (2026-10-17, 9a3698b09)
 
 - **Rule:** §16-21-2 (Ver. 4.3) "<Material Save> is an immediate-type effect that triggers when the Digimon with this effect would be deleted." §15-8-5-2: an immediate-type effect interrupts right before its cause, so the Digimon and its digivolution cards are still in the battle area when it is offered and processed.
 - **Ours:** `cards/keyword_effects.rs` `Keyword::MaterialSave(n)` (~L1562) is an `Effect::on_deletion` (post-trash, rule 25): it reads `deleted_object_snapshot()`, picks the Tamer, then `select_snapshot_digisources_from_trash`. Observed (`ch16_processing_keywords::material_save_kind_matches_rule`, `#[ignore]`d): when P1 is offered <Material Save> for `MSAVE2` (deleted by P0's `MAIN_DEL1`), `MSAVE2` and all its digivolution cards are already in P1's trash. Proven green alongside it: the specified-card filter (both copies of a named card offered, the unspecified card not), placement at the bottom under the Tamer, the player-chosen order, the decline, and no offer on a bounce.
 - **DCGO:** `CardEffect/BT11/Red/BT11_018.cs` registers `MaterialSaveEffect` at `EffectTiming.WhenPermanentWouldBeDeleted`; `CardEffectCommons.MaterialSaveProcess` requires `IsExistOnBattleArea(card)` and picks from `PermanentOfThisCard().DigivolutionCards`.
 - **Fix shape:** re-time the auto-effect as a non-cancelling `WhenWouldBeDeleted` immediate effect (the `<Partition>` shape in the same file: optional, offered while the carrier stands, picks from the live stack, no `cancel_leave`), moving the chosen sources under the Tamer before the deletion proceeds.
 - **Blocks training:** yes. The cards pass through the trash (trash-count and "when trashed" readers see them), and the effect's place among the other "would be deleted" effects changes.
+- **Resolution:** `Keyword::MaterialSave(n)` is now a non-cancelling `WhenWouldBeDeleted` immediate effect (self-scoped, gated on an eligible digivolution card and an own Tamer) that picks from the carrier's live stack before the deletion proceeds; no `on_deletion` or deletion snapshot remains. `ch16_processing_keywords::material_save_kind_matches_rule` un-ignored and green; `material_save_keyword::material_save_filters_recipe_sources_and_enforces_cap` (which pinned the from-trash timing) now asserts the live-stack timing (9a3698b09).
 
-### `<Material Save>` lets the player place fewer cards than it can  [G-ENGINE-MATERIAL-SAVE-MAY-PLACE-FEWER]
+### `<Material Save>` lets the player place fewer cards than it can  [G-ENGINE-MATERIAL-SAVE-MAY-PLACE-FEWER] — RESOLVED (2026-10-17, 9a3698b09)
 
 - **Rule:** §16-21-3 (Ver. 4.3) "The processing from <Material Save> is optional. However, if <Material Save> will be processed, the number of cards specified by this effect must be placed under your Tamer whenever possible."
 - **Ours:** the card pick is `select_snapshot_digisources_from_trash(owner, eligible, n, ..., /*is_optional_zero=*/ true, ...)` (`cards/keyword_effects.rs` ~L1610), a `CountCappedMultiSelect { min: 0, max: n }` that stays optional after every pick. Observed (`ch16_processing_keywords::material_save_places_the_full_number_whenever_possible`, `#[ignore]`d): with 3 specified cards available for <Material Save 2>, after P1 places `XROSSB` the next decision is still optional (P1 can stop at 1 card).
 - **DCGO:** `MaterialSaveProcess` uses `canEndNotMax: false` with `maxCount = Math.Min(materialSaveCount, matching cards)`: once the Tamer is chosen, exactly that many cards.
 - **Fix shape:** after the Tamer pick (the optional decision), require `min = max = min(n, eligible)`; keep the decline at the Tamer pick.
 - **Blocks training:** yes. An illegal choice (placing fewer) is in the action space.
+- **Resolution:** after the optional Tamer pick the card pick is exact, `min = max = min(n, eligible)` (`start_material_save_card_pick`, a `NonDslCountCappedStep` with `is_optional_zero: false`); `ch16_processing_keywords::material_save_places_the_full_number_whenever_possible` un-ignored and green (9a3698b09).
 
 ### `<Mind Link>`'s placement can be declined after activation  [G-ENGINE-MIND-LINK-PLACEMENT-OPTIONAL] — RESOLVED (2026-10-17, 5804c3d2c)
 

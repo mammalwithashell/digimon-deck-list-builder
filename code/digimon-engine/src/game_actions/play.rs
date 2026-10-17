@@ -489,7 +489,7 @@ impl Game {
         for (source_index, stack_size, is_adopted, card_id, source_handle) in sources {
             // Use `effects_for_card` rather than the raw registry so that
             // keyword-derived auto-installed effects (e.g. printed
-            // `MaterialSave(N)`) are visible here. The action mask uses the
+            // `<Mind Link>` / `<Training>`) are visible here. The action mask uses the
             // same accessor — without this, the mask would emit a Field
             // [Main] bit for an auto-installed keyword that this dispatcher
             // could not honor.

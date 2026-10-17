@@ -21,7 +21,8 @@
 //! observer pattern. Scapegoat is an optional `WhenWouldBeDeleted` substitute
 //! replacement. Guard is an optional cross-permanent `WhenWouldLeaveBattleArea`
 //! cancel replacement. MindLink and Training are `[Main]` active skills;
-//! MaterialSave(N) is a deletion-timed source rescue trigger. Execute is an
+//! MaterialSave(N) is a non-cancelling `WhenWouldBeDeleted` immediate effect
+//! (§16-21-2) that rescues sources while the carrier stands. Execute is an
 //! `EndOfYourTurn` triggered effect granting `MayAttack` +
 //! `CanAttackUnsuspended` for the EOT-attack window with an `EndOfAttack`
 //! self-delete observer; Engage grants only normal `MayAttack` for that same
@@ -83,26 +84,31 @@
 //! triggers that observe a state change without modifying it. Currently
 //! installed: Fortitude (`OnDeletion`, mandatory; uses the post-deletion
 //! replay substrate to play self from trash after `delete_permanent`
-//! finalizes) and Partition (`OnDeletion` with cause filter, trigger-based
-//! play of digivolution source cards).
+//! finalizes). Partition and Material Save are NOT here: both are
+//! immediate-type ("would leave" / "would be deleted") effects on the
+//! replacement window — see their sections below.
 //!
 //! ## Material Save
 //!
-//! `MaterialSave(N)` is a deletion-timed optional rescue. It reads the deleted
-//! permanent's source snapshot, filters those handles through the carrier's
-//! printed DigiXros recipe when one is authored, then parks an own-Tamer pick
-//! followed by an up-to-N source pick from the moved cards in trash.
+//! `MaterialSave(N)` is an immediate-type effect (general_rule.pdf Ver. 4.3
+//! §16-21-2): a non-cancelling `WhenWouldBeDeleted` replacement offered while
+//! the carrier still stands. Its optional decision is an own-Tamer pick
+//! (§16-21-3); once taken, exactly `min(N, eligible)` cards are picked from
+//! the carrier's LIVE digivolution cards (those the top card's DigiXros
+//! requirements specify, §16-21-1/-5) and placed at the bottom of that Tamer
+//! in the picked order (§16-21-4/-6) before the deletion proceeds. Nothing
+//! passes through the trash and no deletion snapshot is read.
 //!
 //! ## Partition (Phase D Task 9)
 //!
-//! Printed `<Partition>` is a leave-field trigger (not a replacement) that
-//! plays cards from the deleted permanent's digivolution sources back to
-//! the field, free + unsuspended. The auto-install mounts as an
-//! `OnDeletion` trigger with a cause filter (`!Battle && !OwnEffect`) and
-//! a 2-pick selection over the carrier's `card_sources`. Picked cards are
-//! stashed in `Game.pending_post_deletion_replays` so they replay from
-//! trash (via `play_from_trash_free_unsuspended`) AFTER `delete_permanent`
-//! finalizes the carrier but BEFORE the `OnAnyDeletion` broadcast.
+//! Printed `<Partition>` plays cards from the leaving Digimon's digivolution
+//! cards, free + unsuspended. It is an immediate-type effect (§16-29: "when
+//! a Digimon with this effect ... WOULD be removed from the battle area"):
+//! the auto-install is an optional, NON-cancelling `WhenWouldLeaveBattleArea`
+//! replacement with a cause filter (`!Battle && !OwnEffect`) that picks from
+//! the carrier's LIVE stack while it still stands and plays the picks before
+//! the leave proceeds (judge-quiz Q30 re-timing; the earlier post-trash
+//! `OnDeletion` + `pending_post_deletion_replays` model is retired).
 //!
 //! Color grouping (`firstSources`/`secondSources` in DCGO) is per-card and
 //! comes from injected `partitionConditions`. Since
@@ -222,6 +228,114 @@ fn park_keyword_count_capped_frame(
             })],
         });
     }
+}
+
+// ── <Material Save> helpers ─────────────────────────────────────────────────
+//
+// general_rule.pdf Ver. 4.3 §16-21: an immediate-type effect (§16-21-2) that,
+// once the optional Tamer pick is taken, places exactly `min(N, eligible)`
+// digivolution cards under that Tamer (§16-21-3), the cards being those
+// specified in the top card's DigiXros requirements (§16-21-1, §16-21-5).
+
+/// The `<Material Save>` carrier's eligible digivolution cards, read off its
+/// LIVE stack (top card excluded): those the top card's DigiXros
+/// requirements specify (§16-21-1, §16-21-5). A top card with no authored
+/// recipe accepts every digivolution card (`card_matches_digixros_recipe`).
+pub(crate) fn material_save_eligible_sources(
+    game: &crate::game::Game,
+    carrier: crate::permanent::PermanentHandle,
+) -> Vec<CardHandle> {
+    let Some(p) = game
+        .player(carrier.player)
+        .battle_area
+        .get(carrier.index as usize)
+    else {
+        return Vec::new();
+    };
+    let top = p.top_card().handle();
+    p.card_sources[..p.card_sources.len().saturating_sub(1)]
+        .iter()
+        .map(|c| c.handle())
+        .filter(|source| game.card_matches_digixros_recipe(top, *source))
+        .collect()
+}
+
+/// Whether `h` is one of `owner`'s Tamers that can receive the cards: a
+/// non-token Tamer in the battle area (§4-21-3 "Cards can't be stacked with
+/// tokens"; DCGO `MaterialSaveEffect` `CanSelectPermanentCondition`:
+/// `permanent.IsTamer && !permanent.IsToken`).
+fn material_save_tamer_ok(
+    game: &crate::game::Game,
+    owner: crate::enums::PlayerId,
+    h: crate::permanent::PermanentHandle,
+) -> bool {
+    h.player == owner
+        && game
+            .player(h.player)
+            .battle_area
+            .get(h.index as usize)
+            .is_some_and(|p| p.is_tamer(&game.card_data))
+        && !game.is_token_source_destination(h)
+}
+
+/// Whether `player` has a Tamer that can receive the cards.
+fn material_save_has_tamer(game: &crate::game::Game, player: crate::enums::PlayerId) -> bool {
+    (0..game.player(player).battle_area.len()).any(|index| {
+        material_save_tamer_ok(
+            game,
+            player,
+            crate::permanent::PermanentHandle {
+                player,
+                index: index as u8,
+            },
+        )
+    })
+}
+
+/// After the Tamer pick: the mandatory, exact card pick (§16-21-3 "the number
+/// of cards specified by this effect must be placed under your Tamer whenever
+/// possible") — `min = max = min(n, eligible)` from the carrier's live stack,
+/// placed at the bottom of `tamer` in the order picked (§16-21-4, §16-21-6).
+/// Driven by a `NonDslCountCappedStep` frame (clone-safe).
+pub(crate) fn start_material_save_card_pick(
+    ctx: &mut EffectContext<'_>,
+    prov: ResumeProvenance,
+    owner: crate::enums::PlayerId,
+    carrier: crate::permanent::PermanentHandle,
+    tamer: crate::permanent::PermanentHandle,
+    n: u8,
+) {
+    let eligible = material_save_eligible_sources(ctx.game, carrier);
+    let count = (n as usize).min(eligible.len()) as u8;
+    if count == 0 {
+        return;
+    }
+    let zone = CountCappedZone::Material(carrier);
+    ctx.select_count_capped_multi_min(
+        owner,
+        zone,
+        count,
+        count,
+        "select Material Save sources to place under Tamer",
+        /*is_optional_zero=*/ false,
+        /*distinct_by=*/ None,
+        move |_g, src| eligible.contains(&src.handle()),
+        move |ctx, picks| {
+            for source in picks {
+                ctx.place_card_under_permanent_bottom(source, tamer, false);
+            }
+        },
+    );
+    park_keyword_count_capped_frame(
+        ctx,
+        prov,
+        owner,
+        zone,
+        count,
+        count,
+        false,
+        NonDslCountCappedTerminal::KeywordMaterialSave { tamer },
+    );
 }
 
 // ── <Partition> per-slot source enforcement ─────────────────────────────────
@@ -1570,79 +1684,79 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
             })
             .build()],
 
-        // Xros Heart change 4.x — printed MaterialSave(N) is no longer a
-        // `[Main]` activation. It is an optional deletion-timed source rescue
-        // that uses the pre-removal snapshot because the carrier has already
-        // moved to trash by the time OnDeletion handlers drain.
-        Keyword::MaterialSave(n) => vec![Effect::on_deletion(card)
+        // `<Material Save N>` — an IMMEDIATE-type effect (general_rule.pdf
+        // Ver. 4.3 §16-21-2: "triggers when the Digimon with this effect
+        // WOULD be deleted"; §15-8-5-2: it interrupts right before the
+        // deletion). So it rides the `WhenWouldBeDeleted` replacement window,
+        // NON-cancelling (no `cancel_leave`): it is offered while the carrier
+        // still stands, picks from the carrier's LIVE digivolution cards, and
+        // moves them under the Tamer before the deletion proceeds with the
+        // rest of the stack. The placed cards never pass through the trash.
+        // It sits among the other "would be deleted" immediate effects (the
+        // window's order prompt); if another one then prevents the deletion,
+        // the cards already placed stay placed (§15-8-5-2 processes immediate
+        // effects in the chosen order; nothing is undone).
+        //
+        // Not `.optional()`: §16-21-3's optional decision IS the Tamer pick
+        // (declinable, prompted even with one Tamer). Once a Tamer is chosen
+        // the card pick is mandatory and exact — `min = max = min(N,
+        // eligible)` ("the number of cards specified ... must be placed under
+        // your Tamer whenever possible"; DCGO `MaterialSaveProcess`
+        // `canEndNotMax: false`, `maxCount = Math.Min(materialSaveCount,
+        // matching)`). Eligible = the digivolution cards specified in the top
+        // card's DigiXros requirements (§16-21-1, §16-21-5;
+        // `material_save_eligible_sources`). DCGO `BT11_018.cs` registers
+        // `MaterialSaveEffect` at `WhenPermanentWouldBeDeleted`.
+        Keyword::MaterialSave(n) => vec![Effect::when_would_be_deleted(card)
             .name(&format!("<Material Save {n}>"))
-            .process(move |ctx| {
-                let Some(snapshot) = ctx.deleted_object_snapshot().cloned() else {
+            .replacement_condition(|ctx, subject| {
+                // Self-scope: only the carrier's own deletion.
+                let ReplacementSubject::Permanent(subject) = subject else {
+                    return false;
+                };
+                if ctx.source_permanent != Some(*subject) {
+                    return false;
+                }
+                // DCGO `CanActivateMaterialSave`: >=1 eligible digivolution
+                // card and >=1 own Tamer.
+                !material_save_eligible_sources(ctx.game, *subject).is_empty()
+                    && material_save_has_tamer(ctx.game, subject.player)
+            })
+            .replacement_process(move |rctx| {
+                let me_perm = rctx.effect.source_permanent;
+                let ReplacementSubject::Permanent(carrier) = rctx.subject else {
                     return;
                 };
-                let owner = snapshot.former_controller;
-                let carrier = snapshot.top_card;
-                let eligible_sources = snapshot
-                    .digisources_just_before
-                    .iter()
-                    .copied()
-                    .filter(|source| ctx.game.card_matches_digixros_recipe(carrier, *source))
-                    .collect::<Vec<_>>();
-                if eligible_sources.is_empty() {
+                if Some(carrier) != me_perm {
                     return;
                 }
-                if !ctx
-                    .game
-                    .player(owner)
-                    .battle_area
-                    .iter()
-                    .any(|permanent| permanent.is_tamer(&ctx.game.card_data))
+                // Re-check at process time: an earlier immediate effect in
+                // the same window may have changed the stack or the Tamers.
+                if material_save_eligible_sources(rctx.effect.game, carrier).is_empty()
+                    || !material_save_has_tamer(rctx.effect.game, carrier.player)
                 {
                     return;
                 }
-                let prov = resume_provenance(ctx);
-                let eligible_sources_for_frame = eligible_sources.clone();
-
-                ctx.select_own_permanent(
+                let owner = carrier.player;
+                let prov = resume_provenance(&rctx.effect);
+                // The closure is the legacy fallback; the resume frame below
+                // drives the pick (clone-safe, CLAUDE.md rule 28).
+                rctx.effect.select_own_permanent(
                     "you may place Material Save sources under one of your Tamers",
                     /*is_optional=*/ true,
-                    move |g, h| {
-                        if h.player != owner {
-                            return false;
-                        }
-                        let p = match g.players[h.player as usize]
-                            .battle_area
-                            .get(h.index as usize)
-                        {
-                            Some(p) => p,
-                            None => return false,
-                        };
-                        p.is_tamer(&g.card_data)
-                    },
+                    move |g, h| material_save_tamer_ok(g, owner, h),
                     move |ctx, tamer| {
-                        let eligible_sources = eligible_sources;
-                        ctx.select_snapshot_digisources_from_trash(
-                            owner,
-                            eligible_sources.clone(),
-                            n,
-                            "select Material Save sources to place under Tamer",
-                            /*is_optional_zero=*/ true,
-                            move |_g, source| eligible_sources.contains(&source),
-                            move |ctx, picks| {
-                                for source in picks {
-                                    ctx.place_card_under_permanent_bottom(source, tamer, false);
-                                }
-                            },
-                        );
+                        let prov = resume_provenance(ctx);
+                        start_material_save_card_pick(ctx, prov, owner, carrier, tamer, n);
                     },
                 );
                 park_keyword_frame(
-                    ctx,
+                    &mut rctx.effect,
                     ResumeFrame::KeywordMaterialSaveTamerSelection(
                         KeywordMaterialSaveTamerSelectionState {
                             prov,
                             owner,
-                            eligible_sources: eligible_sources_for_frame,
+                            carrier,
                             max: n,
                             outer_conts: Vec::new(),
                         },
@@ -2121,8 +2235,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // ## Cost
         //
         // Zero. `[Main]` active skill — `EffectTiming::MainOnField` exposes
-        // the activation in the action mask without any cost gating, mirroring
-        // MaterialSave's parity treatment.
+        // the activation in the action mask without any cost gating.
         //
         // ## Self-scope
         //
@@ -2231,7 +2344,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // (`effect_queue.rs:524`), not on the synchronous `[Main]` activation
         // path (`activate_field_main`). For `MainOnField` skills the cost
         // must be folded into the body — the precedent here is implicit
-        // since MaterialSave / MindLink are zero-cost; Training is the first
+        // since MindLink is zero-cost; Training is the first
         // `MainOnField` auto-install with a state-cost (suspend).
         //
         // ## Self-scope
@@ -2249,8 +2362,8 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // index `BREEDING_TARGET (=14)` — which is gated to Training-bearing
         // carriers only, since RULES_CONTEXT 16-41 specifies that ONLY
         // `<Training>` activates from breeding (surfacing all `MainOnField`
-        // effects from breeding would inadvertently expose Save / MaterialSave
-        // / MindLink from breeding too, which would be wrong).
+        // effects from breeding would inadvertently expose MindLink from
+        // breeding too, which would be wrong).
         Keyword::Training => vec![Effect::declarative(card)
             .name("<Training>")
             .timing(EffectTiming::MainOnField)
