@@ -243,7 +243,7 @@
 "17-1-3-2-5":
   status: proven
   tests: ["ch17_rule_checks::excess_link_cards_trashed_player_chooses_which", "ch17_rule_checks::excess_link_cards_over_any_limit_prompt_before_trash"]
-  note: "A host over its link limit (base 1, §4-9-5) parks its controller's choice of exactly the excess link cards at the rule check (Q6370; one pick per decision, trashed together; a lone removable card is trashed directly). Both the 2-link and 6-link boards are green."
+  note: "A host over its link limit (base 1, §4-9-5) parks its controller's choice of exactly the excess link cards at the rule check (Q6370; one pick per decision, trashed together; when every removable card is excess they are trashed directly). Both the 2-link and 6-link boards are green."
 "17-1-3-2-6":
   status: proven
   tests: ["ch17_rule_checks::link_card_failing_requirement_is_trashed"]
@@ -251,7 +251,7 @@
 "17-1-3-2-7":
   status: proven
   tests: ["ch17_rule_checks::linked_card_of_unlisted_category_is_trashed"]
-  note: "A linked card with no [Link] (so no <Link> note names its category) is trashed by the same per-host link step. Closest stageable witness (a Tamer card; it also falls under 17-1-3-2-6); no fixture models a category-restricting <Link> note yet."
+  note: "A linked card with no [Link] (so no <Link> note names its category) is trashed by the same per-host link step. The witness is really a 17-1-3-2-6 board (a Tamer card with no link requirement); the category-restricting <Link> note model is not built: no card's <Link> note restricts categories in the engine, so any card with a link requirement passes the category half."
 "15-4-3-3":
   status: proven
   tests: ["ch17_rule_checks::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers"]
@@ -1199,6 +1199,8 @@
   status: proven
   tests: ["ch16_processing_keywords::training_optional_cost_then_mandatory_place_also_in_breeding_area", "ch16_processing_keywords::training_optionality_matches_rule"]
 "4-9-5":
-  status: proven
-  tests: ["ch16_processing_keywords::link_max_base_is_one"]
-  note: "Base link limit 1 (Game::link_limit). Linking to a host with no <Link +> and 1 link card replaces it (count stays 1, the old card trashed in the same step). Not the same as ch17's 17-1-3-2-5 rule-check trim (a host over its limit at a rule check). An effect-driven link at a limit above 1 still lacks the in-step choice: G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE, reproducer ch16_processing_keywords::effect_link_at_limit_replaces_existing_link_card_by_choice (#[ignore]d)."
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE
+  tests: ["ch16_processing_keywords::link_max_base_is_one", "ch16_processing_keywords::declared_link_at_limit_replaces_existing_link_card_by_choice", "ch16_processing_keywords::effect_link_at_limit_replaces_existing_link_card_by_choice"]
+  note: "Declared-link half proven (link_max_base_is_one, declared_link_at_limit_replaces_existing_link_card_by_choice; the rule-check trims excess_link_cards_* are ch17's 17-1-3-2-5): base limit 1 (Game::link_limit), and a declared link at the limit has the linking player choose the replaced existing link cards in the link step. Effect-link half open: an effect-driven link at a limit above 1 gets no in-step choice and the later 17-1-3-2-5 trim can remove the new card (effect_link_at_limit_replaces_existing_link_card_by_choice, #[ignore]d)."
