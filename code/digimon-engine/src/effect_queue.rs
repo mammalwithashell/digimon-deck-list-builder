@@ -3752,15 +3752,17 @@ impl Game {
     /// ("When THIS Digimon unsuspends") are unaffected: only the entry whose
     /// event permanent is the source passes.
     pub(crate) fn collapse_simultaneous_event_batch(&mut self, first_index: usize) {
-        self.collapse_event_batch(first_index, false, None);
+        self.collapse_event_batch(first_index, false, false);
     }
 
     pub(crate) fn collapse_simultaneous_play_event_batch(&mut self, first_index: usize) {
-        self.collapse_event_batch(first_index, true, None);
+        self.collapse_event_batch(first_index, true, false);
     }
 
     /// Coalesce one source-trash event (`Game::begin_source_trash_event`):
-    /// the `OnDigivolutionCardTrashed` entries enqueued since `first_index`
+    /// the `OnDigivolutionCardTrashed` entries the event stamped
+    /// (`TriggerContext::in_source_trash_event`, selected wherever they sit,
+    /// so a queue `retain_mut` or swap mid-event cannot misattribute them)
     /// were enqueued once per trashed card, but cards trashed at the same
     /// time are ONE event, so each observer triggers once for it (§15-5-2,
     /// owner ruling 2026-10-10 #4; DCGO stacks one
@@ -3772,44 +3774,47 @@ impl Game {
     /// A trashed card's own inherited "when this card is trashed" effect is a
     /// different effect per card, so each still triggers. Other timings
     /// enqueued meanwhile are left alone. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
-    pub(crate) fn coalesce_source_trash_event(&mut self, first_index: usize) {
-        let first_index = first_index.min(self.effect_queue.len());
+    pub(crate) fn coalesce_source_trash_event(&mut self) {
+        let stamped = |qe: &QueuedEffect| {
+            qe.trigger_context
+                .as_ref()
+                .is_some_and(|c| c.in_source_trash_event)
+        };
         let mut cards: Vec<CardHandle> = Vec::new();
-        for qe in self.effect_queue.range(first_index..) {
-            if qe.timing != EffectTiming::OnDigivolutionCardTrashed {
-                continue;
-            }
+        for qe in self.effect_queue.iter().filter(|qe| stamped(qe)) {
             if let Some(card) = qe.trigger_context.as_ref().and_then(|c| c.event_source_card) {
                 if !cards.contains(&card) {
                     cards.push(card);
                 }
             }
         }
-        if cards.len() < 2 {
-            return;
-        }
-        for qe in self.effect_queue.range_mut(first_index..) {
-            if qe.timing != EffectTiming::OnDigivolutionCardTrashed {
-                continue;
+        if cards.len() >= 2 {
+            for qe in self.effect_queue.iter_mut().filter(|qe| stamped(qe)) {
+                if let Some(context) = qe.trigger_context.as_mut() {
+                    for set in context.moved_card_sets.iter_mut() {
+                        set.cards = cards.clone();
+                    }
+                }
             }
+            self.collapse_event_batch(0, true, true);
+        }
+        // The stamp only scopes this event: clear it (members included) so a
+        // later event, and the §18-3 loop signature, never see it.
+        for qe in self.effect_queue.iter_mut() {
             if let Some(context) = qe.trigger_context.as_mut() {
-                for set in context.moved_card_sets.iter_mut() {
-                    set.cards = cards.clone();
+                context.in_source_trash_event = false;
+                for member in context.simultaneous_play_members.iter_mut() {
+                    member.in_source_trash_event = false;
                 }
             }
         }
-        self.collapse_event_batch(
-            first_index,
-            true,
-            Some(EffectTiming::OnDigivolutionCardTrashed),
-        );
     }
 
     fn collapse_event_batch(
         &mut self,
         first_index: usize,
         retain_play_subjects: bool,
-        only_timing: Option<EffectTiming>,
+        source_trash_event: bool,
     ) {
         type Key = (
             CardHandle,
@@ -3825,7 +3830,7 @@ impl Game {
         // host's scan (pending on the host, `source_permanent: Some`) and the
         // same card's own "when this card is trashed" entry once it is in the
         // trash (`source_permanent: None`) are different pending effects.
-        let by_location = only_timing.is_some();
+        let by_location = source_trash_event;
         let key_of = |qe: &QueuedEffect| -> Key {
             (
                 qe.source_card,
@@ -3846,7 +3851,14 @@ impl Game {
         // Group batch entries by identity, preserving queue order.
         let mut groups: Vec<(Key, Vec<usize>)> = Vec::new();
         for i in first_index..len {
-            if only_timing.is_some_and(|t| self.effect_queue[i].timing != t) {
+            // A source-trash event collapses only the entries it stamped,
+            // wherever they sit in the queue.
+            if source_trash_event
+                && !self.effect_queue[i]
+                    .trigger_context
+                    .as_ref()
+                    .is_some_and(|c| c.in_source_trash_event)
+            {
                 continue;
             }
             let key = key_of(&self.effect_queue[i]);

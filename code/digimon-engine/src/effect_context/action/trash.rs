@@ -553,7 +553,9 @@ impl<'a> EffectContext<'a> {
     }
 
     /// Trash every digivolution source below `target`'s top card, preserving
-    /// the live permanent and dispatching source-trash observers per source.
+    /// the live permanent. All of them are trashed at the same time: ONE
+    /// source-trash event, so each observer triggers once and only after the
+    /// whole trash (§15-5-2, §15-8-3-2).
     pub fn trash_all_sources(&mut self, target: PermanentHandle) -> bool {
         if self.player != target.player && self.stack_trash_blocked(target) {
             return false;

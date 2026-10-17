@@ -2295,10 +2295,8 @@ impl Game {
     /// (§15-8-3-2). Scopes nest; only the outermost one coalesces.
     pub(crate) fn begin_source_trash_event(&mut self) -> SourceTrashEvent {
         self.enter_deferred_drain();
-        let outermost = self.source_trash_event_start.is_none();
-        if outermost {
-            self.source_trash_event_start = Some(self.effect_queue.len());
-        }
+        let outermost = !self.source_trash_event_open;
+        self.source_trash_event_open = true;
         SourceTrashEvent { outermost }
     }
 
@@ -2308,9 +2306,8 @@ impl Game {
     /// only if no effect is still resolving around the event (§15-8-3-2).
     pub(crate) fn end_source_trash_event(&mut self, event: SourceTrashEvent) {
         if event.outermost {
-            if let Some(start) = self.source_trash_event_start.take() {
-                self.coalesce_source_trash_event(start);
-            }
+            self.source_trash_event_open = false;
+            self.coalesce_source_trash_event();
         }
         self.exit_deferred_drain_and_flush();
         self.mark_until_condition_dirty();
@@ -2327,13 +2324,16 @@ impl Game {
         trashed: Vec<TrashedSource>,
         cause: crate::trigger_context::EventCause,
     ) {
-        let start = self.effect_queue.len();
+        // Inside an open event the outermost close coalesces everything;
+        // otherwise these cards are an event of their own.
+        let outermost = !self.source_trash_event_open;
+        self.source_trash_event_open = true;
         for t in trashed {
             self.enqueue_digivolution_card_trashed(t.player, t.host, t.host_card, t.card, cause);
         }
-        // Inside an open event the outermost close coalesces everything.
-        if self.source_trash_event_start.is_none() {
-            self.coalesce_source_trash_event(start);
+        if outermost {
+            self.source_trash_event_open = false;
+            self.coalesce_source_trash_event();
         }
     }
 
@@ -2389,6 +2389,9 @@ impl Game {
         // materialized entry. Cheap when nothing changed (fingerprint memo);
         // after a real removal this is exactly one full rebuild.
         self.tick_declarative_effects();
+        // Enqueueing is pure (no drain), so the new entries are exactly
+        // `start..`; stamp them for the open event's coalescing.
+        let start = self.effect_queue.len();
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnDigivolutionCardTrashed,
             crate::selection::TriggerSource::SourceTrashedFromStack {
@@ -2399,17 +2402,28 @@ impl Game {
                 cause,
             },
         );
+        if self.source_trash_event_open {
+            for qe in self.effect_queue.range_mut(start..) {
+                if qe.timing == crate::enums::EffectTiming::OnDigivolutionCardTrashed {
+                    if let Some(context) = qe.trigger_context.as_mut() {
+                        context.in_source_trash_event = true;
+                    }
+                }
+            }
+        }
     }
 
     /// Sibling of [`Self::fire_digivolution_card_trashed`], for the RETURN of a
     /// digivolution source to the BOTTOM of a player's deck. Fires
     /// `OnDigivolutionCardReturnedToDeckBottom` carrying the former host
-    /// (`host` / `host_card`) and the returned `card`, then drains synchronously
-    /// (same "observer sees each move one at a time" contract as the trash
-    /// sibling — a multi-source return, e.g. BT21-062's "return 4 [Vemmon]",
-    /// fires the observer once per source so a `once_per_turn` inherited clause
-    /// consumes its single use and stops).
+    /// (`host` / `host_card`) and the returned `card`, then drains synchronously,
+    /// once per source (a multi-source return, e.g. BT21-062's "return 4
+    /// [Vemmon]", fires the observer once per source so a `once_per_turn`
+    /// inherited clause consumes its single use and stops).
     /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
+    /// Unlike the trash sibling, which no longer drains inline and fires once
+    /// per event (§15-8-3-2, §15-5-2), this still drains mid-effect:
+    /// G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH.
     pub(crate) fn fire_digivolution_card_returned_to_deck_bottom(
         &mut self,
         player: PlayerId,
@@ -2418,8 +2432,8 @@ impl Game {
         card: crate::card_source::CardHandle,
         cause: crate::trigger_context::EventCause,
     ) {
-        // Same contract as `fire_digivolution_card_trashed`: the source has
-        // already left the stack, so refresh materialized declaratives before
+        // As in `enqueue_digivolution_card_trashed`: the source has already
+        // left the stack, so refresh materialized declaratives before
         // observers (and any pre-tick read) run.
         self.tick_declarative_effects();
         self.enqueue_triggered(
