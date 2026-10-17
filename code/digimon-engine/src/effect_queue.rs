@@ -83,12 +83,7 @@ impl Drop for TriggerContextGuard<'_> {
 }
 
 fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
-    match kind {
-        CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual => EffectSourceKind::Digimon,
-        CardKind::Tamer => EffectSourceKind::Tamer,
-        CardKind::Option => EffectSourceKind::Option,
-        CardKind::Token => EffectSourceKind::Rule,
-    }
+    EffectSourceKind::for_card_kind(kind)
 }
 
 fn security_activation_blocked_for_timing(

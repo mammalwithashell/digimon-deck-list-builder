@@ -2,9 +2,9 @@
 #   [On Play] This Digimon isn't affected by your opponent's effects until the
 #   end of their turn.
 # The Magnamon (X Antibody) (BT16-102) immunity clause, authored with its
-# production idiom: four opponent-scoped `grant_effect_immunity` steps, one
-# per source kind (digimon / tamer / option / rule -- `rule` is the engine's
-# kind for token and card-less effects). DCGO BT16_102.cs: CanNotAffectedClass
+# production idiom: three opponent-scoped `grant_effect_immunity` steps, one
+# per effect kind (§15-2-1: digimon / tamer / option; a token's effect is a
+# Digimon effect, §15-2-1-1). DCGO BT16_102.cs: CanNotAffectedClass
 # (UntilOpponentTurnEnd) over every opponent effect.
 card: IMMUNE_ALL_OPP
 name: Aegismon
@@ -30,10 +30,5 @@ effects:
       - grant_effect_immunity:
           target: self
           source_kind: option
-          source_controller: opponent
-          expiry: end_of_opponents_turn
-      - grant_effect_immunity:
-          target: self
-          source_kind: rule
           source_controller: opponent
           expiry: end_of_opponents_turn

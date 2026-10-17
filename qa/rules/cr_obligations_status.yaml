@@ -195,11 +195,9 @@
   note: "A <Security A. -1> gained from an opponent's Digimon effect while immune is not counted (1 check); once the immunity ends with the grant still in its duration the Digimon checks 0 cards (Q6179). A granted '[End of Your Turn] Delete this Digimon' (EX6-057 idiom) given while immune activates at the end of the carrier's next turn once the immunity has ended (Q2120 / Q3871). Covers modifier-backed gains (the production SecurityAttackChange idiom) and granted triggered effects; keyword-registry grants (grant_keyword; no authored opponent-side use, reachable only under an own-effect immunity) are still an install-time skip in both directions -- a keyword gained while immune is lost, and one gained BEFORE the immunity keeps applying through it, against Q6178 -- non-blocking (G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP)."
 
 "15-2-1-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE
+  status: proven
   tests: ["ch15_15_unaffected::digimon_only_immunity_blocks_a_digimon_tokens_effect"]
-  note: "A token is a Digimon, so its effect is a Digimon effect; the engine classifies token effects as EffectSourceKind::Rule, so a Digimon-effect-only immunity (Atratusmon idiom) does not block the Familiar Token's [On Deletion] -3000 DP (9000 instead of 12000). Test is #[ignore]d."
+  note: "A token is a Digimon (§4-21-1), so its effect is a Digimon effect: the Familiar Token's [On Deletion] -3000 DP does not affect a Digimon immune to its opponent's Digimon effects (Atratusmon idiom; 12000 DP). Token effects carry EffectSourceKind::Digimon (EffectSourceKind::for_card_kind); Rule is kept for card-less processing only. Attribution witness: effect_source_kind::token_attribution."
 
 # ── ch17 Rule Checks (§17, §15-4-3-3) — tests/rules_conformance/ch17_rule_checks.rs ──
 "17-1-2-1":
