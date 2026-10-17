@@ -2887,8 +2887,24 @@ impl Game {
                 break;
             }
         }
-        self.card_kind_for_handle(handle)
-            .map(source_kind_for_card_kind)
+        // A deleted source's `[On Deletion]` reads its category from the
+        // deletion snapshot (rule 25): a token has left the game by then
+        // (§4-21-5) and is in no zone, yet its effect is a Digimon effect
+        // (§15-2-1-1). G-ENGINE-DEPARTED-TOKEN-CONTEXT-FALLS-BACK-TO-RULE.
+        if let Some(snap) = self
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.deleted_object.as_ref())
+        {
+            if snap.top_card == handle {
+                return source_kind_for_card_kind(snap.card_kind);
+            }
+        }
+        // `card_data_for_handle` also resolves the in-flight transients (an
+        // Option between pay-cost and dispose, the security card being
+        // checked) that the zone scan misses.
+        self.card_data_for_handle(handle)
+            .map(|data| source_kind_for_card_kind(data.card_kind))
             .unwrap_or(EffectSourceKind::Rule)
     }
 

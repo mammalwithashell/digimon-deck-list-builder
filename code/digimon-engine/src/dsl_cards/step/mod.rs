@@ -100,6 +100,14 @@ pub struct StepRuntime {
     /// The running clause is inherited/linked-scope: its OPT key is never
     /// moved onto a `<Succession>` adopted-copy counter.
     opt_key_inherited: bool,
+    /// The effect category (§15-2-1) of the context this clause started
+    /// under, captured by the lowering from the live `EffectContext` and
+    /// cloned into parked tails: a tail rebuilt after a selection
+    /// (`drain_or_rewrap_pending_tail`) resolves as the same category, even
+    /// when its source card has left every zone (a deleted token, §4-21-5)
+    /// and can no longer be looked up. `None` = infer from the zones.
+    /// G-ENGINE-DEPARTED-TOKEN-CONTEXT-FALLS-BACK-TO-RULE.
+    source_kind: Option<crate::enums::EffectSourceKind>,
 }
 
 impl Default for StepRuntime {
@@ -115,7 +123,19 @@ impl StepRuntime {
             dna_origin: None,
             opt_key: None,
             opt_key_inherited: false,
+            source_kind: None,
         }
+    }
+
+    /// Record the effect category the clause runs under (see the field).
+    pub fn with_source_kind(mut self, source_kind: crate::enums::EffectSourceKind) -> Self {
+        self.source_kind = Some(source_kind);
+        self
+    }
+
+    /// The effect category the clause started under, if captured.
+    pub fn source_kind(&self) -> Option<crate::enums::EffectSourceKind> {
+        self.source_kind
     }
 
     pub fn raw(&self) -> &EngineRawRustRegistry {
@@ -270,7 +290,14 @@ pub(crate) fn drain_or_rewrap_pending_tail(
     game.effect_source_player = Some(player);
     game.effect_source_card = Some(source_card);
     game.effect_source_permanent = live_source;
-    let mut ctx = EffectContext::new(game, source_card, live_source, player);
+    // The rebuilt context keeps the category the clause started under
+    // (§15-2-1-1): a zone lookup would miss a source that has left play (a
+    // deleted token is removed from the game, §4-21-5) and fall back to a rule
+    // effect. G-ENGINE-DEPARTED-TOKEN-CONTEXT-FALLS-BACK-TO-RULE.
+    let mut ctx = match runtime.source_kind() {
+        Some(kind) => EffectContext::new_with_source_kind(game, source_card, live_source, kind, player),
+        None => EffectContext::new(game, source_card, live_source, player),
+    };
     run_steps_with_runtime(&outer_tail, &mut ctx, &mut bindings, &runtime);
     (game.effect_source_player, game.effect_source_card, game.effect_source_permanent) = previous_source;
     game.current_trigger_context = previous;

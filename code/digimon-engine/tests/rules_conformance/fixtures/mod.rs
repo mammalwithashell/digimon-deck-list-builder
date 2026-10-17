@@ -147,6 +147,7 @@ const CH15_15: &[&str] = &[
     include_str!("ch15_15/SELF_IMM_THEN_UP.yaml"),
     include_str!("ch15_15/TAMER_MINUS_3K.yaml"),
     include_str!("ch15_15/TAMER_PROGRESS_SEC4.yaml"),
+    include_str!("ch15_15/TOKEN_OD_MINUS_3K.yaml"),
 ];
 
 /// §16-42..§16-47 Ver. 4.x keyword cards, with the §4-6 DUAL, §4-19

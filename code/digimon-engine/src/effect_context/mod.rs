@@ -117,9 +117,11 @@ fn infer_effect_source_kind(
             }
         }
     }
-    game.card_kind_for_handle(source_card)
-        .map(source_kind_for_card_kind)
-        .unwrap_or(EffectSourceKind::Rule)
+    // The source is not (or no longer) the top of `source_permanent`: a
+    // departed source (the `[On Deletion]` of a deleted token, removed from
+    // the game by §4-21-5) is read from the deletion snapshot or the in-flight
+    // card data before the zone lookup gives up and calls it a rule effect.
+    game.effect_source_kind_for_handle(source_card)
 }
 
 /// Read-only view of game state for effect condition closures.

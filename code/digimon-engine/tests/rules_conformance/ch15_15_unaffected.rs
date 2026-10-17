@@ -1123,3 +1123,52 @@ fn immunity_suppresses_an_opponent_formula_aura_while_it_lasts() {
     assert_eq!(r.turn_player(), 1, "P1's turn");
     assert_eq!(dp(&r, imm), 11000, "the immunity ended: affected again");
 }
+
+// ─── §15-2-1-1: a departed token's deferred effect ──────────────────────────
+
+/// §15-2-1-1 (as above). §4-21-5 (a token that leaves the battle area is
+/// removed from the game).
+///
+/// P0's `TOKEN_OD_MINUS_3K` ("[On Deletion] 1 of your opponent's Digimon gets
+/// -3000 DP for the turn") attacks P1's suspended `IMMUNE_DIGI_ONLY` (P0's
+/// Digimon effects don't affect it until the end of P0's turn), loses and is
+/// deleted. Its [On Deletion] offers P1's two Digimon; P0 chooses the immune
+/// one. The -3000 DP is applied after the choice, by a context rebuilt when
+/// the token is already out of the game -- it is still the token's Digimon
+/// effect, so the immune Digimon is not affected: 12000 DP. Control: chosen,
+/// P1's `LV5_PLAIN` (7000 DP) is affected: 4000 DP.
+#[test]
+fn departed_tokens_deferred_effect_is_still_a_digimon_effect() {
+    cite!(
+        "15-2-1-1",
+        "1b26b455c5b8ddc666117716e988f4eaf37a39f7c247beb3eba6b1a6334497a2"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let imm = play_and_resolve(&mut r, 1, "IMMUNE_DIGI_ONLY");
+    let plain = r.place_on_field(1, "LV5_PLAIN", Some(0));
+    set_suspended(&mut r, imm, true);
+    let token = r.place_on_field(0, "TOKEN_OD_MINUS_3K", Some(0));
+    r.attack_digimon(token, imm, false);
+    assert!(!on_field(&r, 0, "TOKEN_OD_MINUS_3K"), "the token lost the battle");
+    let sel = r.pending_selection().expect("the token's [On Deletion] choice");
+    assert_eq!(sel.selecting_player, 0, "{sel:?}");
+    assert_eq!(sel.valid_action_ids.len(), 2, "both of P1's Digimon are offered: {sel:?}");
+    pick_field(&mut r, imm.index as u16);
+    resolve_prompts(&mut r);
+    assert_eq!(
+        dp(&r, imm),
+        12000,
+        "the departed token's effect is a Digimon effect: it doesn't affect the immune Digimon"
+    );
+    assert_eq!(dp(&r, plain), 7000, "the other Digimon was not chosen");
+
+    let mut r = board(&[], &[FILL; 3]);
+    let imm = play_and_resolve(&mut r, 1, "IMMUNE_DIGI_ONLY");
+    let plain = r.place_on_field(1, "LV5_PLAIN", Some(0));
+    set_suspended(&mut r, imm, true);
+    let token = r.place_on_field(0, "TOKEN_OD_MINUS_3K", Some(0));
+    r.attack_digimon(token, imm, false);
+    pick_field(&mut r, plain.index as u16);
+    resolve_prompts(&mut r);
+    assert_eq!(dp(&r, plain), 4000, "control: the chosen plain Digimon is affected");
+}
