@@ -323,10 +323,20 @@ impl Game {
         if option_handle.player == new_carrier.player && option_handle.index < new_carrier.index {
             new_carrier.index = new_carrier.index.saturating_sub(1);
         }
+        // The orphan's slot leaves the battle area: clear its identity and
+        // re-key every later slot's modifiers, pending attack and queued
+        // effects (the canonical removal sequence), so a carrier above it
+        // keeps its own <Link +> after the Vec compacts.
+        self.clear_permanent_full(option_handle);
+        self.modifiers.expire_player_on_permanent_leave(option_handle);
         let permanent = self
             .player_mut(option_handle.player)
             .battle_area
             .remove(option_handle.index as usize);
+        self.modifiers
+            .shift_after_battle_area_remove(option_handle.player, option_handle.index);
+        self.shift_pending_attack_after_battle_area_remove(option_handle.player, option_handle.index);
+        self.shift_effect_queue_after_battle_area_remove(option_handle.player, option_handle.index);
         let card = permanent
             .card_sources
             .into_iter()

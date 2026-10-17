@@ -783,6 +783,12 @@ impl Game {
         }
         // Fix the host handle after the Vec shift, then attach the top card.
         let host_adj = Game::shift_handle_after_soft_remove(source, host);
+        // §4-9-5: every caller parks the replacement choice first
+        // (`park_link_replacement_choice`); only a forced trim is left here.
+        debug_assert!(
+            !self.link_replacement_is_a_choice(host_adj),
+            "§4-9-5: park_link_replacement_choice before absorbing onto a host at its limit"
+        );
         self.trash_forced_link_replacement(host_adj);
         match self
             .player_mut(host_adj.player)
