@@ -928,11 +928,11 @@
       "blocks_training": true,
       "chapter": 11,
       "fingerprint": "cd109077bced1cb39983cddfc3851c42da90acec2ee7c54922c7d0df6542d1c9",
-      "gap_id": "G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES",
+      "gap_id": "G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK",
       "mechanisms": [
         "attack-and-timing"
       ],
-      "note": "The rule's example: an attacker that deletes itself on its [When Attacking]. The end of attack timing arrives (EOA_OBS resolves), but the defender is never offered the counter timing: the engine abandons the attack as soon as the attacker leaves. Test is #[ignore]d. Second, independent violation: a <Vortex> attack skips the counter and block timings altogether (G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK, linked through 11-4-1; vortex_attack_has_block_timing, #[ignore]d).",
+      "note": "Half fixed; Task 13. The rule's example is proven: an attacker that deletes itself on its [When Attacking] still gives the defender the counter timing, the block timing offers no block (12-1-6), nothing checks security and the end of attack timing arrives (attack_timings_continue_when_attacker_leaves_mid_resolution, green since G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES was resolved). Remaining, independent violation: a <Vortex> attack skips the counter and block timings altogether (G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK, linked through 11-4-1; vortex_attack_has_block_timing, #[ignore]d).",
       "status": "gap",
       "tests": [
         "ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution",

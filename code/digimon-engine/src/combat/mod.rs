@@ -752,6 +752,7 @@ impl Game {
             let attacker = pa.attacker;
             let cancelled = pa.cancelled;
             let declaration_committed = pa.declaration_committed;
+            let security_check_started = pa.security_check_started;
 
             // Phase 9: a `WhenWouldAttack` / `WhenWouldBeAttackTarget`
             // replacement (or a `ctx.cancel_attack()` from a later phase)
@@ -772,7 +773,36 @@ impl Game {
                     // require the slot to still be the in-flight attacker
                     // rather than merely any valid Digimon.
                     if !self.handle_still_attacking(attacker) {
-                        return self.cleanup_attack(AttackResult::Invalid);
+                        match state {
+                            // §11-1-5 (Ver. 4.3): "Once an attack declaration
+                            // has been made, all of the timings that follow
+                            // will occur. (Example: Even if an attacking
+                            // Digimon leaves the battle area, the non-turn
+                            // player's counter timing and block timing will
+                            // still occur.)" The counter timing runs on the
+                            // stored attack context (`try_enter_counter`);
+                            // the block timing offers no block (§12-1-6,
+                            // `try_enter_block`). DCGO `AttackProcess.cs`
+                            // `CounterTiming()` checks only `IsEndAttack`.
+                            AttackState::Declared
+                            | AttackState::RaidOpen
+                            | AttackState::AllianceOpen
+                            | AttackState::CounterOpen
+                            | AttackState::BlockOpen => {}
+                            // After the block timing (or a <Vortex> attack's
+                            // jump to `Battle`) with no attacking Digimon:
+                            // the attack is not successful (§11-5-1-4-1), no
+                            // other action is taken and the end of attack
+                            // timing occurs. A battle already resolved or a
+                            // security check in flight keeps its own path.
+                            AttackState::PostBlock | AttackState::Battle
+                                if self.security_resolution.is_none()
+                                    && !security_check_started =>
+                            {
+                                return self.end_attack_unsuccessful();
+                            }
+                            _ => return self.cleanup_attack(AttackResult::Invalid),
+                        }
                     }
                 } else if !self.handle_valid(attacker) {
                     // Pre-observable replacement resume: the attacker has not
@@ -1698,9 +1728,23 @@ impl Game {
             pa.counter_depth = pa.counter_depth.saturating_add(1);
         }
 
-        let source_card = self.player(attacker.player).battle_area[attacker.index as usize]
-            .top_card()
-            .handle();
+        // §11-1-5: the counter timing occurs even after the attacker left the
+        // battle area. Its slot may be empty or reused by then, so read the
+        // attacking card from the declaration context, never from the slot.
+        let attacker_present = self.handle_still_attacking(attacker);
+        let source_card = if attacker_present {
+            self.player(attacker.player).battle_area[attacker.index as usize]
+                .top_card()
+                .handle()
+        } else {
+            match self.attack_attacker_card {
+                Some(card) => card,
+                // No declaration context (pre-declaration effect window):
+                // nothing names the attacking card.
+                None => return false,
+            }
+        };
+        let source_permanent = attacker_present.then_some(attacker);
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::CounterTiming;
 
@@ -1718,7 +1762,7 @@ impl Game {
             prompt: "Counter (blast / option / field ability)".to_string(),
             effect_choices: None,
             source_card,
-            source_permanent: Some(attacker),
+            source_permanent,
             source_kind: crate::enums::EffectSourceKind::Digimon,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 // Match the resolved action_id back to a candidate.
@@ -1735,14 +1779,13 @@ impl Game {
                 }
 
                 // WhenDigivolving / field-counter bodies may have deleted
-                // the attacker. If so skip Block + Battle; jump to
-                // Cleanup (mirrors DCGO AttackProcess.cs:301).
-                let next_state = match game.pending_attack.as_ref() {
-                    Some(pa) if game.handle_valid(pa.attacker) => AttackState::BlockOpen,
-                    Some(_) => AttackState::Cleanup,
-                    None => return,
-                };
-                game.transition_attack_state(next_state);
+                // the attacker. §11-1-5: the block timing still occurs; it
+                // offers no block without an attacking Digimon (§12-1-6)
+                // and the attack then ends as not successful (§11-5-1-4-1).
+                if game.pending_attack.is_none() {
+                    return;
+                }
+                game.transition_attack_state(AttackState::BlockOpen);
                 game.advance_pending_attack();
             }),
             on_decline: Some(Box::new(move |game: &mut Game| {
@@ -1794,12 +1837,12 @@ impl Game {
             return;
         }
 
-        let next_state = match self.pending_attack.as_ref() {
-            Some(pa) if self.handle_valid(pa.attacker) => AttackState::BlockOpen,
-            Some(_) => AttackState::Cleanup,
-            None => return,
-        };
-        self.transition_attack_state(next_state);
+        // §11-1-5: the block timing follows even if a counter body removed
+        // the attacker; `try_enter_block` then offers no block (§12-1-6).
+        if self.pending_attack.is_none() {
+            return;
+        }
+        self.transition_attack_state(AttackState::BlockOpen);
         self.advance_pending_attack();
     }
 
@@ -2162,6 +2205,16 @@ impl Game {
             AttackTarget::Player(pid) => pid,
         };
         let attacker = pa.attacker;
+
+        // §12-1-6 (Ver. 4.3): "A block can only be performed if an attacking
+        // Digimon is in the battle area." Once declared, the attacker is
+        // judged by its live attacking state (its slot may be reused after it
+        // left); the block timing itself still occurs (§11-1-5) but offers no
+        // block. DCGO `AttackProcess.cs` `BlockTiming()` ends the attack when
+        // `AttackingPermanent.TopCard == null || !IsDigimon`.
+        if pa.declaration_committed && !self.handle_still_attacking(attacker) {
+            return false;
+        }
 
         // Track C: `CannotSwitchAttackTarget` on the attacker locks the
         // declared target — Block (and any redirect path that routes
@@ -4143,8 +4196,12 @@ impl Game {
             .and_then(|p| p.battle_area.get(attacker.index as usize))
         else {
             self.attack_attacker_identity = None;
+            self.attack_attacker_card = None;
             return;
         };
+        // §11-1-5: the declaration context the counter timing reads once the
+        // attacker has left the battle area.
+        self.attack_attacker_card = Some(perm.top_card().handle());
         let identity = match perm.battle_identity {
             Some(identity) => identity,
             None => {
@@ -4207,15 +4264,24 @@ impl Game {
             return Some(AttackResult::InProgress);
         }
 
-        // OnAttack may have deleted or moved the attacker, and field indices
-        // can shift into the old handle. Bail unless the handle still points
-        // at a live attacking permanent. This intentionally allows legal
-        // same-permanent stack changes such as digivolution/de-digivolution.
-        if !self.handle_still_attacking(attacker) {
-            return Some(self.cleanup_attack(AttackResult::Invalid));
-        }
-
+        // OnAttack may have deleted or moved the attacker. §11-1-5 (Ver. 4.3):
+        // the declaration has been made, so the timings that follow still
+        // occur -- `advance_pending_attack` runs the counter timing, offers no
+        // block (§12-1-6) and ends the attack as not successful
+        // (§11-5-1-4-1) when the attacker is gone.
         None
+    }
+
+    /// §11-5-1-4-1 (Ver. 4.3): the attack is not successful -- "no other
+    /// actions are taken and the end of attack timing occurs." Reached when
+    /// the attacking Digimon left the battle area after its declaration
+    /// (§11-1-5: the counter and block timings already ran). Ends through
+    /// `cleanup_attack` exactly like the removed-target unsuccessful attack
+    /// (`resolve_pending_battle`'s defender-gone arm), with the same terminal
+    /// result: `AttackResult` has no dedicated "not successful" variant, and
+    /// `Invalid` means the attack could not be declared at all.
+    fn end_attack_unsuccessful(&mut self) -> AttackResult {
+        self.cleanup_attack(AttackResult::AttackerWins)
     }
 
     /// Enqueue every effect the attack declaration triggers, then drain once.

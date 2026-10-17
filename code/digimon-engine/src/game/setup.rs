@@ -293,6 +293,7 @@ impl Game {
             pending_attack_battle_result: None,
             next_battle_identity: 1,
             attack_attacker_identity: None,
+            attack_attacker_card: None,
             event_snapshot_cache: None,
             native_play_observation: None,
             pending_deletion_batch_rest: Vec::new(),
@@ -474,6 +475,7 @@ impl Game {
         self.pending_attack_battle_result = None;
         self.next_battle_identity = 1;
         self.attack_attacker_identity = None;
+        self.attack_attacker_card = None;
         self.event_snapshot_cache = None;
         self.native_play_observation = None;
         self.pending_deletion_batch_rest.clear();
