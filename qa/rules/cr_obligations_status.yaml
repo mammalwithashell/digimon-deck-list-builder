@@ -211,11 +211,9 @@
   tests: ["ch17_rule_checks::rule_check_not_during_effect_processing"]
   note: "The rule's example '[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP and <Security A. -1>' on a 3000 DP Digimon: at the would-be-deleted decision it is at 0 DP and already has SecurityAttackChange -1, so the effect finished before the rule check deleted it."
 "17-1-3":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-RULE-CHECK-TARGETS-NOT-SIMULTANEOUS
+  status: proven
   tests: ["ch17_rule_checks::all_rule_check_targets_processed_simultaneously"]
-  note: "The rule check removes targets one at a time and drains each 0 DP Digimon's [On Deletion] before the next target: two 0 DP Digimon give Trash/Memory/Trash/Memory with no TriggerOrder; a 0 DP Digimon's [On Deletion] resolves before an orphan Option in the same check is trashed. Test is #[ignore]d."
+  note: "The rule check collects every target first, trashes the trash targets, deletes every 0 DP Digimon in ONE deletion batch and flushes once inside one deferred-drain scope (Game::run_state_based_rules_check): two 0 DP Digimon are both in the trash before their [On Deletion] effects pend together in one TriggerOrder; with an orphan Option and a 0 DP Digimon (both slot orders) the [On Deletion] activates after both removals."
 "17-1-3-1-1":
   status: proven
   tests: ["ch17_rule_checks::zero_dp_digimon_in_battle_area_is_deleted"]
@@ -229,17 +227,13 @@
   tests: ["ch17_rule_checks::option_in_battle_area_not_placed_by_effect_is_trashed"]
   note: "An Option in the battle area that no effect placed there is trashed; control: an Option placed by its own '[Main] Place this card in the battle area' (§4-28-1) stays."
 "17-1-3-2-3":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE
+  status: proven
   tests: ["ch17_rule_checks::non_digimon_in_breeding_area_is_trashed"]
-  note: "The rule check never reads the breeding area: a Tamer there stays. Test is #[ignore]d."
+  note: "A Tamer in the breeding area that no effect placed there is trashed at the rule check; control: a Digimon there stays. The exception reads Permanent::placed_by_effect, set by the effect placement into the breeding area (Game::play_to_breeding_from_hand) and false for a hatched Digi-Egg."
 "17-1-3-2-4":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE
+  status: proven
   tests: ["ch17_rule_checks::face_down_card_on_field_is_trashed"]
-  note: "Rule-check trash target (normative; explicit so the short text is never read as a heading). The rule check never reads face_down: a face-down card on the field stays as a 1000 DP Digimon. Test is #[ignore]d."
+  note: "Rule-check trash target (normative; explicit so the short text is never read as a heading). A permanent whose TOP card is face down is trashed at the rule check (battle area and breeding area, both part of the field per §3-4-6); control: a face-down card stacked under a Tamer stays."
 "17-1-3-2-5":
   status: proven
   tests: ["ch17_rule_checks::excess_link_cards_trashed_player_chooses_which", "ch17_rule_checks::excess_link_cards_over_any_limit_prompt_before_trash"]

@@ -1367,46 +1367,76 @@ impl Game {
         true
     }
 
-    /// General state-based ≤0-DP rules-check (`G-NO-GENERAL-ZERO-DP-RULES-CHECK`).
+    /// The rule check (§17-1-3): every target is processed SIMULTANEOUSLY.
     ///
-    /// Deletes every battle-area Digimon whose effective DP is ≤ 0 — the
-    /// game's "checkup" / DCGO `CheckDeleteDigimon` state-based action. This is
-    /// a SINGLE pass: it collects the current ≤0-DP Digimon and deletes them
-    /// (highest index first, per player, so removals don't shift pending
-    /// handles). The fixpoint loop (re-check after `OnDeletion` handlers and
-    /// aura expiry mutate DP) lives in `drain_effect_queue`'s outermost-drain
-    /// wrapper, which calls this only at top-level resolution boundaries — never
-    /// mid-effect.
+    /// Runs at a timing when rule checks are possible (§17-1-1): the
+    /// outermost effect-queue drain calls it before activating queued
+    /// triggers, between top-level queued effects, and in a fixpoint loop
+    /// after the queue empties — never mid-effect (§17-1-2-2).
     ///
-    /// Returns `true` if it applied at least one target: deleted or trashed a
-    /// permanent, trashed link cards, or parked the §17-1-3-2-5 excess choice
-    /// (drives the wrapper's fixpoint, which stops on a parked selection).
-    /// `false` means the board had no rule-check target. Deletion routes through `delete_permanent_with_effects` (the
-    /// batched flow + inferred cause), so `OnDeletion` handlers fire post-trash
-    /// per CLAUDE.md §25.
+    /// Shape: **collect → apply trashes → ONE deletion batch → link-excess
+    /// choice → ONE flush.**
     ///
-    /// Idempotent: a handle whose slot is already empty is filtered by the
-    /// batched-deletion entrypoint, so a re-run is a no-op.
+    /// 1. Collect every target from the current board before touching it:
+    ///    - battle area, per permanent: a face-down top (§17-1-3-2-4); a
+    ///      DP-less Digimon / Digi-Egg / DUAL top or an exposed `Standard`
+    ///      Option top (§17-1-3-2-1, Q1921 for §17-1-3-2-2); a Digimon at
+    ///      0 DP or less (§17-1-3-1-1, the only deletion target);
+    ///    - breeding area: a face-down top, or a non-Digimon top an effect did
+    ///      not place there (§17-1-3-2-3 / -4,
+    ///      [`Self::breeding_area_is_rule_trash_target`]);
+    ///    - per link host (`collect_link_rule_targets`, hosts that are
+    ///      themselves leaving skipped): unqualified link cards (§17-1-3-2-6 /
+    ///      -7) and a host over its link limit (§17-1-3-2-5).
+    /// 2. Inside ONE `enter_deferred_drain` scope: trash every trash target
+    ///    (breeding, battle area in descending `(player, index)` so a removal
+    ///    never shifts a pending handle, link cards), apply their `<Overflow>`
+    ///    once (turn player first, §4-19-5), then delete every 0-DP Digimon in
+    ///    ONE `delete_permanents_batch` (its handles remapped past the
+    ///    battle-area trashes), then park the §17-1-3-2-5 choice of the first
+    ///    over-limit host (its controller picks, Q6370) from a fresh scan.
+    /// 3. `exit_deferred_drain_and_flush` once: every `[On Deletion]`, deletion
+    ///    observer and `OnLinkedCardTrashed` this check triggered pends
+    ///    together (§15-4-3-2) and the turn player orders theirs first
+    ///    (§15-4-3-5). A parked selection (the link-excess choice, or a
+    ///    replacement window inside the batch) holds the flush until it
+    ///    resolves, so no trigger activates before every target is processed.
     ///
-    /// Also applies the per-host link targets (`collect_link_rule_targets`):
-    /// unqualified link cards are trashed (§17-1-3-2-6 / -7) and a host over
-    /// its link limit parks its controller's choice (§17-1-3-2-5).
+    /// Trashes are not deletions: they fire no `[On Deletion]` / leave
+    /// triggers. Rule processing is not an effect, so "can't be affected by
+    /// effects" does not stop it. The deletion is a rule action: its observer
+    /// cause is `EventCause::Rule` (the `current_deletion_event_cause_override`
+    /// slot, captured into each trigger's snapshot at enqueue); the batch's
+    /// replacement cause is inferred as before (there is no
+    /// `ReplacementCause::Rule`).
+    ///
+    /// A replacement window parked inside the batch
+    /// (`G-ENGINE-RULES-CHECK-CONTINUES-PAST-PARKED-DELETION`): the batch
+    /// stashes its other members in `pending_deletion_batch_rest`, which the
+    /// post-selection path deletes; the link-excess choice is then left to the
+    /// rule check that the resuming drain runs before any trigger activates.
+    ///
+    /// Returns `true` if it applied at least one target (deleted or trashed a
+    /// permanent, trashed link cards, or parked / applied the §17-1-3-2-5
+    /// trim); the drain's fixpoint loop re-runs it until it returns `false`
+    /// or a selection parks. Idempotent on a legal board.
     pub(crate) fn run_state_based_rules_check(&mut self) -> bool {
         // Continuous effects must include new entrants (and removed aura
         // sources) before rule processing reads their effective DP. Callers
         // already restrict this check to completed resolution boundaries.
         self.tick_declarative_effects();
-        // Per-permanent rule-check action. Both §17-1-3-1-1 and §17-1-3-2-1 are
-        // evaluated in one scan; they target disjoint permanents (a ≤0-DP
-        // Digimon has a DP value, a DP-less top has none).
+        // Per-permanent battle-area rule-check action. The trash targets and
+        // the deletion target are disjoint per permanent: a face-down top is
+        // trashed whatever its DP; a DP-less top has no DP to be ≤ 0.
         enum RuleAction {
             /// §17-1-3-1-1 — a Digimon at ≤0 DP is DELETED (fires OnDeletion).
             DeleteZeroDp,
-            /// §17-1-3-2-1 — a DP-less card (a Digi-Egg) exposed as the live top
-            /// of a battle-area permanent "is considered to not be in any area
-            /// and is trashed." This is a TRASH of the whole permanent, NOT a
+            /// §17-1-3-2-1 / §17-1-3-2-2 (Q1921) / §17-1-3-2-4 — the
+            /// permanent "is considered to not be in any area and is trashed":
+            /// a DP-less Digimon/Digi-Egg/DUAL or exposed Option top, or a
+            /// face-down top. A TRASH of the whole permanent, NOT a
             /// deletion-from-battle-area, so it fires no OnDeletion observers.
-            TrashDpLess,
+            TrashPermanent,
             /// §17-1-3-2-6 / -7 — link cards the host no longer qualifies
             /// for are trashed (no choice; the host stays).
             TrashUnqualifiedLinks(Vec<CardHandle>),
@@ -1432,6 +1462,14 @@ impl Game {
                     player: pid as PlayerId,
                     index: idx as u8,
                 };
+                // §17-1-3-2-4 "Face-down cards placed on the field": keyed on
+                // the TOP card (a face-down card stacked under a permanent is
+                // that permanent's card, not a card placed on the field; DCGO
+                // `AutoProcessing.IsPermanentFaceDown` reads `TopCard`).
+                if self.players[pid].battle_area[idx].top_card().face_down {
+                    actions.push((handle, RuleAction::TrashPermanent));
+                    continue;
+                }
                 // §17-1-3-2-1 — "A Digimon without DP in the battle area is
                 // considered to not be in any area and is trashed." The rule
                 // keys on the ABSENCE of a DP value (general_rule.pdf
@@ -1461,7 +1499,7 @@ impl Game {
                         crate::permanent::OptionState::Standard
                     );
                 if (presents_as_digimon || exposed_option) && self.effective_dp(handle).is_none() {
-                    actions.push((handle, RuleAction::TrashDpLess));
+                    actions.push((handle, RuleAction::TrashPermanent));
                     continue;
                 }
                 if self.permanent_is_digimon_for_rules(handle)
@@ -1471,6 +1509,11 @@ impl Game {
                 }
             }
         }
+        // §17-1-3-2-3 / -4 in the breeding area.
+        let breeding_targets: Vec<PlayerId> = (0..self.players.len())
+            .map(|pid| pid as PlayerId)
+            .filter(|&pid| self.breeding_area_is_rule_trash_target(pid))
+            .collect();
         // §17-1-3-2-5..7 per-host link targets (hosts leaving the area are
         // skipped: their link cards go with them).
         let leaving: Vec<PermanentHandle> = actions.iter().map(|(h, _)| *h).collect();
@@ -1485,51 +1528,64 @@ impl Game {
                 LinkRuleTarget::Excess(n) => (host, RuleAction::TrimLinks(n)),
             });
         }
-        if actions.is_empty() {
+        if actions.is_empty() && breeding_targets.is_empty() {
             return false;
         }
         actions.sort_by_key(|(h, _)| (h.player, h.index));
-        let mut trim_pending = false;
+
+        // §17-1-3: one simultaneous process. Every trigger it causes is held
+        // until the single flush at the end of this scope (§15-4-3-2).
+        self.enter_deferred_drain();
         let mut acted = false;
+        let mut trim_pending = false;
+        let mut overflow_sources: Vec<crate::card_source::CardSource> = Vec::new();
+        for pid in breeding_targets {
+            overflow_sources.extend(self.trash_breeding_permanent_by_rule(pid));
+            acted = true;
+        }
+        let mut deletions: Vec<PermanentHandle> = Vec::new();
+        let mut trashed_slots: Vec<PermanentHandle> = Vec::new();
         // Apply in descending (player, index) order so each removal — which
         // shifts higher battle-area indices via `Vec::remove` — does not
         // invalidate the handles still pending.
         for (handle, action) in actions.into_iter().rev() {
-            match &action {
+            match action {
                 RuleAction::TrashUnqualifiedLinks(cards) => {
-                    self.trash_link_cards_by_rule(handle, cards);
+                    self.trash_link_cards_by_rule(handle, &cards);
                     acted = true;
-                    continue;
                 }
-                RuleAction::TrimLinks(excess) => {
-                    trim_pending |= *excess > 0;
-                    continue;
+                RuleAction::TrimLinks(excess) => trim_pending |= excess > 0,
+                RuleAction::DeleteZeroDp => deletions.push(handle),
+                RuleAction::TrashPermanent => {
+                    overflow_sources.extend(self.trash_battle_permanent_by_rule(handle));
+                    trashed_slots.push(handle);
+                    acted = true;
                 }
-                RuleAction::DeleteZeroDp | RuleAction::TrashDpLess => acted = true,
             }
-            if let RuleAction::TrashDpLess = action {
-                let movement_snapshot = self.movement_snapshot(handle);
-                // §17-1-3-2-1 trash: route every stacked card to the owner's trash
-                // with no deletion/leave triggers ("not considered trashing from
-                // the battle area").
-                // Overflow observes physical movement even though this is not
-                // deletion or an OnLeaveField event. Include linked cards too.
-                let permanent =
-                    &self.players[handle.player as usize].battle_area[handle.index as usize];
-                let mut leaving_cards = permanent.card_sources.clone();
-                leaving_cards.extend(permanent.linked_cards.iter().cloned());
-                self.clear_permanent_full(handle);
-                self.modifiers.expire_player_on_permanent_leave(handle);
-                self.trash_permanent_stack(handle.player, handle.index as usize);
-                self.modifiers
-                    .shift_after_battle_area_remove(handle.player, handle.index);
-                self.shift_pending_attack_after_battle_area_remove(handle.player, handle.index);
-                self.shift_effect_queue_after_battle_area_remove(handle.player, handle.index);
-                self.mark_until_condition_dirty();
-                self.observe_rule_trash_completed(movement_snapshot);
-                self.apply_ace_overflow_for_sources(&leaving_cards);
-                continue;
-            }
+        }
+        // <Overflow> observes the trashed cards' physical movement (§4-19-1)
+        // even though nothing here is a deletion: one pass for every trash
+        // target, turn player first (§4-19-5). The deletion batch below runs
+        // its own single pass for the deleted stacks.
+        if !overflow_sources.is_empty() {
+            self.apply_ace_overflow_for_sources(&overflow_sources);
+        }
+        if !deletions.is_empty() {
+            acted = true;
+            // The deletion targets were collected before the trashes; move
+            // each past the battle-area slots trashed below it.
+            let mut kill_list: Vec<PermanentHandle> = deletions
+                .into_iter()
+                .map(|h| PermanentHandle {
+                    player: h.player,
+                    index: h.index
+                        - trashed_slots
+                            .iter()
+                            .filter(|t| t.player == h.player && t.index < h.index)
+                            .count() as u8,
+                })
+                .collect();
+            kill_list.sort_by_key(|h| (h.player, h.index));
             // A ≤0-DP deletion is a STATE-BASED RULE action, not an effect.
             // `infer_deletion_cause` would otherwise attribute it to
             // OwnEffect/OpponentEffect (no battle/security/effect-source is
@@ -1539,33 +1595,65 @@ impl Game {
             // on battle OR 0-DP, NOT effect deletion). Refine the OnDeletion /
             // OnAnyDeletion observer payload to `EventCause::Rule` via the
             // same override slot Overclock uses (game_phases.rs); it only
-            // refines the observer cause — replacement-window filtering still
-            // reads `current_deletion_cause` — and the deferred-replacement
-            // path (e.g. an Armor Purge window opened by this deletion)
-            // threads it through ParkedReplacement.
+            // refines the observer cause (captured into each trigger's
+            // snapshot at enqueue, so it survives the deferred flush) —
+            // replacement-window filtering still reads `current_deletion_cause`
+            // — and the deferred-replacement path (e.g. an Armor Purge window
+            // opened by this deletion) threads it through ParkedReplacement.
+            let cause = self.infer_deletion_cause(kill_list[0]);
             let previous = self.current_deletion_event_cause_override;
             self.current_deletion_event_cause_override =
                 Some(crate::trigger_context::EventCause::Rule);
-            self.delete_permanent_with_effects(handle);
+            // ONE batch: every 0-DP Digimon is deleted simultaneously, so
+            // their `[On Deletion]` effects pend together (§15-4-3-2).
+            self.delete_permanents_batch(kill_list, cause);
             self.current_deletion_event_cause_override = previous;
-            // An optional replacement window (e.g. <Decode>) parked a
-            // selection: this deletion is not finished. Stop here — the drain
-            // that resumes after the selection re-runs this check, and the
-            // remaining ≤0-DP Digimon are still at ≤0 DP then. Deleting them
-            // now would re-enter the replacement dispatcher at depth 0 and wipe
-            // the parked event's `(timing, subject)` record, so declining the
-            // window re-offered it (invariant_fuzz seed 20260708005: EX12-036's
-            // <Decode> asked twice). G-ENGINE-RULES-CHECK-CONTINUES-PAST-PARKED-DELETION.
-            if self.pending_selection.is_some() {
-                break;
-            }
         }
         // §17-1-3-2-5: the controller's choice of excess link cards, from a
-        // fresh scan (removals above may have shifted hosts).
+        // fresh scan (removals above may have shifted hosts). Skipped while a
+        // replacement window the batch opened is parked: the drain that
+        // resumes after it runs the rule check before any trigger activates,
+        // and parks the choice then.
         if trim_pending && self.pending_selection.is_none() && self.park_first_link_excess_trim() {
             acted = true;
         }
+        self.exit_deferred_drain_and_flush();
         acted
+    }
+
+    /// Trash a battle-area permanent by rule (§17-1-3-2-1 / -2 / -4): every
+    /// stacked card, then its link cards, goes to its owner's trash face up
+    /// (§3-6-3) with no deletion/leave triggers ("considered to not be in any
+    /// area"). Returns the leaving cards for the caller's single `<Overflow>`
+    /// pass (§4-19-5).
+    fn trash_battle_permanent_by_rule(
+        &mut self,
+        handle: PermanentHandle,
+    ) -> Vec<crate::card_source::CardSource> {
+        let movement_snapshot = self.movement_snapshot(handle);
+        let permanent =
+            &mut self.players[handle.player as usize].battle_area[handle.index as usize];
+        for card in permanent
+            .card_sources
+            .iter_mut()
+            .chain(permanent.linked_cards.iter_mut())
+        {
+            card.face_down = false; // Trash is face-up (3-6-3).
+        }
+        // Overflow observes physical movement even though this is not
+        // deletion or an OnLeaveField event. Include linked cards too.
+        let mut leaving_cards = permanent.card_sources.clone();
+        leaving_cards.extend(permanent.linked_cards.iter().cloned());
+        self.clear_permanent_full(handle);
+        self.modifiers.expire_player_on_permanent_leave(handle);
+        self.trash_permanent_stack(handle.player, handle.index as usize);
+        self.modifiers
+            .shift_after_battle_area_remove(handle.player, handle.index);
+        self.shift_pending_attack_after_battle_area_remove(handle.player, handle.index);
+        self.shift_effect_queue_after_battle_area_remove(handle.player, handle.index);
+        self.mark_until_condition_dirty();
+        self.observe_rule_trash_completed(movement_snapshot);
+        leaving_cards
     }
 
     /// Dispose an Option that has finished resolving its `OptionMain`

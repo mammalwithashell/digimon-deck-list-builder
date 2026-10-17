@@ -337,7 +337,6 @@ fn option_in_battle_area_not_placed_by_effect_is_trashed() {
 /// Red: `Game::run_state_based_rules_check` scans only the battle areas; the
 /// Tamer stays in the breeding area (`G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE`).
 #[test]
-#[ignore = "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE (§17-1-3-2-3)"]
 fn non_digimon_in_breeding_area_is_trashed() {
     cite!(
         "17-1-3-2-3",
@@ -373,7 +372,6 @@ fn non_digimon_in_breeding_area_is_trashed() {
 /// Red: the rule check never reads `face_down`; the face-down card stays in
 /// the battle area as a 1000 DP Digimon (`G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE`).
 #[test]
-#[ignore = "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE (§17-1-3-2-4)"]
 fn face_down_card_on_field_is_trashed() {
     cite!(
         "17-1-3-2-4",
@@ -704,7 +702,6 @@ fn rule_check_deletion_trigger_is_simultaneous_with_timing_triggers() {
 /// the Digimon's [On Deletion] resolves before the Option is trashed
 /// (`G-ENGINE-RULE-CHECK-TARGETS-NOT-SIMULTANEOUS`).
 #[test]
-#[ignore = "G-ENGINE-RULE-CHECK-TARGETS-NOT-SIMULTANEOUS (§17-1-3)"]
 fn all_rule_check_targets_processed_simultaneously() {
     cite!(
         "17-1-3",

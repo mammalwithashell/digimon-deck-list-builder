@@ -171,9 +171,71 @@ impl Game {
             return false;
         }
         let card = self.player_mut(player_id).hand.remove(hand_index);
-        let permanent = crate::permanent::Permanent::new(card, self.turn_count);
+        let mut permanent = crate::permanent::Permanent::new(card, self.turn_count);
+        // §17-1-3-2-3: placed in the breeding area by an effect.
+        permanent.placed_by_effect = true;
         self.player_mut(player_id).breeding_area = Some(permanent);
         true
+    }
+
+    /// §17-1-3-2-3 / §17-1-3-2-4: is `player`'s breeding-area permanent a
+    /// rule-check trash target? A face-down top card is (§17-1-3-2-4: the
+    /// breeding area is part of the field, §3-4-6); so is a top card that is
+    /// not a Digimon, unless an effect placed the permanent there
+    /// (§17-1-3-2-3). A hatched Digi-Egg is a hatched Digimon (§3-4-7-1) and a
+    /// DUAL card there is played as its Digimon face, so neither is a target.
+    pub(crate) fn breeding_area_is_rule_trash_target(&self, player: PlayerId) -> bool {
+        let Some(perm) = self.player(player).breeding_area.as_ref() else {
+            return false;
+        };
+        let Some(top) = perm.card_sources.last() else {
+            return false;
+        };
+        if top.face_down {
+            return true;
+        }
+        !perm.placed_by_effect
+            && !matches!(
+                top.card_kind(&self.card_data),
+                CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual
+            )
+    }
+
+    /// Trash `player`'s breeding-area permanent by rule (§17-1-3-2-3 /
+    /// §17-1-3-2-4): every card of the stack, then its link cards, goes to its
+    /// owner's trash face up (§3-6-3), one `Trash` event each. A rule process,
+    /// not an effect (it is not "affected by effects") and not a deletion, so
+    /// no `[On Deletion]` / leave triggers. Returns the leaving cards for the
+    /// caller's single `<Overflow>` pass (§4-19-5).
+    pub(crate) fn trash_breeding_permanent_by_rule(
+        &mut self,
+        player: PlayerId,
+    ) -> Vec<CardSource> {
+        let Some(perm) = self.player_mut(player).breeding_area.take() else {
+            return Vec::new();
+        };
+        let handle = PermanentHandle {
+            player,
+            index: crate::action::space::BREEDING_TARGET as u8,
+        };
+        self.clear_permanent_full(handle);
+        self.modifiers.expire_player_on_permanent_leave(handle);
+        // A token stack drops whole (parity with `trash_permanent_stack`);
+        // its link cards are real cards and still go to the trash.
+        let stack = if perm.card_sources.first().is_some_and(|c| c.is_token) {
+            Vec::new()
+        } else {
+            perm.card_sources
+        };
+        let leaving: Vec<CardSource> =
+            stack.iter().chain(perm.linked_cards.iter()).cloned().collect();
+        for mut card in stack.into_iter().chain(perm.linked_cards) {
+            card.face_down = false; // Trash is face-up (3-6-3).
+            let owner = card.owner;
+            self.trash_card(owner, card);
+        }
+        self.mark_until_condition_dirty();
+        leaving
     }
 
     pub fn bind_training_permanent_to_permanent(
@@ -458,5 +520,78 @@ impl Game {
         // Breeding digivolve does NOT fire WhenDigivolving (Python parity).
         self.check_turn_end();
         true
+    }
+}
+
+#[cfg(test)]
+mod rule_check_breeding_tests {
+    //! §17-1-3-2-3 / §17-1-3-2-4 breeding-area edges the conformance tests
+    //! don't stage: the "placed by an effect" exception, a hatched Digi-Egg,
+    //! and a face-down top in the breeding area (part of the field, §3-4-6).
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    use crate::enums::CardKind;
+
+    fn runner() -> DebugRunner {
+        let mut tamer = make_test_card("RC-TAMER", "Tamer");
+        tamer.card_kind = CardKind::Tamer;
+        tamer.dp = None;
+        tamer.level = None;
+        let mut egg = make_test_card("RC-EGG", "Egg");
+        egg.card_kind = CardKind::DigiEgg;
+        egg.dp = None;
+        egg.level = Some(2);
+        let mut r = DebugRunner::builder()
+            .add_card(make_test_card("RC-BODY", "Body"))
+            .add_card(tamer)
+            .add_card(egg)
+            .deck(0, &["RC-BODY"; 20])
+            .deck(1, &["RC-BODY"; 20])
+            .memory(3)
+            .start();
+        r.skip_mulligan();
+        r.game.enter_main_phase();
+        r
+    }
+
+    #[test]
+    fn non_digimon_placed_in_breeding_area_by_an_effect_stays() {
+        let mut r = runner();
+        r.place_in_breeding(0, "RC-TAMER");
+        r.game.players[0].breeding_area.as_mut().unwrap().placed_by_effect = true;
+        r.game.drain_effect_queue();
+        assert!(
+            r.game.players[0].breeding_area.is_some(),
+            "§17-1-3-2-3 excepts cards placed in the breeding area by an effect"
+        );
+        assert!(r.game.players[0].trash.is_empty());
+    }
+
+    #[test]
+    fn hatched_digi_egg_in_breeding_area_stays() {
+        let mut r = runner();
+        r.place_in_breeding(0, "RC-EGG");
+        r.game.drain_effect_queue();
+        assert!(r.game.players[0].breeding_area.is_some());
+        assert!(r.game.players[0].trash.is_empty());
+    }
+
+    #[test]
+    fn face_down_top_in_breeding_area_is_trashed_face_up() {
+        let mut r = runner();
+        r.place_in_breeding(0, "RC-BODY");
+        r.game.players[0].breeding_area.as_mut().unwrap().card_sources[0].face_down = true;
+        r.game.drain_effect_queue();
+        assert!(r.game.players[0].breeding_area.is_none());
+        let trash = &r.game.players[0].trash;
+        assert_eq!(trash.len(), 1);
+        assert!(!trash[0].face_down, "trash is face up (§3-6-3)");
+    }
+
+    #[test]
+    fn play_to_breeding_from_hand_marks_the_permanent_placed_by_effect() {
+        let mut r = runner();
+        let index = r.add_to_hand(0, "RC-BODY");
+        assert!(r.game.play_to_breeding_from_hand(0, index));
+        assert!(r.game.players[0].breeding_area.as_ref().unwrap().placed_by_effect);
     }
 }

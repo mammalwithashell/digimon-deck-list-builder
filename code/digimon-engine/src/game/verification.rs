@@ -442,6 +442,11 @@ fn write_permanent(hasher: &mut Sha256, game: &Game, permanent: &Permanent) {
     field(hasher, "attacks_this_turn", permanent.attacks_this_turn);
     field(hasher, "is_attacking", permanent.is_attacking);
     debug_field(hasher, "option_state", &permanent.option_state);
+    // Hashed only when set, so states without an effect-placed breeding
+    // permanent keep their digest (§17-1-3-2-3 marker).
+    if permanent.placed_by_effect {
+        token(hasher, "placed_by_effect");
+    }
 
     let mut activations: Vec<_> = permanent.effect_activations.iter().collect();
     activations.sort_by_key(|((card, slot), _)| (card.0, *slot));
