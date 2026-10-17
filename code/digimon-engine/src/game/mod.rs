@@ -9,7 +9,7 @@ use crate::card_data::CardData;
 use crate::card_source::{CardHandle, CardSource};
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
-use crate::enums::{CardKind, Expiry, GamePhase, ModifierType, PlayerId};
+use crate::enums::{CardKind, EffectSourceKind, Expiry, GamePhase, ModifierType, PlayerId};
 use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
@@ -3530,6 +3530,22 @@ impl Game {
         total
     }
 
+    /// The read-time gate of `ModifierRegistry::get`, for a live formula
+    /// aura of category `source_kind` controlled by `controller` reaching
+    /// `target`: not hidden by the `<Progress>` shield (an opponent's effect
+    /// on the shielded attacker, §16-39-1) and not covered by an immunity on
+    /// `target` (§15-15-5-1).
+    fn declarative_formula_can_affect(
+        &self,
+        target: crate::permanent::PermanentHandle,
+        controller: PlayerId,
+        source_kind: EffectSourceKind,
+    ) -> bool {
+        let shielded =
+            self.modifiers.progress_shield() == Some(target) && controller != target.player;
+        !shielded && !self.modifiers.is_unaffected_by(target, controller, source_kind)
+    }
+
     fn live_declarative_formula_sum(
         &self,
         target: crate::permanent::PermanentHandle,
@@ -3548,6 +3564,13 @@ impl Game {
                 let stack_size = perm.card_sources.len();
                 for (source_index, source) in perm.card_sources.iter().enumerate() {
                     let inherited_source = source_index + 1 < stack_size;
+                    // §15-2-1: a top card's aura is an effect of its printed
+                    // category; an inherited one is the Digimon's (§15-3-2).
+                    let kind = if inherited_source {
+                        EffectSourceKind::Digimon
+                    } else {
+                        EffectSourceKind::for_card_kind(self.card_data[source.data_index].card_kind)
+                    };
                     sources.push((
                         source.card_id(&self.card_data).to_string(),
                         source.handle(),
@@ -3555,6 +3578,7 @@ impl Game {
                         player_id,
                         inherited_source,
                         false,
+                        kind,
                     ));
                 }
                 // `<Succession>`: an adopted source's top-scope formula auras.
@@ -3567,6 +3591,7 @@ impl Game {
                         player_id,
                         false,
                         true,
+                        EffectSourceKind::Digimon,
                     ));
                 }
             }
@@ -3584,15 +3609,36 @@ impl Game {
                     player_id,
                     false,
                     false,
+                    EffectSourceKind::for_card_kind(self.card_data[top.data_index].card_kind),
                 ));
             }
         }
 
         let mut total = 0;
         let mut found = false;
-        for (card_id, source_card, source_permanent, controller, inherited_source, adopted_copy) in
-            sources
+        for (
+            card_id,
+            source_card,
+            source_permanent,
+            controller,
+            inherited_source,
+            adopted_copy,
+            source_kind,
+        ) in sources
         {
+            // §15-15-5-1 / §16-39-1: a formula aura is an effect; while
+            // `target` is unaffected by this controller's effects of this
+            // category (a covering immunity, or the `<Progress>` shield on an
+            // attacker against its opponent's effects) its value does not
+            // reach `target`, and applies again the moment the gate lifts
+            // (§15-15-5-2). The registry-level predicates are used (not
+            // `effect_can_affect`, whose `<Progress>` half re-derives the
+            // shield through keyword reads that can read DP) -- the shield the
+            // registry holds IS the read-time truth `Game` keeps refreshed.
+            // G-ENGINE-PROGRESS-SHIELD-BYPASSED-BY-TIMING-DISABLE-AND-FORMULA-AURAS.
+            if !self.declarative_formula_can_affect(target, controller, source_kind) {
+                continue;
+            }
             let Some(effects) = self.effects_for_card(&card_id, source_card) else {
                 continue;
             };
@@ -3655,6 +3701,10 @@ impl Game {
             }
         }
         for (card_id, source_card, host, controller) in linked_sources {
+            // A link card's ESS is the host Digimon's effect (§4-3-5).
+            if !self.declarative_formula_can_affect(target, controller, EffectSourceKind::Digimon) {
+                continue;
+            }
             let Some(effects) = self.effects_for_card(&card_id, source_card) else {
                 continue;
             };

@@ -1034,3 +1034,92 @@ fn progress_attacker_does_not_have_a_keyword_an_opponent_granted_while_attacking
         "the attack is over: the keyword is had again"
     );
 }
+
+// ─── §16-39-1 / §15-15-5-1: a FORMULA aura (computed live, no stored entry) ─
+
+/// §16-39-1 (as above). §15-15-5-2 (as above).
+///
+/// P1's `OPP_AURA_MINUS_PER_FIELD` ("[All Turns] All of your opponent's
+/// Digimon get -1000 DP for each Digimon and Tamer you have") is a formula
+/// aura, summed live inside `effective_dp` rather than stored as a modifier
+/// entry. P1 has it and a suspended `DIGI_MINUS_3K` (4000 DP): P0's
+/// `PROGRESS` (6000 DP) is at 4000 DP. It attacks the suspended Digimon:
+/// while attacking it isn't affected by P1's aura, battles at 6000 DP, wins
+/// and survives. After the attack P1 has one permanent left: 5000 DP.
+///
+/// Control: P0's `LV5_PLAIN` (7000 DP, no <Progress>) is at 5000 DP and
+/// attacks the same 4000-DP target at 5000 DP: it wins too, but battled
+/// affected (a 4000-DP control would have been deleted with its target).
+#[test]
+fn progress_attacker_not_affected_by_opponent_formula_aura_while_attacking() {
+    cite!(
+        "16-39-1",
+        "e7e71a76297e6988256aba87d4bd179c8bdfee7253b8123a05dd238fa6870119"
+    );
+    cite!(
+        "15-15-5-2",
+        "780144a7af6d35d35c824ad67fea8c742362d65bff1707531bdbd9955dc54ffc"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let attacker = r.place_on_field(0, "PROGRESS", Some(0));
+    r.place_on_field(1, "OPP_AURA_MINUS_PER_FIELD", Some(0));
+    let target = r.place_on_field(1, "DIGI_MINUS_3K", Some(0));
+    set_suspended(&mut r, target, true);
+    assert_eq!(dp(&r, attacker), 4000, "precondition: -2000 DP from the aura");
+    r.attack_digimon(attacker, target, false);
+    resolve_prompts(&mut r);
+    assert!(
+        !on_field(&r, 1, "DIGI_MINUS_3K"),
+        "6000 DP while attacking: it wins the battle"
+    );
+    assert!(on_field(&r, 0, "PROGRESS"), "it survives the battle");
+    assert_eq!(
+        dp(&r, attacker),
+        5000,
+        "affected again after the attack (P1 has one permanent left)"
+    );
+
+    // Control: the same battle without <Progress> is fought at the reduced DP.
+    let mut r = board(&[], &[FILL; 3]);
+    let attacker = r.place_on_field(0, "DIGI_MINUS_3K", Some(0));
+    r.place_on_field(1, "OPP_AURA_MINUS_PER_FIELD", Some(0));
+    let target = r.place_on_field(1, "DIGI_MINUS_3K", Some(0));
+    set_suspended(&mut r, target, true);
+    assert_eq!(dp(&r, attacker), 2000, "control: 4000 - 2000");
+    r.attack_digimon(attacker, target, false);
+    resolve_prompts(&mut r);
+    assert!(
+        !on_field(&r, 0, "DIGI_MINUS_3K"),
+        "control: at 2000 DP the attacker loses to the 4000-DP target"
+    );
+    assert!(on_field(&r, 1, "DIGI_MINUS_3K"), "control: the target survives");
+}
+
+/// §15-15-5-1 (as above). §15-15-5-2 (as above).
+///
+/// P0's `OPP_AURA_MINUS_PER_FIELD` (a Digimon effect) reaches P1's
+/// `IMMUNE_DIGI_ONLY` (12000 DP) before its [On Play]: 11000 DP. Once P0's
+/// Digimon effects don't affect it, the live formula aura doesn't either:
+/// 12000 DP. In P1's turn the immunity has ended: 11000 DP again.
+#[test]
+fn immunity_suppresses_an_opponent_formula_aura_while_it_lasts() {
+    cite!(
+        "15-15-5-1",
+        "5f62baf83d024884f00e48e9464e881636542e141762f6036fdc9c43db57c3d2"
+    );
+    cite!(
+        "15-15-5-2",
+        "780144a7af6d35d35c824ad67fea8c742362d65bff1707531bdbd9955dc54ffc"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    r.place_on_field(0, "OPP_AURA_MINUS_PER_FIELD", Some(0));
+    let imm = r.place_on_field(1, "IMMUNE_DIGI_ONLY", Some(0));
+    assert_eq!(dp(&r, imm), 11000, "precondition: the formula aura affects it");
+    r.fire_on_play(1, imm.index as usize);
+    resolve_prompts(&mut r);
+    assert_eq!(dp(&r, imm), 12000, "immune: the formula aura doesn't affect it");
+    r.pass_turn();
+    resolve_prompts(&mut r);
+    assert_eq!(r.turn_player(), 1, "P1's turn");
+    assert_eq!(dp(&r, imm), 11000, "the immunity ended: affected again");
+}

@@ -140,6 +140,7 @@ const CH15_15: &[&str] = &[
     include_str!("ch15_15/OPP_ATK_ALL_MINUS_12K.yaml"),
     include_str!("ch15_15/OPP_ATK_DELETE.yaml"),
     include_str!("ch15_15/OPP_ATK_TRASH_OPP_SEC.yaml"),
+    include_str!("ch15_15/OPP_AURA_MINUS_PER_FIELD.yaml"),
     include_str!("ch15_15/OPT_DELETE_13K.yaml"),
     include_str!("ch15_15/OPT_MINUS_12K.yaml"),
     include_str!("ch15_15/OWN_MINUS_3K.yaml"),
