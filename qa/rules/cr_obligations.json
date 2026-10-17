@@ -12763,8 +12763,8 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": "Controller ruling (provisional, owner sign-off pending): the bottom cards are part of the top card's information -- they contribute inherited effects (4-7-4) -- but a Digimon's traits are its top card's (with its (Rule) Trait grants, 2-3-4-2); a [TS] digivolution card does not make the Digimon a [TS] Digimon. The manual has no explicit 'traits are the top card's' sentence; official Q&A Q3225 (EX1-038: trashing the top card leaves a Digimon 'without [Free] in its traits' while the [Free] EX1-038 is still a digivolution card) and DCGO (BT25_020.cs / EX8_047.cs read permanent.TopCard) are the ruling. Counted: the battle-winner trait qualifier ('any of your [TS] trait Digimon win a battle') and the host-Digimon trait predicate ('trash this card from a [TS] trait Digimon's digivolution cards') read the top card, each with a top-card control (G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS resolved). Not counted: the second sentence (bottom cards aren't on the field; the example's place-under removes a Digimon from the field) is not exercised by these tests.",
-      "status": "proven",
+      "note": "Controller ruling (provisional, owner sign-off pending): the bottom cards are part of the top card's information -- they contribute inherited effects (4-7-4) -- but a Digimon's traits are its top card's (with its (Rule) Trait grants, 2-3-4-2); a [TS] digivolution card does not make the Digimon a [TS] Digimon. The manual has no explicit 'traits are the top card's' sentence; official Q&A Q3225 (EX1-038: trashing the top card leaves a Digimon 'without [Free] in its traits' while the [Free] EX1-038 is still a digivolution card) and DCGO (BT25_020.cs / EX8_047.cs read permanent.TopCard) are the ruling. Counted: the battle-winner trait qualifier ('any of your [TS] trait Digimon win a battle') and the host-Digimon trait predicate ('trash this card from a [TS] trait Digimon's digivolution cards') read the top card, each with a top-card control (G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS resolved). Status (review round 1): the tests pin the Q3225 / DCGO top-card reading of the characteristics consequence; neither sentence is proven as written; the second sentence (bottom cards not on the field; place-under removes) is untested. EX1-038's own inherited text ('[Imperialdramon] in its name or [Free] in its traits', while EX1-038 itself is [Free]) is the strongest card-text evidence for the top-card reading.",
+      "status": "gap",
       "tests": [
         "ch15_08_effect_categories::battle_winner_trait_is_the_top_cards_trait",
         "ch15_08_effect_categories::permanent_trait_is_the_top_cards_trait"
@@ -15306,9 +15306,9 @@
         "total": 66
       },
       "4": {
-        "gap": 85,
+        "gap": 86,
         "not_testable": 34,
-        "proven": 20,
+        "proven": 19,
         "total": 139
       },
       "5": {
@@ -15342,7 +15342,7 @@
         "total": 13
       }
     },
-    "gap": 624,
+    "gap": 625,
     "mechanics": {
       "gap_blocking": 22,
       "gap_nonblocking": 322,
@@ -15350,7 +15350,7 @@
       "proven": 219
     },
     "not-testable": 246,
-    "proven": 249
+    "proven": 248
   },
   "version": 1
 }
