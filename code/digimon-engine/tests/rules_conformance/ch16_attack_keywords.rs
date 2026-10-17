@@ -1463,7 +1463,6 @@ fn collision_forces_block_whenever_possible() {
 /// Before the attack `FILL` has no <Blocker>; at the block timing (while
 /// `COLLISION` is attacking) it has <Blocker>, applied with no activation.
 #[test]
-#[ignore = "G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED (§16-30-1)"]
 fn collision_kind_matches_rule() {
     cite!(
         "16-30-2",
@@ -1525,7 +1524,6 @@ fn collision_timing_matches_rule() {
 /// DCGO: `Permanent.HasBlocker` grants <Blocker> during a <Collision> attack
 /// only `if (!TopCard.CanNotBeAffected(fakeCollisionClass))`.
 #[test]
-#[ignore = "G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED (§16-30-4)"]
 fn collision_blocker_grant_affects_digimon_forced_block_affects_player() {
     cite!(
         "16-30-4",

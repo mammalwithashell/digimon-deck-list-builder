@@ -2216,9 +2216,12 @@ impl Game {
             {
                 continue;
             }
-            // Blocker required UNLESS the attacker has Collision, which
-            // grants Blocker to every opponent Digimon for this attack.
-            if !attacker_has_collision && !self.has_keyword(h, Keyword::Blocker) {
+            // §16-30-1 / §16-30-4: <Collision> grants <Blocker> to every
+            // opponent Digimon its effects can affect, declaratively inside
+            // `has_keyword` (`collision_grants_blocker`) -- so candidacy is
+            // just "has <Blocker>" and a Digimon unaffected by the attacker's
+            // effects is a candidate only through a Blocker it already has.
+            if !self.has_keyword(h, Keyword::Blocker) {
                 continue;
             }
             // Blocker declaration rewrites the attack target, so it must
