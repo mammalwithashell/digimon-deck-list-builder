@@ -156,7 +156,7 @@ fn bt3_096_own_option_use_offers_suspend_then_gains_one_memory() {
     assert!(is_suspended(&runner, mimi), "Mimi suspends as the cost");
     assert_eq!(runner.memory(), 5, "gained 1 memory");
 
-    // Nothing else is parked — the Option was already trashed after Mimi.
+    // Nothing else is parked — the Option was already trashed before Mimi.
     let _ = runner.auto_resolve();
     assert!(runner.pending_selection().is_none());
 }
@@ -238,18 +238,13 @@ fn bt3_096_option_user_cannot_resolve_their_trigger_before_the_option_is_trashed
     );
     assert_eq!(runner.memory(), 4, "the Option's use cost was paid");
     let view = runner.pending_selection_view().expect("Mimi's gate parked");
-    // Mimi's lone optional trigger parks as a one-entry activation prompt;
-    // what must be absent is any entry for the used Option's trash.
-    let labels: Vec<String> = view
-        .effect_choices
-        .iter()
-        .flatten()
-        .map(|c| c.label.clone())
-        .collect();
+    // Mimi's lone optional trigger parks as a one-entry activation prompt.
+    // The removed ordering prompt had two entries (the trash and the
+    // trigger) and named the trash; neither shape may come back.
+    let entries = view.effect_choices.as_ref().map_or(0, |c| c.len());
     assert!(
-        labels.iter().all(|l| !l.contains("Trash the used Option"))
-            && !view.prompt.contains("pending items"),
-        "§9-1-5: the trash is not orderable against P0's own trigger: {} {labels:?}",
+        entries <= 1 && !view.prompt.to_lowercase().contains("trash"),
+        "§9-1-5: the trash is not orderable against P0's own trigger: {} ({entries} entries)",
         view.prompt
     );
     assert!(
@@ -427,9 +422,9 @@ fn bt3_096_security_plays_itself_free() {
 // Exam BT3-096#effect#0 (qa/dcgo-exams/BT3/BT3-096-effect0.yaml) diverged at
 // Mimi's prompt: DCGO had already placed the <Delay> Option LM-032 in the
 // battle area, ours asked first. Official Q&A: "It can be activated after
-// activating the used Option card's [Main] effect."; general_rule.pdf 9-1-5 /
-// 18-1-2 dispose the used Option once its [Main] resolves, before the
-// triggers pending alongside it; DCGO CardController.cs
+// activating the used Option card's [Main] effect."; general_rule.pdf §9-1-5
+// (Ver. 4.3) disposes the used Option once its [Main] resolves, before the
+// triggers pending alongside it and with no decision; DCGO CardController.cs
 // `UseOptionClass.UseOption` disposes straight after `OptionSkill`, then the
 // stacked OnUseOption skills resolve. CLEAN on HEAD after the option-disposal
 // ordering work (5108e58ee `complete_option_body_if_done`, c652676d1).

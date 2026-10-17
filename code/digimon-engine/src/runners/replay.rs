@@ -752,14 +752,16 @@ pub trait RecordingSource: Send {
     /// and every later row is shifted one decision forward — silently eating a
     /// real choice and measuring the wrong state.
     ///
-    /// Measured witness: `qa/dcgo-exams/BT25/BT25-091-effect2.yaml`. The
+    /// Historical witness (before the auto-answer and its prompt were
+    /// removed): `qa/dcgo-exams/BT25/BT25-091-effect2.yaml`. The
     /// auto-answer took the 9-1-5 trash-order pick, so the scenario's own
     /// `choice: "Trash the used Option"` row landed on Monica Simmons'
     /// §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] "by suspending this Tamer" decline gate and spent it. The
     /// `select: { yes: true }` row that was written for that gate then
     /// answered the target pick, and the oracle diff reported
     /// `p0.field[0].suspended: ours=true dcgo=false` — a divergence
-    /// manufactured entirely by the double answer.
+    /// manufactured entirely by the double answer. The rule stands for any
+    /// future engine-only prompt.
     fn answers_engine_only_prompts(&self) -> bool {
         false
     }
