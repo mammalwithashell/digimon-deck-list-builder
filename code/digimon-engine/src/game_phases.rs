@@ -14,6 +14,7 @@ use crate::enums::{
 };
 use crate::game::{
     DelayedOptionLifecycleResume, DelayedOptionLifecycleResumeKind, EndTurnResume, Game,
+    TurnBoundaryResume,
     OverclockError,
 };
 use crate::permanent::PermanentHandle;
@@ -84,9 +85,22 @@ impl Game {
 
         // Pending processing due at the turn player's next unsuspend phase
         // (§18-1-1). Several due at once are one simultaneous pool (§18-1-2).
+        // A decision in it (a `TriggerOrder`, a body's own pick) holds the
+        // turn here until it resolves.
         if self.enqueue_scheduled_for_timing(EffectTiming::UntilNextUnsuspend) > 0 {
             self.drain_effect_queue();
+            if self.pending_selection.is_some() {
+                self.pending_turn_boundary_resume =
+                    Some(TurnBoundaryResume::BeginTurnAfterUntilNextUnsuspend);
+                return;
+            }
         }
+
+        self.continue_begin_turn_after_until_next_unsuspend();
+    }
+
+    fn continue_begin_turn_after_until_next_unsuspend(&mut self) {
+        let tp = self.turn_player();
 
         // Reset per-turn state. [Once Per Turn] counters reset for BOTH
         // players — "per turn" is per GAME turn, so an [All Turns][Once Per
@@ -509,19 +523,28 @@ impl Game {
             }
         }
         // §18-1-2: pending processing due at the end of the opponent's turn
-        // pools with the printed `EndOfOpponentsTurn` effects above.
+        // pools with the printed `EndOfOpponentsTurn` effects above: the
+        // scheduled bodies and the provenance-keyed deletions ("At the end of
+        // your opponent's turn, delete that token" — P-165 ShoeShoemon; only
+        // entries whose controller is an opponent of `ending_player`).
         self.enqueue_scheduled_for_timing(EffectTiming::EndOfOpponentsTurn);
         self.enqueue_scheduled_for_timing(EffectTiming::EndOfOpponentsNextTurn);
+        self.enqueue_provenance_deletions_at_opponents_turn_end(ending_player);
         self.drain_effect_queue();
+        // The turn does not end until that pool has resolved: a decision in
+        // it (a `TriggerOrder`, a body's own pick) holds the rotation here.
+        if self.pending_selection.is_some() {
+            self.pending_turn_boundary_resume =
+                Some(TurnBoundaryResume::FinishTurnRotation { ending_player });
+            return;
+        }
 
-        // PUPPETS-G016: drain provenance-keyed deletions scheduled for
-        // the end of the opponent's turn ("At the end of your opponent's
-        // turn, delete that token" — P-165 ShoeShoemon). Runs after the
-        // printed EndOfOpponentsTurn observers and scheduled-effect drains.
-        // Only drains entries whose controller != ending_player (i.e. effects
-        // scheduled by the ending player's opponents that fire at this boundary).
-        crate::scheduled_effects::fire_scheduled_provenance_deletions_opp(self, ending_player);
+        self.finish_turn_rotation(ending_player);
+    }
 
+    /// The rest of `rotate_turn_player` once the `EndOfOpponentsTurn` pool
+    /// has resolved: memory floor, turn advance, seesaw flip, `begin_turn`.
+    fn finish_turn_rotation(&mut self, ending_player: PlayerId) {
         if let Some(floor) = self.modifiers.end_turn_min_memory_floor(ending_player) {
             let floor = floor.clamp(i16::MIN as i32, i16::MAX as i32) as i16;
             if self.memory < floor {
@@ -586,6 +609,38 @@ impl Game {
             return;
         }
         self.enter_main_phase();
+    }
+
+    /// Resume the turn machine parked at a turn boundary by a decision in a
+    /// §18-1-2 pool (`TurnBoundaryResume`). Called from the
+    /// `resolve_selection` tail once nothing is pending.
+    pub(crate) fn resume_pending_turn_boundary(&mut self) {
+        if self.pending_selection.is_some() {
+            return;
+        }
+        let Some(resume) = self.pending_turn_boundary_resume.take() else {
+            return;
+        };
+        // The pool may still hold entries the resolved decision did not
+        // reach (the resolver's drain stops at the next decision).
+        if !self.effect_queue.is_empty() {
+            self.drain_effect_queue();
+            if self.pending_selection.is_some() {
+                self.pending_turn_boundary_resume = Some(resume);
+                return;
+            }
+        }
+        if self.game_over {
+            return;
+        }
+        match resume {
+            TurnBoundaryResume::FinishTurnRotation { ending_player } => {
+                self.finish_turn_rotation(ending_player)
+            }
+            TurnBoundaryResume::BeginTurnAfterUntilNextUnsuspend => {
+                self.continue_begin_turn_after_until_next_unsuspend()
+            }
+        }
     }
 
     pub(crate) fn resume_pending_end_turn(&mut self) {
@@ -1054,16 +1109,13 @@ impl Game {
         // player) and `EndOfOpponentsTurn` (inactive players, fired
         // from `rotate_turn_player`). Both peer pools are built
         // separately at their respective observer-fire sites.
+        // PUPPETS-G003: the provenance-keyed turn-end deletions ("At turn
+        // end, delete the Digimon this effect played") are pending processing
+        // of this timing too, so they join the same pool.
         self.enqueue_scheduled_for_timing(EffectTiming::EndOfYourTurn);
         self.enqueue_scheduled_for_timing(EffectTiming::EndOfYourNextTurn);
+        self.enqueue_provenance_deletions_at_turn_end();
         self.drain_effect_queue();
-
-        // PUPPETS-G003: drain provenance-keyed turn-end self-deletions ("At
-        // turn end, delete the Digimon this effect played"). Runs after the
-        // printed `EndOfYourTurn` observers and scheduled-effect drains —
-        // the played Digimon's own end-of-turn window has already closed —
-        // and before turn rotation flips memory.
-        crate::scheduled_effects::fire_scheduled_provenance_deletions(self);
     }
 
     /// Phase 8 Task 3: fire and trash every Delayed Option (across all

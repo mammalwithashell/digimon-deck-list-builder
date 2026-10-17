@@ -76,7 +76,8 @@ impl<'a> EffectContext<'a> {
     /// / `play_union_bound_free` / etc.); this captures the top card's
     /// `ProvenanceToken` *now*, while the handle is still valid.
     ///
-    /// At turn end `fire_scheduled_provenance_deletions` resolves the token:
+    /// At turn end the deletion joins that timing's pool (pending processing,
+    /// §18-1-2; `Game::enqueue_provenance_deletions_at_turn_end`) and resolves the token:
     /// if the played permanent is still on the battle area it is deleted (as
     /// the controller's own effect); if it already left, the entry is a
     /// silent no-op. A handle that does not currently point at a live
@@ -114,6 +115,8 @@ impl<'a> EffectContext<'a> {
         let entry = crate::scheduled_effects::ScheduledProvenanceDeletion {
             token,
             controller: self.player,
+            source_card: self.source_card,
+            source_kind: self.source_kind,
         };
         if opponents_turn {
             self.game.scheduled_provenance_deletions_opp.push(entry);

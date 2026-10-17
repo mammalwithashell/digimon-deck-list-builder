@@ -517,15 +517,27 @@ fn write_effect_queue(hasher: &mut Sha256, queue: &std::collections::VecDeque<Qu
         // Pending processing (§18-1-2). Written only when present, so the
         // digest of a queue without it is unchanged. Not the body's `Debug`
         // dump: its `Bindings` keep a `HashMap` (unstable order).
-        if let Some(scheduled) = &effect.scheduled {
-            token(hasher, "queued.scheduled");
-            debug_field(hasher, "queued.scheduled.when", &scheduled.when);
-            field(
-                hasher,
-                "queued.scheduled.scheduled_at_turn",
-                scheduled.scheduled_at_turn,
-            );
-            field(hasher, "queued.scheduled.body_len", scheduled.body.len());
+        match &effect.pending_processing {
+            None => {}
+            Some(crate::scheduled_effects::PendingProcessing::Scheduled(scheduled)) => {
+                token(hasher, "queued.scheduled");
+                debug_field(hasher, "queued.scheduled.when", &scheduled.when);
+                field(
+                    hasher,
+                    "queued.scheduled.scheduled_at_turn",
+                    scheduled.scheduled_at_turn,
+                );
+                field(hasher, "queued.scheduled.body_len", scheduled.body.len());
+            }
+            Some(crate::scheduled_effects::PendingProcessing::ProvenanceDeletion(entry)) => {
+                token(hasher, "queued.provenance_deletion");
+                field(hasher, "queued.provenance_deletion.token", entry.token.0);
+                field(
+                    hasher,
+                    "queued.provenance_deletion.controller",
+                    entry.controller,
+                );
+            }
         }
     }
 }

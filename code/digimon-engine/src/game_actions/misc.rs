@@ -1430,7 +1430,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
-                scheduled: None,
+                pending_processing: None,
             });
         }
     }
@@ -1477,7 +1477,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
-                scheduled: None,
+                pending_processing: None,
             });
         }
     }

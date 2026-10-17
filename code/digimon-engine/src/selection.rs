@@ -494,16 +494,18 @@ pub struct QueuedEffect {
     /// (DCGO `MultipleSkills.cs` nested `TriggeredSkillProcess`).
     pub trigger_batch: u32,
     /// §18-1-2 — when `Some`, this entry is PENDING PROCESSING (a
-    /// `ScheduledEffect` from `EffectContext::schedule_delayed`) that joined
-    /// its timing's simultaneous pool via `Game::enqueue_scheduled_for_timing`.
-    /// The drainer orders it like any trigger, then runs the captured body
-    /// (`scheduled_effects::run_scheduled_body`) instead of looking up
+    /// `schedule_delayed` body, or a provenance-keyed turn-end deletion) that
+    /// joined its timing's simultaneous pool (`Game::enqueue_scheduled_for_timing`,
+    /// `Game::enqueue_provenance_deletions_at_turn_end`, …). The drainer orders
+    /// it like any trigger, then performs it
+    /// (`scheduled_effects::run_pending_processing`) instead of looking up
     /// `effects_for_card(card_id)[effect_slot]`: it has no `Effect` metadata
     /// (no condition, cost, OPT or optionality) and no source-liveness gate,
     /// since pending processing is performed at its timing even when its
-    /// source has left (§18-1-1). `card_id` / `effect_slot` (0) only label
-    /// the `TriggerOrder` branch. Plain data, so `Game: Clone` stays faithful.
-    pub scheduled: Option<Box<crate::scheduled_effects::ScheduledEffect>>,
+    /// source has left (§18-1-1). `card_id` only labels the `TriggerOrder`
+    /// branch, which names it as pending processing. Plain data, so
+    /// `Game: Clone` stays faithful.
+    pub pending_processing: Option<crate::scheduled_effects::PendingProcessing>,
 }
 
 /// Queued triggered effect parked after its `pay_cost_fn` installed a

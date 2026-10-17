@@ -203,7 +203,7 @@ impl Game {
     ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
         // Pending processing (§18-1-2) carries its own body and has no
         // `Effect` in any card's list; slot 0 of the source card is NOT it.
-        if qe.scheduled.is_some() {
+        if qe.pending_processing.is_some() {
             return None;
         }
         match qe.keyword_effect {
@@ -235,7 +235,7 @@ impl Game {
             granted_effect_id: None,
             keyword_effect: None,
             trigger_batch: 0,
-            scheduled: None,
+            pending_processing: None,
         }
     }
 
@@ -982,7 +982,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
-                scheduled: None,
+                pending_processing: None,
             });
         }
     }
@@ -1055,7 +1055,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
-                    scheduled: None,
+                    pending_processing: None,
                 });
             }
         }
@@ -1128,7 +1128,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
-                scheduled: None,
+                pending_processing: None,
             });
         }
     }
@@ -2585,7 +2585,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
-                scheduled: None,
+                pending_processing: None,
             });
         }
     }
@@ -2693,7 +2693,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
-                scheduled: None,
+                pending_processing: None,
             });
         }
     }
@@ -2766,7 +2766,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
-                scheduled: None,
+                pending_processing: None,
             });
         }
     }
@@ -2873,7 +2873,7 @@ impl Game {
                 granted_effect_id: Some(body_id),
                 keyword_effect: None,
                 trigger_batch: 0,
-                scheduled: None,
+                pending_processing: None,
             });
         }
 
@@ -2923,7 +2923,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
-                    scheduled: None,
+                    pending_processing: None,
                 });
             }
         }
@@ -3020,7 +3020,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: Some(keyword),
                     trigger_batch: 0,
-                    scheduled: None,
+                    pending_processing: None,
                 });
             }
         }
@@ -3087,7 +3087,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
-                    scheduled: None,
+                    pending_processing: None,
                 });
             }
         }
@@ -3180,7 +3180,7 @@ impl Game {
                         granted_effect_id: None,
                         keyword_effect: None,
                         trigger_batch: 0,
-                        scheduled: None,
+                        pending_processing: None,
                     });
                 }
             }
@@ -3255,7 +3255,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
-                    scheduled: None,
+                    pending_processing: None,
                 });
             }
         }
@@ -3323,7 +3323,7 @@ impl Game {
                 granted_effect_id: Some(body_id),
                 keyword_effect: None,
                 trigger_batch: 0,
-                scheduled: None,
+                pending_processing: None,
             });
         }
 
@@ -3354,7 +3354,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
-                    scheduled: None,
+                    pending_processing: None,
                 });
             }
         }
@@ -3403,7 +3403,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
-                    scheduled: None,
+                    pending_processing: None,
                 });
             }
         }
@@ -3573,7 +3573,7 @@ impl Game {
     }
 
     fn queued_single_effect_condition_passes(&mut self, qe: &QueuedEffect) -> bool {
-        if qe.granted_effect_id.is_some() || qe.scheduled.is_some() {
+        if qe.granted_effect_id.is_some() || qe.pending_processing.is_some() {
             // Granted effects have no clause condition — keep them.
             return true;
         }
@@ -3806,8 +3806,8 @@ impl Game {
         // §18-1-2 pending processing: the captured `schedule_delayed` body,
         // performed at its timing whatever happened to its source (§18-1-1)
         // -- no condition / cost / OPT / liveness gates.
-        if let Some(scheduled) = qe.scheduled.take() {
-            crate::scheduled_effects::run_scheduled_body(self, *scheduled, qe.source_permanent);
+        if let Some(payload) = qe.pending_processing.take() {
+            crate::scheduled_effects::run_pending_processing(self, payload, qe.source_permanent);
             return;
         }
         // Track H §3 Phase 4i — granted-triggered-effect branch.
@@ -4230,7 +4230,7 @@ impl Game {
             // timing (§18-1-1), not activated from the carrier (15-4-4-3).
             // The carrier is a new card now, so the body no longer refers to
             // it (and the stale slot must not address whatever shifts in).
-            if source_changed && qe.scheduled.is_some() {
+            if source_changed && qe.pending_processing.is_some() {
                 qe.source_permanent = None;
                 return true;
             }
@@ -5140,14 +5140,20 @@ impl Game {
             let qe_idx = bundle[pos];
             let qe = &self.effect_queue[qe_idx];
             let action_id = HAND_EFFECT_START + pos as u16;
-            let observation_metadata = self
-                .effects_for_queued(qe)
-                .and_then(|effects| {
-                    effects
-                        .get(qe.effect_slot as usize)
-                        .map(|effect| effect.observation_metadata)
-                })
-                .unwrap_or_default();
+            // Pending processing (§18-1-2) has no `Effect`: its metadata and
+            // label come from the payload, so its branch never reads as the
+            // source card's printed slot-0 effect.
+            let observation_metadata = match &qe.pending_processing {
+                Some(payload) => payload.observation_metadata(),
+                None => self
+                    .effects_for_queued(qe)
+                    .and_then(|effects| {
+                        effects
+                            .get(qe.effect_slot as usize)
+                            .map(|effect| effect.observation_metadata)
+                    })
+                    .unwrap_or_default(),
+            };
             // Which KEYWORD this branch is, if any -- the only thing that tells
             // the branches of a same-card trigger stack apart (see
             // `EffectChoiceEntry::keyword`). Two sources, because a keyword
@@ -5180,16 +5186,21 @@ impl Game {
             valid_action_ids.push(action_id);
             choices.push(EffectChoiceEntry {
                 count_choice: None,
-                label: format!(
-                    "{} slot {} ({})",
-                    qe.card_id,
-                    qe.effect_slot,
-                    if qe.is_optional {
-                        "optional"
-                    } else {
-                        "mandatory"
-                    },
-                ),
+                label: match &qe.pending_processing {
+                    Some(payload) => {
+                        format!("{} slot - ({})", qe.card_id, payload.describe(self))
+                    }
+                    None => format!(
+                        "{} slot {} ({})",
+                        qe.card_id,
+                        qe.effect_slot,
+                        if qe.is_optional {
+                            "optional"
+                        } else {
+                            "mandatory"
+                        },
+                    ),
+                },
                 action_id,
                 source_card: Some(qe.source_card),
                 source_kind: Some(qe.source_kind),
@@ -5234,7 +5245,7 @@ impl Game {
                     // shifted).
                     if let Some(&idx) = bundle.get(pos) {
                         if let Some(qe) = game.effect_queue.remove(idx) {
-                            game.run_queued_effect(qe);
+                            game.run_picked_trigger(qe, bundle.len() > 1);
                         }
                     }
                     // Generic resolver will call `drain_effect_queue` after we
@@ -5293,9 +5304,44 @@ impl Game {
         let pos = action_id.saturating_sub(HAND_EFFECT_START) as usize;
         if let Some(&idx) = state.bundle.get(pos) {
             if let Some(qe) = self.effect_queue.remove(idx) {
-                self.run_queued_effect(qe);
+                self.run_picked_trigger(qe, state.bundle.len() > 1);
             }
         }
+    }
+
+    /// Run the entry picked from a `TriggerOrder`. Picking only decides the
+    /// ORDER (§15-4-3-5-1): an OPTIONAL effect keeps its "you may" decision
+    /// (§15-7), so when the single-trigger path would have parked an outer
+    /// accept / decline prompt (`queued_effect_wants_outer_optional_prompt`)
+    /// or a pre-cost decline (an optional effect with an `activation_cost`
+    /// whose condition passes), the pick parks the accept / decline prompt
+    /// instead: accept runs `run_queued_effect`, decline drops the entry.
+    /// `gate_optional` is false for a one-entry `TriggerOrder`: that prompt
+    /// IS the pre-cost decline gate, and its pick is the acceptance.
+    fn run_picked_trigger(&mut self, qe: QueuedEffect, gate_optional: bool) {
+        if gate_optional && self.picked_trigger_needs_optional_gate(&qe) {
+            self.install_outer_optional_trigger_selection(qe);
+            return;
+        }
+        self.run_queued_effect(qe);
+    }
+
+    fn picked_trigger_needs_optional_gate(&mut self, qe: &QueuedEffect) -> bool {
+        if !qe.is_optional {
+            return false;
+        }
+        if self.queued_effect_wants_outer_optional_prompt(qe) {
+            return true;
+        }
+        let has_activation_cost = self
+            .effects_for_queued(qe)
+            .and_then(|effects| {
+                effects
+                    .get(qe.effect_slot as usize)
+                    .map(|effect| effect.activation_cost_fn.is_some())
+            })
+            .unwrap_or(false);
+        has_activation_cost && self.queued_single_effect_condition_passes(qe)
     }
 
     /// Resolve any pending selection — `TriggerOrder`, `Target`, `Hand`,
@@ -5564,6 +5610,9 @@ impl Game {
         }
         if self.pending_selection.is_none() {
             self.resume_pending_end_turn();
+        }
+        if self.pending_selection.is_none() {
+            self.resume_pending_turn_boundary();
         }
         // Parked Breeding → Main advance (user bug 2026-07-09): a breeding
         // action (HATCH / MOVE_FROM_BREEDING) whose trigger drain installed a

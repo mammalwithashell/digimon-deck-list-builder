@@ -305,6 +305,7 @@ impl Game {
             declined_delay_option: None,
             pending_delayed_option_lifecycle_stack: Vec::new(),
             pending_end_turn_resume: None,
+            pending_turn_boundary_resume: None,
             pending_enter_main_after_selection: false,
             draining_deferred: 0,
             turn_end_check_deferred: false,
@@ -480,6 +481,7 @@ impl Game {
         self.declined_delay_option = None;
         self.pending_delayed_option_lifecycle_stack = Vec::new();
         self.pending_end_turn_resume = None;
+        self.pending_turn_boundary_resume = None;
         self.pending_enter_main_after_selection = false;
         self.draining_deferred = 0;
         self.turn_end_check_deferred = false;

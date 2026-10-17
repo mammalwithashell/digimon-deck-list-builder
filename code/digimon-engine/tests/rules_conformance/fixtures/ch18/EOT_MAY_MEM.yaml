@@ -1,0 +1,15 @@
+# EOT_MAY_MEM -- Tamer, red, play cost 3.
+#   [End of Your Turn] You may gain 1 memory.
+# An optional end-of-turn effect: picked first from the pool it shares with
+# pending processing (§18-1-2), it still asks "you may".
+card: EOT_MAY_MEM
+name: Maybe Dusk Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: end_of_your_turn
+    optional: true
+    summary: "[End of Your Turn] You may gain 1 memory."
+    process:
+      - gain_memory: 1

@@ -242,8 +242,8 @@
   note: "The rule's example '[When Attacking] Gain 3 memory. Lose 3 memory at the end of the turn' (schedule_delayed): after the attack only +3 is applied and the turn goes on; on pass the -3 is processed before P1's TurnStart."
 "18-1-2":
   status: proven
-  tests: ["ch18_pending_overwrite::pending_processing_orders_with_simultaneous_triggers"]
-  note: "The 18-1-1 board plus EOT_MEM ([End of Your Turn] Gain 2 memory): at the end of P0's turn the pending -3 and EOT_MEM are offered in ONE TriggerOrder to P0 before either is processed, and both orders are honoured. Every timing site enqueues its due ScheduledEffects (Game::enqueue_scheduled_for_timing) into the same batch as the printed triggers before draining."
+  tests: ["ch18_pending_overwrite::pending_processing_orders_with_simultaneous_triggers", "ch18_pending_overwrite::pending_deletion_orders_with_simultaneous_triggers", "ch18_pending_overwrite::optional_effect_ordered_first_in_the_pool_keeps_its_choice", "ch18_pending_overwrite::end_of_opponents_turn_pool_resolves_before_the_turn_passes"]
+  note: "The 18-1-1 board plus EOT_MEM ([End of Your Turn] Gain 2 memory): at the end of P0's turn the pending -3 and EOT_MEM are offered in ONE TriggerOrder to P0 before either is processed, and both orders are honoured. Every timing site enqueues its due ScheduledEffects (Game::enqueue_scheduled_for_timing) into the same batch as the printed triggers before draining. The provenance-keyed turn-end deletion (delete the Digimon this effect played) pools the same way; an optional effect ordered first keeps its accept/decline; the end-of-opponent's-turn pool resolves before the turn passes (no turn advance or TurnStart while it waits)."
 "18-2-1":
   status: proven
   tests: ["ch18_pending_overwrite::instead_overwrites_the_normal_processing"]

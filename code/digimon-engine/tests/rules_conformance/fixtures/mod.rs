@@ -268,13 +268,17 @@ const CH17: &[&str] = &[
 /// §18 "Other Information" chapter cards, with the §9-1-5 and §16-7 cards
 /// (`ch18_pending_overwrite.rs`).
 const CH18: &[&str] = &[
+    include_str!("ch18/EOOT_MEM.yaml"),
+    include_str!("ch18/EOT_MAY_MEM.yaml"),
     include_str!("ch18/GREYMON_LV4.yaml"),
     include_str!("ch18/INH_PIERCE.yaml"),
     include_str!("ch18/LOOP_FLIP.yaml"),
     include_str!("ch18/LOOP_FLIP_MAY.yaml"),
     include_str!("ch18/MAIN_DEL_6000_OR_LOWEST_IF_GREYMON.yaml"),
+    include_str!("ch18/MAIN_MEM_AT_EOONT.yaml"),
     include_str!("ch18/MAIN_MINUS3000.yaml"),
     include_str!("ch18/MAIN_PLAY_LV3.yaml"),
+    include_str!("ch18/MAIN_PLAY_LV3_DEL_EOT.yaml"),
     include_str!("ch18/OBS_OPP_PLAY_MEM.yaml"),
     include_str!("ch18/OD_DEL_OPP.yaml"),
     include_str!("ch18/OP_MAY_MEM.yaml"),

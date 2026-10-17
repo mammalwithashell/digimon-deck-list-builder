@@ -166,6 +166,19 @@ pub(crate) struct DelayedOptionLifecycleResume {
     pub(crate) skip_key: Option<(PlayerId, u16)>,
 }
 
+/// Where the turn machine resumes after a decision in a turn-boundary
+/// simultaneous pool (§18-1-2: pending processing + triggered effects)
+/// parked it. The boundary does not pass until that pool has resolved.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TurnBoundaryResume {
+    /// The `EndOfOpponentsTurn` pool of `rotate_turn_player`: finish the
+    /// rotation (memory floor, turn advance, seesaw flip, `begin_turn`).
+    FinishTurnRotation { ending_player: PlayerId },
+    /// The `UntilNextUnsuspend` pool at the start of a turn: continue into
+    /// the per-turn reset and the unsuspend phase.
+    BeginTurnAfterUntilNextUnsuspend,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct EndTurnResume {
     pub(crate) ending_player: PlayerId,
@@ -1179,7 +1192,7 @@ pub struct Game {
     /// permanent* at turn end ("At turn end, delete the Digimon this effect
     /// played") pushes one entry here, keyed by a stable `ProvenanceToken`
     /// (the played card's identity) rather than a battle-area index that can
-    /// shift. Drained by `scheduled_effects::fire_scheduled_provenance_deletions`
+    /// shift. Enqueued into the end-of-turn pool by `Game::enqueue_provenance_deletions_at_turn_end`
     /// from `fire_end_of_your_turn`; the queue is cleared each turn so a
     /// played permanent that already left is a silent no-op.
     pub scheduled_provenance_deletions: Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
@@ -1209,6 +1222,9 @@ pub struct Game {
     /// Continuation for the regular EndTurn state machine when an
     /// EndOfYourTurn effect parks a player selection.
     pub(crate) pending_end_turn_resume: Option<EndTurnResume>,
+    /// Continuation for a turn boundary whose §18-1-2 pool parked on a
+    /// decision (`resume_pending_turn_boundary`).
+    pub(crate) pending_turn_boundary_resume: Option<TurnBoundaryResume>,
     /// Parked Breeding â†’ Main phase advance. Set by `enter_main_phase` when a
     /// breeding-action trigger (e.g. an `[When Moving]` selection fired by
     /// `move_from_breeding`) parked a `PendingSelection` before the phase

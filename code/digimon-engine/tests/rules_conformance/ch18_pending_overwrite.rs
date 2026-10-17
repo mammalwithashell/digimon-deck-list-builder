@@ -145,13 +145,18 @@ fn within<T: Send + 'static>(
 /// P1's suspended `FILL`, starting from memory 0; `with_eot_mem` adds P0's
 /// Tamer `EOT_MEM` ("[End of Your Turn] Gain 2 memory").
 fn pending_loss_board(with_eot_mem: bool) -> (DebugRunner, usize) {
+    pending_loss_board_with(with_eot_mem.then_some("EOT_MEM"))
+}
+
+/// [`pending_loss_board`] with P0's Tamer `tamer` (if any) on the field.
+fn pending_loss_board_with(tamer: Option<&str>) -> (DebugRunner, usize) {
     let mut r = ch18()
         .deck(0, &[FILL; 4])
         .deck(1, &[FILL; 4])
         .memory(0)
         .start();
-    if with_eot_mem {
-        r.place_on_field(0, "EOT_MEM", Some(0));
+    if let Some(tamer) = tamer {
+        r.place_on_field(0, tamer, Some(0));
     }
     let attacker = r.place_on_field(0, "WA_GAIN3_LOSE3_EOT", Some(0));
     let defender = r.place_on_field(1, FILL, Some(0));
@@ -269,6 +274,183 @@ fn pending_processing_orders_with_simultaneous_triggers() {
             "P0 chose {first} first"
         );
     }
+}
+
+/// Index in the event log (since `cp`) of the first trash of `card_id`.
+fn trash_event_index(r: &DebugRunner, cp: usize, card_id: &str) -> Option<usize> {
+    r.events_since(cp)
+        .iter()
+        .position(|e| matches!(e, GameEvent::Trash { card_id: id, .. } if id == card_id))
+}
+
+/// The §18-1-1 board plus P0's Tamer `EOT_MAY_MEM` ("[End of Your Turn] You
+/// may gain 1 memory"). At the end of P0's turn it pools with the pending
+/// "lose 3 memory" (§18-1-2). Ordering it first decides only the ORDER: its
+/// "you may" decision still follows, and both answers are honoured.
+#[test]
+fn optional_effect_ordered_first_in_the_pool_keeps_its_choice() {
+    cite!(
+        "18-1-2",
+        "1b5f8339dafb6d36f24a37380b4ccbcf4131788de779f4d1800da5a65bbd3372"
+    );
+    for take in [true, false] {
+        let (mut r, cp) = pending_loss_board_with(Some("EOT_MAY_MEM"));
+        r.pass_turn();
+        let choices = order_choices(&r, 0);
+        assert_eq!(choices.len(), 2, "{choices:?}");
+        choose(&mut r, "EOT_MAY_MEM");
+        {
+            let sel = r.pending_selection().expect("EOT_MAY_MEM's \"you may\"");
+            assert_ne!(sel.kind, SelectionKind::TriggerOrder, "{sel:?}");
+            assert!(sel.is_optional, "an accept / decline choice: {sel:?}");
+            assert_eq!(sel.selecting_player, 0, "{sel:?}");
+        }
+        assert_eq!(
+            memory_deltas(&r, cp).len(),
+            1,
+            "nothing at the end of the turn was processed before the choice"
+        );
+        if take {
+            accept(&mut r, 0);
+        } else {
+            r.decline_optional_trigger()
+                .unwrap_or_else(|e| panic!("decline rejected: {e:?}"));
+        }
+        resolve_prompts(&mut r);
+        let end_of_turn: Vec<(String, i16)> = memory_deltas(&r, cp)
+            .into_iter()
+            .skip(1)
+            .map(|(_, id, delta)| (id, delta))
+            .collect();
+        let mut expected = Vec::new();
+        if take {
+            expected.push(("EOT_MAY_MEM".to_string(), 1));
+        }
+        expected.push(("WA_GAIN3_LOSE3_EOT".to_string(), -3));
+        assert_eq!(end_of_turn, expected, "accepted = {take}");
+    }
+}
+
+/// "At the end of the turn, delete the Digimon this effect played" is
+/// pending processing too (§18-1-1). P0 uses `MAIN_PLAY_LV3_DEL_EOT` to play
+/// `VANILLA_LV3` and has the Tamer `EOT_MEM` ("[End of Your Turn] Gain 2
+/// memory"). At the end of P0's turn the deletion and `EOT_MEM` are one
+/// simultaneous pool that P0 orders (§18-1-2), and either order is honoured.
+#[test]
+fn pending_deletion_orders_with_simultaneous_triggers() {
+    cite!(
+        "18-1-2",
+        "1b5f8339dafb6d36f24a37380b4ccbcf4131788de779f4d1800da5a65bbd3372"
+    );
+    for first in ["MAIN_PLAY_LV3_DEL_EOT", "EOT_MEM"] {
+        let mut r = ch18()
+            .hand(0, &["MAIN_PLAY_LV3_DEL_EOT", FILL])
+            .deck(0, &[FILL; 4])
+            .deck(1, &[FILL; 4])
+            .memory(3)
+            .start();
+        r.place_on_field(0, "EOT_MEM", Some(0));
+        use_option(&mut r, 0, "MAIN_PLAY_LV3_DEL_EOT");
+        pick_hand_card(&mut r, 0, FILL);
+        resolve_prompts(&mut r);
+        assert_eq!(field_top_ids(&r, 0), owned(&["EOT_MEM", FILL]));
+        let cp = r.event_checkpoint();
+        r.pass_turn();
+        let choices = order_choices(&r, 0);
+        assert_eq!(
+            choices.len(),
+            2,
+            "the pending deletion and [End of Your Turn] share one ordering choice: {choices:?}"
+        );
+        assert!(
+            choices
+                .iter()
+                .any(|l| branch_card(l) == "MAIN_PLAY_LV3_DEL_EOT")
+                && choices.iter().any(|l| branch_card(l) == "EOT_MEM"),
+            "{choices:?}"
+        );
+        assert_eq!(
+            field_top_ids(&r, 0),
+            owned(&["EOT_MEM", FILL]),
+            "nothing was deleted before the choice"
+        );
+        assert!(memory_deltas(&r, cp).is_empty(), "nor any memory gained");
+        choose(&mut r, first);
+        resolve_prompts(&mut r);
+        assert_eq!(field_top_ids(&r, 0), owned(&["EOT_MEM"]), "deleted");
+        let deleted = trash_event_index(&r, cp, FILL).expect("the deletion's trash event");
+        let gained = memory_event_index(&r, cp, "EOT_MEM").expect("EOT_MEM's gain");
+        if first == "EOT_MEM" {
+            assert!(gained < deleted, "P0 chose EOT_MEM first");
+        } else {
+            assert!(deleted < gained, "P0 chose the deletion first");
+        }
+    }
+}
+
+/// The pool at the end of the opponent's turn (§18-1-2) resolves before the
+/// turn passes. P0 used `MAIN_MEM_AT_EOONT` ("At the end of your opponent's
+/// next turn, gain 2 memory") and has the Tamer `EOOT_MEM` ("[End of
+/// Opponent's Turn] Gain 1 memory"). When P1 passes, both are pending for P0
+/// in one ordering choice; while it waits, P1's turn has not ended (no turn
+/// advance, no `TurnStart` for P0); once it resolves, both are processed and
+/// only then does P0's turn start.
+#[test]
+fn end_of_opponents_turn_pool_resolves_before_the_turn_passes() {
+    cite!(
+        "18-1-2",
+        "1b5f8339dafb6d36f24a37380b4ccbcf4131788de779f4d1800da5a65bbd3372"
+    );
+    let mut r = ch18()
+        .hand(0, &["MAIN_MEM_AT_EOONT"])
+        .deck(0, &[FILL; 4])
+        .deck(1, &[FILL; 4])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "EOOT_MEM", Some(0));
+    use_option(&mut r, 0, "MAIN_MEM_AT_EOONT");
+    resolve_prompts(&mut r);
+    r.pass_turn();
+    resolve_prompts(&mut r);
+    assert_eq!(r.turn_player(), 1);
+    let turn = r.game.turn_count;
+    let cp = r.event_checkpoint();
+    r.pass_turn();
+
+    let choices = order_choices(&r, 0);
+    assert_eq!(
+        choices.len(),
+        2,
+        "the pending gain and [End of Opponent's Turn] share one ordering choice: {choices:?}"
+    );
+    assert_eq!(r.turn_player(), 1, "P1's turn has not ended");
+    assert_eq!(r.game.turn_count, turn, "no turn advance while the pool waits");
+    assert_eq!(turn_start_index(&r, cp, 0), None, "P0's turn has not started");
+    assert!(memory_deltas(&r, cp).is_empty(), "nothing processed before the choice");
+
+    choose(&mut r, "MAIN_MEM_AT_EOONT");
+    resolve_prompts(&mut r);
+    let gains: Vec<(String, i16)> = memory_deltas(&r, cp)
+        .into_iter()
+        .map(|(_, id, delta)| (id, delta))
+        .collect();
+    // The gauge is read from the turn player's (P1's) side, so P0's gains
+    // are negative deltas.
+    assert_eq!(
+        gains,
+        vec![
+            ("MAIN_MEM_AT_EOONT".to_string(), -2),
+            ("EOOT_MEM".to_string(), -1)
+        ]
+    );
+    let p0_turn = turn_start_index(&r, cp, 0).expect("P0's turn started");
+    let last_gain = memory_event_index(&r, cp, "EOOT_MEM").expect("EOOT_MEM's gain");
+    assert!(
+        last_gain < p0_turn,
+        "the pool finished before P0's turn began (gain #{last_gain}, turn #{p0_turn})"
+    );
+    assert_eq!(r.turn_player(), 0);
+    assert_eq!(r.game.turn_count, turn + 1);
 }
 
 // ─── §18-2-1 / §18-2-3 ──────────────────────────────────────────────────────
