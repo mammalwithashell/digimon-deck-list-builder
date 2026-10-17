@@ -83,11 +83,9 @@
   tests: ["ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves"]
   note: "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not. G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX."
 "15-8-3-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS
+  status: proven
   tests: ["ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish"]
-  note: "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: from an Option [Main] the observer waits (green half); from an [On Play] it resolves before 'Then, gain 1 memory' (inline drain in fire_digivolution_card_trashed). Test is #[ignore]d."
+  note: "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: the observer waits for the trashing effect's 'Then, gain 1 memory' whether the cause is an Option [Main] or an [On Play] trigger. fire_digivolution_card_trashed no longer drains inline; source-trash observers are enqueued inside a deferred-drain event scope (G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS resolved)."
 "15-8-3-5":
   status: proven
   tests: ["ch15_08_effect_categories::inherited_on_deletion_is_pending_on_the_former_top_card"]
@@ -1026,11 +1024,9 @@
   tests: ["ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential"]
   note: "With a Tamer card exposed after the 1st card (top category changes), the 2nd card is still trashed."
 "16-12-7":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS
+  status: proven
   tests: ["ch16_processing_keywords::de_digivolve_separate_instances_processed_separately"]
-  note: "Two <De-Digivolve 1> instances in one Option [Main]: both cards trashed, but the 'top stacked card trashed' observer triggers once instead of once per instance (15-4-2-4, owner ruling 2026-10-10 #5; DCGO runs IDegeneration twice, each stacking WhenTopCardTrashed). #[ignore]d."
+  note: "Two <De-Digivolve 1> instances in one Option [Main]: both cards trashed, and the 'top stacked card trashed' observer triggers once per instance (15-4-2-4, owner ruling 2026-10-10 #5; DCGO runs IDegeneration twice, each stacking WhenTopCardTrashed). The 1st event's trigger used to fail its condition because event_host_is_own_digimon located the host by the top card the 2nd instance trashed; it now locates an OnTopCardTrashed host by stack identity (G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS resolved)."
 "16-12-8":
   status: proven
   tests: ["ch16_processing_keywords::de_digivolve_state_confirmed_after_each_instance"]

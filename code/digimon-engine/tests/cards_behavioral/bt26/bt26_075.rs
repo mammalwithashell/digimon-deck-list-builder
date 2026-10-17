@@ -73,19 +73,19 @@ fn delete(r: &mut DebugRunner, h: PermanentHandle) {
         .delete_permanents_batch(vec![h], ReplacementCause::OpponentEffect);
 }
 
-/// Decline <Ascension>'s "place this card as the top security card?" choice
-/// if it is the pending prompt. (The engine's inline drain of the
-/// face-down-trash observers can surface it mid-[On Deletion]; see
-/// G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.)
-fn decline_ascension_if_pending(r: &mut DebugRunner) {
-    let is_ascension = r
-        .game
+/// True when <Ascension>'s "place this card as the top security card?"
+/// choice is the pending prompt.
+fn ascension_pending(r: &DebugRunner) -> bool {
+    r.game
         .pending_selection
         .as_ref()
-        .is_some_and(|s| s.prompt.contains("top security card") && s.effect_choices.is_some());
-    if is_ascension {
-        r.execute_branch(1).expect("decline <Ascension>");
-    }
+        .is_some_and(|s| s.prompt.contains("top security card") && s.effect_choices.is_some())
+}
+
+/// Decline <Ascension>'s choice, which must be the pending prompt.
+fn decline_ascension(r: &mut DebugRunner) {
+    assert!(ascension_pending(r), "<Ascension> is the pending prompt");
+    r.execute_branch(1).expect("decline <Ascension>");
 }
 
 /// Resolve the <Ascension> / [On Deletion] trigger-order prompt, putting the
@@ -120,7 +120,14 @@ fn bt26_075_on_deletion_trashes_face_down_and_plays_from_trash() {
     on_deletion_first(&mut r);
     pick_first(&mut r, 0); // the Tamer (the 'by trashing' cost)
     assert_eq!(sources(&r, t), 0);
-    decline_ascension_if_pending(&mut r);
+    // §15-8-3-2: the simultaneously triggered <Ascension> waits until the
+    // [On Deletion] has finished; trashing its cost no longer activates it
+    // mid-effect (this test used to tolerate that interleave,
+    // G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS).
+    assert!(
+        !ascension_pending(&r),
+        "<Ascension> must not activate during the [On Deletion]"
+    );
     let v = r.pending_selection_view().expect("trash play pick");
     assert!(v.is_optional, "'you may play'");
     assert_eq!(
@@ -132,7 +139,7 @@ fn bt26_075_on_deletion_trashes_face_down_and_plays_from_trash() {
         "only the [Glowing Dawn] card with play cost <= 5"
     );
     pick_first(&mut r, 0);
-    decline_ascension_if_pending(&mut r);
+    decline_ascension(&mut r);
     assert!(r.game.pending_selection.is_none());
     assert!(field_ids(&r, 0).contains(&"GD5".to_string()));
     assert!(
@@ -153,7 +160,7 @@ fn bt26_075_on_deletion_cost_may_be_declined() {
     let v = r.pending_selection_view().expect("Tamer pick");
     assert!(v.is_optional, "the 'by trashing' cost is declinable");
     pass(&mut r, 0);
-    decline_ascension_if_pending(&mut r);
+    decline_ascension(&mut r);
     assert!(r.game.pending_selection.is_none());
     assert_eq!(sources(&r, t), 1);
     assert!(!field_ids(&r, 0).contains(&"GD5".to_string()));
@@ -167,7 +174,7 @@ fn bt26_075_on_deletion_needs_a_face_down_card() {
     let s = r.place_on_field(0, CARD_ID, Some(0));
     delete(&mut r, s);
     // Only <Ascension> is live (no trigger-order prompt): decline it.
-    decline_ascension_if_pending(&mut r);
+    decline_ascension(&mut r);
     assert!(
         r.game.pending_selection.is_none(),
         "no [On Deletion] prompt"

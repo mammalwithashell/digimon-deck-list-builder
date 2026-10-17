@@ -321,18 +321,20 @@ impl Game {
         }
         self.apply_ace_overflow_for_sources(&overflow);
         self.tick_declarative_effects();
-        for card in source_handles {
-            self.enqueue_triggered(
-                EffectTiming::OnDigivolutionCardTrashed,
-                TriggerSource::SourceTrashedFromStack {
+        // The donor's digivolution cards are trashed at the same time: one
+        // event (§15-5-2).
+        self.enqueue_digivolution_cards_trashed(
+            source_handles
+                .into_iter()
+                .map(|card| super::TrashedSource {
                     player: donor.player,
                     host: donor,
                     host_card: top_card,
                     card,
-                    cause: EventCause::Rule,
-                },
-            );
-        }
+                })
+                .collect(),
+            EventCause::Rule,
+        );
         if linked {
             for player in 0..self.players.len() {
                 self.enqueue_triggered(

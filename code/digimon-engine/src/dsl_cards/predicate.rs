@@ -2246,19 +2246,36 @@ fn eval_event_fields(
         // Digimon owned by the observer that still stands in the battle area.
         // Located by the host's TOP CARD (`event_host_card`), not its index:
         // the battle area compacts when a <Delay> carrier trashes itself.
-        let host_card = rctx
-            .game
-            .current_trigger_context
-            .as_ref()
-            .and_then(|t| t.event_host_card);
-        let is_own_digimon = host_card
-            .and_then(|card| {
+        // When the host IS the event permanent (`OnTopCardTrashed`), it is
+        // located by its stack identity instead: a LATER event can trash the
+        // top card this event exposed (two separate <De-Digivolve 1>
+        // instances, §16-12-7), and the earlier event's trigger is still met
+        // on the same Digimon (§15-4-2-4; owner ruling 2026-10-10 #5).
+        // G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+        let trigger = rctx.game.current_trigger_context.as_ref();
+        let host_by_identity = trigger
+            .filter(|t| {
+                t.event_permanent_identity.is_some()
+                    && t.event_host_permanent.is_some()
+                    && t.event_host_permanent == t.event_permanent
+            })
+            .map(|t| {
+                t.resolve_event_permanent(rctx.game)
+                    .filter(|h| h.player == rctx.player)
+                    .map(|h| h.index as usize)
+            });
+        let host_card = trigger.and_then(|t| t.event_host_card);
+        let host_index = match host_by_identity {
+            Some(index) => index,
+            None => host_card.and_then(|card| {
                 rctx.game
                     .player(rctx.player)
                     .battle_area
                     .iter()
                     .position(|perm| perm.top_card().handle() == card)
-            })
+            }),
+        };
+        let is_own_digimon = host_index
             .map(|index| {
                 rctx.game
                     .permanent_is_digimon_for_rules(crate::permanent::PermanentHandle {

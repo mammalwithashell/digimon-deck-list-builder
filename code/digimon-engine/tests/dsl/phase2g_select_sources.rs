@@ -115,7 +115,7 @@ fn empty_select_own_sources_silently_skips_outer_tail_when_min_positive() {
 }
 
 #[test]
-fn digi_burst_two_selects_exact_self_sources_and_fires_source_trash_per_card() {
+fn digi_burst_two_selects_exact_self_sources_and_fires_source_trash_once_per_event() {
     let burst_yaml = r#"
 card: DSL-DIGI-BURST-2
 name: Digi-Burst Two
@@ -165,6 +165,7 @@ effects:
     let carrier = runner.place_stack(0, &["SRC-A", "SRC-B", "SRC-C", "DSL-DIGI-BURST-2"]);
     let other = runner.place_stack(0, &["OTHER-SRC", "OTHER-HOST"]);
     runner.place_on_field(0, "DSL-SOURCE-TRASH-OBSERVER", None);
+    let cp = runner.event_checkpoint();
 
     assert!(
         runner.game.activate_field_main(0, carrier.index as usize),
@@ -230,6 +231,13 @@ effects:
         .execute_action(0, pick_b)
         .expect("second Digi-Burst source pick resolves");
 
+    // §15-8-3-2: the observer can't activate while Digi-Burst is still
+    // processing, so its `then` body (+3) resolves first. §15-5-2 (owner
+    // ruling 2026-10-10 #4): Digi-Burst trashes its 2 cards at the same time
+    // (DCGO: one `ITrashDigivolutionCards` over the whole list, one
+    // `OnDigivolutionCardDiscarded`), so the observer triggers ONCE (+1), with
+    // no trigger-order prompt. This test used to pin one firing per card,
+    // resolved before the body (G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS).
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(
         runner.game.players[0].battle_area[carrier.index as usize]
@@ -247,8 +255,114 @@ effects:
     );
     assert_eq!(runner.game.players[0].trash.len(), 2);
     assert_eq!(
-        runner.game.memory, 5,
-        "two source-trash observer firings (+2) should resolve before/alongside the nested body (+3)"
+        runner.game.memory, 4,
+        "the nested body (+3), then ONE source-trash observer firing (+1)"
+    );
+    let gains: Vec<i16> = runner
+        .events_since(cp)
+        .iter()
+        .filter_map(|e| match e {
+            digimon_engine::events::GameEvent::MemoryChange { delta, .. } => Some(*delta),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(gains, vec![3, 1], "the body first (§15-8-3-2), then one firing");
+}
+
+/// §15-5-2 / §15-4-2-4 (owner rulings 2026-10-10 #4 and #5) with §15-8-3-2:
+/// one step trashing 2 digivolution cards is ONE event (the observer triggers
+/// once for it), a second trashing step is a NEW event (it triggers again),
+/// and neither trigger activates before the trashing effect's own
+/// "gain 3 memory" has resolved. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+#[test]
+fn source_trash_observer_triggers_once_per_event_and_again_per_new_event() {
+    let trasher_yaml = r#"
+card: DSL-TRASH-TWICE
+name: Trash Twice
+kind: digimon
+level: 5
+color: [black]
+cost: 8
+dp: 7000
+effects:
+  - when: main_on_field
+    process:
+      - trash_bottom_sources: { target: this, count: 2 }
+      - trash_bottom_sources: { target: this, count: 1 }
+      - gain_memory: 3
+"#;
+    let observer_yaml = r#"
+card: DSL-SOURCE-TRASH-OBSERVER
+name: Source Trash Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+effects:
+  - when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+    process:
+      - gain_memory: 1
+"#;
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(trasher_yaml)
+        .expect("trasher fixture compiles")
+        .from_dsl_yaml(observer_yaml)
+        .expect("observer fixture compiles")
+        .add_card(make_test_card("SRC-A", "Source A"))
+        .add_card(make_test_card("SRC-B", "Source B"))
+        .add_card(make_test_card("SRC-C", "Source C"))
+        .build();
+    let carrier = runner.place_stack(0, &["SRC-A", "SRC-B", "SRC-C", "DSL-TRASH-TWICE"]);
+    runner.place_on_field(0, "DSL-SOURCE-TRASH-OBSERVER", None);
+    let cp = runner.event_checkpoint();
+
+    assert!(
+        runner.game.activate_field_main(0, carrier.index as usize),
+        "the fixture should expose its Main effect"
+    );
+    // Two events -> two pending triggers of the same observer, simultaneous
+    // for one player: the turn player orders them (§15-4-3-2).
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::TriggerOrder));
+    assert_eq!(
+        runner
+            .game
+            .pending_selection
+            .as_ref()
+            .map(|s| s.valid_action_ids.len()),
+        Some(2),
+        "one trigger per trashing event, not one per card (3 cards)"
+    );
+    while runner.pending_kind() == Some(SelectionKind::TriggerOrder) {
+        let first = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        runner
+            .execute_action(0, first)
+            .expect("trigger-order pick resolves");
+    }
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(
+        runner.game.players[0].battle_area[carrier.index as usize]
+            .card_sources
+            .len(),
+        1,
+        "all three digivolution cards were trashed"
+    );
+    let gains: Vec<i16> = runner
+        .events_since(cp)
+        .iter()
+        .filter_map(|e| match e {
+            digimon_engine::events::GameEvent::MemoryChange { delta, .. } => Some(*delta),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        gains,
+        vec![3, 1, 1],
+        "the trashing effect's body first (§15-8-3-2), then one firing per event"
     );
 }
 

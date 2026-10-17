@@ -4712,15 +4712,15 @@
       "text": "A trigger-type effect will always trigger as soon as its trigger conditions are met, then the effect will activate. If an effect reads \"[When Attacking] Lose 2 memory\" or \"[Your Turn] When effects suspend this Digimon, suspend 1 of your opponent's Digimon,\" that shows a trigger timing."
     },
     "15-8-3-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 15,
       "fingerprint": "db9514d0faa35f84c637c60f04cbbe89569aafaa1a4d579674c36b56820b69e1",
-      "gap_id": "G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS",
+      "gap_id": null,
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: from an Option [Main] the observer waits (green half); from an [On Play] it resolves before 'Then, gain 1 memory' (inline drain in fire_digivolution_card_trashed). Test is #[ignore]d.",
-      "status": "gap",
+      "note": "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: the observer waits for the trashing effect's 'Then, gain 1 memory' whether the cause is an Option [Main] or an [On Play] trigger. fire_digivolution_card_trashed no longer drains inline; source-trash observers are enqueued inside a deferred-drain event scope (G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS resolved).",
+      "status": "proven",
       "tests": [
         "ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish"
       ],
@@ -5497,15 +5497,15 @@
       "text": "When using <De-Digivolve> to trash multiple cards, even if the category of the top card changes while the trashing is still being performed, the trashing will continue until the declared number is trashed."
     },
     "16-12-7": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "706566bf4559d2891c74d862aaf32604927b34d4ade8ad425abca709c5584da5",
-      "gap_id": "G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Two <De-Digivolve 1> instances in one Option [Main]: both cards trashed, but the 'top stacked card trashed' observer triggers once instead of once per instance (15-4-2-4, owner ruling 2026-10-10 #5; DCGO runs IDegeneration twice, each stacking WhenTopCardTrashed). #[ignore]d.",
-      "status": "gap",
+      "note": "Two <De-Digivolve 1> instances in one Option [Main]: both cards trashed, and the 'top stacked card trashed' observer triggers once per instance (15-4-2-4, owner ruling 2026-10-10 #5; DCGO runs IDegeneration twice, each stacking WhenTopCardTrashed). The 1st event's trigger used to fail its condition because event_host_is_own_digimon located the host by the top card the 2nd instance trashed; it now locates an OnTopCardTrashed host by stack identity (G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS resolved).",
+      "status": "proven",
       "tests": [
         "ch16_processing_keywords::de_digivolve_separate_instances_processed_separately"
       ],
@@ -15268,15 +15268,15 @@
         "total": 10
       },
       "15": {
-        "gap": 142,
+        "gap": 141,
         "not_testable": 66,
-        "proven": 36,
+        "proven": 37,
         "total": 244
       },
       "16": {
-        "gap": 12,
+        "gap": 11,
         "not_testable": 44,
-        "proven": 150,
+        "proven": 151,
         "total": 206
       },
       "17": {
@@ -15340,15 +15340,15 @@
         "total": 13
       }
     },
-    "gap": 621,
+    "gap": 619,
     "mechanics": {
-      "gap_blocking": 19,
+      "gap_blocking": 17,
       "gap_nonblocking": 322,
       "not_testable": 152,
-      "proven": 222
+      "proven": 224
     },
     "not-testable": 246,
-    "proven": 252
+    "proven": 254
   },
   "version": 1
 }

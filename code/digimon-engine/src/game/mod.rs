@@ -1284,6 +1284,16 @@ pub struct Game {
     /// where `dsl_outer_tail` is empty.
     #[doc(hidden)]
     pub(crate) draining_deferred: u32,
+    /// A source-trash event is open (`Game::begin_source_trash_event`): every
+    /// `OnDigivolutionCardTrashed` entry enqueued meanwhile is stamped
+    /// (`TriggerContext::in_source_trash_event`). One effect step trashing
+    /// several digivolution cards is ONE event: its observers are coalesced
+    /// to one trigger per observer when the event closes (§15-5-2), and a
+    /// later event triggers them again (§15-4-2-4). Coalescing selects the
+    /// stamped entries wherever they sit, so a queue `retain_mut` or swap
+    /// mid-event cannot misattribute entries. Transient: always `false`
+    /// between steps. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+    pub(crate) source_trash_event_open: bool,
     /// 6-1-4-1: memory crossed to the opponent's side while an effect was
     /// still resolving (inside a drain or a deferred-drain scope), so
     /// `check_turn_end` held the turn end back. The outermost

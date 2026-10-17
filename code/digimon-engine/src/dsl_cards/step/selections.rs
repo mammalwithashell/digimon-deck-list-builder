@@ -1849,6 +1849,9 @@ fn finish_non_dsl_count_capped(
     );
     match state.terminal {
         crate::resume::NonDslCountCappedTerminal::KeywordFragment { subject } => {
+            // <Fragment> trashes its N cards at the same time: one event
+            // (§15-5-2).
+            let event = ctx.game.begin_source_trash_event();
             let paid = state
                 .accum
                 .iter()
@@ -1857,6 +1860,9 @@ fn finish_non_dsl_count_capped(
             if paid == state.max as usize {
                 ctx.cancel_leave();
             }
+            // Closed after the replacement is applied: nothing activates
+            // mid-<Fragment> (§15-8-3-2).
+            ctx.game.end_source_trash_event(event);
         }
         crate::resume::NonDslCountCappedTerminal::KeywordPartition { subject } => {
             crate::cards::keyword_effects::partition_extract_and_play(

@@ -4382,11 +4382,20 @@ The source-trash slice routes digivolution-source movement through
 payloads now carry `event_card` / `event_source_card` for the trashed source,
 `event_host_card` for the former or remaining host top card,
 `event_host_permanent` when a stable host handle is available,
-`affected_player` / `source_player`, `cause`, and a one-card
-`moved_card_sets` entry from `BattleArea` to `Trash`. DSL
+`affected_player` / `source_player`, `cause`, and a `moved_card_sets` entry
+from `BattleArea` to `Trash` naming every card of the trashing event. DSL
 `host_permanent_trait_has` first checks the live host and then falls back to
 the host-card snapshot, so return-to-hand/deck source disposition remains
 observable after the host leaves the battle area.
+Source-trash observers never drain inline (§15-8-3-2): one step that trashes
+several digivolution cards wraps them in `Game::begin_source_trash_event()` /
+`end_source_trash_event(..)` (a deferred-drain scope), and a rule process that
+moves a whole stack uses `Game::enqueue_digivolution_cards_trashed(..)`. Either
+way the cards form ONE event, so each observer triggers once for it (§15-5-2,
+the kept entry retains every card as a member, like a simultaneous play), and a
+later trashing step is a new event that triggers it again (§15-4-2-4). A
+trashed card's own inherited "when this card is trashed" effect stays one
+trigger per card. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
 For source-cost authoring, DSL `select_own_sources` accepts an optional
 `target: <binding-ref>` field. When omitted, it scans the controller's own
 battle-area source cards as before. When set, it resolves the binding to a

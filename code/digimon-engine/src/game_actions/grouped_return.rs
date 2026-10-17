@@ -112,9 +112,20 @@ impl Game {
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
         self.apply_ace_overflow_for_sources(&overflow);
-        for (h, host, source) in source_events {
-            self.enqueue_digivolution_card_trashed(h.player, h, host, source, EventCause::Rule);
-        }
+        // Every returned stack's digivolution cards are trashed at the same
+        // time: one event (§15-5-2).
+        self.enqueue_digivolution_cards_trashed(
+            source_events
+                .into_iter()
+                .map(|(h, host, card)| super::TrashedSource {
+                    player: h.player,
+                    host: h,
+                    host_card: host,
+                    card,
+                })
+                .collect(),
+            EventCause::Rule,
+        );
         for _ in 0..linked_events {
             for player in 0..self.players.len() {
                 self.enqueue_triggered(
