@@ -2047,6 +2047,8 @@ fn run_keyword_mind_link_selection_step(
     action_id: u16,
     is_pass: bool,
 ) {
+    // Unreachable since the pick became mandatory (§16-28-3); kept for the
+    // sibling-step signature.
     if is_pass {
         return;
     }

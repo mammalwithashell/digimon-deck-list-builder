@@ -411,7 +411,7 @@ fn mind_link_pick_cannot_be_declined() {
     assert_eq!(
         r.game.players[0].battle_area.len(),
         2,
-        "Tamer permanent must remain on field after decline"
+        "Tamer permanent must remain on field after the rejected PASS"
     );
     assert_eq!(
         r.game.players[0].battle_area[tamer_field_index]
@@ -424,11 +424,30 @@ fn mind_link_pick_cannot_be_declined() {
     assert_eq!(
         digi_perm.card_sources.len(),
         digi_stack_before,
-        "DIGI's stack must be unchanged after decline"
+        "DIGI's stack must be unchanged after the rejected PASS"
     );
     assert_eq!(
         digi_perm.top_card().card_id(&r.game.card_data),
         "DIGI",
         "DIGI's top must be unchanged"
     );
+
+    // The only way forward is the placement itself: picking the Digimon puts
+    // the Tamer at the bottom of its digivolution cards and off the field.
+    let pick = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    r.game.resolve_selection(0, pick).expect("make the pick");
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        1,
+        "the Tamer permanent leaves the field once placed"
+    );
+    let digi_perm = &r.game.players[0].battle_area[digi_field_index];
+    assert_eq!(digi_perm.card_sources.len(), digi_stack_before + 1);
+    assert_eq!(
+        digi_perm.card_sources[0].card_id(&r.game.card_data),
+        "ML-TAMER",
+        "the Tamer is the bottom digivolution card of the chosen Digimon"
+    );
+    assert_eq!(digi_perm.top_card().card_id(&r.game.card_data), "DIGI");
 }
