@@ -8612,14 +8612,15 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "A mandatory suspend/unsuspend loop: GameEvent::InfiniteLoop then GameOver { winner: None, reason: InfiniteLoopDraw }. Forced decisions do not reset the loop watch, so a loop whose repetitions only ask a mandatory pick (one option or two) or an immediate-replacement order also draws. The draw is final: one declared inside an attack stops the attack (no later security check, no second GameOver; the first terminal outcome stands). MAX_CHAIN_DEPTH (10_000) remains a far backstop that ends in the same draw; nothing is cleared with the game going on.",
+      "note": "A mandatory suspend/unsuspend loop: GameEvent::InfiniteLoop then GameOver { winner: None, reason: InfiniteLoopDraw }. Forced decisions do not reset the loop watch, so a loop whose repetitions only ask a mandatory pick (one option or two) or an immediate-replacement order also draws. The draw is final: one declared inside an attack stops the attack (no later security check, no second GameOver; the first terminal outcome stands). MAX_CHAIN_DEPTH (10_000) remains a far backstop that ends in the same draw, counted both on the chain depth and on the loop watch's age (steps since the last optional decision), so a forced-prompt loop whose DP grows without bound also draws; nothing is cleared with the game going on.",
       "status": "proven",
       "tests": [
         "ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared",
         "ch18_pending_overwrite::forced_prompt_loop_still_ends_in_a_draw",
         "ch18_pending_overwrite::forced_multi_option_pick_loop_still_ends_in_a_draw",
         "ch18_pending_overwrite::forced_replacement_order_loop_still_ends_in_a_draw",
-        "ch18_pending_overwrite::infinite_loop_draw_during_an_attack_is_final"
+        "ch18_pending_overwrite::infinite_loop_draw_during_an_attack_is_final",
+        "ch18_pending_overwrite::forced_prompt_loop_with_growing_state_still_ends_in_a_draw"
       ],
       "text": "If an infinite loop occurs and neither player has the ability to stop it, that game ends in a draw."
     },
