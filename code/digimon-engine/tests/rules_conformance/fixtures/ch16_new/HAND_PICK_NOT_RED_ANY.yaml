@@ -1,8 +1,9 @@
 # HAND_PICK_NOT_RED_ANY -- Option, red, use cost 0.
 #   [Main] Trash 1 card that is not red from your hand.
-# An UNQUALIFIED negated reference: a DUAL card can be treated as either
-# category (§4-6-1), so it matches when one of its informations is not red
-# (DUAL_ARTS' Option information is purple).
+# An UNQUALIFIED negated reference: it reads a DUAL card's Digimon
+# information only (§4-6-1, §4-6-5-2; owner ruling W5 (b)), so DUAL_ARTS
+# (Digimon information red) does not match; its purple Option information is
+# not read.
 card: HAND_PICK_NOT_RED_ANY
 name: Any non-red Audit
 kind: option

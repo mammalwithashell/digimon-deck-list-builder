@@ -27,7 +27,14 @@ What is checked (`find_violations` is pure so it can be run on any snapshot):
   4. every YAML spec declaring a `dual:` block is a DUAL card in cards.json
      (the class of bug that hid ST23-09 et al. -- right YAML, wrong production data);
   5. `ingest_cards.DUAL_OPTION_COLOR_OVERRIDES` agrees with the official colours, so a
-     re-ingest reproduces them instead of reverting them.
+     re-ingest reproduces them instead of reverting them;
+  6. the DIGIMON information's colours equal the official card colours, in cards.json
+     (`dual.digimon.colors`, `card_colors`) and in every YAML spec (top-level `color:`
+     and `dual.digimon.colors`). Owner ruling W5 (b) (2026-10-17; §4-6-1, §4-6-5-2)
+     makes these load-bearing: an unqualified reference ("1 red card from your hand")
+     reads a DUAL card's Digimon information only, so a dropped Digimon colour hides
+     the card from every such search. ST24-07's YAML authored yellow only (the card
+     is yellow/red) until Task 29's review round.
 
 Colours are compared as SETS: legality is set-based, and the official DB's ordering is
 presentation only.
@@ -68,6 +75,61 @@ def yaml_dual_option_colors(cards_dir):
         m = re.search(r"(?ms)^  option:\s*$.*?^    colors:\s*\[([^\]]*)\]", text)
         out[cid] = [c.strip() for c in m.group(1).split(",")] if m else None
     return out
+
+
+_COLOR_NAME = {v: k for k, v in _COLOR.items()}
+
+
+def _yaml_list(text, pattern):
+    m = re.search(pattern, text)
+    return [c.strip() for c in m.group(1).split(",") if c.strip()] if m else None
+
+
+def yaml_dual_digimon_colors(cards_dir):
+    """{card_id: (top-level `color:`, `dual.digimon.colors`)} for every YAML DUAL spec.
+
+    Either entry is None when the spec does not declare it as a flow list."""
+    out = {}
+    for path in glob.glob(os.path.join(cards_dir, "*", "*.yaml")):
+        text = open(path, encoding="utf-8").read()
+        if not re.search(r"(?m)^dual:\s*$", text):
+            continue
+        cid = os.path.splitext(os.path.basename(path))[0]
+        top = _yaml_list(text, r"(?m)^color:\s*\[([^\]]*)\]")
+        # `colors:` directly under `dual.digimon` (stop at the next 2-space key).
+        digi = _yaml_list(text, r"(?ms)^  digimon:\s*$(?:(?!^  \S).)*?^    colors:\s*\[([^\]]*)\]")
+        out[cid] = (top, digi)
+    return out
+
+
+def find_digimon_color_violations(cards, official, yaml_digimon):
+    """Check 6: the Digimon information's colours against the official card colours."""
+    v = []
+    off_dual = {cid: e for cid, e in official.items() if e.get("dual_colors")}
+    for cid, e in sorted(off_dual.items()):
+        want = _norm_colors((e.get("colors") or "").split())
+        if not want:
+            v.append(f"{cid}: official DUAL card has no colours in card_official.json")
+            continue
+        c = cards.get(cid)
+        if c is not None and c.get("dual"):
+            got = _norm_colors(c["dual"]["digimon"].get("colors", []))
+            if got != want:
+                v.append(f"{cid}: cards.json dual.digimon.colors {got} != official {want}")
+            top = sorted(_COLOR_NAME.get(int(x), str(x)) for x in c.get("card_colors", []))
+            if top != want:
+                v.append(f"{cid}: cards.json card_colors {top} != official {want}")
+        if cid in yaml_digimon:
+            ytop, ydigi = yaml_digimon[cid]
+            for label, got in (("top-level color", ytop), ("dual.digimon.colors", ydigi)):
+                if got is None:
+                    v.append(f"{cid}: YAML declares no {label} flow list")
+                elif _norm_colors(got) != want:
+                    v.append(f"{cid}: YAML {label} {got} != official {want} -- an unqualified "
+                             "colour reference reads the Digimon information (W5 (b))")
+    for cid in sorted(set(yaml_digimon) - set(off_dual)):
+        v.append(f"{cid}: YAML declares a dual: block but the official mirror has no DUAL colours")
+    return v
 
 
 def find_violations(cards, official, yaml_duals, ingest_table):
@@ -139,6 +201,28 @@ def test_dual_cards_match_the_official_db():
     violations = find_violations(*_repo_inputs())
     assert not violations, "DUAL card data disagrees with the official Bandai DB:\n  " + \
         "\n  ".join(violations)
+
+
+def test_dual_digimon_information_colours_match_the_official_db():
+    cards, official, _, _ = _repo_inputs()
+    yaml_digimon = yaml_dual_digimon_colors(
+        os.path.join(_ROOT, "code", "digimon-engine", "cards"))
+    assert yaml_digimon, "no YAML DUAL spec found -- the guard would pass vacuously"
+    violations = find_digimon_color_violations(cards, official, yaml_digimon)
+    assert not violations, "DUAL Digimon-information colours disagree with the official " \
+        "Bandai DB:\n  " + "\n  ".join(violations)
+
+
+def test_digimon_colour_guard_rejects_a_dropped_digimon_colour():
+    # The ST24-07 regression shape: the YAML authors one of the Digimon face's two colours.
+    official = {"X-1": {"colors": "Yellow Red", "dual_colors": "Yellow Red"}}
+    cards = {"X-1": {"card_colors": [2, 0],
+                     "dual": {"digimon": {"colors": ["Yellow", "Red"]},
+                              "option": {"colors": ["Yellow", "Red"]}}}}
+    good = {"X-1": (["yellow", "red"], ["red", "yellow"])}
+    assert find_digimon_color_violations(cards, official, good) == []
+    bad = find_digimon_color_violations(cards, official, {"X-1": (["yellow"], ["yellow"])})
+    assert len(bad) == 2 and all(b.startswith("X-1: YAML") for b in bad), bad
 
 
 def test_the_guard_covers_every_known_dual_card():

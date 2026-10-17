@@ -1,5 +1,5 @@
 # ST24-07 ShineGreymon / "GeoGrey Sword" — DUAL card (Digimon + Option).
-# Lv.6 Yellow, Light Dragon / DATA SQUAD, DP 12000.
+# Lv.6 Yellow/Red, Light Dragon / DATA SQUAD, DP 12000.
 #
 # ─── cards.json TRAP ─────────────────────────────────────────────────────────
 # cards.json mislabels this as a plain Digimon (card_kind 0) and files the
@@ -9,7 +9,7 @@
 # ST24_07.cs are authoritative. Authored as kind: dual with per-face effects.
 #
 # Printed text (card image / DCGO — authoritative, verbatim):
-#   DIGIMON FACE — ShineGreymon, Lv.6, DP 12000, Yellow.
+#   DIGIMON FACE — ShineGreymon, Lv.6, DP 12000, Yellow/Red.
 #     <Raid> <Piercing> <Security A. +1>
 #     <Digivolve> Lv.5 w/ [RizeGreymon] in name or [DATA SQUAD] trait: Cost 3
 #       (ignore digivolution requirement).
@@ -57,9 +57,9 @@ name: "ShineGreymon"
 kind: dual
 
 # Top-level metadata mirrors the Digimon face (so deck-legality / search see a
-# Lv.6 Yellow Light Dragon). The engine reads face-specific stats from `dual`.
+# Lv.6 Yellow/Red Light Dragon). The engine reads face-specific stats from `dual`.
 level: 6
-color: [yellow]
+color: [yellow, red]
 cost: 5
 dp: 12000
 traits: [Light Dragon, DATA SQUAD]
@@ -81,7 +81,7 @@ dual:
   digimon:
     level: 6
     dp: 12000
-    colors: [yellow]
+    colors: [yellow, red]
     traits: [Light Dragon, DATA SQUAD]
     effect_text: |
       <Raid> <Piercing> <Security A. +1>

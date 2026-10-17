@@ -411,7 +411,8 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 - (b) The Digimon information only (the card's default, top-level face), as the engine does for every reference today.
 - (c) Neither colour unless the effect names the category.
 - DCGO: not checked. Suite: unasserted; the fix must pin whichever is chosen.
-- **Fixed on reading (a); owner may override.** Task 18 of Plan 4 pins it: a `kind: option` / `kind: digimon` reference reads that information only (§4-6-5-2, §4-6-6-2); an unqualified reference matches if the whole reference holds through either information (§4-6-1), pinned by `ch16_new_keywords::dual_unqualified_colour_reference_matches_either_information` and `dual_unqualified_reference_holds_through_one_information` ("purple Lv.6 card" does not match a red-Lv.6 / purple-Option DUAL; "card that is not red" does); digivolution cards on the field read the Digimon information only (§4-6-3). Reading (b) or (c) would invert that test's two positive picks.
+- *Superseded by the owner ruling below.* History: Task 18 of Plan 4 pinned provisional reading (a) (an unqualified reference matched if the whole reference held through either information), while `kind: option` / `kind: digimon` read that information only (§4-6-5-2, §4-6-6-2) and on-field digivolution cards read the Digimon information only (§4-6-3); those three still hold.
+- **Owner ruled (b) 2026-10-17: Digimon information.** Fixed in Task 29 (421e95064). An unqualified reference reads the DUAL card's Digimon information only; the Option information is read only under `kind: option` (§4-6-6-2). `dual_unqualified_colour_reference_reads_digimon_information` (renamed from `..._matches_either_information`) and `dual_unqualified_reference_holds_through_one_information` are re-pinned: "red card" finds the red-Digimon / purple-Option DUAL; "purple card", "purple Lv.6 card" and "card that is not red" do not.
 
 **W6. Sign-off: §15-8-3-9-4 versus Q1009** (15-8-3-9-2 sidecar note, `05d39e4cb`). §15-8-3-9-4 covers the removed card's own last-known state; references to general game state (e.g. your security count) are made when processing is performed (§15-8-3-9-3), as Q1009 rules for BT2-034. Proven on that reading (`pending_effect_whose_condition_lapsed_is_dropped`).
 
@@ -428,6 +429,7 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 **W11. `blocks_training` judgement calls.** Overflow (`G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT`: the outcome differs only when the memory marker hits ±10 mid-sequence) and DUAL search (`G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH`) are flagged blocking (`173375296`). Keep, or downgrade to non-blocking?
 
 **W12. Link-time replacement chooser (§4-9-5).** §4-9-5 says the same number of existing link cards are trashed but not who chooses which. Q6370 gives the choice to "the player" for the rule-check trim. Reading: the linking player (who controls the host, §10-1-3-1) chooses. DCGO: the owner chooses when the maximum is above 1. Confirmation only.
+- **Confirmed by owner 2026-10-17** (linking player chooses; implemented by Task 3).
 
 ## Retracted or resolved during the campaign
 

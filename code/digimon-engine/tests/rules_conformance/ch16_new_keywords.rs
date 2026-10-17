@@ -1764,86 +1764,93 @@ fn dual_option_information_referenced_as_option_card() {
 /// Digimon card category or the Option card category."
 ///
 /// An UNQUALIFIED reference ("Trash 1 purple card from your hand") names
-/// neither category, so it picks neither information: the DUAL matches when
-/// EITHER information has the color (owner-pending ruling W5 reading (a);
-/// `qa/rules/mechanics-gaps-2026-10.md`). `DUAL_ARTS`: Digimon information
-/// red, Option information purple.
-/// - "purple card" (Option information) and "red card" (Digimon information)
-///   can both choose it;
+/// neither category; by owner ruling W5 (b) (2026-10-17, "This would be the
+/// Digimon colour/s"; `qa/rules/mechanics-gaps-2026-10.md`) it reads the DUAL
+/// card's Digimon information only, as a `kind: digimon` reference does
+/// (§4-6-5-2). The Option information is read only when the reference names
+/// "Option card" (§4-6-6-2). `DUAL_ARTS`: Digimon information red, Option
+/// information purple.
+/// - "red card" (the Digimon information's colour) can choose it;
+/// - "purple card" (only the Option information's colour) can't;
 /// - "blue card" (neither) can't.
 #[test]
-fn dual_unqualified_colour_reference_matches_either_information() {
+fn dual_unqualified_colour_reference_reads_digimon_information() {
     cite!(
         "4-6-1",
         "71e521e2421527fc20a64b564c7792b256d164651256c309effe1e311448eee7"
     );
-    for picker in ["HAND_PICK_PURPLE_ANY", "HAND_PICK_RED_ANY"] {
+    let mut r = board(&["HAND_PICK_RED_ANY", "DUAL_ARTS"]);
+    red_anchor(&mut r);
+    use_option(&mut r, 0, "HAND_PICK_RED_ANY");
+    assert!(
+        r.pending_selection().is_some(),
+        "the Digimon information is red: a legal pick (no pick offered)"
+    );
+    pick_hand_card(&mut r, 0, "DUAL_ARTS");
+    resolve_prompts(&mut r);
+    assert!(hand_ids(&r, 0).is_empty());
+    assert!(trash_ids(&r, 0).contains(&"DUAL_ARTS".to_string()));
+
+    for (picker, why) in [
+        (
+            "HAND_PICK_PURPLE_ANY",
+            "purple is only the Option information; an unqualified reference reads the Digimon information (red)",
+        ),
+        ("HAND_PICK_BLUE_ANY", "neither information is blue"),
+    ] {
         let mut r = board(&[picker, "DUAL_ARTS"]);
         red_anchor(&mut r);
         use_option(&mut r, 0, picker);
         assert!(
-            r.pending_selection().is_some(),
-            "{picker}: one of DUAL_ARTS's informations has the color: a legal pick (no pick offered)"
+            r.pending_selection().is_none(),
+            "{picker}: {why}: {:?}",
+            r.pending_selection()
         );
-        pick_hand_card(&mut r, 0, "DUAL_ARTS");
         resolve_prompts(&mut r);
-        assert!(hand_ids(&r, 0).is_empty(), "{picker}");
-        assert!(
-            trash_ids(&r, 0).contains(&"DUAL_ARTS".to_string()),
-            "{picker}"
-        );
+        assert_eq!(hand_ids(&r, 0), owned(&["DUAL_ARTS"]), "{picker}: {why}");
     }
-
-    let mut r = board(&["HAND_PICK_BLUE_ANY", "DUAL_ARTS"]);
-    red_anchor(&mut r);
-    use_option(&mut r, 0, "HAND_PICK_BLUE_ANY");
-    assert!(
-        r.pending_selection().is_none(),
-        "neither information is blue: {:?}",
-        r.pending_selection()
-    );
-    resolve_prompts(&mut r);
-    assert_eq!(hand_ids(&r, 0), owned(&["DUAL_ARTS"]));
 }
 
 /// §4-6-1 "A DUAL card is a card that can be treated as being in either the
 /// Digimon card category or the Option card category."
 ///
-/// An unqualified reference matches a DUAL when the WHOLE reference holds
-/// through ONE of its informations -- not leaf by leaf across both. `DUAL_ARTS`:
+/// An unqualified reference reads the WHOLE reference through the DUAL card's
+/// Digimon information (owner ruling W5 (b), 2026-10-17; §4-6-5-2), never the
+/// Option information and never leaf by leaf across both. `DUAL_ARTS`:
 /// Digimon information red Lv.6, Option information purple (no level).
 /// - `HAND_PICK_PURPLE_LV6_ANY` ("Trash 1 purple Lv.6 card from your hand")
-///   can't choose it: purple is the Option information, Lv.6 the Digimon one;
+///   can't choose it: the Digimon information is Lv.6 but red (purple is only
+///   the Option information);
 /// - `HAND_PICK_NOT_RED_ANY` ("Trash 1 card that is not red from your hand")
-///   can: its Option information is not red.
+///   can't either: the Digimon information is red (the Option information's
+///   purple is not read).
 #[test]
 fn dual_unqualified_reference_holds_through_one_information() {
     cite!(
         "4-6-1",
         "71e521e2421527fc20a64b564c7792b256d164651256c309effe1e311448eee7"
     );
-    let mut r = board(&["HAND_PICK_PURPLE_LV6_ANY", "DUAL_ARTS"]);
-    red_anchor(&mut r);
-    use_option(&mut r, 0, "HAND_PICK_PURPLE_LV6_ANY");
-    assert!(
-        r.pending_selection().is_none(),
-        "no single information is both purple and Lv.6: {:?}",
-        r.pending_selection()
-    );
-    resolve_prompts(&mut r);
-    assert_eq!(hand_ids(&r, 0), owned(&["DUAL_ARTS"]));
-
-    let mut r = board(&["HAND_PICK_NOT_RED_ANY", "DUAL_ARTS"]);
-    red_anchor(&mut r);
-    use_option(&mut r, 0, "HAND_PICK_NOT_RED_ANY");
-    assert!(
-        r.pending_selection().is_some(),
-        "the Option information is not red: a legal pick (no pick offered)"
-    );
-    pick_hand_card(&mut r, 0, "DUAL_ARTS");
-    resolve_prompts(&mut r);
-    assert!(hand_ids(&r, 0).is_empty());
-    assert!(trash_ids(&r, 0).contains(&"DUAL_ARTS".to_string()));
+    for (picker, why) in [
+        (
+            "HAND_PICK_PURPLE_LV6_ANY",
+            "the Digimon information is Lv.6 but red, not purple",
+        ),
+        (
+            "HAND_PICK_NOT_RED_ANY",
+            "the Digimon information is red; the Option information is not read",
+        ),
+    ] {
+        let mut r = board(&[picker, "DUAL_ARTS"]);
+        red_anchor(&mut r);
+        use_option(&mut r, 0, picker);
+        assert!(
+            r.pending_selection().is_none(),
+            "{picker}: {why}: {:?}",
+            r.pending_selection()
+        );
+        resolve_prompts(&mut r);
+        assert_eq!(hand_ids(&r, 0), owned(&["DUAL_ARTS"]), "{picker}: {why}");
+    }
 }
 
 /// §4-6-3 "A DUAL card placed on the field is treated as a Digimon. It can't
