@@ -3914,6 +3914,16 @@ impl Game {
         self.modifiers.expire_end_of_attack();
         self.pending_attack = None;
 
+        // §17-1-3-1-1 / §15-15-5-2: ending the attack can change DP -- an
+        // opponent's effect held for a `<Progress>` attacker starts applying
+        // (`expire_end_of_attack` released it), and "until the end of the
+        // attack" buffs expire. Run the rule check now (the outermost drain
+        // does it; a nested drain defers to its parent) instead of leaving a
+        // 0-DP Digimon on the field until some later drain.
+        if self.pending_selection.is_none() {
+            self.drain_effect_queue();
+        }
+
         // An attack-time effect — e.g. ST1-06 Coredramon's [When Attacking]
         // "Lose 2 memory" — can push memory across to the opponent's side. The
         // attack state machine is the only action that resolves entirely below

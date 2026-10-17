@@ -243,34 +243,36 @@ impl Game {
             )
     }
 
+    /// §15-15-5-1 / §16-39-1: whether an effect of category `source_kind`
+    /// controlled by `effect_controller` can affect `target` right now -- not
+    /// shielded by `<Progress>` while attacking, and not covered by a
+    /// `CannotBeAffected` immunity. The single gate for one-shot processing;
+    /// `EffectContext::can_affect_permanent` is this with the context's
+    /// controller and kind, and resume terminals that run outside an
+    /// `EffectContext` (e.g. the per-color batch delete) call it directly.
+    pub fn effect_can_affect(
+        &self,
+        target: PermanentHandle,
+        effect_controller: crate::enums::PlayerId,
+        source_kind: crate::enums::EffectSourceKind,
+    ) -> bool {
+        !self.progress_excludes(target, Some(effect_controller))
+            && !self.permanent_is_unaffected_by_effect(target, effect_controller, source_kind)
+    }
+
+    /// §15-15-5-1: whether `target` is unaffected by an effect of category
+    /// `source_kind` controlled by `effect_controller`. Thin wrapper over
+    /// [`crate::modifiers::ModifierRegistry::is_unaffected_by`], whose
+    /// predicate also drives the read-time suppression of modifiers that
+    /// were applied to `target` (§15-15-5-2).
     pub fn permanent_is_unaffected_by_effect(
         &self,
         target: PermanentHandle,
         effect_controller: crate::enums::PlayerId,
         source_kind: crate::enums::EffectSourceKind,
     ) -> bool {
-        use crate::modifiers::EffectControllerFilter;
-
         self.modifiers
-            .get(target, crate::enums::ModifierType::CannotBeAffected)
-            .into_iter()
-            .any(|entry| {
-                let Some(filter) = entry.effect_immunity_filter else {
-                    return true;
-                };
-                let source_kind_matches = filter
-                    .source_kind
-                    .map(|expected| source_kind.includes(expected))
-                    .unwrap_or(true);
-                if !source_kind_matches {
-                    return false;
-                }
-                match filter.controller {
-                    EffectControllerFilter::Any => true,
-                    EffectControllerFilter::OpponentOnly => effect_controller != target.player,
-                    EffectControllerFilter::OwnOnly => effect_controller == target.player,
-                }
-            })
+            .is_unaffected_by(target, effect_controller, source_kind)
     }
 
     /// Returns `true` when an effect is currently resolving AND its

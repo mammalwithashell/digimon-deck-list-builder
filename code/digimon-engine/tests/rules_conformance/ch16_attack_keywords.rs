@@ -2184,14 +2184,27 @@ fn p1_pick_slots(r: &DebugRunner) -> Vec<u16> {
 /// affected by your opponent's effects while attacking.""
 /// §16-39-3 "<Progress> will activate while the Digimon with this effect is
 /// attacking."
+/// §15-15-5-3 "'Isn't affected by effects' cards can still be chosen for
+/// effects."
+///
+/// Re-pinned 2026-10-16 (Plan 4 Task 24 fix round 2, controller-authorised):
+/// this test used to assert that P1's pick does NOT offer the attacking
+/// `PROGRESS`. That was wrong against §15-15-5-3 (an unaffected card can still
+/// be chosen; DCGO's `SelectPermanentEffect` has no `CanNotBeAffected`
+/// candidacy filter either). It now asserts the attacker IS offered and, once
+/// chosen, is NOT affected while attacking.
 ///
 /// P1 has `OPP_WA_MINUS3000` ("[All Turns] When an opponent's Digimon
-/// attacks, 1 of your opponent's Digimon gets -3000 DP for the turn"). P0 has
-/// `PROGRESS` (slot 0), `FILL` (slot 1) and `LV5_PLAIN` (slot 2).
-/// - `PROGRESS` attacks: P1's pick offers `FILL` and `LV5_PLAIN`, not the
-///   attacking `PROGRESS` (P1 picks `LV5_PLAIN`).
-/// - Then `LV5_PLAIN` attacks: `PROGRESS` is not attacking, so the pick
-///   offers it; P1 picks it and it gets -3000 DP.
+/// attacks, 1 of your opponent's Digimon gets -3000 DP for the turn"),
+/// suspended. P0 has `PROGRESS` (slot 0, 6000 DP), `FILL` (slot 1) and
+/// `LV5_PLAIN` (slot 2).
+/// - `PROGRESS` attacks P1's suspended `OPP_WA_MINUS3000` (3000 DP): P1's pick
+///   offers all three, P1 picks `PROGRESS`. It isn't affected while
+///   attacking: it battles at 6000 DP and wins (at 3000 it would tie and both
+///   would be deleted). When the attack ends the -3000 DP, still in its
+///   duration, affects it (§15-15-5-2): 3000 DP.
+/// - On a fresh board, `LV5_PLAIN` attacks: `PROGRESS` is not attacking, so
+///   P1 picks it and it gets -3000 DP.
 #[test]
 fn progress_persistent_only_while_attacking() {
     cite!(
@@ -2202,17 +2215,39 @@ fn progress_persistent_only_while_attacking() {
         "16-39-3",
         "29c92e50cafda2ea45440650f22852032229f11e2d7e895807b612d06ff892ef"
     );
+    cite!(
+        "15-15-5-3",
+        "170d539a05566095ac27d28910127cd4991e960081e9eb56d89d9f94423b976d"
+    );
+    let mut r = board(&[FILL; 5]);
+    let progress = r.place_on_field(0, "PROGRESS", Some(0));
+    r.place_on_field(0, FILL, Some(0));
+    r.place_on_field(0, "LV5_PLAIN", Some(0));
+    let target = place_suspended(&mut r, 1, "OPP_WA_MINUS3000");
+
+    r.attack_digimon(progress, target, false);
+    assert_eq!(
+        p1_pick_slots(&r),
+        vec![0, 1, 2],
+        "the attacking PROGRESS can still be chosen (§15-15-5-3)"
+    );
+    pick_field(&mut r, 0);
+    settle_declining(&mut r);
+    assert!(
+        r.game.player(1).battle_area.is_empty(),
+        "not affected while attacking: 6000 DP beats 3000 DP"
+    );
+    assert_eq!(
+        r.effective_dp(progress),
+        Some(3000),
+        "the attack is over: the -3000 DP now affects it"
+    );
+
     let mut r = board(&[FILL; 5]);
     let progress = r.place_on_field(0, "PROGRESS", Some(0));
     r.place_on_field(0, FILL, Some(0));
     let other = r.place_on_field(0, "LV5_PLAIN", Some(0));
     r.place_on_field(1, "OPP_WA_MINUS3000", Some(0));
-
-    r.attack_player(progress, 1, false);
-    assert_eq!(p1_pick_slots(&r), vec![1, 2], "not the attacking PROGRESS");
-    pick_field(&mut r, 2);
-    settle_declining(&mut r);
-
     r.attack_player(other, 1, false);
     assert_eq!(
         p1_pick_slots(&r),
@@ -2229,24 +2264,46 @@ fn progress_persistent_only_while_attacking() {
 }
 
 /// §16-39-2 "<Progress> is a persistent effect."
+/// §15-15-5-3 (as above).
+///
+/// Re-pinned 2026-10-16 (Plan 4 Task 24 fix round 2, controller-authorised):
+/// this test used to assert that P1's pick offers only P0's `FILL`, not the
+/// <Progress> attacker; §15-15-5-3 keeps the attacker choosable. It now
+/// asserts the attacker is offered and, chosen, is not affected.
 ///
 /// P0's `WA_PROGRESS` ("[When Attacking] This Digimon gains <Progress> for
-/// the turn") attacks; P1's `OPP_WA_MINUS3000` triggers on the same attack
-/// and resolves after it (the turn player's effects first, §15-4-3-5): the
-/// <Progress> gained applies at once, so the pick offers only P0's `FILL`.
+/// the turn", 6000 DP) attacks P1's suspended `OPP_WA_MINUS3000` (3000 DP);
+/// that Digimon's own "when an opponent's Digimon attacks" trigger resolves
+/// after the [When Attacking] (the turn player's effects first, §15-4-3-5).
+/// The <Progress> gained applies at once, with no activation: P1's pick
+/// offers both of P0's Digimon, P1 picks `WA_PROGRESS`, and the -3000 DP
+/// doesn't affect it during the attack (it battles at 6000 and wins). Once
+/// the attack ends the -3000 DP applies: 3000 DP.
 #[test]
 fn progress_kind_matches_rule() {
     cite!(
         "16-39-2",
         "8ccc13d0144f4f4dcbaddcfbd9d2b8617d5d60d8f4a6bbe5b7203c7f725b953e"
     );
+    cite!(
+        "15-15-5-3",
+        "170d539a05566095ac27d28910127cd4991e960081e9eb56d89d9f94423b976d"
+    );
     let mut r = board(&[FILL; 3]);
     let a = r.place_on_field(0, "WA_PROGRESS", Some(0));
     r.place_on_field(0, FILL, Some(0));
-    r.place_on_field(1, "OPP_WA_MINUS3000", Some(0));
-    r.attack_player(a, 1, false);
-    assert_eq!(p1_pick_slots(&r), vec![1], "the gained <Progress> protects");
-    pick_field(&mut r, 1);
+    let target = place_suspended(&mut r, 1, "OPP_WA_MINUS3000");
+    r.attack_digimon(a, target, false);
+    assert_eq!(
+        p1_pick_slots(&r),
+        vec![0, 1],
+        "the <Progress> attacker can still be chosen (§15-15-5-3)"
+    );
+    pick_field(&mut r, 0);
     settle_declining(&mut r);
-    assert_eq!(r.effective_dp(a), Some(6000));
+    assert!(
+        r.game.player(1).battle_area.is_empty(),
+        "the gained <Progress> protects at once: 6000 DP beats 3000 DP"
+    );
+    assert_eq!(r.effective_dp(a), Some(3000), "affected once the attack ends");
 }

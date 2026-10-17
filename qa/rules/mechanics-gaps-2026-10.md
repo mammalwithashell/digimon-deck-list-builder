@@ -58,9 +58,18 @@ Statuses live in `qa/rules/cr_obligations_status.yaml` (hand-maintained sidecar)
 
 **29 gap ids** block training (63 obligations). **All 29 are `PDF-explicit`**: the 4.3 text (with, where noted, an official Q&A) settles the expected behaviour, so Plan 3 fixes them without asking. **None is `PDF-silent`.** Six explicit gaps carry a worksheet question that does not hold up their fix: Vortex target (W2), the end-of-turn attack keywords (W3), DUAL (W5 and W11), infinite loops (W10), Overflow (W11) and Link-at-limit (W12).
 
+**Update 2026-10-16 (Plan 4 Task 24):** two blocking ids were added, `G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS` (§16-39-1) and `G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE` (§15-2-1-1), both `PDF-explicit`; `G-ENGINE-UNAFFECTED-SKIPS-INSTEAD-OF-SUPPRESSES` (§15-15-5-1/-2/-4) was found and resolved in the same task (see "Retracted or resolved"). With the Plan 1 ids already resolved by earlier Plan 4 tasks, the regenerated ledger on this branch has **24 open blocking gap ids (51 obligations)**; the 29/63 above is the Plan 1 baseline.
+
 Grouped by the mechanism the defect lives in; when the obligation's Aegis taxonomy tag differs, it is given after the rule id. The tests are those the sidecar lists for the gap's obligations: the red ones are `#[ignore]`d under the gap id and fail with `--include-ignored`; the green ones (other halves of the same obligations) are marked "(green)". "DCGO" and "Aegis" give each reference engine's stance on the rule as the gap entry and Aegis's vendored scenario index (`qa/rules/aegis/conformance-scenario-index.md`) / engine audits (`docs/audits/engine/*.md` at Aegis `ec0cd22f0`) record it.
 
 ### effects-and-ordering
+
+**G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE**: `PDF-explicit` — filed 2026-10-16 (Plan 4 Task 24 fix round 1)
+- Rules: §15-2-1-1.
+- Test: `ch15_15_unaffected::digimon_only_immunity_blocks_a_digimon_tokens_effect`.
+- Cause: token effects are classified `EffectSourceKind::Rule` at four `source_kind_for_card_kind` sites, so a Digimon-effect-only immunity does not block them.
+- DCGO: agrees with the rule (`AutoProcessing.cs` marks token effects `IsDigimonEffect`).
+- Fix: map `CardKind::Token` to `Digimon`; handle the tensor `source_kind_bucket` shift, the opponent-Digimon-effect attributions, and the five `source_kind: rule` immunity grants (BT13-088, BT16-102, EX11-046, EX13-062, EX6-011) in the same change.
 
 **G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL**: `PDF-explicit`
 - Rules: §15-4-3-2; §16-24-2 (keywords, <Alliance>); §16-23-2 (keywords, <Raid>).
@@ -243,6 +252,14 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 
 ### keywords
 
+**G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS**: `PDF-explicit` (+ Q6178) — filed 2026-10-16 (Plan 4 Task 24 fix round 1)
+- Rules: §16-39-1 (<Progress>), §15-15-5-1.
+- Test: `ch15_15_unaffected::progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking`; `progress_attacker_effect_applied_during_attack_applies_after_it` (green: an opponent's effect applied DURING the attack is held and applies after it).
+- Cause: `<Progress>` is decided at install time (`held_while_attacking`); `ModifierRegistry::get` cannot read the attack state, so an opponent's modifier installed before the attack keeps applying while the Digimon attacks (a 6000-DP attacker under an earlier -3000 battles at 3000).
+- DCGO: agrees with the rule (read-time `CanNotBeAffected`).
+- Fix: a `Game`-maintained attack shield on the registry that `get` honours for opponent-controlled, effect-tagged entries.
+
+
 **G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS**: `PDF-explicit` (+ Q3868/Q3869; confirmation question W3)
 - Rules: §16-44-2 (<Engage>), §16-38-2 (<Execute>), §16-33-2 (<Vortex>), §16-34-2 (<Overclock>).
 - Tests: `ch16_new_keywords::engage_kind_matches_rule`, `engage_timing_matches_rule` (green); `ch16_attack_keywords::execute_kind_matches_rule`, `execute_timing_matches_rule` (green), `vortex_kind_matches_rule`, `vortex_timing_matches_rule` (green), `overclock_kind_matches_rule`, `overclock_timing_matches_rule` (green). The kind tests pin declaration < other `[End of Your Turn]` effect < counter timing / security check. The order follows from §11-1-4 ("After declaring an attack, the counter timing won't begin until any triggered [When Attacking] effects and other triggered effects have been resolved"), which holds for any end-of-turn "may attack" trigger, and Q3869 rules it for <Vortex>.
@@ -338,6 +355,7 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 - `G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK` (§15-7-3, DSL vocabulary): a compound optional condition can be paid in part; production card BT18-019 is affected and needs a both-names gate.
 - `G-ENGINE-OPTION-TRASH-NO-EVENT` (§9-1-5, no obligation of its own): a used Option's trash emits no `GameEvent`.
 - `G-ENGINE-ENGAGE-EOT-PASS-ONLY-STEP` (§16-44-1, no obligation of its own): after an <Engage> attack the turn parks once more with PASS as the only legal action.
+- `G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP` (§15-15-5-2 / §15-15-5-4): a keyword granted (`grant_keyword`) to an immune Digimon is skipped instead of suppressed, so it never applies after the immunity ends; no authored opponent-side keyword grant (BT22-029 grants <Blocker> to its own Puppet Digimon); reachable only as an own grant under an own-effect immunity (the Quantumon shape), in both directions (granted while immune is lost; granted before keeps applying, against Q6178). Modifier-backed gains and granted triggered effects are fixed (`G-ENGINE-UNAFFECTED-SKIPS-INSTEAD-OF-SUPPRESSES`).
 
 The other 330 non-blocking mechanics-set gaps (and 279 outside it) are untriaged defaults with no test, mostly chapters 1-10.
 
@@ -391,6 +409,7 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 - `G-REPLACEMENT-NO-ORDER-PROMPT`: no longer reproduces (checked 2026-10-16): `replacement_window.rs` installs an `EffectChoice` order for simultaneous immediate-type effects; `ch16_replacement_keywords::two_simultaneous_replacements_ordered_by_controller` proves §15-8-5-3.
 - `G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE`: resolved by the F2 merge (`b41f3f5f1`, the §13-1-8 reorder `SecuritySkillDrain → OnSecurityCheckDrain → BattleResolved`); `ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle` is un-ignored and green, and §13-1-8 / §13-1-8-2-1 / §13-1-8-3-1 are `proven`.
 - `G-ENGINE-DNA-RESULT-KEEPS-BASE-ORIENTATION`: resolved (§8-2-2-1-1, design F3). Fix `98d4937a6` (PR #737); the per-clause conformance tests `code/digimon-engine/tests/dna_result_new_card.rs` landed with the F3 merge and are green. The tracker entry in `docs/RUST_ENGINE_GAPS.md` is RESOLVED.
+- `G-ENGINE-UNAFFECTED-SKIPS-INSTEAD-OF-SUPPRESSES`: found and resolved in Plan 4 Task 24 (§15-15-5-1 / -2 / -4, `1e3fc9d9e`). Modifiers and granted triggered effects applied to an immune Digimon are recorded and hidden at read time, so they apply once the immunity ends; `tests/rules_conformance/ch15_15_unaffected.rs` (10 tests) is green and 15-15-5-1..4 are `proven`.
 - `G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN`: resolved (fixed 2026-08-24 in `73733429d`, confirmed by `delay_scheduled_window_is_optional`); entry moved to `qa/resolved-gaps.md`.
 
 ## Vocabulary gaps filed (`qa/dsl-vocab-gaps.md`, 2026-10-16)

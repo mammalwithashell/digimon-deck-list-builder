@@ -24,6 +24,28 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 
 impl<'a> EffectContext<'a> {
+    /// Apply-time hold for the continuous modifier installs below
+    /// (`add_modifier` / `add_modifier_with_payload` /
+    /// `add_modifier_with_until_condition`).
+    ///
+    /// §15-15-5-2 "When a card isn't affected by effects, then it can be
+    /// affected again, effects will immediately start affecting that card":
+    /// an immunity never skips the install. A `CannotBeAffected` immunity is
+    /// handled at read time -- the entry is tagged with this effect's
+    /// category (`ModifierEntry::affecting_source_kind`) and
+    /// `ModifierRegistry::get` hides it while the immunity covers it (DCGO
+    /// `ChangeDP.cs` `CanUseCondition`). `<Progress>` (§16-39-1, "isn't
+    /// affected by your opponent's effects while attacking") is decided here,
+    /// because it reads the attack state the registry does not hold: an
+    /// opponent's entry installed on a `<Progress>` attacker is held
+    /// (`held_while_attacking`) and released when the attack ends
+    /// (`ModifierRegistry::expire_end_of_attack`). One-shot processing
+    /// (delete, suspend, return, ...) keeps the `can_affect_permanent` skip:
+    /// there is nothing left to apply later.
+    fn held_for_progress_attack(&self, target: PermanentHandle) -> bool {
+        self.game.progress_excludes(target, Some(self.player))
+    }
+
     pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {
         // Single source of truth for the gate lives in `add_modifier`.
         self.add_modifier(target, ModifierType::ChangeDp, value, expiry);
@@ -45,9 +67,7 @@ impl<'a> EffectContext<'a> {
         value: i32,
         expiry: Expiry,
     ) {
-        if !self.can_affect_permanent(target) {
-            return;
-        }
+        let held = self.held_for_progress_attack(target);
         // `*NextTurn` expiries installed during the about-to-end turn must
         // skip that turn-end (otherwise they expire one turn early). The
         // engine knows the current turn at install time, so compute it
@@ -61,7 +81,9 @@ impl<'a> EffectContext<'a> {
         self.game.modifiers.add(
             target,
             ModifierEntry::simple(modifier, value, expiry, self.player)
-                .with_pending_skips(pending_skips),
+                .with_pending_skips(pending_skips)
+                .with_affecting_source_kind(self.source_kind)
+                .with_held_while_attacking(held),
         );
         self.game.mark_until_condition_dirty();
         // NOTE: a DP reduction to ≤0 does NOT delete the Digimon here. Deletion
@@ -76,7 +98,7 @@ impl<'a> EffectContext<'a> {
 
     /// Like [`add_modifier`], but carries a structured [`ModifierPayload`]
     /// (e.g. `SynthIdentity` for `TreatAsDigimon`). Honors the same
-    /// `can_affect_permanent` guard and `*NextTurn` pending-skip semantics.
+    /// record-and-suppress immunity gate and `*NextTurn` pending-skip semantics.
     /// Used by the DSL `add_modifier` lowering when a `synth_identity:`
     /// block is present, and available to raw_rust scripts.
     pub fn add_modifier_with_payload(
@@ -87,9 +109,7 @@ impl<'a> EffectContext<'a> {
         expiry: Expiry,
         payload: crate::modifiers::ModifierPayload,
     ) {
-        if !self.can_affect_permanent(target) {
-            return;
-        }
+        let held = self.held_for_progress_attack(target);
         let pending_skips = crate::modifiers::pending_skips_for_install(
             expiry,
             self.player,
@@ -99,7 +119,9 @@ impl<'a> EffectContext<'a> {
             target,
             ModifierEntry::simple(modifier, value, expiry, self.player)
                 .with_payload(payload)
-                .with_pending_skips(pending_skips),
+                .with_pending_skips(pending_skips)
+                .with_affecting_source_kind(self.source_kind)
+                .with_held_while_attacking(held),
         );
         self.game.mark_until_condition_dirty();
     }
@@ -197,13 +219,13 @@ impl<'a> EffectContext<'a> {
         value: i32,
         predicate: crate::modifiers::UntilConditionFn,
     ) {
-        if !self.can_affect_permanent(target) {
-            return;
-        }
+        let held = self.held_for_progress_attack(target);
         self.game.modifiers.add(
             target,
             ModifierEntry::simple(modifier, value, Expiry::UntilCondition, self.player)
-                .with_until_condition(predicate),
+                .with_until_condition(predicate)
+                .with_affecting_source_kind(self.source_kind)
+                .with_held_while_attacking(held),
         );
         self.game.mark_until_condition_dirty();
     }
@@ -249,9 +271,9 @@ impl<'a> EffectContext<'a> {
     /// `expiry` follows the same semantics as `add_modifier`:
     /// `Permanent` for "until carrier leaves the field" (clears via
     /// `clear_permanent`); `EndOfTurn` / `EndOfYourTurn` /
-    /// `EndOfOpponentsTurn` for turn-bound grants. The
-    /// `can_affect_permanent` guard is honored so opponent-effect
-    /// immunities suppress the install.
+    /// `EndOfOpponentsTurn` for turn-bound grants. An effect immunity on the
+    /// carrier does not suppress the install (§15-15-5-2): the dispatcher
+    /// gates the granted trigger at fire time instead.
     pub fn grant_triggered_effect<F>(
         &mut self,
         carrier: PermanentHandle,
@@ -261,9 +283,13 @@ impl<'a> EffectContext<'a> {
     ) where
         F: Fn(&mut EffectContext<'_>) + Send + Sync + 'static,
     {
-        if !self.can_affect_permanent(carrier) {
-            return;
-        }
+        // §15-15-5-2 / §15-15-5-4: an effect gained while immune (including
+        // by a `<Progress>` attacker, §16-39-1) is recorded, not skipped. The
+        // granted-trigger dispatch (`effect_queue.rs`: `progress_excludes`
+        // and `permanent_is_unaffected_by_effect` against the grantor) keeps
+        // it from triggering while the carrier is unaffected, and lets it
+        // trigger once the immunity has ended (official Q&A Q2120 / Q3871 /
+        // Q6179).
         // Phase 4i — allocate a body id and register the closure in the
         // game-level body registry so the queue-based drainer can fetch
         // it at fire time. The same Arc is also stored on the entry for

@@ -3169,7 +3169,7 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "Heading '\"Isn't affected by effects\" cards'; its obligations are 15-15-5-1..4 (ch15_15_unaffected).",
       "status": "not-testable",
       "tests": [],
       "text": "\"Isn't affected by effects\" cards"
@@ -3182,9 +3182,17 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Scope matrix: an opponent-Digimon-effect immunity (Atratusmon ST23-09 idiom) is affected by Option [Main] and [Security]-activated [Main] effects, Tamer effects and its own controller's effects, not by opponent Digimon effects; a full opponent-effect immunity (Magnamon (X Antibody) BT16-102 idiom) blocks opponent Option ([Main] and [Security]), Tamer, Digimon and token effects but not its own controller's; battles and the 0-DP rule check are not effects (Q6279). An immunity that starts mid-effect covers that effect's later steps; one that starts after a -DP effect stops it affecting the card (Q6178; read-time suppression in ModifierRegistry::get).",
+      "status": "proven",
+      "tests": [
+        "ch15_15_unaffected::digimon_only_immunity_is_affected_by_opponent_option_main",
+        "ch15_15_unaffected::digimon_only_immunity_is_affected_by_option_security_activation",
+        "ch15_15_unaffected::digimon_only_immunity_is_affected_by_opponent_tamer_and_own_effects",
+        "ch15_15_unaffected::full_opponent_immunity_blocks_option_tamer_digimon_and_token_effects",
+        "ch15_15_unaffected::full_opponent_immunity_does_not_block_rule_processing",
+        "ch15_15_unaffected::effect_applied_before_immunity_stops_affecting_when_immunity_starts",
+        "ch15_15_unaffected::immunity_granted_mid_effect_covers_later_steps"
+      ],
       "text": "When a card isn't affected by effects, it won't be affected by processing caused by effects. (Example: Even if a card that isn't affected by effects is chosen for an \"[On Play] Suspend 1 of your opponent's Digimon\" effect, it isn't suspended.)"
     },
     "15-15-5-2": {
@@ -3195,9 +3203,12 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Record-and-suppress (2026-10-16): a modifier applied to an immune card is recorded (ModifierEntry::affecting_source_kind) and hidden while a covering CannotBeAffected entry exists; it applies as soon as the immunity lapses (the rule's 'while suspended' example: -3000 DP applies on unsuspend) or expires (Atratusmon shape, Q831), for the rest of its own duration. Previously EffectContext::add_modifier skipped the install, so the effect never applied.",
+      "status": "proven",
+      "tests": [
+        "ch15_15_unaffected::effect_applied_while_immune_starts_affecting_when_immunity_lapses",
+        "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it"
+      ],
       "text": "When a card isn't affected by effects, then it can be affected again, effects will immediately start affecting that card. (Example: When a -3000 DP effect is applied to a suspended Digimon with an \"[All Turns] While this Digimon is suspended, this Digimon isn't affected by the effects of your opponent's Digimon\" effect, the Digimon will get - 3000 DP as soon as it's unsuspended.)"
     },
     "15-15-5-3": {
@@ -3208,9 +3219,13 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "An immune Digimon is offered by an opponent's 'choose 1' (beside another Digimon, and as the only candidate), can be chosen, and is not affected (Q6176, Q3788).",
+      "status": "proven",
+      "tests": [
+        "ch15_15_unaffected::immune_permanent_is_still_choosable_and_offered_as_only_candidate",
+        "ch16_attack_keywords::progress_persistent_only_while_attacking",
+        "ch16_attack_keywords::progress_kind_matches_rule"
+      ],
       "text": "\"Isn't affected by effects\" cards can still be chosen for effects. (Example: A card that isn't affected by effects can be chosen for an \"[On Play] Suspend 1 of your opponent's Digimon\" effect, but it isn't affected by that effect and it isn't suspended.)"
     },
     "15-15-5-4": {
@@ -3221,9 +3236,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A <Security A. -1> gained from an opponent's Digimon effect while immune is not counted (1 check); once the immunity ends with the grant still in its duration the Digimon checks 0 cards (Q6179). A granted '[End of Your Turn] Delete this Digimon' (EX6-057 idiom) given while immune activates at the end of the carrier's next turn once the immunity has ended (Q2120 / Q3871). Covers modifier-backed gains (the production SecurityAttackChange idiom) and granted triggered effects; keyword-registry grants (grant_keyword; no authored opponent-side use, reachable only under an own-effect immunity) are still an install-time skip in both directions -- a keyword gained while immune is lost, and one gained BEFORE the immunity keeps applying through it, against Q6178 -- non-blocking (G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP).",
+      "status": "proven",
+      "tests": [
+        "ch15_15_unaffected::granted_effect_not_considered_had_while_immune"
+      ],
       "text": "Even if a Digimon that isn't affected by effects gains an effect, the Digimon won't be considered to34 have that effect. (Example: If an effect reads \"[On Play] 1 of your opponent's Digimon gains <Security A. -1> until the end of their turn,\" even if a Digimon that isn't affected by effects gains <Security A. -1>, the Digimon won't be considered to have <Security A. -1>."
     },
     "15-15-6": {
@@ -3842,16 +3859,18 @@
       "text": "Effects are divided into the following types."
     },
     "15-2-1-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 15,
       "fingerprint": "1b26b455c5b8ddc666117716e988f4eaf37a39f7c247beb3eba6b1a6334497a2",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "A token is a Digimon, so its effect is a Digimon effect; the engine classifies token effects as EffectSourceKind::Rule, so a Digimon-effect-only immunity (Atratusmon idiom) does not block the Familiar Token's [On Deletion] -3000 DP (9000 instead of 12000). Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_15_unaffected::digimon_only_immunity_blocks_a_digimon_tokens_effect"
+      ],
       "text": "An effect activated by a Digimon card, Digimon, or Security Digimon is considered a Digimon effect."
     },
     "15-2-1-2": {
@@ -7341,17 +7360,19 @@
       "text": "<Progress>"
     },
     "16-39-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "e7e71a76297e6988256aba87d4bd179c8bdfee7253b8123a05dd238fa6870119",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS",
       "mechanisms": [
         "keywords"
       ],
-      "note": "The opponent's 'when an opponent's Digimon attacks, 1 of your opponent's Digimon gets -3000 DP' can't choose the attacking <Progress> Digimon.",
-      "status": "proven",
+      "note": "The opponent's 'when an opponent's Digimon attacks, 1 of your opponent's Digimon gets -3000 DP' CAN choose the attacking <Progress> Digimon (§15-15-5-3; re-pinned 2026-10-16, the earlier 'can't choose' pin was wrong against the rule text) and doesn't affect it while it attacks; the -3000 DP applies when the attack ends (green). An opponent's -12000 DP applied during the attack is held and applies when the attack ends (green, Task 24 fix round 1). Demoted from proven 2026-10-16: an opponent effect applied BEFORE the attack still affects the attacking <Progress> Digimon (test #[ignore]d).",
+      "status": "gap",
       "tests": [
-        "ch16_attack_keywords::progress_persistent_only_while_attacking"
+        "ch16_attack_keywords::progress_persistent_only_while_attacking",
+        "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it",
+        "ch15_15_unaffected::progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking"
       ],
       "text": "<Progress> is a keyword effect that reads \"this Digimon isn't affected by your opponent's effects while attacking.\""
     },
@@ -7363,7 +7384,7 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "A <Progress> gained by [When Attacking] protects at once from the opponent's effect resolving after it.",
+      "note": "A <Progress> gained by [When Attacking] protects at once from the opponent's effect resolving after it: the attacker is still offered by the opponent's pick (§15-15-5-3; re-pinned 2026-10-16, the earlier pin excluded it) and, chosen, battles unaffected; the -3000 DP applies when the attack ends.",
       "status": "proven",
       "tests": [
         "ch16_attack_keywords::progress_kind_matches_rule"
@@ -15221,15 +15242,15 @@
         "total": 10
       },
       "15": {
-        "gap": 148,
+        "gap": 144,
         "not_testable": 66,
-        "proven": 30,
+        "proven": 34,
         "total": 244
       },
       "16": {
-        "gap": 21,
+        "gap": 22,
         "not_testable": 44,
-        "proven": 141,
+        "proven": 140,
         "total": 206
       },
       "17": {
@@ -15293,15 +15314,15 @@
         "total": 13
       }
     },
-    "gap": 649,
+    "gap": 646,
     "mechanics": {
-      "gap_blocking": 32,
-      "gap_nonblocking": 330,
+      "gap_blocking": 34,
+      "gap_nonblocking": 325,
       "not_testable": 152,
-      "proven": 201
+      "proven": 204
     },
     "not-testable": 246,
-    "proven": 224
+    "proven": 227
   },
   "version": 1
 }

@@ -1,0 +1,34 @@
+# OPT_MINUS_12K -- Option, red, use cost 8.
+#   [Main] 1 of your opponent's Digimon gets -12000 DP until the end of your
+#   opponent's turn.
+#   [Security] Activate this card's [Main] effects.
+# The Final Shining Burst (BT13-104) shape, without its "Then, you may play 1
+# [Marcus Damon]" tail.
+card: OPT_MINUS_12K
+name: Final Shine
+kind: option
+color: [red]
+cost: 8
+effects:
+  - when: main_from_hand
+    summary: "[Main] 1 of your opponent's Digimon gets -12000 DP until the end of your opponent's turn."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -12000 DP until the end of your opponent's turn"
+      - add_dp_modifier:
+          target: victim
+          value: -12000
+          expiry: end_of_opponents_turn
+  - when: on_security
+    summary: "[Security] Activate this card's [Main] effects."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -12000 DP until the end of your opponent's turn"
+      - add_dp_modifier:
+          target: victim
+          value: -12000
+          expiry: end_of_opponents_turn
