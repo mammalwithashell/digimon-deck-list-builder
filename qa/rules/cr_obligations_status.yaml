@@ -233,7 +233,7 @@
 "17-1-3-2-4":
   status: proven
   tests: ["ch17_rule_checks::face_down_card_on_field_is_trashed"]
-  note: "Rule-check trash target (normative; explicit so the short text is never read as a heading). A permanent whose TOP card is face down is trashed at the rule check (battle area and breeding area, both part of the field per §3-4-6); control: a face-down card stacked under a Tamer stays."
+  note: "Rule-check trash target (normative; explicit so the short text is never read as a heading). A permanent whose TOP card is face down is trashed at the rule check; control: a face-down card stacked under a Tamer stays. The conformance test stages the battle area; the breeding-area case (also part of the field, §3-4-6) is pinned by the lib unit test game_actions::breeding::rule_check_breeding_tests::face_down_top_in_breeding_area_is_trashed_face_up."
 "17-1-3-2-5":
   status: proven
   tests: ["ch17_rule_checks::excess_link_cards_trashed_player_chooses_which", "ch17_rule_checks::excess_link_cards_over_any_limit_prompt_before_trash"]
@@ -640,7 +640,7 @@
 "4-19-5":
   status: proven
   tests: ["ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player"]
-  note: "A deletion batch (mutual battle deletion, 'delete all Digimon') collects every leaving card and processes its <Overflow> instances in one pass after the removals, before the batch's trigger flush."
+  note: "A deletion batch (mutual battle deletion, 'delete all Digimon') collects every leaving card and processes its <Overflow> instances in one pass after the removals, before the batch's trigger flush. A rule check that both trashes and deletes ACE stacks (§17-1-3) applies the trashed cards' turn-player instances before the deletion batch and the non-turn player's after it, so every turn-player instance goes first (engine test ace_overflow::rule_check_deleted_and_trashed_aces_overflow_turn_player_first; not listed in tests because it lives outside rules_conformance and carries no cite!)."
 "4-19-5-1":
   status: proven
   tests: ["ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player"]
