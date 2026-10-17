@@ -5933,12 +5933,12 @@
       "blocks_training": false,
       "chapter": 16,
       "fingerprint": "25a61affcf23dd9a1afcd3484a1e3b3436b81c9211cd6491a7044ce3dcf8e8c9",
-      "gap_id": "G-ENGINE-KEYWORD-REFERENCE-MATCHES-ONE-VALUE",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Behavioural witness: '[Main] Delete 1 of your opponent's Digimon with <Fragment>' (DSL `has_keyword: Fragment`) must be able to choose a <Fragment (2)> Digimon as well as a <Fragment (1)> one; the engine compares the whole Keyword value (lookup_keyword(\"Fragment\", None) = Fragment(1)), so only <Fragment (1)> qualifies. #[ignore]d. Supporting evidence only: the printed icons parse to one Keyword variant per keyword. No production card references a parametric keyword through has_keyword today, hence blocks_training false.",
-      "status": "gap",
+      "note": "A DSL keyword reference without a parameter ('Digimon with <Fragment>', `has_keyword: Fragment`) matches every value of the keyword by type: Keyword::same_type (discriminant equality) + Game::has_keyword_type scan the same origins as has_keyword (modifier grants, face, inherited, adopted, declarative grants, link cards). Proven: <Fragment (1)> and <Fragment (2)> Digimon are both choosable, a Digimon without the keyword is not. Supporting evidence (not counted): the printed icons parse to one Keyword variant per keyword.",
+      "status": "proven",
       "tests": [
         "ch16_replacement_keywords::keyword_reference_matches_every_value_of_the_keyword"
       ],
@@ -6574,12 +6574,12 @@
       "blocks_training": false,
       "chapter": 16,
       "fingerprint": "d7fd5721ce3b7c69bff1c61b31052bfab5b629db1f039b4e9e34b72d43a70db1",
-      "gap_id": "G-ENGINE-MIND-LINK-PLACEMENT-OPTIONAL",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "The [Main] timing half is proven; after activation the Digimon pick is optional (DCGO agrees, the PDF governs). #[ignore]d. Does not block training: declining is outcome-equal to not declaring.",
-      "status": "gap",
+      "note": "The [Main] timing is the player's choice (proven); once activated the Digimon pick is mandatory (is_optional=false, so PASS is not legal) and the Tamer is placed. The rule governs over DCGO's canNoSelect: true.",
+      "status": "proven",
       "tests": [
         "ch16_processing_keywords::mind_link_timing_matches_rule",
         "ch16_processing_keywords::mind_link_places_tamer_under_tamerless_digimon_mandatory"
@@ -15251,9 +15251,9 @@
         "total": 244
       },
       "16": {
-        "gap": 21,
+        "gap": 19,
         "not_testable": 44,
-        "proven": 141,
+        "proven": 143,
         "total": 206
       },
       "17": {
@@ -15317,15 +15317,15 @@
         "total": 13
       }
     },
-    "gap": 643,
+    "gap": 641,
     "mechanics": {
       "gap_blocking": 33,
-      "gap_nonblocking": 325,
+      "gap_nonblocking": 323,
       "not_testable": 152,
-      "proven": 205
+      "proven": 207
     },
     "not-testable": 246,
-    "proven": 230
+    "proven": 232
   },
   "version": 1
 }

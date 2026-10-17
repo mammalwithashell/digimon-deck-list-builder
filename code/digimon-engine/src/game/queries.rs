@@ -75,6 +75,19 @@ impl Game {
         handle: PermanentHandle,
         keyword: crate::enums::Keyword,
     ) -> bool {
+        self.card_source_keyword_matches(handle, &|k| k == keyword)
+    }
+
+    /// The one walk over every card-source origin of a permanent's keywords
+    /// (face, inherited, `<Succession>`-adopted, declarative grants, link
+    /// cards), with the keyword compare supplied by the caller: exact value
+    /// for [`Game::has_keyword_from_card_sources`], keyword type for
+    /// [`Game::has_keyword_type`] (Comprehensive Rules 4.3 §16-2).
+    fn card_source_keyword_matches(
+        &self,
+        handle: PermanentHandle,
+        matches: &dyn Fn(crate::enums::Keyword) -> bool,
+    ) -> bool {
         // Native printed on the top card's face.
         let Some(player) = self.players.get(handle.player as usize) else {
             return false;
@@ -85,7 +98,7 @@ impl Game {
         let top = perm.top_card();
         // `data_index` is a direct Vec index — O(1), no iteration needed.
         let card_data = &self.card_data[top.data_index];
-        if face_keywords(card_data).contains(&keyword) {
+        if face_keywords(card_data).iter().any(|k| matches(*k)) {
             return true;
         }
         // Inherited keyword grants from digivolution sources. Only cards
@@ -111,10 +124,18 @@ impl Game {
         for (source_index, data_index, src_id, src_handle) in source_ids {
             let is_under = source_index + 1 < stack_size;
             let is_adopted = adopted.contains(&source_index);
-            if is_under && inherited_keywords(&self.card_data[data_index]).contains(&keyword) {
+            if is_under
+                && inherited_keywords(&self.card_data[data_index])
+                    .iter()
+                    .any(|k| matches(*k))
+            {
                 return true;
             }
-            if is_adopted && face_keywords(&self.card_data[data_index]).contains(&keyword) {
+            if is_adopted
+                && face_keywords(&self.card_data[data_index])
+                    .iter()
+                    .any(|k| matches(*k))
+            {
                 return true;
             }
             let Some(effects) = self.effects_for_card(&src_id, src_handle) else {
@@ -126,7 +147,7 @@ impl Game {
                 {
                     continue;
                 }
-                if effect.granted_keyword != Some(keyword) {
+                if !effect.granted_keyword.is_some_and(matches) {
                     continue;
                 }
                 if let Some(cond) = &effect.condition {
@@ -161,7 +182,10 @@ impl Game {
             .map(|c| (c.data_index, c.handle()))
             .collect();
         for (data_index, linked_handle) in linked_ids {
-            if link_keywords(&self.card_data[data_index]).contains(&keyword) {
+            if link_keywords(&self.card_data[data_index])
+                .iter()
+                .any(|k| matches(*k))
+            {
                 return true;
             }
             let linked_id = self.card_data[data_index].card_id.clone();
@@ -172,7 +196,7 @@ impl Game {
                 if !effect.declarative || !(effect.inherited || effect.linked) {
                     continue;
                 }
-                if effect.granted_keyword != Some(keyword) {
+                if !effect.granted_keyword.is_some_and(matches) {
                     continue;
                 }
                 if let Some(cond) = &effect.condition {
@@ -528,5 +552,23 @@ impl Game {
             }
         }
         total
+    }
+}
+
+impl Game {
+    /// Keyword query by TYPE: `true` when the permanent has ANY keyword of the
+    /// same type as `kind`, whatever its numerical value or specified card
+    /// (Comprehensive Rules 4.3 §16-2: "A keyword effect is considered to be
+    /// the same type even if it has a different numerical value or specified
+    /// card included in the icon enclosed in brackets"). So `<Fragment (1)>`
+    /// and `<Fragment (2)>` both answer `has_keyword_type(h, &Fragment(0))`.
+    ///
+    /// Scans the same origins as [`Game::has_keyword`] (modifier grants, face,
+    /// inherited, adopted, declarative grants, link cards). Use this for a
+    /// reference that names a keyword without a parameter ("a Digimon with
+    /// <Fragment>"); keep [`Game::has_keyword`] where the exact value matters.
+    pub fn has_keyword_type(&self, handle: PermanentHandle, kind: &crate::enums::Keyword) -> bool {
+        self.modifiers.has_keyword_type(handle, kind)
+            || self.card_source_keyword_matches(handle, &|k| k.same_type(kind))
     }
 }

@@ -1747,7 +1747,6 @@ fn multiple_instances_of_one_keyword_each_offered_once_per_event() {
 /// icons `＜Fragment (1)＞`/`＜Fragment (2)＞` and `＜Decoy＞`/`＜Decoy (Black)＞`
 /// parse to one `Keyword` variant each.
 #[test]
-#[ignore = "G-ENGINE-KEYWORD-REFERENCE-MATCHES-ONE-VALUE (§16-2)"]
 fn keyword_reference_matches_every_value_of_the_keyword() {
     cite!(
         "16-2",

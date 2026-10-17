@@ -669,6 +669,18 @@ pub enum Keyword {
     Ascension,
 }
 
+impl Keyword {
+    /// Whether `other` is the same keyword TYPE, ignoring any numerical value
+    /// or specified card in the icon's brackets (Comprehensive Rules 4.3
+    /// §16-2): `<Fragment (1)>` and `<Fragment (2)>`, `<Decoy>` and
+    /// `<Decoy (Black)>` are the same type. Exact-value equality (`==`) stays
+    /// the right compare wherever the parameter matters (replacement
+    /// resolution, the observation tensor).
+    pub fn same_type(&self, other: &Keyword) -> bool {
+        std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
+}
+
 /// Zone where a card can exist.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Zone {

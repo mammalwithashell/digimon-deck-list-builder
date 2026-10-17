@@ -3,6 +3,7 @@ mod execute;
 mod guard;
 mod helpers;
 mod iceclad;
+mod keyword_type;
 mod mind_link;
 mod progress;
 mod scapegoat_cause_filter;

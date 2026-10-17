@@ -2158,13 +2158,17 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 let owner = me.player;
                 let prov = resume_provenance(ctx);
 
-                // Optional own-permanent pick (DCGO `canNoSelect: true`).
+                // Mandatory own-permanent pick once activated (§16-28-3: "The
+                // processing from <Mind Link> is mandatory"; the rule governs
+                // over DCGO's `canNoSelect: true`). The player chose WHEN to
+                // activate the [Main]; the activation gate guarantees a
+                // candidate.
                 // Filter mirrors the gate plus a self-exclusion (the
                 // carrier is itself on its controller's battle area; we
                 // must never target it).
                 ctx.select_own_permanent(
                     "select a Digimon to receive the Mind Link Tamer",
-                    /*is_optional=*/ true,
+                    /*is_optional=*/ false,
                     move |g, h| {
                         if h.player != owner || h == me {
                             return false;

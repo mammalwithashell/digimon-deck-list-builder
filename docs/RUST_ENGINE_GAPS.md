@@ -5521,13 +5521,14 @@ no dedicated clause test in `dna_result_new_card.rs`.
 - **Fix shape:** after an end-of-turn attack's `cleanup_attack`, re-check `has_end_of_turn_keywords(turn_player)` and rotate the turn when it is false, instead of parking.
 - **Blocks training:** no. No outcome changes; it is one forced, meaningless decision point per <Engage> attack in the RL trajectory.
 
-### A keyword reference by name matches only one value of a parametric keyword  [G-ENGINE-KEYWORD-REFERENCE-MATCHES-ONE-VALUE]
+### A keyword reference by name matches only one value of a parametric keyword  [G-ENGINE-KEYWORD-REFERENCE-MATCHES-ONE-VALUE] — RESOLVED (2026-10-17, 5804c3d2c)
 
 - **Rule:** §16-2 (Ver. 4.3) "A keyword effect is considered to be the same type even if it has a different numerical value or specified card included in the icon enclosed in brackets." So "a Digimon with <Fragment>" is every <Fragment (N)> Digimon, "with <Decoy>" every <Decoy (X)> Digimon.
 - **Ours:** `dsl_cards/predicate.rs` `has_keyword` (~L4297) resolves the name with `modifier_map::lookup_keyword(keyword, None)`, which fills a default parameter (`Fragment` → `Keyword::Fragment(1)`, `Decoy` → `Decoy(0)`, `MaterialSave`/`DigiBurst`/`DeDigivolve`/`DrawX` → `(1)`, `SecurityAttackPlus` → `(1)`), and `Game::has_keyword` (`game/queries.rs` ~L52) compares the whole `Keyword` value (`modifiers.has_keyword` `entry.keyword == keyword`; `face_keywords(..).contains(&keyword)`). Observed (`ch16_replacement_keywords::keyword_reference_matches_every_value_of_the_keyword`): P0's `MAIN_DEL_FRAG` ("[Main] Delete 1 of your opponent's Digimon with <Fragment>", `has_keyword: Fragment`) can choose P1's `EVADE_FRAG1` (<Fragment (1)>) but NOT P1's `FRAG2` (<Fragment (2)>): valid targets `[101]`, rule `[100, 101]`.
 - **Test:** the test above, `#[ignore]`d. Supporting (not counted): the printed icons parse to one `Keyword` variant per keyword.
 - **Fix shape:** compare by keyword type, not value, when a reference names a keyword without a parameter: e.g. a `Keyword::same_type(&self, other)` (`std::mem::discriminant` equality) used by `has_keyword` predicates and a `Game::has_keyword_type(handle, kind)` that scans face / inherited / link / granted keywords by type; keep exact-value matching for the replacement / tensor paths that need the parameter. Check other name-only keyword readers (`modifiers.has_keyword` callers, "loses <X>" / "can't gain <X>" effects) for the same exact-value compare.
 - **Blocks training:** no today: no production YAML references a parametric keyword through `has_keyword` (current uses: Blocker, Jamming, Progress). It becomes a wrong-target bug the moment one does.
+- **Resolution:** `Keyword::same_type` (discriminant equality, `enums.rs`) and `Game::has_keyword_type(handle, &kind)` (end of `game/queries.rs`) answer "has a keyword of this type" over the same origins as `has_keyword`: the card-source walk was generalised into `card_source_keyword_matches` with a caller-supplied compare (exact value for `has_keyword_from_card_sources`, type for `has_keyword_type`), plus `ModifierRegistry::has_keyword_type`. The `has_keyword` and `printed_keyword` predicates (`dsl_cards/predicate.rs`) use the type compare, since a DSL reference carries no parameter; exact-value `has_keyword` is unchanged for the replacement / tensor paths. Test: `ch16_replacement_keywords::keyword_reference_matches_every_value_of_the_keyword` (un-ignored).
 
 ### `<Blitz>` never attacks: the turn ends as soon as the digivolution's effects resolve  [G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK]
 
@@ -5610,13 +5611,14 @@ no dedicated clause test in `dna_result_new_card.rs`.
 - **Fix shape:** after the Tamer pick (the optional decision), require `min = max = min(n, eligible)`; keep the decline at the Tamer pick.
 - **Blocks training:** yes. An illegal choice (placing fewer) is in the action space.
 
-### `<Mind Link>`'s placement can be declined after activation  [G-ENGINE-MIND-LINK-PLACEMENT-OPTIONAL]
+### `<Mind Link>`'s placement can be declined after activation  [G-ENGINE-MIND-LINK-PLACEMENT-OPTIONAL] — RESOLVED (2026-10-17, 5804c3d2c)
 
 - **Rule:** §16-28-3 (Ver. 4.3) "The processing from <Mind Link> is mandatory. However, if it uses the [Main] activation timing, it can be activated and processed at a timing chosen by the player." The player chooses WHEN to activate; once activated, the Tamer is placed.
 - **Ours:** `cards/keyword_effects.rs` `Keyword::MindLink` (~L2118) parks `select_own_permanent(..., /*is_optional=*/ true, ...)`. Observed (`ch16_processing_keywords::mind_link_places_tamer_under_tamerless_digimon_mandatory`, `#[ignore]`d): after P0 declares `MINDLINK`'s [Main] <Mind Link>, the Digimon pick (correctly only the Tamer-less `LV4_PLAIN`) is optional. Proven green: the candidate filter and the placement (`mind_link_kind_matches_rule`), the player-chosen timing (`mind_link_timing_matches_rule`).
 - **DCGO:** `CardEffectCommons/KeyWordEffects/MindLink.cs` (~L60) also uses `canNoSelect: true`. `general_rule.pdf` governs rules questions over DCGO (source priority), so the rule's "mandatory" wins.
 - **Fix shape:** make the pick mandatory (`is_optional = false`); the activation gate (a Tamer-less Digimon exists) already guarantees a candidate.
 - **Blocks training:** no. Declining after declaring reaches exactly the state of not declaring (the [Main] has no cost and no use limit), which PASS already offers; no outcome changes. It is one redundant decision in the action space.
+- **Resolution:** `Keyword::MindLink`'s Digimon pick is `is_optional = false` (`cards/keyword_effects.rs`); the player still chooses WHEN to activate the [Main] and WHICH Tamer-less Digimon (a real `pending_selection`, no auto-pick), but cannot PASS once activated. Test: `ch16_processing_keywords::mind_link_places_tamer_under_tamerless_digimon_mandatory` (un-ignored); `keyword_phase_f::mind_link::mind_link_optional_pick_can_be_declined` encoded DCGO's `canNoSelect` and was inverted to `mind_link_pick_cannot_be_declined` (PASS rejected).
 
 ### `<Blast DNA Digivolve>` ignores the DNA digivolution requirements  [G-ENGINE-BLAST-DNA-IGNORES-DNA-REQUIREMENTS] — RESOLVED (2026-10-16, e9c3a4b2b)
 

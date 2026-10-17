@@ -492,11 +492,9 @@
   tests: ["ch16_replacement_keywords::multiple_instances_of_one_keyword_each_offered_once_per_event"]
   note: "The bracketed icon <Barrier> parses to the keyword effect; each printed/inherited instance is its own effect: a Digimon with <Barrier> on its top card and an inherited <Barrier> gets an ordering choice, then each instance offered once in one battle deletion (first declined, second accepted)."
 "16-2":
-  status: gap
-  blocks_training: false
-  gap_id: G-ENGINE-KEYWORD-REFERENCE-MATCHES-ONE-VALUE
+  status: proven
   tests: ["ch16_replacement_keywords::keyword_reference_matches_every_value_of_the_keyword"]
-  note: "Behavioural witness: '[Main] Delete 1 of your opponent's Digimon with <Fragment>' (DSL `has_keyword: Fragment`) must be able to choose a <Fragment (2)> Digimon as well as a <Fragment (1)> one; the engine compares the whole Keyword value (lookup_keyword(\"Fragment\", None) = Fragment(1)), so only <Fragment (1)> qualifies. #[ignore]d. Supporting evidence only: the printed icons parse to one Keyword variant per keyword. No production card references a parametric keyword through has_keyword today, hence blocks_training false."
+  note: "A DSL keyword reference without a parameter ('Digimon with <Fragment>', `has_keyword: Fragment`) matches every value of the keyword by type: Keyword::same_type (discriminant equality) + Game::has_keyword_type scan the same origins as has_keyword (modifier grants, face, inherited, adopted, declarative grants, link cards). Proven: <Fragment (1)> and <Fragment (2)> Digimon are both choosable, a Digimon without the keyword is not. Supporting evidence (not counted): the printed icons parse to one Keyword variant per keyword."
 "16-3":
   status: proven
   tests: ["ch16_replacement_keywords::specified_cards_follow_the_icon_note"]
@@ -1150,11 +1148,9 @@
   status: proven
   tests: ["ch16_processing_keywords::mind_link_kind_matches_rule"]
 "16-28-3":
-  status: gap
-  blocks_training: false
-  gap_id: G-ENGINE-MIND-LINK-PLACEMENT-OPTIONAL
+  status: proven
   tests: ["ch16_processing_keywords::mind_link_timing_matches_rule", "ch16_processing_keywords::mind_link_places_tamer_under_tamerless_digimon_mandatory"]
-  note: "The [Main] timing half is proven; after activation the Digimon pick is optional (DCGO agrees, the PDF governs). #[ignore]d. Does not block training: declining is outcome-equal to not declaring."
+  note: "The [Main] timing is the player's choice (proven); once activated the Digimon pick is mandatory (is_optional=false, so PASS is not legal) and the Tamer is placed. The rule governs over DCGO's canNoSelect: true."
 "16-31-1":
   status: proven
   tests: ["ch16_processing_keywords::blast_dna_optionality_matches_rule"]

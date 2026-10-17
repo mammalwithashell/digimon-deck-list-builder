@@ -2232,7 +2232,6 @@ fn mind_link_board() -> (DebugRunner, PermanentHandle, PermanentHandle) {
 /// choice can't be declined; `MINDLINK` becomes its bottom digivolution card
 /// and is no longer on the field.
 #[test]
-#[ignore = "G-ENGINE-MIND-LINK-PLACEMENT-OPTIONAL (§16-28-3)"]
 fn mind_link_places_tamer_under_tamerless_digimon_mandatory() {
     cite!(
         "16-28-3",
