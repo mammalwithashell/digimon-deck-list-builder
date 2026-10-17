@@ -195,11 +195,17 @@ Grouped by the mechanism the defect lives in; when the obligation's Aegis taxono
 - DCGO: agrees with the rule (`StackSkillInfos` evaluates `CanTrigger` when the battle stacks it).
 - Fix: evaluate the trigger condition at the battle's enqueue and drop entries that did not trigger; keep the §15-4-4-5 activation re-check.
 
-**G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS**: `needs-reading` — filed 2026-10-17 (Plan 4 Task 28 review round)
+**G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS**: `needs-reading` — filed 2026-10-17 (Plan 4 Task 28 review round) — **fixed (Plan 4 Task 31, `8834bec70`)**: a Digimon's traits are its top card's (controller ruling, provisional; §4-7-7, Q3225, DCGO `permanent.TopCard`); `Permanent::has_trait` (now `has_printed_trait`) reads the top card and the winner / host-Digimon trait readers use `has_trait_for_rules`; the pinning test is un-ignored and `ch15_08_effect_categories::battle_winner_trait_is_the_top_cards_trait` / `::permanent_trait_is_the_top_cards_trait` are green. §4-7-7 stays `gap` (tests listed; they pin the characteristics reading, not the rule's text).
 - Rules: §4-7-7 (bottom cards are part of the top card's information) vs DCGO's top-card trait read (`BT25_020.cs`).
 - Test: `dsl::battle_deleter::turn_players_observer_reads_the_winners_top_card_before_de_digivolution` (ignored).
 - Cause: `TriggerContext::battle_winner_has_trait` reads the live winner through `Permanent::has_trait`, which scans every card in the stack.
 - Fix: read the winner's synthesized identity (top card + trait modifiers), once the reading is confirmed.
+
+**G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS**: `needs-reading` (same ruling as the trait gap above) — filed 2026-10-17 (Plan 4 Task 31 review round)
+- Rules: §4-7-7 + Q3225 (a Digimon "without ... [Imperialdramon] in its name" once its top card is trashed); DCGO `TopCard.ContainsCardName`.
+- Cards: BT12-059, EX1-014, BT20-059, BT17-102 read "this Digimon's name / is [X]" through `self_digivolution_contains_name` (top card + every digivolution card); BT16-027 / BT20-020 read "in its digivolution cards" through the same scan (harmless today).
+- Cause: `Permanent::contains_card_name` scans the whole stack.
+- Fix: re-author those cards onto a top-card name predicate (`source_name_contains`; BT17-102 on the synthesized names) and BT16-027 / BT20-020 onto `self_digivolution_sources_contain_name`; leave `contains_card_name` as is.
 
 (§14 is 7 of 10 proven.)
 
@@ -392,6 +398,8 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 - `G-ENGINE-STANDING-LINK-ABSORB-DRAINS-MID-PROCESS` (§4-9-5, no obligation of its own; filed by Plan 4 Task 30 review): `absorb_standing_digimon_as_link` drains the effect queue after each trashed digivolution card and after the source's own link cards, so on the §4-9-5 choice path the replaced link cards' `OnLinkedCardTrashed` triggers resolve before the new card attaches (and a trigger removing a lower-index permanent could leave the host handle stale); fix: queue only and drain once after `OnLink`. Shared by the declared standing link and the effect relink (only `_examples/EX11-027` authors it).
 - `G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH` (§15-8-3-2, no obligation of its own): `fire_digivolution_card_returned_to_deck_bottom`, `digivolve_replacement_subject_without_cost`, `play_token` and `place_self_as_delay_option_permanent` still drain the queue inline; the source-trash paths were fixed under `G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS`.
 
+- `G-ENGINE-REPLACED-TRAIT-STILL-COUNTS-FROM-PRINTED-TOP-CARD` (no obligation of its own; filed by the Plan 4 Task 31 review): `has_trait_for_rules` and the general `trait_has` OR the synthesized identity with the printed top card, so a replacing `ChangeTraits` / non-additive `TreatAsDigimon` cannot remove a printed trait, and the live winner read can disagree with its snapshot.
+
 The other 330 non-blocking mechanics-set gaps (and 279 outside it) are untriaged defaults with no test, mostly chapters 1-10.
 
 ## Owner-rulings worksheet
@@ -452,6 +460,7 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 - `G-ENGINE-UNAFFECTED-SKIPS-INSTEAD-OF-SUPPRESSES`: found and resolved in Plan 4 Task 24 (§15-15-5-1 / -2 / -4, `1e3fc9d9e`). Modifiers and granted triggered effects applied to an immune Digimon are recorded and hidden at read time, so they apply once the immunity ends; `tests/rules_conformance/ch15_15_unaffected.rs` (10 tests) is green and 15-15-5-1..4 are `proven`.
 - `G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS`: resolved in Plan 4 Task 25 (§16-39-1 / §15-15-5-1 / §15-15-5-2, `20646307f`). `<Progress>` is a read-time shield on the modifier registry (`ModifierRegistry::progress_shield`, keyed to the attacker by identity), so an opponent's effect applied before the attack stops applying while it attacks and applies again the moment it ends or the attacker loses `<Progress>`; `ch15_15_unaffected` progress tests green, 16-39-1 `proven`.
 - `G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION`: found in the Task 27 review and resolved in Plan 4 Task 28 (§14-2-4, §15-4-3-5-1, §16-7-4; `055806250`). The battle-result triggers and <Piercing> pend with the loser's [On Deletion] in one pool, the turn player's first (Q3931); the end-of-battle timing (§14-2-5) follows the pool.
+- `G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS`: found in the Task 28 review and resolved in Plan 4 Task 31 (§4-7-7; `8834bec70`). A Digimon's traits are its top card's (controller ruling, provisional; official Q&A Q3225; DCGO reads `permanent.TopCard`): the shared `Permanent::has_trait` (now `has_printed_trait`) no longer scans the digivolution cards, so the battle-winner qualifier and the host-Digimon trait predicate read the top card.
 - `G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN`: resolved (fixed 2026-08-24 in `73733429d`, confirmed by `delay_scheduled_window_is_optional`); entry moved to `qa/resolved-gaps.md`.
 
 ## Vocabulary gaps filed (`qa/dsl-vocab-gaps.md`, 2026-10-16)

@@ -2500,10 +2500,23 @@ fn eval_event_fields(
         }
     }
     if let Some(ref trait_name) = pred.host_permanent_trait_has {
+        // "a [X] trait Digimon's digivolution cards": the host's traits are
+        // its top card's (with trait-changing effects), never another
+        // digivolution card's (§4-7-7; DCGO `EX8_047.cs`
+        // `trashedPermanent.TopCard.ContainsTraits`).
+        // G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS.
         let live_host_matches = rctx
             .event_host_permanent()
-            .and_then(|host| permanent_for_handle(rctx, host))
-            .map(|perm| perm.has_trait(trait_name, rctx.card_data()))
+            .and_then(|host| {
+                permanent_for_handle(rctx, host).map(|perm| {
+                    perm.has_trait_for_rules(
+                        trait_name,
+                        rctx.card_data(),
+                        &rctx.game.modifiers,
+                        host,
+                    )
+                })
+            })
             .unwrap_or(false);
         let host_snapshot_matches = rctx
             .event_host_card()

@@ -1,0 +1,25 @@
+# INH_TRASHED_FROM_TS -- Digimon, Lv.3, red, 1000 DP, play cost 2.
+#   Inherited: When effects trash this card from a [TS] trait Digimon's
+#   digivolution cards, gain 1 memory.
+# "a [TS] trait Digimon" is the Digimon the card is trashed from: its traits
+# are its top card's, never another digivolution card's (§4-7-7; official Q&A
+# Q3225). The EX8-047 Sunarizamon shape (DCGO `EX8_047.cs` reads
+# `trashedPermanent.TopCard.ContainsTraits`).
+card: INH_TRASHED_FROM_TS
+name: Shardmon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 1000
+effects:
+  - scope: inherited
+    when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+        - trashed_source_card_id_is: INH_TRASHED_FROM_TS
+        - host_permanent_trait_has: TS
+    summary: "When effects trash this card from a [TS] trait Digimon's digivolution cards, gain 1 memory."
+    process:
+      - gain_memory: 1

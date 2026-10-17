@@ -587,7 +587,7 @@ fn winner_predicates_do_not_follow_a_de_digivolved_body_replayed_from_trash() {
 
 fn winner_after_de_digivolution(replay: bool) {
     // P1 the turn player: its [On Deletion] de-digivolves the winner first.
-    // (The P0-turn-player outcome is pinned, ignored, by
+    // (The P0-turn-player outcome is pinned by
     // `turn_players_observer_reads_the_winners_top_card_before_de_digivolution`.)
     winner_after_de_digivolution_with_turn(replay, 1);
 }
@@ -596,11 +596,10 @@ fn winner_after_de_digivolution(replay: bool) {
 /// [On Deletion] de-digivolves the winner; §15-8-3-8 / §15-4-4-5: the
 /// winner it reads is BD-HERO, whose top card has no [Evolved] trait -- the
 /// [Evolved] BD-SOURCE is only one of its digivolution cards -- so nothing is
-/// trashed. The engine reads the winner's traits from EVERY card in its stack
-/// (`Permanent::has_trait`, via `TriggerContext::battle_winner_has_trait`) and
-/// trashes one. Found by the Task 28 review round.
+/// trashed (a Digimon's traits are its top card's: §4-7-7, official Q&A
+/// Q3225). Found by the Task 28 review round;
+/// G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS.
 #[test]
-#[ignore = "G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS"]
 fn turn_players_observer_reads_the_winners_top_card_before_de_digivolution() {
     for replay in [false, true] {
         winner_after_de_digivolution_with_turn(replay, 0);

@@ -89,17 +89,20 @@ const CH15_07: &[&str] = &[
 
 /// §15-8 "Effect Categories" chapter cards (`ch15_08_effect_categories.rs`).
 const CH15_08: &[&str] = &[
+    include_str!("ch15_08/AURA_TS_TAMER.yaml"),
     include_str!("ch15_08/DNA_LV6.yaml"),
     include_str!("ch15_08/EOT_MEM.yaml"),
     include_str!("ch15_08/EOT_MEM3.yaml"),
     include_str!("ch15_08/IMM_COND.yaml"),
     include_str!("ch15_08/IMM_TWO_MAY.yaml"),
     include_str!("ch15_08/INH_OD_MEM.yaml"),
+    include_str!("ch15_08/INH_TRASHED_FROM_TS.yaml"),
     include_str!("ch15_08/LV4_PLAIN.yaml"),
     include_str!("ch15_08/MAIN_DEL1.yaml"),
     include_str!("ch15_08/MAIN_DEL2.yaml"),
     include_str!("ch15_08/MAIN_DEL_ALL.yaml"),
     include_str!("ch15_08/MAIN_PLAY_LV4.yaml"),
+    include_str!("ch15_08/MAIN_TRASH_BOTTOM_SRC.yaml"),
     include_str!("ch15_08/MAIN_TRASH_UNDER_MEM.yaml"),
     include_str!("ch15_08/OBS_ATK_CHRON.yaml"),
     include_str!("ch15_08/OBS_ATK_GE5.yaml"),

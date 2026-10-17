@@ -305,13 +305,23 @@ impl TriggerContext {
     /// §15-8-3-1 / §15-8-3-8). The one reader behind the DSL
     /// `event_winner_trait_has` and `EffectContext::battle_winner_has_trait`.
     /// G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX.
+    ///
+    /// Both branches read the winner's TOP card (with trait-changing effects),
+    /// never its digivolution cards: the live read is
+    /// `Permanent::has_trait_for_rules` (the DSL `trait_has` reading) and the
+    /// snapshot's `traits` are its synthesized identity's
+    /// (`Game::build_snapshot_for_handle`). §4-7-7; official Q&A Q3225; DCGO
+    /// `BT25_020.cs` `permanent.TopCard.HasTSTraits`.
+    /// G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS.
     pub fn battle_winner_has_trait(&self, game: &crate::game::Game, trait_name: &str) -> bool {
         match self.resolve_battle_winner(game) {
             Some(winner) => game
                 .player(winner.player)
                 .battle_area
                 .get(winner.index as usize)
-                .is_some_and(|perm| perm.has_trait(trait_name, &game.card_data)),
+                .is_some_and(|perm| {
+                    perm.has_trait_for_rules(trait_name, &game.card_data, &game.modifiers, winner)
+                }),
             None => {
                 self.battle_winner_identity.is_some()
                     && self.deleted_object.as_ref().is_some_and(|snapshot| {
