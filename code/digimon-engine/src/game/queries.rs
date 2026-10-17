@@ -71,8 +71,12 @@ impl Game {
     ///
     /// DCGO `Permanent.HasBlocker`: true for every opponent Digimon during a
     /// `<Collision>` attack unless `TopCard.CanNotBeAffected(collisionEffect)`.
-    fn collision_grants_blocker(&self, handle: PermanentHandle) -> bool {
-        let Some(attacker) = self.current_attacker() else {
+    pub(crate) fn collision_grants_blocker(&self, handle: PermanentHandle) -> bool {
+        // `live_attack_attacker` (stack identity), not `current_attacker`
+        // (the slot handle): the grant vanishes exactly when the <Collision>
+        // Digimon leaves the attack, and field compaction can't aim it at
+        // another Digimon that slid into the attacker's old slot.
+        let Some(attacker) = self.live_attack_attacker() else {
             return false;
         };
         if attacker.player == handle.player

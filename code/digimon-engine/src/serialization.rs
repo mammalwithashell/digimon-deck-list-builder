@@ -378,7 +378,9 @@ fn perm_data(
         for (kw, name) in DISPLAY_KEYWORDS {
             if game.has_keyword(h, *kw) {
                 keywords.push(name);
-                if game.modifiers.has_keyword(h, *kw) {
+                if game.modifiers.has_keyword(h, *kw)
+                    || (*kw == Keyword::Blocker && game.collision_grants_blocker(h))
+                {
                     gained.push(name);
                 } else {
                     innate.push(name);
