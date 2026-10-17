@@ -1136,7 +1136,11 @@ fn install_host_select(
 }
 
 /// Pay the per-card cost, attach the card to the host via the primitive, then
-/// install the next pick.
+/// install the next pick. At the host's link limit with a choice (2+ existing
+/// link cards), the linking player first picks the replaced ones (§4-9-5,
+/// §10-1-3-1): the shared `LinkCardTrashChoice` frame parks with this pick's
+/// continuation (`LinkTrashPurpose::EffectLink`), and the attach and the rest
+/// of the loop run from [`resume_effect_link`] after the picks.
 #[allow(clippy::too_many_arguments)]
 fn attach_and_continue(
     ctx: &mut EffectContext<'_>,
@@ -1146,7 +1150,7 @@ fn attach_and_continue(
     card: CardHandle,
     source: LinkCardSource,
     tail: Arc<Vec<CompiledStep>>,
-    mut bindings: Bindings,
+    bindings: Bindings,
     runtime: StepRuntime,
 ) {
     // Pay the per-card cost (currently always 0 for the cards this serves; the
@@ -1160,6 +1164,52 @@ fn attach_and_continue(
         let _ = ctx.game.pay_memory(pay);
     }
 
+    if ctx.game.link_replacement_is_a_choice(host) {
+        let resume = EffectLinkResume {
+            prov: crate::resume::ResumeProvenance {
+                source_card: ctx.source_card,
+                source_permanent: ctx.source_permanent,
+                source_kind: ctx.source_kind,
+                controller: ctx.player,
+                override_pin: ctx.override_selecting_player(),
+            },
+            spec: Arc::clone(&spec),
+            pick_index,
+            host,
+            card,
+            source,
+            tail: Arc::clone(&tail),
+            bindings: bindings.clone(),
+            runtime: runtime.clone(),
+            trigger_context: ctx.game.current_trigger_context.clone(),
+        };
+        let purpose = crate::game_actions::LinkTrashPurpose::EffectLink(Box::new(resume));
+        if ctx
+            .game
+            .park_link_replacement_choice(ctx.player, host, purpose)
+        {
+            return;
+        }
+    }
+
+    link_and_continue(ctx, spec, pick_index, host, card, source, tail, bindings, runtime);
+}
+
+/// The attach half of [`attach_and_continue`] (the cost is paid and any
+/// replaced link cards are trashed): link the card, bind it, install the next
+/// pick.
+#[allow(clippy::too_many_arguments)]
+fn link_and_continue(
+    ctx: &mut EffectContext<'_>,
+    spec: Arc<LinkCardsSpec>,
+    pick_index: u8,
+    host: PermanentHandle,
+    card: CardHandle,
+    source: LinkCardSource,
+    tail: Arc<Vec<CompiledStep>>,
+    mut bindings: Bindings,
+    runtime: StepRuntime,
+) {
     let _ = ctx.link_chosen_card_into_host(host, card, source);
 
     // Capture the just-linked card into the optional `bind_as` CardList. The
@@ -1173,6 +1223,57 @@ fn attach_and_continue(
     }
 
     install_pick(ctx, spec, pick_index + 1, tail, bindings, runtime);
+}
+
+/// A `link_cards` pick paused at its §4-9-5 replacement choice (plain data,
+/// rule 28): the cost is paid and the card, host and source are chosen; the
+/// attach and the rest of the pick loop resume from here.
+#[derive(Debug, Clone)]
+pub(crate) struct EffectLinkResume {
+    prov: crate::resume::ResumeProvenance,
+    spec: Arc<LinkCardsSpec>,
+    pick_index: u8,
+    host: PermanentHandle,
+    card: CardHandle,
+    source: LinkCardSource,
+    tail: Arc<Vec<CompiledStep>>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+    trigger_context: Option<crate::trigger_context::TriggerContext>,
+}
+
+/// Resume a `link_cards` pick after its replacement choice's picks were
+/// trashed: link the card and continue the loop, under the trigger context
+/// the step parked with.
+pub(crate) fn resume_effect_link(game: &mut crate::game::Game, resume: EffectLinkResume) {
+    let EffectLinkResume {
+        prov,
+        spec,
+        pick_index,
+        host,
+        card,
+        source,
+        tail,
+        bindings,
+        runtime,
+        trigger_context,
+    } = resume;
+    let previous_trigger_context =
+        std::mem::replace(&mut game.current_trigger_context, trigger_context);
+    {
+        let mut ctx = EffectContext::new_with_source_kind_and_override(
+            game,
+            prov.source_card,
+            prov.source_permanent,
+            prov.source_kind,
+            prov.controller,
+            prov.override_pin,
+        );
+        link_and_continue(
+            &mut ctx, spec, pick_index, host, card, source, tail, bindings, runtime,
+        );
+    }
+    game.current_trigger_context = previous_trigger_context;
 }
 
 /// Run the steps that followed the whole `link_cards` step, preserving the
@@ -1305,7 +1406,10 @@ pub fn try_run_relink(
     let override_pin = ctx.override_selecting_player();
     let trigger_context = ctx.game.current_trigger_context.clone();
     ctx.select_own_permanent(&prompt_str, false, host_filter_fn, move |cb_ctx, host| {
-        cb_ctx.game.absorb_standing_digimon_as_link(source, host);
+        let chooser = cb_ctx.player;
+        cb_ctx
+            .game
+            .link_standing_digimon_by_effect(chooser, source, host);
     });
     // make-engine-cloneable: park a data frame alongside the closure (coexistence).
     // `select_own_permanent` installs a FieldPermanent(OwnField) select over the

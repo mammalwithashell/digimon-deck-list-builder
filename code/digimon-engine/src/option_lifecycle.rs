@@ -298,11 +298,30 @@ impl Game {
         if option_handle == new_carrier {
             return false;
         }
-        if option_handle.player == new_carrier.player && option_handle.index < new_carrier.index {
-            new_carrier.index = new_carrier.index.saturating_sub(1);
-        }
+        // Validated against the carrier as it stands now (the orphan has not
+        // left yet, so `new_carrier` still addresses it).
         if !self.can_insert_plug_in_at(new_carrier, link_index) {
             return false;
+        }
+        // §4-9-5 / §10-1-3-1: at the carrier's link limit with a choice, its
+        // controller (the linking player) picks the replaced link cards first;
+        // the relink resumes after the picks (`LinkTrashPurpose::RelinkPlugIn`).
+        let purpose = crate::game_actions::LinkTrashPurpose::RelinkPlugIn {
+            option: option_handle,
+            carrier: new_carrier,
+            link_index,
+        };
+        if self.park_link_replacement_choice(new_carrier.player, new_carrier, purpose) {
+            return true;
+        }
+        // A replacement with nothing to choose may have trashed link cards.
+        let link_index = link_index.min(
+            self.player(new_carrier.player).battle_area[new_carrier.index as usize]
+                .linked_cards
+                .len() as u8,
+        );
+        if option_handle.player == new_carrier.player && option_handle.index < new_carrier.index {
+            new_carrier.index = new_carrier.index.saturating_sub(1);
         }
         let permanent = self
             .player_mut(option_handle.player)

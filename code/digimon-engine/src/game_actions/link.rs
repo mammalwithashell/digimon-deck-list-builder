@@ -700,6 +700,26 @@ impl Game {
         self.check_turn_end();
     }
 
+    /// An effect links its own standing Digimon `source` onto `host`
+    /// (`relink_self_to_own_digimon`, EX11-027; DCGO
+    /// `IPlacePermanentToLinkCards`). At the link limit with a choice, the
+    /// linking player `chooser` first picks the replaced link cards (§4-9-5,
+    /// §10-1-3-1), and the absorb runs after the picks; otherwise it absorbs
+    /// now. Returns `true` when the choice was parked.
+    pub(crate) fn link_standing_digimon_by_effect(
+        &mut self,
+        chooser: PlayerId,
+        source: PermanentHandle,
+        host: PermanentHandle,
+    ) -> bool {
+        let purpose = LinkTrashPurpose::RelinkStanding { source, host };
+        if self.park_link_replacement_choice(chooser, host, purpose) {
+            return true;
+        }
+        self.absorb_standing_digimon_as_link(source, host);
+        false
+    }
+
     /// Absorb a standing Digimon `source` into `host`'s linked cards. The
     /// digivolution sources under `source`'s top card are trashed (DCGO
     /// `DiscardEvoRoots`); only the top card becomes a single linked card.
@@ -1070,8 +1090,11 @@ pub enum LinkRuleTarget {
     Unqualified(Vec<CardHandle>),
 }
 
-/// What runs after a link-card trash choice's picks are trashed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// What runs after a link-card trash choice's picks are trashed. Every link
+/// entry point that can replace link cards (§4-9-5) parks the same
+/// `LinkCardTrashChoice` frame through [`Game::park_link_replacement_choice`]
+/// and finishes its own attach here.
+#[derive(Debug, Clone)]
 pub(crate) enum LinkTrashPurpose {
     /// §17-1-3-2-5 rule-check trim; nothing else follows.
     RuleExcess,
@@ -1085,6 +1108,22 @@ pub(crate) enum LinkTrashPurpose {
     /// §4-9-5 replacement in a Plug-In Option link: resume
     /// `commit_linked_card_no_replace`.
     OptionLink(crate::game::PendingWouldLinkResume),
+    /// §4-9-5 replacement in an effect's `link_cards` pick (cost already
+    /// paid): attach the chosen card, then continue the step's pick loop.
+    EffectLink(Box<crate::dsl_cards::step::link_cards::EffectLinkResume>),
+    /// §4-9-5 replacement in an effect relinking its own standing Digimon
+    /// (`relink_self_to_own_digimon`): absorb `source` onto `host`.
+    RelinkStanding {
+        source: PermanentHandle,
+        host: PermanentHandle,
+    },
+    /// §4-9-5 replacement in an orphaned Plug-In's relink onto `carrier`:
+    /// resume [`Game::relink_plug_in`].
+    RelinkPlugIn {
+        option: PermanentHandle,
+        carrier: PermanentHandle,
+        link_index: u8,
+    },
 }
 
 /// Resumable state of a link-card trash choice (rule 28: plain data). The
@@ -1119,6 +1158,19 @@ impl Game {
             .get(host.index as usize)
             .map_or(0, |p| p.linked_cards.len());
         (len + 1).saturating_sub(self.link_limit(host)).min(len)
+    }
+
+    /// §4-9-5 / §10-1-3-1: whether one more link card onto `host` replaces
+    /// some but not all of its link cards, so the linking player chooses
+    /// which (2+ existing link cards at the limit).
+    pub(crate) fn link_replacement_is_a_choice(&self, host: PermanentHandle) -> bool {
+        let len = self
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+            .map_or(0, |p| p.linked_cards.len());
+        let excess = self.link_replacement_excess(host);
+        excess > 0 && excess < len
     }
 
     /// Whether `card`, linked to `host`, still qualifies (§17-1-3-2-6 / -7):
@@ -1250,34 +1302,37 @@ impl Game {
         }
     }
 
-    /// §4-9-5 with nothing to choose: one more link card replaces `host`'s
-    /// only link card (DCGO `Permanent.AddLinkCard`'s `LinkedMax == 1`
-    /// branch). Called by every attach primitive just before the push. Where
-    /// a choice exists, the declaration paths park
-    /// [`Self::park_link_replacement_choice`] first; an effect-driven link
-    /// that would need one leaves the host over its limit for the
-    /// §17-1-3-2-5 rule check (`G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE`).
+    /// §4-9-5 with nothing to choose: one more link card replaces every one
+    /// of `host`'s link cards (a lone card at the limit, DCGO
+    /// `Permanent.AddLinkCard`'s `LinkedMax == 1` branch; or every card when
+    /// the excess covers them all). Called by every attach primitive just
+    /// before the push. Where a choice exists, every link entry point (the
+    /// declared Digimon and Option links, the effect `link_cards` pick, the
+    /// effect relinks) parks [`Self::park_link_replacement_choice`] before it
+    /// reaches the primitive, so a choice is never left here.
     pub(crate) fn trash_forced_link_replacement(&mut self, host: PermanentHandle) {
-        let only = match self
+        let cards: Vec<CardHandle> = match self
             .player(host.player)
             .battle_area
             .get(host.index as usize)
         {
-            Some(p) if p.linked_cards.len() == 1 => p.linked_cards[0].handle(),
-            _ => return,
+            Some(p) => p.linked_cards.iter().map(|c| c.handle()).collect(),
+            None => return,
         };
-        if self.link_replacement_excess(host) == 1 {
-            self.trash_link_cards_by_rule(host, &[only]);
+        let excess = self.link_replacement_excess(host);
+        if !cards.is_empty() && excess >= cards.len() {
+            self.trash_link_cards_by_rule(host, &cards);
         }
     }
 
-    /// §4-9-5 in a declared link: when the new card replaces existing link
-    /// cards and there is a choice (fewer to trash than there are), park the
-    /// linking player's choice of exactly that many; `purpose` finishes the
-    /// link after the picks are trashed. Returns `false` when nothing needs
-    /// choosing: every existing card goes (trashed here, e.g. a host already
-    /// over its limit), or a lone card the attach primitive trims, or nothing
-    /// could be parked; the caller then attaches directly.
+    /// §4-9-5 / §10-1-3-1 for every link (declared, Plug-In Option, or made
+    /// by an effect): when the new card replaces existing link cards and there
+    /// is a choice (fewer to trash than there are), park the linking player's
+    /// choice of exactly that many; `purpose` finishes the link after the
+    /// picks are trashed. Returns `false` when nothing needs choosing: every
+    /// existing card goes (trashed here, e.g. a host already over its limit),
+    /// or a lone card the attach primitive trims, or nothing could be parked;
+    /// the caller then attaches directly.
     pub(crate) fn park_link_replacement_choice(
         &mut self,
         chooser: PlayerId,
@@ -1292,9 +1347,10 @@ impl Game {
             .map(|p| p.linked_cards.iter().map(|c| c.handle()).collect())
             .unwrap_or_default();
         if excess == 0 || cards.len() <= 1 {
+            // Nothing, or a lone card the attach primitive trims.
             return false;
         }
-        if excess >= cards.len() {
+        if !self.link_replacement_is_a_choice(host) {
             // No choice: every existing link card is replaced.
             self.trash_link_cards_by_rule(host, &cards);
             return false;
@@ -1441,6 +1497,25 @@ impl Game {
                 self.finish_digimon_link_attach(origin, host, card);
             }
             LinkTrashPurpose::OptionLink(resume) => self.commit_linked_card_no_replace(resume),
+            LinkTrashPurpose::EffectLink(resume) => {
+                crate::dsl_cards::step::link_cards::resume_effect_link(self, *resume);
+            }
+            LinkTrashPurpose::RelinkStanding { source, host } => {
+                self.absorb_standing_digimon_as_link(source, host);
+            }
+            LinkTrashPurpose::RelinkPlugIn {
+                option,
+                carrier,
+                link_index,
+            } => {
+                // The picks shortened the carrier's link cards.
+                let len = self
+                    .player(carrier.player)
+                    .battle_area
+                    .get(carrier.index as usize)
+                    .map_or(0, |p| p.linked_cards.len());
+                let _ = self.relink_plug_in(option, carrier, link_index.min(len as u8));
+            }
         }
         crate::dsl_cards::step::selections::run_outer_conts(self, outer_conts);
     }

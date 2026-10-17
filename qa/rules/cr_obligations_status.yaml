@@ -1171,8 +1171,6 @@
   status: proven
   tests: ["ch16_processing_keywords::training_optional_cost_then_mandatory_place_also_in_breeding_area", "ch16_processing_keywords::training_optionality_matches_rule"]
 "4-9-5":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE
-  tests: ["ch16_processing_keywords::link_max_base_is_one", "ch16_processing_keywords::declared_link_at_limit_replaces_existing_link_card_by_choice", "ch16_processing_keywords::effect_link_at_limit_replaces_existing_link_card_by_choice"]
-  note: "Declared-link half proven (link_max_base_is_one, declared_link_at_limit_replaces_existing_link_card_by_choice; the rule-check trims excess_link_cards_* are ch17's 17-1-3-2-5): base limit 1 (Game::link_limit), and a declared link at the limit has the linking player choose the replaced existing link cards in the link step. Effect-link half open: an effect-driven link at a limit above 1 gets no in-step choice and the later 17-1-3-2-5 trim can remove the new card (effect_link_at_limit_replaces_existing_link_card_by_choice, #[ignore]d)."
+  status: proven
+  tests: ["ch16_processing_keywords::link_max_base_is_one", "ch16_processing_keywords::declared_link_at_limit_replaces_existing_link_card_by_choice", "ch16_processing_keywords::effect_link_at_limit_replaces_existing_link_card_by_choice", "ch16_processing_keywords::effect_relink_at_limit_offers_the_same_choice"]
+  note: "Base limit 1 (Game::link_limit). Every link at the limit replaces existing link cards in the link itself: a declared link (link_max_base_is_one, declared_link_at_limit_replaces_existing_link_card_by_choice), an effect's link_cards pick (effect_link_at_limit_replaces_existing_link_card_by_choice) and an effect relinking its own Digimon (effect_relink_at_limit_offers_the_same_choice). With 2+ existing link cards and fewer to replace, the linking player chooses which (one shared LinkCardTrashChoice frame; §10-1-3-1, W12); the new card is never an option and no later 17-1-3-2-5 trim follows. With nothing to choose the replaced cards are trashed directly. The rule-check trims excess_link_cards_* are ch17's 17-1-3-2-5."

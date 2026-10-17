@@ -2742,7 +2742,6 @@ fn declared_link_at_limit_replaces_existing_link_card_by_choice() {
 /// to trim one of all 4, `LINK_A` included
 /// (`G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE`).
 #[test]
-#[ignore = "G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE (§4-9-5)"]
 fn effect_link_at_limit_replaces_existing_link_card_by_choice() {
     cite!(
         "4-9-5",
@@ -2775,6 +2774,90 @@ fn effect_link_at_limit_replaces_existing_link_card_by_choice() {
         choice.iter().all(|c| c.source_card != Some(link_a)),
         "the newly linked card is not a replacement option: {choice:?}"
     );
+}
+
+/// §4-9-5 "When linking to a Digimon that has already reached the link
+/// limit, the same number of the existing link cards are trashed at the same
+/// time as the newly linked cards." -- for an effect that links its own
+/// standing Digimon (the relink twin of
+/// `effect_link_at_limit_replaces_existing_link_card_by_choice`).
+///
+/// P0's `LINKPLUS2` (max 3) holds 3 `LINK_B`. P0 plays `RELINK` ("[On Play]
+/// Link this Digimon to 1 of your other Digimon") and picks `LINKPLUS2`.
+/// Before anything moves, P0 (the linking player) is asked which EXISTING link
+/// card is replaced: the 3 `LINK_B`, never `RELINK`; the host never holds 4
+/// and `RELINK` is still standing. The pick trashes it in the link itself:
+/// nothing is left for a later §17-1-3-2-5 trim.
+#[test]
+fn effect_relink_at_limit_offers_the_same_choice() {
+    cite!(
+        "4-9-5",
+        "fcec093c198b9ce1bb55b9d769eefe9b189ae82d63c7002091435e834fb2c980"
+    );
+    let mut r = board(&["RELINK"], &[]);
+    let host = r.place_on_field(0, "LINKPLUS2", Some(0));
+    for _ in 0..3 {
+        r.push_linked_owned(host, "LINK_B", 0);
+    }
+    r.game.tick_declarative_effects();
+    let relink = r.game.player(0).hand[0].handle();
+    let existing: Vec<_> = r.game.player(0).battle_area[0]
+        .linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    r.play(0, 0).expect("RELINK is played");
+    let mut choice = None;
+    for _ in 0..8 {
+        let Some(sel) = r.pending_selection() else {
+            break;
+        };
+        if sel.prompt.starts_with("Choose a link card to trash") {
+            choice = Some((
+                sel.selecting_player,
+                sel.effect_choices.clone().unwrap_or_default(),
+            ));
+            break;
+        }
+        let (player, action) = (sel.selecting_player, sel.valid_action_ids[0]);
+        r.execute_action(player, action)
+            .unwrap_or_else(|e| panic!("pick rejected: {e:?}"));
+    }
+    let (chooser, options) = choice.expect("P0 chooses the replaced link card");
+    assert_eq!(chooser, 0, "the linking player chooses");
+    let offered: Vec<_> = options.iter().filter_map(|c| c.source_card).collect();
+    assert_eq!(
+        offered, existing,
+        "exactly the existing link cards are offered"
+    );
+    assert!(!offered.contains(&relink), "the relinked card is not an option");
+    assert_eq!(
+        r.game.player(0).battle_area[0].linked_cards.len(),
+        3,
+        "nothing trashed or linked before the choice; never 4"
+    );
+    assert!(
+        r.game.player(0).battle_area.iter().any(|p| p.top_card().handle() == relink),
+        "RELINK is still standing during the choice"
+    );
+    assert!(trash_ids(&r, 0).is_empty(), "{:?}", trash_ids(&r, 0));
+
+    let pick = r.pending_selection().unwrap().valid_action_ids[0];
+    r.execute_action(0, pick).expect("pick the first LINK_B");
+    assert!(
+        r.pending_selection().is_none(),
+        "the trash happened in the link; no §17-1-3-2-5 trim follows: {:?}",
+        r.pending_selection()
+    );
+    let linked: Vec<_> = r.game.player(0).battle_area[0]
+        .linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(linked.len(), 3);
+    assert!(linked.contains(&relink), "RELINK linked");
+    assert!(!linked.contains(&existing[0]), "the picked LINK_B left");
+    assert_eq!(trash_ids(&r, 0), vec!["LINK_B".to_string()]);
 }
 
 // ─── §16-41 <Training> ──────────────────────────────────────────────────────
