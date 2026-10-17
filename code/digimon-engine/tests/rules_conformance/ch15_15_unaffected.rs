@@ -724,7 +724,6 @@ fn progress_attacker_effect_applied_during_attack_applies_after_it() {
 /// opponent's effect, so it battles at 6000 DP, wins and survives; after the
 /// attack it is at 3000 DP again.
 #[test]
-#[ignore = "G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS (§16-39-1, §15-15-5-1)"]
 fn progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking() {
     cite!(
         "16-39-1",
@@ -747,6 +746,123 @@ fn progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking() {
     );
     assert!(on_field(&r, 0, "PROGRESS"), "it survives the battle");
     assert_eq!(dp(&r, attacker), 3000, "affected again after the attack");
+}
+
+/// §15-15-5-2 (as above). §16-39-1 (as above).
+///
+/// P0 (4 security cards) has `TAMER_PROGRESS_SEC4` (while P0 has 4 or more
+/// security cards, all of P0's Digimon gain <Progress>) and
+/// `WA_TRASH_OWN_SEC` (6000 DP). During P0's turn P1's `DIGI_MINUS_3K` gives
+/// `WA_TRASH_OWN_SEC` -3000 DP until the end of P0's turn: 3000 DP. It
+/// attacks P1's suspended `DIGI_MINUS_3K` (4000 DP). While its optional
+/// [When Attacking] waits on P0 the attack is under way and the -3000 DP
+/// doesn't affect it: 6000 DP. P0 trashes its top security card: 3 security
+/// cards, it no longer has <Progress>, and the -3000 DP affects it at once --
+/// it battles at 3000 DP, loses and is deleted; the 4000-DP Digimon survives.
+#[test]
+fn progress_lost_mid_attack_applies_held_opponent_effects_immediately() {
+    cite!(
+        "15-15-5-2",
+        "780144a7af6d35d35c824ad67fea8c742362d65bff1707531bdbd9955dc54ffc"
+    );
+    cite!(
+        "16-39-1",
+        "e7e71a76297e6988256aba87d4bd179c8bdfee7253b8123a05dd238fa6870119"
+    );
+    let mut r = ch15_15()
+        .deck(0, &[FILL; 6])
+        .deck(1, &[FILL; 6])
+        .security(0, &[FILL; 4])
+        .security(1, &[FILL; 3])
+        .memory(10)
+        .start();
+    r.place_on_field(0, "TAMER_PROGRESS_SEC4", Some(0));
+    let attacker = r.place_on_field(0, "WA_TRASH_OWN_SEC", Some(0));
+    let target = play_and_resolve(&mut r, 1, "DIGI_MINUS_3K");
+    assert_eq!(dp(&r, attacker), 3000, "precondition: affected before attacking");
+    set_suspended(&mut r, target, true);
+    r.attack_digimon(attacker, target, false);
+    assert_eq!(
+        dp(&r, attacker),
+        6000,
+        "attacking with <Progress>: the earlier -3000 DP doesn't affect it"
+    );
+    accept(&mut r, 0);
+    resolve_prompts(&mut r);
+    assert_eq!(r.security_count(0), 3, "it trashed its top security card");
+    assert!(
+        !on_field(&r, 0, "WA_TRASH_OWN_SEC"),
+        "no <Progress> any more: 3000 DP at once, it loses the battle"
+    );
+    assert!(
+        on_field(&r, 1, "DIGI_MINUS_3K"),
+        "the 4000-DP Digimon wins the battle"
+    );
+}
+
+/// §16-39-1 (as above). §15-15-5-2 (as above).
+///
+/// P0's field: `FILL` (slot 0), `PROGRESS` (slot 1, 6000 DP) and `LV5_PLAIN`
+/// (slot 2, 7000 DP). During P0's turn P1's two `DIGI_MINUS_3K` give
+/// `PROGRESS` and `LV5_PLAIN` -3000 DP each until the end of P0's turn (3000
+/// / 4000 DP). `PROGRESS` attacks P1; P1's `OPP_ATK_DELETE` and
+/// `OPP_WA_MINUS3000` trigger and P1 resolves `OPP_ATK_DELETE` first: it
+/// deletes `FILL`, so `PROGRESS` moves to slot 0 and `LV5_PLAIN` to slot 1,
+/// the attacker's old slot. At `OPP_WA_MINUS3000`'s choice the attack is
+/// under way: the attacker isn't affected by the earlier -3000 DP (6000 DP);
+/// `LV5_PLAIN`, now in its old slot, is (4000 DP). P1 gives `LV5_PLAIN`
+/// another -3000 DP (1000 DP). After the attack `PROGRESS` is at 3000 DP
+/// again.
+#[test]
+fn progress_shield_follows_the_attacker_through_compaction() {
+    cite!(
+        "16-39-1",
+        "e7e71a76297e6988256aba87d4bd179c8bdfee7253b8123a05dd238fa6870119"
+    );
+    cite!(
+        "15-15-5-2",
+        "780144a7af6d35d35c824ad67fea8c742362d65bff1707531bdbd9955dc54ffc"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    r.place_on_field(0, FILL, Some(0));
+    let attacker = r.place_on_field(0, "PROGRESS", Some(0));
+    let plain = r.place_on_field(0, "LV5_PLAIN", Some(0));
+    assert_eq!((attacker.index, plain.index), (1, 2), "precondition: slots");
+    play_choosing(&mut r, 1, "DIGI_MINUS_3K", 1);
+    play_choosing(&mut r, 1, "DIGI_MINUS_3K", 2);
+    assert_eq!(dp(&r, attacker), 3000, "precondition: affected before attacking");
+    assert_eq!(dp(&r, plain), 4000, "precondition: affected");
+    r.place_on_field(1, "OPP_ATK_DELETE", Some(0));
+    r.place_on_field(1, "OPP_WA_MINUS3000", Some(0));
+    r.attack_player(attacker, 1, false);
+    choose(&mut r, "OPP_ATK_DELETE");
+    pick_field(&mut r, 0);
+    assert!(!on_field(&r, 0, FILL), "OPP_ATK_DELETE deleted the slot-0 Digimon");
+    let attacker = find(&r, 0, "PROGRESS").expect("the attacker is on the field");
+    let plain = find(&r, 0, "LV5_PLAIN").expect("LV5_PLAIN is on the field");
+    assert_eq!(
+        (attacker.index, plain.index),
+        (0, 1),
+        "compaction: LV5_PLAIN slid into the attacker's old slot"
+    );
+    assert_eq!(
+        dp(&r, attacker),
+        6000,
+        "still attacking with <Progress>: the earlier -3000 DP doesn't affect it"
+    );
+    assert_eq!(
+        dp(&r, plain),
+        4000,
+        "the Digimon in the attacker's old slot is not shielded"
+    );
+    pick_field(&mut r, 1);
+    resolve_prompts(&mut r);
+    assert_eq!(dp(&r, plain), 1000, "LV5_PLAIN took the second -3000 DP");
+    assert_eq!(
+        dp(&r, attacker),
+        3000,
+        "the attack is over: the earlier -3000 DP affects it again"
+    );
 }
 
 // ─── §15-2-1-1: a token's effect is a Digimon effect ────────────────────────

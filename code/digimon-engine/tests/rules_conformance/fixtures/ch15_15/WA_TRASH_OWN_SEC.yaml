@@ -1,0 +1,18 @@
+# WA_TRASH_OWN_SEC -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+#   [When Attacking] You may trash the top card of your security stack.
+# Its own effect can take its controller below a security-count condition in
+# the middle of its attack (with `TAMER_PROGRESS_SEC4`: it loses <Progress>
+# while attacking, §15-15-5-2).
+card: WA_TRASH_OWN_SEC
+name: Wanemarchmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - when: when_attacking
+    optional: true
+    summary: "[When Attacking] You may trash the top card of your security stack."
+    process:
+      - trash_top_security: { of: you }
