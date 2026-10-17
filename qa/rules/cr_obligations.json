@@ -8595,11 +8595,12 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "Definition; pinned with 18-3-2. The drainer records a loop signature (pending entries + board: zones' card handles, suspension, memory) before each resolution step; the same state seen LOOP_SIGNATURE_REPEATS (3) times with no declinable decision in between is a loop. A 60-card self-chaining trigger (~120 chained resolutions that end when the deck empties) runs to its end with no loop event.",
+      "note": "Definition; pinned with 18-3-2. From LOOP_WATCH_START (20) steps on, the drainer records a loop signature (pending entries + board: zones' card handles, suspension, effective DP, per-turn activation counts, memory) before each resolution step; the same state seen LOOP_SIGNATURE_REPEATS (3) times with no declinable decision in between is a loop. A 60-card self-chaining trigger (~120 chained resolutions that end when the deck empties) and a chain whose only progress is DP (+1000 per cycle up to 30000) both run to their end with no loop event.",
       "status": "proven",
       "tests": [
         "ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared",
-        "ch18_pending_overwrite::long_finite_chain_is_not_an_infinite_loop"
+        "ch18_pending_overwrite::long_finite_chain_is_not_an_infinite_loop",
+        "ch18_pending_overwrite::dp_progress_chain_is_not_an_infinite_loop"
       ],
       "text": "An infinite loop refers to a state where a set of processing will continue infinitely or must be continued infinitely as a result of processing for a rule or effect, and game progress is no longer possible."
     },
@@ -8611,11 +8612,14 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "A mandatory suspend/unsuspend loop: GameEvent::InfiniteLoop then GameOver { winner: None, reason: InfiniteLoopDraw }. A loop whose every repetition asks a forced single-option pick also draws: only a declinable decision resets the loop watch. MAX_CHAIN_DEPTH (10_000) remains a far backstop that ends in the same draw; nothing is cleared with the game going on.",
+      "note": "A mandatory suspend/unsuspend loop: GameEvent::InfiniteLoop then GameOver { winner: None, reason: InfiniteLoopDraw }. Forced decisions do not reset the loop watch, so a loop whose repetitions only ask a mandatory pick (one option or two) or an immediate-replacement order also draws. The draw is final: one declared inside an attack stops the attack (no later security check, no second GameOver; the first terminal outcome stands). MAX_CHAIN_DEPTH (10_000) remains a far backstop that ends in the same draw; nothing is cleared with the game going on.",
       "status": "proven",
       "tests": [
         "ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared",
-        "ch18_pending_overwrite::forced_prompt_loop_still_ends_in_a_draw"
+        "ch18_pending_overwrite::forced_prompt_loop_still_ends_in_a_draw",
+        "ch18_pending_overwrite::forced_multi_option_pick_loop_still_ends_in_a_draw",
+        "ch18_pending_overwrite::forced_replacement_order_loop_still_ends_in_a_draw",
+        "ch18_pending_overwrite::infinite_loop_draw_during_an_attack_is_final"
       ],
       "text": "If an infinite loop occurs and neither player has the ability to stop it, that game ends in a draw."
     },
@@ -8642,7 +8646,7 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). The turn-player-first order of declarations is not asserted.",
+      "note": "repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). The turn-player-first order of declarations is not asserted. (residual; see Resolution)",
       "status": "gap",
       "tests": [],
       "text": "The turn player declares to repeat the processing a certain number of times. If the turn player doesn't have the ability to stop the infinite loop, skip this step and go on to the next step."
@@ -8655,7 +8659,7 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). As 18-3-3-1, for the non-turn player.",
+      "note": "repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). As 18-3-3-1, for the non-turn player. (residual; see Resolution)",
       "status": "gap",
       "tests": [],
       "text": "The non-turn player declares to repeat the processing a certain number of times. If the non- turn player doesn't have the ability to stop the infinite loop, skip this step and go on to the next step."
@@ -8668,10 +8672,11 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "Per-repetition optional prompt (ruling W10): the player repeats the loop as many times as they choose (40 here, past any fixed cap), then stops it by declining.",
+      "note": "Per-repetition decision (ruling W10): an optional prompt, or the DSL effect-text choose-one ('you may X instead'), lets the player repeat the loop as many times as they choose (40 / 30 in the tests, past any fixed cap), then stop it.",
       "status": "proven",
       "tests": [
-        "ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it"
+        "ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it",
+        "ch18_pending_overwrite::choose_one_loop_repeats_until_its_owner_stops_it"
       ],
       "text": "The processing is executed at least the number of times that was declared it would be repeated, then the player stops the processing when possible."
     },
