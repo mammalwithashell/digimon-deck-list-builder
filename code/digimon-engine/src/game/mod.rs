@@ -1282,6 +1282,14 @@ pub struct Game {
     /// where `dsl_outer_tail` is empty.
     #[doc(hidden)]
     pub(crate) draining_deferred: u32,
+    /// Queue length when the outermost open source-trash event began
+    /// (`Game::begin_source_trash_event`), or `None` when no event is open.
+    /// One effect step trashing several digivolution cards is ONE event: its
+    /// `OnDigivolutionCardTrashed` observers are coalesced to one trigger per
+    /// observer when the event closes (§15-5-2), and a later event triggers
+    /// them again (§15-4-2-4). Transient: always `None` between steps.
+    /// G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+    pub(crate) source_trash_event_start: Option<usize>,
     /// 6-1-4-1: memory crossed to the opponent's side while an effect was
     /// still resolving (inside a drain or a deferred-drain scope), so
     /// `check_turn_end` held the turn end back. The outermost

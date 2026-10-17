@@ -541,9 +541,9 @@ impl<'a> EffectContext<'a> {
             .trash_source_and_fire(removed.owner, perm, removed, host_card);
         // Soft-remove the carrier slot if the trash emptied it. Sibling
         // of the digivolve-from-material fix landed in PR #533. The
-        // `fire_digivolution_card_trashed` observer dispatch above runs
-        // BEFORE the slot removal, so observers see the source-trash
-        // event attributed to the correct host. See
+        // `fire_digivolution_card_trashed` observer enqueue above captures
+        // the trigger context BEFORE the slot removal, so observers see the
+        // source-trash event attributed to the correct host. See
         // `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
         // `qa/archetype-qa/engine-gaps.md`.
         if !self.game.soft_remove_if_emptied(perm) {
@@ -573,6 +573,8 @@ impl<'a> EffectContext<'a> {
             .map(|source| source.handle())
             .collect();
 
+        // Every source is trashed at the same time: one event (§15-5-2).
+        let event = self.game.begin_source_trash_event();
         for source in source_handles {
             let Some(permanent) = self
                 .game
@@ -580,7 +582,7 @@ impl<'a> EffectContext<'a> {
                 .battle_area
                 .get(target.index as usize)
             else {
-                return true;
+                break;
             };
             let still_below_top = permanent
                 .card_sources
@@ -593,6 +595,7 @@ impl<'a> EffectContext<'a> {
                 let _ = self.trash_card_source(target, source);
             }
         }
+        self.game.end_source_trash_event(event);
         true
     }
 
@@ -697,10 +700,14 @@ impl<'a> EffectContext<'a> {
                     .collect()
             })
             .unwrap_or_default();
-        cards
+        // The N cards are trashed at the same time: one event (§15-5-2).
+        let event = self.game.begin_source_trash_event();
+        let trashed = cards
             .into_iter()
             .filter(|card| self.trash_card_source(target, *card))
-            .count() as u8
+            .count() as u8;
+        self.game.end_source_trash_event(event);
+        trashed
     }
 
     /// Trash up to `count` cards from the top of `target`'s stack, one at a
@@ -731,6 +738,8 @@ impl<'a> EffectContext<'a> {
         }
 
         if include_top_card {
+            // One effect step: one event (§15-5-2).
+            let event = self.game.begin_source_trash_event();
             let mut removed = 0;
             for _ in 0..count {
                 if !self
@@ -747,6 +756,7 @@ impl<'a> EffectContext<'a> {
                 }
                 removed += 1;
             }
+            self.game.end_source_trash_event(event);
             return removed;
         }
         let cards: Vec<_> = self
@@ -769,10 +779,14 @@ impl<'a> EffectContext<'a> {
                     .collect()
             })
             .unwrap_or_default();
-        cards
+        // One effect step: one event (§15-5-2).
+        let event = self.game.begin_source_trash_event();
+        let trashed = cards
             .into_iter()
             .filter(|card| self.trash_card_source(target, *card))
-            .count()
+            .count();
+        self.game.end_source_trash_event(event);
+        trashed
     }
 
     /// Trash the bottom-most face-down digivolution source from `target`,
@@ -996,9 +1010,14 @@ impl<'a> EffectContext<'a> {
                     .map(move |c| (h, c.handle()))
             })
             .collect();
-        targets
+        // Every Digimon's cards are trashed at the same time: one event
+        // (§15-5-2).
+        let event = self.game.begin_source_trash_event();
+        let trashed = targets
             .into_iter()
             .filter(|(host, card)| self.trash_card_source(*host, *card))
-            .count()
+            .count();
+        self.game.end_source_trash_event(event);
+        trashed
     }
 }

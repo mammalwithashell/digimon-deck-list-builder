@@ -3752,14 +3752,65 @@ impl Game {
     /// ("When THIS Digimon unsuspends") are unaffected: only the entry whose
     /// event permanent is the source passes.
     pub(crate) fn collapse_simultaneous_event_batch(&mut self, first_index: usize) {
-        self.collapse_event_batch(first_index, false);
+        self.collapse_event_batch(first_index, false, None);
     }
 
     pub(crate) fn collapse_simultaneous_play_event_batch(&mut self, first_index: usize) {
-        self.collapse_event_batch(first_index, true);
+        self.collapse_event_batch(first_index, true, None);
     }
 
-    fn collapse_event_batch(&mut self, first_index: usize, retain_play_subjects: bool) {
+    /// Coalesce one source-trash event (`Game::begin_source_trash_event`):
+    /// the `OnDigivolutionCardTrashed` entries enqueued since `first_index`
+    /// were enqueued once per trashed card, but cards trashed at the same
+    /// time are ONE event, so each observer triggers once for it (§15-5-2,
+    /// owner ruling 2026-10-10 #4; DCGO stacks one
+    /// `OnDigivolutionCardDiscarded` carrying the whole trashed list). Every
+    /// trashed card stays a member of the kept entry, exactly as for a
+    /// simultaneous play: the condition holds when any member meets it, and a
+    /// singular "that card" reference becomes a choice among the matching
+    /// members. Each member's `moved_card_sets` names the whole event's cards.
+    /// A trashed card's own inherited "when this card is trashed" effect is a
+    /// different effect per card, so each still triggers. Other timings
+    /// enqueued meanwhile are left alone. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+    pub(crate) fn coalesce_source_trash_event(&mut self, first_index: usize) {
+        let first_index = first_index.min(self.effect_queue.len());
+        let mut cards: Vec<CardHandle> = Vec::new();
+        for qe in self.effect_queue.range(first_index..) {
+            if qe.timing != EffectTiming::OnDigivolutionCardTrashed {
+                continue;
+            }
+            if let Some(card) = qe.trigger_context.as_ref().and_then(|c| c.event_source_card) {
+                if !cards.contains(&card) {
+                    cards.push(card);
+                }
+            }
+        }
+        if cards.len() < 2 {
+            return;
+        }
+        for qe in self.effect_queue.range_mut(first_index..) {
+            if qe.timing != EffectTiming::OnDigivolutionCardTrashed {
+                continue;
+            }
+            if let Some(context) = qe.trigger_context.as_mut() {
+                for set in context.moved_card_sets.iter_mut() {
+                    set.cards = cards.clone();
+                }
+            }
+        }
+        self.collapse_event_batch(
+            first_index,
+            true,
+            Some(EffectTiming::OnDigivolutionCardTrashed),
+        );
+    }
+
+    fn collapse_event_batch(
+        &mut self,
+        first_index: usize,
+        retain_play_subjects: bool,
+        only_timing: Option<EffectTiming>,
+    ) {
         type Key = (
             CardHandle,
             u8,
@@ -3769,6 +3820,12 @@ impl Game {
             EffectTiming,
         );
         let len = self.effect_queue.len();
+        // A source-trash event also separates entries by WHERE they are
+        // pending: a digivolution card's inherited effect enqueued from its
+        // host's scan (pending on the host, `source_permanent: Some`) and the
+        // same card's own "when this card is trashed" entry once it is in the
+        // trash (`source_permanent: None`) are different pending effects.
+        let by_location = only_timing.is_some();
         let key_of = |qe: &QueuedEffect| -> Key {
             (
                 qe.source_card,
@@ -3777,7 +3834,11 @@ impl Game {
                 // A dynamic grant shares its body across carriers, but each
                 // carrier owns a distinct effect. Collapse repeated observer
                 // scans for that carrier only, never another recipient's copy.
-                qe.granted_effect_id.and(qe.source_permanent),
+                if by_location {
+                    qe.source_permanent
+                } else {
+                    qe.granted_effect_id.and(qe.source_permanent)
+                },
                 qe.keyword_effect,
                 qe.timing,
             )
@@ -3785,6 +3846,9 @@ impl Game {
         // Group batch entries by identity, preserving queue order.
         let mut groups: Vec<(Key, Vec<usize>)> = Vec::new();
         for i in first_index..len {
+            if only_timing.is_some_and(|t| self.effect_queue[i].timing != t) {
+                continue;
+            }
             let key = key_of(&self.effect_queue[i]);
             match groups.iter_mut().find(|(k, _)| *k == key) {
                 Some((_, members)) => members.push(i),

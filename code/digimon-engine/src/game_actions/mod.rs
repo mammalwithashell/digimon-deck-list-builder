@@ -413,6 +413,22 @@ fn classify_option_modes(effects: &[crate::effect::Effect]) -> Vec<OptionPlayMod
     modes
 }
 
+/// One digivolution card leaving `host`'s stack for the trash, as one member
+/// of a source-trash event (`Game::enqueue_digivolution_cards_trashed`).
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct TrashedSource {
+    pub player: PlayerId,
+    pub host: PermanentHandle,
+    pub host_card: CardHandle,
+    pub card: CardHandle,
+}
+
+/// Token for an open source-trash event (`Game::begin_source_trash_event`).
+#[must_use]
+pub(crate) struct SourceTrashEvent {
+    outermost: bool,
+}
+
 impl Game {
     pub(crate) fn play_from_hand_with_cost_result(
         &mut self,
@@ -2243,6 +2259,18 @@ impl Game {
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
+    /// Fire `OnDigivolutionCardTrashed` for ONE card trashed from `host`'s
+    /// digivolution cards. A lone call is its own trashing event; inside an
+    /// open [`Self::begin_source_trash_event`] scope it joins that event.
+    ///
+    /// Never drains inline: "trigger-type effects can't activate during the
+    /// processing for a rule or effect" (§15-8-3-2). Inside a resolving
+    /// effect (a deferred-drain scope) the observers stay queued until that
+    /// effect has finished, together with every sibling trigger already
+    /// pending (§15-4-3-2); at top level they resolve once the event closes.
+    /// DCGO `ITrashDigivolutionCards.TrashDigivolutionCards()` stacks one
+    /// `OnDigivolutionCardDiscarded` for its whole list.
+    /// G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
     pub(crate) fn fire_digivolution_card_trashed(
         &mut self,
         player: PlayerId,
@@ -2251,10 +2279,62 @@ impl Game {
         card: CardHandle,
         cause: crate::trigger_context::EventCause,
     ) {
+        let event = self.begin_source_trash_event();
         self.enqueue_digivolution_card_trashed(player, host, host_card, card, cause);
-        self.drain_effect_queue();
+        self.end_source_trash_event(event);
+    }
+
+    /// Open one source-trash EVENT: every digivolution card trashed until the
+    /// matching [`Self::end_source_trash_event`] is trashed "at the same
+    /// time" by one effect step (one `<Digi-Burst>` / cost payment / "trash N
+    /// digivolution cards"), so each `OnDigivolutionCardTrashed` observer
+    /// triggers ONCE for the whole event, however many of its cards meet the
+    /// condition (§15-5-2; owner ruling 2026-10-10 #4). Separate events stay
+    /// separate triggers (§15-4-2-4; ruling #5). The scope is also a
+    /// deferred-drain scope, so nothing pending activates mid-event
+    /// (§15-8-3-2). Scopes nest; only the outermost one coalesces.
+    pub(crate) fn begin_source_trash_event(&mut self) -> SourceTrashEvent {
+        self.enter_deferred_drain();
+        let outermost = self.source_trash_event_start.is_none();
+        if outermost {
+            self.source_trash_event_start = Some(self.effect_queue.len());
+        }
+        SourceTrashEvent { outermost }
+    }
+
+    /// Close a scope from [`Self::begin_source_trash_event`]: the outermost
+    /// close coalesces the event's observers (one trigger per observer, all
+    /// trashed cards retained as the event's members), then the queue drains
+    /// only if no effect is still resolving around the event (§15-8-3-2).
+    pub(crate) fn end_source_trash_event(&mut self, event: SourceTrashEvent) {
+        if event.outermost {
+            if let Some(start) = self.source_trash_event_start.take() {
+                self.coalesce_source_trash_event(start);
+            }
+        }
+        self.exit_deferred_drain_and_flush();
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
+    }
+
+    /// Enqueue `OnDigivolutionCardTrashed` for several digivolution cards
+    /// trashed by ONE rule or effect process (a permanent leaving the field
+    /// with its stack, a grouped return, ...) as ONE event (§15-5-2), without
+    /// draining: the caller's process still has its own observers to enqueue
+    /// (leave-field, linked-card trash) before anything activates.
+    pub(crate) fn enqueue_digivolution_cards_trashed(
+        &mut self,
+        trashed: Vec<TrashedSource>,
+        cause: crate::trigger_context::EventCause,
+    ) {
+        let start = self.effect_queue.len();
+        for t in trashed {
+            self.enqueue_digivolution_card_trashed(t.player, t.host, t.host_card, t.card, cause);
+        }
+        // Inside an open event the outermost close coalesces everything.
+        if self.source_trash_event_start.is_none() {
+            self.coalesce_source_trash_event(start);
+        }
     }
 
     /// Enqueue `OnTopCardTrashed` ONCE for the top card(s) one event trashed
@@ -3386,22 +3466,23 @@ impl Game {
         self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
         self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
 
-        // Sources-below-top → each source's owner's trash. Per source: push,
-        // enqueue OnDigivolutionCardTrashed for each player, drain queue.
-        // Mirrors `EffectContext::attach_tamer_to_digimon`.
+        // Sources-below-top → each source's owner's trash, all at the same
+        // time: ONE `OnDigivolutionCardTrashed` event (§15-5-2). Nothing
+        // activates before this placement has finished (§15-8-3-2): the
+        // queue is drained (if no effect is resolving) after the top card
+        // reaches security.
+        let had_sources = !permanent.card_sources.is_empty();
         for source in permanent.card_sources.drain(..) {
             let owner = source.owner;
             self.player_mut(owner).trash.push(source);
+        }
+        if had_sources {
             for pid in 0..self.players.len() {
                 self.enqueue_triggered(
                     EffectTiming::OnDigivolutionCardTrashed,
                     TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
                 );
             }
-            // Intentionally inline-drain (see `fire_digivolution_card_trashed`):
-            // EX10-036's behavioral test depends on synchronous between-source
-            // observer firing for chained trash-pickup clauses.
-            self.drain_effect_queue();
         }
 
         // Linked cards → controller's trash; fire OnLinkedCardTrashed once
@@ -3418,8 +3499,6 @@ impl Game {
                     TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
                 );
             }
-            // Intentionally inline-drain — same rationale as above.
-            self.drain_effect_queue();
         }
 
         // Place top card in security at the requested position.
@@ -3447,6 +3526,9 @@ impl Game {
                 .face_up_security
                 .insert(face_up_key);
         }
+        // The placement has finished: the trash observers enqueued above may
+        // activate now, unless an effect is still resolving (§15-8-3-2).
+        self.maybe_drain_effect_queue();
         true
     }
 
@@ -3999,18 +4081,20 @@ impl Game {
         // No observer runs before every card reaches its destination and handles are shifted.
         self.apply_ace_overflow_for_sources(&leaving_sources);
         self.tick_declarative_effects();
-        for card in source_handles {
-            self.enqueue_triggered(
-                EffectTiming::OnDigivolutionCardTrashed,
-                TriggerSource::SourceTrashedFromStack {
+        // The stack's digivolution cards are trashed at the same time: one
+        // event (§15-5-2).
+        self.enqueue_digivolution_cards_trashed(
+            source_handles
+                .into_iter()
+                .map(|card| TrashedSource {
                     player: target.player,
                     host: target,
                     host_card: top_handle,
                     card,
-                    cause: crate::trigger_context::EventCause::Rule,
-                },
-            );
-        }
+                })
+                .collect(),
+            crate::trigger_context::EventCause::Rule,
+        );
         if had_linked {
             for pid in 0..self.players.len() {
                 self.enqueue_triggered(

@@ -657,10 +657,12 @@ impl<'a> EffectContext<'a> {
         // host them via `<Linked>`) likewise go to trash — they cannot
         // ride the host into another permanent's digivolution stack.
         //
-        // Mirror `Game::return_to_deck` (game_actions.rs:1497-1506): fire
-        // `OnDigivolutionCardTrashed` per source, per player, draining
-        // between each so observers see them one at a time.
+        // The sources are trashed at the same time: ONE
+        // `OnDigivolutionCardTrashed` event (§15-5-2), and nothing activates
+        // before the Mind Link placement has finished (§15-8-3-2) — the
+        // event scope closes after the placement below.
         let top_handle = top.handle();
+        let event = self.game.begin_source_trash_event();
         for source in tamer_perm.card_sources.drain(..) {
             self.game.trash_source_and_fire_with_cause(
                 controller,
@@ -684,7 +686,6 @@ impl<'a> EffectContext<'a> {
                     crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
                 );
             }
-            self.game.drain_effect_queue();
         }
 
         // Resolve the target's NEW slot after the index shift. If the
@@ -702,6 +703,7 @@ impl<'a> EffectContext<'a> {
         let target_player = self.game.player_mut(controller);
         if digimon_idx >= target_player.battle_area.len() {
             target_player.trash.push(top);
+            self.game.end_source_trash_event(event);
             return;
         }
         // Insert at the bottom of the target's stack. `face_down` stays
@@ -717,6 +719,7 @@ impl<'a> EffectContext<'a> {
         let cause = self.placing_effect_attribution();
         self.game
             .note_effect_added_sources(host, vec![top_handle], cause);
+        self.game.end_source_trash_event(event);
     }
 
     /// Trash the current top Digimon of `perm` and promote the next-highest

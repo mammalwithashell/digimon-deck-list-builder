@@ -311,6 +311,7 @@ impl Game {
             pending_turn_boundary_resume: None,
             pending_enter_main_after_selection: false,
             draining_deferred: 0,
+            source_trash_event_start: None,
             turn_end_check_deferred: false,
             selection_resolution_depth: 0,
             play_enters_suspended: false,

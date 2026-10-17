@@ -63,7 +63,6 @@ fn tamer_trash_board(trasher: &str) -> (DebugRunner, PermanentHandle) {
 /// - the Option `MAIN_TRASH_UNDER_MEM` ([Main]);
 /// - the Digimon `OP_TRASH_UNDER_MEM` ([On Play]), itself a triggered effect.
 #[test]
-#[ignore = "G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS (§15-8-3-2)"]
 fn trigger_type_waits_for_causing_effect_to_finish() {
     cite!(
         "15-8-3-2",
