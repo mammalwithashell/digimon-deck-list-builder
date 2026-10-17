@@ -24,25 +24,25 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 
 impl<'a> EffectContext<'a> {
-    /// Apply-time gate for the continuous modifier installs below
+    /// Apply-time hold for the continuous modifier installs below
     /// (`add_modifier` / `add_modifier_with_payload` /
-    /// `add_modifier_with_until_condition`) and for `grant_triggered_effect`.
+    /// `add_modifier_with_until_condition`).
     ///
     /// §15-15-5-2 "When a card isn't affected by effects, then it can be
     /// affected again, effects will immediately start affecting that card":
-    /// a `CannotBeAffected` immunity does NOT skip the install. The entry is
-    /// recorded, tagged with this effect's category
-    /// (`ModifierEntry::affecting_source_kind`), and
-    /// `ModifierRegistry::get` hides it while the immunity covers it -- so
-    /// it starts applying the moment the immunity expires or its condition
-    /// lapses, for the rest of its own duration (DCGO `ChangeDP.cs`
-    /// `CanUseCondition`, a read-time `CanNotBeAffected` check). One-shot
-    /// processing (delete, suspend, return, ...) keeps the
-    /// `can_affect_permanent` skip: there is nothing left to apply later.
-    ///
-    /// `<Progress>` (§16-39) stays a skip: it is attack-scoped and has no
-    /// `CannotBeAffected` entry to key the suppression on.
-    fn continuous_modifier_blocked(&self, target: PermanentHandle) -> bool {
+    /// an immunity never skips the install. A `CannotBeAffected` immunity is
+    /// handled at read time -- the entry is tagged with this effect's
+    /// category (`ModifierEntry::affecting_source_kind`) and
+    /// `ModifierRegistry::get` hides it while the immunity covers it (DCGO
+    /// `ChangeDP.cs` `CanUseCondition`). `<Progress>` (§16-39-1, "isn't
+    /// affected by your opponent's effects while attacking") is decided here,
+    /// because it reads the attack state the registry does not hold: an
+    /// opponent's entry installed on a `<Progress>` attacker is held
+    /// (`held_while_attacking`) and released when the attack ends
+    /// (`ModifierRegistry::expire_end_of_attack`). One-shot processing
+    /// (delete, suspend, return, ...) keeps the `can_affect_permanent` skip:
+    /// there is nothing left to apply later.
+    fn held_for_progress_attack(&self, target: PermanentHandle) -> bool {
         self.game.progress_excludes(target, Some(self.player))
     }
 
@@ -67,9 +67,7 @@ impl<'a> EffectContext<'a> {
         value: i32,
         expiry: Expiry,
     ) {
-        if self.continuous_modifier_blocked(target) {
-            return;
-        }
+        let held = self.held_for_progress_attack(target);
         // `*NextTurn` expiries installed during the about-to-end turn must
         // skip that turn-end (otherwise they expire one turn early). The
         // engine knows the current turn at install time, so compute it
@@ -84,7 +82,8 @@ impl<'a> EffectContext<'a> {
             target,
             ModifierEntry::simple(modifier, value, expiry, self.player)
                 .with_pending_skips(pending_skips)
-                .with_affecting_source_kind(self.source_kind),
+                .with_affecting_source_kind(self.source_kind)
+                .with_held_while_attacking(held),
         );
         self.game.mark_until_condition_dirty();
         // NOTE: a DP reduction to ≤0 does NOT delete the Digimon here. Deletion
@@ -110,9 +109,7 @@ impl<'a> EffectContext<'a> {
         expiry: Expiry,
         payload: crate::modifiers::ModifierPayload,
     ) {
-        if self.continuous_modifier_blocked(target) {
-            return;
-        }
+        let held = self.held_for_progress_attack(target);
         let pending_skips = crate::modifiers::pending_skips_for_install(
             expiry,
             self.player,
@@ -123,7 +120,8 @@ impl<'a> EffectContext<'a> {
             ModifierEntry::simple(modifier, value, expiry, self.player)
                 .with_payload(payload)
                 .with_pending_skips(pending_skips)
-                .with_affecting_source_kind(self.source_kind),
+                .with_affecting_source_kind(self.source_kind)
+                .with_held_while_attacking(held),
         );
         self.game.mark_until_condition_dirty();
     }
@@ -221,14 +219,13 @@ impl<'a> EffectContext<'a> {
         value: i32,
         predicate: crate::modifiers::UntilConditionFn,
     ) {
-        if self.continuous_modifier_blocked(target) {
-            return;
-        }
+        let held = self.held_for_progress_attack(target);
         self.game.modifiers.add(
             target,
             ModifierEntry::simple(modifier, value, Expiry::UntilCondition, self.player)
                 .with_until_condition(predicate)
-                .with_affecting_source_kind(self.source_kind),
+                .with_affecting_source_kind(self.source_kind)
+                .with_held_while_attacking(held),
         );
         self.game.mark_until_condition_dirty();
     }
@@ -286,15 +283,13 @@ impl<'a> EffectContext<'a> {
     ) where
         F: Fn(&mut EffectContext<'_>) + Send + Sync + 'static,
     {
-        // §15-15-5-2 / §15-15-5-4: an effect gained while immune is recorded,
-        // not skipped. The granted-trigger dispatch
-        // (`effect_queue.rs`, `permanent_is_unaffected_by_effect` against
-        // the grantor) keeps it from triggering while the carrier is
-        // unaffected, and lets it trigger once the immunity has ended
-        // (official Q&A Q2120 / Q3871 / Q6179).
-        if self.continuous_modifier_blocked(carrier) {
-            return;
-        }
+        // §15-15-5-2 / §15-15-5-4: an effect gained while immune (including
+        // by a `<Progress>` attacker, §16-39-1) is recorded, not skipped. The
+        // granted-trigger dispatch (`effect_queue.rs`: `progress_excludes`
+        // and `permanent_is_unaffected_by_effect` against the grantor) keeps
+        // it from triggering while the carrier is unaffected, and lets it
+        // trigger once the immunity has ended (official Q&A Q2120 / Q3871 /
+        // Q6179).
         // Phase 4i — allocate a body id and register the closure in the
         // game-level body registry so the queue-based drainer can fetch
         // it at fire time. The same Arc is also stored on the entry for

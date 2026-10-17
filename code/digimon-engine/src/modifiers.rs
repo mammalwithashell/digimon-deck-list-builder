@@ -137,6 +137,12 @@ pub struct ModifierEntry {
     /// its own duration (DCGO `ChangeDP.cs` `CanUseCondition`, re-evaluated at
     /// read time).
     pub affecting_source_kind: Option<EffectSourceKind>,
+    /// §16-39-1 / §15-15-5-2: installed by an opponent's effect while the
+    /// target was a `<Progress>` (or `ImmunityToOpponentEffects`) attacker.
+    /// [`ModifierRegistry::get`] hides the entry until
+    /// [`ModifierRegistry::expire_end_of_attack`] releases it, so it applies
+    /// once the attack ends, for whatever remains of its own duration.
+    pub held_while_attacking: bool,
     /// For `ModifierType::DisableEffect` entries — the specific
     /// `EffectTiming` that is suppressed on this permanent. None for
     /// every other variant. Read by the observer dispatch hook before
@@ -210,6 +216,7 @@ impl std::fmt::Debug for ModifierEntry {
             .field("has_until_condition", &self.until_condition.is_some())
             .field("effect_immunity_filter", &self.effect_immunity_filter)
             .field("affecting_source_kind", &self.affecting_source_kind)
+            .field("held_while_attacking", &self.held_while_attacking)
             .field("disable_effect_timing", &self.disable_effect_timing)
             .field("install_order", &self.install_order)
             .finish_non_exhaustive()
@@ -254,6 +261,7 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             affecting_source_kind: None,
+            held_while_attacking: false,
             disable_effect_timing: None,
             pending_skips: 0,
             install_order: 0,
@@ -280,6 +288,7 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             affecting_source_kind: None,
+            held_while_attacking: false,
             disable_effect_timing: None,
             pending_skips: 0,
             install_order: 0,
@@ -305,6 +314,7 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             affecting_source_kind: None,
+            held_while_attacking: false,
             disable_effect_timing: Some(timing),
             pending_skips: 0,
             install_order: 0,
@@ -332,6 +342,7 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             affecting_source_kind: None,
+            held_while_attacking: false,
             disable_effect_timing: None,
             pending_skips: 0,
             install_order: 0,
@@ -368,6 +379,12 @@ impl ModifierEntry {
 
     /// Tag the entry with the category of the effect installing it, so an
     /// immunity on the target suppresses it at read time (§15-15-5-2).
+    /// Hold the entry until the current attack ends (§16-39-1 `<Progress>`).
+    pub fn with_held_while_attacking(mut self, held: bool) -> Self {
+        self.held_while_attacking = held;
+        self
+    }
+
     pub fn with_affecting_source_kind(mut self, kind: EffectSourceKind) -> Self {
         self.affecting_source_kind = Some(kind);
         self
@@ -1203,19 +1220,26 @@ impl ModifierRegistry {
     /// (`affecting_source_kind: Some`) is hidden while a `CannotBeAffected`
     /// entry on the same permanent covers that effect, and shows again as
     /// soon as the immunity ends -- the entry itself keeps its own duration.
-    /// `CannotBeAffected` entries are never hidden.
+    /// `CannotBeAffected` entries are never hidden. An entry held for a
+    /// `<Progress>` attack (`held_while_attacking`) is hidden until the attack
+    /// ends (§16-39-1).
     pub fn get(&self, target: PermanentHandle, modifier: ModifierType) -> Vec<&ModifierEntry> {
-        self.permanent_modifiers
-            .get(&target)
-            .map(|entries| {
-                entries
-                    .iter()
-                    .filter(|e| {
-                        e.modifier == modifier && !Self::suppressed_by_immunity(entries, target, e)
-                    })
-                    .collect()
+        let Some(entries) = self.permanent_modifiers.get(&target) else {
+            return Vec::new();
+        };
+        // Hot path (`effective_dp`, search): only scan for suppression when
+        // the permanent carries an immunity at all.
+        let immune = entries
+            .iter()
+            .any(|e| e.modifier == ModifierType::CannotBeAffected);
+        entries
+            .iter()
+            .filter(|e| {
+                e.modifier == modifier
+                    && !e.held_while_attacking
+                    && !(immune && Self::suppressed_by_immunity(entries, target, e))
             })
-            .unwrap_or_default()
+            .collect()
     }
 
     /// Whether `entry` (on `target`, whose entries are `entries`) is hidden by
@@ -1725,6 +1749,11 @@ impl ModifierRegistry {
     pub fn expire_end_of_attack(&mut self) {
         for entries in self.permanent_modifiers.values_mut() {
             entries.retain(|e| !matches!(e.expiry, Expiry::EndOfAttack | Expiry::EndOfBattle));
+            // §16-39-1 / §15-15-5-2: the attack is over, so `<Progress>` no
+            // longer applies; held entries start affecting their target now.
+            for e in entries.iter_mut() {
+                e.held_while_attacking = false;
+            }
         }
         for kws in self.permanent_keywords.values_mut() {
             kws.retain(|entry| !matches!(entry.expiry, Expiry::EndOfAttack | Expiry::EndOfBattle));
