@@ -63,14 +63,16 @@ pub fn eval_predicate_with_bindings(
     // Lv.6 card" needs one information that is both purple and Lv.6).
     // Only a DUAL card in a card zone has two readings: on the field it is a
     // Digimon (§4-6-3) and `eval_card_fields` reads it as one.
-    let is_dual_card = match subject {
-        PredicateSubject::Card(c) | PredicateSubject::RevealedCard(c) => {
-            rctx.game
-                .card_data_for_handle(c)
-                .is_some_and(|d| d.dual.is_some())
-                && !rctx.game.card_is_on_field(c)
-        }
-        _ => false,
+    // (`if let`, not a `match` with a wildcard arm: `dsl_eval_arm_coverage`
+    // forbids wildcard catch-alls inside this function so new subjects get an
+    // explicit decision.)
+    let is_dual_card = if let PredicateSubject::Card(c) | PredicateSubject::RevealedCard(c) = subject {
+        rctx.game
+            .card_data_for_handle(c)
+            .is_some_and(|d| d.dual.is_some())
+            && !rctx.game.card_is_on_field(c)
+    } else {
+        false
     };
     if is_dual_card && conjunct_dual_ref(pred) == DualRef::Either {
         return eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Digimon)
