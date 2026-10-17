@@ -794,15 +794,19 @@ fn battle_winner_qualifier_reads_the_material_after_the_winner_dna_digivolves() 
 
 /// P0's stack `stack` (bottom first, top card last), P0's Tamer `OBS_WIN_TS`
 /// ("[All Turns] When any of your [TS] trait Digimon win a battle, gain 1
-/// memory") and P1's `VANILLA_LV3` (1000 DP). On P0's turn the stack attacks
-/// P1's Digimon and wins. Returns the memory gains since the attack.
-fn stack_wins_battle(stack: &[&str]) -> Vec<(PlayerId, String)> {
+/// memory"), P0's other cards `extra` and P1's `VANILLA_LV3` (1000 DP). On
+/// P0's turn the stack attacks P1's Digimon and wins. Returns the memory
+/// gains since the attack.
+fn stack_wins_battle(stack: &[&str], extra: &[&str]) -> Vec<(PlayerId, String)> {
     let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
         .security(1, &[FILL; 3])
         .memory(3)
         .start();
     let winner = r.place_stack(0, stack);
     r.place_on_field(0, "OBS_WIN_TS", Some(0));
+    for id in extra {
+        r.place_on_field(0, id, Some(0));
+    }
     let loser = r.place_on_field(1, "VANILLA_LV3", Some(0));
     let cp = r.event_checkpoint();
     r.attack_digimon(winner, loser, false);
@@ -828,23 +832,34 @@ fn stack_wins_battle(stack: &[&str]) -> Vec<(PlayerId, String)> {
 /// The [TS] `TS_LV5` is the digivolution card of a `LV5_PLAIN` (no traits)
 /// that wins a battle: no [TS] Digimon won, so `OBS_WIN_TS` does not trigger.
 /// Control: the same two cards with `TS_LV5` on top -- a [TS] Digimon won.
+/// Second control: a `LV5_PLAIN` alone under P0's `AURA_TS_TAMER` ("[Your
+/// Turn] All of your Digimon gain the [TS] trait") -- the top card's traits
+/// with the trait-changing effect applied (DCGO `CardSource.CardTraits`
+/// applies `IChangeTraitsEffect`).
 #[test]
 fn battle_winner_trait_is_the_top_cards_trait() {
     cite!(
         "4-7-7",
         "d4517eedd82a9caf085a83c46d1898d22958f368614580d07fac9600f57fbeb4"
     );
-    let gains = stack_wins_battle(&["TS_LV5", "LV5_PLAIN"]);
+    let gains = stack_wins_battle(&["TS_LV5", "LV5_PLAIN"], &[]);
     assert!(
         gains.is_empty(),
         "the winner's top card has no [TS] trait; its [TS] digivolution card does not make it a [TS] Digimon: {gains:?}"
     );
 
-    let gains = stack_wins_battle(&["LV5_PLAIN", "TS_LV5"]);
+    let gains = stack_wins_battle(&["LV5_PLAIN", "TS_LV5"], &[]);
     assert_eq!(
         gains,
         vec![(0, "OBS_WIN_TS".to_string())],
         "control: the winner's top card is [TS]"
+    );
+
+    let gains = stack_wins_battle(&["LV5_PLAIN"], &["AURA_TS_TAMER"]);
+    assert_eq!(
+        gains,
+        vec![(0, "OBS_WIN_TS".to_string())],
+        "control: an effect gives the winner the [TS] trait"
     );
 }
 

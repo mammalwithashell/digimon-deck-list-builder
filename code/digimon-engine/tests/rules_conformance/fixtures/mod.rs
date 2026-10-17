@@ -89,6 +89,7 @@ const CH15_07: &[&str] = &[
 
 /// §15-8 "Effect Categories" chapter cards (`ch15_08_effect_categories.rs`).
 const CH15_08: &[&str] = &[
+    include_str!("ch15_08/AURA_TS_TAMER.yaml"),
     include_str!("ch15_08/DNA_LV6.yaml"),
     include_str!("ch15_08/EOT_MEM.yaml"),
     include_str!("ch15_08/EOT_MEM3.yaml"),
