@@ -741,8 +741,26 @@ fn bt25_089_main_link_at_link_limit_offers_the_replacement_choice() {
         "the new card is still in hand during the choice"
     );
 
+    // The parked choice is plain data (rule 28): a clone taken at the prompt
+    // resolves the same pick to the same board.
+    let mut twin = r.game.clone();
+
     let pick = r.game.pending_selection.as_ref().unwrap().valid_action_ids[1];
     r.game.resolve_selection(0, pick).expect("pick the second link card");
+    twin.resolve_selection(0, pick).expect("the clone takes the same pick");
+    let board = |g: &digimon_engine::game::Game| {
+        (
+            g.player(0).battle_area[my_host.index as usize]
+                .linked_cards
+                .iter()
+                .map(|c| c.handle())
+                .collect::<Vec<_>>(),
+            g.player(0).trash.iter().map(|c| c.handle()).collect::<Vec<_>>(),
+            g.player(0).hand.iter().map(|c| c.handle()).collect::<Vec<_>>(),
+            g.pending_selection.is_some(),
+        )
+    };
+    assert_eq!(board(&twin), board(&r.game), "the clone resolves identically");
     assert!(
         r.game.pending_selection.is_none(),
         "the trash happened in the link; no §17-1-3-2-5 trim follows: {:?}",
