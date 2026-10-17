@@ -1404,6 +1404,14 @@ impl Game {
                 if self.pending_selection.is_some() || self.halted_by_infinite_loop() {
                     break;
                 }
+                // Explicit termination: a pass that acted but changed nothing
+                // observable (a 0 DP Digimon that can't be deleted, a trash
+                // every protection refuses) has reached the rule check's
+                // fixpoint (§17-1-1 "repeated until there are no more rule
+                // check targets" is read as "no more targets it can act on").
+                // Without this, such a stable state would spin until the
+                // §18-3 loop watch declared a draw that no loop exists for.
+                let before = self.loop_signature(crate::game::infinite_loop::LoopSite::RulesCheck);
                 if !self.run_state_based_rules_check() {
                     break;
                 }
@@ -1417,6 +1425,11 @@ impl Game {
                 // enqueued further triggers — flush them before the next pass.
                 if self.pending_selection.is_none() && !self.effect_queue.is_empty() {
                     self.drain_effect_queue_inner();
+                }
+                if self.pending_selection.is_none()
+                    && self.loop_signature(crate::game::infinite_loop::LoopSite::RulesCheck) == before
+                {
+                    break;
                 }
             }
         }

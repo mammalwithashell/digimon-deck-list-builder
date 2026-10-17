@@ -100,6 +100,9 @@ impl Game {
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
     ) -> Option<usize> {
+        if self.game_over {
+            return None;
+        }
         self.play_from_hand_with_cost_result(player_id, hand_index, cost_delta, source, true)
             .into_option()
     }

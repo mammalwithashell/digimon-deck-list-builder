@@ -517,6 +517,10 @@ impl Game {
             allow_cancel: _,
             cost_upgrade,
         } = open;
+        // A finished game declares no attack.
+        if self.game_over {
+            return AttackResult::Invalid;
+        }
         let TargetConstraint::Forced(target) = target_constraint else {
             return AttackResult::Invalid;
         };

@@ -1064,6 +1064,9 @@ impl Game {
     /// over-cost play pushed it there — that overflow is preserved and carried
     /// through the turn switch. Matches Python `game.pass_turn`.
     pub fn pass_turn(&mut self) {
+        if self.game_over {
+            return;
+        }
         if self.memory >= 0 {
             self.memory = -3;
         }

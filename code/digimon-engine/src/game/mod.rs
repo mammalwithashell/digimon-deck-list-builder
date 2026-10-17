@@ -1641,6 +1641,17 @@ impl Game {
         if self.pending_selection.is_none() {
             return Err(SelectionError::NoPendingSelection);
         }
+        // A finished game accepts no further decision: only the between-games
+        // play-order choice (`SelectionKind::PlayOrder`, installed by the BO3
+        // match wrapper after `game_over`) resolves.
+        if self.game_over
+            && self
+                .pending_selection
+                .as_ref()
+                .is_some_and(|sel| sel.kind != crate::selection::SelectionKind::PlayOrder)
+        {
+            return Err(SelectionError::GameOver);
+        }
         self.resolve_generic_selection(player, action_id)
     }
 
@@ -2628,30 +2639,9 @@ impl Game {
             return;
         }
         if self.rules.player_count == 2 {
-            // Standard: deck-out = loss
-            self.game_over = true;
-            self.cancel_all_prepared_source_plays();
-        self.source_play_receipts.clear();
-            self.cost_payment_receipts.clear();
-            self.active_cost_payment_receipt = None;
-            self.deletion_receipts.clear();
-            self.return_receipts.clear();
-            self.pending_field_top_source_moves.clear();
-            self.field_source_receipts.clear();
-            self.abort_would_digivolve_declaration();
-            self.abort_effect_digivolve_scopes();
-            self.pending_security_moves.clear();
-            self.current_deletion_receipt = None;
-            let opponents = self.opponents(player_id);
-            self.winner = opponents.first().copied();
-            self.terminal_outcome_reason = Some(TerminalOutcomeReason::DeckOut);
-            self.current_phase = GamePhase::GameOver;
-            let seq = self.next_event_seq();
-            self.events.push(crate::events::GameEvent::GameOver {
-                seq,
-                winner: self.winner,
-                reason: TerminalOutcomeReason::DeckOut,
-            });
+            // Standard: deck-out = loss. One terminal path (`finish_game`).
+            let winner = self.opponents(player_id).first().copied();
+            self.finish_game(winner, TerminalOutcomeReason::DeckOut);
         } else {
             // Multiplayer: elimination
             self.eliminate_player(player_id);

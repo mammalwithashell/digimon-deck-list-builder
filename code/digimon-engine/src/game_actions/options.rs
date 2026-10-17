@@ -74,6 +74,9 @@ impl Game {
         player_id: PlayerId,
         hand_index: usize,
     ) -> OptionPlayResult {
+        if self.game_over {
+            return OptionPlayResult::Invalid;
+        }
         // Defensive reset: a manual top-level Option play must never inherit a
         // stuck `effect_driven_option_use` lift from a previously-parked
         // effect-driven use (which keeps the flag set across `Pending` so its

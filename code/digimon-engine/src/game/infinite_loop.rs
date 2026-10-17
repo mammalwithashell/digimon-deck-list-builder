@@ -155,6 +155,12 @@ impl Game {
             player.battle_area.len().hash(&mut h);
             for (index, permanent) in player.battle_area.iter().enumerate() {
                 hash_permanent(permanent, &mut h);
+                // A transiently empty slot (a just-emptied material carrier
+                // mid-cleanup) has no top card and no DP; the rule check skips
+                // it too.
+                if permanent.card_sources.is_empty() {
+                    continue;
+                }
                 // Effective DP: a chain whose only progress is DP ("+1000
                 // DP; then, if it has less than 6000 DP, ...") is finite.
                 self.effective_dp(PermanentHandle {
@@ -313,5 +319,43 @@ mod tests {
             !selection_can_stop_a_loop(sel, None),
             "without the mark the prompt would be forced"
         );
+    }
+}
+
+#[cfg(test)]
+mod rule_check_fixpoint_tests {
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    use crate::enums::{Expiry, ModifierType};
+    use crate::modifiers::ModifierEntry;
+
+    /// §17-1-1: the rule check's fixpoint ends when a pass changes nothing,
+    /// not at the §18-3 loop watch. A 0 DP Digimon that can't be deleted is a
+    /// stable state: the rule check acts on it every pass and nothing
+    /// happens; the drain must settle with the game going on, not declare a
+    /// draw for a loop that does not exist.
+    #[test]
+    fn rule_check_that_makes_no_progress_terminates_without_a_draw() {
+        let card = make_test_card("STUCK-ZERO", "Stuckmon");
+        let mut r = DebugRunner::builder().add_card(card).start();
+        let h = r.place_on_field(0, "STUCK-ZERO", None);
+        r.game.modifiers.add(
+            h,
+            ModifierEntry::simple(ModifierType::CannotBeDestroyed, 1, Expiry::EndOfTurn, 0),
+        );
+        r.game.modifiers.add(
+            h,
+            ModifierEntry::simple(ModifierType::ChangeDp, -100_000, Expiry::EndOfTurn, 1),
+        );
+        r.game.drain_effect_queue();
+        assert!(!r.game.game_over, "a stable rule-check state is not a loop");
+        assert_eq!(r.game.terminal_outcome_reason, None);
+        assert!(
+            r.game.players[0]
+                .battle_area
+                .iter()
+                .any(|p| p.top_card().card_id(&r.game.card_data) == "STUCK-ZERO"),
+            "it can't be deleted: it stays at 0 DP"
+        );
+        assert!(r.game.pending_selection.is_none());
     }
 }
