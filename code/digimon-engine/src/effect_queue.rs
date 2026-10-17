@@ -377,6 +377,13 @@ impl Game {
         if context.deleted_object.is_some() || context.event_permanent_identity.is_none() {
             return None;
         }
+        // An attack-target change names the attacker as `event_permanent`,
+        // but its `event_target_*` reads are about the NEW target
+        // (`attack_target_change.new_target`, e.g. ST5-14 "when you use
+        // <Blocker>"): a departed attacker's snapshot must not stand in for it.
+        if context.attack_target_change.is_some() {
+            return None;
+        }
         let snapshot = context.event_snapshot.as_ref()?;
         if context.resolve_event_permanent(self).is_some() {
             return None;

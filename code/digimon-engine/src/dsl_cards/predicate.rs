@@ -3055,6 +3055,15 @@ fn event_target_dp(rctx: &EffectReadContext<'_>) -> Option<i32> {
 
 fn event_target_same_level_as_previous(rctx: &EffectReadContext<'_>) -> Option<bool> {
     let trigger = rctx.game.current_trigger_context.as_ref()?;
+    // Last-known information (a deletion snapshot, or a clause gate's view of
+    // a departed event Digimon): its top card against the card directly
+    // under it (`digisources_just_before` is bottom-most first).
+    if let Some(snapshot) = trigger.deleted_object.as_ref() {
+        let top_level = rctx.game.card_data_for_handle(snapshot.top_card)?.level?;
+        let previous = *snapshot.digisources_just_before.last()?;
+        let previous_level = rctx.game.card_data_for_handle(previous)?.level?;
+        return Some(top_level == previous_level);
+    }
     let handle = if trigger.event_permanent_identity.is_some() {
         trigger.resolve_event_permanent(rctx.game)?
     } else {

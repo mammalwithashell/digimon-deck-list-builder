@@ -17,7 +17,7 @@ use digimon_engine::enums::{
 };
 use digimon_engine::events::GameEvent;
 use digimon_engine::modifiers::ModifierEntry;
-use digimon_engine::permanent::{Permanent, PermanentHandle};
+use digimon_engine::permanent::{OptionState, Permanent, PermanentHandle};
 use digimon_engine::replacement::{ReplacementCause, ReplacementSubject};
 use digimon_engine::selection::{AttackTarget, SelectionKind, TriggerSource};
 use digimon_engine::trigger_context::EventCause;
@@ -3552,4 +3552,83 @@ fn inherited_stack_dispatch_fires_each_below_top_source_once() {
          before={before}, after={}",
         r.memory()
     );
+}
+
+/// A `<Delay>` Option keyed to "[Your Turn] When one of your [CS] trait
+/// Digimon attacks" (the BT23-096 shape: `kind: delay`, `trigger:
+/// on_ally_attack`, `attacker_trait_has` in `active_when`).
+const DELAY_CS_YAML: &str = r#"
+card: DELAY-CS
+name: Delay CS
+kind: option
+color: [red]
+cost: 0
+effects:
+  - kind: delay
+    trigger: on_ally_attack
+    active_when:
+      all_of:
+        - your_turn: true
+        - attacker_trait_has: CS
+    summary: "[Your Turn] <Delay> When one of your [CS] trait Digimon attacks, gain 2 memory"
+    process:
+      - gain_memory: 2
+"#;
+
+/// §15-8-3-1: the `<Delay>` observer triggers on the [CS] Digimon's attack
+/// together with the attacker's own "return this Digimon to hand"; the
+/// attacker returning first does not un-happen the attack, so the Delay's
+/// "[CS] trait" qualifier keeps the departed attacker's last-known traits
+/// (the delay path's clause-level gate reads the trigger's snapshot) and the
+/// Delay is still offered.
+#[test]
+fn delay_attacker_trait_qualifier_survives_attacker_leaving() {
+    let mut cs = plain_digimon("CS-ATK", "CS Attacker", 3);
+    cs.traits = vec!["CS".to_string()];
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(DELAY_CS_YAML)
+        .expect("delay option loads")
+        .add_card(cs)
+        .memory(5)
+        .start();
+    r.register_effect("CS-ATK", Arc::new(ReturnSelfOnAttack));
+    if r.game.turn_count == 0 {
+        r.game.turn_count = 1;
+    }
+    let delay = r.place_on_field(0, "DELAY-CS", None);
+    r.game.players[0].battle_area[delay.index as usize].option_state = OptionState::Delayed {
+        owner: 0,
+        trash_on_turn: u16::MAX,
+        trigger: DelayTrigger::OnEvent(EffectTiming::OnAllyAttack),
+        placed_on_turn: r.game.turn_count - 1,
+    };
+    let attacker = r.place_on_field(0, "CS-ATK", Some(0));
+    let before = r.memory();
+
+    r.attack_player(attacker, 1, false);
+    let order = r.pending_selection().expect("both triggered on the attack");
+    assert_eq!(order.kind, SelectionKind::TriggerOrder, "{order:?}");
+    let on_attack = order
+        .effect_choices
+        .as_ref()
+        .unwrap()
+        .iter()
+        .find(|c| c.timing == Some(EffectTiming::OnAttack))
+        .expect("the attacker's return")
+        .action_id;
+    r.execute_action(0, on_attack).expect("return the attacker first");
+    assert!(
+        r.game.players[0].hand.iter().any(|c| c.card_id(&r.game.card_data) == "CS-ATK"),
+        "the attacker returned to hand"
+    );
+    for _ in 0..4 {
+        let Some(sel) = r.pending_selection() else { break };
+        assert!(sel.is_optional, "only the optional <Delay> remains: {sel:?}");
+        r.accept_optional_trigger().expect("activate the <Delay>");
+    }
+    assert!(
+        r.game.players[0].trash.iter().any(|c| c.card_id(&r.game.card_data) == "DELAY-CS"),
+        "the <Delay> was activated (it trashes itself)"
+    );
+    assert_eq!(r.memory(), before + 2, "its body ran");
 }
