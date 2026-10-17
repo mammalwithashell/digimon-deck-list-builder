@@ -935,6 +935,16 @@ fn observed_deletion_cause(game: &Game) -> Option<ReplacementCause> {
         if let Some(rc) = replacement_cause_from_event_cause(snap.cause) {
             return Some(rc);
         }
+        // A deletion by the game rules (the §17-1-3-1-1 0 DP rule check) is
+        // not a deletion by an effect, whatever effect lowered the DP
+        // (official Q&A Q1348 / Q2828; DCGO `!IsByEffect`). The snapshot's
+        // `Rule` is terminal: the live `current_deletion_cause` slot still
+        // holds the cause `infer_deletion_cause` guessed for the batch
+        // (Own/OpponentEffect between effects) and must not be read for it.
+        // G-ENGINE-RULE-CHECK-DELETION-READS-LIVE-EFFECT-CAUSE.
+        if snap.cause == crate::trigger_context::EventCause::Rule {
+            return None;
+        }
     }
     match game.current_deletion_event_cause_override {
         Some(crate::trigger_context::EventCause::Overclock) => Some(ReplacementCause::Overclock),
