@@ -1191,8 +1191,16 @@ pub struct PendingAttack {
     /// shifts down into its slot, so re-probing `effective_target` with
     /// `handle_valid` misreads the bystander as a surviving defender.
     pub battle_defender_deleted: bool,
-    /// A battle caused by an effect earned Piercing for this attacking Digimon.
-    /// Processing waits until immediately before the attack ends (16-6-4).
+    /// A `<Piercing>` of this attacking Digimon ACTIVATED in a battle's
+    /// trigger pool (the attack's own battle or an effect battle it won
+    /// during the attack): its security check is pending processing,
+    /// performed immediately before the End of Attack timing (§16-7-4) even
+    /// if the keyword is lost afterwards (official Q&A Q3931).
+    ///
+    /// The name predates that: the flag once covered only effect battles.
+    /// It is kept because the `PendingAttack` `Debug` text feeds the
+    /// verification digest (`tests/pending_attack_debug_compat.rs` pins it)
+    /// and the DCGO exam harness builds `PendingAttack` literals by name.
     pub effect_battle_piercing_pending: bool,
     /// Only one transition to security checking is allowed during one attack,
     /// including ordinary checks and any number of Piercing activations.

@@ -853,37 +853,26 @@ impl Game {
                         return AttackResult::InProgress;
                     }
 
-                    // Phase 9 Task 6 — `<Piercing>` post-battle security
-                    // check. Fires iff the just-resolved battle was a
-                    // Digimon-vs-Digimon match in which the attacker
-                    // survived, the defender was DELETED in the battle
-                    // (`battle_defender_deleted` — recorded by
-                    // `resolve_battle` from the deletion-batch outcome;
-                    // never re-probed via the defender's slot-based handle,
-                    // which a bystander may have shifted into), AND the
-                    // attacker has `<Piercing>`. Survival is re-checked
-                    // here because OnDeletion / EndOfBattle triggers that
-                    // ran inside `resolve_battle` may have deleted the
-                    // attacker. Applies to both attack shapes: declared on
-                    // a Digimon, or declared on the player and blocked
-                    // (glossary: "This effect also works if an attack is
-                    // blocked"; §16-7-2).
-                    //
-                    // The security pipeline may park on a
-                    // `PendingSelection`; in that case we return
-                    // `InProgress` and `advance_security_resolution`
-                    // finalizes via `cleanup_attack` when the chain clears.
                     // `<Piercing>` triggered in the battle's pool with the
                     // loser's `[On Deletion]` (§16-7-4; `EffectTiming::
                     // BattleResult`, keyword body in `keyword_effects.rs`);
                     // its activation left the check pending
-                    // (`effect_battle_piercing_pending`). `cleanup_attack`
-                    // processes it immediately before the End of Attack
-                    // timing, after every effect triggered by the battle
-                    // has resolved (the post-selection resume re-enters
-                    // through the `PostBattle` arm below), and the check is
-                    // performed even if <Piercing> was lost after it
-                    // activated (official Q&A Q3931).
+                    // (`effect_battle_piercing_pending`). It applies to both
+                    // attack shapes -- declared on a Digimon, or declared on
+                    // the player and blocked (glossary: "This effect also
+                    // works if an attack is blocked"; §16-7-2) -- and to an
+                    // effect battle the attacking Digimon wins during the
+                    // attack. `cleanup_attack` processes it immediately
+                    // before the End of Attack timing, after every effect
+                    // triggered by the battle has resolved (the
+                    // post-selection resume re-enters through the
+                    // `PostBattle` arm below); `fire_piercing_or_finish`
+                    // re-checks that the attacker is still attacking
+                    // (§16-7-6), and the check is performed even if
+                    // <Piercing> was lost after it activated (official Q&A
+                    // Q3931). The security pipeline may park on a
+                    // `PendingSelection`; `advance_security_resolution` then
+                    // finalizes via `cleanup_attack` when the chain clears.
                     return self.cleanup_attack(outcome);
                 }
                 AttackState::PostBattle => {
@@ -893,11 +882,11 @@ impl Game {
                     //    flight — `advance_security_resolution` owns
                     //    completion and finalizes via `cleanup_attack`.
                     //    Yield.
-                    // 2. The Battle arm deferred an owed `<Piercing>` check
-                    //    because battle-triggered effects were still
-                    //    resolving (§16-7-4). Those have now cleared (the
-                    //    loop-top guard yields while a selection or queued
-                    //    effect is pending), so fire the check now.
+                    // 2. `cleanup_attack` deferred the check an activated
+                    //    `<Piercing>` left pending, because effects were
+                    //    still resolving (§16-7-4). Those have now cleared
+                    //    (the loop-top guard yields while a selection or
+                    //    queued effect is pending), so fire the check now.
                     if self.security_resolution.is_some() {
                         return AttackResult::InProgress;
                     }
@@ -3942,9 +3931,13 @@ impl Game {
     /// caller. Called from both `begin_attack` (early-exit paths) and
     /// `advance_pending_attack` (normal terminal paths).
     fn cleanup_attack(&mut self, outcome: AttackResult) -> AttackResult {
-        // Effect battles can remove the declared target before the attack's
-        // normal battle. Their earned Piercing still resolves before EndOfAttack,
-        // after battle rewards, but never after an ordinary security transition.
+        // A `<Piercing>` that activated in a battle's trigger pool -- the
+        // attack's own battle, or an effect battle the attacking Digimon won
+        // during the attack (which can also remove the declared target before
+        // the attack's normal battle) -- left its check pending (§16-7-4). It
+        // is processed here, immediately before the End of Attack timing,
+        // after the battle's triggered effects, but never after an ordinary
+        // security transition (§16-7-5).
         if let Some(pa) = self.pending_attack.as_ref() {
             if pa.effect_battle_piercing_pending && !pa.security_check_started && !pa.cancelled
                 && self.handle_still_attacking(pa.attacker)
