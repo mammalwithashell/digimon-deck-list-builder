@@ -144,6 +144,7 @@ const CH15_15: &[&str] = &[
     include_str!("ch15_15/OPT_DELETE_13K.yaml"),
     include_str!("ch15_15/OPT_MINUS_12K.yaml"),
     include_str!("ch15_15/OWN_MINUS_3K.yaml"),
+    include_str!("ch15_15/PROGRESS_SEC4.yaml"),
     include_str!("ch15_15/SELF_IMM_THEN_UP.yaml"),
     include_str!("ch15_15/TAMER_MINUS_3K.yaml"),
     include_str!("ch15_15/TAMER_PROGRESS_SEC4.yaml"),

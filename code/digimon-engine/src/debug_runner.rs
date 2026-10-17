@@ -1333,10 +1333,16 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
     };
 
     // Populate native keywords from face-up `grant_keyword` declarative clauses.
-    // A `GrantKeyword` clause is semantically equivalent to a printed keyword
-    // on the card face, so `has_keyword` can detect it via the native path
-    // without needing the declarative process to run at placement. Inherited
-    // grants are stack text and must stay out of native top-card keywords.
+    // An UNCONDITIONAL `GrantKeyword` clause is semantically equivalent to a
+    // printed keyword on the card face, so `has_keyword` can detect it via the
+    // native path without needing the declarative process to run at placement.
+    // Inherited grants are stack text and must stay out of native top-card
+    // keywords. A CONDITIONAL grant (`active_when`: "[All Turns] While X, this
+    // Digimon gains <KW>") is NOT folded: production parses such prose as a
+    // granted, not innate, keyword (`parse_printed_keywords`), and
+    // `Game::card_source_keyword_matches` evaluates the clause's condition at
+    // read time, so folding it would make the keyword unconditionally on in
+    // every test (G-TEST-DEBUGRUNNER-IGNORES-ACTIVE-WHEN-ON-OWN-GRANT-KEYWORD).
     let mut keywords: Vec<Keyword> = Vec::new();
     // For a DUAL card the printed keywords live on the Digimon face, which is
     // the top card while the card is in play as a Digimon. `face_keywords`
@@ -1356,12 +1362,17 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
             keyword,
             value,
             scope,
+            active_when,
             ..
         }) = clause
         {
             // Linked grants are Link-ESS for the HOST (BT26-010), never the
             // card's own native keywords.
             if matches!(scope, CompiledScope::Inherited | CompiledScope::Linked) {
+                continue;
+            }
+            // A conditional grant stays a real `active_when` clause.
+            if active_when.is_some() {
                 continue;
             }
             if let Some(kw) = lookup_keyword(keyword, *value) {

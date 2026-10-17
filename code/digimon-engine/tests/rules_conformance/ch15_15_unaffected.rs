@@ -803,6 +803,44 @@ fn progress_lost_mid_attack_applies_held_opponent_effects_immediately() {
         3,
         "deleted by the rule check before any security check"
     );
+
+    // The direct shape: the attacker's OWN "[All Turns] While you have 4 or
+    // more security cards, this Digimon gains <Progress>" (`PROGRESS_SEC4`,
+    // 4000 DP) -- the same sequence, with the conditional keyword read from
+    // the card's own clause (G-TEST-DEBUGRUNNER-IGNORES-ACTIVE-WHEN-ON-OWN-
+    // GRANT-KEYWORD: the DebugRunner no longer folds it into the printed
+    // keywords, so it is seen switching off).
+    let mut r = ch15_15()
+        .deck(0, &[FILL; 6])
+        .deck(1, &[FILL; 6])
+        .security(0, &[FILL; 4])
+        .security(1, &[FILL; 3])
+        .memory(10)
+        .start();
+    let attacker = r.place_on_field(0, "PROGRESS_SEC4", Some(0));
+    assert!(r.game.has_keyword(attacker, Keyword::Progress), "4 security cards: <Progress>");
+    play_and_resolve(&mut r, 1, "DIGI_MINUS_3K");
+    assert_eq!(dp(&r, attacker), 1000, "precondition: affected before attacking");
+    r.place_on_field(1, "OPP_WA_MINUS3000", Some(0));
+    r.place_on_field(1, "OPP_ATK_TRASH_OPP_SEC", Some(0));
+    r.attack_player(attacker, 1, false);
+    assert_eq!(
+        dp(&r, attacker),
+        4000,
+        "attacking with its own conditional <Progress>: the earlier -3000 DP doesn't affect it"
+    );
+    choose(&mut r, "OPP_WA_MINUS3000");
+    resolve_prompts(&mut r);
+    assert_eq!(r.security_count(0), 3, "P1's effect trashed P0's top security card");
+    assert!(
+        !on_field(&r, 0, "PROGRESS_SEC4"),
+        "3 security cards: no <Progress>, both -3000 DP apply at once, 0 DP, deleted"
+    );
+    assert_eq!(
+        r.security_count(1),
+        3,
+        "deleted by the rule check before any security check"
+    );
 }
 
 /// §16-39-1 (as above). §15-15-5-2 (as above).
