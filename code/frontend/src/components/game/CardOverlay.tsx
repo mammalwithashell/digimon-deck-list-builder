@@ -1,43 +1,102 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/shared/Card';
-import { KeywordBadges } from '@/components/board/KeywordBadges';
 import type { PermanentInfo, SourceInfo } from '@/types/game';
+import type { BoardStyle } from '@/stores/uiStore';
 import { useGameStore } from '@/stores/gameStore';
-import { COLOR_HEX, COLOR_NAMES } from '@/utils/constants';
+import { COLOR_HEX, COLOR_NAMES, KEYWORD_DISPLAY } from '@/utils/constants';
 import { groupModifiers } from '@/utils/modifierDisplay';
 import { CardEffectText } from '@/utils/formatCardText';
+
+/** Something the player can do with the inspected permanent right now. */
+export interface InspectorAction {
+  key: string;
+  label: string;
+  /** Hover text, e.g. the full authored effect summary. */
+  title?: string;
+  tone: 'attack' | 'effect' | 'move';
+  onClick: () => void;
+}
 
 interface CardOverlayProps {
   permanent: PermanentInfo | null;
   onClose: () => void;
   /**
-   * Right-click (context-menu) a card image in the stack to open it in the
+   * Right-click (context-menu) or click a card image to open it in the
    * enlarged CardDetailOverlay — without closing this panel (DCGO's
    * CardInfo → OpenCardDetail flow).
    */
   onInspectCard?: (cardId: string) => void;
+  /** Whose permanent this is. The panel covers the OTHER half of the board
+   *  so the inspected card stays in sight. */
+  side?: 'own' | 'opponent';
+  /** Legal actions for this permanent (attack, [Main] effects, move). */
+  actions?: InspectorAction[];
+  boardStyle?: BoardStyle;
 }
 
-/**
- * DCGO-style PermanentDetail panel — floating card detail overlay anchored
- * to the bottom-left. Shows a vertical scrollable card stack with
- * color-coded borders and inline inherited effect text, then the linked
- * cards with their link effect text.
- */
-export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayProps) {
-  const hoveredCard = useGameStore((s) => s.hoveredCard);
+type KeywordTone = 'defense' | 'offense' | 'recovery' | 'effect';
 
-  // Dismiss on Escape
+const KEYWORD_TONES: Record<string, KeywordTone> = {
+  Blocker: 'defense', Barrier: 'defense', Evade: 'defense', ArmorPurge: 'defense',
+  Jamming: 'defense', Decoy: 'defense', Fragment: 'defense', Scapegoat: 'defense',
+  Iceclad: 'defense', Progress: 'defense',
+  Reboot: 'recovery', Recovery: 'recovery', Fortitude: 'recovery', Save: 'recovery',
+  MaterialSave: 'recovery', Partition: 'recovery', Decode: 'recovery',
+  Rush: 'offense', Blitz: 'offense', Raid: 'offense', Piercing: 'offense',
+  SecurityAttack: 'offense', Retaliation: 'offense', Alliance: 'offense',
+  Collision: 'offense', Vortex: 'offense', Overclock: 'offense', Execute: 'offense',
+  DeDigivolve: 'offense',
+};
+
+/**
+ * Stack inspector — the permanent as it stands right now, laid over the half
+ * of the board opposite the card (Aegis-style) so the card stays visible:
+ * card art | reading column (DP with its change from base, status badges,
+ * printed effect, DP breakdown, actions) | the digivolution cards and linked
+ * cards with their inherited / link effects.
+ *
+ * With no permanent but a hovered card, shows a plain hover preview.
+ */
+export function CardOverlay({
+  permanent,
+  onClose,
+  onInspectCard,
+  side = 'own',
+  actions = [],
+  boardStyle = 'classic',
+}: CardOverlayProps) {
+  const hoveredCard = useGameStore((s) => s.hoveredCard);
+  const panelRef = useRef<HTMLElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+
+  // Dismiss on Escape, or on a press outside the panel. The enlarged card
+  // detail sits above this panel and owns its own presses.
   useEffect(() => {
     if (!permanent) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
+    const handlePointer = (e: PointerEvent) => {
+      const target = e.target;
+      if (!(target instanceof Node) || panelRef.current?.contains(target)) return;
+      if (target instanceof Element && target.closest('[data-testid="card-detail-overlay"]')) return;
+      onClose();
+    };
     window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    document.addEventListener('pointerdown', handlePointer, true);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      document.removeEventListener('pointerdown', handlePointer, true);
+    };
   }, [permanent, onClose]);
 
-  // Hover-only preview (no permanent clicked)
+  const topCardId = permanent?.topCardId ?? null;
+  useEffect(() => {
+    if (topCardId) closeRef.current?.focus({ preventScroll: true });
+  }, [topCardId]);
+
+  // Hover-only preview (no permanent inspected)
   if (!permanent && hoveredCard) {
     return (
       <div className="absolute bottom-4 left-4 z-30 pointer-events-none">
@@ -48,211 +107,243 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
 
   if (!permanent) return null;
 
-  const saValue = 1 + permanent.securityAttackModifier;
-  const nonZeroSourceDp = permanent.dpBreakdown.sources.filter((s) => s.value !== 0);
-  const hasDpBreakdown = permanent.dpBreakdown.total != null &&
-    (nonZeroSourceDp.length > 0 || permanent.dpBreakdown.temporary !== 0);
+  const breakdown = permanent.dpBreakdown;
+  const baseDp = breakdown.base;
+  const dpDelta = baseDp != null ? permanent.dp - baseDp : 0;
+  const nonZeroSourceDp = breakdown.sources.filter((s) => s.value !== 0);
+  const hasDpBreakdown = breakdown.total != null &&
+    (nonZeroSourceDp.length > 0 || breakdown.temporary !== 0);
 
-  // Reverse sources so top card (last in array) comes first visually
-  const stackSources = [...permanent.sources].reverse();
-  // Linked cards (from linkedCardIds), each with its printed link effect —
-  // the text this Digimon gains from it (rules 4-2-6).
+  // Sources are stored bottom-up; list them top-down under the top card.
+  const stackSources = [...permanent.sources].reverse().filter((src) => !src.isTop);
+  // Linked cards, each with its printed link effect — the text this Digimon
+  // gains from it (rules 4-2-6).
   const linkedIds = permanent.linkedCardIds;
   const linkEffects = permanent.linkEffects ?? [];
-  // Active modifiers, grouped (immunities / restrictions / stat changes / other)
   const modifierGroups = groupModifiers(permanent.modifiers ?? []);
+  const hasSupporting = stackSources.length > 0 || linkedIds.length > 0;
+  const gained = new Set(permanent.keywordBreakdown.gained);
 
+  const inspect = (cardId: string) => () => onInspectCard?.(cardId);
   const inspectOnRightClick = (cardId: string) => (e: React.MouseEvent) => {
     e.preventDefault();
     onInspectCard?.(cardId);
   };
 
   return (
-    <div className="absolute bottom-4 left-4 z-30 w-[340px] max-h-[calc(100%-32px)] overflow-hidden bg-[var(--ib-graphite)] border border-[var(--ib-line)] rounded-lg shadow-2xl backdrop-blur-sm animate-overlay-open flex flex-col">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--ib-line)] shrink-0">
-        <span className="text-sm font-semibold text-[var(--ib-bone)] truncate">
-          {permanent.topCardName ?? 'Unknown'}
-        </span>
-        <button
-          data-testid="card-overlay-close"
-          onClick={onClose}
-          className="text-[var(--ib-bone-dd)] hover:text-[var(--ib-bone-d)] text-lg leading-none"
-        >
-          &times;
-        </button>
-      </div>
-
-      {/* ── Stats & Effects Summary ── */}
-      <div className="px-3 py-2 border-b border-[var(--ib-line)] shrink-0 space-y-1.5">
-        {/* Stat badges */}
-        <div className="flex flex-wrap gap-1.5">
-          {permanent.level != null && (
-            <span className="px-2 py-0.5 bg-yellow-600/80 text-white text-xs font-bold rounded">
-              Lv.{permanent.level}
-            </span>
-          )}
-          {permanent.dp != null && (
-            <span className="px-2 py-0.5 bg-[var(--ib-panel-2)] text-[var(--ib-bone)] text-xs font-bold rounded">
-              {permanent.dp.toLocaleString()} DP
-            </span>
-          )}
-          {permanent.securityAttackModifier !== 0 && (
-            <span className="px-2 py-0.5 bg-red-700/80 text-white text-xs font-bold rounded">
-              SA{permanent.securityAttackModifier > 0 ? '+' : ''}{permanent.securityAttackModifier}
-            </span>
-          )}
-        </div>
-
-        {/* Security Attack line (DCGO style) */}
-        <div className="text-[11px] text-[var(--ib-bone-dd)]">
-          Security Attack: <span className="text-[var(--ib-bone)] font-medium">{saValue}</span>
-        </div>
-
-        {/* Keywords */}
-        {permanent.keywords.length > 0 && (
-          <KeywordBadges keywords={permanent.keywords} />
+    <section
+      ref={panelRef}
+      className="ib-inspector animate-overlay-open"
+      data-half={side === 'own' ? 'upper' : 'lower'}
+      data-board-style={boardStyle}
+      data-has-sources={hasSupporting || undefined}
+      role="dialog"
+      aria-modal="false"
+      aria-label={`${permanent.topCardName ?? 'Permanent'} details`}
+    >
+      <div className="ib-inspector__body">
+        {/* ── Card art ── */}
+        {permanent.topCardId && (
+          <div className="ib-inspector__art">
+            <Card
+              cardId={permanent.topCardId}
+              cardName={permanent.topCardName ?? undefined}
+              cardColor={permanent.colors[0]}
+              size="inspector"
+              suspended={false}
+              onClick={inspect(permanent.topCardId)}
+              onContextMenu={inspectOnRightClick(permanent.topCardId)}
+            />
+            <span className="ib-inspector__id">{permanent.topCardId}</span>
+          </div>
         )}
 
-        {/* Active effects summary (DCGO bulleted list) */}
-        {permanent.keywords.length > 0 && (
-          <div className="text-[11px] text-[var(--ib-bone-dd)] space-y-0.5">
+        {/* ── Reading column ── */}
+        <div className="ib-inspector__reading">
+          <header className="ib-inspector__header">
+            <div className="ib-inspector__title">
+              <h2>{permanent.topCardName ?? 'Unknown'}</h2>
+              {permanent.level != null && <span className="ib-inspector__level">Lv.{permanent.level}</span>}
+              <span className="ib-inspector__colors" aria-label="Colors">
+                {permanent.colors.map((c) => (
+                  <i key={c} style={{ background: colorHex(c) }} title={COLOR_NAMES[c]} />
+                ))}
+              </span>
+            </div>
+            {permanent.dp > 0 && (
+              <strong className="ib-inspector__dp" data-testid="inspector-dp">
+                {permanent.dp.toLocaleString()} DP
+                {dpDelta !== 0 && (
+                  <em data-direction={dpDelta > 0 ? 'up' : 'down'}>
+                    {dpDelta > 0 ? '+' : '−'}{Math.abs(dpDelta).toLocaleString()}
+                  </em>
+                )}
+              </strong>
+            )}
+            <button
+              ref={closeRef}
+              type="button"
+              data-testid="card-overlay-close"
+              className="ib-inspector__close"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              &times;
+            </button>
+          </header>
+
+          {/* Status: suspended, keywords (granted marked), security attack */}
+          <div className="ib-inspector__state">
+            {permanent.isSuspended && <span className="ib-inspector__badge" data-tone="muted">Suspended</span>}
+            {permanent.securityAttackModifier !== 0 && (
+              <span className="ib-inspector__badge" data-tone="offense">
+                <ToneIcon tone="offense" />
+                Security Attack {permanent.securityAttackModifier > 0 ? '+' : '−'}
+                {Math.abs(permanent.securityAttackModifier)}
+              </span>
+            )}
             {permanent.keywords.map((kw) => {
-              const isGained = permanent.keywordBreakdown.gained.includes(kw);
+              const tone = KEYWORD_TONES[kw] ?? 'effect';
               return (
-                <div key={kw}>
-                  <span className="text-[var(--ib-bone-dd)]">-</span>{' '}
-                  <span className={isGained ? 'text-cyan-300' : 'text-[var(--ib-bone-d)]'}>{kw}</span>
-                  {isGained && <span className="text-[var(--ib-bone-dd)] text-[9px] ml-1">(granted)</span>}
-                </div>
+                <span
+                  key={kw}
+                  className="ib-inspector__badge"
+                  data-tone={tone}
+                  data-granted={gained.has(kw) || undefined}
+                  title={gained.has(kw) ? 'Granted by an effect' : 'Printed'}
+                >
+                  <ToneIcon tone={tone} />
+                  {KEYWORD_DISPLAY[kw] ?? kw}
+                  {gained.has(kw) && <small>granted</small>}
+                </span>
               );
             })}
           </div>
-        )}
 
-        {/* Active modifiers (immunities, restrictions, stat changes) — DCGO-style */}
-        {modifierGroups.length > 0 && (
-          <div data-testid="active-modifiers" className="pt-1 mt-1 border-t border-[var(--ib-line)] space-y-1">
-            <div className="text-[9px] text-[var(--ib-bone-dd)] font-bold uppercase tracking-wide">
-              Active Modifiers
-            </div>
-            {modifierGroups.map((grp) => (
-              <div key={grp.group} className="space-y-0.5">
-                {grp.items.map((item, i) => (
-                  <div key={`${grp.group}-${i}`} className="text-[11px] flex items-baseline gap-1">
-                    <span style={{ color: grp.color }}>•</span>
-                    <span className="text-[var(--ib-bone)]">{item.label}</span>
-                    {item.expiryHint && (
-                      <span className="text-[var(--ib-bone-dd)] text-[9px]">({item.expiryHint})</span>
-                    )}
-                  </div>
-                ))}
+          <div className="ib-inspector__scroll">
+            {/* Active modifiers (immunities, restrictions, stat changes) */}
+            {modifierGroups.length > 0 && (
+              <div data-testid="active-modifiers" className="ib-inspector__section">
+                <span className="ib-inspector__label">Active modifiers</span>
+                <ul className="ib-inspector__modifiers">
+                  {modifierGroups.flatMap((grp) =>
+                    grp.items.map((item, i) => (
+                      <li key={`${grp.group}-${i}`} style={{ '--mod-color': grp.color } as React.CSSProperties}>
+                        <span>{item.label}</span>
+                        {item.expiryHint && <small>({item.expiryHint})</small>}
+                      </li>
+                    )),
+                  )}
+                </ul>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            )}
 
-      {/* ── Scrollable card stack ── */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
-        {/* Top card (large) + main effect */}
-        {permanent.topCardId && (
-          <div
-            className="rounded-lg overflow-hidden"
-            style={{ borderLeft: `3px solid ${colorBorder(permanent.colors)}` }}
-          >
-            <div className="p-2 bg-[var(--ib-panel)]">
-              <Card
-                cardId={permanent.topCardId}
-                size="inspector"
-                onContextMenu={inspectOnRightClick(permanent.topCardId)}
-              />
-              {permanent.mainEffectText && (
-                <CardEffectText text={permanent.mainEffectText} className="mt-2" />
+            <div className="ib-inspector__section">
+              <span className="ib-inspector__label">Printed effect</span>
+              {permanent.mainEffectText ? (
+                <CardEffectText text={permanent.mainEffectText} />
+              ) : (
+                <p className="ib-inspector__none">No printed effect.</p>
               )}
             </div>
+
+            {hasDpBreakdown && (
+              <div className="ib-inspector__section">
+                <button
+                  type="button"
+                  className="ib-inspector__label ib-inspector__toggle"
+                  aria-expanded={showBreakdown}
+                  onClick={() => setShowBreakdown((v) => !v)}
+                >
+                  DP breakdown {showBreakdown ? '▾' : '▸'}
+                </button>
+                {showBreakdown && (
+                  <div className="ib-inspector__breakdown" data-testid="dp-breakdown">
+                    <span>Base <b>{(breakdown.base ?? 0).toLocaleString()}</b></span>
+                    {nonZeroSourceDp.map((src, i) => (
+                      <span key={`${src.cardId}-${i}`}>
+                        {src.cardName ?? src.cardId}{' '}
+                        <b data-direction={src.value > 0 ? 'up' : 'down'}>
+                          {src.value > 0 ? '+' : ''}{src.value.toLocaleString()}
+                        </b>
+                      </span>
+                    ))}
+                    {breakdown.temporary !== 0 && (
+                      <span>
+                        Effects{' '}
+                        <b data-direction={breakdown.temporary > 0 ? 'up' : 'down'}>
+                          {breakdown.temporary > 0 ? '+' : ''}{breakdown.temporary.toLocaleString()}
+                        </b>
+                      </span>
+                    )}
+                    <span>= <b>{breakdown.total?.toLocaleString()}</b></span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Source cards (non-top, in stack order) */}
-        {stackSources
-          .filter((src) => !src.isTop)
-          .map((src, i) => (
-            <StackCardEntry
-              key={`${src.cardId}-${i}`}
-              source={src}
-              onInspectCard={onInspectCard}
-            />
-          ))}
+          {actions.length > 0 && (
+            <div className="ib-inspector__actions">
+              {actions.map((a) => (
+                <button
+                  key={a.key}
+                  type="button"
+                  data-testid={`inspector-action-${a.key}`}
+                  className="ib-inspector__action"
+                  data-tone={a.tone}
+                  title={a.title}
+                  onClick={a.onClick}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-        {/* Linked cards */}
-        {linkedIds.length > 0 && (
-          <>
+        {/* ── Digivolution cards + linked cards ── */}
+        {hasSupporting && (
+          <div className="ib-inspector__sources" aria-label="Stack">
+            <span className="ib-inspector__label">
+              {stackSources.length} digivolution card{stackSources.length === 1 ? '' : 's'}
+              {linkedIds.length > 0 && ` · ${linkedIds.length} linked`}
+            </span>
+            {stackSources.map((src, i) => (
+              <StackCardEntry key={`${src.cardId}-${i}`} source={src} onInspectCard={onInspectCard} />
+            ))}
             {linkedIds.map((cardId, i) => {
               const linkEffect = linkEffects.find((e) => e.linkIndex === i);
               return (
                 <div
                   key={`link-${cardId}-${i}`}
                   data-testid="linked-card"
-                  className="rounded-lg overflow-hidden border-l-3"
-                  style={{ borderLeft: '3px solid #a855f7' }}
+                  className="ib-inspector__source"
+                  style={{ '--source-color': '#a855f7' } as React.CSSProperties}
                 >
-                  <div className="p-2 bg-purple-900/20">
-                    <div className="text-[9px] text-purple-400 font-bold uppercase mb-1">Linked</div>
-                    <div className="flex items-start gap-2">
-                      <Card
-                        cardId={cardId}
-                        size="md"
-                        onContextMenu={inspectOnRightClick(cardId)}
-                      />
-                      {linkEffect && (
-                        <div className="flex-1 min-w-0 pt-1">
-                          <div className="text-[9px] text-purple-400 font-bold uppercase mb-0.5">
-                            Link Effect
-                          </div>
-                          <CardEffectText text={linkEffect.text} />
-                        </div>
-                      )}
-                    </div>
+                  <Card cardId={cardId} size="sm" onClick={inspect(cardId)} onContextMenu={inspectOnRightClick(cardId)} />
+                  <div>
+                    <span className="ib-inspector__label">
+                      {linkEffect?.cardName ?? cardId} · Linked
+                    </span>
+                    {linkEffect && (
+                      <>
+                        <span className="ib-inspector__sublabel">Link Effect</span>
+                        <CardEffectText text={linkEffect.text} />
+                      </>
+                    )}
                   </div>
                 </div>
               );
             })}
-          </>
+          </div>
         )}
       </div>
-
-      {/* ── DP Breakdown (bottom) ── */}
-      {hasDpBreakdown && (
-        <div className="px-3 py-2 border-t border-[var(--ib-line)] shrink-0">
-          <div className="text-[10px] text-[var(--ib-bone-dd)] mb-0.5">DP Breakdown</div>
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
-            <span className="text-[var(--ib-bone-dd)]">
-              Base: <span className="text-[var(--ib-bone)]">{permanent.dpBreakdown.base ?? 0}</span>
-            </span>
-            {nonZeroSourceDp.map((src, i) => (
-              <span key={`${src.cardId}-${i}`} className="text-[var(--ib-bone-dd)]">
-                {src.cardName ?? src.cardId}: <span className="text-cyan-300">{src.value > 0 ? `+${src.value}` : src.value}</span>
-              </span>
-            ))}
-            {permanent.dpBreakdown.temporary !== 0 && (
-              <span className="text-[var(--ib-bone-dd)]">
-                Temp: <span className="text-amber-300">
-                  {permanent.dpBreakdown.temporary > 0 ? `+${permanent.dpBreakdown.temporary}` : permanent.dpBreakdown.temporary}
-                </span>
-              </span>
-            )}
-            <span className="text-[var(--ib-bone-d)] font-medium">
-              = {permanent.dpBreakdown.total?.toLocaleString()}
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
+    </section>
   );
 }
 
-/** Single card entry in the digivolution stack, matching DCGO's CardInfo. */
+/** One digivolution card: thumbnail, name, and its inherited effect. */
 function StackCardEntry({
   source,
   onInspectCard,
@@ -260,61 +351,62 @@ function StackCardEntry({
   source: SourceInfo;
   onInspectCard?: (cardId: string) => void;
 }) {
-  const borderColor = colorBorder(source.colors);
-  const hasInherited = source.inheritedEffectText.trim().length > 0;
-
   // Hidden / face-down source (opponent's cards)
   if (!source.cardId) {
     return (
-      <div
-        className="rounded-lg overflow-hidden"
-        style={{ borderLeft: '3px solid #6b7280' }}
-      >
-        <div className="p-2 bg-[var(--ib-panel)] text-center text-[var(--ib-bone-dd)] text-sm py-6">
-          ???
+      <div className="ib-inspector__source" style={{ '--source-color': '#6b7280' } as React.CSSProperties}>
+        <Card cardId="hidden" size="sm" faceDown />
+        <div>
+          <span className="ib-inspector__label">Hidden card</span>
         </div>
       </div>
     );
   }
 
+  const hasInherited = source.inheritedEffectText.trim().length > 0;
   return (
     <div
-      className="rounded-lg overflow-hidden"
-      style={{ borderLeft: `3px solid ${borderColor}` }}
+      className="ib-inspector__source"
+      style={{ '--source-color': colorHex(source.colors?.[0]) } as React.CSSProperties}
     >
-      <div className="p-2 bg-[var(--ib-panel)]">
-        <div className="flex items-start gap-2">
-          <Card
-            cardId={source.cardId}
-            size="md"
-            onContextMenu={(e) => {
-              e.preventDefault();
-              onInspectCard?.(source.cardId);
-            }}
-          />
-          {hasInherited && (
-            <div className="flex-1 min-w-0 pt-1">
-              <div className="text-[9px] text-amber-500 font-bold uppercase mb-0.5">
-                Inherited Effect
-              </div>
-              <CardEffectText text={source.inheritedEffectText} />
-            </div>
-          )}
-        </div>
-        {source.cardName && (
-          <div className="text-[10px] text-[var(--ib-bone-dd)] mt-1 truncate">{source.cardName}</div>
+      <Card
+        cardId={source.cardId}
+        size="sm"
+        onClick={() => onInspectCard?.(source.cardId)}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onInspectCard?.(source.cardId);
+        }}
+      />
+      <div>
+        <span className="ib-inspector__label">{source.cardName ?? source.cardId} · Inherited</span>
+        {hasInherited ? (
+          <CardEffectText text={source.inheritedEffectText} />
+        ) : (
+          <p className="ib-inspector__none">No inherited effect.</p>
         )}
       </div>
     </div>
   );
 }
 
-/** Get CSS border color from card color enum values. */
-function colorBorder(colors: number[] | undefined): string {
-  if (!colors || colors.length === 0) return '#6b7280'; // gray fallback
-  const colorVal = colors[0];
+function ToneIcon({ tone }: { tone: KeywordTone }) {
+  const paths: Record<KeywordTone, string> = {
+    defense: 'M8 1.5 13.5 3.5V8c0 3.2-2.4 5.6-5.5 6.5C4.9 13.6 2.5 11.2 2.5 8V3.5Z',
+    offense: 'M2.5 13.5 9 7M9 7l1.5-4.5L14 1.5l-1 3.5L8.5 6.5M2 11l3 3M13.5 13.5 7 7M7 7 5.5 2.5 2 1.5l1 3.5 4.5 1.5M14 11l-3 3',
+    recovery: 'M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3',
+    effect: 'M8 1.5 9.5 6.5 14.5 8 9.5 9.5 8 14.5 6.5 9.5 1.5 8 6.5 6.5Z',
+  };
+  return (
+    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d={paths[tone]} />
+    </svg>
+  );
+}
+
+/** CSS color for a card color enum value (gray fallback). */
+function colorHex(colorVal: number | undefined): string {
   if (colorVal === undefined) return '#6b7280';
   const name = COLOR_NAMES[colorVal];
-  if (!name) return '#6b7280';
-  return COLOR_HEX[name] ?? '#6b7280';
+  return (name && COLOR_HEX[name]) || '#6b7280';
 }

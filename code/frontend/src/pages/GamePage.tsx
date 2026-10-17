@@ -25,7 +25,7 @@ import { AttackArrow } from '@/components/game/AttackArrow';
 import { PhaseBanner } from '@/components/game/PhaseBanner';
 import { DigivolveBanner } from '@/components/game/DigivolveBanner';
 import { BattleEffect } from '@/components/game/BattleEffect';
-import { CardOverlay } from '@/components/game/CardOverlay';
+import { CardOverlay, type InspectorAction } from '@/components/game/CardOverlay';
 import { CardDetailOverlay } from '@/components/game/CardDetailOverlay';
 import { GameLogDrawer } from '@/components/game/GameLogDrawer';
 import { SecurityRevealOverlay } from '@/components/board/SecurityRevealOverlay';
@@ -49,6 +49,7 @@ import {
   ATTACK_TARGET_SECURITY,
   BREEDING_SLOT,
   DIGIVOLVE_FIELDS_PER_HAND,
+  EFFECTS_PER_SOURCE,
   FIELD_SLOTS,
   SELECTION,
 } from '@/utils/constants';
@@ -72,6 +73,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { BotSpeedControl } from '@/components/game/BotSpeedControl';
 import { BoardStyleControl } from '@/components/game/BoardStyleControl';
 import { usePacedAgentDriver } from '@/hooks/usePacedAgentDriver';
+import { effectTooltip, isActivatableEffect, shortEffectTag } from '@/utils/effectLabel';
 import { formatEvents } from '@/utils/gameLogFormat';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
@@ -84,6 +86,20 @@ const EMPTY_MASK: number[] = [];
 // through the Tauri-backed deckStore. parseDeck / validateDeckRaw already
 // branch internally, so those stay on deckApiMod.
 const decks = IS_DESKTOP ? deckStore : deckApiMod;
+
+interface InspectTarget {
+  isOpponent: boolean;
+  identity: string;
+  /** Where it was when opened, to tell apart identical permanents. */
+  slotHint: number | 'breeding';
+}
+
+/** A permanent's identity for following it across state updates: the turn it
+ *  entered play plus its bottom card, both unchanged by digivolving or by its
+ *  battle-area index shifting. */
+function permanentIdentity(perm: PermanentInfo): string {
+  return `${perm.turnPlayed}:${perm.sources[0]?.cardId ?? perm.topCardId ?? '?'}`;
+}
 
 export function GamePage() {
   const { id: urlGameId } = useParams<{ id: string }>();
@@ -371,7 +387,19 @@ export function GamePage() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [inspectedPerm, setInspectedPerm] = useState<PermanentInfo | null>(null);
+  // The stack inspector follows a permanent by identity rather than holding a
+  // snapshot, so it stays live as the game moves on (DP changes, digivolves,
+  // a slot shift after a deletion, Move from breeding) and closes when the
+  // permanent leaves play.
+  const [inspectTarget, setInspectTarget] = useState<InspectTarget | null>(null);
+  const openInspector = useCallback(
+    (isOpponent: boolean, perm: PermanentInfo | null | undefined, slot: number | 'breeding') => {
+      if (perm) setInspectTarget({ isOpponent, identity: permanentIdentity(perm), slotHint: slot });
+    },
+    [],
+  );
+  const boardStyle = useUiStore((s) => s.boardStyle);
+  const closeInspector = useCallback(() => setInspectTarget(null), []);
   // Right-click card inspect (DCGO CardDetail) — enlarged single-card view,
   // opened from the hand or from a card image in the stack inspector.
   const [inspectedCardId, setInspectedCardId] = useState<string | null>(null);
@@ -831,11 +859,9 @@ export function GamePage() {
 
       // Inspect on right-click/double-click style
       const player = isOpponent ? store.player2 : store.player1;
-      if (player?.battleArea[slotIndex]) {
-        setInspectedPerm(player.battleArea[slotIndex] ?? null);
-      }
+      openInspector(isOpponent, player?.battleArea[slotIndex], slotIndex);
     },
-    [store, parsedMask, handleAction, digivolvingHandIndex],
+    [store, parsedMask, handleAction, digivolvingHandIndex, openInspector],
   );
 
   // Right-click inspect: open the stack inspector for ANY permanent (own,
@@ -844,20 +870,90 @@ export function GamePage() {
   const handleSlotInspect = useCallback(
     (isOpponent: boolean, slotIndex: number) => {
       const player = isOpponent ? store.player2 : store.player1;
-      const perm = player?.battleArea[slotIndex];
-      if (perm) setInspectedPerm(perm);
+      openInspector(isOpponent, player?.battleArea[slotIndex], slotIndex);
     },
-    [store],
+    [store, openInspector],
   );
 
   const handleBreedingInspect = useCallback(
     (isOpponent: boolean) => {
       const player = isOpponent ? store.player2 : store.player1;
-      const perm = player?.breedingArea;
-      if (perm) setInspectedPerm(perm);
+      openInspector(isOpponent, player?.breedingArea, 'breeding');
     },
-    [store],
+    [store, openInspector],
   );
+
+  // Where the inspected permanent is right now (null once it has left play).
+  const inspected = useMemo(() => {
+    if (!inspectTarget) return null;
+    const player = inspectTarget.isOpponent ? store.player2 : store.player1;
+    if (!player) return null;
+    // Two copies played the same turn share an identity; prefer the slot the
+    // inspector was opened on.
+    const matches = player.battleArea
+      .map((p, i) => (p != null && permanentIdentity(p) === inspectTarget.identity ? i : -1))
+      .filter((i) => i >= 0);
+    const battleSlot = matches.includes(inspectTarget.slotHint as number)
+      ? (inspectTarget.slotHint as number)
+      : matches[0] ?? -1;
+    if (battleSlot >= 0) {
+      return { perm: player.battleArea[battleSlot]!, slot: battleSlot as number | 'breeding' };
+    }
+    const breeding = player.breedingArea;
+    if (breeding && permanentIdentity(breeding) === inspectTarget.identity) {
+      return { perm: breeding, slot: 'breeding' as const };
+    }
+    return null;
+  }, [inspectTarget, store.player1, store.player2]);
+
+  useEffect(() => {
+    if (inspectTarget && !inspected) setInspectTarget(null);
+  }, [inspectTarget, inspected]);
+
+  // What the player can do with the inspected permanent from the panel:
+  // attack, its activatable [Main] effects, or Move out of breeding. Each
+  // closes the panel so the board is clear for the follow-up (picking an
+  // attack target, answering the effect's prompts).
+  const inspectorActions = useMemo((): InspectorAction[] => {
+    if (!inspected || inspectTarget?.isOpponent || store.agentPending || store.isGameOver) return [];
+    const { slot } = inspected;
+    const acts: InspectorAction[] = [];
+    const run = (fn: () => void) => () => {
+      fn();
+      setInspectTarget(null);
+    };
+    if (slot !== 'breeding' && parsedMask.canAttack.has(slot)) {
+      acts.push({ key: 'attack', label: 'Attack', tone: 'attack', onClick: run(() => store.selectAttacker(slot)) });
+    }
+    if (slot === 'breeding' && parsedMask.canMove) {
+      acts.push({ key: 'move', label: 'Move to battle area', tone: 'move', onClick: run(() => handleAction(ACTION.MOVE)) });
+    }
+    const effects = store.decodedActions.filter((a) =>
+      isActivatableEffect(a)
+      && (slot === 'breeding'
+        ? a.sourceZone === 'breeding'
+        : a.sourceZone === 'battle' && a.sourceIndex === slot),
+    );
+    if (effects.length > 0) {
+      effects.forEach((a, i) => acts.push({
+        key: `effect-${a.actionId}`,
+        label: shortEffectTag(a.effectName) ?? (effects.length > 1 ? `Activate effect ${i + 1}` : 'Activate effect'),
+        title: effectTooltip(a),
+        tone: 'effect',
+        onClick: run(() => handleAction(a.actionId)),
+      }));
+    } else if (store.decodedActions.length === 0 && slot !== 'breeding') {
+      // No engine-decoded list (WebSocket games): fall back to the raw mask.
+      const indices = [...(parsedMask.canActivateEffect.get(slot) ?? [])];
+      indices.forEach((effectIdx, i) => acts.push({
+        key: `effect-${slot}-${effectIdx}`,
+        label: indices.length > 1 ? `Activate effect ${i + 1}` : 'Activate effect',
+        tone: 'effect',
+        onClick: run(() => handleAction(ACTION.EFFECT_START + slot * EFFECTS_PER_SOURCE + effectIdx)),
+      }));
+    }
+    return acts;
+  }, [inspected, inspectTarget, store, parsedMask, handleAction]);
 
   const handleRevealedClick = useCallback(
     (index: number) => {
@@ -1318,8 +1414,11 @@ export function GamePage() {
 
         <div className="flex-1 min-h-0 overflow-hidden relative" ref={boardContainerRef}>
           <CardOverlay
-            permanent={inspectedPerm}
-            onClose={() => setInspectedPerm(null)}
+            permanent={inspected?.perm ?? null}
+            onClose={closeInspector}
+            side={inspectTarget?.isOpponent ? 'opponent' : 'own'}
+            actions={inspectorActions}
+            boardStyle={boardStyle}
             onInspectCard={setInspectedCardId}
           />
           <CardDetailOverlay

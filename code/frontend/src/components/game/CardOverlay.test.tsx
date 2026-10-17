@@ -158,3 +158,73 @@ describe('Escape layering between stack inspector and enlarged detail', () => {
     expect(onInspectorClose).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('CardOverlay arena-style inspector', () => {
+  it('covers the half of the board opposite the inspected card', () => {
+    const { rerender } = render(<CardOverlay permanent={makePerm()} onClose={vi.fn()} side="own" />);
+    expect(screen.getByRole('dialog')).toHaveAttribute('data-half', 'upper');
+    rerender(<CardOverlay permanent={makePerm()} onClose={vi.fn()} side="opponent" />);
+    expect(screen.getByRole('dialog')).toHaveAttribute('data-half', 'lower');
+  });
+
+  it('shows the DP change from base at a glance, with the breakdown on demand', () => {
+    const perm = makePerm({
+      dp: 6000,
+      dpBreakdown: {
+        base: 4000,
+        sources: [{ cardId: 'ST1-02', cardName: 'Koromon', value: 1000 }],
+        temporary: 1000,
+        total: 6000,
+      },
+    });
+    render(<CardOverlay permanent={perm} onClose={vi.fn()} />);
+    expect(screen.getByTestId('inspector-dp')).toHaveTextContent('6,000 DP+2,000');
+    expect(screen.queryByTestId('dp-breakdown')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /DP breakdown/ }));
+    expect(screen.getByTestId('dp-breakdown')).toHaveTextContent('Koromon +1,000');
+  });
+
+  it('marks granted keywords', () => {
+    const perm = makePerm({
+      keywords: ['Blocker', 'Rush'],
+      keywordBreakdown: { innate: ['Blocker'], gained: ['Rush'] },
+    });
+    render(<CardOverlay permanent={perm} onClose={vi.fn()} />);
+    expect(screen.getByTitle('Granted by an effect')).toHaveTextContent('Rush');
+    expect(screen.getByTitle('Printed')).toHaveTextContent('Blocker');
+  });
+
+  it('renders the actions it is given and runs them on click', () => {
+    const onAttack = vi.fn();
+    const onEffect = vi.fn();
+    render(
+      <CardOverlay
+        permanent={makePerm()}
+        onClose={vi.fn()}
+        actions={[
+          { key: 'attack', label: 'Attack', tone: 'attack', onClick: onAttack },
+          { key: 'effect-1004', label: 'Draw 1', title: '[Main] Draw 1', tone: 'effect', onClick: onEffect },
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('inspector-action-attack'));
+    fireEvent.click(screen.getByTestId('inspector-action-effect-1004'));
+    expect(onAttack).toHaveBeenCalledOnce();
+    expect(onEffect).toHaveBeenCalledOnce();
+    expect(screen.getByTestId('inspector-action-effect-1004')).toHaveAttribute('title', '[Main] Draw 1');
+  });
+
+  it('closes on a press outside the panel but not inside it', () => {
+    const onClose = vi.fn();
+    render(
+      <>
+        <div data-testid="elsewhere" />
+        <CardOverlay permanent={makePerm()} onClose={onClose} />
+      </>,
+    );
+    fireEvent.pointerDown(screen.getByRole('dialog'));
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.pointerDown(screen.getByTestId('elsewhere'));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+});

@@ -2076,6 +2076,363 @@ body {
   border: 0;
 }
 
+/* ─── Stack inspector (CardOverlay) ──────────────────────────────────────
+   Laid over the half of the board opposite the inspected card so the card
+   stays in sight: art | reading column | digivolution + linked cards.
+   Classic uses the --ib-* console furniture; the arena board style swaps in
+   a navy plate with rounded corners. */
+.ib-inspector {
+  --insp-bg: oklch(from var(--ib-panel) l c h / 0.97);
+  --insp-fill: oklch(from var(--ib-panel-2) l c h / 0.9);
+  --insp-line: var(--ib-line);
+  --insp-ink: var(--ib-bone);
+  --insp-muted: var(--ib-bone-dd);
+  --insp-accent: var(--ib-player);
+  --insp-radius: 2px;
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  height: 50%;
+  padding: 12px clamp(12px, 4vw, 72px);
+  color: var(--insp-ink);
+  background: oklch(0 0 0 / 0.28);
+  pointer-events: none;
+}
+
+.ib-inspector[data-half="upper"] { top: 0; }
+.ib-inspector[data-half="lower"] { bottom: 0; }
+
+.ib-inspector[data-board-style="arena"] {
+  --insp-bg: oklch(0.17 0.03 255 / 0.97);
+  --insp-fill: oklch(1 0 0 / 0.06);
+  --insp-line: oklch(0.75 0.06 230 / 0.25);
+  --insp-ink: oklch(0.95 0.01 230);
+  --insp-muted: oklch(0.74 0.02 230);
+  --insp-accent: oklch(0.84 0.15 85);
+  --insp-radius: 10px;
+}
+
+.ib-inspector__body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 20px;
+  max-width: 1180px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 16px;
+  border: 1px solid var(--insp-line);
+  border-radius: var(--insp-radius);
+  background: var(--insp-bg);
+  box-shadow: 0 18px 50px oklch(0 0 0 / 0.55);
+  pointer-events: auto;
+  min-height: 0;
+}
+
+.ib-inspector[data-has-sources] .ib-inspector__body {
+  grid-template-columns: auto minmax(0, 1fr) minmax(260px, 340px);
+}
+
+.ib-inspector__art {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 6px;
+}
+
+.ib-inspector__art > .relative.inline-block {
+  border-radius: 8px;
+  box-shadow: 0 10px 24px oklch(0 0 0 / 0.5);
+  cursor: zoom-in;
+}
+
+.ib-inspector__id {
+  color: var(--insp-muted);
+  font-family: var(--ib-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.ib-inspector__reading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.ib-inspector__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.ib-inspector__title {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.ib-inspector__title h2 {
+  overflow: hidden;
+  font-family: var(--ib-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ib-inspector__level {
+  color: var(--ib-warn);
+  font-family: var(--ib-font-mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ib-inspector__colors {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.ib-inspector__colors i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px oklch(0 0 0 / 0.35);
+}
+
+.ib-inspector__dp {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--ib-font-mono);
+  font-size: 20px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ib-inspector__dp em,
+.ib-inspector__breakdown b[data-direction] {
+  font-style: normal;
+  font-size: 13px;
+}
+
+.ib-inspector__dp em[data-direction="up"],
+.ib-inspector__breakdown b[data-direction="up"] { color: oklch(0.80 0.17 150); }
+.ib-inspector__dp em[data-direction="down"],
+.ib-inspector__breakdown b[data-direction="down"] { color: oklch(0.70 0.19 25); }
+
+.ib-inspector__close {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--insp-line);
+  border-radius: var(--insp-radius);
+  background: var(--insp-fill);
+  color: var(--insp-muted);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.ib-inspector__close:hover { color: var(--insp-ink); }
+.ib-inspector__close:focus-visible { outline: 2px solid var(--insp-accent); outline-offset: 2px; }
+
+.ib-inspector__state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ib-inspector__badge {
+  --tone: var(--insp-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid oklch(from var(--tone) l c h / 0.5);
+  border-radius: 999px;
+  background: oklch(from var(--tone) l c h / 0.14);
+  color: var(--tone);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ib-inspector__badge[data-tone="defense"] { --tone: oklch(0.78 0.12 230); }
+.ib-inspector__badge[data-tone="offense"] { --tone: oklch(0.74 0.17 35); }
+.ib-inspector__badge[data-tone="recovery"] { --tone: oklch(0.80 0.16 150); }
+.ib-inspector__badge[data-tone="effect"] { --tone: oklch(0.78 0.13 300); }
+
+/* Classic light (parchment): the tone hues need more ink to read. */
+[data-theme="light"] .ib-inspector[data-board-style="classic"] .ib-inspector__badge[data-tone="defense"] { --tone: oklch(0.50 0.13 240); }
+[data-theme="light"] .ib-inspector[data-board-style="classic"] .ib-inspector__badge[data-tone="offense"] { --tone: oklch(0.52 0.18 35); }
+[data-theme="light"] .ib-inspector[data-board-style="classic"] .ib-inspector__badge[data-tone="recovery"] { --tone: oklch(0.50 0.14 150); }
+[data-theme="light"] .ib-inspector[data-board-style="classic"] .ib-inspector__badge[data-tone="effect"] { --tone: oklch(0.50 0.16 300); }
+[data-theme="light"] .ib-inspector[data-board-style="classic"] :is(.ib-inspector__dp em, .ib-inspector__breakdown b)[data-direction="up"] { color: oklch(0.50 0.15 150); }
+[data-theme="light"] .ib-inspector[data-board-style="classic"] :is(.ib-inspector__dp em, .ib-inspector__breakdown b)[data-direction="down"] { color: oklch(0.52 0.19 25); }
+
+.ib-inspector__badge small {
+  color: var(--insp-muted);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ib-inspector__scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ib-inspector__section {
+  display: grid;
+  gap: 5px;
+}
+
+.ib-inspector__label {
+  color: var(--insp-muted);
+  font-family: var(--ib-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.ib-inspector__sublabel {
+  display: block;
+  margin-top: 2px;
+  color: #c084fc;
+  font-family: var(--ib-font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ib-inspector__toggle {
+  justify-self: start;
+  cursor: pointer;
+}
+
+.ib-inspector__toggle:hover { color: var(--insp-ink); }
+
+.ib-inspector__none {
+  color: var(--insp-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.ib-inspector__modifiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ib-inspector__modifiers li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 9px;
+  border-left: 3px solid var(--mod-color);
+  border-radius: var(--insp-radius);
+  background: var(--insp-fill);
+  font-size: 12px;
+}
+
+.ib-inspector__modifiers small {
+  color: var(--insp-muted);
+  font-size: 10px;
+}
+
+.ib-inspector__breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--insp-muted);
+  font-size: 12px;
+}
+
+.ib-inspector__breakdown b {
+  color: var(--insp-ink);
+  font-family: var(--ib-font-mono);
+}
+
+.ib-inspector .card-effect-text {
+  color: var(--insp-ink);
+  font-size: 12px;
+}
+
+.ib-inspector__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--insp-line);
+}
+
+.ib-inspector__action {
+  --tone: oklch(0.72 0.12 210);
+  padding: 7px 16px;
+  border: 1px solid var(--tone);
+  border-radius: var(--insp-radius);
+  background: oklch(from var(--tone) l c h / 0.18);
+  color: var(--insp-ink);
+  font-family: var(--ib-font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.ib-inspector__action:hover { background: oklch(from var(--tone) l c h / 0.32); }
+.ib-inspector__action:active { transform: scale(0.97); }
+.ib-inspector__action:focus-visible { outline: 2px solid var(--insp-accent); outline-offset: 2px; }
+.ib-inspector__action[data-tone="attack"] { --tone: oklch(0.66 0.20 28); }
+.ib-inspector__action[data-tone="move"] { --tone: oklch(0.75 0.15 150); }
+
+.ib-inspector__sources {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-left: 16px;
+  border-left: 1px solid var(--insp-line);
+}
+
+.ib-inspector__source {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px;
+  border-left: 3px solid var(--source-color, var(--insp-line));
+  border-radius: var(--insp-radius);
+  background: var(--insp-fill);
+}
+
+.ib-inspector__source > .relative.inline-block {
+  border-radius: 4px;
+  cursor: zoom-in;
+}
+
+.ib-inspector__source .card-effect-text {
+  font-size: 11px;
+}
+
 /* Dev-only debug overlay (mounted behind import.meta.env.DEV). Anchored
    bottom-LEFT so it never overlaps the bottom-right hand-count chip or the
    centered hand. See the ingame-dev-overlays capability. */
