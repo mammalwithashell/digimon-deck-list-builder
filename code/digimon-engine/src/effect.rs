@@ -661,9 +661,16 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::EndOfAttack)
     }
 
-    /// Fires when a battle resolves (DP comparison done) but before `EndOfAttack`.
+    /// The end of the battle timing (§14-2-5): after the battle's triggered
+    /// effects have resolved, before `EndOfAttack`.
     pub fn end_of_battle(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::EndOfBattle)
+    }
+
+    /// Triggered by the battle itself (§14-2-4): "wins a battle", "deletes
+    /// in battle", `<Piercing>`. Pends with the loser's `[On Deletion]`.
+    pub fn battle_result(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::BattleResult)
     }
 
     /// Fires when any Digimon enters any player's battle area (global observer).

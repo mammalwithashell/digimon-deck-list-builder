@@ -3826,6 +3826,57 @@ impl Game {
         }
     }
 
+    /// Keep ONE queued `keyword` auto-effect per source permanent among the
+    /// entries at `first_index..` (a just-enqueued trigger scan), dropping the
+    /// other instances. For a keyword whose activations are interchangeable
+    /// -- `<Piercing>`: §16-7-5 performs one check per attack however many
+    /// instances activate, and DCGO stacks exactly one (`CardController.cs`
+    /// `PutStackedSkill(skillInfos_Pierce[0])`) -- so identical instances are
+    /// never offered as distinct `TriggerOrder` branches. Keeps the first
+    /// member whose condition passes now (else the first), as
+    /// `collapse_event_batch` does.
+    pub(crate) fn collapse_duplicate_keyword_triggers(
+        &mut self,
+        first_index: usize,
+        keyword: crate::enums::Keyword,
+    ) {
+        let mut groups: Vec<(Option<PermanentHandle>, Vec<usize>)> = Vec::new();
+        for i in first_index..self.effect_queue.len() {
+            let qe = &self.effect_queue[i];
+            let is_keyword = qe.keyword_effect == Some(keyword)
+                || (qe.granted_effect_id.is_none()
+                    && self.effects_for_queued(qe).is_some_and(|effects| {
+                        effects
+                            .get(qe.effect_slot as usize)
+                            .is_some_and(|effect| effect.keyword_source == Some(keyword))
+                    }));
+            if !is_keyword {
+                continue;
+            }
+            let carrier = qe.source_permanent;
+            match groups.iter_mut().find(|(h, _)| *h == carrier) {
+                Some((_, members)) => members.push(i),
+                None => groups.push((carrier, vec![i])),
+            }
+        }
+        let mut drop: Vec<usize> = Vec::new();
+        for (_, members) in groups {
+            if members.len() < 2 {
+                continue;
+            }
+            let keep = members
+                .iter()
+                .copied()
+                .find(|&i| self.queued_effect_condition_passes(i))
+                .unwrap_or(members[0]);
+            drop.extend(members.into_iter().filter(|&i| i != keep));
+        }
+        drop.sort_unstable();
+        for idx in drop.into_iter().rev() {
+            self.effect_queue.remove(idx);
+        }
+    }
+
     fn queued_effect_activation_kind(&self, qe: &QueuedEffect) -> EffectSourceKind {
         // Q2229 classifies native field effects on activation, after earlier
         // simultaneous effects. Cost/body continuations retain this capture.

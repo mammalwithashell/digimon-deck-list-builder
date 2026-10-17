@@ -1,0 +1,27 @@
+# PIERCE_IF_TOP -- Digimon, Lv.6, red, 8000 DP, play cost 8.
+#   [Your Turn] While your opponent has no Digimon with as much or more DP as
+#   this Digimon, this Digimon gains <Piercing> (When this Digimon attacks and
+#   deletes your opponent's Digimon in battle, it checks security before the
+#   attack ends.)
+# The EX8-045 Callismon shape of official Q&A Q3931: the loser's [On Deletion]
+# can end the condition after <Piercing> has triggered.
+card: PIERCE_IF_TOP
+name: Ursamon
+kind: digimon
+level: 6
+color: [red]
+cost: 8
+dp: 8000
+effects:
+  - kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - your_turn: true
+        - no_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            dp_gte: { formula: { source_dp: {} } }
+    grant_keyword: { keyword: Piercing }
+    summary: "[Your Turn] While your opponent has no Digimon with as much or more DP as this Digimon, this Digimon gains <Piercing>."

@@ -292,6 +292,7 @@ impl Game {
             active_deletion_batch: None,
             pending_battle_resolutions: Vec::new(),
             pending_attack_battle_result: None,
+            security_battle_end_referent: None,
             next_battle_identity: 1,
             attack_attacker_identity: None,
             event_snapshot_cache: None,
@@ -474,6 +475,7 @@ impl Game {
         self.active_deletion_batch = None;
         self.pending_battle_resolutions.clear();
         self.pending_attack_battle_result = None;
+        self.security_battle_end_referent = None;
         self.next_battle_identity = 1;
         self.attack_attacker_identity = None;
         self.event_snapshot_cache = None;

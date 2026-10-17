@@ -377,33 +377,55 @@ fn declared_attack_evade_outcome_and_attack_cleanup_survive_clone() {
     }
 }
 
+/// §14-2-4 / §15-4-3-2: the "deletes in battle" observer and the deleted
+/// Digimon's [On Deletion] are triggered by the same battle and pend together;
+/// §15-4-3-5-1: the turn player's activate first. Official Q&A Q3931 (EX8-045
+/// Callismon): the battle trigger and the deleted Digimon's [On Deletion]
+/// "will trigger simultaneously, then the turn player's will activate first."
+/// P0 (the turn player under the runner's even seed) owns the optional
+/// observer, P1 the optional [On Deletion]: P0 decides first, then P1. (This
+/// test used to pin the reverse -- P1's [On Deletion] choice before P0's
+/// observer -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION.)
+/// A clone taken at P0's choice resolves independently of the original.
 #[test]
-fn on_deletion_choice_finishes_before_end_of_battle_observer_after_clone() {
+fn turn_players_battle_observer_choice_precedes_on_deletion_after_clone() {
     let observer = OBSERVER.replace("    summary:", "    optional: true\n    summary:");
     let mut r = runner_with(&observer);
     r.place_on_field(0, "BD-OBS", Some(0));
     let hero = r.place_on_field(0, "BD-HERO", Some(0));
     let dying = r.place_on_field(1, "BD-DYING", Some(0));
+    assert_eq!(r.game.turn_player(), 0, "P0 is the turn player");
+    let memory0 = r.game.memory;
     r.battle_digimon(hero, dying);
     assert_eq!(
         r.battle_area_size(1),
         0,
-        "deletion commits before On Deletion choice"
+        "deletion commits before the battle's triggered choices"
     );
-    assert_eq!(r.pending_selection().unwrap().selecting_player, 1);
+    assert_eq!(
+        r.pending_selection().unwrap().selecting_player,
+        0,
+        "the turn player's battle observer activates before the On Deletion"
+    );
     assert_eq!(r.security_count(1), 4);
+    assert_eq!(r.game.memory, memory0, "the On Deletion waits for the observer");
     let mut cloned = DebugRunner::wrap(r.game.clone());
-    for (game, decline_deletion) in [(&mut r, false), (&mut cloned, true)] {
-        choose(game, decline_deletion);
+    for (game, decline_observer) in [(&mut r, false), (&mut cloned, true)] {
+        choose(game, decline_observer);
+        assert_eq!(
+            game.security_count(1),
+            if decline_observer { 4 } else { 3 },
+            "the observer resolved (or was declined) first"
+        );
         assert_eq!(
             game.pending_selection().unwrap().selecting_player,
-            0,
-            "EndOfBattle waits for the earlier On Deletion choice"
+            1,
+            "then the non-turn player's On Deletion"
         );
-        assert_eq!(game.security_count(1), 4);
+        assert_eq!(game.game.memory, memory0);
         choose(game, false);
-        assert_eq!(game.security_count(1), 3);
         assert!(game.pending_selection().is_none());
+        assert_ne!(game.game.memory, memory0, "the On Deletion resolved last");
     }
 }
 
@@ -514,6 +536,13 @@ fn winner_identity_after_deletion(delete_winner: bool, dna_winner: bool) {
             replay_after_de_digivolve: false,
         }),
     );
+    // The scenario is P1's [On Deletion] changing the winner BEFORE P0's
+    // observer activates. Both are triggered by the battle and pend together
+    // (§14-2-4, §15-4-3-2), and the turn player's activate first
+    // (§15-4-3-5-1): P1 is the turn player here, as in
+    // `ch15_08_effect_categories::winner_deleted_by_loser_board`.
+    // G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION.
+    r.game.turn_player_idx = 1;
     r.battle_digimon(hero, villain);
     r.auto_resolve().unwrap();
     assert_eq!(
@@ -584,6 +613,10 @@ fn winner_after_de_digivolution(replay: bool) {
             replay_after_de_digivolve: replay,
         }),
     );
+    // P1's [On Deletion] de-digivolves the winner before P0's observer
+    // activates: P1 is the turn player, so its effect in the battle's pool
+    // activates first (§15-4-3-5-1; see `winner_identity_after_deletion`).
+    r.game.turn_player_idx = 1;
     r.battle_digimon(hero, villain);
     r.auto_resolve().unwrap();
     assert!(r.game.players[0]

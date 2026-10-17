@@ -263,9 +263,21 @@ pub enum EffectTiming {
     EndOfOpponentsNextTurn,
     UntilNextUnsuspend,
     EndOfAttack,
-    /// Fires when a battle resolves (DP comparison complete) but before
-    /// `EndOfAttack`. Used for "if this Digimon wins/loses a battle" effects.
+    /// The end of the battle timing (§14-2-5): "[All Turns] At the end of a
+    /// battle, …". Fires once a battle's triggered effects (`BattleResult`,
+    /// the loser's `[On Deletion]`) have all resolved, before `EndOfAttack`,
+    /// together with the pending processing due at the end of the battle
+    /// (§18-1-1 / §18-1-2).
     EndOfBattle,
+    /// An effect triggered BY the battle (§14-2-4): "When this Digimon wins a
+    /// battle", "When your Digimon deletes an opponent's Digimon in battle"
+    /// (DSL `on_ally_won_battle`) and `<Piercing>` (§16-7-2). It triggers in
+    /// the battle's deletion and pends with the loser's `[On Deletion]` and
+    /// the deletion observers as ONE simultaneous pool, the turn player's
+    /// first (§15-4-3-2, §15-4-3-5-1, §16-7-4; official Q&A Q3931).
+    /// Dispatched with `TriggerSource::BattleResolved`, like `EndOfBattle`.
+    /// G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION.
+    BattleResult,
 
     // Triggered by game events
     OnAllyAttack,

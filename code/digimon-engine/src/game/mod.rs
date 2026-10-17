@@ -1117,6 +1117,15 @@ pub struct Game {
     /// Completed declared-attack battle, consumed when its state machine
     /// resumes after the battle's triggered choices have finished.
     pub(crate) pending_attack_battle_result: Option<crate::combat::AttackResult>,
+    /// A security battle's winner referent (identity + last-known
+    /// information, `Game::battle_winner_referent`) taken when its
+    /// battle-result triggers were enqueued, carried to the end of the battle
+    /// timing (§14-2-5) that follows them
+    /// (`SecurityPhase::EndOfSecurityBattleTimingDrain`).
+    pub(crate) security_battle_end_referent: Option<(
+        Option<(PlayerId, u64)>,
+        Option<std::sync::Arc<crate::trigger_context::DeletedObjectSnapshot>>,
+    )>,
     pub(crate) next_battle_identity: u64,
     /// Stack identity (`Permanent::battle_identity`) of the declared
     /// attacker, captured when the declaration's triggers are enqueued

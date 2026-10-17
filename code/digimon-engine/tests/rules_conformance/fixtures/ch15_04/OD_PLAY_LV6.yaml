@@ -1,0 +1,23 @@
+# OD_PLAY_LV6 -- Digimon, Lv.4, red, 3000 DP, play cost 4.
+#   [On Deletion] Play 1 level 6 Digimon card from your hand without paying
+#   the cost.
+card: OD_PLAY_LV6
+name: Summonmon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 3000
+effects:
+  - when: on_deletion
+    summary: "[On Deletion] Play 1 level 6 Digimon card from your hand without paying the cost."
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 6
+          prompt: "Play 1 level 6 Digimon card from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }
