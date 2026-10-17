@@ -8,6 +8,8 @@ const TYPE_ALIASES: Record<string, string> = {
   Digivolve: 'digivolve',
   Attack: 'attack',
   Trash: 'trash',
+  CardToHand: 'card_to_hand',
+  CardToDeck: 'card_to_deck',
   Mill: 'mill',
   SecurityReveal: 'security_reveal',
   EffectTarget: 'effect_target',

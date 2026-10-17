@@ -878,6 +878,22 @@ pub struct Game {
     /// `OptionSkill` process, before the stacked triggers resolve.
     /// G-ENGINE-OPTION-TRASH-AFTER-TRIGGERED-EFFECTS.
     pub(crate) option_body_pending: bool,
+    /// §9-1-5: the deferred-drain depth the in-flight Option's `[Main]` body
+    /// was started under (`play_option_core`), refreshed to the depth outside
+    /// the resolving callback whenever one of the body's selections resolves.
+    /// The body has finished -- and the Option is disposed -- as soon as the
+    /// drain is back at that depth: `draining_deferred == outer`, not `== 0`,
+    /// so an Option an EFFECT uses from inside its own selection callback
+    /// (EX7-073 using P-180: the body runs with `draining_deferred > 0`) is
+    /// trashed in the step that finishes its body too, before any rule check
+    /// (F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE residual).
+    pub(crate) option_body_outer_deferred: u32,
+    /// §9-1-5 "as soon as the timing when its 1st [Main] effect has been
+    /// resolved": set when the in-flight Option's first `OptionMain` entry has
+    /// run; an Option with two `[Main]` effects (BT1-090, BT22-013) is
+    /// disposed after the first, and the second resolves as the pending
+    /// effect of a card in the trash.
+    pub(crate) option_first_main_resolved: bool,
 
     /// VARIABLE-amount interactive cost reduction driven by the printed play
     /// cost of a permanent deleted DURING an interactive cost's `pay_cost`

@@ -1316,7 +1316,7 @@ impl Game {
         // effects and rule checks don't interrupt the period between [Main]
         // effect activation and trashing" -- so before the rules check below.
         if self.option_body_pending
-            && self.draining_deferred == 0
+            && self.draining_deferred <= self.option_body_outer_deferred
             && self.pending_selection.is_none()
         {
             self.complete_option_body_if_done();
@@ -1518,7 +1518,9 @@ impl Game {
             // disposed before any trigger that body caused resolves. Skipped
             // inside a deferred-drain scope (the body is still running there);
             // the flush at scope exit re-enters here.
-            if self.option_body_pending && self.draining_deferred == 0 {
+            if self.option_body_pending
+                && self.draining_deferred <= self.option_body_outer_deferred
+            {
                 self.complete_option_body_if_done();
                 if self.pending_selection.is_some() {
                     return;
@@ -1598,16 +1600,19 @@ impl Game {
                     // §9-1-5: the used Option is trashed in the step that
                     // finishes its `[Main]` body, uninterrupted -- before the
                     // rules check below and before any trigger the body
-                    // caused is offered. (A body that parked a selection is
-                    // disposed once that selection's resolution has finished
-                    // the body: see the top of `drain_effect_queue`.)
-                    if self.draining_deferred == 0 {
+                    // caused is offered -- also when the use is an effect's,
+                    // from inside that effect's selection callback (the
+                    // baseline depth is then > 0). (A body that parked a
+                    // selection is disposed once that selection's resolution
+                    // has finished the body: see the top of
+                    // `drain_effect_queue`.)
+                    if self.draining_deferred <= self.option_body_outer_deferred {
                         self.complete_option_body_if_done();
                     }
                     self.rules_check_between_queued_effects();
                     continue;
                 }
-                if self.draining_deferred > 0 {
+                if self.draining_deferred > self.option_body_outer_deferred {
                     // The body has been popped but `complete_option_body_if_done`
                     // has not released it yet: we are INSIDE the `[Main]`'s
                     // resolution, reached through a nested `drain_effect_queue`
@@ -3962,6 +3967,16 @@ impl Game {
         let prev_effect_source_permanent = self.effect_source_permanent;
         let prev_trigger_context = self.current_trigger_context.clone();
         let prev_dna_origin = self.current_dna_origin;
+        // §9-1-5 "as soon as the timing when its 1st [Main] effect has been
+        // resolved": this is the in-flight Option's `[Main]` body (whichever
+        // path runs it -- the drain's OptionMain arm or the outer-optional
+        // ACCEPT callback), so once it has run the first [Main] is resolved
+        // and `complete_option_body_if_done` may dispose the card.
+        let is_pending_option_main = qe.timing == EffectTiming::OptionMain
+            && self
+                .pending_option
+                .as_ref()
+                .is_some_and(|p| p.card.handle() == qe.source_card);
         let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
         self.effect_source_player = Some(qe.controller);
         self.effect_source_card = Some(attribution_source_card);
@@ -3971,6 +3986,9 @@ impl Game {
             self.current_dna_origin = qe.dna_origin_context;
         }
         let out = self.run_queued_effect_inner(qe);
+        if is_pending_option_main {
+            self.option_first_main_resolved = true;
+        }
         self.current_dna_origin = prev_dna_origin;
         self.current_trigger_context = prev_trigger_context;
         self.effect_source_permanent = prev_effect_source_permanent;
@@ -5610,6 +5628,13 @@ impl Game {
         if self.effect_chain_depth > 0 {
             self.effect_chain_depth = 1;
         }
+        // §9-1-5: whatever scopes the in-flight Option's body was started under
+        // have unwound while its selection waited; the resolving callback
+        // opens its own deferred scope, so the body has finished once the drain
+        // is back at the depth we are at NOW (see `option_body_outer_deferred`).
+        if self.option_body_pending {
+            self.option_body_outer_deferred = self.draining_deferred;
+        }
 
         // Take the selection, restore phase, invoke the appropriate callback.
         let sel = self.pending_selection.take().expect("checked Some above");
@@ -6007,12 +6032,12 @@ impl Game {
         if pending.resolution_phase != crate::selection::OptionResolutionPhase::MainEffectDrain {
             return;
         }
-        let card = pending.card.handle();
-        if self
-            .effect_queue
-            .iter()
-            .any(|q| q.timing == EffectTiming::OptionMain && q.source_card == card)
-        {
+        // §9-1-5 "as soon as the timing when its 1st [Main] effect has been
+        // resolved": the FIRST body entry decides, not the last -- an Option
+        // with two `[Main]` effects is trashed after the first; the second
+        // still resolves afterwards, as the pending effect of a card in the
+        // trash (§9-1-4 keeps the card out of every area only during the 1st).
+        if !self.option_first_main_resolved {
             return;
         }
         if let Some((player, used)) = self.on_use_option_armed.take() {

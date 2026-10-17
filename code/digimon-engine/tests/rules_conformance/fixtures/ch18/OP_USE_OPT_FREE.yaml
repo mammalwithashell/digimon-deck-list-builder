@@ -1,0 +1,23 @@
+# OP_USE_OPT_FREE -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] You may use 1 Option card from your hand without paying the
+#   cost.
+# An EFFECT that uses an Option (the EX7-073 / P-180 idiom,
+# `use_option_from_hand`): the Option's [Main] runs from inside this effect's
+# hand-pick selection callback, so §9-1-5's uninterrupted trash must hold
+# there too (F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE residual).
+card: OP_USE_OPT_FREE
+name: Casterpup
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] You may use 1 Option card from your hand without paying the cost."
+    process:
+      - use_option_from_hand:
+          of: you
+          optional: true
+          filter: { kind: option }
+          prompt: "Use 1 Option card from your hand without paying the cost"

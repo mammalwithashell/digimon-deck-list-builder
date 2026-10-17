@@ -170,6 +170,30 @@ pub enum GameEvent {
         /// Printed name of the trashed card, captured at emission.
         card_name: String,
     },
+    /// A card moved to `player`'s hand by a replacement outcome instead of
+    /// the zone it was headed for -- today a used Option whose trash a
+    /// `WhenWouldBeTrashed` effect cancelled or redirected to the hand
+    /// (§9-1-5 replacement; F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE
+    /// residual). `source` names the processing that moved it
+    /// (`"option_use"`).
+    CardToHand {
+        seq: u64,
+        player: PlayerId,
+        card_id: String,
+        card_name: String,
+        source: String,
+    },
+    /// A card moved to `player`'s deck by a replacement outcome instead of
+    /// the zone it was headed for -- today a used Option redirected to the
+    /// bottom of the deck. `position` is `"bottom"` or `"top"`.
+    CardToDeck {
+        seq: u64,
+        player: PlayerId,
+        card_id: String,
+        card_name: String,
+        position: String,
+        source: String,
+    },
 
     /// A card was milled (deck→trash from the top of the deck).
     Mill {
@@ -278,6 +302,8 @@ impl GameEvent {
             | GameEvent::Digivolve { seq, .. }
             | GameEvent::Attack { seq, .. }
             | GameEvent::Trash { seq, .. }
+            | GameEvent::CardToHand { seq, .. }
+            | GameEvent::CardToDeck { seq, .. }
             | GameEvent::Mill { seq, .. }
             | GameEvent::SecurityReveal { seq, .. }
             | GameEvent::EffectTarget { seq, .. }
@@ -301,6 +327,8 @@ impl GameEvent {
             GameEvent::Digivolve { .. } => "Digivolve",
             GameEvent::Attack { .. } => "Attack",
             GameEvent::Trash { .. } => "Trash",
+            GameEvent::CardToHand { .. } => "CardToHand",
+            GameEvent::CardToDeck { .. } => "CardToDeck",
             GameEvent::Mill { .. } => "Mill",
             GameEvent::SecurityReveal { .. } => "SecurityReveal",
             GameEvent::EffectTarget { .. } => "EffectTarget",

@@ -628,6 +628,11 @@ impl Game {
         // this body resolves, before the rules check and the triggers it
         // caused (§9-1-5; `complete_option_body_if_done`).
         self.option_body_pending = true;
+        // The body's baseline: an effect-driven use from inside a selection
+        // callback starts with `draining_deferred > 0`; the body has finished
+        // when the drain is back at THIS depth (§9-1-5, see the field).
+        self.option_body_outer_deferred = self.draining_deferred;
+        self.option_first_main_resolved = false;
         self.enqueue_option_main_from_pending(&card_id, card_handle, player_id, mode.is_link());
         self.drain_effect_queue();
 
