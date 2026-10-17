@@ -119,6 +119,24 @@ const CH15_08: &[&str] = &[
     include_str!("ch15_08/WOULD_DEL_MEM.yaml"),
 ];
 
+/// §15-15-5 "isn't affected by effects" chapter cards
+/// (`ch15_15_unaffected.rs`).
+const CH15_15: &[&str] = &[
+    include_str!("ch15_15/DIGI_GRANT_EOT_DELETE.yaml"),
+    include_str!("ch15_15/DIGI_GRANT_SA_MINUS1.yaml"),
+    include_str!("ch15_15/DIGI_MINUS_3K.yaml"),
+    include_str!("ch15_15/DIGI_SUSPEND_THEN_MINUS3K.yaml"),
+    include_str!("ch15_15/HUGE_LV7.yaml"),
+    include_str!("ch15_15/IMMUNE_ALL_OPP.yaml"),
+    include_str!("ch15_15/IMMUNE_DIGI_ONLY.yaml"),
+    include_str!("ch15_15/IMMUNE_WHILE_SUSPENDED.yaml"),
+    include_str!("ch15_15/OPT_DELETE_13K.yaml"),
+    include_str!("ch15_15/OPT_MINUS_12K.yaml"),
+    include_str!("ch15_15/OWN_MINUS_3K.yaml"),
+    include_str!("ch15_15/SELF_IMM_THEN_UP.yaml"),
+    include_str!("ch15_15/TAMER_MINUS_3K.yaml"),
+];
+
 /// §16-42..§16-47 Ver. 4.x keyword cards, with the §4-6 DUAL, §4-19
 /// <Overflow> and §4-20 Arts Digivolve cards (`ch16_new_keywords.rs`).
 const CH16_NEW: &[&str] = &[
@@ -309,6 +327,11 @@ pub fn ch15_08_cards() -> &'static [&'static str] {
     CH15_08
 }
 
+/// Every `ch15_15/` card's YAML source.
+pub fn ch15_15_cards() -> &'static [&'static str] {
+    CH15_15
+}
+
 /// Every `ch16_new/` card's YAML source.
 pub fn ch16_new_cards() -> &'static [&'static str] {
     CH16_NEW
@@ -377,6 +400,7 @@ fn every_fixture_file_is_listed() {
         ("ch15_04", CH15_04.len()),
         ("ch15_07", CH15_07.len()),
         ("ch15_08", CH15_08.len()),
+        ("ch15_15", CH15_15.len()),
         ("ch16_new", CH16_NEW.len()),
         ("ch16_repl", CH16_REPL.len()),
         ("ch16_atk", CH16_ATK.len()),

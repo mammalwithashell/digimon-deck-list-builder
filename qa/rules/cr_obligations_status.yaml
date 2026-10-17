@@ -173,6 +173,27 @@
   tests: ["ch15_07_optional_conditions::mandatory_invoker_does_not_force_invoked_optional_condition"]
   note: "Ver. 4.3 rewrite. The DSL expresses borrowing (refire_card_effect, BT15-102 idiom). A mandatory '[When Attacking] Place 1 [Lender] card from your trash under this Digimon; activate 1 of its [On Play] effects as an effect of this Digimon' runs a borrowed 'By trashing your top security card, gain 1 memory' with no decision (security trashed, memory gained); a borrowed hand-pick condition keeps its PASS. Test is #[ignore]d."
 
+# ── ch15-15 "Isn't affected by effects" (§15-15-5) — tests/rules_conformance/ch15_15_unaffected.rs ──
+"15-15-5":
+  status: not-testable
+  note: "Heading '\"Isn't affected by effects\" cards'; its obligations are 15-15-5-1..4 (ch15_15_unaffected)."
+"15-15-5-1":
+  status: proven
+  tests: ["ch15_15_unaffected::digimon_only_immunity_is_affected_by_opponent_option_main", "ch15_15_unaffected::digimon_only_immunity_is_affected_by_option_security_activation", "ch15_15_unaffected::digimon_only_immunity_is_affected_by_opponent_tamer_and_own_effects", "ch15_15_unaffected::full_opponent_immunity_blocks_option_tamer_digimon_and_token_effects", "ch15_15_unaffected::full_opponent_immunity_does_not_block_rule_processing", "ch15_15_unaffected::effect_applied_before_immunity_stops_affecting_when_immunity_starts", "ch15_15_unaffected::immunity_granted_mid_effect_covers_later_steps"]
+  note: "Scope matrix: an opponent-Digimon-effect immunity (Atratusmon ST23-09 idiom) is affected by Option [Main] and [Security]-activated [Main] effects, Tamer effects and its own controller's effects, not by opponent Digimon effects; a full opponent-effect immunity (Magnamon (X Antibody) BT16-102 idiom) blocks opponent Option ([Main] and [Security]), Tamer, Digimon and token effects but not its own controller's; battles and the 0-DP rule check are not effects (Q6279). An immunity that starts mid-effect covers that effect's later steps; one that starts after a -DP effect stops it affecting the card (Q6178; read-time suppression in ModifierRegistry::get)."
+"15-15-5-2":
+  status: proven
+  tests: ["ch15_15_unaffected::effect_applied_while_immune_starts_affecting_when_immunity_lapses"]
+  note: "Record-and-suppress (2026-10-16): a modifier applied to an immune card is recorded (ModifierEntry::affecting_source_kind) and hidden while a covering CannotBeAffected entry exists; it applies as soon as the immunity lapses (the rule's 'while suspended' example: -3000 DP applies on unsuspend) or expires (Atratusmon shape, Q831), for the rest of its own duration. Previously EffectContext::add_modifier skipped the install, so the effect never applied."
+"15-15-5-3":
+  status: proven
+  tests: ["ch15_15_unaffected::immune_permanent_is_still_choosable_and_offered_as_only_candidate"]
+  note: "An immune Digimon is offered by an opponent's 'choose 1' (beside another Digimon, and as the only candidate), can be chosen, and is not affected (Q6176, Q3788)."
+"15-15-5-4":
+  status: proven
+  tests: ["ch15_15_unaffected::granted_effect_not_considered_had_while_immune"]
+  note: "A <Security A. -1> gained from an opponent's Digimon effect while immune is not counted (1 check); once the immunity ends with the grant still in its duration the Digimon checks 0 cards (Q6179). A granted '[End of Your Turn] Delete this Digimon' (EX6-057 idiom) given while immune activates at the end of the carrier's next turn once the immunity has ended (Q2120 / Q3871). Covers modifier-backed gains (the production SecurityAttackChange idiom) and granted triggered effects; keyword-registry grants (grant_keyword, one authored opponent-side use) are still an install-time skip, non-blocking (G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP)."
+
 # ── ch17 Rule Checks (§17, §15-4-3-3) — tests/rules_conformance/ch17_rule_checks.rs ──
 "17-1-2-1":
   status: proven

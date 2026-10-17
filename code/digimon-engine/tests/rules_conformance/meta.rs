@@ -23,6 +23,10 @@ const CHAPTER_SOURCES: &[(&str, &str)] = &[
         "ch15_08_effect_categories.rs",
         include_str!("ch15_08_effect_categories.rs"),
     ),
+    (
+        "ch15_15_unaffected.rs",
+        include_str!("ch15_15_unaffected.rs"),
+    ),
     ("ch17_rule_checks.rs", include_str!("ch17_rule_checks.rs")),
     (
         "ch18_pending_overwrite.rs",
