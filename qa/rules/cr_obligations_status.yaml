@@ -60,8 +60,8 @@
   tests: ["ch15_04_effect_states::digivolving_mid_pending_cancels_sibling_when_attacking"]
 "15-4-4-5":
   status: proven
-  tests: ["ch15_04_effect_states::pending_effect_whose_trigger_condition_lapsed_cannot_activate"]
-  note: "Trigger-condition qualifier ('When one of your Digimon with 4000 DP or less is played'): a sibling [On Play] raising the played Digimon to 6000 DP first makes the pending observer unable to activate; control ordering activates it."
+  tests: ["ch15_04_effect_states::pending_effect_whose_trigger_condition_lapsed_cannot_activate", "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"]
+  note: "Trigger-condition qualifier ('When one of your Digimon with 4000 DP or less is played'): a sibling [On Play] raising the played Digimon to 6000 DP first makes the pending observer unable to activate; control ordering activates it. The activation-time re-check is not where a trigger is decided: 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers, though a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER)."
 "15-8-3-9-2":
   status: proven
   tests: ["ch15_04_effect_states::pending_effect_whose_condition_lapsed_is_dropped"]
@@ -80,8 +80,8 @@
 # ── ch15-08 Effect Categories (§15-8) — tests/rules_conformance/ch15_08_effect_categories.rs ──
 "15-8-3-1":
   status: proven
-  tests: ["ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves"]
-  note: "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not. G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX."
+  tests: ["ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves", "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"]
+  note: "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not (G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX). Converse: with a winner without [TS] the effect never triggers, even when a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER)."
 "15-8-3-2":
   status: gap
   blocks_training: true

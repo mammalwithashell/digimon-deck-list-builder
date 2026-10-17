@@ -1,0 +1,16 @@
+# TS_LV6 -- Digimon, Lv.6, red, 10000 DP, play cost 10. Traits: [TS]. No text.
+#   Digivolve: red Lv.5, cost 4.
+# A [TS] trait Digimon a battle winner without [TS] digivolves into after the
+# battle (the §15-8-3-1 / §15-4-4-5 test).
+card: TS_LV6
+name: Strategemon
+kind: digimon
+level: 6
+color: [red]
+cost: 10
+dp: 10000
+traits: [TS]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
