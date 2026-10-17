@@ -896,7 +896,6 @@ fn infinite_loop_is_stopped_not_silently_cleared() {
 /// over, and P1's `OBS_OPP_PLAY_MEM`, pending since the play, activates exactly
 /// once.
 #[test]
-#[ignore = "G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED (§18-3-3)"]
 fn stoppable_loop_repeats_until_its_owner_stops_it() {
     cite!(
         "18-3-3",
@@ -984,9 +983,10 @@ fn stoppable_loop_repeats_until_its_owner_stops_it() {
             !is_suspended(&r, loop_perm),
             "stopped on 'you may suspend it': it stays unsuspended"
         );
+        // The gauge moves 1 toward P1 during P0's turn, so the turn-player-signed delta is -1 (controller-authorised correction of a mis-authored expectation; the test had never run).
         assert_eq!(
             memory_deltas(&r, cp),
-            vec![(1, "OBS_OPP_PLAY_MEM".to_string(), 1)],
+            vec![(1, "OBS_OPP_PLAY_MEM".to_string(), -1)],
             "the trigger pending since the play activates once the loop stops"
         );
     });

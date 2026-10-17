@@ -8595,7 +8595,7 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "Definition; pinned with 18-3-2. The drainer records a loop signature (pending entries + board: zones' card handles, suspension, memory) before each resolution step; the same state seen LOOP_SIGNATURE_REPEATS (3) times with no player decision in between is a loop. A 60-card self-chaining trigger (~120 chained resolutions that end when the deck empties) runs to its end with no loop event.",
+      "note": "Definition; pinned with 18-3-2. The drainer records a loop signature (pending entries + board: zones' card handles, suspension, memory) before each resolution step; the same state seen LOOP_SIGNATURE_REPEATS (3) times with no declinable decision in between is a loop. A 60-card self-chaining trigger (~120 chained resolutions that end when the deck empties) runs to its end with no loop event.",
       "status": "proven",
       "tests": [
         "ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared",
@@ -8611,23 +8611,24 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "A mandatory suspend/unsuspend loop: GameEvent::InfiniteLoop then GameOver { winner: None, reason: InfiniteLoopDraw }. MAX_CHAIN_DEPTH (10_000) remains a far backstop that ends in the same draw; nothing is cleared with the game going on.",
+      "note": "A mandatory suspend/unsuspend loop: GameEvent::InfiniteLoop then GameOver { winner: None, reason: InfiniteLoopDraw }. A loop whose every repetition asks a forced single-option pick also draws: only a declinable decision resets the loop watch. MAX_CHAIN_DEPTH (10_000) remains a far backstop that ends in the same draw; nothing is cleared with the game going on.",
       "status": "proven",
       "tests": [
-        "ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared"
+        "ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared",
+        "ch18_pending_overwrite::forced_prompt_loop_still_ends_in_a_draw"
       ],
       "text": "If an infinite loop occurs and neither player has the ability to stop it, that game ends in a draw."
     },
     "18-3-3": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 18,
       "fingerprint": "a169b8994a199a4ab6a8c59166edc61777c3d6e87c8fe2315c770341d74cd9c1",
-      "gap_id": "G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED",
+      "gap_id": null,
       "mechanisms": [
         "other-information"
       ],
-      "note": "Engine side fixed (Task 22): the 'you may suspend it' loop is offered once per repetition (ruling W10) and every resolved decision resets the loop watch and restarts the chain count, so P0 repeats it 40 times, stops it, the Digimon stays unsuspended, the game goes on and P1's pending observer activates once. The test stays #[ignore]d on its last assertion only: it expects MemoryChange delta +1 for P1's gain, but the event's delta is the turn-player gauge delta (-1 during P0's turn); awaiting a ruling on that expectation.",
-      "status": "gap",
+      "note": "A loop with 'you may suspend it' is offered once per repetition (ruling W10): every resolved declinable decision resets the loop watch and every decision restarts the chain count, so P0 repeats it 40 times, stops it, the Digimon stays unsuspended, the game goes on, and P1's trigger pending since the play activates once. (The test's final MemoryChange expectation was corrected to the turn-player-signed delta -1 by controller ruling; the test had never reached it.)",
+      "status": "proven",
       "tests": [
         "ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it"
       ],
@@ -8641,7 +8642,7 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "Repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). The turn-player-first order of declarations is not asserted.",
+      "note": "repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). The turn-player-first order of declarations is not asserted.",
       "status": "gap",
       "tests": [],
       "text": "The turn player declares to repeat the processing a certain number of times. If the turn player doesn't have the ability to stop the infinite loop, skip this step and go on to the next step."
@@ -8654,21 +8655,21 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "Repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). As 18-3-3-1, for the non-turn player.",
+      "note": "repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). As 18-3-3-1, for the non-turn player.",
       "status": "gap",
       "tests": [],
       "text": "The non-turn player declares to repeat the processing a certain number of times. If the non- turn player doesn't have the ability to stop the infinite loop, skip this step and go on to the next step."
     },
     "18-3-3-3": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 18,
       "fingerprint": "ca1e36ce6f3f4e7299e9b32d4fe477ced92d86d03f8f391235592a23b66a6ca0",
-      "gap_id": "G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED",
+      "gap_id": null,
       "mechanisms": [
         "other-information"
       ],
-      "note": "Per-repetition optional prompt (ruling W10): the player repeats the loop as many times as they choose (40 in the test, past any fixed cap), then stops it by declining. Still #[ignore]d on the test's MemoryChange-sign assertion (see 18-3-3).",
-      "status": "gap",
+      "note": "Per-repetition optional prompt (ruling W10): the player repeats the loop as many times as they choose (40 here, past any fixed cap), then stops it by declining.",
+      "status": "proven",
       "tests": [
         "ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it"
       ],
@@ -15240,9 +15241,9 @@
         "total": 16
       },
       "18": {
-        "gap": 5,
+        "gap": 3,
         "not_testable": 3,
-        "proven": 7,
+        "proven": 9,
         "total": 15
       },
       "2": {
@@ -15294,7 +15295,7 @@
         "total": 13
       }
     },
-    "gap": 654,
+    "gap": 652,
     "mechanics": {
       "gap_blocking": 38,
       "gap_nonblocking": 330,
@@ -15302,7 +15303,7 @@
       "proven": 195
     },
     "not-testable": 246,
-    "proven": 219
+    "proven": 221
   },
   "version": 1
 }
