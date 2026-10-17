@@ -1,0 +1,21 @@
+# OPT_TRASH_OWN_TOP -- Option, red, use cost 0.
+#   [Main] Trash the top card of 1 of your Digimon.
+# The `trash_top_source` primitive (the Burst Digivolve turn-end trash of
+# BT13-020 / BT13-060 / BT25-104 / BT26-050): it trashes the visible TOP
+# card, which is not a digivolution card (§4-8-1), so it is a "top card
+# trashed" event (DCGO `WhenTopCardTrashed`), never a "digivolution cards
+# trashed" one (G-ENGINE-TRASH-TOP-SOURCE-FIRES-DIGIVOLUTION-CARD-TRASHED).
+card: OPT_TRASH_OWN_TOP
+name: Shedding
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash the top card of 1 of your Digimon."
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Trash the top card of 1 of your Digimon"
+      - trash_top_source: { target: target }

@@ -605,16 +605,37 @@ impl<'a> EffectContext<'a> {
     /// `armor_purge_top` (which is reserved for the `<Armor Purge>` keyword
     /// auto-install body and panics on insufficient stack).
     ///
-    /// After the trash it fires `OnDigivolutionCardTrashed` and drains the
-    /// queue. That is WRONG for this primitive (it trashes the visible TOP
-    /// card, which is not a digivolution card, §4-8-1) and no longer matches
-    /// `armor_purge_top`, which fires `OnTopCardTrashed`; tracked as
-    /// G-ENGINE-TRASH-TOP-SOURCE-FIRES-DIGIVOLUTION-CARD-TRASHED. The trashed
-    /// card moves through the standard owner trash path.
+    /// The trashed card is the visible TOP card, not a digivolution card
+    /// (§4-8-1), so this enqueues `OnTopCardTrashed` (the timing
+    /// `armor_purge_top` and <De-Digivolve> fire; DCGO
+    /// `EffectTiming.WhenTopCardTrashed`) and never
+    /// `OnDigivolutionCardTrashed`. Enqueue-only: the observers activate once
+    /// the causing effect has finished (§15-4-3-2), like every other
+    /// top-card trash. G-ENGINE-TRASH-TOP-SOURCE-FIRES-DIGIVOLUTION-CARD-
+    /// TRASHED. The trashed card moves to its owner's trash.
+    ///
+    /// A single-card stack is trashed too: the permanent then has no cards,
+    /// so it leaves the battle area (`soft_remove_if_emptied`; it is not
+    /// deleted, no `[On Deletion]`).
     ///
     /// Reject-before-mutate discipline: invalid handle and empty stack both
     /// return `false` before any state change.
     pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
+        let Some(removed) = self.pop_top_source_for_trash(target) else {
+            return false;
+        };
+        self.trash_popped_top_cards(target, vec![removed]);
+        true
+    }
+
+    /// Guards + pop for [`Self::trash_top_source`]: `None` (no mutation)
+    /// when the slot is missing or empty, or a protection blocks the trash
+    /// (`ImmuneFromStackTrashing` on the host, or the top card's own
+    /// source-trash protection).
+    fn pop_top_source_for_trash(
+        &mut self,
+        target: PermanentHandle,
+    ) -> Option<crate::card_source::CardSource> {
         if let Some(card) = self
             .game
             .player(target.player)
@@ -623,49 +644,60 @@ impl<'a> EffectContext<'a> {
             .and_then(|p| p.card_sources.last())
         {
             if self.source_card_trash_blocked(target, card.handle()) {
-                return false;
+                return None;
             }
         }
-
         // Track C / D consult site (2026-05-08): `ImmuneFromStackTrashing`
         // on the host permanent blocks the inherited stack-peel mutation.
         // Distinct from `CannotBeDestroyed` (which protects the live top
         // card from deletion) — this protects the digivolution sources
         // sitting beneath the top from being peeled off and trashed.
         if self.stack_trash_blocked(target) {
-            return false;
+            return None;
         }
-        // Validate target slot.
-        let (removed, host_card) = {
-            let permanent = match self
-                .game
-                .player_mut(target.player)
-                .battle_area
-                .get_mut(target.index as usize)
-            {
-                Some(p) => p,
-                None => return false,
-            };
-            // Pop top of card_sources; bail clean if empty.
-            let removed = match permanent.card_sources.pop() {
-                Some(s) => s,
-                None => return false,
-            };
-            let host_card = permanent
-                .card_sources
-                .last()
-                .map(|card| card.handle())
-                .unwrap_or_else(|| removed.handle());
-            (removed, host_card)
-        };
-        // Fires OnDigivolutionCardTrashed for the trashed TOP card (shared
-        // Tier-2 push+fire primitive). Known wrong timing, §4-8-1:
-        // G-ENGINE-TRASH-TOP-SOURCE-FIRES-DIGIVOLUTION-CARD-TRASHED (unlike
-        // `armor_purge_top`, which fires OnTopCardTrashed).
         self.game
-            .trash_source_and_fire(removed.owner, target, removed, host_card);
-        let _ = self.cleanup_exposed_battle_area_digi_egg(target);
-        true
+            .player_mut(target.player)
+            .battle_area
+            .get_mut(target.index as usize)?
+            .card_sources
+            .pop()
+    }
+
+    /// Move top cards popped from `target` (in pop order) to their owners'
+    /// trash and enqueue ONE `OnTopCardTrashed` for the batch (§16-12-5 /
+    /// DCGO `ITrashStack`: every card trashed by one event in one timing).
+    /// The host is the card now on top (the last popped card when the stack
+    /// is empty); an emptied permanent leaves the battle area.
+    fn trash_popped_top_cards(
+        &mut self,
+        target: PermanentHandle,
+        removed: Vec<crate::card_source::CardSource>,
+    ) {
+        let Some(last) = removed.last() else {
+            return;
+        };
+        let host_card = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .and_then(|p| p.card_sources.last())
+            .map(|card| card.handle())
+            .unwrap_or_else(|| last.handle());
+        let cause = crate::trigger_context::EventCause::from(
+            self.game.infer_effect_cause(target.player),
+        );
+        let handles: Vec<_> = removed.iter().map(|card| card.handle()).collect();
+        for card in removed {
+            self.game.player_mut(card.owner).trash.push(card);
+        }
+        self.game
+            .enqueue_top_cards_trashed(target.player, target, host_card, handles, cause);
+        self.game.mark_until_condition_dirty();
+        self.game.reevaluate_until_condition_modifiers_if_dirty();
+        if !self.game.soft_remove_if_emptied(target) {
+            let _ = self.cleanup_exposed_battle_area_digi_egg(target);
+        }
     }
 
     /// Trash up to `count` bottom-most digivolution sources from `target`.
@@ -731,7 +763,9 @@ impl<'a> EffectContext<'a> {
         }
 
         if include_top_card {
-            let mut removed = 0;
+            // One event: every popped top card is trashed together and
+            // `OnTopCardTrashed` fires ONCE for the batch (DCGO `ITrashStack`).
+            let mut removed = Vec::new();
             for _ in 0..count {
                 if !self
                     .game
@@ -742,12 +776,14 @@ impl<'a> EffectContext<'a> {
                 {
                     break;
                 }
-                if !self.trash_top_source(target) {
+                let Some(card) = self.pop_top_source_for_trash(target) else {
                     break;
-                }
-                removed += 1;
+                };
+                removed.push(card);
             }
-            return removed;
+            let n = removed.len();
+            self.trash_popped_top_cards(target, removed);
+            return n;
         }
         let cards: Vec<_> = self
             .game

@@ -1,0 +1,23 @@
+# OPT_TRASH_OWN_TOP2 -- Option, red, use cost 0.
+#   [Main] Trash the top 2 stacked cards of 1 of your Digimon.
+# The `trash_top_stacked_sources` primitive with `include_top_card` (the
+# BT21-030 "trash the top 10 stacked cards" idiom): the cards it trashes are
+# each the top card at that moment (§4-8-1), trashed by ONE event (DCGO
+# `ITrashStack` stacks `WhenTopCardTrashed` once with every trashed card).
+card: OPT_TRASH_OWN_TOP2
+name: Double Shedding
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash the top 2 stacked cards of 1 of your Digimon."
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Trash the top 2 stacked cards of 1 of your Digimon"
+      - trash_top_stacked_sources:
+          target: target
+          count: 2
+          include_top_card: true
