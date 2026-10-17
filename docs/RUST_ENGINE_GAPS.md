@@ -4706,7 +4706,7 @@ host's modifier registry already holds from the materialized grant, so it is off
 bt24_067_on_its_own_does_not_retaliate link_box_production::fakemon_on_its_own_has_no_scapegoat`,
 `dsl -- link::linked_scope_replacement_keyword`.
 
-## G-ENGINE-LINK-MAX-BASE â€” OPEN (2026-10-03, noted on BT26-086 Dantemon)
+## G-ENGINE-LINK-MAX-BASE — RESOLVED (2026-10-17, f82b98888; opened 2026-10-03, noted on BT26-086 Dantemon)
 
 `link_host_candidates` / `can_insert_plug_in_at` use a base link max of 5 (`5 +
 link_max_delta`), while DCGO `Permanent.LinkedMax` starts at 1 (`<Link +N>` raises it). With
@@ -4715,6 +4715,8 @@ the engine's base, a Digimon can hold up to 5 link cards without any `<Link +N>`
 change affects every link card in the pool.
 
 **Rules-conformance repro (2026-10-16, Ver. 4.3 §4-9-5).** §4-9-5 (whole): "1 card can have a maximum of 1 link card. When linking to a Digimon that has already reached the link limit, the same number of the existing link cards are trashed at the same time as the newly linked cards." `ch16_processing_keywords::link_max_base_is_one` (`#[ignore]`d on this id and `G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED`): `LINK_HOST_LV4` (no <Link +>) with 1 link card should, when `LINK_A` is linked, keep 1 link card and trash the old one; the engine adds it (2 link cards, nothing trashed). Same shape for `LINKPLUS2` (two <Link +1>, max 3) at 3 (engine: 4) and for a host with a granted <Link +1> (max 2) at 2 (engine: 3): `link_plus_adds_to_max_link_cards_and_instances_add`, `link_plus_kind_matches_rule` (both `#[ignore]`d). The below-max halves (adds, nothing trashed) pass. Fixing this base alone turns those tests into refusals, which is the sibling gap `G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED`.
+
+- **Resolution:** `Game::link_limit` (1 + `link_max_delta`, §4-9-5 / §16-40-1) replaces the base of 5 in `link_host_candidates`, `can_insert_plug_in_at` and the new §17-1-3-2-5 rule-check step; Dantemon's `<Link +6>` now gives 7. Tests: `ch16_processing_keywords::link_max_base_is_one`, `link_plus_kind_matches_rule`, `link_plus_adds_to_max_link_cards_and_instances_add` (un-ignored).
 
 ## G-ENGINE-LINK-TEXT-IN-INHERITED-SLOT â€” RESOLVED (2026-10-05; opened 2026-10-03, BT26 Seven Code Appmon)
 
@@ -5406,6 +5408,7 @@ no dedicated clause test in `dna_result_new_card.rs`.
 - **Simultaneity:** the new targets must be removed in the same simultaneous pass as the existing ones; see `G-ENGINE-RULE-CHECK-TARGETS-NOT-SIMULTANEOUS`.
 - **Tests:** `code/digimon-engine/tests/rules_conformance/ch17_rule_checks.rs`, six `#[ignore]`d tests (§17-1-3-2-3/-4/-5 x2/-6/-7).
 - **Blocks training:** a board the rules clear stays playable: a face-down or breeding-area Tamer card, an over-limit or unqualified link card that keeps its link DP and effects. The §17-1-3-2-5 choice is also missing from the action space.
+- **Progress (2026-10-17, f82b98888):** §17-1-3-2-5, -6 and -7 are done: `Game::collect_link_rule_targets` (`LinkRuleTarget::{Excess, Unqualified}`) feeds `run_state_based_rules_check` (`RuleAction::TrashUnqualifiedLinks` / `TrimLinks`), unqualified link cards are trashed with no choice, and an over-limit host parks its controller's choice. Tests `excess_link_cards_trashed_player_chooses_which`, `excess_link_cards_over_any_limit_prompt_before_trash`, `link_card_failing_requirement_is_trashed`, `linked_card_of_unlisted_category_is_trashed` un-ignored. §17-1-3-2-3 and -4 follow in Task 4; the entry stays OPEN.
 
 ### A rule check removes its targets one at a time and resolves each `[On Deletion]` between them  [G-ENGINE-RULE-CHECK-TARGETS-NOT-SIMULTANEOUS]
 
@@ -5622,13 +5625,14 @@ no dedicated clause test in `dna_result_new_card.rs`.
 - **Blocks training:** yes. An illegal digivolution is offered in the action space (e.g. a level-modified or same-named lower-level Digimon).
 - **Resolution:** `dna_digivolve.rs::blast_dna_route_for_hand_card` computes the (field, hand material) match against the result card's `dna_costs` first; a registered blast route is offered only when that match exists (the requirement's order sets `first_is_top`, the blast path's cost is kept). A requirement's "w/[X] in text" is the whole-card text scan (`CardData::in_text_contains`, the same surface as the `in_text_contains` predicate; both loaders lower `in_text_contains` to `text_contains`). A result with no DNA requirement fails closed: nothing to perform (§16-31-4, §8-2-1; DCGO `CanPlayJogress` is false with a null `jogressCondition`). Tests: `ch16_processing_keywords::blast_dna_cannot_ignore_dna_requirements` (un-ignored), `blast_dna_without_dna_requirement_is_not_offered` (new).
 
-### Linking to a Digimon at its link limit is refused instead of replacing a link card  [G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED]
+### Linking to a Digimon at its link limit is refused instead of replacing a link card  [G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED] — RESOLVED (2026-10-17, f82b98888)
 
 - **Rule:** §4-9-5 (Ver. 4.3) "1 card can have a maximum of 1 link card. When linking to a Digimon that has already reached the link limit, the same number of the existing link cards are trashed at the same time as the newly linked cards." §16-40-1: <Link +> adds to that maximum. So a Digimon at its limit is still a legal link host; the link replaces existing link cards.
 - **Ours:** `game_actions/mod.rs` `link_host_candidates` (~L982-985) drops every host with `linked_cards.len() >= link_max`, and `option_lifecycle.rs` `can_insert_plug_in_at` (~L113) does the same for Plug-In Options, so the link is not in the action space at the limit and nothing ever replaces a link card. Observed (scratch probe, 2026-10-16): `LINK_HOST_LV4` with 5 link cards (the engine's limit, see `G-ENGINE-LINK-MAX-BASE`) has no `HAND_EFFECT` bit for `LINK_A`; with 0..4 it does, and the link adds a card. The conformance tests (`ch16_processing_keywords::link_max_base_is_one`, `link_plus_kind_matches_rule`, `link_plus_adds_to_max_link_cards_and_instances_add`, all `#[ignore]`d) assert the replacement at the rule's limits (1, 2 and 3); today they fail on the base (the engine adds), and with the base alone fixed they would fail here (refused).
 - **DCGO:** agrees with the rule. `CardEffectFactory/KeyWordEffects/Link.cs` `CanSelectPermanentCondition` (~L30-46) has no link-count gate on the host, and `Permanent.cs` (~L1306) at link time: `if (LinkedCards.Count >= LinkedMax)` it first removes `(Count + 1) - LinkedMax` link cards (`RemoveLinkedCard(null, n)`, the owner choosing which when `LinkedMax > 1`; the only one otherwise), then inserts the new card. `AutoProcessing.DigimonLackLinkMaxCountProcess` (~L528) is the separate later rule-check trim.
 - **Fix shape:** keep hosts at their limit as candidates (link filter and Standard state still apply); when the link would exceed the limit, have the linking player choose which existing link card(s) to trash (a resumable selection, rule 28), trash them as part of the same link step, then plug in the new card. Keep the ch17 rule-check trim (`G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE`, §17-1-3-2-5) for hosts that go over their limit later (e.g. a lost <Link +>).
 - **Blocks training:** yes. A legal link is missing from the action space whenever a host is at its limit.
+- **Resolution:** hosts at their limit stay link candidates. A declared link (`commit_digimon_link`, `commit_linked_card_no_replace`) parks the linking player's choice of the replaced link cards (`ResumeFrame::LinkCardTrashChoice`, one `EffectChoice` pick per card, trashed together, then the link finishes); a single removable card is trimmed in every attach primitive. Effect-driven links with a real choice remain open as `G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE`. Tests: the three `ch16_processing_keywords` link tests above (un-ignored); option_flow `plug_in_install_at_link_limit_replaces_the_link_card`, `relink_onto_carrier_at_link_limit_replaces_the_link_card` (inverted from base 5).
 
 ### An effect-driven link at a host's link limit gets no in-step replacement choice  [G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE]
 
