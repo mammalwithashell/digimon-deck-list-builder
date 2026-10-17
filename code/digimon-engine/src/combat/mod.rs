@@ -4417,6 +4417,10 @@ impl Game {
     /// it was when the battle was won (§15-8-3-1, §15-8-3-8, §15-4-4-5;
     /// DCGO keeps a copy of each winner in the battle hashtable's
     /// `WinnerPermanents`). `(None, None)` when there is no permanent winner.
+    /// The Digimon-vs-Digimon battle calls this at the comparison; the
+    /// security-battle path calls it when it enqueues `EndOfBattle`, which is
+    /// equivalent: it has a permanent winner only when the attacker's DP was
+    /// strictly higher, and nothing is deleted between (§14-2-3).
     pub(crate) fn battle_winner_referent(
         &mut self,
         winner: Option<PermanentHandle>,

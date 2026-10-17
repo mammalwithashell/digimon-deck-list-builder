@@ -1988,25 +1988,7 @@ fn eval_event_fields(
             .game
             .current_trigger_context
             .as_ref()
-            .is_some_and(|trigger| {
-                match trigger.resolve_battle_winner(rctx.game) {
-                    Some(winner) => rctx
-                        .game
-                        .player(winner.player)
-                        .battle_area
-                        .get(winner.index as usize)
-                        .is_some_and(|perm| perm.has_trait(trait_name, rctx.card_data())),
-                    None => {
-                        trigger.battle_winner_identity.is_some()
-                            && trigger.deleted_object.as_ref().is_some_and(|snapshot| {
-                                snapshot
-                                    .traits
-                                    .iter()
-                                    .any(|t| t.eq_ignore_ascii_case(trait_name))
-                            })
-                    }
-                }
-            });
+            .is_some_and(|trigger| trigger.battle_winner_has_trait(rctx.game, trait_name));
         if !matches {
             return false;
         }

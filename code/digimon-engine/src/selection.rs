@@ -790,7 +790,8 @@ pub enum TriggerSource {
         /// its battle opponent, including both sides of mutual deletion.
         deleters: Vec<crate::trigger_context::BattleCombatantSnapshot>,
         /// The winner's identity and last-known information, taken when the
-        /// battle was compared. Present whenever the battle had a permanent
+        /// battle was compared (on the security-battle path, at this enqueue:
+        /// nothing is deleted in between, §14-2-3). Present whenever the battle had a permanent
         /// winner, including one that left the field (e.g. to the loser's
         /// `[On Deletion]`) before this event was emitted, when `winner` is
         /// `None` (§15-8-3-1, §15-8-3-8;

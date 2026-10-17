@@ -86,6 +86,7 @@ const CH15_07: &[&str] = &[
 
 /// §15-8 "Effect Categories" chapter cards (`ch15_08_effect_categories.rs`).
 const CH15_08: &[&str] = &[
+    include_str!("ch15_08/DNA_LV6.yaml"),
     include_str!("ch15_08/EOT_MEM.yaml"),
     include_str!("ch15_08/EOT_MEM3.yaml"),
     include_str!("ch15_08/IMM_COND.yaml"),
@@ -103,6 +104,7 @@ const CH15_08: &[&str] = &[
     include_str!("ch15_08/OBS_OPP_PLAY_GE4.yaml"),
     include_str!("ch15_08/OBS_OPP_PLAY_LVL.yaml"),
     include_str!("ch15_08/OBS_TAMER_TRASH.yaml"),
+    include_str!("ch15_08/OBS_WIN_DNA.yaml"),
     include_str!("ch15_08/OBS_WIN_RET_LV3.yaml"),
     include_str!("ch15_08/OBS_WIN_TS.yaml"),
     include_str!("ch15_08/OD_DEL_ALL_OPP.yaml"),

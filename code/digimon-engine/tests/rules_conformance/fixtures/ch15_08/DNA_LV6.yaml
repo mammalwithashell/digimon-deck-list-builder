@@ -1,0 +1,10 @@
+# DNA_LV6 -- Digimon, Lv.6, red, 12000 DP, play cost 12. No traits, no text.
+# The DNA digivolution result of the §15-8-3-8 DNA test: a new Digimon
+# without the [TS] trait its material had.
+card: DNA_LV6
+name: Unionmon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000

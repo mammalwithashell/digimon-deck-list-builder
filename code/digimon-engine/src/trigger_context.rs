@@ -275,12 +275,10 @@ impl TriggerContext {
     /// Resolve the captured event object, never a later occupant of its old slot.
     /// Legacy contexts without a captured token retain their compatibility handle.
     pub fn resolve_event_permanent(&self, game: &crate::game::Game) -> Option<PermanentHandle> {
-        if let Some((player, identity)) = self.event_permanent_identity {
-            return game.player(player).battle_area.iter()
-                .position(|permanent| permanent.battle_identity == Some(identity))
-                .map(|index| PermanentHandle { player, index: index as u8 });
+        match self.event_permanent_identity {
+            Some(identity) => resolve_battle_identity(game, identity),
+            None => self.event_permanent,
         }
-        self.event_permanent
     }
 
     /// The battle winner of an `EndOfBattle` firing while it is on the field:
@@ -290,12 +288,36 @@ impl TriggerContext {
     /// information -- then), on a tie, or on any other event. Legacy contexts
     /// without a captured identity keep the compatibility handle.
     pub fn resolve_battle_winner(&self, game: &crate::game::Game) -> Option<PermanentHandle> {
-        if let Some((player, identity)) = self.battle_winner_identity {
-            return game.player(player).battle_area.iter()
-                .position(|permanent| permanent.battle_identity == Some(identity))
-                .map(|index| PermanentHandle { player, index: index as u8 });
+        match self.battle_winner_identity {
+            Some(identity) => resolve_battle_identity(game, identity),
+            None => self.battle_winner,
         }
-        self.battle_winner
+    }
+
+    /// Whether the battle winner carries `trait_name` (case-insensitive): read
+    /// live by identity while it is on the field (§15-4-4-5), and from its
+    /// last-known information once it has left -- the snapshot a clause-level
+    /// gate exposes as `deleted_object` (`Game::gate_trigger_context`;
+    /// §15-8-3-1 / §15-8-3-8). The one reader behind the DSL
+    /// `event_winner_trait_has` and `EffectContext::battle_winner_has_trait`.
+    /// G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX.
+    pub fn battle_winner_has_trait(&self, game: &crate::game::Game, trait_name: &str) -> bool {
+        match self.resolve_battle_winner(game) {
+            Some(winner) => game
+                .player(winner.player)
+                .battle_area
+                .get(winner.index as usize)
+                .is_some_and(|perm| perm.has_trait(trait_name, &game.card_data)),
+            None => {
+                self.battle_winner_identity.is_some()
+                    && self.deleted_object.as_ref().is_some_and(|snapshot| {
+                        snapshot
+                            .traits
+                            .iter()
+                            .any(|t| t.eq_ignore_ascii_case(trait_name))
+                    })
+            }
+        }
     }
 
     /// The controller of the battle winner (whether or not it is still on the
@@ -334,6 +356,19 @@ impl TriggerContext {
             .map(|set| set.cards.as_slice())
             .unwrap_or(&[])
     }
+}
+
+/// The battle-area permanent carrying `identity` (`Permanent::battle_identity`),
+/// or `None` once it has left the field (or become a new Digimon by DNA).
+fn resolve_battle_identity(
+    game: &crate::game::Game,
+    (player, identity): (PlayerId, u64),
+) -> Option<PermanentHandle> {
+    game.player(player)
+        .battle_area
+        .iter()
+        .position(|permanent| permanent.battle_identity == Some(identity))
+        .map(|index| PermanentHandle { player, index: index as u8 })
 }
 
 impl From<crate::option_lifecycle::OptionTrashCause> for EventCause {

@@ -634,23 +634,26 @@ fn processing_condition_in_active_when_read_at_processing() {
 
 /// P0's `winner` and P0's Tamer `OBS_WIN_TS` ("[All Turns] When any of your
 /// [TS] trait Digimon win a battle, gain 1 memory"); P1's `OD_DEL_ALL_OPP`
-/// ("[On Deletion] Delete all of your opponent's Digimon", 2000 DP). P0's
-/// `winner` (7000 DP) attacks it and wins the battle; the loser's
-/// [On Deletion] deletes the winner before the Tamer's effect activates.
+/// ("[On Deletion] Delete all of your opponent's Digimon", 2000 DP). On P1's
+/// turn, P1's `OD_DEL_ALL_OPP` attacks P0's `winner` (7000 DP) and loses; its
+/// [On Deletion] -- the turn player's effect, so it activates before P0's
+/// observer whether or not the two pend together (§15-4-3-5-1) -- deletes
+/// the winner before the Tamer's effect activates.
 fn winner_deleted_by_loser_board(winner: &str) -> (DebugRunner, usize) {
     let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
-        .security(1, &[FILL; 3])
+        .security(0, &[FILL; 3])
         .memory(3)
         .start();
-    let attacker = r.place_on_field(0, winner, Some(0));
+    let defender = r.place_on_field(0, winner, Some(0));
     r.place_on_field(0, "OBS_WIN_TS", Some(0));
-    let loser = r.place_on_field(1, "OD_DEL_ALL_OPP", Some(0));
+    let attacker = r.place_on_field(1, "OD_DEL_ALL_OPP", Some(0));
+    r.game.turn_player_idx = 1;
     let cp = r.event_checkpoint();
-    r.attack_digimon(attacker, loser, false);
+    r.attack_digimon(attacker, defender, false);
     resolve_prompts(&mut r);
     assert!(
         trash_ids(&r, 1).contains(&"OD_DEL_ALL_OPP".to_string()),
-        "the loser was deleted in battle"
+        "the attacker lost the battle and was deleted"
     );
     assert!(
         trash_ids(&r, 0).contains(&winner.to_string()),
@@ -739,6 +742,52 @@ fn battle_winner_qualifier_does_not_read_the_digimon_that_slid_into_the_slot() {
         memory_sources(&r, cp),
         vec![(0, "OBS_WIN_TS".to_string())],
         "the [TS] winner is still on the field: the effect activates"
+    );
+}
+
+/// §15-8-3-8. P0's battle area holds, in order, `VANILLA_LV3`, the [TS]
+/// `TS_LV5`, the Tamer `OBS_WIN_TS` ("[All Turns] When any of your [TS] trait
+/// Digimon win a battle, gain 1 memory") and the Tamer `OBS_WIN_DNA` ("[All
+/// Turns] When any of your Digimon win a battle, 1 of your [TS] trait Digimon
+/// and 1 of your level 3 Digimon DNA digivolve into a level 6 Digimon card in
+/// your hand without paying the cost, ignoring DNA digivolution
+/// requirements"); P0's hand holds `DNA_LV6` (no traits). `TS_LV5` attacks
+/// P1's `VANILLA_LV3` and wins: both Tamers' effects trigger. P0 activates
+/// the DNA digivolution first: the [TS] winner becomes part of a new Digimon
+/// with no [TS] trait (§8-2-2-1), so the Digimon that won is no longer on the
+/// field. It was a [TS] Digimon when it won, so `OBS_WIN_TS` activates (its
+/// last-known information), and the new Digimon is not read in its place.
+#[test]
+fn battle_winner_qualifier_reads_the_material_after_the_winner_dna_digivolves() {
+    cite!(
+        "15-8-3-8",
+        "f9fa5d72cc53f4d558f8cb42b2bac4ae3cd435c46ad3cb75edb2e0efc5ab8a4e"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
+        .hand(0, &["DNA_LV6"])
+        .security(1, &[FILL; 3])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "VANILLA_LV3", Some(0));
+    let winner = r.place_on_field(0, "TS_LV5", Some(0));
+    r.place_on_field(0, "OBS_WIN_TS", Some(0));
+    r.place_on_field(0, "OBS_WIN_DNA", Some(0));
+    let loser = r.place_on_field(1, "VANILLA_LV3", Some(0));
+    let cp = r.event_checkpoint();
+    r.attack_digimon(winner, loser, false);
+    let choices = order_choices(&r, 0);
+    assert_eq!(choices.len(), 2, "both triggered on the battle win: {choices:?}");
+    choose(&mut r, "OBS_WIN_DNA");
+    resolve_prompts(&mut r);
+    let field = field_top_ids(&r, 0);
+    assert!(
+        field.contains(&"DNA_LV6".to_string()) && !field.contains(&"TS_LV5".to_string()),
+        "the winner DNA digivolved into a new Digimon first: {field:?}"
+    );
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(0, "OBS_WIN_TS".to_string())],
+        "a [TS] Digimon won the battle: the effect activates after it became a new Digimon"
     );
 }
 

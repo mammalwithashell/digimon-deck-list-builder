@@ -505,7 +505,10 @@ impl<'a> EffectReadContext<'a> {
     /// information once it has left (a clause-level gate's `deleted_object`,
     /// §15-8-3-8).
     pub fn battle_winner_has_trait(&self, trait_name: &str) -> bool {
-        battle_winner_has_trait_in(self.game, trait_name)
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .is_some_and(|trigger| trigger.battle_winner_has_trait(self.game, trait_name))
     }
 
     /// The player whose HAND lost cards in the current `OnDiscardHand` batch.
@@ -1300,7 +1303,10 @@ impl<'a> EffectContext<'a> {
 
     /// See [`EffectReadContext::battle_winner_has_trait`].
     pub fn battle_winner_has_trait(&self, trait_name: &str) -> bool {
-        battle_winner_has_trait_in(self.game, trait_name)
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .is_some_and(|trigger| trigger.battle_winner_has_trait(self.game, trait_name))
     }
 
     /// See [`EffectReadContext::discard_hand_player`]. G-ENGINE-ON-DISCARD-HAND.
@@ -1933,30 +1939,5 @@ mod tests {
             before + 1,
             "one Familiar Token permanent is created"
         );
-    }
-}
-
-/// Shared body of the two `battle_winner_has_trait` readers: the winner by
-/// identity, live while on the field; its last-known traits (the gate's
-/// `deleted_object`) once it has left. G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX.
-fn battle_winner_has_trait_in(game: &Game, trait_name: &str) -> bool {
-    let Some(trigger) = game.current_trigger_context.as_ref() else {
-        return false;
-    };
-    match trigger.resolve_battle_winner(game) {
-        Some(handle) => game
-            .player(handle.player)
-            .battle_area
-            .get(handle.index as usize)
-            .is_some_and(|perm| perm.has_trait(trait_name, &game.card_data)),
-        None => {
-            trigger.battle_winner_identity.is_some()
-                && trigger.deleted_object.as_ref().is_some_and(|snapshot| {
-                    snapshot
-                        .traits
-                        .iter()
-                        .any(|t| t.eq_ignore_ascii_case(trait_name))
-                })
-        }
     }
 }
