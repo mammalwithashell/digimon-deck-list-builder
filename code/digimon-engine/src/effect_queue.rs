@@ -6037,7 +6037,16 @@ impl Game {
         // with two `[Main]` effects is trashed after the first; the second
         // still resolves afterwards, as the pending effect of a card in the
         // trash (§9-1-4 keeps the card out of every area only during the 1st).
-        if !self.option_first_main_resolved {
+        // A body that never went through the queue (no `OptionMain` effect: a
+        // placed Delay / Training Option, a TS Option with no [Main]) has
+        // nothing to wait for.
+        let card = pending.card.handle();
+        if !self.option_first_main_resolved
+            && self
+                .effect_queue
+                .iter()
+                .any(|q| q.timing == EffectTiming::OptionMain && q.source_card == card)
+        {
             return;
         }
         if let Some((player, used)) = self.on_use_option_armed.take() {
