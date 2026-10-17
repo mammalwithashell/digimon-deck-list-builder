@@ -33,7 +33,7 @@
 //!     └── ONE <Overflow> pass for every leaving card, turn player first
 //!         (§4-19-5)
 //!     └── enqueue OnAnyDeletion + OnLeaveField per survivor (snapshot)
-//! OnDeletionDrain
+//! TriggerFlush
 //!     └── one flush: OnDeletion + observers drain as ONE simultaneous
 //!         trigger pool (§16-13-2 / §15-4-3-2); handler parks unwind
 //!         through pending_selection with the rest still queued
@@ -125,7 +125,7 @@ pub enum BatchStage {
     /// One flush of the batch's OnDeletion + OnAnyDeletion / OnLeaveField
     /// entries as a single simultaneous trigger pool (§16-13-2). Batch is
     /// closed when this stage completes.
-    OnDeletionDrain,
+    TriggerFlush,
 }
 
 /// Returned by `Game::delete_permanents_batch` to let callers introspect

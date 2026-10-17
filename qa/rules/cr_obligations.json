@@ -5535,7 +5535,8 @@
       "status": "proven",
       "tests": [
         "ch16_attack_keywords::retaliation_kind_matches_rule",
-        "ch16_attack_keywords::retaliation_timing_matches_rule"
+        "ch16_attack_keywords::retaliation_timing_matches_rule",
+        "ch16_attack_keywords::deletion_observer_activates_after_on_deletion_pauses_for_a_decision"
       ],
       "text": "<Retaliation> is a trigger-type effect that triggers when just the Digimon with this effect is deleted in battle. (For details, refer to 15-8-3 \"Trigger-Type Effects\")15-8-3"
     },

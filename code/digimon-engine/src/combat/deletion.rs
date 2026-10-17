@@ -45,12 +45,13 @@ impl Game {
     ///    redirected, and substituted outcomes mutate the surviving list.
     /// 3. **Snapshot** — capture each surviving permanent's pre-removal
     ///    state (`DeletedObjectSnapshot` with `dp_just_before`,
-    ///    `level_just_before`, etc.) while the carrier is still on field.
-    /// 4. **Trash** — enqueue per-survivor OnDeletion triggers (carrying the
-    ///    snapshot in the trigger context) while the carriers stand, then
-    ///    linked-card cascade, `delete_permanent`, modifier cleanup, and ONE
-    ///    ACE <Overflow> pass for every leaving card, turn player first
-    ///    (§4-19-5). After this step the carriers are gone from
+    ///    `level_just_before`, etc.) while the carrier is still on field,
+    ///    then (still in this stage, inside a deferred-drain scope) enqueue
+    ///    per-survivor OnDeletion triggers carrying the snapshot in the
+    ///    trigger context, since their effects are read from the live slot.
+    /// 4. **Trash** — linked-card cascade, `delete_permanent`, modifier
+    ///    cleanup, and ONE ACE <Overflow> pass for every leaving card, turn
+    ///    player first (§4-19-5). After this step the carriers are gone from
     ///    `battle_area` and their top cards are in trash.
     /// 5. **OnAnyDeletion / OnLeaveField** — global broadcast with each
     ///    snapshot, enqueued (not drained).
@@ -257,7 +258,7 @@ impl Game {
                 .active_deletion_batch
                 .as_mut()
                 .expect("active batch must persist into the deletion-trigger stage");
-            batch.stage = BatchStage::OnDeletionDrain;
+            batch.stage = BatchStage::TriggerFlush;
         }
         self.exit_deferred_drain_and_flush();
         // A park unwinds with every remaining entry (either kind) still
@@ -705,9 +706,6 @@ impl Game {
             let sources = self.player(handle.player).battle_area[handle.index as usize]
                 .card_sources
                 .clone();
-            if !sources.first().is_some_and(|source| source.is_token) {
-                overflow_sources = sources.clone();
-            }
             self.clear_permanent_full(handle);
             self.modifiers.expire_player_on_permanent_leave(handle);
             // Route stack-to-trash through emission helper so every
@@ -737,6 +735,11 @@ impl Game {
                 .shift_after_battle_area_remove(handle.player, handle.index);
             self.shift_pending_attack_after_battle_area_remove(handle.player, handle.index);
             self.shift_effect_queue_after_battle_area_remove(handle.player, handle.index);
+            // The leaving stack, for the batch's single <Overflow> pass
+            // (a token stack processes none).
+            if !sources.first().is_some_and(|source| source.is_token) {
+                overflow_sources = sources;
+            }
         } else {
             self.clear_permanent_full(handle);
             self.modifiers.expire_player_on_permanent_leave(handle);
@@ -989,7 +992,7 @@ impl Game {
         let in_batch = self
             .active_deletion_batch
             .as_ref()
-            .is_some_and(|b| matches!(b.stage, BatchStage::OnDeletionDrain));
+            .is_some_and(|b| matches!(b.stage, BatchStage::TriggerFlush));
         if in_batch {
             self.drain_effect_queue();
             if self.pending_selection.is_some() {

@@ -747,7 +747,7 @@
   note: "Deleted as the attack target or as the attacker, <Retaliation> deletes the Digimon it battled."
 "16-13-2":
   status: proven
-  tests: ["ch16_attack_keywords::retaliation_kind_matches_rule", "ch16_attack_keywords::retaliation_timing_matches_rule"]
+  tests: ["ch16_attack_keywords::retaliation_kind_matches_rule", "ch16_attack_keywords::retaliation_timing_matches_rule", "ch16_attack_keywords::deletion_observer_activates_after_on_deletion_pauses_for_a_decision"]
   note: "Timing: an effect deletion does not trigger it, a battle deletion does. Kind: <Retaliation> (an OnDeletion effect) and a 'when one of your Digimon is deleted' observer triggered by the same deletion pend in one pool (one flush per deletion batch); P1 orders them through TriggerOrder."
 "16-13-3":
   status: proven
