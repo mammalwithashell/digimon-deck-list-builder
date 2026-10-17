@@ -366,18 +366,21 @@ impl Game {
         if self.attack_target_blocked_by_modifier(attacker, defender) {
             return None;
         }
-        if vortex_legal {
-            return Some(true);
-        }
-        if !normal_legal {
+        if !vortex_legal && !normal_legal {
             return None;
         }
+        // Either grant attacks only a legal target: suspended, or one this
+        // attacker may attack unsuspended (§11-2-7-1). <Vortex> grants the
+        // attack, not a target permission (§16-33-1; contrast <Execute>
+        // §16-38-1). A legal <Vortex> grant is preferred for the flag (it
+        // carries the played-this-turn exemption).
+        let flag = vortex_legal;
 
         let can_attack_unsuspended = self
             .modifiers
             .has(attacker, ModifierType::CanAttackUnsuspended);
         if target.is_suspended || can_attack_unsuspended {
-            return Some(false);
+            return Some(flag);
         }
         if self.has_keyword(attacker, Keyword::Raid) {
             let max_opp = self
@@ -404,7 +407,7 @@ impl Game {
                 self.effective_dp(defender)
                     .is_some_and(|defender_dp| defender_dp == max_dp)
             }) {
-                return Some(false);
+                return Some(flag);
             }
         }
         None

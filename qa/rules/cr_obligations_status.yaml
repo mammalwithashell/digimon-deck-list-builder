@@ -327,7 +327,7 @@
   blocks_training: true
   gap_id: G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES
   tests: ["ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution", "ch16_attack_keywords::vortex_attack_has_block_timing"]
-  note: "The rule's example: an attacker that deletes itself on its [When Attacking]. The end of attack timing arrives (EOA_OBS resolves), but the defender is never offered the counter timing: the engine abandons the attack as soon as the attacker leaves. Test is #[ignore]d. Second, independent violation: a <Vortex> attack skips the counter and block timings altogether (G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK, linked through 11-4-1; vortex_attack_has_block_timing, #[ignore]d)."
+  note: "The rule's example: an attacker that deletes itself on its [When Attacking]. The end of attack timing arrives (EOA_OBS resolves), but the defender is never offered the counter timing: the engine abandons the attack as soon as the attacker leaves. Test is #[ignore]d. The second, independent violation (a <Vortex> attack skipped the counter and block timings, G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK) is fixed (Plan 4 Task 13): vortex_attack_has_block_timing is green."
 "12-1-6":
   status: proven
   tests: ["ch11_14_attack_procedure::block_not_offered_when_attacker_left_battle_area"]
@@ -846,11 +846,9 @@
   tests: ["ch16_attack_keywords::collision_blocker_grant_affects_digimon_forced_block_affects_player"]
   note: "A Digimon unaffected by the attacker's Digimon effects does not gain <Blocker> (effect_can_affect gate) and is not a forced candidate; the forced block still falls on the opponent player."
 "16-33-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON
+  status: proven
   tests: ["ch16_attack_keywords::vortex_optional_eot_attack_on_digimon_and_same_turn_played", "ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon", "ch16_attack_keywords::vortex_attack_has_block_timing"]
-  note: "Proven: a Digimon played this turn may attack an opponent's suspended Digimon (not the player) at the end of the turn. Fails: the <Vortex> attack is also offered against UNSUSPENDED Digimon (this gap), and it skips the counter / block timings (G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK). Both tests #[ignore]d."
+  note: "A Digimon played this turn may attack an opponent's suspended Digimon (not the player) at the end of the turn; not an UNSUSPENDED one (W2 reading (a): <Vortex> grants the attack, not a target permission); and the attack is an ordinary attack: P1's block timing follows it (Q3869)."
 "16-33-2":
   status: gap
   blocks_training: true
@@ -938,17 +936,13 @@
   tests: ["ch16_attack_keywords::progress_persistent_only_while_attacking"]
   note: "Not attacking (another Digimon attacks), it can be chosen and gets -3000 DP."
 "11-2-7-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON
+  status: proven
   tests: ["ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon"]
-  note: "At the end of P0's turn a <Vortex> attack is offered against P1's UNSUSPENDED Digimon (only a suspended Digimon or the opponent is a legal target; <Vortex> adds no target permission, contrast <Execute> 16-38-1). #[ignore]d. Main-phase target legality is not covered here."
+  note: "At the end of P0's turn a <Vortex> attack is offered against P1's suspended Digimon but not its UNSUSPENDED one (only a suspended Digimon or the opponent is a legal target; <Vortex> adds no target permission, contrast <Execute> 16-38-1). Main-phase target legality is not covered here."
 "11-4-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK
+  status: proven
   tests: ["ch16_attack_keywords::vortex_attack_has_block_timing"]
-  note: "A <Vortex> attack at the end of P0's turn offers P1 no block timing (nor counter timing): the engine jumps from the declaration straight to the battle. Ordinary attacks' block timing is proven in ch11_14 (one_block_per_attack et al.). #[ignore]d."
+  note: "A <Vortex> attack at the end of P0's turn offers P1 the block timing: P1's <Blocker> blocks and battles instead of the target (the counter timing also opens: combat::counter_interrupt::vortex_attack_has_counter_timing). Ordinary attacks' block timing is proven in ch11_14 (one_block_per_attack et al.)."
 
 # ── ch16 processing keywords (§16-6..§16-41) — tests/rules_conformance/ch16_processing_keywords.rs ──
 "16-6-1":

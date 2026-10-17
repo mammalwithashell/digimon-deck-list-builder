@@ -12,7 +12,7 @@
 //!   - player attack + blocker → security loop does NOT run; battle runs
 //!     against the blocker instead
 //!   - `is_attacking` flag set during flight, cleared by cleanup
-//!   - Vortex short-circuits the block window
+//!   - a Vortex attack opens the block window too (§11-1-5, §11-4-1)
 //!   - wrong-player cannot resolve block selection
 
 use std::sync::{Arc, Mutex};
@@ -466,9 +466,15 @@ fn is_attacking_flag_lifecycle() {
     assert!(!r.game.players[0].battle_area[atk.index as usize].is_attacking);
 }
 
-/// Vortex attacks bypass the Block window (per rules).
+/// §11-1-5 "Once an attack declaration has been made, all of the timings that
+/// follow will occur." §11-4-1: the block timing is "the timing when a
+/// non-turn player who is being attacked can use their Digimon with <Blocker>
+/// to perform a block." A <Vortex> attack is an ordinary attack (Q3869,
+/// EX7-064), so the defender's block window opens and a block redirects the
+/// battle. (Inverted from `vortex_bypasses_blocktiming`, which pinned the
+/// short-circuit to the battle; G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK.)
 #[test]
-fn vortex_bypasses_blocktiming() {
+fn vortex_attack_has_block_timing() {
     let mut r = runner_with_attacker_vs(3000, 5000);
     let atk = r.place_on_field(0, "ATK", Some(0));
     let def = r.place_on_field(1, "DEF", Some(0));
@@ -477,11 +483,24 @@ fn vortex_bypasses_blocktiming() {
         .modifiers
         .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
 
-    // Mark vortex = true. No block prompt — synchronous resolution.
     let result = r.attack_digimon(atk, def, /* vortex = */ true);
-    assert_eq!(result, AttackResult::AttackerWins);
-    assert!(r.game.pending_selection.is_none());
+    assert_eq!(result, AttackResult::InProgress);
+    assert_eq!(r.current_phase(), GamePhase::BlockTiming);
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("the <Vortex> attack opens the block timing");
+    assert_eq!(sel.selecting_player, 1, "defender declares blockers");
+    assert_eq!(sel.valid_action_ids, vec![encode_attack(0, 1)]);
+
+    r.game
+        .resolve_selection(1, encode_attack(0, 1))
+        .expect("declaring a valid blocker must succeed");
     assert!(r.game.pending_attack.is_none());
+    // ATK (5000) lost to BLK (9000). DEF survives.
+    assert_eq!(r.battle_area_size(0), 0, "attacker deleted by blocker");
+    assert_eq!(r.battle_area_size(1), 2, "DEF and BLK both survive");
 }
 
 /// Only the defending player can resolve a block selection.
