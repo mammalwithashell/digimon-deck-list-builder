@@ -183,7 +183,7 @@
   note: "Scope matrix: an opponent-Digimon-effect immunity (Atratusmon ST23-09 idiom) is affected by Option [Main] and [Security]-activated [Main] effects, Tamer effects and its own controller's effects, not by opponent Digimon effects; a full opponent-effect immunity (Magnamon (X Antibody) BT16-102 idiom) blocks opponent Option ([Main] and [Security]), Tamer, Digimon and token effects but not its own controller's; battles and the 0-DP rule check are not effects (Q6279). An immunity that starts mid-effect covers that effect's later steps; one that starts after a -DP effect stops it affecting the card (Q6178; read-time suppression in ModifierRegistry::get)."
 "15-15-5-2":
   status: proven
-  tests: ["ch15_15_unaffected::effect_applied_while_immune_starts_affecting_when_immunity_lapses"]
+  tests: ["ch15_15_unaffected::effect_applied_while_immune_starts_affecting_when_immunity_lapses", "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it"]
   note: "Record-and-suppress (2026-10-16): a modifier applied to an immune card is recorded (ModifierEntry::affecting_source_kind) and hidden while a covering CannotBeAffected entry exists; it applies as soon as the immunity lapses (the rule's 'while suspended' example: -3000 DP applies on unsuspend) or expires (Atratusmon shape, Q831), for the rest of its own duration. Previously EffectContext::add_modifier skipped the install, so the effect never applied."
 "15-15-5-3":
   status: proven
@@ -192,7 +192,14 @@
 "15-15-5-4":
   status: proven
   tests: ["ch15_15_unaffected::granted_effect_not_considered_had_while_immune"]
-  note: "A <Security A. -1> gained from an opponent's Digimon effect while immune is not counted (1 check); once the immunity ends with the grant still in its duration the Digimon checks 0 cards (Q6179). A granted '[End of Your Turn] Delete this Digimon' (EX6-057 idiom) given while immune activates at the end of the carrier's next turn once the immunity has ended (Q2120 / Q3871). Covers modifier-backed gains (the production SecurityAttackChange idiom) and granted triggered effects; keyword-registry grants (grant_keyword, one authored opponent-side use) are still an install-time skip, non-blocking (G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP)."
+  note: "A <Security A. -1> gained from an opponent's Digimon effect while immune is not counted (1 check); once the immunity ends with the grant still in its duration the Digimon checks 0 cards (Q6179). A granted '[End of Your Turn] Delete this Digimon' (EX6-057 idiom) given while immune activates at the end of the carrier's next turn once the immunity has ended (Q2120 / Q3871). Covers modifier-backed gains (the production SecurityAttackChange idiom) and granted triggered effects; keyword-registry grants (grant_keyword; no authored opponent-side use, reachable only under an own-effect immunity) are still an install-time skip, non-blocking (G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP)."
+
+"15-2-1-1":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE
+  tests: ["ch15_15_unaffected::digimon_only_immunity_blocks_a_digimon_tokens_effect"]
+  note: "A token is a Digimon, so its effect is a Digimon effect; the engine classifies token effects as EffectSourceKind::Rule, so a Digimon-effect-only immunity (Atratusmon idiom) does not block the Familiar Token's [On Deletion] -3000 DP (9000 instead of 12000). Test is #[ignore]d."
 
 # ── ch17 Rule Checks (§17, §15-4-3-3) — tests/rules_conformance/ch17_rule_checks.rs ──
 "17-1-2-1":
@@ -957,9 +964,11 @@
   tests: ["ch16_attack_keywords::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack"]
   note: "The deletion does pend with EOA_OBS in one TriggerOrder (the 18-1-2 half holds), but it never deletes (see 16-38-1). #[ignore]d."
 "16-39-1":
-  status: proven
-  tests: ["ch16_attack_keywords::progress_persistent_only_while_attacking"]
-  note: "The opponent's 'when an opponent's Digimon attacks, 1 of your opponent's Digimon gets -3000 DP' can't choose the attacking <Progress> Digimon."
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS
+  tests: ["ch16_attack_keywords::progress_persistent_only_while_attacking", "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it", "ch15_15_unaffected::progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking"]
+  note: "The opponent's 'when an opponent's Digimon attacks, 1 of your opponent's Digimon gets -3000 DP' can't choose the attacking <Progress> Digimon (green; but see the gap entry: §15-15-5-3 keeps an unaffected card choosable). An opponent's -12000 DP applied during the attack is held and applies when the attack ends (green, Task 24 fix round 1). Demoted from proven 2026-10-16: an opponent effect applied BEFORE the attack still affects the attacking <Progress> Digimon (test #[ignore]d)."
 "16-39-2":
   status: proven
   tests: ["ch16_attack_keywords::progress_kind_matches_rule"]

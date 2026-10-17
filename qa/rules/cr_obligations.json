@@ -3206,7 +3206,8 @@
       "note": "Record-and-suppress (2026-10-16): a modifier applied to an immune card is recorded (ModifierEntry::affecting_source_kind) and hidden while a covering CannotBeAffected entry exists; it applies as soon as the immunity lapses (the rule's 'while suspended' example: -3000 DP applies on unsuspend) or expires (Atratusmon shape, Q831), for the rest of its own duration. Previously EffectContext::add_modifier skipped the install, so the effect never applied.",
       "status": "proven",
       "tests": [
-        "ch15_15_unaffected::effect_applied_while_immune_starts_affecting_when_immunity_lapses"
+        "ch15_15_unaffected::effect_applied_while_immune_starts_affecting_when_immunity_lapses",
+        "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it"
       ],
       "text": "When a card isn't affected by effects, then it can be affected again, effects will immediately start affecting that card. (Example: When a -3000 DP effect is applied to a suspended Digimon with an \"[All Turns] While this Digimon is suspended, this Digimon isn't affected by the effects of your opponent's Digimon\" effect, the Digimon will get - 3000 DP as soon as it's unsuspended.)"
     },
@@ -3233,7 +3234,7 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "A <Security A. -1> gained from an opponent's Digimon effect while immune is not counted (1 check); once the immunity ends with the grant still in its duration the Digimon checks 0 cards (Q6179). A granted '[End of Your Turn] Delete this Digimon' (EX6-057 idiom) given while immune activates at the end of the carrier's next turn once the immunity has ended (Q2120 / Q3871). Covers modifier-backed gains (the production SecurityAttackChange idiom) and granted triggered effects; keyword-registry grants (grant_keyword, one authored opponent-side use) are still an install-time skip, non-blocking (G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP).",
+      "note": "A <Security A. -1> gained from an opponent's Digimon effect while immune is not counted (1 check); once the immunity ends with the grant still in its duration the Digimon checks 0 cards (Q6179). A granted '[End of Your Turn] Delete this Digimon' (EX6-057 idiom) given while immune activates at the end of the carrier's next turn once the immunity has ended (Q2120 / Q3871). Covers modifier-backed gains (the production SecurityAttackChange idiom) and granted triggered effects; keyword-registry grants (grant_keyword; no authored opponent-side use, reachable only under an own-effect immunity) are still an install-time skip, non-blocking (G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP).",
       "status": "proven",
       "tests": [
         "ch15_15_unaffected::granted_effect_not_considered_had_while_immune"
@@ -3856,16 +3857,18 @@
       "text": "Effects are divided into the following types."
     },
     "15-2-1-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 15,
       "fingerprint": "1b26b455c5b8ddc666117716e988f4eaf37a39f7c247beb3eba6b1a6334497a2",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "A token is a Digimon, so its effect is a Digimon effect; the engine classifies token effects as EffectSourceKind::Rule, so a Digimon-effect-only immunity (Atratusmon idiom) does not block the Familiar Token's [On Deletion] -3000 DP (9000 instead of 12000). Test is #[ignore]d.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_15_unaffected::digimon_only_immunity_blocks_a_digimon_tokens_effect"
+      ],
       "text": "An effect activated by a Digimon card, Digimon, or Security Digimon is considered a Digimon effect."
     },
     "15-2-1-2": {
@@ -7355,17 +7358,19 @@
       "text": "<Progress>"
     },
     "16-39-1": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 16,
       "fingerprint": "e7e71a76297e6988256aba87d4bd179c8bdfee7253b8123a05dd238fa6870119",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS",
       "mechanisms": [
         "keywords"
       ],
-      "note": "The opponent's 'when an opponent's Digimon attacks, 1 of your opponent's Digimon gets -3000 DP' can't choose the attacking <Progress> Digimon.",
-      "status": "proven",
+      "note": "The opponent's 'when an opponent's Digimon attacks, 1 of your opponent's Digimon gets -3000 DP' can't choose the attacking <Progress> Digimon (green; but see the gap entry: §15-15-5-3 keeps an unaffected card choosable). An opponent's -12000 DP applied during the attack is held and applies when the attack ends (green, Task 24 fix round 1). Demoted from proven 2026-10-16: an opponent effect applied BEFORE the attack still affects the attacking <Progress> Digimon (test #[ignore]d).",
+      "status": "gap",
       "tests": [
-        "ch16_attack_keywords::progress_persistent_only_while_attacking"
+        "ch16_attack_keywords::progress_persistent_only_while_attacking",
+        "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it",
+        "ch15_15_unaffected::progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking"
       ],
       "text": "<Progress> is a keyword effect that reads \"this Digimon isn't affected by your opponent's effects while attacking.\""
     },
@@ -15237,9 +15242,9 @@
         "total": 244
       },
       "16": {
-        "gap": 24,
+        "gap": 25,
         "not_testable": 44,
-        "proven": 138,
+        "proven": 137,
         "total": 206
       },
       "17": {
@@ -15303,15 +15308,15 @@
         "total": 13
       }
     },
-    "gap": 653,
+    "gap": 654,
     "mechanics": {
-      "gap_blocking": 38,
-      "gap_nonblocking": 326,
+      "gap_blocking": 40,
+      "gap_nonblocking": 325,
       "not_testable": 152,
-      "proven": 199
+      "proven": 198
     },
     "not-testable": 246,
-    "proven": 220
+    "proven": 219
   },
   "version": 1
 }

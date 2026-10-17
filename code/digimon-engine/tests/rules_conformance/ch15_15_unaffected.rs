@@ -45,7 +45,11 @@ use digimon_engine::enums::{EffectSourceKind, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 
 fn ch15_15() -> DebugRunnerBuilder {
-    fixtures::builder(&[fixtures::ch17_cards(), fixtures::ch15_15_cards()])
+    fixtures::builder(&[
+        fixtures::ch16_atk_cards(),
+        fixtures::ch17_cards(),
+        fixtures::ch15_15_cards(),
+    ])
 }
 
 /// P0 (memory 10, hand `hand0`) to move in its main phase; both players have
@@ -600,8 +604,10 @@ fn granted_effect_not_considered_had_while_immune() {
 ///   opponent's Digimon. Then, that Digimon gets -3000 DP for the turn")
 ///   chooses P1's unsuspended `IMMUNE_WHILE_SUSPENDED` (5000 DP): it is
 ///   suspended, and from then on P0's Digimon effects don't affect it -- the
-///   -3000 DP doesn't: 5000 DP, suspended. (Control: P1's `LV5_PLAIN`, 7000
-///   DP and no immunity, ends suspended at 4000 DP.)
+///   -3000 DP doesn't: 5000 DP, suspended. That -3000 DP lasts for the turn
+///   only, so when the Digimon unsuspends in P1's turn it is still 5000 DP
+///   (§15-15-5-2 restarts an effect only while it lasts). (Control: P1's
+///   `LV5_PLAIN`, 7000 DP and no immunity, ends suspended at 4000 DP.)
 /// - The reverse, own-effect shape (judge-quiz Q18: an immunity to ALL
 ///   Digimon effects covers its controller's own): P0's `SELF_IMM_THEN_UP`
 ///   ("[On Play] This Digimon isn't affected by the effects of Digimon for the
@@ -621,6 +627,17 @@ fn immunity_granted_mid_effect_covers_later_steps() {
         5000,
         "suspended: the later -3000 DP doesn't affect it"
     );
+    // The -3000 DP was "for the turn": it ends with P0's turn, so when the
+    // Digimon unsuspends in P1's unsuspend phase it never comes back.
+    r.pass_turn();
+    resolve_prompts(&mut r);
+    assert_eq!(r.turn_player(), 1, "P1's turn");
+    assert!(!is_suspended(&r, target), "unsuspended in P1's unsuspend phase");
+    assert_eq!(
+        dp(&r, target),
+        5000,
+        "the -3000 DP expired while it was immune: it never applies"
+    );
 
     // Control: the same effect on P1's `LV5_PLAIN` (7000 DP, no immunity)
     // applies both steps.
@@ -636,5 +653,134 @@ fn immunity_granted_mid_effect_covers_later_steps() {
         dp(&r, me),
         7000,
         "its own +3000 DP is a Digimon effect: it doesn't affect it"
+    );
+}
+
+// ─── §16-39-1 <Progress>: an attack-scoped immunity ─────────────────────────
+
+/// §16-39-1 "<Progress> is a keyword effect that reads 'this Digimon isn't
+/// affected by your opponent's effects while attacking.'"
+/// §15-15-5-2 (as above).
+///
+/// P0's `PROGRESS` (6000 DP) attacks P1, whose `OPP_ATK_ALL_MINUS_12K`
+/// ("When an opponent's Digimon attacks, all of your opponent's Digimon get
+/// -12000 DP until the end of their turn" -- it chooses nothing) triggers on
+/// the declaration. While attacking, `PROGRESS` isn't affected: it checks
+/// P1's top security card (the 1000-DP `FILL`) and wins that battle at 6000
+/// DP. When the attack ends the -12000 DP (still in its duration) starts
+/// affecting it: 0 DP, and the rule check deletes it.
+///
+/// Control: the same attack by P0's `LV5_PLAIN` (7000 DP, no <Progress>)
+/// drops it to 0 DP at once; it is deleted before any security check.
+#[test]
+fn progress_attacker_effect_applied_during_attack_applies_after_it() {
+    cite!(
+        "16-39-1",
+        "e7e71a76297e6988256aba87d4bd179c8bdfee7253b8123a05dd238fa6870119"
+    );
+    cite!(
+        "15-15-5-2",
+        "780144a7af6d35d35c824ad67fea8c742362d65bff1707531bdbd9955dc54ffc"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let attacker = r.place_on_field(0, "PROGRESS", Some(0));
+    r.place_on_field(1, "OPP_ATK_ALL_MINUS_12K", Some(0));
+    r.attack_player(attacker, 1, false);
+    resolve_prompts(&mut r);
+    assert_eq!(
+        r.security_count(1),
+        2,
+        "not affected while attacking: it checked P1's security"
+    );
+    assert!(
+        trash_ids(&r, 1).contains(&FILL.to_string()),
+        "the 1000-DP security Digimon lost the battle to the 6000-DP attacker"
+    );
+    assert!(
+        !on_field(&r, 0, "PROGRESS"),
+        "the attack is over: -12000 DP applies, 0 DP, deleted by the rule check"
+    );
+
+    let mut r = board(&[], &[FILL; 3]);
+    let attacker = r.place_on_field(0, "LV5_PLAIN", Some(0));
+    r.place_on_field(1, "OPP_ATK_ALL_MINUS_12K", Some(0));
+    r.attack_player(attacker, 1, false);
+    resolve_prompts(&mut r);
+    assert!(!on_field(&r, 0, "LV5_PLAIN"), "control: 0 DP, deleted");
+    assert_eq!(
+        r.security_count(1),
+        3,
+        "control: deleted at once, before any security check"
+    );
+}
+
+/// §16-39-1 (as above). §15-15-5-1 (as above); official Q&A Q6178: an effect
+/// already affecting a card stops affecting it as soon as it can't be
+/// affected.
+///
+/// During P0's turn P1's `DIGI_MINUS_3K` gives P0's `PROGRESS` -3000 DP until
+/// the end of P0's turn (3000 DP). `PROGRESS` then attacks P1's suspended
+/// `DIGI_MINUS_3K` (4000 DP): while attacking it isn't affected by that
+/// opponent's effect, so it battles at 6000 DP, wins and survives; after the
+/// attack it is at 3000 DP again.
+#[test]
+#[ignore = "G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS (§16-39-1, §15-15-5-1)"]
+fn progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking() {
+    cite!(
+        "16-39-1",
+        "e7e71a76297e6988256aba87d4bd179c8bdfee7253b8123a05dd238fa6870119"
+    );
+    cite!(
+        "15-15-5-1",
+        "5f62baf83d024884f00e48e9464e881636542e141762f6036fdc9c43db57c3d2"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let attacker = r.place_on_field(0, "PROGRESS", Some(0));
+    let target = play_and_resolve(&mut r, 1, "DIGI_MINUS_3K");
+    assert_eq!(dp(&r, attacker), 3000, "precondition: affected before attacking");
+    set_suspended(&mut r, target, true);
+    r.attack_digimon(attacker, target, false);
+    resolve_prompts(&mut r);
+    assert!(
+        !on_field(&r, 1, "DIGI_MINUS_3K"),
+        "6000 DP while attacking: it wins the battle"
+    );
+    assert!(on_field(&r, 0, "PROGRESS"), "it survives the battle");
+    assert_eq!(dp(&r, attacker), 3000, "affected again after the attack");
+}
+
+// ─── §15-2-1-1: a token's effect is a Digimon effect ────────────────────────
+
+/// §15-2-1-1 "An effect activated by a Digimon card, Digimon, or Security
+/// Digimon is considered a Digimon effect." A Familiar Token is a Digimon
+/// (it has Digimon card information), so its effect is a Digimon effect
+/// (DCGO `AutoProcessing.cs` marks token effects `IsDigimonEffect`).
+///
+/// P1's `IMMUNE_DIGI_ONLY` (P0's Digimon effects don't affect it until the
+/// end of P0's turn) is suspended; P0's Familiar Token attacks it, loses and
+/// is deleted. Its "[On Deletion] 1 of your opponent's Digimon gets -3000 DP
+/// for the turn" can only choose the immune Digimon, and doesn't affect it:
+/// 12000 DP.
+#[test]
+#[ignore = "G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE (§15-2-1-1)"]
+fn digimon_only_immunity_blocks_a_digimon_tokens_effect() {
+    cite!(
+        "15-2-1-1",
+        "1b26b455c5b8ddc666117716e988f4eaf37a39f7c247beb3eba6b1a6334497a2"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let imm = play_and_resolve(&mut r, 1, "IMMUNE_DIGI_ONLY");
+    set_suspended(&mut r, imm, true);
+    let token = place_familiar_token(&mut r, 0);
+    r.attack_digimon(token, imm, false);
+    resolve_prompts(&mut r);
+    assert!(
+        !on_field(&r, 0, "TOKEN_FAMILIAR"),
+        "the token lost the battle"
+    );
+    assert_eq!(
+        dp(&r, imm),
+        12000,
+        "the token's [On Deletion] is a Digimon effect: it doesn't affect it"
     );
 }

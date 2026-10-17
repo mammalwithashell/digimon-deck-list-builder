@@ -130,6 +130,7 @@ const CH15_15: &[&str] = &[
     include_str!("ch15_15/IMMUNE_ALL_OPP.yaml"),
     include_str!("ch15_15/IMMUNE_DIGI_ONLY.yaml"),
     include_str!("ch15_15/IMMUNE_WHILE_SUSPENDED.yaml"),
+    include_str!("ch15_15/OPP_ATK_ALL_MINUS_12K.yaml"),
     include_str!("ch15_15/OPT_DELETE_13K.yaml"),
     include_str!("ch15_15/OPT_MINUS_12K.yaml"),
     include_str!("ch15_15/OWN_MINUS_3K.yaml"),
