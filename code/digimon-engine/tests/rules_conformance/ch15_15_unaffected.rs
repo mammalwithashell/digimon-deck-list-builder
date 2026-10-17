@@ -41,7 +41,7 @@
 use crate::fixtures;
 use crate::support::*;
 use digimon_engine::debug_runner::{DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{EffectSourceKind, PlayerId};
+use digimon_engine::enums::{EffectSourceKind, Keyword, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 
 fn ch15_15() -> DebugRunnerBuilder {
@@ -902,5 +902,135 @@ fn digimon_only_immunity_blocks_a_digimon_tokens_effect() {
         dp(&r, imm),
         12000,
         "the token's [On Deletion] is a Digimon effect: it doesn't affect it"
+    );
+}
+
+// ─── §15-15-5-4 / §15-15-5-2 / §16-39-1: a GAINED KEYWORD (registry grant) ──
+
+/// §15-15-5-4 (as above: the rule's own example is a gained <Security A. -1>).
+/// §15-15-5-2 (as above). Official Q&A Q6179.
+///
+/// `granted_effect_not_considered_had_while_immune` authors the gained
+/// <Security A. -1> with the modifier idiom; this is the same effect authored
+/// as a keyword grant (`DIGI_GRANT_KW_SA_MINUS1`, the `grant_keyword` registry
+/// path), which must agree: P1's `IMMUNE_DIGI_ONLY` (P0's Digimon effects
+/// don't affect it until the end of P0's turn) gains <Security A. -1> until
+/// the end of P1's turn --
+/// - in P0's turn it is not considered to have it: it checks 1 card;
+/// - in P1's turn the immunity has ended and the gained keyword, still in
+///   its duration, is had: it checks 0 cards, and its attack on P0 removes
+///   none of P0's security.
+#[test]
+fn granted_keyword_not_considered_had_while_immune_had_once_immunity_lapses() {
+    cite!(
+        "15-15-5-4",
+        "affbf2f4ae2c52abeb3bcbd00844ac85000dfdc830bb29ea70095ec8e0801229"
+    );
+    cite!(
+        "15-15-5-2",
+        "780144a7af6d35d35c824ad67fea8c742362d65bff1707531bdbd9955dc54ffc"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let imm = play_and_resolve(&mut r, 1, "IMMUNE_DIGI_ONLY");
+    play_and_resolve(&mut r, 0, "DIGI_GRANT_KW_SA_MINUS1");
+    assert_eq!(
+        r.game.effective_security_strike(imm),
+        1,
+        "immune: not considered to have the gained <Security A. -1>"
+    );
+    assert!(
+        !r.game.has_keyword(imm, Keyword::SecurityAttackMinus(1)),
+        "immune: the keyword is not had"
+    );
+    r.pass_turn();
+    resolve_prompts(&mut r);
+    assert_eq!(r.turn_player(), 1, "P1's turn");
+    assert!(
+        r.game.has_keyword(imm, Keyword::SecurityAttackMinus(1)),
+        "no longer immune: the gained keyword, still in its duration, is had"
+    );
+    assert_eq!(
+        r.game.effective_security_strike(imm),
+        0,
+        "no longer immune: it has the gained <Security A. -1>"
+    );
+    let before = r.security_count(0);
+    r.attack_player(imm, 0, false);
+    resolve_prompts(&mut r);
+    assert_eq!(r.security_count(0), before, "it checks 0 security cards");
+}
+
+/// §15-15-5-1 (as above). Official Q&A Q6178 (ST23-09): "As soon as it gains
+/// the 'effects don't affect' effect, it will no longer be affected."
+///
+/// The converse direction for a gained keyword: P1's `IMMUNE_DIGI_ONLY` (its
+/// [On Play] not yet activated) gains <Security A. -1> from P0's
+/// `DIGI_GRANT_KW_SA_MINUS1` and has it (it would check 0 cards). Its [On
+/// Play] then activates (P0's Digimon effects don't affect it): the keyword
+/// is no longer had -- it checks 1 card again -- for as long as the immunity
+/// lasts.
+#[test]
+fn granted_keyword_stops_being_had_when_immunity_starts() {
+    cite!(
+        "15-15-5-1",
+        "5f62baf83d024884f00e48e9464e881636542e141762f6036fdc9c43db57c3d2"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let imm = r.place_on_field(1, "IMMUNE_DIGI_ONLY", Some(0));
+    play_and_resolve(&mut r, 0, "DIGI_GRANT_KW_SA_MINUS1");
+    assert!(
+        r.game.has_keyword(imm, Keyword::SecurityAttackMinus(1)),
+        "precondition: the gained keyword is had"
+    );
+    assert_eq!(r.game.effective_security_strike(imm), 0, "precondition");
+    r.fire_on_play(1, imm.index as usize);
+    resolve_prompts(&mut r);
+    assert!(
+        !r.game.has_keyword(imm, Keyword::SecurityAttackMinus(1)),
+        "immune: the keyword gained before the immunity is no longer had"
+    );
+    assert_eq!(
+        r.game.effective_security_strike(imm),
+        1,
+        "immune: it checks 1 card again"
+    );
+}
+
+/// §16-39-1 (as above). §15-15-5-4 (as above).
+///
+/// P1's `DIGI_GRANT_KW_SA_MINUS1` gives P0's `PROGRESS` <Security A. -1>
+/// until the end of P0's turn; not attacking, `PROGRESS` has it (0 checks).
+/// It attacks P1 (3 security cards): while attacking it isn't affected by
+/// P1's effect, so the gained keyword is not had and it checks 1 card. When
+/// the attack ends the keyword (still in its duration) is had again.
+#[test]
+fn progress_attacker_does_not_have_a_keyword_an_opponent_granted_while_attacking() {
+    cite!(
+        "16-39-1",
+        "e7e71a76297e6988256aba87d4bd179c8bdfee7253b8123a05dd238fa6870119"
+    );
+    cite!(
+        "15-15-5-4",
+        "affbf2f4ae2c52abeb3bcbd00844ac85000dfdc830bb29ea70095ec8e0801229"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let attacker = r.place_on_field(0, "PROGRESS", Some(0));
+    play_and_resolve(&mut r, 1, "DIGI_GRANT_KW_SA_MINUS1");
+    assert!(
+        r.game.has_keyword(attacker, Keyword::SecurityAttackMinus(1)),
+        "not attacking: the opponent's granted keyword is had"
+    );
+    assert_eq!(r.game.effective_security_strike(attacker), 0, "0 checks");
+    r.attack_player(attacker, 1, false);
+    resolve_prompts(&mut r);
+    assert_eq!(
+        r.security_count(1),
+        2,
+        "while attacking the gained <Security A. -1> is not had: it checked 1 card"
+    );
+    assert!(on_field(&r, 0, "PROGRESS"), "6000 DP beats the 1000-DP security Digimon");
+    assert!(
+        r.game.has_keyword(attacker, Keyword::SecurityAttackMinus(1)),
+        "the attack is over: the keyword is had again"
     );
 }

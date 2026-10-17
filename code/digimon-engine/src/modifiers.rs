@@ -688,6 +688,15 @@ struct KeywordEntry {
     source_player: u8,
     source_permanent: Option<PermanentHandle>,
     materialized_declarative: bool,
+    /// §15-15-5-2 / §15-15-5-4 record-and-suppress for keyword grants: the
+    /// category of the effect that granted the keyword (`None` for
+    /// rule-installed and legacy entries, which no immunity filters). While a
+    /// `CannotBeAffected` entry on the same permanent covers
+    /// `(source_player, affecting_source_kind)` the keyword is not had, and
+    /// it is had again the moment the immunity ends, for whatever remains of
+    /// the grant's own duration (`ModifierRegistry::keyword_entry_applies`;
+    /// G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP).
+    affecting_source_kind: Option<EffectSourceKind>,
     /// Track H §4 — install-once continuous gate for keyword grants.
     /// When `Expiry::UntilCondition`, the controller evaluates this
     /// predicate after mutation events and evicts the entry on
@@ -709,6 +718,7 @@ impl std::fmt::Debug for KeywordEntry {
             .field("source_permanent", &self.source_permanent)
             .field("materialized_declarative", &self.materialized_declarative)
             .field("has_until_condition", &self.until_condition.is_some())
+            .field("affecting_source_kind", &self.affecting_source_kind)
             .field("install_order", &self.install_order)
             .finish()
     }
@@ -723,6 +733,7 @@ impl KeywordEntry {
             source_permanent: None,
             materialized_declarative: false,
             until_condition: None,
+            affecting_source_kind: None,
             install_order: 0,
         }
     }
@@ -740,6 +751,7 @@ impl KeywordEntry {
             source_permanent,
             materialized_declarative: true,
             until_condition: None,
+            affecting_source_kind: None,
             install_order: 0,
         }
     }
@@ -953,6 +965,7 @@ impl ModifierRegistry {
                 e.expiry.hash(&mut h);
                 e.source_permanent.hash(&mut h);
                 e.source_player.hash(&mut h);
+                format!("{:?}", e.affecting_source_kind).hash(&mut h);
                 e.install_order.hash(&mut h);
                 sum = sum.wrapping_add(h.finish());
             }
@@ -1159,7 +1172,8 @@ impl ModifierRegistry {
             .push(entry);
     }
 
-    /// Grant a keyword to a permanent with the given expiry.
+    /// Grant a keyword to a permanent with the given expiry (untagged: an
+    /// engine / rule grant that no immunity or `<Progress>` shield hides).
     pub fn grant_keyword(
         &mut self,
         target: PermanentHandle,
@@ -1167,8 +1181,28 @@ impl ModifierRegistry {
         expiry: Expiry,
         source_player: u8,
     ) {
-        self.next_install_order = self.next_install_order.saturating_add(1);
+        self.grant_keyword_entry(target, KeywordEntry::simple(keyword, expiry, source_player));
+    }
+
+    /// Grant a keyword as an EFFECT of category `source_kind` controlled by
+    /// `source_player` (§15-15-5-2 / §15-15-5-4 record-and-suppress). The
+    /// entry is always recorded; the readers hide it while a covering
+    /// immunity or the `<Progress>` shield is on `target`.
+    pub fn grant_keyword_from_effect(
+        &mut self,
+        target: PermanentHandle,
+        keyword: Keyword,
+        expiry: Expiry,
+        source_player: u8,
+        source_kind: EffectSourceKind,
+    ) {
         let mut entry = KeywordEntry::simple(keyword, expiry, source_player);
+        entry.affecting_source_kind = Some(source_kind);
+        self.grant_keyword_entry(target, entry);
+    }
+
+    fn grant_keyword_entry(&mut self, target: PermanentHandle, mut entry: KeywordEntry) {
+        self.next_install_order = self.next_install_order.saturating_add(1);
         entry.install_order = self.next_install_order;
         self.permanent_keywords
             .entry(target)
@@ -1189,14 +1223,25 @@ impl ModifierRegistry {
         predicate: UntilConditionFn,
         source_player: u8,
     ) {
-        self.next_install_order = self.next_install_order.saturating_add(1);
         let mut entry = KeywordEntry::simple(keyword, Expiry::UntilCondition, source_player);
-        entry.install_order = self.next_install_order;
         entry.until_condition = Some(predicate);
-        self.permanent_keywords
-            .entry(target)
-            .or_default()
-            .push(entry);
+        self.grant_keyword_entry(target, entry);
+    }
+
+    /// [`Self::grant_keyword_with_until_condition`] for an EFFECT's grant
+    /// (tagged with its `source_kind`; see [`Self::grant_keyword_from_effect`]).
+    pub fn grant_keyword_with_until_condition_from_effect(
+        &mut self,
+        target: PermanentHandle,
+        keyword: Keyword,
+        predicate: UntilConditionFn,
+        source_player: u8,
+        source_kind: EffectSourceKind,
+    ) {
+        let mut entry = KeywordEntry::simple(keyword, Expiry::UntilCondition, source_player);
+        entry.until_condition = Some(predicate);
+        entry.affecting_source_kind = Some(source_kind);
+        self.grant_keyword_entry(target, entry);
     }
 
     pub fn grant_declarative_keyword(
@@ -1401,31 +1446,63 @@ impl ModifierRegistry {
             .any(|entries| entries.iter().any(|e| e.modifier == modifier))
     }
 
-    /// Whether the permanent has the given granted keyword.
-    pub fn has_keyword(&self, target: PermanentHandle, keyword: Keyword) -> bool {
+    /// Whether a granted keyword `entry` on `target` is currently HAD
+    /// (§15-15-5-4 "won't be considered to have that effect"): the same
+    /// read-time gate as [`Self::get`] applies to modifiers --
+    /// - the `<Progress>` shield (§16-39-1) hides every keyword an
+    ///   opponent's effect granted (a tagged entry or a materialized
+    ///   declarative aura), except `<Progress>` itself: hiding a granted
+    ///   `<Progress>` would drop the shield that hides it (a fixpoint the
+    ///   rules give no answer to; no authored card grants it to an opponent);
+    /// - a `CannotBeAffected` entry on `target` covering the granting
+    ///   effect's `(source_player, affecting_source_kind)` hides the entry
+    ///   (§15-15-5-1 / §15-15-5-2, Q6178 / Q6179), whichever was installed
+    ///   first.
+    /// Untagged entries (engine / rule grants) are always had.
+    fn keyword_entry_applies(&self, target: PermanentHandle, entry: &KeywordEntry) -> bool {
+        if self.progress_shield == Some(target)
+            && entry.keyword != Keyword::Progress
+            && entry.source_player != target.player
+            && (entry.affecting_source_kind.is_some() || entry.materialized_declarative)
+        {
+            return false;
+        }
+        let Some(kind) = entry.affecting_source_kind else {
+            return true;
+        };
+        !self.is_unaffected_by(target, entry.source_player, kind)
+    }
+
+    /// The granted keyword entries on `target` that are currently had
+    /// ([`Self::keyword_entry_applies`]).
+    fn applying_keywords(&self, target: PermanentHandle) -> impl Iterator<Item = &KeywordEntry> {
         self.permanent_keywords
             .get(&target)
-            .map(|kws| kws.iter().any(|entry| entry.keyword == keyword))
-            .unwrap_or(false)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
+            .iter()
+            .filter(move |entry| self.keyword_entry_applies(target, entry))
+    }
+
+    /// Whether the permanent has the given granted keyword.
+    pub fn has_keyword(&self, target: PermanentHandle, keyword: Keyword) -> bool {
+        self.applying_keywords(target)
+            .any(|entry| entry.keyword == keyword)
     }
 
     /// Whether the permanent has a granted keyword of the same TYPE as
     /// `keyword`, whatever its value (Comprehensive Rules 4.3 §16-2).
     pub fn has_keyword_type(&self, target: PermanentHandle, keyword: &Keyword) -> bool {
-        self.permanent_keywords
-            .get(&target)
-            .map(|kws| kws.iter().any(|entry| entry.keyword.same_type(keyword)))
-            .unwrap_or(false)
+        self.applying_keywords(target)
+            .any(|entry| entry.keyword.same_type(keyword))
     }
 
     /// Active keywords granted to a permanent by modifiers/declarative auras.
     pub fn granted_keywords(&self, target: PermanentHandle) -> Vec<Keyword> {
         let mut out = Vec::new();
-        if let Some(entries) = self.permanent_keywords.get(&target) {
-            for entry in entries {
-                if !out.contains(&entry.keyword) {
-                    out.push(entry.keyword);
-                }
+        for entry in self.applying_keywords(target) {
+            if !out.contains(&entry.keyword) {
+                out.push(entry.keyword);
             }
         }
         out
@@ -1449,11 +1526,9 @@ impl ModifierRegistry {
     /// double-fire. (Printed / self-aura-marked origins are filtered out by the
     /// caller via `Game::has_keyword_from_card_sources`.)
     pub fn aura_granted_keywords(&self, target: PermanentHandle) -> Vec<Keyword> {
-        let Some(entries) = self.permanent_keywords.get(&target) else {
-            return Vec::new();
-        };
+        let entries: Vec<&KeywordEntry> = self.applying_keywords(target).collect();
         let mut out: Vec<Keyword> = Vec::new();
-        for entry in entries {
+        for entry in &entries {
             if !entry.materialized_declarative {
                 continue;
             }
@@ -1479,18 +1554,13 @@ impl ModifierRegistry {
     /// so aura-granted Security Attack keywords are actually consumed at the
     /// security loop.
     pub fn granted_security_attack_keyword_bonus(&self, target: PermanentHandle) -> i32 {
-        self.permanent_keywords
-            .get(&target)
-            .map(|kws| {
-                kws.iter()
-                    .map(|entry| match entry.keyword {
-                        Keyword::SecurityAttackPlus(n) => n as i32,
-                        Keyword::SecurityAttackMinus(n) => -(n as i32),
-                        _ => 0,
-                    })
-                    .sum()
+        self.applying_keywords(target)
+            .map(|entry| match entry.keyword {
+                Keyword::SecurityAttackPlus(n) => n as i32,
+                Keyword::SecurityAttackMinus(n) => -(n as i32),
+                _ => 0,
             })
-            .unwrap_or(0)
+            .sum()
     }
 
     /// Whether dispatch of `timing` should be suppressed for `target`.
@@ -2131,6 +2201,44 @@ mod tests {
         );
         assert_eq!(reg.sum(target, ModifierType::ChangeDp), 1000);
         assert!(reg.has(target, ModifierType::ChangeDp));
+    }
+
+    /// §15-15-5-4 / §16-39-1 for KEYWORD grants: an effect's grant is
+    /// recorded and gated at read time like a modifier; an untagged (engine)
+    /// grant is always had (G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP).
+    #[test]
+    fn keyword_grants_are_gated_by_shield_and_immunity_at_read_time() {
+        let mut reg = ModifierRegistry::new();
+        let target = h(0, 0);
+        reg.grant_keyword_from_effect(
+            target,
+            Keyword::SecurityAttackMinus(1),
+            Expiry::EndOfOpponentsTurn,
+            1,
+            EffectSourceKind::Digimon,
+        );
+        reg.grant_keyword(target, Keyword::Blocker, Expiry::EndOfTurn, 1);
+        assert!(reg.has_keyword(target, Keyword::SecurityAttackMinus(1)));
+        assert_eq!(reg.granted_security_attack_keyword_bonus(target), -1);
+
+        reg.set_progress_shield(Some(target));
+        assert!(!reg.has_keyword(target, Keyword::SecurityAttackMinus(1)));
+        assert!(!reg.has_keyword_type(target, &Keyword::SecurityAttackMinus(9)));
+        assert_eq!(reg.granted_security_attack_keyword_bonus(target), 0);
+        assert_eq!(reg.granted_keywords(target), vec![Keyword::Blocker], "untagged grant stays");
+        reg.set_progress_shield(None);
+        assert!(reg.has_keyword(target, Keyword::SecurityAttackMinus(1)));
+
+        reg.add(
+            target,
+            ModifierEntry::simple(ModifierType::CannotBeAffected, 0, Expiry::EndOfTurn, 0)
+                .with_effect_immunity_filter(EffectImmunityFilter {
+                    source_kind: Some(EffectSourceKind::Digimon),
+                    controller: EffectControllerFilter::OpponentOnly,
+                }),
+        );
+        assert!(!reg.has_keyword(target, Keyword::SecurityAttackMinus(1)));
+        assert!(reg.has_keyword(target, Keyword::Blocker));
     }
 
     #[test]

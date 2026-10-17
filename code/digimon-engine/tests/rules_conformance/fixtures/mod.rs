@@ -129,6 +129,7 @@ const CH15_08: &[&str] = &[
 /// (`ch15_15_unaffected.rs`).
 const CH15_15: &[&str] = &[
     include_str!("ch15_15/DIGI_GRANT_EOT_DELETE.yaml"),
+    include_str!("ch15_15/DIGI_GRANT_KW_SA_MINUS1.yaml"),
     include_str!("ch15_15/DIGI_GRANT_SA_MINUS1.yaml"),
     include_str!("ch15_15/DIGI_MINUS_3K.yaml"),
     include_str!("ch15_15/DIGI_SUSPEND_THEN_MINUS3K.yaml"),
