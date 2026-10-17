@@ -660,4 +660,21 @@ Tasks 16–20 touch disjoint files and may run in parallel sessions (each on its
 - [ ] **Step 4: Sidecar:** list the tests under `15-8-3-1` and `15-4-4-5`. Regenerate; `--check`. Entry RESOLVED.
 - [ ] **Step 5: Commit** — `engine: battle-result triggers check their condition when they trigger (§15-8-3-1, §15-8-3-8, §15-4-4-5; G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER)`.
 
-**Phase G in Task 23's closure:** the digest headline and the "blocking gaps with no task" list are updated to reflect Tasks 25-32; W5 and W12 are recorded as owner-decided; the §4-7-7 trait ruling (Task 31) is listed for owner sign-off.
+### Task 33: `<Raid>` is a post-declaration switch, not a declaration-time target permission
+
+**Gap:** `G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED` (blocking; filed by the Task 13 review). **Rules:** §11-2-7-1 (an attack on a Digimon is declared on a suspended Digimon, or one the attacker may attack unsuspended by effect), §16-23-1/-2 (`<Raid>`: WHEN this Digimon attacks, you may switch the target to the opponent's unsuspended Digimon with the highest DP; the attacker chooses on a tie). DCGO: `Permanent.CanAttackTargetDigimon` applies the normal legality at declaration; `Raid.cs` switches after.
+
+**Ours:** three sites in `action/mask.rs` (Main-phase attack, end-of-turn attack, effect-granted attack) and one in `action/decode.rs` offer a `<Raid>` attacker the highest-DP UNSUSPENDED opponent Digimon as a DECLARATION target. The declared target therefore differs from the rules' (the Raid switch then has nothing to do), which changes the attack-declaration pool state (`[When Attacking]` observers read the declared target, Task 1) and the opponent's counter/block decisions. Task 1 already implements the real `<Raid>` switch as a `[When Attacking]` trigger body in the attack pool.
+
+**Files:**
+- Modify: `code/digimon-engine/src/action/mask.rs` (the three sites) and `action/decode.rs` — remove the Raid arm from declaration-time target legality; keep suspended targets and `CanAttackUnsuspended`-type grants. The Raid switch (Task 1's trigger) is then the only way a `<Raid>` attacker ends up attacking an unsuspended Digimon.
+- Tests: re-pin `tests/mask_and_tensor/mask_end_of_turn_parity.rs`'s Raid pin added by Task 13 (it pins the current behaviour with a comment pointing at this gap id) to the rules reading; add a conformance test in `ch16_attack_keywords.rs` (`raid_attacker_declares_on_a_legal_target_then_may_switch`, cite 16-23-1 and 11-2-7-1): a `<Raid>` attacker with only unsuspended opponents may declare on the PLAYER (or a suspended Digimon if one exists) and is then offered the switch; it cannot declare directly on an unsuspended Digimon. Check `tests/combat/raid*.rs` and the `cards_behavioral` filter `raid` for pins of the old arm; invert each with a §11-2-7-1 / §16-23 comment and list them.
+- Keep green: `--test mask_and_tensor`, `--test combat`, `ch16_attack_keywords` + whole `rules_conformance`, `--test flood_gates`, `--test cards_behavioral -- raid vortex when_attacking` (filter), then the FULL `cards_behavioral` (the mask bit set changes).
+
+- [ ] **Step 1: Write the conformance test; run → FAIL (declaration on an unsuspended target is in the mask).**
+- [ ] **Step 2: Implement** the legality change at the four sites.
+- [ ] **Step 3: Run → PASS**; invert the named pins; regression list; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** list the test under `16-23-1` and `11-2-7-1` (flip to proven if gap). Regenerate; `--check`. Entry RESOLVED.
+- [ ] **Step 5: Commit** — `engine: <Raid> attackers declare on a legal target and may switch afterwards (§11-2-7-1, §16-23; G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED)`.
+
+**Phase G in Task 23's closure:** the digest headline and the "blocking gaps with no task" list are updated to reflect Tasks 25-33; W5 and W12 are recorded as owner-decided; the §4-7-7 trait ruling (Task 31) is listed for owner sign-off.
