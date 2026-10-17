@@ -614,6 +614,11 @@ impl Game {
             state: AttackState::Declared,
             counter_depth: 0,
         });
+        // A new attack: the previous attack's stack identity no longer names
+        // its attacker (`fire_on_attack` captures this one's). §16-39-3:
+        // `<Progress>` applies from the declaration.
+        self.attack_attacker_identity = None;
+        self.refresh_progress_shield();
 
         // `GameEvent::Attack` emission — spec
         // `engine-event-emission` requires emission at declaration time,
@@ -3337,6 +3342,9 @@ impl Game {
                     self.set_security_phase(SecurityPhase::OnSecurityCheckDrain);
                 }
                 SecurityPhase::BattleResolved => {
+                    // §16-39-1: the security battle compares the attacker's DP
+                    // as it is now, as `resolve_battle_with` does.
+                    self.refresh_progress_shield();
                     // Only Digimon security runs the DP battle; Option /
                     // Tamer / DigiEgg skip straight through.
                     let Some(state) = self.security_resolution.as_ref() else {
@@ -3935,10 +3943,14 @@ impl Game {
 
         self.modifiers.expire_end_of_attack();
         self.pending_attack = None;
+        self.attack_attacker_identity = None;
+        // `expire_end_of_attack` dropped the `<Progress>` shield; keep the
+        // registry in step with `progress_shield_target` (now `None`).
+        self.refresh_progress_shield();
 
         // §17-1-3-1-1 / §15-15-5-2: ending the attack can change DP -- an
-        // opponent's effect held for a `<Progress>` attacker starts applying
-        // (`expire_end_of_attack` released it), and "until the end of the
+        // opponent's effect hidden by a `<Progress>` attacker's shield starts
+        // applying (`expire_end_of_attack` dropped it), and "until the end of the
         // attack" buffs expire. Run the rule check now (the outermost drain
         // does it; a nested drain defers to its parent) instead of leaving a
         // 0-DP Digimon on the field until some later drain.
@@ -4070,24 +4082,28 @@ impl Game {
         player: PlayerId,
         removed_index: u8,
     ) {
-        let Some(pa) = self.pending_attack.as_mut() else {
-            return;
-        };
-        let shift = |h: &mut PermanentHandle| {
-            if h.player == player && h.index > removed_index {
-                h.index -= 1;
+        if let Some(pa) = self.pending_attack.as_mut() {
+            let shift = |h: &mut PermanentHandle| {
+                if h.player == player && h.index > removed_index {
+                    h.index -= 1;
+                }
+            };
+            shift(&mut pa.attacker);
+            if let AttackTarget::Digimon(h) = &mut pa.original_target {
+                shift(h);
             }
-        };
-        shift(&mut pa.attacker);
-        if let AttackTarget::Digimon(h) = &mut pa.original_target {
-            shift(h);
+            if let AttackTarget::Digimon(h) = &mut pa.effective_target {
+                shift(h);
+            }
+            if let Some(h) = pa.blocker.as_mut() {
+                shift(h);
+            }
         }
-        if let AttackTarget::Digimon(h) = &mut pa.effective_target {
-            shift(h);
-        }
-        if let Some(h) = pa.blocker.as_mut() {
-            shift(h);
-        }
+        // Every caller re-keyed the modifier registry first (which carried
+        // the `<Progress>` shield along); re-derive it from the attacker's
+        // identity so a removed attacker is never replaced by the Digimon
+        // that slid into its slot.
+        self.refresh_progress_shield();
     }
 
     /// The in-flight attack's attacker, or `None` once it has left the
@@ -4230,6 +4246,8 @@ impl Game {
         use crate::selection::TriggerSource;
 
         self.capture_attack_attacker_identity(handle);
+        // The shield now follows the attacker by identity.
+        self.refresh_progress_shield();
         self.enqueue_triggered(EffectTiming::OnAttack, TriggerSource::Permanent(handle));
         if let Some(card) = suspend_event {
             self.enqueue_on_suspend(handle, card, false);
@@ -4300,6 +4318,9 @@ impl Game {
         if let Some(pa) = self.pending_attack.as_mut() {
             pa.battle_occurred = true;
         }
+        // §16-39-1: the battle compares DP as it is now -- `<Progress>` may
+        // have been gained or lost since the last refresh.
+        self.refresh_progress_shield();
         let a_dp = self.effective_dp(attacker).unwrap_or(0);
         let d_dp = self.effective_dp(defender).unwrap_or(0);
 

@@ -24,26 +24,25 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 
 impl<'a> EffectContext<'a> {
-    /// Apply-time hold for the continuous modifier installs below
+    /// Shared epilogue of the continuous modifier installs below
     /// (`add_modifier` / `add_modifier_with_payload` /
     /// `add_modifier_with_until_condition`).
     ///
     /// §15-15-5-2 "When a card isn't affected by effects, then it can be
     /// affected again, effects will immediately start affecting that card":
-    /// an immunity never skips the install. A `CannotBeAffected` immunity is
-    /// handled at read time -- the entry is tagged with this effect's
-    /// category (`ModifierEntry::affecting_source_kind`) and
-    /// `ModifierRegistry::get` hides it while the immunity covers it (DCGO
-    /// `ChangeDP.cs` `CanUseCondition`). `<Progress>` (§16-39-1, "isn't
-    /// affected by your opponent's effects while attacking") is decided here,
-    /// because it reads the attack state the registry does not hold: an
-    /// opponent's entry installed on a `<Progress>` attacker is held
-    /// (`held_while_attacking`) and released when the attack ends
-    /// (`ModifierRegistry::expire_end_of_attack`). One-shot processing
+    /// an immunity never skips the install. The entry is tagged with this
+    /// effect's category (`ModifierEntry::affecting_source_kind`) and
+    /// `ModifierRegistry::get` hides it at read time while a
+    /// `CannotBeAffected` immunity covers it (DCGO `ChangeDP.cs`
+    /// `CanUseCondition`) or while its target is the `<Progress>` shield
+    /// (§16-39-1, `ModifierRegistry::progress_shield`). The shield is
+    /// refreshed once the entry is in, so it is current whenever an effect's
+    /// entry lands on an attacker (and an installed
+    /// `ImmunityToOpponentEffects` shields at once). One-shot processing
     /// (delete, suspend, return, ...) keeps the `can_affect_permanent` skip:
     /// there is nothing left to apply later.
-    fn held_for_progress_attack(&self, target: PermanentHandle) -> bool {
-        self.game.progress_excludes(target, Some(self.player))
+    fn after_recorded_install(&mut self) {
+        self.game.refresh_progress_shield();
     }
 
     pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {
@@ -67,7 +66,6 @@ impl<'a> EffectContext<'a> {
         value: i32,
         expiry: Expiry,
     ) {
-        let held = self.held_for_progress_attack(target);
         // `*NextTurn` expiries installed during the about-to-end turn must
         // skip that turn-end (otherwise they expire one turn early). The
         // engine knows the current turn at install time, so compute it
@@ -82,10 +80,10 @@ impl<'a> EffectContext<'a> {
             target,
             ModifierEntry::simple(modifier, value, expiry, self.player)
                 .with_pending_skips(pending_skips)
-                .with_affecting_source_kind(self.source_kind)
-                .with_held_while_attacking(held),
+                .with_affecting_source_kind(self.source_kind),
         );
         self.game.mark_until_condition_dirty();
+        self.after_recorded_install();
         // NOTE: a DP reduction to ≤0 does NOT delete the Digimon here. Deletion
         // is a state-based action (rule 17-1-2-2 / `G-NO-GENERAL-ZERO-DP-RULES-CHECK`)
         // that runs only after the ongoing effect or rule action finishes — see
@@ -109,7 +107,6 @@ impl<'a> EffectContext<'a> {
         expiry: Expiry,
         payload: crate::modifiers::ModifierPayload,
     ) {
-        let held = self.held_for_progress_attack(target);
         let pending_skips = crate::modifiers::pending_skips_for_install(
             expiry,
             self.player,
@@ -120,10 +117,10 @@ impl<'a> EffectContext<'a> {
             ModifierEntry::simple(modifier, value, expiry, self.player)
                 .with_payload(payload)
                 .with_pending_skips(pending_skips)
-                .with_affecting_source_kind(self.source_kind)
-                .with_held_while_attacking(held),
+                .with_affecting_source_kind(self.source_kind),
         );
         self.game.mark_until_condition_dirty();
+        self.after_recorded_install();
     }
 
     pub fn add_declarative_modifier(
@@ -219,15 +216,14 @@ impl<'a> EffectContext<'a> {
         value: i32,
         predicate: crate::modifiers::UntilConditionFn,
     ) {
-        let held = self.held_for_progress_attack(target);
         self.game.modifiers.add(
             target,
             ModifierEntry::simple(modifier, value, Expiry::UntilCondition, self.player)
                 .with_until_condition(predicate)
-                .with_affecting_source_kind(self.source_kind)
-                .with_held_while_attacking(held),
+                .with_affecting_source_kind(self.source_kind),
         );
         self.game.mark_until_condition_dirty();
+        self.after_recorded_install();
     }
 
     /// Track H §4 — grant a keyword scoped to `Expiry::UntilCondition`
@@ -253,6 +249,8 @@ impl<'a> EffectContext<'a> {
             self.player,
         );
         self.game.mark_until_condition_dirty();
+        // §16-39-2: a `<Progress>` gained mid-attack shields at once.
+        self.game.refresh_progress_shield();
     }
 
     /// Track H §3 — grant a triggered effect to `carrier` (DCGO
@@ -618,6 +616,8 @@ impl<'a> EffectContext<'a> {
             .grant_keyword(target, keyword, expiry, self.player);
         self.grant_keyword_triggered_auto_effects(target, keyword, expiry);
         self.game.mark_until_condition_dirty();
+        // §16-39-2: a `<Progress>` gained mid-attack shields at once.
+        self.game.refresh_progress_shield();
     }
 
     /// Register the granted keyword's TRIGGERED auto-effect(s) so they fire

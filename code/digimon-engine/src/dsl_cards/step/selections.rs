@@ -2784,8 +2784,9 @@ fn per_color_delete_candidates(
         }
         // §15-15-5-3: a Digimon the effect can't affect (e.g. a `<Progress>`
         // attacker, §16-39-1) is still a legal target; the processing then
-        // skips or holds it (`EffectContext::can_affect_permanent`,
-        // `held_while_attacking`).
+        // skips it or records a modifier the read path hides
+        // (`EffectContext::can_affect_permanent`,
+        // `ModifierRegistry::progress_shield`).
         // Extra author restriction (default: none).
         if let Some(filter) = &state.filter {
             if !eval_predicate_with_bindings(

@@ -258,7 +258,8 @@ impl Game {
     /// to one branch).
     ///
     /// Returns `true` when:
-    ///   - `target` is the current attacker (`current_attacker() == Some(target)`), AND
+    ///   - `target` is the attacker (`progress_shield_target`: the attack's
+    ///     attacker, resolved by stack identity once declared), AND
     ///   - `source` is `Some(pid)` where `pid != target.player`, AND
     ///   - `target` has either `Keyword::Progress` (printed or granted) **or**
     ///     `ModifierType::ImmunityToOpponentEffects`.
@@ -292,14 +293,49 @@ impl Game {
         if src == target.player {
             return false;
         }
-        if self.current_attacker() != Some(target) {
-            return false;
-        }
-        self.has_keyword(target, crate::enums::Keyword::Progress)
+        self.progress_shield_target() == Some(target)
+    }
+
+    /// §16-39-1 / §16-39-3: the Digimon `<Progress>` currently shields -- the
+    /// attacker, while it attacks and has `<Progress>` (printed, inherited,
+    /// linked or granted) or `ImmunityToOpponentEffects`. The one predicate
+    /// behind both [`Game::progress_excludes`] (one-shot processing) and the
+    /// read-time shield on the modifier registry
+    /// ([`Game::refresh_progress_shield`]).
+    ///
+    /// The attacker is the `pending_attack` slot until the declaration
+    /// captured its stack identity; from then on it is resolved by identity
+    /// (`live_attack_attacker`), so a Digimon that slides into the attacker's
+    /// slot after a battle-area compaction is never taken for it (DCGO keys
+    /// `<Progress>` to `attackProcess.AttackingPermanent`, an object).
+    pub(crate) fn progress_shield_target(&self) -> Option<PermanentHandle> {
+        let pa = self.pending_attack.as_ref()?;
+        let attacker = if pa.declaration_committed && self.attack_attacker_identity.is_some() {
+            self.live_attack_attacker()?
+        } else {
+            pa.attacker
+        };
+        (self.has_keyword(attacker, crate::enums::Keyword::Progress)
             || self.modifiers.has(
-                target,
+                attacker,
                 crate::enums::ModifierType::ImmunityToOpponentEffects,
-            )
+            ))
+        .then_some(attacker)
+    }
+
+    /// §16-39-1 / §15-15-5-1 / §15-15-5-2: re-evaluate `<Progress>` and hand
+    /// the result to the modifier registry, whose read path hides every
+    /// opponent effect's entry on the shielded attacker. Called wherever
+    /// [`Game::progress_shield_target`] can change: the attack declaration,
+    /// every declarative tick (a `<Progress>` gained or lost mid-attack, by a
+    /// grant or a changed stack or condition), a battle-area compaction, each
+    /// battle's DP comparison, an effect's modifier install, and the end of
+    /// the attack (`cleanup_attack`, where it drops to `None`).
+    pub(crate) fn refresh_progress_shield(&mut self) {
+        let shield = self.progress_shield_target();
+        if self.modifiers.progress_shield() != shield {
+            self.modifiers.set_progress_shield(shield);
+        }
     }
 
     /// §15-15-5-1 / §16-39-1: whether an effect of category `source_kind`

@@ -137,11 +137,14 @@ const CH15_15: &[&str] = &[
     include_str!("ch15_15/IMMUNE_DIGI_ONLY.yaml"),
     include_str!("ch15_15/IMMUNE_WHILE_SUSPENDED.yaml"),
     include_str!("ch15_15/OPP_ATK_ALL_MINUS_12K.yaml"),
+    include_str!("ch15_15/OPP_ATK_DELETE.yaml"),
+    include_str!("ch15_15/OPP_ATK_TRASH_OPP_SEC.yaml"),
     include_str!("ch15_15/OPT_DELETE_13K.yaml"),
     include_str!("ch15_15/OPT_MINUS_12K.yaml"),
     include_str!("ch15_15/OWN_MINUS_3K.yaml"),
     include_str!("ch15_15/SELF_IMM_THEN_UP.yaml"),
     include_str!("ch15_15/TAMER_MINUS_3K.yaml"),
+    include_str!("ch15_15/TAMER_PROGRESS_SEC4.yaml"),
 ];
 
 /// §16-42..§16-47 Ver. 4.x keyword cards, with the §4-6 DUAL, §4-19

@@ -187,8 +187,8 @@
   note: "Scope matrix: an opponent-Digimon-effect immunity (Atratusmon ST23-09 idiom) is affected by Option [Main] and [Security]-activated [Main] effects, Tamer effects and its own controller's effects, not by opponent Digimon effects; a full opponent-effect immunity (Magnamon (X Antibody) BT16-102 idiom) blocks opponent Option ([Main] and [Security]), Tamer, Digimon and token effects but not its own controller's; battles and the 0-DP rule check are not effects (Q6279). An immunity that starts mid-effect covers that effect's later steps; one that starts after a -DP effect stops it affecting the card (Q6178; read-time suppression in ModifierRegistry::get)."
 "15-15-5-2":
   status: proven
-  tests: ["ch15_15_unaffected::effect_applied_while_immune_starts_affecting_when_immunity_lapses", "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it"]
-  note: "Record-and-suppress (2026-10-16): a modifier applied to an immune card is recorded (ModifierEntry::affecting_source_kind) and hidden while a covering CannotBeAffected entry exists; it applies as soon as the immunity lapses (the rule's 'while suspended' example: -3000 DP applies on unsuspend) or expires (Atratusmon shape, Q831), for the rest of its own duration. Previously EffectContext::add_modifier skipped the install, so the effect never applied."
+  tests: ["ch15_15_unaffected::effect_applied_while_immune_starts_affecting_when_immunity_lapses", "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it", "ch15_15_unaffected::progress_lost_mid_attack_applies_held_opponent_effects_immediately", "ch15_15_unaffected::progress_shield_follows_the_attacker_through_compaction"]
+  note: "Record-and-suppress (2026-10-16): a modifier applied to an immune card is recorded (ModifierEntry::affecting_source_kind) and hidden while a covering CannotBeAffected entry exists; it applies as soon as the immunity lapses (the rule's 'while suspended' example: -3000 DP applies on unsuspend) or expires (Atratusmon shape, Q831), for the rest of its own duration. Previously EffectContext::add_modifier skipped the install, so the effect never applied. <Progress> (2026-10-17): an opponent's -3000 DP hidden while the attacker has <Progress> applies the moment it loses <Progress> mid-attack (it battles at 3000 DP and loses), not at the end of the attack; the hidden -3000 DP on the attacker never moves to the Digimon that slides into its slot."
 "15-15-5-3":
   status: proven
   tests: ["ch15_15_unaffected::immune_permanent_is_still_choosable_and_offered_as_only_candidate", "ch16_attack_keywords::progress_persistent_only_while_attacking", "ch16_attack_keywords::progress_kind_matches_rule"]
@@ -928,11 +928,9 @@
   tests: ["ch16_attack_keywords::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack"]
   note: "The deletion does pend with EOA_OBS in one TriggerOrder (the 18-1-2 half holds), but it never deletes (see 16-38-1). #[ignore]d."
 "16-39-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS
-  tests: ["ch16_attack_keywords::progress_persistent_only_while_attacking", "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it", "ch15_15_unaffected::progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking"]
-  note: "The opponent's 'when an opponent's Digimon attacks, 1 of your opponent's Digimon gets -3000 DP' CAN choose the attacking <Progress> Digimon (§15-15-5-3; re-pinned 2026-10-16, the earlier 'can't choose' pin was wrong against the rule text) and doesn't affect it while it attacks; the -3000 DP applies when the attack ends (green). An opponent's -12000 DP applied during the attack is held and applies when the attack ends (green, Task 24 fix round 1). Demoted from proven 2026-10-16: an opponent effect applied BEFORE the attack still affects the attacking <Progress> Digimon (test #[ignore]d)."
+  status: proven
+  tests: ["ch16_attack_keywords::progress_persistent_only_while_attacking", "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it", "ch15_15_unaffected::progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking", "ch15_15_unaffected::progress_shield_follows_the_attacker_through_compaction"]
+  note: "The opponent's 'when an opponent's Digimon attacks, 1 of your opponent's Digimon gets -3000 DP' CAN choose the attacking <Progress> Digimon (§15-15-5-3) and doesn't affect it while it attacks; the -3000 DP applies when the attack ends. An opponent's -12000 DP applied during the attack applies when the attack ends. An opponent's -3000 DP applied BEFORE the attack stops affecting it while it attacks (it battles at its printed 6000 DP and wins) and affects it again after (Q6178). Read-time shield (2026-10-17): ModifierRegistry::progress_shield, refreshed by Game::refresh_progress_shield, hides every opponent effect's entry on the attacker, which it follows through battle-area compaction by identity."
 "16-39-2":
   status: proven
   tests: ["ch16_attack_keywords::progress_kind_matches_rule"]

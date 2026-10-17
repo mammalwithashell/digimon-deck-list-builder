@@ -137,12 +137,6 @@ pub struct ModifierEntry {
     /// its own duration (DCGO `ChangeDP.cs` `CanUseCondition`, re-evaluated at
     /// read time).
     pub affecting_source_kind: Option<EffectSourceKind>,
-    /// §16-39-1 / §15-15-5-2: installed by an opponent's effect while the
-    /// target was a `<Progress>` (or `ImmunityToOpponentEffects`) attacker.
-    /// [`ModifierRegistry::get`] hides the entry until
-    /// [`ModifierRegistry::expire_end_of_attack`] releases it, so it applies
-    /// once the attack ends, for whatever remains of its own duration.
-    pub held_while_attacking: bool,
     /// For `ModifierType::DisableEffect` entries — the specific
     /// `EffectTiming` that is suppressed on this permanent. None for
     /// every other variant. Read by the observer dispatch hook before
@@ -216,7 +210,6 @@ impl std::fmt::Debug for ModifierEntry {
             .field("has_until_condition", &self.until_condition.is_some())
             .field("effect_immunity_filter", &self.effect_immunity_filter)
             .field("affecting_source_kind", &self.affecting_source_kind)
-            .field("held_while_attacking", &self.held_while_attacking)
             .field("disable_effect_timing", &self.disable_effect_timing)
             .field("install_order", &self.install_order)
             .finish_non_exhaustive()
@@ -261,7 +254,6 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             affecting_source_kind: None,
-            held_while_attacking: false,
             disable_effect_timing: None,
             pending_skips: 0,
             install_order: 0,
@@ -288,7 +280,6 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             affecting_source_kind: None,
-            held_while_attacking: false,
             disable_effect_timing: None,
             pending_skips: 0,
             install_order: 0,
@@ -314,7 +305,6 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             affecting_source_kind: None,
-            held_while_attacking: false,
             disable_effect_timing: Some(timing),
             pending_skips: 0,
             install_order: 0,
@@ -342,7 +332,6 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             affecting_source_kind: None,
-            held_while_attacking: false,
             disable_effect_timing: None,
             pending_skips: 0,
             install_order: 0,
@@ -374,12 +363,6 @@ impl ModifierEntry {
     /// expiry on the first matching turn-end).
     pub fn with_pending_skips(mut self, skips: u8) -> Self {
         self.pending_skips = skips;
-        self
-    }
-
-    /// Hold the entry until the current attack ends (§16-39-1 `<Progress>`).
-    pub fn with_held_while_attacking(mut self, held: bool) -> Self {
-        self.held_while_attacking = held;
         self
     }
 
@@ -882,6 +865,19 @@ pub struct ModifierRegistry {
     /// `Default`) forces a rebuild on the first tick.
     decl_memo_valid: bool,
     decl_last_fingerprint: u64,
+    /// §16-39-1 / §15-15-5-1 / §15-15-5-2: the `<Progress>` attacker (or an
+    /// attacker with `ImmunityToOpponentEffects`) while it attacks -- the
+    /// one piece of attack state the read path needs and cannot compute
+    /// (`Game::progress_excludes` reads `pending_attack` and the printed /
+    /// inherited keywords, which live on `Game`). [`ModifierRegistry::get`]
+    /// hides every opponent-controlled, effect-installed entry on it, whenever
+    /// that entry was installed (DCGO `Progress.cs` is a `CanNotAffectedClass`
+    /// re-checked on every read, keyed to `attackProcess.AttackingPermanent`).
+    /// `Game::refresh_progress_shield` owns it; the registry only follows the
+    /// permanent through battle-area compaction
+    /// ([`ModifierRegistry::shift_after_battle_area_remove`]), so a Digimon
+    /// that slides into the attacker's old slot is never shielded.
+    progress_shield: Option<PermanentHandle>,
 }
 
 impl ModifierRegistry {
@@ -978,6 +974,14 @@ impl ModifierRegistry {
                 e.install_order.hash(&mut h);
                 sum = sum.wrapping_add(h.finish());
             }
+        }
+        // The `<Progress>` shield changes what `get` returns for the attacker,
+        // so a declarative condition reading its DP must see a rebuild.
+        {
+            let mut h = std::collections::hash_map::DefaultHasher::new();
+            "progress_shield".hash(&mut h);
+            self.progress_shield.hash(&mut h);
+            sum = sum.wrapping_add(h.finish());
         }
         sum
     }
@@ -1220,9 +1224,12 @@ impl ModifierRegistry {
     /// (`affecting_source_kind: Some`) is hidden while a `CannotBeAffected`
     /// entry on the same permanent covers that effect, and shows again as
     /// soon as the immunity ends -- the entry itself keeps its own duration.
-    /// `CannotBeAffected` entries are never hidden. An entry held for a
-    /// `<Progress>` attack (`held_while_attacking`) is hidden until the attack
-    /// ends (§16-39-1).
+    /// `CannotBeAffected` entries are never hidden. While `target` is the
+    /// `<Progress>` shield (§16-39-1, [`ModifierRegistry::progress_shield`])
+    /// every opponent-controlled, effect-installed entry on it is hidden,
+    /// whether it was installed before or during the attack (§15-15-5-1,
+    /// official Q&A Q6178), and shows again the moment the shield drops --
+    /// the attack ends or the attacker loses `<Progress>` (§15-15-5-2).
     pub fn get(&self, target: PermanentHandle, modifier: ModifierType) -> Vec<&ModifierEntry> {
         let Some(entries) = self.permanent_modifiers.get(&target) else {
             return Vec::new();
@@ -1232,14 +1239,39 @@ impl ModifierRegistry {
         let immune = entries
             .iter()
             .any(|e| e.modifier == ModifierType::CannotBeAffected);
+        let shielded = self.progress_shield == Some(target);
         entries
             .iter()
             .filter(|e| {
                 e.modifier == modifier
-                    && !e.held_while_attacking
+                    && !(shielded && Self::hidden_by_progress_shield(target, e))
                     && !(immune && Self::suppressed_by_immunity(entries, target, e))
             })
             .collect()
+    }
+
+    /// Whether `<Progress>` hides `entry` on the shielded `target` (§16-39-1
+    /// "isn't affected by your opponent's effects"): the entry was installed
+    /// by an effect (an `affecting_source_kind` tag, or a materialized
+    /// declarative aura) controlled by `target`'s opponent. Untagged
+    /// (engine-installed) entries and the attacker's own effects are not
+    /// hidden; an opponent effect of any `EffectSourceKind`, `Rule` included,
+    /// is (DCGO
+    /// `Progress.cs` `SkillCondition`: an opponent effect with a source card).
+    fn hidden_by_progress_shield(target: PermanentHandle, entry: &ModifierEntry) -> bool {
+        entry.source_player != target.player
+            && (entry.affecting_source_kind.is_some() || entry.materialized_declarative)
+    }
+
+    /// The permanent `<Progress>` currently shields (§16-39-1), if any.
+    pub fn progress_shield(&self) -> Option<PermanentHandle> {
+        self.progress_shield
+    }
+
+    /// Set the `<Progress>` shield. Only `Game::refresh_progress_shield`
+    /// calls this: it is the one place that can evaluate `<Progress>`.
+    pub(crate) fn set_progress_shield(&mut self, shield: Option<PermanentHandle>) {
+        self.progress_shield = shield;
     }
 
     /// Whether `entry` (on `target`, whose entries are `entries`) is hidden by
@@ -1550,6 +1582,11 @@ impl ModifierRegistry {
         remap_entries(&mut self.permanent_modifiers, player, removed_index);
         remap_entries(&mut self.permanent_keywords, player, removed_index);
         remap_entries(&mut self.granted_triggered, player, removed_index);
+        // The shield follows the attacker it was set on (and drops when that
+        // permanent is the one removed); it never stays on the slot.
+        self.progress_shield = self
+            .progress_shield
+            .and_then(|h| shifted(h, player, removed_index));
 
         for entries in self.permanent_modifiers.values_mut() {
             for entry in entries {
@@ -1758,12 +1795,11 @@ impl ModifierRegistry {
     pub fn expire_end_of_attack(&mut self) {
         for entries in self.permanent_modifiers.values_mut() {
             entries.retain(|e| !matches!(e.expiry, Expiry::EndOfAttack | Expiry::EndOfBattle));
-            // §16-39-1 / §15-15-5-2: the attack is over, so `<Progress>` no
-            // longer applies; held entries start affecting their target now.
-            for e in entries.iter_mut() {
-                e.held_while_attacking = false;
-            }
         }
+        // §16-39-1 / §15-15-5-2: the attack is over, so `<Progress>` no longer
+        // applies; the opponent's entries it hid start affecting the
+        // attacker now, for whatever remains of their own duration.
+        self.progress_shield = None;
         for kws in self.permanent_keywords.values_mut() {
             kws.retain(|entry| !matches!(entry.expiry, Expiry::EndOfAttack | Expiry::EndOfBattle));
         }
