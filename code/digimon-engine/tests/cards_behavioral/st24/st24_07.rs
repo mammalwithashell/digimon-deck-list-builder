@@ -1,5 +1,5 @@
 //! ST24-07 ShineGreymon / "GeoGrey Sword" — DUAL card (Digimon + Option).
-//! Lv.6 Yellow, Light Dragon / DATA SQUAD, DP 12000.
+//! Lv.6 Yellow/Red, Light Dragon / DATA SQUAD, DP 12000.
 //!
 //! # cards.json TRAP
 //! cards.json mislabels this as a plain Digimon (card_kind 0) and files the
@@ -7,7 +7,7 @@
 //! IMAGE (DIGIMON / OPTION DUAL) + DCGO ST24_07.cs are authoritative.
 //!
 //! # Card text (card image / DCGO — authoritative)
-//! DIGIMON FACE — ShineGreymon, Lv.6, DP 12000, Yellow.
+//! DIGIMON FACE — ShineGreymon, Lv.6, DP 12000, Yellow/Red.
 //!   <Raid> <Piercing> <Security A. +1>
 //!   <Digivolve> Lv.5 w/ [RizeGreymon] in name or [DATA SQUAD] trait: Cost 3
 //!     (ignore digivolution requirement).
