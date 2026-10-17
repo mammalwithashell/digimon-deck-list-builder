@@ -243,6 +243,25 @@ impl Game {
         // deferred scope as the stage-4a `[On Deletion]` entries.
         self.enqueue_batch_on_any_deletion();
 
+        // Stage 4d: a battle's own deletion also triggers the effects of the
+        // battle result -- "wins a battle" / "deletes in battle" observers and
+        // <Piercing> (`EffectTiming::BattleResult`). §14-2-4 / §15-4-3-2 /
+        // §16-7-4: they trigger together with the loser's [On Deletion], so
+        // they are enqueued into the same deferred scope and pend in the one
+        // pool below, the turn player's first (§15-4-3-5-1; official Q&A
+        // Q3931). Only the battle's last deletion sub-batch does this (a
+        // member parked on a replacement leaves the rest pending), so every
+        // combatant's deletion is known. DCGO: the battle stacks its
+        // `OnEndBattle` effects onto the `OnDestroyedAnyone` list `Destroy()`
+        // stacked, then one `AutoProcessCheck` resolves both.
+        // G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION.
+        if self.active_deletion_batch.as_ref().is_some_and(|b| {
+            b.cause == crate::replacement::ReplacementCause::Battle
+        }) && self.pending_deletion_batch_rest.is_empty()
+        {
+            self.enqueue_pending_battle_result_triggers();
+        }
+
         // Stage 5: one flush for the whole deletion. §16-13-2 / §15-4-3-2:
         // every effect this deletion triggered -- `[On Deletion]` (incl.
         // <Retaliation>) and the "when a Digimon is deleted" observers --

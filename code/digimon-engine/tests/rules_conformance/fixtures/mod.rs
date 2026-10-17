@@ -54,7 +54,9 @@ const CH15_04: &[&str] = &[
     include_str!("ch15_04/HYBRID_LV5.yaml"),
     include_str!("ch15_04/OBS_OPP_DEL_MEM.yaml"),
     include_str!("ch15_04/OBS_PLAY_LE4K.yaml"),
+    include_str!("ch15_04/OD_PLAY_LV6.yaml"),
     include_str!("ch15_04/OD_RECOVER_LE3.yaml"),
+    include_str!("ch15_04/PIERCE_IF_TOP.yaml"),
     include_str!("ch15_04/PLAY_DP_UP.yaml"),
     include_str!("ch15_04/RET_PLAYED.yaml"),
     include_str!("ch15_04/SWEEPER.yaml"),
@@ -64,6 +66,7 @@ const CH15_04: &[&str] = &[
     include_str!("ch15_04/WA_HYBRID_DIGI.yaml"),
     include_str!("ch15_04/WA_MEM_INH.yaml"),
     include_str!("ch15_04/WD_DEL_RET.yaml"),
+    include_str!("ch15_04/WIN_MEM.yaml"),
     include_str!("ch15_04/WOULD_DEL_STRIKE.yaml"),
 ];
 

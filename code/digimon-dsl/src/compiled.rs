@@ -1405,7 +1405,8 @@ pub enum CompiledTiming {
     OnDeletion,
     OnAnyDeletion,
     /// Board-wide battle-winner observer (`when: on_ally_won_battle`); lowers to
-    /// `EffectTiming::EndOfBattle` with NO forced self-filter. Scope-gate via
+    /// `EffectTiming::BattleResult` (§14-2-4: pends with the loser's
+    /// [On Deletion]) with NO forced self-filter. Scope-gate via
     /// `active_when:` (`event_winner_owner`, `event_winner_trait_has`).
     /// G-DSL-BATTLE-WINNER-BOARDWIDE.
     OnAllyWonBattle,

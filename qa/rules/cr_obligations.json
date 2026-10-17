@@ -1889,10 +1889,11 @@
       "mechanisms": [
         "battle"
       ],
-      "note": "The deleted Digimon's [On Deletion], triggered by the battle, resolves before the end of battle effect.",
+      "note": "The deleted Digimon's [On Deletion], triggered by the battle, resolves before the end of battle effect; so do the battle-result triggers ('wins a battle'), which pend with it.",
       "status": "proven",
       "tests": [
-        "ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"
+        "ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle",
+        "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first"
       ],
       "text": "If an effect is triggered by a battle, that effect is to be resolved. The next action won't begin until all of the processing is resolved for the current action."
     },
@@ -1904,10 +1905,11 @@
       "mechanisms": [
         "battle"
       ],
-      "note": "An '[All Turns] At the end of a battle, gain 1 memory' resolves exactly once after each battle, after the battle-triggered effects.",
+      "note": "An '[All Turns] At the end of a battle, gain 1 memory' resolves exactly once after each battle, after the battle-triggered effects (the [On Deletion] and the 'wins a battle' triggers of one pool).",
       "status": "proven",
       "tests": [
-        "ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"
+        "ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle",
+        "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first"
       ],
       "text": "If an effect is triggered by the end of the battle timing when a battle ends, that effect is to be resolved."
     },
@@ -4121,10 +4123,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). Known open defect in another pool: a battle loser's [On Deletion] and the battle-result observers ('wins a battle', 'deletes in battle') are drained in sequence, not as one pool -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION (no test here yet).",
+      "note": "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). A battle's 'wins a battle' trigger, the deletion observer and the loser's [On Deletion] pend in one pool: the turn player's TriggerOrder offers its battle-result trigger and its deletion observer together (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved).",
       "status": "proven",
       "tests": [
-        "ch15_04_effect_states::when_attacking_and_alliance_share_one_pool"
+        "ch15_04_effect_states::when_attacking_and_alliance_share_one_pool",
+        "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first"
       ],
       "text": "If multiple effects are triggered before a single rule or effect is resolved, they all trigger simultaneously. If effects trigger simultaneously, the effects will be pending activation and activate 1 at a time. (For details, refer to 15-4-4 \"Pending Activation\")15-4- 4"
     },
@@ -4177,10 +4180,12 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "P0 orders only its own simultaneously triggered attack effects and resolves all of them before the non-turn player chooses. Known open defect: after a battle the non-turn player's [On Deletion] activates before the turn player's battle-result observers -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION (no test here yet).",
+      "note": "P0 orders only its own simultaneously triggered attack effects and resolves all of them before the non-turn player chooses. After a battle the turn player's battle-result triggers ('wins a battle', <Piercing>) activate before the non-turn player's [On Deletion] (official Q&A Q3931; G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved).",
       "status": "proven",
       "tests": [
-        "ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"
+        "ch15_04_effect_states::turn_player_orders_first_then_non_turn_player",
+        "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first",
+        "ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool"
       ],
       "text": "The turn player chooses 1 of their effects to activate from among the effects that triggered simultaneously. This step is repeated until there are no more pending activation effects for the turn player."
     },
@@ -8116,10 +8121,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "The rule's example: <Piercing> deletes a Digimon with '[On Deletion] Gain 1 memory'; event order is the [On Deletion] memory, then the single SecurityReveal, then the attacker's [End of Attack] memory. Related open defect: the other effects triggered by the battle (battle-result observers) do not pend with the [On Deletion] -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION.",
+      "note": "The rule's example: <Piercing> deletes a Digimon with '[On Deletion] Gain 1 memory'; event order is the [On Deletion] memory, then the single SecurityReveal, then the attacker's [End of Attack] memory. <Piercing> is a BattleResult trigger in the battle's pool with the [On Deletion]: the turn player's <Piercing> activates first, so the [On Deletion] that ends its condition (Q3931 / EX8-045 shape) does not stop the pending check, which is still performed after the [On Deletion] (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved).",
       "status": "proven",
       "tests": [
-        "ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack"
+        "ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack",
+        "ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool"
       ],
       "text": "<Piercing> is pending processing that is processed immediately before the transition to the end of attack timing. Therefore, it will trigger simultaneously with effects triggered by the battle, but it is processed before the end of the attack. (Example: If a Digimon with <Piercing> attacks and deletes a Digimon with an [On Deletion] effect in the battle, first the [On Deletion] effect is resolved, then <Piercing> is processed.)"
     },

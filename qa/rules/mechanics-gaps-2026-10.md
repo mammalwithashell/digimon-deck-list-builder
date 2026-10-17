@@ -172,12 +172,25 @@ Grouped by the mechanism the defect lives in; when the obligation's Aegis taxono
 
 ### battle
 
-**G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION**: `PDF-explicit` — filed 2026-10-17 (Plan 4 Task 27 review round 1)
+**G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION**: `PDF-explicit` — filed 2026-10-17 (Plan 4 Task 27 review round 1) — **fixed (Plan 4 Task 28, `055806250`)**: battle-result triggers and <Piercing> (`EffectTiming::BattleResult`) pend with the loser's [On Deletion], turn player first; `ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first` and `::piercing_triggers_with_the_battle_deletion_pool` are green.
 - Rules: §14-2-4; §15-4-3-2, §15-4-3-5-1 (effects-and-ordering); §16-7-4 (keywords, <Piercing>); official Q&A Q3931 (EX8-045).
 - Test: `dsl::battle_deleter::on_deletion_choice_finishes_before_end_of_battle_observer_after_clone` pins the wrong order (P0 is the turn player, yet P1's [On Deletion] choice comes first); no conformance test is red yet, and the obligations keep their status.
 - Cause: the battle deletion's trigger flush drains the loser's [On Deletion] / `OnAnyDeletion` pool to completion before `resume_pending_battle_resolutions` enqueues the `EndOfBattle` battle-result observers ("wins a battle", "deletes in battle"), so the turn player's battle-result triggers activate after the non-turn player's [On Deletion].
 - DCGO: agrees with the rule (one `AutoProcessCheck` over the `OnDestroyedAnyone` and `OnEndBattle` stacks).
 - Fix: enqueue the battle-result observers into the deletion batch's single `TriggerFlush` pool (with the §18-1-2 end-of-battle pending processing); invert the pinning test.
+
+**G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER**: `PDF-explicit` — filed 2026-10-17 (Plan 4 Task 28 review round)
+- Rules: §15-8-3-1, §15-8-3-8, §15-4-4-5.
+- Test: `dsl::battle_deleter::winner_predicates_follow_ordinary_evolution_during_opponents_on_deletion` pins the wrong outcome (P1-turn staging: the observer activates after the loser's [On Deletion] made the winner [Evolved]); no conformance test yet.
+- Cause: `BattleResult` entries are queued without evaluating their trigger condition; the drainer's transient non-firing filter lets one whose condition failed at the battle activate once a sibling makes it true.
+- DCGO: agrees with the rule (`StackSkillInfos` evaluates `CanTrigger` when the battle stacks it).
+- Fix: evaluate the trigger condition at the battle's enqueue and drop entries that did not trigger; keep the §15-4-4-5 activation re-check.
+
+**G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS**: `needs-reading` — filed 2026-10-17 (Plan 4 Task 28 review round)
+- Rules: §4-7-7 (bottom cards are part of the top card's information) vs DCGO's top-card trait read (`BT25_020.cs`).
+- Test: `dsl::battle_deleter::turn_players_observer_reads_the_winners_top_card_before_de_digivolution` (ignored).
+- Cause: `TriggerContext::battle_winner_has_trait` reads the live winner through `Permanent::has_trait`, which scans every card in the stack.
+- Fix: read the winner's synthesized identity (top card + trait modifiers), once the reading is confirmed.
 
 (§14 is 7 of 10 proven.)
 
@@ -424,6 +437,7 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 - `G-ENGINE-DNA-RESULT-KEEPS-BASE-ORIENTATION`: resolved (§8-2-2-1-1, design F3). Fix `98d4937a6` (PR #737); the per-clause conformance tests `code/digimon-engine/tests/dna_result_new_card.rs` landed with the F3 merge and are green. The tracker entry in `docs/RUST_ENGINE_GAPS.md` is RESOLVED.
 - `G-ENGINE-UNAFFECTED-SKIPS-INSTEAD-OF-SUPPRESSES`: found and resolved in Plan 4 Task 24 (§15-15-5-1 / -2 / -4, `1e3fc9d9e`). Modifiers and granted triggered effects applied to an immune Digimon are recorded and hidden at read time, so they apply once the immunity ends; `tests/rules_conformance/ch15_15_unaffected.rs` (10 tests) is green and 15-15-5-1..4 are `proven`.
 - `G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS`: resolved in Plan 4 Task 25 (§16-39-1 / §15-15-5-1 / §15-15-5-2, `20646307f`). `<Progress>` is a read-time shield on the modifier registry (`ModifierRegistry::progress_shield`, keyed to the attacker by identity), so an opponent's effect applied before the attack stops applying while it attacks and applies again the moment it ends or the attacker loses `<Progress>`; `ch15_15_unaffected` progress tests green, 16-39-1 `proven`.
+- `G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION`: found in the Task 27 review and resolved in Plan 4 Task 28 (§14-2-4, §15-4-3-5-1, §16-7-4; `055806250`). The battle-result triggers and <Piercing> pend with the loser's [On Deletion] in one pool, the turn player's first (Q3931); the end-of-battle timing (§14-2-5) follows the pool.
 - `G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN`: resolved (fixed 2026-08-24 in `73733429d`, confirmed by `delay_scheduled_window_is_optional`); entry moved to `qa/resolved-gaps.md`.
 
 ## Vocabulary gaps filed (`qa/dsl-vocab-gaps.md`, 2026-10-16)

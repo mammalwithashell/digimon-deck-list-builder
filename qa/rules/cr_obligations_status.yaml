@@ -38,16 +38,16 @@
   note: "Same sentence as 15-4-2-3, restated for pending activation."
 "15-4-3-2":
   status: proven
-  tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool"]
-  note: "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). Known open defect in another pool: a battle loser's [On Deletion] and the battle-result observers ('wins a battle', 'deletes in battle') are drained in sequence, not as one pool -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION (no test here yet)."
+  tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first"]
+  note: "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). A battle's 'wins a battle' trigger, the deletion observer and the loser's [On Deletion] pend in one pool: the turn player's TriggerOrder offers its battle-result trigger and its deletion observer together (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved)."
 "16-24-2":
   status: proven
   tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool", "ch16_attack_keywords::alliance_kind_matches_rule"]
   note: "<Alliance> is a [When Attacking] trigger-type body (keyword_to_auto_effect) pending with the attack declaration's other triggers; its ally pick is the body."
 "15-4-3-5-1":
   status: proven
-  tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"]
-  note: "P0 orders only its own simultaneously triggered attack effects and resolves all of them before the non-turn player chooses. Known open defect: after a battle the non-turn player's [On Deletion] activates before the turn player's battle-result observers -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION (no test here yet)."
+  tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first", "ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool"]
+  note: "P0 orders only its own simultaneously triggered attack effects and resolves all of them before the non-turn player chooses. After a battle the turn player's battle-result triggers ('wins a battle', <Piercing>) activate before the non-turn player's [On Deletion] (official Q&A Q3931; G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved)."
 "15-4-3-5-2":
   status: proven
   tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"]
@@ -310,8 +310,8 @@
   note: "Per-repetition decision (ruling W10): an optional prompt, or the DSL effect-text choose-one ('you may X instead'), lets the player repeat the loop as many times as they choose (40 / 30 in the tests, past any fixed cap), then stop it."
 "16-7-4":
   status: proven
-  tests: ["ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack"]
-  note: "The rule's example: <Piercing> deletes a Digimon with '[On Deletion] Gain 1 memory'; event order is the [On Deletion] memory, then the single SecurityReveal, then the attacker's [End of Attack] memory. Related open defect: the other effects triggered by the battle (battle-result observers) do not pend with the [On Deletion] -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION."
+  tests: ["ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack", "ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool"]
+  note: "The rule's example: <Piercing> deletes a Digimon with '[On Deletion] Gain 1 memory'; event order is the [On Deletion] memory, then the single SecurityReveal, then the attacker's [End of Attack] memory. <Piercing> is a BattleResult trigger in the battle's pool with the [On Deletion]: the turn player's <Piercing> activates first, so the [On Deletion] that ends its condition (Q3931 / EX8-045 shape) does not stop the pending check, which is still performed after the [On Deletion] (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved)."
 "16-7-5":
   status: proven
   tests: ["ch18_pending_overwrite::piercing_checks_security_once_however_many_instances", "ch11_14_attack_procedure::one_security_check_per_attack_sa_plus_counts_inside_it"]
@@ -420,12 +420,12 @@
   note: "Each loser is in its owner's trash after the battle. Equal DP: both are deleted, and with an [On Deletion] on each both Trash events precede the first [On Deletion] (deleted at the same time, before either effect resolves)."
 "14-2-4":
   status: proven
-  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]
-  note: "The deleted Digimon's [On Deletion], triggered by the battle, resolves before the end of battle effect."
+  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first"]
+  note: "The deleted Digimon's [On Deletion], triggered by the battle, resolves before the end of battle effect; so do the battle-result triggers ('wins a battle'), which pend with it."
 "14-2-5":
   status: proven
-  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]
-  note: "An '[All Turns] At the end of a battle, gain 1 memory' resolves exactly once after each battle, after the battle-triggered effects."
+  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first"]
+  note: "An '[All Turns] At the end of a battle, gain 1 memory' resolves exactly once after each battle, after the battle-triggered effects (the [On Deletion] and the 'wins a battle' triggers of one pool)."
 "16-9-1":
   status: proven
   tests: ["ch11_14_attack_procedure::jamming_survives_security_battle_only"]
