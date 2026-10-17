@@ -321,11 +321,9 @@
 
 # ── ch11-14 Attack, Block, Security Check, Battle (§11-§14), §15-16-10-2, §16-7-5, §16-9-1 — tests/rules_conformance/ch11_14_attack_procedure.rs ──
 "11-1-5":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES
+  status: proven
   tests: ["ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution", "ch16_attack_keywords::vortex_attack_has_block_timing"]
-  note: "The rule's example: an attacker that deletes itself on its [When Attacking]. The end of attack timing arrives (EOA_OBS resolves), but the defender is never offered the counter timing: the engine abandons the attack as soon as the attacker leaves. Test is #[ignore]d. The second, independent violation (a <Vortex> attack skipped the counter and block timings, G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK) is fixed (Plan 4 Task 13): vortex_attack_has_block_timing is green."
+  note: "The rule's example is proven: an attacker that deletes itself on its [When Attacking] still gives the defender the counter timing, the block timing offers no block (12-1-6), nothing checks security and the end of attack timing arrives (attack_timings_continue_when_attacker_leaves_mid_resolution, green since G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES was resolved). Remaining, independent violation: a <Vortex> attack skips the counter and block timings altogether (G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK, linked through 11-4-1; vortex_attack_has_block_timing, #[ignore]d). Task 13 merged: the Vortex half (vortex_attack_has_block_timing) is proven too, so 11-1-5 is proven in full (controller, at the Task 10 merge)."
 "12-1-6":
   status: proven
   tests: ["ch11_14_attack_procedure::block_not_offered_when_attacker_left_battle_area"]

@@ -925,15 +925,15 @@
       "text": "The next timing won't begin until all of the processing is resolved for the current timing. (Example: After declaring an attack, the counter timing won't begin until any triggered [When Attacking] effects and other triggered effects have been resolved.)"
     },
     "11-1-5": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 11,
       "fingerprint": "cd109077bced1cb39983cddfc3851c42da90acec2ee7c54922c7d0df6542d1c9",
-      "gap_id": "G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES",
+      "gap_id": null,
       "mechanisms": [
         "attack-and-timing"
       ],
-      "note": "The rule's example: an attacker that deletes itself on its [When Attacking]. The end of attack timing arrives (EOA_OBS resolves), but the defender is never offered the counter timing: the engine abandons the attack as soon as the attacker leaves. Test is #[ignore]d. The second, independent violation (a <Vortex> attack skipped the counter and block timings, G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK) is fixed (Plan 4 Task 13): vortex_attack_has_block_timing is green.",
-      "status": "gap",
+      "note": "The rule's example is proven: an attacker that deletes itself on its [When Attacking] still gives the defender the counter timing, the block timing offers no block (12-1-6), nothing checks security and the end of attack timing arrives (attack_timings_continue_when_attacker_leaves_mid_resolution, green since G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES was resolved). Remaining, independent violation: a <Vortex> attack skips the counter and block timings altogether (G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK, linked through 11-4-1; vortex_attack_has_block_timing, #[ignore]d). Task 13 merged: the Vortex half (vortex_attack_has_block_timing) is proven too, so 11-1-5 is proven in full (controller, at the Task 10 merge).",
+      "status": "proven",
       "tests": [
         "ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution",
         "ch16_attack_keywords::vortex_attack_has_block_timing"
@@ -15244,9 +15244,9 @@
         "total": 10
       },
       "11": {
-        "gap": 28,
+        "gap": 27,
         "not_testable": 8,
-        "proven": 4,
+        "proven": 5,
         "total": 40
       },
       "12": {
@@ -15340,15 +15340,15 @@
         "total": 13
       }
     },
-    "gap": 619,
+    "gap": 618,
     "mechanics": {
-      "gap_blocking": 17,
+      "gap_blocking": 16,
       "gap_nonblocking": 322,
       "not_testable": 152,
-      "proven": 224
+      "proven": 225
     },
     "not-testable": 246,
-    "proven": 254
+    "proven": 255
   },
   "version": 1
 }

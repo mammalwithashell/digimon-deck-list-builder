@@ -141,7 +141,6 @@ fn decline_windows(r: &mut DebugRunner) -> Vec<Window> {
 ///   `block_not_offered_when_attacker_left_battle_area`), nothing checks
 ///   security, and the end of attack timing arrives (`EOA_OBS` resolves).
 #[test]
-#[ignore = "G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES (§11-1-5)"]
 fn attack_timings_continue_when_attacker_leaves_mid_resolution() {
     cite!(
         "11-1-5",

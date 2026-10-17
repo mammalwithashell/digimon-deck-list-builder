@@ -10,8 +10,10 @@
 //!   - decline: card stays in hand, attack advances to BlockOpen
 //!   - declare: card stack-pushes, `WhenDigivolving` fires (+1 memory via
 //!     the pilot), attack continues against the original target
-//!   - attacker deleted during Counter → state machine skips BlockOpen/Battle
-//!     and lands in Cleanup; no AttackerWins is claimed
+//!   - attacker deleted during Counter → the block timing offers no block
+//!     (§12-1-6) and the attack ends as not successful (§11-5-1-4-1)
+//!   - attacker gone before the counter timing → the counter timing still
+//!     occurs (§11-1-5), names the attacker's card, and can be accepted
 //!   - a Vortex attack opens CounterTiming too (§11-1-5; Q3869)
 //!   - Counter → Block sequence (declare Counter then Block fires next)
 //!   - Player-target attack ALSO opens Counter (general_rule 11-1-3;
@@ -533,4 +535,156 @@ fn encode_decode_digivolve_round_trip_for_action_ids() {
     let (h2, f2) = decode_digivolve(action2);
     assert_eq!(h2, 5);
     assert_eq!(f2, 3);
+}
+
+// ─── §11-1-5 / §12-1-6 / §11-5-1-4-1: the attacker leaves after declaring ──
+
+const KAMIKAZE_YAML: &str = r#"
+card: LEAVE-ATK
+name: Kamikazemon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Delete this Digimon."
+    process:
+      - delete_permanent: { target: source }
+"#;
+
+const EOA_ALLY_YAML: &str = r#"
+card: LEAVE-EOA
+name: Afterattackmon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 1000
+effects:
+  - when: end_of_attack
+    summary: "[All Turns] At the end of an attack, gain 1 memory."
+    process:
+      - gain_memory: 1
+"#;
+
+const COUNTER_MEM_YAML: &str = r#"
+card: LEAVE-COUNTER
+name: Parrymon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: counter
+    summary: "[Counter] Gain 1 memory."
+    process:
+      - gain_memory: 1
+"#;
+
+/// §11-1-5 (Ver. 4.3): "Even if an attacking Digimon leaves the battle area,
+/// the non-turn player's counter timing and block timing will still occur."
+/// §12-1-6: "A block can only be performed if an attacking Digimon is in the
+/// battle area." §11-5-1-4-1: the attack is not successful and the end of
+/// attack timing occurs.
+///
+/// P0's `LEAVE-ATK` (slot 0, "[When Attacking] Delete this Digimon") attacks
+/// P1 and deletes itself; its ally `LEAVE-EOA` ("[All Turns] At the end of an
+/// attack, gain 1 memory") slides from slot 1 into slot 0. P1 has
+/// `LEAVE-COUNTER` ("[Counter] Gain 1 memory") and an unsuspended <Blocker>.
+/// P1 is offered the counter timing naming the attacker's card (not the ally
+/// now in slot 0), ACCEPTS it and gains 1 memory; no block is offered, no
+/// security card is checked, and the end of attack timing still arrives.
+#[test]
+fn counter_accepted_after_attacker_left_then_no_block_and_attack_ends() {
+    use digimon_engine::action::space::encode_attack;
+    use digimon_engine::events::GameEvent;
+
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(KAMIKAZE_YAML)
+        .expect("attacker loads")
+        .from_dsl_yaml(EOA_ALLY_YAML)
+        .expect("end-of-attack ally loads")
+        .from_dsl_yaml(COUNTER_MEM_YAML)
+        .expect("counter card loads")
+        .add_card(dgmn("BLK", 4, 9000))
+        .add_card(dgmn("FILL", 3, 1000))
+        .security(1, &["FILL", "FILL", "FILL"])
+        .start();
+    let atk = r.place_on_field(0, "LEAVE-ATK", Some(0));
+    let ally = r.place_on_field(0, "LEAVE-EOA", Some(0));
+    assert_eq!((atk.index, ally.index), (0, 1));
+    let counter = r.place_on_field(1, "LEAVE-COUNTER", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+    let atk_card = r.game.players[0].battle_area[0].top_card().handle();
+    let ally_card = r.game.players[0].battle_area[1].top_card().handle();
+    let security_before = r.security_count(1);
+    let cp = r.event_checkpoint();
+
+    assert_eq!(r.attack_player(atk, 1, false), AttackResult::InProgress);
+
+    // The attacker left; the ally slid into slot 0.
+    assert_eq!(r.battle_area_size(0), 1, "the attacker deleted itself");
+    assert_eq!(
+        r.game.players[0].battle_area[0].top_card().handle(),
+        ally_card,
+        "the ally compacted into the attacker's slot"
+    );
+
+    // §11-1-5: the counter timing still occurs, as a real declinable prompt.
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming);
+    let sel = r.game.pending_selection.as_ref().expect("the counter timing");
+    assert_eq!(sel.selecting_player, 1);
+    assert!(sel.is_optional);
+    assert_eq!(
+        sel.source_card, atk_card,
+        "the prompt names the attacker's card, not the ally in its old slot"
+    );
+    assert_eq!(sel.source_permanent, None, "no attacking permanent remains");
+    let accept = encode_attack(0, counter.index as u16);
+    assert!(sel.valid_action_ids.contains(&accept), "{sel:?}");
+
+    r.game
+        .resolve_selection(1, accept)
+        .expect("P1 accepts its [Counter]");
+    // Settle any follow-up prompt that is not a block (there should be none).
+    for _ in 0..8 {
+        let Some(sel) = r.game.pending_selection.as_ref() else {
+            break;
+        };
+        assert_ne!(
+            r.current_phase(),
+            GamePhase::BlockTiming,
+            "§12-1-6: no block without an attacking Digimon"
+        );
+        let (player, action) = (sel.selecting_player, sel.valid_action_ids[0]);
+        r.game.resolve_selection(player, action).expect("settle prompt");
+    }
+
+    let events = r.events_since(cp);
+    let gained_by = |id: &str| {
+        events.iter().any(|e| {
+            matches!(e, GameEvent::MemoryChange { source_card_id: Some(src), .. } if src == id)
+        })
+    };
+    assert!(gained_by("LEAVE-COUNTER"), "P1's [Counter] resolved");
+    assert!(gained_by("LEAVE-EOA"), "the end of attack timing arrived");
+    assert!(
+        !events
+            .iter()
+            .any(|e| matches!(e, GameEvent::SecurityReveal { .. })),
+        "no security check without an attacking Digimon"
+    );
+    assert_eq!(r.security_count(1), security_before);
+    assert!(
+        !r.game.players[1].battle_area[blk.index as usize].is_suspended,
+        "the blocker did not block"
+    );
+    assert!(r.game.pending_attack.is_none(), "the attack ended");
+    assert!(r.game.pending_selection.is_none());
 }

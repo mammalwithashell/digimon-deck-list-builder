@@ -159,7 +159,8 @@ export type AttackResult =
   | 'MutualDestruction'
   | 'SecurityCheckSurvived'
   | 'AttackerDeletedBySecurity'
-  | 'GameWon';
+  | 'GameWon'
+  | 'Unsuccessful';
 
 export interface AttackResultDto {
   result: AttackResult;
