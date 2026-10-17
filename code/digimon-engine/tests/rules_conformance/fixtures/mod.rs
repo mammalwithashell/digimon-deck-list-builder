@@ -290,10 +290,16 @@ const CH17: &[&str] = &[
 const CH18: &[&str] = &[
     include_str!("ch18/EOOT_MEM.yaml"),
     include_str!("ch18/EOT_MAY_MEM.yaml"),
+    include_str!("ch18/DP_CHAIN.yaml"),
     include_str!("ch18/GREYMON_LV4.yaml"),
     include_str!("ch18/INH_PIERCE.yaml"),
     include_str!("ch18/LOOP_FLIP.yaml"),
+    include_str!("ch18/LOOP_FLIP_CHOOSE.yaml"),
+    include_str!("ch18/LOOP_FLIP_FINITE.yaml"),
     include_str!("ch18/LOOP_FLIP_MAY.yaml"),
+    include_str!("ch18/LOOP_FLIP_PICK.yaml"),
+    include_str!("ch18/LOOP_PICK_GROW.yaml"),
+    include_str!("ch18/LOOP_TWIN_GUARD.yaml"),
     include_str!("ch18/MAIN_DEL_6000_OR_LOWEST_IF_GREYMON.yaml"),
     include_str!("ch18/MAIN_MEM_AT_EOONT.yaml"),
     include_str!("ch18/MAIN_MINUS3000.yaml"),
@@ -306,6 +312,7 @@ const CH18: &[&str] = &[
     include_str!("ch18/OP_MEM_OR_DRAW_INSTEAD.yaml"),
     include_str!("ch18/PIERCE_EOA.yaml"),
     include_str!("ch18/WA_GAIN3_LOSE3_EOT.yaml"),
+    include_str!("ch18/WA_LOOP.yaml"),
 ];
 
 /// Every shared card's YAML source.

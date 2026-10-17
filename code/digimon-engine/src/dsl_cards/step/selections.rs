@@ -8087,6 +8087,9 @@ fn install_select_effect_choice(
     // Park the data frame (coexistence): driven by run_resume's EffectChoice arm.
     // Not optional (a branch must be picked) → decline None.
     if ctx.game.pending_selection.is_some() {
+        // The effect-text choose-one is how "you may X instead" is authored:
+        // choosing the other branch is the ability to stop a loop (§18-3-3-3).
+        ctx.game.mark_pending_selection_as_optional_decision();
         ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::RunTail {
                 prov: crate::resume::ResumeProvenance {

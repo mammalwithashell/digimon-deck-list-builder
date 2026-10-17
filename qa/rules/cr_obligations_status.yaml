@@ -283,39 +283,31 @@
   tests: ["ch18_pending_overwrite::used_option_trashed_immediately_after_first_main_uninterrupted"]
   note: "Two interruptions, both red: (1) the rule check deletes a 0 DP Digimon the [Main] caused before the Option is trashed (its would-be-deleted decision parks with P0's trash empty); (2) a trigger the [Main] caused makes the engine offer 'Trash the used Option' as a TriggerOrder branch. Test is #[ignore]d. The Option's trash itself emits no event (G-ENGINE-OPTION-TRASH-NO-EVENT, non-blocking), so the test reads the trash at parked decisions."
 "18-3-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
-  tests: ["ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared"]
-  note: "Definition; pinned with 18-3-2. The engine never recognises a loop: MAX_CHAIN_DEPTH (50) clears the effect queue silently. Test is #[ignore]d."
+  status: proven
+  tests: ["ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared", "ch18_pending_overwrite::long_finite_chain_is_not_an_infinite_loop", "ch18_pending_overwrite::dp_progress_chain_is_not_an_infinite_loop"]
+  note: "Definition; pinned with 18-3-2. From LOOP_WATCH_START (20) steps on, the drainer records a loop signature (pending entries + board: zones' card handles, suspension, effective DP, per-turn activation counts, memory) before each resolution step; the same state seen LOOP_SIGNATURE_REPEATS (3) times with no declinable decision in between is a loop. A 60-card self-chaining trigger (~120 chained resolutions that end when the deck empties) and a chain whose only progress is DP (+1000 per cycle up to 30000) both run to their end with no loop event."
 "18-3-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
-  tests: ["ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared"]
-  note: "A mandatory suspend/unsuspend loop: no GameOver (draw), nothing pending, the game goes on, and the opponent's trigger from the same play is discarded. Test is #[ignore]d."
+  status: proven
+  tests: ["ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared", "ch18_pending_overwrite::forced_prompt_loop_still_ends_in_a_draw", "ch18_pending_overwrite::forced_multi_option_pick_loop_still_ends_in_a_draw", "ch18_pending_overwrite::forced_replacement_order_loop_still_ends_in_a_draw", "ch18_pending_overwrite::infinite_loop_draw_during_an_attack_is_final", "ch18_pending_overwrite::forced_prompt_loop_with_growing_state_still_ends_in_a_draw"]
+  note: "A mandatory suspend/unsuspend loop: GameEvent::InfiniteLoop then GameOver { winner: None, reason: InfiniteLoopDraw }. Forced decisions do not reset the loop watch, so a loop whose repetitions only ask a mandatory pick (one option or two) or an immediate-replacement order also draws. The draw is final: one declared inside an attack stops the attack (no later security check, no second GameOver; the first terminal outcome stands). MAX_CHAIN_DEPTH (10_000) remains a far backstop that ends in the same draw, counted both on the chain depth and on the loop watch's age (steps since the last optional decision), so a forced-prompt loop whose DP grows without bound also draws; nothing is cleared with the game going on."
 "18-3-3":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
+  status: proven
   tests: ["ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it"]
-  note: "A loop with 'you may suspend it': after 24 acceptances the next repetition is not offered (the cap counts prompted iterations) and the opponent's pending trigger is discarded. The test accepts a repeat-count declaration or per-repetition prompts. Test is #[ignore]d."
+  note: "A loop with 'you may suspend it' is offered once per repetition (ruling W10): every resolved declinable decision resets the loop watch and every decision restarts the chain count, so P0 repeats it 40 times, stops it, the Digimon stays unsuspended, the game goes on, and P1's trigger pending since the play activates once. (The test's final MemoryChange expectation was corrected to the turn-player-signed delta -1 by controller ruling; the test had never reached it.)"
 "18-3-3-1":
   status: gap
-  blocks_training: true
+  blocks_training: false
   gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
-  note: "No declaration of a repeat count exists. The stoppable-loop test accepts a declaration prompt when one is built, or per-repetition prompts; the turn-player-first order of declarations is not asserted."
+  note: "repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). The turn-player-first order of declarations is not asserted. (residual; see Resolution)"
 "18-3-3-2":
   status: gap
-  blocks_training: true
+  blocks_training: false
   gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
-  note: "As 18-3-3-1, for the non-turn player."
+  note: "repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). As 18-3-3-1, for the non-turn player. (residual; see Resolution)"
 "18-3-3-3":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED
-  tests: ["ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it"]
-  note: "The player cannot repeat the loop 40 times and then stop it: the engine abandons it at the cap. Test is #[ignore]d."
+  status: proven
+  tests: ["ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it", "ch18_pending_overwrite::choose_one_loop_repeats_until_its_owner_stops_it"]
+  note: "Per-repetition decision (ruling W10): an optional prompt, or the DSL effect-text choose-one ('you may X instead'), lets the player repeat the loop as many times as they choose (40 / 30 in the tests, past any fixed cap), then stop it."
 "16-7-4":
   status: proven
   tests: ["ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack"]

@@ -213,6 +213,25 @@ pub enum GameEvent {
         source_zone: RevealZone,
     },
 
+    /// §18-3-2 (Comprehensive Rules Ver. 4.3): an infinite loop that neither
+    /// player can stop was detected, so the game ends in a draw. Emitted
+    /// immediately before the `GameOver { winner: None, reason:
+    /// InfiniteLoopDraw }` it causes. `player` / `card_id` / `card_name` name
+    /// the newest pending effect of the loop (`None` when the loop ran
+    /// through a rule-processing window with nothing queued). `repetitions`
+    /// is how many times the repeating state was seen (`backstop == false`,
+    /// see `game::infinite_loop::LOOP_SIGNATURE_REPEATS`), or the number of
+    /// resolutions the far `MAX_CHAIN_DEPTH` backstop counted
+    /// (`backstop == true`).
+    InfiniteLoop {
+        seq: u64,
+        player: Option<PlayerId>,
+        card_id: Option<String>,
+        card_name: Option<String>,
+        repetitions: u16,
+        backstop: bool,
+    },
+
     /// The game ended. `winner` is `None` on a draw.
     GameOver {
         seq: u64,
@@ -263,6 +282,7 @@ impl GameEvent {
             | GameEvent::SecurityReveal { seq, .. }
             | GameEvent::EffectTarget { seq, .. }
             | GameEvent::Reveal { seq, .. }
+            | GameEvent::InfiniteLoop { seq, .. }
             | GameEvent::GameOver { seq, .. }
             | GameEvent::Concede { seq, .. }
             | GameEvent::EffectFizzled { seq, .. } => *seq,
@@ -285,6 +305,7 @@ impl GameEvent {
             GameEvent::SecurityReveal { .. } => "SecurityReveal",
             GameEvent::EffectTarget { .. } => "EffectTarget",
             GameEvent::Reveal { .. } => "Reveal",
+            GameEvent::InfiniteLoop { .. } => "InfiniteLoop",
             GameEvent::GameOver { .. } => "GameOver",
             GameEvent::Concede { .. } => "Concede",
             GameEvent::EffectFizzled { .. } => "EffectFizzled",

@@ -68,6 +68,22 @@ const event = (overrides: Partial<GameEvent>): GameEvent => ({
 });
 
 describe('formatEvent', () => {
+  it('explains an infinite-loop draw', () => {
+    const lines = formatEvent(
+      event({
+        type: 'InfiniteLoop',
+        source_card_id: 'BT1-001',
+        source_card_name: 'Agumon',
+        meta: { repetitions: 3, backstop: false },
+      }),
+      { state, playerLabels: { 1: 'You', 2: 'Bot' } },
+    );
+
+    expect(lines).toEqual([
+      'An infinite loop no player can stop ([BT1-001: Agumon]): the game is a draw.',
+    ]);
+  });
+
   it('formats play events as [CARD-ID: Name] from event identity', () => {
     const lines = formatEvent(
       event({

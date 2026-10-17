@@ -15,9 +15,15 @@
 //!   triggers for the current chooser are all optional, the prompt carries
 //!   a PASS bit that declines **all of them at once**.
 //!
-//! The drainer has a hard cap of `MAX_CHAIN_DEPTH` iterations as a safety
-//! rail against self-triggering loops. Matches Python's
-//! `_resolve_effect_stack` max=50 bound.
+//! §18-3 infinite loops: before each resolution step the drainer records a
+//! loop signature (`Game::watch_for_infinite_loop`, `game::infinite_loop`);
+//! the same state recurring `LOOP_SIGNATURE_REPEATS` times with no
+//! declinable decision in between (a forced pick does not count) ends the
+//! game in the §18-3-2 draw. A loop with an
+//! optional decision in it repeats for as long as its owner keeps accepting
+//! (§18-3-3-3, ruling W10). `MAX_CHAIN_DEPTH` is a far backstop behind the
+//! signature watch that ends in the same draw; nothing is ever silently
+//! cleared.
 
 use crate::action::space::{
     BREEDING_TARGET, HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS, REPLACEMENT_ACCEPT,
@@ -38,9 +44,13 @@ use crate::selection::{
 };
 use crate::trigger_context::TriggerContext;
 
-/// Max iterations the drainer will take before aborting a suspected infinite
-/// chain. Matches Python's `_resolve_effect_stack` limit.
-pub const MAX_CHAIN_DEPTH: u16 = 50;
+/// Far backstop behind the §18-3 loop-signature watch: a chain that resolves
+/// this many entries with no player decision in between, without ever
+/// repeating a state, is treated as an infinite loop nobody can stop and ends
+/// in the §18-3-2 draw (`GameEvent::InfiniteLoop`, `GameOver { winner: None }`).
+/// It is never a silent clear. Long but finite chains (a deck's worth of
+/// chained triggers) stay far below it.
+pub const MAX_CHAIN_DEPTH: u16 = 10_000;
 
 /// RAII guard that installs a `TriggerContext` onto `Game.current_trigger_context`
 /// for the lifetime of the guard and restores the previous value on drop —
@@ -1314,7 +1324,9 @@ impl Game {
             self.run_state_based_rules_check();
         }
         self.drain_effect_queue_inner();
-        if self.effect_drain_depth == 1 {
+        // A §18-3-2 infinite-loop draw ends the game: no flush or rules
+        // processing runs after it.
+        if self.effect_drain_depth == 1 && !self.halted_by_infinite_loop() {
             // Flush the OnDiscardHand batch window (G-ENGINE-ON-DISCARD-HAND):
             // the causing effect body has finished, so the whole discard batch
             // is known. Fire the trigger ONCE per affected owner (DCGO
@@ -1323,15 +1335,21 @@ impl Game {
             // a selection (a park means the effect body is not finished — the
             // resuming drain flushes it). Loop-guarded because an OnDiscardHand
             // observer can itself trash a hand (a nested batch).
-            if self.pending_selection.is_none() {
+            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
                 let mut discard_guard: u16 = 0;
-                while self.pending_hand_discard.is_some() && self.pending_selection.is_none() {
+                while self.pending_hand_discard.is_some()
+                    && self.pending_selection.is_none()
+                    && !self.halted_by_infinite_loop()
+                {
                     self.flush_pending_hand_discard();
                     if !self.effect_queue.is_empty() {
                         self.drain_effect_queue_inner();
                     }
                     discard_guard += 1;
-                    if discard_guard > MAX_CHAIN_DEPTH {
+                    if self.loop_step_ends_game(
+                        crate::game::infinite_loop::LoopSite::DiscardFlush,
+                        discard_guard,
+                    ) {
                         break;
                     }
                 }
@@ -1340,15 +1358,23 @@ impl Game {
             // (G-ENGINE-ON-ADD-TO-DECK): the effect body that added cards to a
             // deck has finished, so fire the observer ONCE (DCGO
             // `FireOnAddLibraryAnyone` once per added list), then drain.
-            if self.pending_selection.is_none() {
+            // Every later block re-checks for the §18-3-2 draw: a pass above
+            // may have ended the game in it, and nothing runs after that.
+            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
                 let mut deck_guard: u16 = 0;
-                while self.pending_deck_add.is_some() && self.pending_selection.is_none() {
+                while self.pending_deck_add.is_some()
+                    && self.pending_selection.is_none()
+                    && !self.halted_by_infinite_loop()
+                {
                     self.flush_pending_deck_add();
                     if !self.effect_queue.is_empty() {
                         self.drain_effect_queue_inner();
                     }
                     deck_guard += 1;
-                    if deck_guard > MAX_CHAIN_DEPTH {
+                    if self.loop_step_ends_game(
+                        crate::game::infinite_loop::LoopSite::DeckAddFlush,
+                        deck_guard,
+                    ) {
                         break;
                     }
                 }
@@ -1359,29 +1385,36 @@ impl Game {
             // ONCE per host (DCGO `AddDigivolutionCards*` once per list;
             // rule 15-5-2), then drain the observers. Loop-guarded because an
             // observer can itself place sources (a nested batch).
-            if self.pending_selection.is_none() {
+            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
                 let mut added_guard: u16 = 0;
-                while !self.pending_added_sources.is_empty() && self.pending_selection.is_none() {
+                while !self.pending_added_sources.is_empty()
+                    && self.pending_selection.is_none()
+                    && !self.halted_by_infinite_loop()
+                {
                     self.flush_pending_added_sources();
                     if !self.effect_queue.is_empty() {
                         self.drain_effect_queue_inner();
                     }
                     added_guard += 1;
-                    if added_guard > MAX_CHAIN_DEPTH {
+                    if self.loop_step_ends_game(
+                        crate::game::infinite_loop::LoopSite::AddedSourcesFlush,
+                        added_guard,
+                    ) {
                         break;
                     }
                 }
             }
             let mut guard: u16 = 0;
             loop {
-                if self.pending_selection.is_some() {
+                if self.pending_selection.is_some() || self.halted_by_infinite_loop() {
                     break;
                 }
                 if !self.run_state_based_rules_check() {
                     break;
                 }
                 guard += 1;
-                if guard > MAX_CHAIN_DEPTH {
+                if self.loop_step_ends_game(crate::game::infinite_loop::LoopSite::RulesCheck, guard)
+                {
                     break;
                 }
                 // The batched deletion drains its own OnDeletion handlers, but
@@ -1393,6 +1426,13 @@ impl Game {
             }
         }
         self.effect_drain_depth = self.effect_drain_depth.saturating_sub(1);
+        if self.effect_drain_depth == 0 && self.pending_selection.is_none() {
+            // §18-3: the outermost drain has settled with nothing parked, so
+            // this processing is over; a later drain starts its own loop
+            // watch. A drain parked on a decision keeps its watch: whether it
+            // starts over depends on that decision (declinable or forced).
+            self.reset_loop_watch();
+        }
         // G-ENGINE-TURN-END-MID-EFFECT: a turn end that `check_turn_end` held
         // back while an effect was resolving runs now that the outermost
         // drain has settled with nothing parked (6-1-4-1).
@@ -1418,6 +1458,26 @@ impl Game {
         }
     }
 
+    /// One step of drain processing at `site`, the `steps`-th since the
+    /// count last restarted. Returns `true` when processing must stop because
+    /// the game has ended in the §18-3-2 infinite-loop draw: the step
+    /// completed a repeating state (`watch_for_infinite_loop`), or the count
+    /// passed the far `MAX_CHAIN_DEPTH` backstop.
+    fn loop_step_ends_game(
+        &mut self,
+        site: crate::game::infinite_loop::LoopSite,
+        steps: u16,
+    ) -> bool {
+        if self.watch_for_infinite_loop(site) {
+            return true;
+        }
+        if steps > MAX_CHAIN_DEPTH {
+            self.declare_infinite_loop_draw(steps, true);
+            return true;
+        }
+        false
+    }
+
     /// Inner queue-drain loop (the historical `drain_effect_queue` body).
     /// Resolves triggered effects until the queue empties or a selection parks.
     /// Runs the state-based rules-check between top-level queued effects via
@@ -1426,6 +1486,12 @@ impl Game {
     fn drain_effect_queue_inner(&mut self) {
         loop {
             if self.pending_selection.is_some() {
+                return;
+            }
+            // §18-3-2: the game ended in an infinite-loop draw (possibly in a
+            // nested drain an effect body performed); nothing more resolves.
+            if self.halted_by_infinite_loop() {
+                self.effect_queue.clear();
                 return;
             }
             // 9-1-5 / 18-1-2: a used Option whose `[Main]` body has just
@@ -1453,11 +1519,17 @@ impl Game {
             }
 
             self.effect_chain_depth = self.effect_chain_depth.saturating_add(1);
-            if self.effect_chain_depth > MAX_CHAIN_DEPTH {
-                // Suspected self-triggering loop — drop the remaining queue.
-                // Matches Python's defensive behavior.
-                self.effect_queue.clear();
-                self.effect_chain_depth = 0;
+            // §18-3-1 / §18-3-2: the same pending entries over the same board
+            // again, with no declinable decision since, is an infinite loop
+            // neither player can stop (a declinable decision resets the
+            // watch, so a loop with an optional "you may" in it keeps
+            // repeating while its owner accepts, §18-3-3-3; a forced pick
+            // does not). The game ends in a draw; the queue is never
+            // dropped with the game going on.
+            if self.loop_step_ends_game(
+                crate::game::infinite_loop::LoopSite::Queue,
+                self.effect_chain_depth,
+            ) {
                 return;
             }
 
@@ -5429,6 +5501,27 @@ impl Game {
         }
         let was_attack_pending = self.pending_attack.is_some();
 
+        // §18-3 / gap G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED: a player
+        // decision resolves here (page navigation returned above).
+        // - The far `MAX_CHAIN_DEPTH` backstop counts resolutions between
+        //   decisions, so ANY decision restarts the chain count -- at 1, not
+        //   0, when a chain is running, keeping the "inside a chain" marker
+        //   that attack-cancel and until-condition re-evaluation read.
+        // - The loop-signature watch starts over only after a DECLINABLE
+        //   decision: §18-3-3-3's stop is the player's optional decision, so a
+        //   loop whose repetitions only ask forced questions is still one
+        //   neither player can stop (§18-3-2) and keeps its watch.
+        let mark = self.optional_decision_mark.take();
+        let declinable = self.pending_selection.as_ref().is_some_and(|sel| {
+            crate::game::infinite_loop::selection_can_stop_a_loop(sel, mark.as_ref())
+        });
+        if declinable {
+            self.reset_loop_watch();
+        }
+        if self.effect_chain_depth > 0 {
+            self.effect_chain_depth = 1;
+        }
+
         // Take the selection, restore phase, invoke the appropriate callback.
         let sel = self.pending_selection.take().expect("checked Some above");
         let resume = self.pending_selection_resume.take();
@@ -6079,44 +6172,70 @@ mod tests {
     use super::*;
     use crate::debug_runner::{make_test_card, DebugRunner};
 
-    /// Chain cap safety rail: if the chain_depth counter has reached the
-    /// cap (simulating a long sequence of recursive triggers), the next
-    /// drain iteration trips the guard, clears the remaining queue, and
-    /// resets the counter. Prevents a pathological self-triggering chain
-    /// from hanging the engine.
+    /// Far chain-depth backstop. §18-3-2 (Comprehensive Rules Ver. 4.3): "If
+    /// an infinite loop occurs and neither player has the ability to stop it,
+    /// that game ends in a draw." A chain that has resolved `MAX_CHAIN_DEPTH`
+    /// entries with no player decision is treated as such a loop: the next
+    /// drain step emits `GameEvent::InfiniteLoop` and ends the game in a draw.
+    /// (This test used to assert the opposite -- a SILENT clear of the queue
+    /// with the game going on, gap G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED,
+    /// which no rule allows.)
     #[test]
-    fn chain_cap_terminates_runaway_queue() {
+    fn chain_depth_backstop_ends_in_an_infinite_loop_draw() {
         let mut r = DebugRunner::builder()
             .add_card(make_test_card("TEST-006", "TestSix"))
             .start();
         r.place_on_field(0, "TEST-006", Some(0));
 
-        // Simulate having just finished 50 chained resolutions — the next
-        // resolution should be capped.
+        // Simulate having just finished MAX_CHAIN_DEPTH chained resolutions
+        // with no decision in between.
         r.game.effect_chain_depth = MAX_CHAIN_DEPTH;
 
         // Enqueue a fresh mandatory trigger; single-bundle, would normally
-        // auto-fire. With the cap already reached, drain should abort.
+        // auto-fire. Past the backstop the game ends instead.
         r.game.enqueue_triggered(
             EffectTiming::EndOfYourTurn,
             TriggerSource::PlayerBattleArea(0),
         );
         let memory_before = r.game.memory;
+        let cp = r.game.events.len();
 
         r.game.drain_effect_queue();
 
-        assert!(
-            r.game.effect_queue.is_empty(),
-            "runaway queue must be cleared after hitting the cap"
-        );
+        let events = &r.game.events[cp..];
+        let loop_at = events
+            .iter()
+            .position(|e| {
+                matches!(
+                    e,
+                    crate::events::GameEvent::InfiniteLoop { backstop: true, .. }
+                )
+            })
+            .unwrap_or_else(|| panic!("an InfiniteLoop event: {events:?}"));
+        let over_at = events
+            .iter()
+            .position(|e| {
+                matches!(
+                    e,
+                    crate::events::GameEvent::GameOver {
+                        winner: None,
+                        reason: crate::game::TerminalOutcomeReason::InfiniteLoopDraw,
+                        ..
+                    }
+                )
+            })
+            .unwrap_or_else(|| panic!("a GameOver draw: {events:?}"));
+        assert!(loop_at < over_at, "the loop event precedes the GameOver");
+        assert!(r.game.game_over);
+        assert_eq!(r.game.winner, None, "§18-3-2: the game is a draw");
         assert_eq!(
-            r.game.effect_chain_depth, 0,
-            "chain depth must reset after the cap clears the queue"
+            r.game.terminal_outcome_reason,
+            Some(crate::game::TerminalOutcomeReason::InfiniteLoopDraw)
         );
         assert!(r.game.pending_selection.is_none());
         assert_eq!(
             r.game.memory, memory_before,
-            "capped effect must not have fired"
+            "the effect past the backstop must not have fired"
         );
     }
 

@@ -12,6 +12,7 @@ const TYPE_ALIASES: Record<string, string> = {
   SecurityReveal: 'security_reveal',
   EffectTarget: 'effect_target',
   Reveal: 'reveal',
+  InfiniteLoop: 'infinite_loop',
   GameOver: 'game_over',
   Concede: 'concede',
   EffectFizzled: 'effect_fizzled',

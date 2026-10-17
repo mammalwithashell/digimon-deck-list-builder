@@ -712,6 +712,18 @@ impl Game {
     /// `pending_attack.state` (e.g. to `Battle` after a block declaration)
     /// and re-invokes this method to continue.
     pub fn advance_pending_attack(&mut self) -> AttackResult {
+        // §18-3-2: a drain inside this attack (e.g. its [When Attacking]
+        // effects) ended the game in the infinite-loop draw: no later attack
+        // timing, battle or security check runs. `GameWon` is the engine's
+        // "game over" result, as in the security-check guard; the terminal
+        // outcome itself is `Game::winner` / `terminal_outcome_reason`.
+        // Scoped to the loop draw: many card tests stage an opponent's-turn
+        // attack on a board whose `end_turn` decked a player out, and expect
+        // the attack to resolve. Every terminal outcome is still final
+        // (`finish_game` keeps the first one).
+        if self.halted_by_infinite_loop() {
+            return AttackResult::GameWon;
+        }
         // A declaration made while resolving an effect is only declared here.
         // Finish that effect's remaining steps before attack interrupts/battle.
         if self.draining_deferred > 0 {

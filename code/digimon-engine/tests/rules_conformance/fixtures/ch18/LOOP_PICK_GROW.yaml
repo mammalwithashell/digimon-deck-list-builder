@@ -1,0 +1,43 @@
+# LOOP_PICK_GROW -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] Suspend this Digimon.
+#   [All Turns] When this Digimon suspends, it gets +1000 DP for the turn.
+#   Then, unsuspend 1 of your Digimon.
+#   [All Turns] When this Digimon unsuspends, suspend it.
+# An infinite loop (§18-3-1) whose state never repeats (its DP grows without
+# bound) and whose every repetition asks a forced pick ("unsuspend 1 of your
+# Digimon" with this Digimon its controller's only Digimon). Neither player
+# can stop it (§18-3-2).
+card: LOOP_PICK_GROW
+name: Swellmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] Suspend this Digimon."
+    process:
+      - suspend: { target: source }
+  - when: on_suspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon suspends, it gets +1000 DP for the turn. Then, unsuspend 1 of your Digimon."
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 1000
+          expiry: end_of_turn
+      - select_own_permanent:
+          bind_as: pick
+          filter: { kind: digimon }
+          prompt: "Unsuspend 1 of your Digimon"
+      - unsuspend: { target: pick }
+  - when: on_unsuspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon unsuspends, suspend it."
+    process:
+      - suspend: { target: source }
