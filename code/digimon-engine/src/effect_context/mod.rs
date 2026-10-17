@@ -1651,10 +1651,8 @@ impl<'a> EffectContext<'a> {
     // ─── Field mutations ──────────────────────────────────────────────
 
     pub fn can_affect_permanent(&self, target: PermanentHandle) -> bool {
-        !self.game.progress_excludes(target, Some(self.player))
-            && !self
-                .game
-                .permanent_is_unaffected_by_effect(target, self.player, self.source_kind)
+        self.game
+            .effect_can_affect(target, self.player, self.source_kind)
     }
 
     /// Snapshot of the current reveal pool. Scripts inspect this to decide

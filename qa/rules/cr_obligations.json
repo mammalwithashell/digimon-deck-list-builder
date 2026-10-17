@@ -3222,7 +3222,9 @@
       "note": "An immune Digimon is offered by an opponent's 'choose 1' (beside another Digimon, and as the only candidate), can be chosen, and is not affected (Q6176, Q3788).",
       "status": "proven",
       "tests": [
-        "ch15_15_unaffected::immune_permanent_is_still_choosable_and_offered_as_only_candidate"
+        "ch15_15_unaffected::immune_permanent_is_still_choosable_and_offered_as_only_candidate",
+        "ch16_attack_keywords::progress_persistent_only_while_attacking",
+        "ch16_attack_keywords::progress_kind_matches_rule"
       ],
       "text": "\"Isn't affected by effects\" cards can still be chosen for effects. (Example: A card that isn't affected by effects can be chosen for an \"[On Play] Suspend 1 of your opponent's Digimon\" effect, but it isn't affected by that effect and it isn't suspended.)"
     },

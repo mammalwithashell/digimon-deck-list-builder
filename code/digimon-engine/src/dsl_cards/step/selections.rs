@@ -2853,7 +2853,18 @@ fn run_per_color_delete_terminal(
     game: &mut crate::game::Game,
     state: crate::resume::PerColorDeleteState,
 ) {
-    if !state.picked.is_empty() {
+    // §15-15-5-3 / §15-15-5-1: an unaffected Digimon (a `<Progress>`
+    // attacker, a `CannotBeAffected` immunity) can be picked, but the delete
+    // doesn't affect it; the other picks are still deleted together.
+    let deletable: Vec<PermanentHandle> = state
+        .picked
+        .iter()
+        .copied()
+        .filter(|h| {
+            game.effect_can_affect(*h, state.prov.controller, state.prov.source_kind)
+        })
+        .collect();
+    if !deletable.is_empty() {
         // Attribute the deletion to the controller's effect so the cause is the
         // opponent's-Digimon-deleted-by-your-effect one DCGO uses (`OpponentEffect`
         // from the target's perspective). Pin `effect_source_player` = controller
@@ -2862,8 +2873,8 @@ fn run_per_color_delete_terminal(
         // `delete_permanent_with_effects`.
         let prev_source = game.effect_source_player;
         game.effect_source_player = Some(state.prov.controller);
-        let cause = game.infer_deletion_cause(state.picked[0]);
-        game.delete_permanents_batch(state.picked.clone(), cause);
+        let cause = game.infer_deletion_cause(deletable[0]);
+        game.delete_permanents_batch(deletable, cause);
         game.effect_source_player = prev_source;
     }
     let mut ctx = EffectContext::new_with_source_kind_and_override(

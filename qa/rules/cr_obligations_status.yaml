@@ -187,7 +187,7 @@
   note: "Record-and-suppress (2026-10-16): a modifier applied to an immune card is recorded (ModifierEntry::affecting_source_kind) and hidden while a covering CannotBeAffected entry exists; it applies as soon as the immunity lapses (the rule's 'while suspended' example: -3000 DP applies on unsuspend) or expires (Atratusmon shape, Q831), for the rest of its own duration. Previously EffectContext::add_modifier skipped the install, so the effect never applied."
 "15-15-5-3":
   status: proven
-  tests: ["ch15_15_unaffected::immune_permanent_is_still_choosable_and_offered_as_only_candidate"]
+  tests: ["ch15_15_unaffected::immune_permanent_is_still_choosable_and_offered_as_only_candidate", "ch16_attack_keywords::progress_persistent_only_while_attacking", "ch16_attack_keywords::progress_kind_matches_rule"]
   note: "An immune Digimon is offered by an opponent's 'choose 1' (beside another Digimon, and as the only candidate), can be chosen, and is not affected (Q6176, Q3788)."
 "15-15-5-4":
   status: proven

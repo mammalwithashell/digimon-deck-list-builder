@@ -243,6 +243,23 @@ impl Game {
             )
     }
 
+    /// §15-15-5-1 / §16-39-1: whether an effect of category `source_kind`
+    /// controlled by `effect_controller` can affect `target` right now -- not
+    /// shielded by `<Progress>` while attacking, and not covered by a
+    /// `CannotBeAffected` immunity. The single gate for one-shot processing;
+    /// `EffectContext::can_affect_permanent` is this with the context's
+    /// controller and kind, and resume terminals that run outside an
+    /// `EffectContext` (e.g. the per-color batch delete) call it directly.
+    pub fn effect_can_affect(
+        &self,
+        target: PermanentHandle,
+        effect_controller: crate::enums::PlayerId,
+        source_kind: crate::enums::EffectSourceKind,
+    ) -> bool {
+        !self.progress_excludes(target, Some(effect_controller))
+            && !self.permanent_is_unaffected_by_effect(target, effect_controller, source_kind)
+    }
+
     /// §15-15-5-1: whether `target` is unaffected by an effect of category
     /// `source_kind` controlled by `effect_controller`. Thin wrapper over
     /// [`crate::modifiers::ModifierRegistry::is_unaffected_by`], whose
