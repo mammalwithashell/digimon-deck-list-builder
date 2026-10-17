@@ -243,34 +243,19 @@ impl Game {
             )
     }
 
+    /// §15-15-5-1: whether `target` is unaffected by an effect of category
+    /// `source_kind` controlled by `effect_controller`. Thin wrapper over
+    /// [`crate::modifiers::ModifierRegistry::is_unaffected_by`], whose
+    /// predicate also drives the read-time suppression of modifiers that
+    /// were applied to `target` (§15-15-5-2).
     pub fn permanent_is_unaffected_by_effect(
         &self,
         target: PermanentHandle,
         effect_controller: crate::enums::PlayerId,
         source_kind: crate::enums::EffectSourceKind,
     ) -> bool {
-        use crate::modifiers::EffectControllerFilter;
-
         self.modifiers
-            .get(target, crate::enums::ModifierType::CannotBeAffected)
-            .into_iter()
-            .any(|entry| {
-                let Some(filter) = entry.effect_immunity_filter else {
-                    return true;
-                };
-                let source_kind_matches = filter
-                    .source_kind
-                    .map(|expected| source_kind.includes(expected))
-                    .unwrap_or(true);
-                if !source_kind_matches {
-                    return false;
-                }
-                match filter.controller {
-                    EffectControllerFilter::Any => true,
-                    EffectControllerFilter::OpponentOnly => effect_controller != target.player,
-                    EffectControllerFilter::OwnOnly => effect_controller == target.player,
-                }
-            })
+            .is_unaffected_by(target, effect_controller, source_kind)
     }
 
     /// Returns `true` when an effect is currently resolving AND its

@@ -128,6 +128,15 @@ pub struct ModifierEntry {
     pub until_condition: Option<UntilConditionFn>,
     /// Optional source-kind/controller filter for CannotBeAffected-style gates.
     pub effect_immunity_filter: Option<EffectImmunityFilter>,
+    /// §15-15-5-1 / §15-15-5-2 record-and-suppress: the category of the
+    /// effect that installed this entry (`None` for rule-installed and legacy
+    /// entries, which no immunity filters). While a `CannotBeAffected` entry
+    /// on the same permanent covers `(source_player, affecting_source_kind)`,
+    /// [`ModifierRegistry::get`] hides the entry; it applies again the moment
+    /// the immunity expires or its condition lapses, for whatever remains of
+    /// its own duration (DCGO `ChangeDP.cs` `CanUseCondition`, re-evaluated at
+    /// read time).
+    pub affecting_source_kind: Option<EffectSourceKind>,
     /// For `ModifierType::DisableEffect` entries — the specific
     /// `EffectTiming` that is suppressed on this permanent. None for
     /// every other variant. Read by the observer dispatch hook before
@@ -158,6 +167,35 @@ pub struct EffectImmunityFilter {
     pub controller: EffectControllerFilter,
 }
 
+/// Whether a `CannotBeAffected` entry's `filter` makes a permanent controlled
+/// by `target_player` unaffected by an effect of category `source_kind`
+/// controlled by `effect_controller`. `None` (an unfiltered entry) covers
+/// every effect. The single predicate behind
+/// [`ModifierRegistry::is_unaffected_by`] (the apply-time gate for one-shot
+/// processing) and the read-time suppression in [`ModifierRegistry::get`].
+pub fn immunity_filter_covers(
+    filter: Option<&EffectImmunityFilter>,
+    target_player: PlayerId,
+    effect_controller: PlayerId,
+    source_kind: EffectSourceKind,
+) -> bool {
+    let Some(filter) = filter else {
+        return true;
+    };
+    if !filter
+        .source_kind
+        .map(|expected| source_kind.includes(expected))
+        .unwrap_or(true)
+    {
+        return false;
+    }
+    match filter.controller {
+        EffectControllerFilter::Any => true,
+        EffectControllerFilter::OpponentOnly => effect_controller != target_player,
+        EffectControllerFilter::OwnOnly => effect_controller == target_player,
+    }
+}
+
 impl std::fmt::Debug for ModifierEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ModifierEntry")
@@ -171,6 +209,7 @@ impl std::fmt::Debug for ModifierEntry {
             .field("cause_filter", &self.cause_filter)
             .field("has_until_condition", &self.until_condition.is_some())
             .field("effect_immunity_filter", &self.effect_immunity_filter)
+            .field("affecting_source_kind", &self.affecting_source_kind)
             .field("disable_effect_timing", &self.disable_effect_timing)
             .field("install_order", &self.install_order)
             .finish_non_exhaustive()
@@ -214,6 +253,7 @@ impl ModifierEntry {
             replacement_condition: None,
             until_condition: None,
             effect_immunity_filter: None,
+            affecting_source_kind: None,
             disable_effect_timing: None,
             pending_skips: 0,
             install_order: 0,
@@ -239,6 +279,7 @@ impl ModifierEntry {
             replacement_condition: None,
             until_condition: None,
             effect_immunity_filter: None,
+            affecting_source_kind: None,
             disable_effect_timing: None,
             pending_skips: 0,
             install_order: 0,
@@ -263,6 +304,7 @@ impl ModifierEntry {
             replacement_condition: None,
             until_condition: None,
             effect_immunity_filter: None,
+            affecting_source_kind: None,
             disable_effect_timing: Some(timing),
             pending_skips: 0,
             install_order: 0,
@@ -289,6 +331,7 @@ impl ModifierEntry {
             replacement_condition: None,
             until_condition: None,
             effect_immunity_filter: None,
+            affecting_source_kind: None,
             disable_effect_timing: None,
             pending_skips: 0,
             install_order: 0,
@@ -320,6 +363,13 @@ impl ModifierEntry {
     /// expiry on the first matching turn-end).
     pub fn with_pending_skips(mut self, skips: u8) -> Self {
         self.pending_skips = skips;
+        self
+    }
+
+    /// Tag the entry with the category of the effect installing it, so an
+    /// immunity on the target suppresses it at read time (§15-15-5-2).
+    pub fn with_affecting_source_kind(mut self, kind: EffectSourceKind) -> Self {
+        self.affecting_source_kind = Some(kind);
         self
     }
 
@@ -1146,12 +1196,70 @@ impl ModifierRegistry {
         );
     }
 
-    /// Get all modifiers of a given type on a permanent.
+    /// Get all modifiers of a given type on a permanent that currently
+    /// affect it.
+    ///
+    /// §15-15-5-1 / §15-15-5-2: an entry installed by an effect
+    /// (`affecting_source_kind: Some`) is hidden while a `CannotBeAffected`
+    /// entry on the same permanent covers that effect, and shows again as
+    /// soon as the immunity ends -- the entry itself keeps its own duration.
+    /// `CannotBeAffected` entries are never hidden.
     pub fn get(&self, target: PermanentHandle, modifier: ModifierType) -> Vec<&ModifierEntry> {
         self.permanent_modifiers
             .get(&target)
-            .map(|entries| entries.iter().filter(|e| e.modifier == modifier).collect())
+            .map(|entries| {
+                entries
+                    .iter()
+                    .filter(|e| {
+                        e.modifier == modifier && !Self::suppressed_by_immunity(entries, target, e)
+                    })
+                    .collect()
+            })
             .unwrap_or_default()
+    }
+
+    /// Whether `entry` (on `target`, whose entries are `entries`) is hidden by
+    /// an immunity on `target` (§15-15-5-1).
+    fn suppressed_by_immunity(
+        entries: &[ModifierEntry],
+        target: PermanentHandle,
+        entry: &ModifierEntry,
+    ) -> bool {
+        let Some(kind) = entry.affecting_source_kind else {
+            return false;
+        };
+        entry.modifier != ModifierType::CannotBeAffected
+            && entries.iter().any(|imm| {
+                imm.modifier == ModifierType::CannotBeAffected
+                    && immunity_filter_covers(
+                        imm.effect_immunity_filter.as_ref(),
+                        target.player,
+                        entry.source_player,
+                        kind,
+                    )
+            })
+    }
+
+    /// Whether `target` is currently unaffected by an effect of category
+    /// `source_kind` controlled by `effect_controller` (§15-15-5-1): any of
+    /// its `CannotBeAffected` entries covers it.
+    pub fn is_unaffected_by(
+        &self,
+        target: PermanentHandle,
+        effect_controller: PlayerId,
+        source_kind: EffectSourceKind,
+    ) -> bool {
+        self.permanent_modifiers.get(&target).is_some_and(|entries| {
+            entries.iter().any(|imm| {
+                imm.modifier == ModifierType::CannotBeAffected
+                    && immunity_filter_covers(
+                        imm.effect_immunity_filter.as_ref(),
+                        target.player,
+                        effect_controller,
+                        source_kind,
+                    )
+            })
+        })
     }
 
     /// Sum of all `value` fields for a given modifier type on a permanent.

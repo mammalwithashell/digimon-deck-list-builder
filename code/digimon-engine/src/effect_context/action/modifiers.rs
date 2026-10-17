@@ -24,6 +24,28 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 
 impl<'a> EffectContext<'a> {
+    /// Apply-time gate for the continuous modifier installs below
+    /// (`add_modifier` / `add_modifier_with_payload` /
+    /// `add_modifier_with_until_condition`) and for `grant_triggered_effect`.
+    ///
+    /// §15-15-5-2 "When a card isn't affected by effects, then it can be
+    /// affected again, effects will immediately start affecting that card":
+    /// a `CannotBeAffected` immunity does NOT skip the install. The entry is
+    /// recorded, tagged with this effect's category
+    /// (`ModifierEntry::affecting_source_kind`), and
+    /// `ModifierRegistry::get` hides it while the immunity covers it -- so
+    /// it starts applying the moment the immunity expires or its condition
+    /// lapses, for the rest of its own duration (DCGO `ChangeDP.cs`
+    /// `CanUseCondition`, a read-time `CanNotBeAffected` check). One-shot
+    /// processing (delete, suspend, return, ...) keeps the
+    /// `can_affect_permanent` skip: there is nothing left to apply later.
+    ///
+    /// `<Progress>` (§16-39) stays a skip: it is attack-scoped and has no
+    /// `CannotBeAffected` entry to key the suppression on.
+    fn continuous_modifier_blocked(&self, target: PermanentHandle) -> bool {
+        self.game.progress_excludes(target, Some(self.player))
+    }
+
     pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {
         // Single source of truth for the gate lives in `add_modifier`.
         self.add_modifier(target, ModifierType::ChangeDp, value, expiry);
@@ -45,7 +67,7 @@ impl<'a> EffectContext<'a> {
         value: i32,
         expiry: Expiry,
     ) {
-        if !self.can_affect_permanent(target) {
+        if self.continuous_modifier_blocked(target) {
             return;
         }
         // `*NextTurn` expiries installed during the about-to-end turn must
@@ -61,7 +83,8 @@ impl<'a> EffectContext<'a> {
         self.game.modifiers.add(
             target,
             ModifierEntry::simple(modifier, value, expiry, self.player)
-                .with_pending_skips(pending_skips),
+                .with_pending_skips(pending_skips)
+                .with_affecting_source_kind(self.source_kind),
         );
         self.game.mark_until_condition_dirty();
         // NOTE: a DP reduction to ≤0 does NOT delete the Digimon here. Deletion
@@ -76,7 +99,7 @@ impl<'a> EffectContext<'a> {
 
     /// Like [`add_modifier`], but carries a structured [`ModifierPayload`]
     /// (e.g. `SynthIdentity` for `TreatAsDigimon`). Honors the same
-    /// `can_affect_permanent` guard and `*NextTurn` pending-skip semantics.
+    /// record-and-suppress immunity gate and `*NextTurn` pending-skip semantics.
     /// Used by the DSL `add_modifier` lowering when a `synth_identity:`
     /// block is present, and available to raw_rust scripts.
     pub fn add_modifier_with_payload(
@@ -87,7 +110,7 @@ impl<'a> EffectContext<'a> {
         expiry: Expiry,
         payload: crate::modifiers::ModifierPayload,
     ) {
-        if !self.can_affect_permanent(target) {
+        if self.continuous_modifier_blocked(target) {
             return;
         }
         let pending_skips = crate::modifiers::pending_skips_for_install(
@@ -99,7 +122,8 @@ impl<'a> EffectContext<'a> {
             target,
             ModifierEntry::simple(modifier, value, expiry, self.player)
                 .with_payload(payload)
-                .with_pending_skips(pending_skips),
+                .with_pending_skips(pending_skips)
+                .with_affecting_source_kind(self.source_kind),
         );
         self.game.mark_until_condition_dirty();
     }
@@ -197,13 +221,14 @@ impl<'a> EffectContext<'a> {
         value: i32,
         predicate: crate::modifiers::UntilConditionFn,
     ) {
-        if !self.can_affect_permanent(target) {
+        if self.continuous_modifier_blocked(target) {
             return;
         }
         self.game.modifiers.add(
             target,
             ModifierEntry::simple(modifier, value, Expiry::UntilCondition, self.player)
-                .with_until_condition(predicate),
+                .with_until_condition(predicate)
+                .with_affecting_source_kind(self.source_kind),
         );
         self.game.mark_until_condition_dirty();
     }
@@ -249,9 +274,9 @@ impl<'a> EffectContext<'a> {
     /// `expiry` follows the same semantics as `add_modifier`:
     /// `Permanent` for "until carrier leaves the field" (clears via
     /// `clear_permanent`); `EndOfTurn` / `EndOfYourTurn` /
-    /// `EndOfOpponentsTurn` for turn-bound grants. The
-    /// `can_affect_permanent` guard is honored so opponent-effect
-    /// immunities suppress the install.
+    /// `EndOfOpponentsTurn` for turn-bound grants. An effect immunity on the
+    /// carrier does not suppress the install (§15-15-5-2): the dispatcher
+    /// gates the granted trigger at fire time instead.
     pub fn grant_triggered_effect<F>(
         &mut self,
         carrier: PermanentHandle,
@@ -261,7 +286,13 @@ impl<'a> EffectContext<'a> {
     ) where
         F: Fn(&mut EffectContext<'_>) + Send + Sync + 'static,
     {
-        if !self.can_affect_permanent(carrier) {
+        // §15-15-5-2 / §15-15-5-4: an effect gained while immune is recorded,
+        // not skipped. The granted-trigger dispatch
+        // (`effect_queue.rs`, `permanent_is_unaffected_by_effect` against
+        // the grantor) keeps it from triggering while the carrier is
+        // unaffected, and lets it trigger once the immunity has ended
+        // (official Q&A Q2120 / Q3871 / Q6179).
+        if self.continuous_modifier_blocked(carrier) {
             return;
         }
         // Phase 4i — allocate a body id and register the closure in the
