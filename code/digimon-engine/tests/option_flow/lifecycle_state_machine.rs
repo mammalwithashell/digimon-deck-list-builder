@@ -202,6 +202,129 @@ fn relink_onto_carrier_at_link_limit_replaces_the_link_card() {
     );
 }
 
+/// §4-9-5 / §10-1-3-1: relinking an orphaned Plug-In onto a carrier at its
+/// link limit with 2 link cards asks the carrier's controller (the linking
+/// player) which existing link card is replaced, before the orphan moves; the
+/// relink completes after the pick (the shared `LinkCardTrashChoice` path).
+#[test]
+fn relink_onto_carrier_at_link_limit_offers_the_replacement_choice() {
+    let plugin_ids = ["PLUGIN0", "PLUGIN1", "ORPHAN"];
+    let mut builder = DebugRunner::builder().add_card(digimon_card("HOST"));
+    for id in plugin_ids {
+        builder = builder.add_card(option_card(id));
+    }
+    let mut r = builder.hand(0, &plugin_ids).start();
+    for id in plugin_ids {
+        r.give_link_requirement(id, 0);
+    }
+
+    let host = r.place_on_field(0, "HOST", Some(0));
+    r.give_link_plus(host, 1);
+    let mut existing = Vec::new();
+    for slot in 0..2u8 {
+        let plugin = r.game.player_mut(0).hand.remove(0);
+        existing.push(plugin.handle());
+        assert!(r.game.install_field_option_as_plug_in(plugin, host, slot));
+    }
+    let orphan_card = r.game.player_mut(0).hand.remove(0);
+    let orphan_handle = orphan_card.handle();
+    let orphan = r.game.install_field_option_as_ordinary(orphan_card, 0);
+    assert!(r.game.orphan_plug_in(orphan, host.player));
+
+    assert!(r.game.relink_plug_in(orphan, host, 2));
+    let sel = r.game.pending_selection.as_ref().expect("the replacement choice");
+    assert_eq!(sel.selecting_player, 0, "the linking player chooses");
+    let offered: Vec<_> = sel
+        .effect_choices
+        .as_ref()
+        .unwrap()
+        .iter()
+        .filter_map(|c| c.source_card)
+        .collect();
+    assert_eq!(offered, existing, "exactly the existing link cards are offered");
+    assert_eq!(
+        r.game.option_field_state(orphan),
+        Some(OptionFieldState::OrphanedPlugIn {
+            last_carrier_owner: host.player,
+        }),
+        "the orphan has not moved before the choice"
+    );
+
+    let pick = sel.valid_action_ids[0];
+    r.game.resolve_selection(0, pick).expect("pick PLUGIN0");
+    assert!(r.game.pending_selection.is_none());
+    let linked: Vec<_> = r.game.player(0).battle_area[host.index as usize]
+        .linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(linked, vec![existing[1], orphan_handle]);
+    assert!(
+        r.game.player(0).trash.iter().any(|c| c.handle() == existing[0]),
+        "the picked Plug-In is trashed"
+    );
+    assert_eq!(r.game.player(0).battle_area.len(), 1, "the orphan left the field");
+}
+
+/// As above with the orphan BELOW the carrier (orphan at index 0, HOST at
+/// index 1): the relink is validated and the choice parked against the
+/// carrier as it stands (index 1), and after the pick the orphan leaves and
+/// the carrier, now at index 0, keeps its <Link +1> and takes the orphan.
+#[test]
+fn relink_from_a_lower_orphan_onto_carrier_at_link_limit_offers_the_choice() {
+    let plugin_ids = ["PLUGIN0", "PLUGIN1", "ORPHAN"];
+    let mut builder = DebugRunner::builder().add_card(digimon_card("HOST"));
+    for id in plugin_ids {
+        builder = builder.add_card(option_card(id));
+    }
+    let mut r = builder.hand(0, &plugin_ids).start();
+    for id in plugin_ids {
+        r.give_link_requirement(id, 0);
+    }
+
+    let orphan_card = r.game.player_mut(0).hand.remove(2);
+    let orphan_handle = orphan_card.handle();
+    let orphan = r.game.install_field_option_as_ordinary(orphan_card, 0);
+    let host = r.place_on_field(0, "HOST", Some(0));
+    assert_eq!((orphan.index, host.index), (0, 1), "orphan below the carrier");
+    r.give_link_plus(host, 1);
+    let mut existing = Vec::new();
+    for slot in 0..2u8 {
+        let plugin = r.game.player_mut(0).hand.remove(0);
+        existing.push(plugin.handle());
+        assert!(r.game.install_field_option_as_plug_in(plugin, host, slot));
+    }
+    assert!(r.game.orphan_plug_in(orphan, host.player));
+
+    assert!(r.game.relink_plug_in(orphan, host, 2));
+    let sel = r.game.pending_selection.as_ref().expect("the replacement choice");
+    assert_eq!(sel.selecting_player, 0, "the linking player chooses");
+    assert_eq!(sel.source_permanent, Some(host), "asked about the carrier at index 1");
+    let offered: Vec<_> = sel
+        .effect_choices
+        .as_ref()
+        .unwrap()
+        .iter()
+        .filter_map(|c| c.source_card)
+        .collect();
+    assert_eq!(offered, existing, "exactly the carrier's link cards are offered");
+
+    let pick = sel.valid_action_ids[1];
+    r.game.resolve_selection(0, pick).expect("pick PLUGIN1");
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.game.player(0).battle_area.len(), 1, "the orphan left the field");
+    let linked: Vec<_> = r.game.player(0).battle_area[0]
+        .linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(linked, vec![existing[0], orphan_handle]);
+    assert!(
+        r.game.player(0).trash.iter().any(|c| c.handle() == existing[1]),
+        "the picked Plug-In is trashed"
+    );
+}
+
 #[test]
 fn relink_rejects_multi_source_orphans_without_dropping_sources() {
     let mut r = DebugRunner::builder()

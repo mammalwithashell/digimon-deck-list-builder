@@ -490,8 +490,12 @@ pub(crate) fn run_resume(
                             // (OnDigivolutionCardTrashed/OnLinkedCardTrashed/OnLink)
                             // — NOT atomic; the empty inner_tail is a no-op and the
                             // dispatcher tail (wrapped as outer_conts) composes onto
-                            // any nested park via run_outer_conts. No bind.
-                            ctx.game.absorb_standing_digimon_as_link(source, h);
+                            // any nested park via run_outer_conts. No bind. At the
+                            // host's link limit with a choice, the §4-9-5 pick parks
+                            // first and the absorb runs after it (the outer conts
+                            // compose onto that frame the same way).
+                            let chooser = ctx.player;
+                            ctx.game.link_standing_digimon_by_effect(chooser, source, h);
                             run_tail_preserving_trigger_context(
                                 &mut ctx,
                                 trigger_context,

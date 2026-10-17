@@ -320,12 +320,24 @@ impl<'a> EffectContext<'a> {
     /// Cost payment + `WhenWouldLink` cost reduction are the calling effect's
     /// responsibility (register via the cost step before invoking). Returns
     /// `true` when the card was found and attached.
+    ///
+    /// §4-9-5 / §10-1-3-1: at the host's link limit with a choice (2+
+    /// existing link cards, fewer to replace), the linking player picks the
+    /// replaced ones BEFORE this attach. Callers go through the shared
+    /// replacement step first (`Game::park_link_replacement_choice`, with a
+    /// `LinkTrashPurpose` that resumes into this attach, as the DSL
+    /// `link_cards` step does); this primitive only trims when there is
+    /// nothing to choose.
     pub fn link_chosen_card_into_host(
         &mut self,
         host: PermanentHandle,
         card: CardHandle,
         from: crate::enums::LinkCardSource,
     ) -> bool {
+        debug_assert!(
+            !self.game.link_replacement_is_a_choice(host),
+            "§4-9-5: park_link_replacement_choice before linking onto a host at its limit"
+        );
         self.game.link_chosen_card_into_host(host, card, from)
     }
 }

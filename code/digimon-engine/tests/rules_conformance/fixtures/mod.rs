@@ -272,6 +272,7 @@ const CH16_PROC: &[&str] = &[
     include_str!("ch16_proc/REBOOT.yaml"),
     include_str!("ch16_proc/REBOOT_INH.yaml"),
     include_str!("ch16_proc/REC_OPT.yaml"),
+    include_str!("ch16_proc/RELINK.yaml"),
     include_str!("ch16_proc/RIGHT5.yaml"),
     include_str!("ch16_proc/SAVE.yaml"),
     include_str!("ch16_proc/UNSUSP_OBS_INH.yaml"),
