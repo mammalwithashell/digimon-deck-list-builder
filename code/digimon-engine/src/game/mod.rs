@@ -679,6 +679,10 @@ pub struct Game {
     /// Steps since the loop watch last started over; signatures are taken
     /// only from `game::infinite_loop::LOOP_WATCH_START` steps on.
     pub(crate) loop_watch_steps: u16,
+    /// Marks the pending prompt as an optional decision when it is not
+    /// `is_optional` (DSL choose-one, `<Ascension>` Yes/No); consumed when the
+    /// next decision resolves. See `game::infinite_loop::OptionalDecisionMark`.
+    pub(crate) optional_decision_mark: Option<infinite_loop::OptionalDecisionMark>,
     /// Last Â§15-4-5 trigger-batch id handed out by the drainer (see
     /// `QueuedEffect::trigger_batch`). Monotonic within a game.
     pub(crate) trigger_batch_seq: u32,

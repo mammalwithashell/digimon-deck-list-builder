@@ -1053,6 +1053,58 @@ fn forced_prompt_loop_still_ends_in_a_draw() {
     });
 }
 
+/// §18-3-2 when the state never repeats and every repetition asks a forced
+/// question. `LOOP_PICK_GROW` gains +1000 DP on each suspension (so no loop
+/// signature ever recurs) and asks a single-option mandatory "unsuspend 1 of
+/// your Digimon" pick each time (so the chain-depth count restarts every
+/// repetition). Neither player can stop it; the far backstop on the loop
+/// watch's age (`MAX_CHAIN_DEPTH` steps with no optional decision) still ends
+/// the game in exactly one draw, reported as a backstop `InfiniteLoop`.
+#[test]
+fn forced_prompt_loop_with_growing_state_still_ends_in_a_draw() {
+    cite!(
+        "18-3-2",
+        "989de42a09e690aa1c0e80632ee1aeb9f94eb27d3fdfeff9b09fa784f38f29ca"
+    );
+    within("growing forced loop", Duration::from_secs(120), || {
+        let (mut r, cp, _) = loop_board("LOOP_PICK_GROW");
+        let mut picks = 0usize;
+        for _ in 0..20_000 {
+            if r.game_over() {
+                break;
+            }
+            let Some(sel) = r.pending_selection() else {
+                break;
+            };
+            assert!(!sel.is_optional, "the pick is mandatory: {sel:?}");
+            assert_eq!(sel.valid_action_ids.len(), 1, "one option: {sel:?}");
+            let (player, action) = (sel.selecting_player, sel.valid_action_ids[0]);
+            r.execute_action(player, action)
+                .unwrap_or_else(|e| panic!("forced pick rejected: {e:?}"));
+            picks += 1;
+        }
+        let events = r.events_since(cp);
+        let overs: Vec<_> = events
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::GameOver { winner, reason, .. } => Some((*winner, *reason)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            overs,
+            vec![(None, TerminalOutcomeReason::InfiniteLoopDraw)],
+            "one GameOver, the draw (after {picks} forced picks)"
+        );
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, GameEvent::InfiniteLoop { backstop: true, .. })),
+            "reported by the backstop"
+        );
+    });
+}
+
 /// The two-Digimon variant of `forced_prompt_loop_still_ends_in_a_draw`: with a
 /// second Digimon on P0's field the mandatory "unsuspend 1 of your Digimon"
 /// pick has two options. A mandatory pick is still not the optional decision

@@ -228,6 +228,7 @@ impl Game {
             effect_chain_depth: 0,
             loop_watch: std::collections::BTreeMap::new(),
             loop_watch_steps: 0,
+            optional_decision_mark: None,
             trigger_batch_seq: 0,
             effect_drain_depth: 0,
             logger: Box::new(SilentLogger),
@@ -412,6 +413,10 @@ impl Game {
         self.effect_chain_depth = 0;
         self.loop_watch.clear();
         self.loop_watch_steps = 0;
+        self.optional_decision_mark = None;
+        self.pending_hand_discard = None;
+        self.pending_deck_add = None;
+        self.pending_added_sources.clear();
         // logger intentionally preserved (session owns the logger choice).
         self.events = Vec::new();
         self.event_seq = 0;

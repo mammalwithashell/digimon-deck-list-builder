@@ -5511,11 +5511,9 @@ impl Game {
         //   decision: §18-3-3-3's stop is the player's optional decision, so a
         //   loop whose repetitions only ask forced questions is still one
         //   neither player can stop (§18-3-2) and keeps its watch.
+        let mark = self.optional_decision_mark.take();
         let declinable = self.pending_selection.as_ref().is_some_and(|sel| {
-            crate::game::infinite_loop::selection_can_stop_a_loop(
-                sel,
-                self.pending_selection_resume.as_ref(),
-            )
+            crate::game::infinite_loop::selection_can_stop_a_loop(sel, mark.as_ref())
         });
         if declinable {
             self.reset_loop_watch();

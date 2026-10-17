@@ -2353,6 +2353,9 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                         );
                     },
                 );
+                // "You may": declining is the player's ability to stop a
+                // loop (§18-3-3-3), though the prompt is a 2-branch choice.
+                ctx.game.mark_pending_selection_as_optional_decision();
                 park_keyword_frame(
                     ctx,
                     ResumeFrame::KeywordAscensionChoice(KeywordAscensionChoiceState {

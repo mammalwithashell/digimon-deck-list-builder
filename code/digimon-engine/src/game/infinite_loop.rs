@@ -94,37 +94,47 @@ fn hash_permanent<H: Hasher>(permanent: &Permanent, h: &mut H) {
     activations.hash(h);
 }
 
+/// The explicit "optional decision" marker for a prompt that is not
+/// `is_optional` (PASS is not legal) yet still lets its player decline: the
+/// installer calls `Game::mark_pending_selection_as_optional_decision` right
+/// after installing it. Today: the DSL effect-text choose-one
+/// (`select_effect_choice`, how "you may X instead" is authored) and the
+/// `<Ascension>` "you may" Yes/No. The mark names the prompt it was set on
+/// (player, kind, prompt text), so a stale mark never classifies a different
+/// prompt; it is consumed when the next decision resolves.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct OptionalDecisionMark {
+    player: PlayerId,
+    kind: crate::selection::SelectionKind,
+    prompt: String,
+}
+
+impl OptionalDecisionMark {
+    fn of(sel: &crate::selection::PendingSelection) -> Self {
+        Self {
+            player: sel.selecting_player,
+            kind: sel.kind,
+            prompt: sel.prompt.clone(),
+        }
+    }
+}
+
 /// Whether resolving `sel` gives its player the ability to stop a loop
-/// (§18-3-3-3: "the player stops the processing when possible"):
-/// - a prompt that can be declined (`is_optional`, PASS legal); or
-/// - the DSL's effect-text choose-one (`select_effect_choice`, how "you may X
-///   instead" is authored), recognised by the resume frame that resolves it:
-///   `RunTail { select_kind: EffectChoice { post: None } }`. Its illegal
-///   branches are already trimmed at install, and a single legal branch is
-///   never prompted.
+/// (§18-3-3-3: "the player stops the processing when possible"): a prompt
+/// that can be declined (`is_optional`, PASS legal), or one its installer
+/// marked as an optional decision (`mark`, see [`OptionalDecisionMark`]).
 ///
 /// Everything else is a forced decision that cannot stop the loop, so the
 /// loop watch survives it: mandatory picks (however many options), trigger
 /// and immediate-replacement ORDER prompts, count choices, the refire prompt,
 /// and the engine's other effect choices (deck top/bottom destination,
-/// remainder order: `post: Some(..)`). Residual: a choose-one whose every
-/// branch leads back into the loop is still counted, since telling that apart
-/// needs lookahead.
+/// remainder order). Residual: a choose-one whose every branch leads back
+/// into the loop is still counted, since telling that apart needs lookahead.
 pub(crate) fn selection_can_stop_a_loop(
     sel: &crate::selection::PendingSelection,
-    resume: Option<&crate::resume::ResumeStack>,
+    mark: Option<&OptionalDecisionMark>,
 ) -> bool {
-    if sel.is_optional {
-        return true;
-    }
-    sel.kind == crate::selection::SelectionKind::EffectChoice
-        && matches!(
-            resume.and_then(|stack| stack.frames.last()),
-            Some(crate::resume::ResumeFrame::RunTail {
-                select_kind: crate::resume::ResumeSelectKind::EffectChoice { post: None },
-                ..
-            })
-        )
+    sel.is_optional || mark.is_some_and(|m| *m == OptionalDecisionMark::of(sel))
 }
 
 impl Game {
@@ -183,6 +193,15 @@ impl Game {
             return self.halted_by_infinite_loop();
         }
         self.loop_watch_steps = self.loop_watch_steps.saturating_add(1);
+        // Far backstop on the WATCH's age: forced decisions restart
+        // `effect_chain_depth` but not this count, so a loop that asks a forced
+        // question every repetition while its state never repeats (DP growing
+        // without bound) still ends in the §18-3-2 draw.
+        if self.loop_watch_steps > crate::effect_queue::MAX_CHAIN_DEPTH {
+            let steps = self.loop_watch_steps;
+            self.declare_infinite_loop_draw(steps, true);
+            return true;
+        }
         if self.loop_watch_steps < LOOP_WATCH_START {
             return false;
         }
@@ -195,6 +214,15 @@ impl Game {
             return true;
         }
         false
+    }
+
+    /// Mark the prompt just installed as an optional decision (see
+    /// [`OptionalDecisionMark`]): resolving it resets the §18-3 loop watch even
+    /// though it is not `is_optional`. Called by the DSL choose-one and the
+    /// `<Ascension>` Yes/No installers.
+    pub(crate) fn mark_pending_selection_as_optional_decision(&mut self) {
+        self.optional_decision_mark =
+            self.pending_selection.as_ref().map(OptionalDecisionMark::of);
     }
 
     /// A declinable player decision resolved, or the outermost drain settled
@@ -239,8 +267,51 @@ impl Game {
             backstop,
         });
         self.effect_queue.clear();
+        // The processing the loop cut off is over with the game: drop the
+        // outermost-drain batch windows it left open, so nothing flushes them
+        // later. Done here, not in `finish_game`: other terminal outcomes let
+        // in-flight processing finish (card tests resolve attacks on boards an
+        // `end_turn` decked out), while the loop draw halts all processing.
+        self.pending_hand_discard = None;
+        self.pending_deck_add = None;
+        self.pending_added_sources.clear();
         self.reset_loop_watch();
         self.effect_chain_depth = 0;
         self.declare_draw_with_reason(TerminalOutcomeReason::InfiniteLoopDraw);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::selection_can_stop_a_loop;
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    use crate::enums::Keyword;
+
+    /// §18-3-3-3: the `<Ascension>` "you may place this card as the top
+    /// security card" Yes/No is its player's optional decision. It is a
+    /// two-branch effect choice (PASS is not legal), so it counts only through
+    /// the installer's optional-decision mark; without the mark the same
+    /// prompt would be classed as forced and would not reset the loop watch.
+    #[test]
+    fn ascension_yes_no_is_an_optional_decision() {
+        let mut card = make_test_card("ASC-LOOP", "Ascendmon");
+        card.keywords = vec![Keyword::Ascension];
+        let mut r = DebugRunner::builder().add_card(card).start();
+        let carrier = r.place_on_field(0, "ASC-LOOP", None);
+        r.game.delete_permanent_with_effects(carrier);
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("the <Ascension> Yes/No is offered");
+        assert!(!sel.is_optional, "a two-branch choice, not a PASS prompt: {sel:?}");
+        assert!(
+            selection_can_stop_a_loop(sel, r.game.optional_decision_mark.as_ref()),
+            "the marked <Ascension> prompt can stop a loop: {sel:?}"
+        );
+        assert!(
+            !selection_can_stop_a_loop(sel, None),
+            "without the mark the prompt would be forced"
+        );
     }
 }

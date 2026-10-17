@@ -278,6 +278,7 @@ const CH18: &[&str] = &[
     include_str!("ch18/LOOP_FLIP_FINITE.yaml"),
     include_str!("ch18/LOOP_FLIP_MAY.yaml"),
     include_str!("ch18/LOOP_FLIP_PICK.yaml"),
+    include_str!("ch18/LOOP_PICK_GROW.yaml"),
     include_str!("ch18/LOOP_TWIN_GUARD.yaml"),
     include_str!("ch18/MAIN_DEL_6000_OR_LOWEST_IF_GREYMON.yaml"),
     include_str!("ch18/MAIN_MEM_AT_EOONT.yaml"),
