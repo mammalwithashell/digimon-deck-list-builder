@@ -16,9 +16,10 @@
 //! declines. That satisfies §18-3-3-3; the §18-3-3-1/-2 repeat-count
 //! declaration is not modelled as a separate action.
 //!
-//! **Detection.** Before each resolution step the drainer records a loop
-//! signature: the pending effect entries (source card, controller, timing,
-//! slot) plus the board (every zone's card handles, suspension, memory) --
+//! **Detection.** Before each resolution step (from `LOOP_WATCH_START` steps
+//! on) the drainer records a loop signature: the pending effect entries
+//! (source card, controller, timing, slot) plus the board (every zone's card
+//! handles, suspension, effective DP, per-turn activation counts, memory) --
 //! the state a repeating set of processing keeps returning to. Resolving a
 //! DECLINABLE player decision (`selection_can_stop_a_loop`) clears the watch,
 //! and so does the outermost drain settling with nothing parked; a forced
@@ -28,7 +29,7 @@
 //! offered within the cycle: neither player can stop it, and the game ends in
 //! the §18-3-2 draw (`GameEvent::InfiniteLoop`,
 //! then `GameOver { winner: None, reason: InfiniteLoopDraw }`). A chain that
-//! makes progress (consumes a queued entry, moves a card, changes memory)
+//! makes progress (consumes a queued entry, moves a card, changes DP or memory)
 //! never repeats a signature, so a long finite chain runs to its end.
 //! `effect_queue::MAX_CHAIN_DEPTH` stays as a far backstop for a loop whose
 //! state never repeats; it ends in the same draw. Nothing is ever cleared
@@ -42,12 +43,18 @@ use std::hash::{Hash, Hasher};
 
 use super::*;
 use crate::card_source::CardSource;
-use crate::permanent::Permanent;
+use crate::permanent::{Permanent, PermanentHandle};
 
 /// How many times the same loop signature must be seen, with no player
 /// decision in between, before the processing is an infinite loop nobody can
 /// stop (§18-3-2).
 pub const LOOP_SIGNATURE_REPEATS: u8 = 3;
+
+/// Steps (drain resolutions and flush passes) since the watch last started
+/// over before signatures are taken at all. Ordinary processing never pays for
+/// the hash; a loop is still caught after `LOOP_SIGNATURE_REPEATS` identical
+/// repeats, only a few steps later.
+pub const LOOP_WATCH_START: u16 = 20;
 
 /// Where the drainer took a loop signature. Part of the signature, so a
 /// rule-processing flush pass never matches a queue-resolution step.
@@ -76,18 +83,48 @@ fn hash_permanent<H: Hasher>(permanent: &Permanent, h: &mut H) {
     hash_cards(&permanent.card_sources, h);
     hash_cards(&permanent.linked_cards, h);
     permanent.is_suspended.hash(h);
+    // Per-turn activation counts (only effects with a per-turn cap record
+    // one), sorted: `HashMap` order is not part of the state.
+    let mut activations: Vec<_> = permanent
+        .effect_activations
+        .iter()
+        .map(|(&(card, slot), &count)| (card.0, slot, count))
+        .collect();
+    activations.sort_unstable();
+    activations.hash(h);
 }
 
 /// Whether resolving `sel` gives its player the ability to stop a loop
-/// (§18-3-3-3: "the player stops the processing when possible"): a prompt
-/// that can be declined (`is_optional`, PASS legal), or an effect choice
-/// between two or more branches (the DSL's "you may X instead" shape). A
-/// forced decision -- a mandatory pick, a trigger order, a single-branch
-/// choice -- cannot stop it, so the loop watch survives it.
-pub(crate) fn selection_can_stop_a_loop(sel: &crate::selection::PendingSelection) -> bool {
-    sel.is_optional
-        || (sel.kind == crate::selection::SelectionKind::EffectChoice
-            && sel.effect_choices.as_ref().is_some_and(|c| c.len() >= 2))
+/// (§18-3-3-3: "the player stops the processing when possible"):
+/// - a prompt that can be declined (`is_optional`, PASS legal); or
+/// - the DSL's effect-text choose-one (`select_effect_choice`, how "you may X
+///   instead" is authored), recognised by the resume frame that resolves it:
+///   `RunTail { select_kind: EffectChoice { post: None } }`. Its illegal
+///   branches are already trimmed at install, and a single legal branch is
+///   never prompted.
+///
+/// Everything else is a forced decision that cannot stop the loop, so the
+/// loop watch survives it: mandatory picks (however many options), trigger
+/// and immediate-replacement ORDER prompts, count choices, the refire prompt,
+/// and the engine's other effect choices (deck top/bottom destination,
+/// remainder order: `post: Some(..)`). Residual: a choose-one whose every
+/// branch leads back into the loop is still counted, since telling that apart
+/// needs lookahead.
+pub(crate) fn selection_can_stop_a_loop(
+    sel: &crate::selection::PendingSelection,
+    resume: Option<&crate::resume::ResumeStack>,
+) -> bool {
+    if sel.is_optional {
+        return true;
+    }
+    sel.kind == crate::selection::SelectionKind::EffectChoice
+        && matches!(
+            resume.and_then(|stack| stack.frames.last()),
+            Some(crate::resume::ResumeFrame::RunTail {
+                select_kind: crate::resume::ResumeSelectKind::EffectChoice { post: None },
+                ..
+            })
+        )
 }
 
 impl Game {
@@ -106,8 +143,15 @@ impl Game {
             hash_cards(&player.security, &mut h);
             hash_cards(&player.trash, &mut h);
             player.battle_area.len().hash(&mut h);
-            for permanent in &player.battle_area {
+            for (index, permanent) in player.battle_area.iter().enumerate() {
                 hash_permanent(permanent, &mut h);
+                // Effective DP: a chain whose only progress is DP ("+1000
+                // DP; then, if it has less than 6000 DP, ...") is finite.
+                self.effective_dp(PermanentHandle {
+                    player: player.id,
+                    index: index as u8,
+                })
+                .hash(&mut h);
             }
             match &player.breeding_area {
                 Some(permanent) => {
@@ -138,6 +182,10 @@ impl Game {
         if self.game_over {
             return self.halted_by_infinite_loop();
         }
+        self.loop_watch_steps = self.loop_watch_steps.saturating_add(1);
+        if self.loop_watch_steps < LOOP_WATCH_START {
+            return false;
+        }
         let signature = self.loop_signature(site);
         let seen = self.loop_watch.entry(signature).or_insert(0);
         *seen = seen.saturating_add(1);
@@ -154,6 +202,7 @@ impl Game {
     /// decision (or fresh processing) in between, so it starts a new watch.
     pub(crate) fn reset_loop_watch(&mut self) {
         self.loop_watch.clear();
+        self.loop_watch_steps = 0;
     }
 
     /// True once the game has ended in the §18-3-2 infinite-loop draw.
@@ -190,7 +239,7 @@ impl Game {
             backstop,
         });
         self.effect_queue.clear();
-        self.loop_watch.clear();
+        self.reset_loop_watch();
         self.effect_chain_depth = 0;
         self.declare_draw_with_reason(TerminalOutcomeReason::InfiniteLoopDraw);
     }

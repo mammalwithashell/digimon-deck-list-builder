@@ -29,6 +29,7 @@ use digimon_engine::count_choice::CountChoiceOperation;
 use digimon_engine::debug_runner::{DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{GamePhase, PlayerId};
 use digimon_engine::events::GameEvent;
+use digimon_engine::game::TerminalOutcomeReason;
 use digimon_engine::selection::SelectionKind;
 
 fn ch18() -> DebugRunnerBuilder {
@@ -1049,6 +1050,276 @@ fn forced_prompt_loop_still_ends_in_a_draw() {
             matches!((loop_at, over_at), (Some(l), Some(o)) if l < o),
             "InfiniteLoop then GameOver {{ winner: None }}: {loop_at:?} / {over_at:?}"
         );
+    });
+}
+
+/// The two-Digimon variant of `forced_prompt_loop_still_ends_in_a_draw`: with a
+/// second Digimon on P0's field the mandatory "unsuspend 1 of your Digimon"
+/// pick has two options. A mandatory pick is still not the optional decision
+/// §18-3-3-3 stops a loop with, so it keeps the loop watch: P0 always picks the
+/// looping Digimon, the same state recurs, and the game ends in the §18-3-2
+/// draw.
+#[test]
+fn forced_multi_option_pick_loop_still_ends_in_a_draw() {
+    cite!(
+        "18-3-2",
+        "989de42a09e690aa1c0e80632ee1aeb9f94eb27d3fdfeff9b09fa784f38f29ca"
+    );
+    within("forced multi-option loop", Duration::from_secs(30), || {
+        let mut r = ch18()
+            .hand(0, &["LOOP_FLIP_PICK"])
+            .deck(0, &[FILL; 4])
+            .deck(1, &[FILL; 4])
+            .memory(5)
+            .start();
+        r.place_on_field(0, FILL, Some(0));
+        let cp = r.event_checkpoint();
+        r.play(0, 0);
+        let loop_perm = r.perm_handle(0, 1);
+        let mut picks = 0;
+        for _ in 0..200 {
+            if r.game_over() {
+                break;
+            }
+            let Some(sel) = r.pending_selection() else {
+                break;
+            };
+            assert!(!sel.is_optional, "the pick is mandatory: {sel:?}");
+            assert_eq!(sel.valid_action_ids.len(), 2, "two options: {sel:?}");
+            let player = sel.selecting_player;
+            let action = offered_own_slot_action(&r, loop_perm.index);
+            r.execute_action(player, action)
+                .unwrap_or_else(|e| panic!("pick rejected: {e:?}"));
+            picks += 1;
+        }
+        assert!(picks >= 1, "the pick is offered");
+        assert!(
+            r.game_over() && r.winner().is_none(),
+            "a loop of mandatory picks ends in a draw ({picks} picks; pending: {:?})",
+            r.pending_selection()
+        );
+        assert!(
+            r.events_since(cp)
+                .iter()
+                .any(|e| matches!(e, GameEvent::InfiniteLoop { .. })),
+            "the loop is reported"
+        );
+    });
+}
+
+/// The action that picks P0's own Digimon in battle-area slot `slot` from the
+/// pending own-field selection.
+fn offered_own_slot_action(r: &DebugRunner, slot: u8) -> u16 {
+    let sel = r.pending_selection().expect("an own-field pick");
+    let base = *sel.valid_action_ids.iter().min().expect("options");
+    let action = base + u16::from(slot);
+    assert!(
+        sel.valid_action_ids.contains(&action),
+        "slot {slot} is offered: {sel:?}"
+    );
+    action
+}
+
+/// §18-3-2, for a forced ORDERING decision. `LOOP_TWIN_GUARD`'s every
+/// repetition raises two mandatory immediate-type effects on the same "would
+/// be deleted" (§15-8-5-3: its player chooses their order), then re-suspends,
+/// unsuspends and deletes itself again. Choosing an order cannot stop the loop,
+/// so it is not the ability to stop it: P0 answers every prompt with its first
+/// option and the game ends in a draw.
+#[test]
+fn forced_replacement_order_loop_still_ends_in_a_draw() {
+    cite!(
+        "18-3-2",
+        "989de42a09e690aa1c0e80632ee1aeb9f94eb27d3fdfeff9b09fa784f38f29ca"
+    );
+    within("forced order loop", Duration::from_secs(30), || {
+        let mut r = ch18()
+            .hand(0, &["LOOP_TWIN_GUARD"])
+            .deck(0, &[FILL; 4])
+            .deck(1, &[FILL; 4])
+            .memory(5)
+            .start();
+        let cp = r.event_checkpoint();
+        r.play(0, 0);
+        let mut orders = 0;
+        for _ in 0..300 {
+            if r.game_over() {
+                break;
+            }
+            let Some(sel) = r.pending_selection() else {
+                break;
+            };
+            assert!(!sel.is_optional, "every prompt is forced: {sel:?}");
+            if sel.valid_action_ids.len() >= 2 {
+                orders += 1;
+            }
+            let (player, action) = (sel.selecting_player, sel.valid_action_ids[0]);
+            r.execute_action(player, action)
+                .unwrap_or_else(|e| panic!("prompt rejected: {e:?}"));
+        }
+        assert!(orders >= 1, "the order of the two effects is asked");
+        assert!(
+            r.game_over() && r.winner().is_none(),
+            "a loop whose only decisions are forced orderings ends in a draw ({orders} orders; pending: {:?})",
+            r.pending_selection()
+        );
+        assert!(
+            r.events_since(cp)
+                .iter()
+                .any(|e| matches!(e, GameEvent::InfiniteLoop { .. })),
+            "the loop is reported"
+        );
+    });
+}
+
+/// §18-3-3-3, with the stop authored as the DSL's effect-text choose-one ("you
+/// may X instead" is written that way) instead of an optional trigger.
+/// `LOOP_FLIP_CHOOSE`: "When this Digimon unsuspends, choose one: suspend it;
+/// or do nothing." The choice is the ability to stop the loop, so the same
+/// state recurring is not a draw: P0 repeats it 30 times, then chooses "Do
+/// nothing", and the loop stops with the game going on.
+#[test]
+fn choose_one_loop_repeats_until_its_owner_stops_it() {
+    cite!(
+        "18-3-3-3",
+        "ca1e36ce6f3f4e7299e9b32d4fe477ced92d86d03f8f391235592a23b66a6ca0"
+    );
+    within("choose-one loop", Duration::from_secs(30), || {
+        const REPEATS: usize = 30;
+        let mut r = ch18()
+            .hand(0, &["LOOP_FLIP_CHOOSE"])
+            .deck(0, &[FILL; 4])
+            .deck(1, &[FILL; 4])
+            .memory(5)
+            .start();
+        let cp = r.event_checkpoint();
+        r.play(0, 0);
+        let mut chosen = 0;
+        for _ in 0..200 {
+            assert!(!r.game_over(), "a stoppable loop does not end the game");
+            if r.pending_selection().is_none() {
+                break;
+            }
+            let label = if chosen < REPEATS { "Suspend it" } else { "Do nothing" };
+            pick_branch(&mut r, label);
+            chosen += 1;
+        }
+        assert_eq!(chosen, REPEATS + 1, "the choice is offered every repetition");
+        assert!(r.pending_selection().is_none());
+        assert!(!r.game_over(), "a stoppable loop does not end the game");
+        assert!(
+            !r.events_since(cp)
+                .iter()
+                .any(|e| matches!(e, GameEvent::InfiniteLoop { .. })),
+            "no loop was declared"
+        );
+        let loop_perm = r.perm_handle(0, 0);
+        assert!(
+            !is_suspended(&r, loop_perm),
+            "stopped on 'do nothing': it stays unsuspended"
+        );
+    });
+}
+
+/// §18-3-2 is final: a draw declared while an attack is resolving ends the
+/// attack too. P0's `WA_LOOP` attacks P1; the attack's suspension and its
+/// "[When Attacking] Unsuspend this Digimon" start a mandatory loop (P0 only
+/// orders the two simultaneous triggers, a forced decision), and the game ends
+/// in a draw right there. No later attack step may overwrite that
+/// result: against no security cards there is exactly one `GameOver` (no
+/// winner, `InfiniteLoopDraw`), and against one there is also no security
+/// check after it.
+#[test]
+fn infinite_loop_draw_during_an_attack_is_final() {
+    cite!(
+        "18-3-2",
+        "989de42a09e690aa1c0e80632ee1aeb9f94eb27d3fdfeff9b09fa784f38f29ca"
+    );
+    for security in [0usize, 1] {
+        within("loop during an attack", Duration::from_secs(30), move || {
+            let mut r = ch18()
+                .deck(0, &[FILL; 4])
+                .deck(1, &[FILL; 4])
+                .security(1, &vec![FILL; security])
+                .memory(5)
+                .start();
+            let attacker = r.place_on_field(0, "WA_LOOP", Some(0));
+            let cp = r.event_checkpoint();
+            r.attack_player(attacker, 1, false);
+            // The attack's suspension and its [When Attacking] effect trigger
+            // together: P0 orders them (a forced decision), then the loop runs.
+            for _ in 0..100 {
+                if r.game_over() {
+                    break;
+                }
+                let Some(sel) = r.pending_selection() else {
+                    break;
+                };
+                assert!(!sel.is_optional, "only forced decisions: {sel:?}");
+                let (player, action) = (sel.selecting_player, sel.valid_action_ids[0]);
+                r.execute_action(player, action)
+                    .unwrap_or_else(|e| panic!("prompt rejected: {e:?}"));
+            }
+            let events = r.events_since(cp);
+            let overs: Vec<_> = events
+                .iter()
+                .filter_map(|e| match e {
+                    GameEvent::GameOver { winner, reason, .. } => Some((*winner, *reason)),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(
+                overs,
+                vec![(None, TerminalOutcomeReason::InfiniteLoopDraw)],
+                "{security} security: one GameOver, the draw"
+            );
+            assert!(r.game_over() && r.winner().is_none(), "{security} security");
+            let loop_at = events
+                .iter()
+                .position(|e| matches!(e, GameEvent::InfiniteLoop { .. }))
+                .expect("the loop is reported");
+            assert!(
+                !events[loop_at..]
+                    .iter()
+                    .any(|e| matches!(e, GameEvent::SecurityReveal { .. })),
+                "{security} security: no security check after the draw"
+            );
+        });
+    }
+}
+
+/// §18-3-1: a chain whose only progress is DP is still finite. `DP_CHAIN`'s
+/// "When this Digimon suspends, it gets +1000 DP for the turn. Then, if it has
+/// 29000 DP or less, unsuspend it." and "When this Digimon unsuspends, suspend
+/// it." re-trigger each other 27 times from 3000 DP: the zones and suspension
+/// repeat every cycle, but the DP does not, and the chain stops at 30000 DP.
+/// It runs to its end with no infinite-loop draw.
+#[test]
+fn dp_progress_chain_is_not_an_infinite_loop() {
+    cite!(
+        "18-3-1",
+        "ed4b8654d01a7037421af96f1ccf80ac81741aaff69b040659d881003f0e2d79"
+    );
+    within("DP chain", Duration::from_secs(30), || {
+        let mut r = ch18()
+            .hand(0, &["DP_CHAIN"])
+            .deck(0, &[FILL; 4])
+            .deck(1, &[FILL; 4])
+            .memory(5)
+            .start();
+        let cp = r.event_checkpoint();
+        r.play(0, 0);
+        assert!(r.pending_selection().is_none(), "{:?}", r.pending_selection());
+        assert!(!r.game_over(), "a finite chain does not end the game");
+        assert!(
+            !r.events_since(cp)
+                .iter()
+                .any(|e| matches!(e, GameEvent::InfiniteLoop { .. })),
+            "no loop was declared"
+        );
+        let h = r.perm_handle(0, 0);
+        assert_eq!(r.effective_dp(h), Some(30000), "every link ran");
+        assert!(is_suspended(&r, h), "the chain ends on its last suspension");
     });
 }
 

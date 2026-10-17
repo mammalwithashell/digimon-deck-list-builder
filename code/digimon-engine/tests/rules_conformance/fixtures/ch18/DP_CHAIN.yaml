@@ -1,0 +1,45 @@
+# DP_CHAIN -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] Suspend this Digimon.
+#   [All Turns] When this Digimon suspends, it gets +1000 DP for the turn.
+#   Then, if it has 29000 DP or less, unsuspend it.
+#   [All Turns] When this Digimon unsuspends, suspend it.
+# A long chain whose ONLY progress is DP (the zones and suspension repeat
+# every cycle): it gains 1000 DP per suspension and stops at 30000 DP, so it
+# is finite and not an infinite loop (§18-3-1).
+card: DP_CHAIN
+name: Pumpmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] Suspend this Digimon."
+    process:
+      - suspend: { target: source }
+  - when: on_suspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon suspends, it gets +1000 DP for the turn. Then, if it has 29000 DP or less, unsuspend it."
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 1000
+          expiry: end_of_turn
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              is_source: true
+              dp_lte: 29000
+          then:
+            - unsuspend: { target: source }
+  - when: on_unsuspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon unsuspends, suspend it."
+    process:
+      - suspend: { target: source }

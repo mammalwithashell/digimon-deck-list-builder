@@ -1335,9 +1335,12 @@ impl Game {
             // a selection (a park means the effect body is not finished — the
             // resuming drain flushes it). Loop-guarded because an OnDiscardHand
             // observer can itself trash a hand (a nested batch).
-            if self.pending_selection.is_none() {
+            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
                 let mut discard_guard: u16 = 0;
-                while self.pending_hand_discard.is_some() && self.pending_selection.is_none() {
+                while self.pending_hand_discard.is_some()
+                    && self.pending_selection.is_none()
+                    && !self.halted_by_infinite_loop()
+                {
                     self.flush_pending_hand_discard();
                     if !self.effect_queue.is_empty() {
                         self.drain_effect_queue_inner();
@@ -1355,9 +1358,14 @@ impl Game {
             // (G-ENGINE-ON-ADD-TO-DECK): the effect body that added cards to a
             // deck has finished, so fire the observer ONCE (DCGO
             // `FireOnAddLibraryAnyone` once per added list), then drain.
-            if self.pending_selection.is_none() {
+            // Every later block re-checks for the §18-3-2 draw: a pass above
+            // may have ended the game in it, and nothing runs after that.
+            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
                 let mut deck_guard: u16 = 0;
-                while self.pending_deck_add.is_some() && self.pending_selection.is_none() {
+                while self.pending_deck_add.is_some()
+                    && self.pending_selection.is_none()
+                    && !self.halted_by_infinite_loop()
+                {
                     self.flush_pending_deck_add();
                     if !self.effect_queue.is_empty() {
                         self.drain_effect_queue_inner();
@@ -1377,9 +1385,12 @@ impl Game {
             // ONCE per host (DCGO `AddDigivolutionCards*` once per list;
             // rule 15-5-2), then drain the observers. Loop-guarded because an
             // observer can itself place sources (a nested batch).
-            if self.pending_selection.is_none() {
+            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
                 let mut added_guard: u16 = 0;
-                while !self.pending_added_sources.is_empty() && self.pending_selection.is_none() {
+                while !self.pending_added_sources.is_empty()
+                    && self.pending_selection.is_none()
+                    && !self.halted_by_infinite_loop()
+                {
                     self.flush_pending_added_sources();
                     if !self.effect_queue.is_empty() {
                         self.drain_effect_queue_inner();
@@ -1395,7 +1406,7 @@ impl Game {
             }
             let mut guard: u16 = 0;
             loop {
-                if self.pending_selection.is_some() {
+                if self.pending_selection.is_some() || self.halted_by_infinite_loop() {
                     break;
                 }
                 if !self.run_state_based_rules_check() {
@@ -5500,10 +5511,12 @@ impl Game {
         //   decision: §18-3-3-3's stop is the player's optional decision, so a
         //   loop whose repetitions only ask forced questions is still one
         //   neither player can stop (§18-3-2) and keeps its watch.
-        let declinable = self
-            .pending_selection
-            .as_ref()
-            .is_some_and(crate::game::infinite_loop::selection_can_stop_a_loop);
+        let declinable = self.pending_selection.as_ref().is_some_and(|sel| {
+            crate::game::infinite_loop::selection_can_stop_a_loop(
+                sel,
+                self.pending_selection_resume.as_ref(),
+            )
+        });
         if declinable {
             self.reset_loop_watch();
         }

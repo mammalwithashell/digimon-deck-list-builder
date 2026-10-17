@@ -669,11 +669,16 @@ pub struct Game {
     /// signature watch) the game ends in the §18-3-2 draw.
     pub(crate) effect_chain_depth: u16,
     /// §18-3 infinite-loop watch: how many times each loop signature
-    /// (`Game::loop_signature`) has been seen since the last player decision
-    /// resolved or the outermost drain settled. See `game::infinite_loop`.
-    /// Transient: empty at every decision point, so clones taken for search
-    /// always carry an empty watch.
+    /// (`Game::loop_signature`) has been seen since the last DECLINABLE
+    /// decision resolved or the outermost drain settled with nothing parked.
+    /// See `game::infinite_loop`. It survives forced decisions, so a clone
+    /// taken at a forced prompt carries a non-empty watch; clones stay
+    /// deterministic because it is a `BTreeMap` of fixed-key hashes over
+    /// handles and values (no pointers, RNG or allocation order).
     pub(crate) loop_watch: std::collections::BTreeMap<u64, u8>,
+    /// Steps since the loop watch last started over; signatures are taken
+    /// only from `game::infinite_loop::LOOP_WATCH_START` steps on.
+    pub(crate) loop_watch_steps: u16,
     /// Last Â§15-4-5 trigger-batch id handed out by the drainer (see
     /// `QueuedEffect::trigger_batch`). Monotonic within a game.
     pub(crate) trigger_batch_seq: u32,
@@ -2612,6 +2617,10 @@ impl Game {
 
     /// Handle deck-out for a player.
     pub(crate) fn handle_deckout(&mut self, player_id: PlayerId) {
+        // The first terminal outcome stands (see `finish_game`).
+        if self.game_over {
+            return;
+        }
         if self.rules.player_count == 2 {
             // Standard: deck-out = loss
             self.game_over = true;

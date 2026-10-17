@@ -278,7 +278,15 @@ impl Game {
 
     /// Shared terminal bookkeeping for a win or a draw: drop in-flight
     /// receipts and declarations, enter `GameOver`, emit `GameEvent::GameOver`.
+    ///
+    /// Idempotent: the FIRST terminal outcome stands. A later call (e.g. a
+    /// security attack still resolving after an effect drain ended the game
+    /// in the §18-3-2 infinite-loop draw) is a no-op and emits no second
+    /// `GameOver`.
     fn finish_game(&mut self, winner: Option<PlayerId>, reason: TerminalOutcomeReason) {
+        if self.game_over {
+            return;
+        }
         self.game_over = true;
         self.cancel_all_prepared_source_plays();
         self.source_play_receipts.clear();

@@ -1,0 +1,43 @@
+# LOOP_FLIP_CHOOSE -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] Suspend this Digimon.
+#   [All Turns] When this Digimon suspends, unsuspend it.
+#   [All Turns] When this Digimon unsuspends, choose one: suspend it; or do
+#   nothing.
+# The stoppable loop of LOOP_FLIP_MAY authored as the DSL's effect-text
+# choose-one (how "you may X instead" is written) rather than an optional
+# trigger: its owner stops it by choosing the other branch (§18-3-3-3).
+card: LOOP_FLIP_CHOOSE
+name: Dithermon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] Suspend this Digimon."
+    process:
+      - suspend: { target: source }
+  - when: on_suspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon suspends, unsuspend it."
+    process:
+      - unsuspend: { target: source }
+  - when: on_unsuspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon unsuspends, choose one: suspend it; or do nothing."
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Suspend it"
+            - "Do nothing"
+          prompt: "Suspend this Digimon, or do nothing"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - suspend: { target: source }
