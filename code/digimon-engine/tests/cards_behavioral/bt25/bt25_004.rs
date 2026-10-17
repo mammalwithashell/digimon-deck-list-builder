@@ -377,6 +377,8 @@ fn bt25_004_reducer_is_once_per_turn() {
         .start();
 
     let host = r.place_stack(0, &[CARD_ID, "HOST-APP"]);
+    // Two link cards need <Link +1> (base limit 1, §4-9-5).
+    r.give_link_plus(host, 1);
     let src_a = r.place_on_field(0, "TEST-SOCIAL-LINK", Some(0));
     let _src_b = r.place_on_field(0, "TEST-SOCIAL-LINK", Some(0));
     advance_to_main(&mut r);

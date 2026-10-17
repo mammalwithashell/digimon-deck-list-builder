@@ -147,6 +147,17 @@ fn option_card(card_id: &str, cost: u16, color: CardColor) -> digimon_engine::Ca
     cd
 }
 
+/// A Plug-In Option that links itself, in its production shape: a printed
+/// Link box (`link_text`) and no lowered link requirement, as ST22-08 /
+/// BT25-101 load (`G-DATA-LINK-REQUIREMENT-NOT-LOWERED`: an unknown
+/// requirement counts as met). A card with no [Link] at all can't be linked
+/// (Q4533) and is trashed at the rule check (§17-1-3-2-7).
+fn plug_in_option_card(card_id: &str, cost: u16, color: CardColor) -> digimon_engine::CardData {
+    let mut cd = option_card(card_id, cost, color);
+    cd.link_text = "Link DP +2000".to_string();
+    cd
+}
+
 fn digimon_card(card_id: &str, color: CardColor) -> digimon_engine::CardData {
     let mut cd = make_test_card(card_id, card_id);
     cd.colors = vec![color];
@@ -728,7 +739,7 @@ fn on_link_observer_sees_option_main_already_resolved() {
 #[test]
 fn dsl_free_link_step_surfaces_host_selection_mask() {
     let mut r = DebugRunner::builder()
-        .add_card(option_card("ST22-08", 0, CardColor::Red))
+        .add_card(plug_in_option_card("ST22-08", 0, CardColor::Red))
         .add_card(digimon_card("HOST", CardColor::Red))
         .hand(0, &["ST22-08"])
         .memory(0)
@@ -772,7 +783,7 @@ effects:
 #[test]
 fn dsl_free_link_step_decoder_resolves_host_selection() {
     let mut r = DebugRunner::builder()
-        .add_card(option_card("ST22-08", 0, CardColor::Red))
+        .add_card(plug_in_option_card("ST22-08", 0, CardColor::Red))
         .add_card(digimon_card("HOST", CardColor::Red))
         .hand(0, &["ST22-08"])
         .memory(0)
@@ -981,6 +992,8 @@ fn d6_self_filtered_when_linked_fires_once_and_not_on_sibling() {
     r.register_effect("LINK-A", Arc::new(SelfFilteredWhenLinked(witness.clone())));
     r.register_effect("LINK-B", Arc::new(LinkAnyHost));
     let host = r.place_on_field(0, "HOST", Some(0));
+    // Two link cards need <Link +1> (base limit 1, §4-9-5).
+    r.give_link_plus(host, 1);
     advance_to_main(&mut r);
 
     // Attach A to the host — A's WhenLinked fires exactly once.
@@ -1620,6 +1633,8 @@ fn facet9_link_chosen_card_from_hand_attaches_and_fires_onlink() {
         .memory(3)
         .start();
     r.register_effect("HOST", Arc::new(HostSideWhenLinked(host_witness.clone())));
+    // A linked card carries [Link] (§17-1-3-2-6 / -7).
+    r.give_link_requirement("LINKEE", 0);
     let host = r.place_on_field(0, "HOST", Some(0));
     advance_to_main(&mut r);
 
@@ -1656,6 +1671,9 @@ fn facet9_link_chosen_card_from_digivolution_sources() {
         .add_card(digimon_card("TOP", CardColor::Red))
         .memory(3)
         .start();
+    // A linked card carries [Link] (§17-1-3-2-6 / -7).
+    r.give_link_requirement("UNDER", 0);
+    r.give_link_requirement("TOP", 0);
     let host = r.place_on_field(0, "HOST", Some(0));
     // Donor: UNDER beneath TOP (a 2-card digivolution stack).
     let donor = r.place_stack(0, &["UNDER", "TOP"]);
@@ -2118,6 +2136,8 @@ fn inherited_scope_link_ess_triggered_clause_fires_via_host() {
         Arc::new(InheritedTriggeredLinkEss(witness.clone())),
     );
 
+    // The linked card carries [Link] (§17-1-3-2-6 / -7).
+    r.give_link_requirement("TRIG-ESS", 0);
     let host: PermanentHandle = r.place_on_field(0, "HOST", Some(0));
     r.push_linked_owned(host, "TRIG-ESS", 0);
     assert_eq!(*witness.lock().unwrap(), 0, "not fired yet");
@@ -2181,6 +2201,8 @@ effects:
         .memory(3)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // The linked card carries [Link] (Q4533; §17-1-3-2-6 / -7).
+    r.give_link_requirement("APPMON", 0);
     let host = r.place_on_field(0, "REBOOT-DSL", Some(0));
     advance_to_main(&mut r);
 
@@ -2228,6 +2250,8 @@ effects:
         .memory(3)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // The linked card carries [Link] (Q4533; §17-1-3-2-6 / -7).
+    r.give_link_requirement("APP-SRC", 0);
     // REBOOT-DSL on top of an Appmon under-source (a 2-card digivolution stack).
     let host = r.place_stack(0, &["APP-SRC", "REBOOT-DSL"]);
     advance_to_main(&mut r);
@@ -2291,8 +2315,13 @@ effects:
         .memory(3)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+    r.give_link_requirement("CARD-A", 0);
+    r.give_link_requirement("CARD-B", 0);
     let vulc = r.place_on_field(0, "VULC-DSL", Some(0));
     let target = r.place_on_field(0, "TARGET", Some(0));
+    // Two link cards need <Link +1> (base limit 1, §4-9-5).
+    r.give_link_plus(target, 1);
     advance_to_main(&mut r);
 
     let hand_before = r.hand_size(0);
@@ -2383,6 +2412,9 @@ effects:
         .memory(3)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+    r.give_link_requirement("APP-SRC", 0);
+    r.give_link_requirement("APP-HAND", 0);
     // REBOOT-DSL on top of an Appmon under-source: a candidate in self_sources,
     // plus an Appmon in hand → both zones populated.
     let host = r.place_stack(0, &["APP-SRC", "REBOOT-DSL"]);
@@ -2437,8 +2469,13 @@ effects:
         .memory(3)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+    r.give_link_requirement("CCARD-A", 0);
+    r.give_link_requirement("CCARD-B", 0);
     let vulc = r.place_on_field(0, "VULC-CLN", Some(0));
     let target = r.place_on_field(0, "TARGET-CLN", Some(0));
+    // Two link cards need <Link +1> (base limit 1, §4-9-5).
+    r.give_link_plus(target, 1);
     advance_to_main(&mut r);
     r.game.fire_on_play(0, vulc.index as usize);
 
@@ -2532,6 +2569,9 @@ effects:
         .memory(3)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+    r.give_link_requirement("APP-SRC-C", 0);
+    r.give_link_requirement("APP-HAND-C", 0);
     let host = r.place_stack(0, &["APP-SRC-C", "REBOOT-CLN"]);
     advance_to_main(&mut r);
     r.game.fire_on_play(0, host.index as usize);
@@ -2623,6 +2663,8 @@ effects:
         .memory(3)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // The linked card carries [Link] (Q4533; §17-1-3-2-6 / -7).
+    r.give_link_requirement("APP-USRC", 0);
     let host = r.place_stack(0, &["APP-USRC", "REBOOT-SRC"]);
     advance_to_main(&mut r);
     r.game.fire_on_play(0, host.index as usize);
@@ -2707,6 +2749,8 @@ effects:
         .memory(5)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // The linked card carries [Link] (Q4533; §17-1-3-2-6 / -7).
+    r.give_link_requirement("APPMON", 0);
     let src = r.place_on_field(0, "HOSTFILT", Some(0));
     let host_ok = r.place_on_field(0, "HOST-OK", Some(0));
     let _host_no = r.place_on_field(0, "HOST-NO", Some(0));
@@ -2777,6 +2821,8 @@ effects:
         .memory(5)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // The relinked card carries [Link] (Q4533; §17-1-3-2-6 / -7).
+    r.give_link_requirement("RELINKER", 0);
     let src = r.place_on_field(0, "RELINKER", Some(0));
     let _ok = r.place_on_field(0, "HOST-OK", Some(0));
     let _no = r.place_on_field(0, "HOST-NO", Some(0));
@@ -2845,6 +2891,8 @@ effects:
         .memory(5)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // The relinked card carries [Link] (Q4533; §17-1-3-2-6 / -7).
+    r.give_link_requirement("RELINKER", 0);
     let src = r.place_on_field(0, "RELINKER", Some(0));
     let _ok = r.place_on_field(0, "HOST-OK", Some(0));
     let _no = r.place_on_field(0, "HOST-NO", Some(0));
@@ -2990,7 +3038,13 @@ fn ex11_027_linked_leave_prevention_places_link_card_as_bottom_source() {
     let mut r = DebugRunner::builder()
         .dsl_card("EX11-027")
         .expect("EX11-027 loads")
-        .add_card(digimon_card("HOST", CardColor::Red))
+        // HOST meets Maquinamon's link requirement ("[Maquinamon] in text";
+        // §17-1-3-2-6 trashes an unqualified link card).
+        .add_card({
+            let mut host = digimon_card("HOST", CardColor::Red);
+            host.effect_text = "[Maquinamon]".to_string();
+            host
+        })
         .memory(0)
         .start();
     let host = r.place_on_field(0, "HOST", Some(0));
@@ -3420,6 +3474,8 @@ fn gap3a_leave_replacement_trashes_link_card_and_stays() {
         .memory(0)
         .start();
     r.register_effect("STAYER", Arc::new(LinkTrashLeaveReplacement));
+    // The linked card carries [Link] (§17-1-3-2-6 / -7).
+    r.give_link_requirement("LINKEE", 0);
     let perm = r.place_on_field(0, "STAYER", Some(0));
     r.push_linked_owned(perm, "LINKEE", 0);
     advance_to_main(&mut r);
@@ -3478,6 +3534,8 @@ fn gap3a_leave_replacement_declined_leaves() {
         .memory(0)
         .start();
     r.register_effect("STAYER", Arc::new(LinkTrashLeaveReplacement));
+    // The linked card carries [Link] (§17-1-3-2-6 / -7).
+    r.give_link_requirement("LINKEE", 0);
     let perm = r.place_on_field(0, "STAYER", Some(0));
     r.push_linked_owned(perm, "LINKEE", 0);
     advance_to_main(&mut r);
@@ -3536,7 +3594,12 @@ fn gap3a_leave_replacement_chooses_which_link_card() {
         .memory(0)
         .start();
     r.register_effect("STAYER", Arc::new(LinkTrashLeaveReplacement));
+    // Linked cards carry [Link] (§17-1-3-2-6 / -7).
+    r.give_link_requirement("LINK-A", 0);
+    r.give_link_requirement("LINK-B", 0);
     let perm = r.place_on_field(0, "STAYER", Some(0));
+    // Two link cards need <Link +1> (base limit 1, §4-9-5).
+    r.give_link_plus(perm, 1);
     let link_a = r.push_linked_owned(perm, "LINK-A", 0);
     let _link_b = r.push_linked_owned(perm, "LINK-B", 0);
     advance_to_main(&mut r);
@@ -3593,7 +3656,12 @@ fn gap3a_link_card_trash_prompt_clones_faithfully() {
         .memory(0)
         .start();
     r.register_effect("STAYER", Arc::new(LinkTrashLeaveReplacement));
+    // Linked cards carry [Link] (§17-1-3-2-6 / -7).
+    r.give_link_requirement("LINK-A", 0);
+    r.give_link_requirement("LINK-B", 0);
     let perm = r.place_on_field(0, "STAYER", Some(0));
+    // Two link cards need <Link +1> (base limit 1, §4-9-5).
+    r.give_link_plus(perm, 1);
     let link_a = r.push_linked_owned(perm, "LINK-A", 0);
     let _link_b = r.push_linked_owned(perm, "LINK-B", 0);
     advance_to_main(&mut r);
@@ -3643,6 +3711,8 @@ effects:
         .memory(0)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // The linked card carries [Link] (§17-1-3-2-6 / -7).
+    r.give_link_requirement("LINKEE", 0);
     let perm = r.place_on_field(0, "BT25-066", Some(0));
     r.push_linked_owned(perm, "LINKEE", 0);
     advance_to_main(&mut r);
@@ -3734,6 +3804,8 @@ effects:
         .memory(0)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // The linked card carries [Link] (§17-1-3-2-6 / -7).
+    r.give_link_requirement("LINKEE", 0);
     let perm = r.place_on_field(0, "EX11-027-PLACE", Some(0));
     let linkee = r.push_linked_owned(perm, "LINKEE", 0);
     advance_to_main(&mut r);
@@ -3804,6 +3876,8 @@ effects:
         .memory(0)
         .start();
     register_dsl_yaml(&mut r, yaml);
+    // The linked card carries [Link] (§17-1-3-2-6 / -7).
+    r.give_link_requirement("LINKEE", 0);
     let perm = r.place_on_field(0, "EX11-027-PLACE", Some(0));
     let linkee = r.push_linked_owned(perm, "LINKEE", 0);
     advance_to_main(&mut r);
@@ -3868,7 +3942,7 @@ effects:
 "#;
 
     let mut r = DebugRunner::builder()
-        .add_card(option_card("BT25-101", 0, CardColor::Red))
+        .add_card(plug_in_option_card("BT25-101", 0, CardColor::Red))
         .add_card(digimon_card("HOST", CardColor::Red))
         .hand(0, &["BT25-101"])
         .memory(3)

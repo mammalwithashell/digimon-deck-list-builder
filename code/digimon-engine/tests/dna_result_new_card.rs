@@ -110,6 +110,7 @@ fn runner() -> DebugRunner {
         .add_card(result)
         .add_card(filler)
         .add_card(make_test_card("LINK", "Link Card"))
+        .link_requirement("LINK", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(ordinary)
         .hand(0, &["DNA-RESULT", "LINK", "LINK"])
         // The opponent needs security so attacks on the player never end the

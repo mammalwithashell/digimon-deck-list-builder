@@ -35,6 +35,9 @@ fn base() -> DebugRunnerBuilder {
     let mut b = DebugRunner::builder()
         .dsl_card(ID)
         .expect("BT26-086 compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("APP-1B", 0)
+        .link_requirement("NON-APP", 0)
         .add_card(digimon(
             "APP-1B",
             "Alpha",
@@ -54,7 +57,9 @@ fn base() -> DebugRunnerBuilder {
         .add_card(digimon("OPP-D", "OppD", CardColor::Red, 5, 6, &[]))
         .add_card(filler("FILLER"));
     for (id, name) in NAMES {
-        b = b.add_card(digimon(id, name, CardColor::Red, 3, 4, &["Appmon"]));
+        b = b
+            .add_card(digimon(id, name, CardColor::Red, 3, 4, &["Appmon"]))
+            .link_requirement(id, 0);
     }
     b.deck(0, &["FILLER"; 10])
         .deck(1, &["FILLER"; 10])
@@ -175,7 +180,10 @@ fn bt26_086_seven_links_bounce_even_when_delete_declined() {
 fn bt26_086_eight_links_no_bounce() {
     let mut r = base().start();
     r.game.enter_main_phase();
+    // 8 link cards need a 2nd <Link +> beside <Link +6> (limit 1 + 6, §4-9-5;
+    // §17-1-3-2-5 would trim the 8th): stage it so 8 is a legal board.
     let h = place_with_links(&mut r, 7);
+    r.give_link_plus(h, 1);
     let sec0 = r.security_count(1);
     push_link_and_fire(&mut r, h, "APP-8");
     drain_first(&mut r);

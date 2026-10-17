@@ -47,7 +47,7 @@ impl digimon_engine::effect::CardEffect for OriginProbe {
 }
 fn origin_control_with_host(linked:bool, dual:bool){
  let mut source=digimon_engine::debug_runner::make_test_card("ORIGIN-TAMER","Origin Tamer");source.card_kind=digimon_engine::enums::CardKind::Tamer;source.dp=None;source.level=None;
- let mut r=DebugRunner::builder().add_card(source).dsl_card("BT12-092").unwrap().dsl_card("ST1-03").unwrap().deck(0,&["ST1-03";12]).deck(1,&["ST1-03";12]).memory(10).start();r.skip_mulligan();let seen=Arc::new(Mutex::new(vec![]));r.register_effect("ORIGIN-TAMER",Arc::new(OriginProbe{seen:seen.clone(),linked}));
+ let mut r=DebugRunner::builder().add_card(source).dsl_card("BT12-092").unwrap().dsl_card("ST1-03").unwrap().deck(0,&["ST1-03";12]).deck(1,&["ST1-03";12]).memory(10).start();r.skip_mulligan();let seen=Arc::new(Mutex::new(vec![]));r.register_effect("ORIGIN-TAMER",Arc::new(OriginProbe{seen:seen.clone(),linked}));r.give_link_requirement("ORIGIN-TAMER",0) /* [Link]: §17-1-3-2-6/-7 */;
  let h=r.place_on_field(0,if dual {"BT12-092"} else {"ST1-03"},Some(0));r.place_on_field(0,"ST1-03",Some(0));if dual {r.game.enter_main_phase();r.accept_optional_trigger().unwrap();}
  if linked {let i=r.add_to_hand(0,"ORIGIN-TAMER");let card=r.game.players[0].hand.remove(i);r.game.players[0].battle_area[0].linked_cards.push(card);}else{r.push_source(h,"ORIGIN-TAMER");}
  r.game.enqueue_triggered(digimon_engine::enums::EffectTiming::WhenAttacking,digimon_engine::selection::TriggerSource::Permanent(h));r.game.drain_effect_queue();assert_eq!(*seen.lock().unwrap(),vec![(true,false,false)],"inherited/link origin is Digimon-only on either ordinary or dual-kind carrier");

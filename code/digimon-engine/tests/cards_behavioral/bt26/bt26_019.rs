@@ -26,6 +26,9 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(ID)
         .expect("BT26-019 compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("SC-LINK", 0)
+        .link_requirement("PLAIN-LINK", 0)
         .add_card(digimon(
             "APP-HOST",
             "AppHost",

@@ -28,6 +28,15 @@ fn production_card(card_id: &str) -> CardData {
         .clone()
 }
 
+/// The host Digimon: an [Appmon] Digimon, which meets the production link
+/// cards' link requirement (BT24-067 Hackmon: [Appmon] trait); a link card on
+/// a host that doesn't is trashed at the rule check (§17-1-3-2-6).
+fn link_host() -> CardData {
+    let mut host = make_test_card("HOST-DGM", "Host Digimon");
+    host.traits = vec!["Appmon".to_string()];
+    host
+}
+
 /// A plain Digimon whose only digivolution card is the production `card_id`.
 fn digimon_over(card_id: &str) -> (DebugRunner, PermanentHandle) {
     let mut runner = DebugRunner::builder()
@@ -42,7 +51,7 @@ fn digimon_over(card_id: &str) -> (DebugRunner, PermanentHandle) {
 fn digimon_linked_with(card_id: &str) -> (DebugRunner, PermanentHandle) {
     let mut runner = DebugRunner::builder()
         .add_card(production_card(card_id))
-        .add_card(make_test_card("HOST-DGM", "Host Digimon"))
+        .add_card(link_host())
         .start();
     let host = runner.place_on_field(0, "HOST-DGM", Some(0));
     runner.push_linked_owned(host, card_id, 0);
@@ -106,7 +115,7 @@ fn hackmon_as_a_link_card_retaliates_once() {
     big.dp = Some(8000);
     let mut runner = DebugRunner::builder()
         .add_card(production_card("BT24-067"))
-        .add_card(make_test_card("HOST-DGM", "Host Digimon"))
+        .add_card(link_host())
         .add_card(big)
         .start();
     let host = runner.place_on_field(0, "HOST-DGM", Some(0));
@@ -140,7 +149,7 @@ fn hackmon_as_a_link_card_retaliates_once() {
 fn fakemon_runner() -> DebugRunner {
     DebugRunner::builder()
         .add_card(production_card("BT22-075"))
-        .add_card(make_test_card("HOST-DGM", "Host Digimon"))
+        .add_card(link_host())
         .add_card(make_test_card("ALLY-DGM", "Ally Digimon"))
         .start()
 }

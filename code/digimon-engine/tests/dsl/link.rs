@@ -186,6 +186,8 @@ fn linked_evade_runner() -> DebugRunner {
     DebugRunner::builder()
         .from_dsl_yaml(LINKED_EVADE)
         .expect("fixture compiles")
+        // The link card carries [Link] (§17-1-3-2-6 / -7).
+        .link_requirement("TEST-LINK-EVADE", 0)
         .add_card(digimon_card("HOST", CardColor::Red))
         .add_card(digimon_card("ALLY", CardColor::Red))
         .start()

@@ -90,9 +90,12 @@ fn base_builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
         .add_card(digimon("APP-HOST", CardColor::Black, &["Appmon"]))
         .add_card(digimon("APP-OTHER", CardColor::Black, &["Appmon"]))
         .add_card(digimon("APP-LINKED", CardColor::Black, &["Appmon"]))
+        .link_requirement("APP-LINKED", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(digimon("APP-LINK", CardColor::Black, &["Appmon"]))
+        .link_requirement("APP-LINK", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(digimon("RED-PLAIN", CardColor::Red, &["Beast"]))
         .add_card(digimon("PLAIN", CardColor::Black, &["Beast"]))
+        .link_requirement("PLAIN", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(appmon_tamer("APP-TAMER"))
         .add_card(make_test_card("FILL", "Fill"))
 }

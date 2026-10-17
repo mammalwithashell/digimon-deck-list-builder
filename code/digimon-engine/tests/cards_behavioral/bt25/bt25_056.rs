@@ -78,6 +78,9 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT25-056 YAML parses and compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("TOOL-IN-HAND", 0)
+        .link_requirement("PLAIN-X", 0)
         .add_card(make_test_card("DECK-PAD", "Filler"))
         .add_card(make_digimon("TOOL-IN-HAND", 4, 4000, 4, &["Tool"]))
         .add_card(make_digimon("PLAIN-X", 3, 2000, 3, &["Beast"]))
