@@ -2375,12 +2375,25 @@ impl Game {
             TriggerSource::BattleResolved {
                 winner,
                 ref deleters,
+                winner_identity,
+                ref winner_snapshot,
             } => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 // The battle winner (owner + trait read by the observer's
-                // `event_winner_*` predicates). `None` on a tie — no winner.
+                // `event_winner_*` predicates). `None` on a tie — no winner —
+                // and when the winner left the field before this event.
                 battle_winner: winner,
+                // The winner's identity and last-known information from the
+                // battle: the `event_winner_*` reads resolve it by identity,
+                // and `Game::gate_trigger_context` exposes the snapshot as
+                // `deleted_object` once it has left (§15-8-3-8; the Task 1
+                // event-referent model). Pre-set here, so the generic
+                // capture below does not retake them from the later board.
+                // G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX.
+                battle_winner_identity: winner_identity,
+                event_permanent_identity: winner_identity,
+                event_snapshot: winner_snapshot.clone(),
                 // G-DSL-BATTLE-DELETER — read by `event_battle_deleter`.
                 battle_deleters: deleters.clone(),
                 event_permanent: winner,
@@ -2470,7 +2483,7 @@ impl Game {
         // Capture before any observer resolves. The existing stack identity is
         // shared with battle/replacement tracking: it survives ordinary stack
         // edits, is invalidated by every DNA path, and is absent on a new play.
-        if context.deleted_object.is_none() {
+        if context.deleted_object.is_none() && context.event_permanent_identity.is_none() {
             if let Some(handle) = context.event_permanent {
                 if let Some(permanent) = self
                     .player(handle.player)

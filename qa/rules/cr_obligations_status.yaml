@@ -39,7 +39,7 @@
 "15-4-3-2":
   status: proven
   tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool"]
-  note: "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved)."
+  note: "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). Known open defect in another pool: a battle loser's [On Deletion] and the battle-result observers ('wins a battle', 'deletes in battle') are drained in sequence, not as one pool -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION (no test here yet)."
 "16-24-2":
   status: proven
   tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool", "ch16_attack_keywords::alliance_kind_matches_rule"]
@@ -47,7 +47,7 @@
 "15-4-3-5-1":
   status: proven
   tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"]
-  note: "P0 orders only its own simultaneously triggered attack effects and resolves all of them before the non-turn player chooses."
+  note: "P0 orders only its own simultaneously triggered attack effects and resolves all of them before the non-turn player chooses. Known open defect: after a battle the non-turn player's [On Deletion] activates before the turn player's battle-result observers -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION (no test here yet)."
 "15-4-3-5-2":
   status: proven
   tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"]
@@ -78,6 +78,10 @@
   tests: ["ch15_04_effect_states::non_turn_player_derived_trigger_precedes_turn_player_pending"]
 
 # ── ch15-08 Effect Categories (§15-8) — tests/rules_conformance/ch15_08_effect_categories.rs ──
+"15-8-3-1":
+  status: proven
+  tests: ["ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves"]
+  note: "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not. G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX."
 "15-8-3-2":
   status: gap
   blocks_training: true
@@ -101,8 +105,8 @@
   note: "Security count read at processing: ordering the sibling <Recovery +1> first makes a level 4 Digimon returnable; ordering the observer first does not."
 "15-8-3-8":
   status: proven
-  tests: ["ch15_08_effect_categories::trigger_reference_tied_to_condition_uses_trigger_time_state", "ch15_08_effect_categories::trigger_condition_qualifier_read_in_triggered_state_after_attacker_leaves"]
-  note: "The rule's example: the played level 4 Digimon digivolves to level 5 before the observer activates; only the opponent's level 4 Digimon is a legal deletion target."
+  tests: ["ch15_08_effect_categories::trigger_reference_tied_to_condition_uses_trigger_time_state", "ch15_08_effect_categories::trigger_condition_qualifier_read_in_triggered_state_after_attacker_leaves", "ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves", "ch15_08_effect_categories::battle_winner_qualifier_does_not_read_the_digimon_that_slid_into_the_slot", "ch15_08_effect_categories::battle_winner_qualifier_reads_the_material_after_the_winner_dna_digivolves"]
+  note: "The rule's example: the played level 4 Digimon digivolves to level 5 before the observer activates; only the opponent's level 4 Digimon is a legal deletion target. 'When any of your [TS] trait Digimon win a battle' (BT25-020 Marsmon shape): the winner is resolved by identity while on the field (a lower-index Digimon returning first does not redirect the read) and read through its last-known information once the loser's [On Deletion] has deleted it or it has become a new Digimon by DNA digivolution."
 "15-8-3-9-1":
   status: proven
   tests: ["ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger"]
@@ -309,7 +313,7 @@
 "16-7-4":
   status: proven
   tests: ["ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack"]
-  note: "The rule's example: <Piercing> deletes a Digimon with '[On Deletion] Gain 1 memory'; event order is the [On Deletion] memory, then the single SecurityReveal, then the attacker's [End of Attack] memory."
+  note: "The rule's example: <Piercing> deletes a Digimon with '[On Deletion] Gain 1 memory'; event order is the [On Deletion] memory, then the single SecurityReveal, then the attacker's [End of Attack] memory. Related open defect: the other effects triggered by the battle (battle-result observers) do not pend with the [On Deletion] -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION."
 "16-7-5":
   status: proven
   tests: ["ch18_pending_overwrite::piercing_checks_security_once_however_many_instances", "ch11_14_attack_procedure::one_security_check_per_attack_sa_plus_counts_inside_it"]

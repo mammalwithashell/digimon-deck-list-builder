@@ -1961,51 +1961,50 @@ fn eval_event_fields(
     }
     if let Some(want) = pred.event_winner_owner {
         // on_ally_won_battle: the winner's controller must match the ref. A tie
-        // has no winner â†’ no `battle_winner` â†’ fail. G-DSL-BATTLE-WINNER-BOARDWIDE.
-        let Some(winner) = rctx
+        // has no winner -> fail. The controller comes with the winner's
+        // identity, so it holds after the winner has left the field.
+        // G-DSL-BATTLE-WINNER-BOARDWIDE.
+        let Some(owner) = rctx
             .game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.battle_winner)
+            .and_then(|trigger| trigger.battle_winner_controller())
         else {
             return false;
         };
-        if !player_ref_matches(want, winner.player, rctx) {
+        if !player_ref_matches(want, owner, rctx) {
             return false;
         }
     }
     if let Some(ref trait_name) = pred.event_winner_trait_has {
-        // on_ally_won_battle: the winner's top card must carry the trait. The
-        // winner survives a non-tie battle, so read the live slot.
+        // on_ally_won_battle: the winner must carry the trait. The winner is
+        // found by identity, never by the slot named at enqueue (a lower-index
+        // departure shifts it onto another Digimon); while it is on the field
+        // it is read live (§15-4-4-5), and once it has left a clause-level
+        // gate reads its last-known information (`Game::gate_trigger_context`
+        // exposes the battle's winner snapshot as `deleted_object`):
+        // §15-8-3-1 / §15-8-3-8. G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX.
         let matches = rctx
             .game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.battle_winner)
-            .and_then(|winner| {
-                rctx.game
-                    .player(winner.player)
-                    .battle_area
-                    .get(winner.index as usize)
-            })
-            .map(|perm| perm.has_trait(trait_name, rctx.card_data()))
-            .unwrap_or(false);
+            .is_some_and(|trigger| trigger.battle_winner_has_trait(rctx.game, trait_name));
         if !matches {
             return false;
         }
     }
     if let Some(want) = pred.event_winner_is_source {
         // on_ally_won_battle: is the winner THIS effect's carrier? A tie has no
-        // winner â†’ fail. G-DSL-BATTLE-WINNER-IS-SOURCE.
-        let Some(winner) = rctx
-            .game
-            .current_trigger_context
-            .as_ref()
-            .and_then(|trigger| trigger.battle_winner)
-        else {
+        // winner -> fail. Resolved by identity: a winner that has left the
+        // field is not the carrier on the field. G-DSL-BATTLE-WINNER-IS-SOURCE.
+        let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
             return false;
         };
-        if (Some(winner) == rctx.source_permanent) != want {
+        if trigger.battle_winner_controller().is_none() {
+            return false;
+        }
+        let winner = trigger.resolve_battle_winner(rctx.game);
+        if (winner.is_some() && winner == rctx.source_permanent) != want {
             return false;
         }
     }
