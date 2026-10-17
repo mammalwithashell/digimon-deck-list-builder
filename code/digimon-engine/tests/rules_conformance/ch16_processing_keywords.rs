@@ -3008,7 +3008,7 @@ fn trashing_a_top_card_is_not_a_digivolution_card_trash() {
     let cp = r.event_checkpoint();
     use_option(&mut r, 0, "OPT_TRASH_OWN_TOP");
     pick_field(&mut r, stack.index as u16);
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert_eq!(
         stack_ids(&r, stack),
         owned(&[FILL, "LV4_PLAIN"]),
@@ -3032,7 +3032,7 @@ fn trashing_a_top_card_is_not_a_digivolution_card_trash() {
     let cp = r.event_checkpoint();
     use_option(&mut r, 0, "OPT_TRASH_OWN_TOP2");
     pick_field(&mut r, stack.index as u16);
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert_eq!(stack_ids(&r, stack), owned(&[FILL]), "2 top cards trashed");
     assert_eq!(memory_events_from(&r, cp, "OBS_SRC_TRASH_MEM"), 0);
     assert_eq!(
