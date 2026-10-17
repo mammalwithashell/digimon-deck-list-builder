@@ -2122,10 +2122,9 @@ impl Game {
     }
 
     /// Scan the defender's battle area for unsuspended Digimon with the
-    /// Blocker keyword (modifier-granted or native — native/static parsing
-    /// still pending §4.3b/§2.1b; only granted Blocker keywords are
-    /// honored today). Install a `PendingSelection` in `BlockTiming` if
-    /// any candidate exists. Returns `true` if a selection was installed,
+    /// Blocker keyword (`Game::has_keyword`: printed, inherited, modifier-
+    /// granted, or the live `<Collision>` grant of §16-30-1). Install a
+    /// `PendingSelection` in `BlockTiming` if any candidate exists. Returns `true` if a selection was installed,
     /// `false` if no candidates and the caller should auto-advance to
     /// Battle.
     fn try_enter_block(&mut self) -> bool {
@@ -2159,10 +2158,10 @@ impl Game {
         // would be the same permanent.
         let attacker_is_defender = attacker.player == defender_player;
 
-        // §Collision: when the attacker has `Keyword::Collision`, every
-        // opponent Digimon is treated as having Blocker for this attack.
-        // Mirrors Python's `_is_collision` check in
-        // `permanent.py::can_be_blocker`.
+        // §16-30-1 / §16-30-4: <Collision> makes the block mandatory (the
+        // forcing affects the opponent PLAYER); the <Blocker> every affected
+        // opponent Digimon gains is granted declaratively in
+        // `Game::has_keyword` (`collision_grants_blocker`), not here.
         let attacker_has_collision = self.has_keyword(attacker, Keyword::Collision);
 
         let battle_area_len = self.player(defender_player).battle_area.len();
@@ -2192,9 +2191,9 @@ impl Game {
                 continue;
             }
             // `CannotBlock` (Phase 6 restriction) short-circuits
-            // candidacy regardless of Collision — Collision promotes
-            // every opponent Digimon to "has Blocker" but does NOT
-            // override a printed/modifier `CannotBlock` gate.
+            // candidacy regardless of Collision -- the <Collision> grant
+            // gives the Digimon <Blocker> but does NOT override a
+            // printed/modifier `CannotBlock` gate.
             if self.modifiers.has(h, ModifierType::CannotBlock) {
                 continue;
             }
@@ -2216,9 +2215,12 @@ impl Game {
             {
                 continue;
             }
-            // Blocker required UNLESS the attacker has Collision, which
-            // grants Blocker to every opponent Digimon for this attack.
-            if !attacker_has_collision && !self.has_keyword(h, Keyword::Blocker) {
+            // §16-30-1 / §16-30-4: <Collision> grants <Blocker> to every
+            // opponent Digimon its effects can affect, declaratively inside
+            // `has_keyword` (`collision_grants_blocker`) -- so candidacy is
+            // just "has <Blocker>" and a Digimon unaffected by the attacker's
+            // effects is a candidate only through a Blocker it already has.
+            if !self.has_keyword(h, Keyword::Blocker) {
                 continue;
             }
             // Blocker declaration rewrites the attack target, so it must

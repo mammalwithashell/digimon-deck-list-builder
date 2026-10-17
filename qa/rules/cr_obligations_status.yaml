@@ -838,27 +838,21 @@
   tests: ["ch16_attack_keywords::alliance_dp_and_sa_persist_after_suspended_digimon_leaves"]
   note: "A [Counter] deleting the suspended Digimon leaves the added DP and <Security A. +1>."
 "16-30-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED
+  status: proven
   tests: ["ch16_attack_keywords::collision_forces_block_whenever_possible", "ch16_attack_keywords::collision_kind_matches_rule"]
-  note: "Forced-block half proven (mandatory block window over every unsuspended opponent Digimon; one that can't suspend isn't forced). Gain-<Blocker> half fails: no <Blocker> is granted (has_keyword false during the attack); block candidacy short-circuits on the attacker's <Collision>. collision_kind_matches_rule is #[ignore]d."
+  note: "Both halves proven: has_keyword(h, Blocker) is true for each opponent Digimon during the attack (Game::collision_grants_blocker), and the block window is mandatory. G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED resolved."
 "16-30-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED
+  status: proven
   tests: ["ch16_attack_keywords::collision_kind_matches_rule"]
-  note: "The persistent grant is not applied at all (see 16-30-1). #[ignore]d."
+  note: "The grant is persistent and live-computed from the current attack (no activation, no modifier that could outlive it); absent before the attack, present at the block timing."
 "16-30-3":
   status: proven
   tests: ["ch16_attack_keywords::collision_timing_matches_rule"]
   note: "Another Digimon's attack forces no block."
 "16-30-4":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED
+  status: proven
   tests: ["ch16_attack_keywords::collision_blocker_grant_affects_digimon_forced_block_affects_player"]
-  note: "A Digimon unaffected by the opponent's effects is still forced into the block window (engine: [0, 1], rule: [1]) and, alone, is still offered. #[ignore]d."
+  note: "A Digimon unaffected by the attacker's Digimon effects does not gain <Blocker> (effect_can_affect gate) and is not a forced candidate; the forced block still falls on the opponent player."
 "16-33-1":
   status: gap
   blocks_training: true

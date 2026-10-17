@@ -54,7 +54,42 @@ impl Game {
         if self.modifiers.has_keyword(handle, keyword) {
             return true;
         }
+        if keyword == crate::enums::Keyword::Blocker && self.collision_grants_blocker(handle) {
+            return true;
+        }
         self.has_keyword_from_card_sources(handle, keyword)
+    }
+
+    /// §16-30-1 / §16-30-2 / §16-30-4: while a Digimon with `<Collision>` is
+    /// attacking, ALL of its controller's opponent's Digimon gain
+    /// `<Blocker>` -- a persistent keyword effect, computed live from the
+    /// current attack (so it can never outlive the attack), applied with no
+    /// activation. "Gain <Blocker>" is processing that affects Digimon
+    /// (§16-30-4), so a Digimon the attacker's Digimon effects can't affect
+    /// (§15-15-5) does not gain it; the forced block, which affects the
+    /// opponent PLAYER, is `try_enter_block`'s mandatory window.
+    ///
+    /// DCGO `Permanent.HasBlocker`: true for every opponent Digimon during a
+    /// `<Collision>` attack unless `TopCard.CanNotBeAffected(collisionEffect)`.
+    pub(crate) fn collision_grants_blocker(&self, handle: PermanentHandle) -> bool {
+        // `live_attack_attacker` (stack identity), not `current_attacker`
+        // (the slot handle): the grant vanishes exactly when the <Collision>
+        // Digimon leaves the attack, and field compaction can't aim it at
+        // another Digimon that slid into the attacker's old slot.
+        let Some(attacker) = self.live_attack_attacker() else {
+            return false;
+        };
+        if attacker.player == handle.player
+            || !self.permanent_is_digimon_for_rules(handle)
+            || !self.has_keyword(attacker, crate::enums::Keyword::Collision)
+        {
+            return false;
+        }
+        self.effect_can_affect(
+            handle,
+            attacker.player,
+            crate::enums::EffectSourceKind::Digimon,
+        )
     }
 
     /// The card-source half of [`Game::has_keyword`]: `keyword` reaches
@@ -569,6 +604,8 @@ impl Game {
     /// <Fragment>"); keep [`Game::has_keyword`] where the exact value matters.
     pub fn has_keyword_type(&self, handle: PermanentHandle, kind: &crate::enums::Keyword) -> bool {
         self.modifiers.has_keyword_type(handle, kind)
+            || (kind.same_type(&crate::enums::Keyword::Blocker)
+                && self.collision_grants_blocker(handle))
             || self.card_source_keyword_matches(handle, &|k| k.same_type(kind))
     }
 }
