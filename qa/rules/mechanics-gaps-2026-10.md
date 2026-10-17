@@ -160,6 +160,7 @@ Grouped by the mechanism the defect lives in; when the obligation's Aegis taxono
 - DCGO: agrees (`SetIsVortex()` only relaxes the played-this-turn check).
 - Aegis: none found.
 - Fix: drop the short-circuit; keep `AttackInitiator::Vortex` only for the same-turn exemption; invert `tests/combat/counter_interrupt.rs::vortex_bypasses_counter`.
+- **Fixed** (Plan 4 Task 13, `4967a8120`): §11-4-1 `proven`.
 
 **G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON**: `PDF-explicit` (confirmation question W2)
 - Rules: §11-2-7-1; §16-33-1 (keywords).
@@ -169,6 +170,7 @@ Grouped by the mechanism the defect lives in; when the obligation's Aegis taxono
 - Aegis: mixed (scenario "16-33-1: <Vortex> does not bypass the normal suspended-target requirement"; the 2026-09-05 `vortex-timing.md` audit describes allowing "unsuspended opposing Digimon").
 - Classification: §11-2-7-1 names the legal targets ("the opponent or 1 of the opponent's suspended Digimon"); §16-33-1 grants an attack on a Digimon but no target permission, and the manual spells such a permission out wherever it exists (§16-38-1 <Execute>, the §15-1-3 example).
 - Fix: apply the normal suspended / `CanAttackUnsuspended` / <Raid> target legality to Vortex-only attacks in the mask and the decoder; keep the same-turn exemption.
+- **Fixed** (Plan 4 Task 13, `4967a8120`): §11-2-7-1, §16-33-1 `proven`.
 
 ### battle
 
@@ -381,7 +383,8 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 
 **W2. Confirmation: §16-33-1 <Vortex> attack target.** (`G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON`, classified `PDF-explicit`; does not hold up the fix.)
 - (a) Suspended Digimon only: §11-2-7-1 names the legal targets; §16-33-1 grants the attack, not a target permission, while §16-38-1 <Execute> and the §15-1-3 example spell such a permission out. DCGO and Aegis's current scenario agree. Suite and fix assume (a).
-- (b) Any opponent Digimon, reading §16-33-1's "attack an opponent's Digimon" as unqualified. Aegis's 2026-09-05 audit once implemented (b); the engine does (b) today.
+- (b) Any opponent Digimon, reading §16-33-1's "attack an opponent's Digimon" as unqualified. Aegis's 2026-09-05 audit once implemented (b); the engine did (b) until Task 13.
+- **Fixed (Task 13) on reading (a); owner may override.** Task 13 of Plan 4 (`4967a8120`) applies the normal suspended / `CanAttackUnsuspended` / <Raid> target legality to the <Vortex> attack in the mask and the decoder; `ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon` is un-ignored and §11-2-7-1 / §16-33-1 are `proven`. Reading (b) would invert that test's second assertion and `mask_end_of_turn_parity::mask_vortex_does_not_target_unsuspended_digimon`.
 
 **W3. Confirmation: end-of-turn attack order for <Engage>, <Execute>, <Overclock>.** Q3868/Q3869 are rulings on <Vortex> (EX7-064): another end-of-turn effect ordered after it resolves after the attack declaration and before the counter timing. For the other three this is not analogy alone: §11-1-4 ("After declaring an attack, the counter timing won't begin until any triggered [When Attacking] effects and other triggered effects have been resolved") gives the same order for any pending trigger once an attack is declared. (Does not hold up the fix.)
 - (a) The same order for every trigger-type end-of-turn "may attack" keyword (declaration < other effect < counter timing), per §11-1-4 + Q3869. Suite assumes (a) for all four.
