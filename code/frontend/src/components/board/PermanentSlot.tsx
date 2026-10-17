@@ -35,6 +35,10 @@ export function PermanentSlot({
 
   if (!perm.topCardId) return null;
 
+  // Tamers (and Options left in play) report level 0 and a -1 Security
+  // Attack — they never check security — so only Digimon show either badge.
+  const isDigimon = perm.level != null && perm.level > 0;
+
   // Check if this slot has an active effect
   const isEffectSource =
     activeEffectSlot === slotIndex &&
@@ -71,9 +75,9 @@ export function PermanentSlot({
         targeted={targeted}
         overlay={{
           dp: perm.dp,
-          level: perm.level,
+          level: isDigimon ? perm.level : null,
           keywords: perm.keywords,
-          saModifier: perm.securityAttackModifier,
+          saModifier: isDigimon ? perm.securityAttackModifier : 0,
         }}
       />
       {/* Selected-for-"choose N" check badge — mirrors the trash modal's badge */}

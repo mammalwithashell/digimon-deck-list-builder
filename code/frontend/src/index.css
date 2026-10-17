@@ -146,14 +146,14 @@ body {
 
 /* In Between board redesign */
 .ib-board {
-  position: relative;
+  /* Fill the GamePage board container (position: relative) outright rather
+     than via height: 100%, which resolves to nothing in the web build where
+     no ancestor has a definite height. No min-height either: the board must
+     be free to shrink with its flex-1 container so the surrounding column
+     (header/prompt/footer/action bar) always fits the canvas. */
+  position: absolute;
+  inset: 0;
   isolation: isolate;
-  height: 100%;
-  /* min-height removed: the board must be free to shrink with its flex-1
-     container so the surrounding column (header/prompt/footer/action bar)
-     always fits the canvas. A floor here forced overflow and pushed the
-     action bar below the viewport when the container was short. */
-  min-height: 0;
   overflow: hidden;
   color: var(--ib-bone);
   background: var(--ib-obsidian);
@@ -1187,12 +1187,6 @@ body {
   --card-back-2: oklch(0.20 0.08 262);
   --card-back-ring: oklch(0.80 0.14 70);
 
-  position: relative;
-  isolation: isolate;
-  height: 100%;
-  /* min-height 0: the board must shrink with its flex-1 container so the
-     surrounding column (header/prompt/footer/action bar) always fits. */
-  min-height: 0;
   overflow: hidden;
   color: var(--ib-bone);
   background: var(--arena-grout);
@@ -1571,7 +1565,7 @@ body {
   --card-back-ring: oklch(0.97 0.04 90);
 }
 
-.ib-board--arena .ib-zone__count {
+.ib-board--arena .ib-zone__body .ib-zone__count {
   position: absolute;
   right: -8px;
   bottom: -8px;

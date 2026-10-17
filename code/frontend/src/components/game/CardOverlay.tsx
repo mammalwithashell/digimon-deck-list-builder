@@ -123,6 +123,8 @@ export function CardOverlay({
   const modifierGroups = groupModifiers(permanent.modifiers ?? []);
   const hasSupporting = stackSources.length > 0 || linkedIds.length > 0;
   const gained = new Set(permanent.keywordBreakdown.gained);
+  // Tamers / Options in play report level 0 and a -1 Security Attack.
+  const isDigimon = permanent.level != null && permanent.level > 0;
 
   const inspect = (cardId: string) => () => onInspectCard?.(cardId);
   const inspectOnRightClick = (cardId: string) => (e: React.MouseEvent) => {
@@ -163,7 +165,7 @@ export function CardOverlay({
           <header className="ib-inspector__header">
             <div className="ib-inspector__title">
               <h2>{permanent.topCardName ?? 'Unknown'}</h2>
-              {permanent.level != null && <span className="ib-inspector__level">Lv.{permanent.level}</span>}
+              {isDigimon && <span className="ib-inspector__level">Lv.{permanent.level}</span>}
               <span className="ib-inspector__colors" aria-label="Colors">
                 {permanent.colors.map((c) => (
                   <i key={c} style={{ background: colorHex(c) }} title={COLOR_NAMES[c]} />
@@ -195,7 +197,7 @@ export function CardOverlay({
           {/* Status: suspended, keywords (granted marked), security attack */}
           <div className="ib-inspector__state">
             {permanent.isSuspended && <span className="ib-inspector__badge" data-tone="muted">Suspended</span>}
-            {permanent.securityAttackModifier !== 0 && (
+            {isDigimon && permanent.securityAttackModifier !== 0 && (
               <span className="ib-inspector__badge" data-tone="offense">
                 <ToneIcon tone="offense" />
                 Security Attack {permanent.securityAttackModifier > 0 ? '+' : '−'}

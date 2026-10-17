@@ -1331,13 +1331,14 @@ export function GamePage() {
   }
 
   return (
-    // `h-full` fills the parent `main` (Layout's flex-1 slot), which in
-    // the desktop build is 1080 - navbar; in web mode it's the
-    // viewport-equivalent. Previously this used `100vh - 56px` which
-    // referenced the actual window viewport (720px in the smallest
-    // preset) instead of the fixed canvas (1080px), causing ~360px of
-    // dead space below the hand at desktop's minimum preset.
-    <div className="h-full flex flex-col">
+    // `h-full` fills the fixed CanvasScaler box in the desktop build. In the
+    // web build the Layout `main` has no definite height (min-h-screen), so
+    // `h-full` resolves to nothing there and `flex-1` fills `main` as a flex
+    // child instead. Previously this used `100vh - 56px` which referenced
+    // the actual window viewport (720px in the smallest preset) instead of
+    // the fixed canvas (1080px), causing ~360px of dead space below the
+    // hand at desktop's minimum preset.
+    <div className="h-full flex-1 min-h-0 flex flex-col">
       {/* Full-width board area */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         <div className="px-3 py-1 flex items-center justify-between">
