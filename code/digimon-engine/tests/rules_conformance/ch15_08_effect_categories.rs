@@ -73,7 +73,7 @@ fn trigger_type_waits_for_causing_effect_to_finish() {
     let (mut r, tamer) = tamer_trash_board("MAIN_TRASH_UNDER_MEM");
     let cp = r.event_checkpoint();
     use_option(&mut r, 0, "MAIN_TRASH_UNDER_MEM");
-    settle_after_option(&mut r); // the Tamer pick, then the Option's trash
+    resolve_prompts(&mut r); // the Tamer pick (the Option's trash is no decision, §9-1-5)
     assert_eq!(
         r.game.players[0].battle_area[tamer.index as usize]
             .card_sources
@@ -365,7 +365,6 @@ fn trigger_reference_tied_to_condition_uses_trigger_time_state() {
 
     use_option(&mut r, 0, "MAIN_PLAY_LV4");
     pick_hand_card(&mut r, 0, "OP_DIGI_LV4");
-    trash_used_option_first(&mut r);
 
     let choices = order_choices(&r, 0);
     assert_eq!(

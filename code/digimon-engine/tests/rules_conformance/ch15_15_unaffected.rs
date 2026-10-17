@@ -156,7 +156,7 @@ fn digimon_only_immunity_is_affected_by_opponent_option_main() {
         "precondition: P0's Digimon effects don't affect it"
     );
     use_option(&mut r, 0, "OPT_DELETE_13K");
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert!(
         !on_field(&r, 1, "IMMUNE_DIGI_ONLY"),
         "the Option's [Main] deletes it"
@@ -167,7 +167,7 @@ fn digimon_only_immunity_is_affected_by_opponent_option_main() {
     red_anchor(&mut r);
     play_and_resolve(&mut r, 1, "IMMUNE_DIGI_ONLY");
     use_option(&mut r, 0, "OPT_MINUS_12K");
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert!(
         !on_field(&r, 1, "IMMUNE_DIGI_ONLY"),
         "-12000 DP from the Option takes it to 0 DP; the rule check deletes it"
@@ -291,7 +291,7 @@ fn full_opponent_immunity_blocks_option_tamer_digimon_and_token_effects() {
     red_anchor(&mut r);
     let imm = play_and_resolve(&mut r, 1, "IMMUNE_ALL_OPP");
     use_option(&mut r, 0, "OPT_MINUS_12K");
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert!(on_field(&r, 1, "IMMUNE_ALL_OPP"), "Option [Main]");
     assert_eq!(dp(&r, imm), 12000, "Option [Main]");
 
@@ -428,7 +428,7 @@ fn immune_permanent_is_still_choosable_and_offered_as_only_candidate() {
         "both of P1's Digimon are offered: {offered:?}"
     );
     pick_field(&mut r, imm.index as u16);
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert_eq!(dp(&r, imm), 12000, "chosen, not affected");
     assert!(trash_ids(&r, 0).contains(&"OPT_MINUS_12K".to_string()));
 
@@ -446,7 +446,7 @@ fn immune_permanent_is_still_choosable_and_offered_as_only_candidate() {
         "the immune Digimon is offered as the only candidate"
     );
     pick_field(&mut r, imm.index as u16);
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert_eq!(dp(&r, imm), 12000, "chosen, not affected");
 }
 

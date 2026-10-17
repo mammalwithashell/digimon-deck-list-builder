@@ -233,6 +233,11 @@ pub(crate) struct PendingBattleResolution {
     winner_snapshot: Option<std::sync::Arc<crate::trigger_context::DeletedObjectSnapshot>>,
     is_attack: bool,
     in_call: bool,
+    /// The effects triggered by this battle (`EffectTiming::BattleResult`:
+    /// "wins a battle" / "deletes in battle" / <Piercing>) have been enqueued
+    /// -- into the battle deletion's trigger pool, or, when no loser was
+    /// deleted, by `resume_pending_battle_resolutions` (§14-2-4).
+    result_enqueued: bool,
 }
 
 // Deletion lifecycle + DP split out of the attack state machine (rule 25).
@@ -866,63 +871,26 @@ impl Game {
                         return AttackResult::InProgress;
                     }
 
-                    // Phase 9 Task 6 — `<Piercing>` post-battle security
-                    // check. Fires iff the just-resolved battle was a
-                    // Digimon-vs-Digimon match in which the attacker
-                    // survived, the defender was DELETED in the battle
-                    // (`battle_defender_deleted` — recorded by
-                    // `resolve_battle` from the deletion-batch outcome;
-                    // never re-probed via the defender's slot-based handle,
-                    // which a bystander may have shifted into), AND the
-                    // attacker has `<Piercing>`. Survival is re-checked
-                    // here because OnDeletion / EndOfBattle triggers that
-                    // ran inside `resolve_battle` may have deleted the
-                    // attacker. Applies to both attack shapes: declared on
-                    // a Digimon, or declared on the player and blocked
-                    // (glossary: "This effect also works if an attack is
-                    // blocked"; §16-7-2).
-                    //
-                    // The security pipeline may park on a
-                    // `PendingSelection`; in that case we return
-                    // `InProgress` and `advance_security_resolution`
+                    // `<Piercing>` triggered in the battle's pool with the
+                    // loser's `[On Deletion]` (§16-7-4; `EffectTiming::
+                    // BattleResult`, keyword body in `keyword_effects.rs`);
+                    // its activation left the check pending
+                    // (`effect_battle_piercing_pending`). It applies to both
+                    // attack shapes -- declared on a Digimon, or declared on
+                    // the player and blocked (glossary: "This effect also
+                    // works if an attack is blocked"; §16-7-2) -- and to an
+                    // effect battle the attacking Digimon wins during the
+                    // attack. `cleanup_attack` processes it immediately
+                    // before the End of Attack timing, after every effect
+                    // triggered by the battle has resolved (the
+                    // post-selection resume re-enters through the
+                    // `PostBattle` arm below); `fire_piercing_or_finish`
+                    // re-checks that the attacker is still attacking
+                    // (§16-7-6), and the check is performed even if
+                    // <Piercing> was lost after it activated (official Q&A
+                    // Q3931). The security pipeline may park on a
+                    // `PendingSelection`; `advance_security_resolution` then
                     // finalizes via `cleanup_attack` when the chain clears.
-                    if outcome == AttackResult::AttackerWins {
-                        // Refresh declarative state before the keyword gate:
-                        // a conditional aura's `<Piercing>` may turn ON at
-                        // this exact timing (EX11-016's inherited "[Your
-                        // Turn] while your opponent has no Digimon with
-                        // digivolution cards" becomes true when the battle
-                        // deletes that last sourced Digimon — official Q&A:
-                        // the freshly gained keyword DOES trigger). Same
-                        // staleness rationale as `current_security_strike`.
-                        self.tick_declarative_effects();
-                        if let Some(pa) = self.pending_attack.as_ref() {
-                            let attacker_h = pa.attacker;
-                            let defender_deleted = pa.battle_defender_deleted;
-                            if defender_deleted
-                                && !pa.security_check_started
-                                && self.handle_still_attacking(attacker_h)
-                                && self.has_keyword(attacker_h, Keyword::Piercing)
-                            {
-                                self.transition_attack_state(AttackState::PostBattle);
-                                // §16-7-4: `<Piercing>` is pending processing
-                                // that resolves AFTER effects triggered by
-                                // the battle. If the battle's OnDeletion /
-                                // EndOfBattle chain parked a selection or
-                                // still has queued effects, yield; the
-                                // post-selection resume hook re-enters
-                                // `advance_pending_attack`, and the
-                                // `PostBattle` arm below fires the check
-                                // once the chain has cleared.
-                                if self.pending_selection.is_some() || !self.effect_queue.is_empty()
-                                {
-                                    return AttackResult::InProgress;
-                                }
-                                return self.fire_piercing_or_finish(attacker_h);
-                            }
-                        }
-                    }
-
                     return self.cleanup_attack(outcome);
                 }
                 AttackState::PostBattle => {
@@ -932,11 +900,11 @@ impl Game {
                     //    flight — `advance_security_resolution` owns
                     //    completion and finalizes via `cleanup_attack`.
                     //    Yield.
-                    // 2. The Battle arm deferred an owed `<Piercing>` check
-                    //    because battle-triggered effects were still
-                    //    resolving (§16-7-4). Those have now cleared (the
-                    //    loop-top guard yields while a selection or queued
-                    //    effect is pending), so fire the check now.
+                    // 2. `cleanup_attack` deferred the check an activated
+                    //    `<Piercing>` left pending, because effects were
+                    //    still resolving (§16-7-4). Those have now cleared
+                    //    (the loop-top guard yields while a selection or
+                    //    queued effect is pending), so fire the check now.
                     if self.security_resolution.is_some() {
                         return AttackResult::InProgress;
                     }
@@ -2909,10 +2877,12 @@ impl Game {
     /// Fire the owed `<Piercing>` follow-up security check, or finish the
     /// attack when the check can no longer be performed.
     ///
+    /// The check is owed once a `<Piercing>` ACTIVATED in the battle's
+    /// trigger pool (`effect_battle_piercing_pending`, §16-7-4); losing the
+    /// keyword afterwards does not cancel it (official Q&A Q3931).
     /// Preconditions re-validated here (they may have changed while
     /// battle-triggered effects resolved, §16-7-4):
-    /// - the attacker is still the in-flight attacking Digimon;
-    /// - it still has `<Piercing>`;
+    /// - the attacker is still the in-flight attacking Digimon (§16-7-6);
     /// - the defending player has ≥ 1 security card — §16-6-6 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md]: with 0
     ///   security the check "can't be performed" at all, and in particular
     ///   Piercing must NOT win the game (the 0-security game-win arm is
@@ -2922,17 +2892,18 @@ impl Game {
     ///   no-defender arm).
     fn fire_piercing_or_finish(&mut self, attacker: PermanentHandle) -> AttackResult {
         // Keyword state may have changed while battle-triggered effects
-        // resolved — refresh the materialized aura grants before the gate
-        // (same rationale as `current_security_strike`).
+        // resolved — refresh the materialized aura grants before the
+        // security-check pipeline reads them (same rationale as
+        // `current_security_strike`).
         self.tick_declarative_effects();
-        let earned_by_effect_battle = self.pending_attack.as_mut().is_some_and(|pa| {
+        let piercing_activated = self.pending_attack.as_mut().is_some_and(|pa| {
             let pending = pa.effect_battle_piercing_pending;
             pa.effect_battle_piercing_pending = false;
             pending
         });
         let defender_player: PlayerId = 1 - attacker.player;
         if self.handle_still_attacking(attacker)
-            && (earned_by_effect_battle || self.has_keyword(attacker, Keyword::Piercing))
+            && piercing_activated
             && self.pending_attack.as_ref().is_some_and(|pa| !pa.security_check_started)
             && !self.player(defender_player).security.is_empty()
         {
@@ -2942,6 +2913,55 @@ impl Game {
             }
         } else {
             self.cleanup_attack(AttackResult::AttackerWins)
+        }
+    }
+
+    /// `<Piercing>`'s trigger condition and activation gate (§16-7-1 /
+    /// §16-7-2; DCGO `CanTriggerPierce` + `CanActivatePierce`), read with
+    /// the battle's `BattleResolved` trigger context installed: `carrier`
+    /// won the battle (found by identity, §15-8-3-8) and deleted its battle
+    /// opponent; it is still the in-flight attacking Digimon and still has
+    /// <Piercing>; the attack has checked no security yet and owes no
+    /// <Piercing> check already (§16-7-5: one check per attack, so a second
+    /// instance does not activate); the opponent has security to check.
+    /// Covers the attack's own battle and an effect battle the attacking
+    /// Digimon fights during the attack (Bandai CRM4 "May battle" notes).
+    pub(crate) fn piercing_trigger_applies(&self, carrier: PermanentHandle) -> bool {
+        let Some(trigger) = self.current_trigger_context.as_ref() else {
+            return false;
+        };
+        let Some((winner_controller, winner_identity)) = trigger.battle_winner_identity else {
+            return false;
+        };
+        if trigger.resolve_battle_winner(self) != Some(carrier) {
+            return false;
+        }
+        let deleted_its_opponent = trigger.battle_deleters.iter().any(|deleter| {
+            deleter.controller == winner_controller && deleter.battle_identity == winner_identity
+        });
+        let Some(pa) = self.pending_attack.as_ref() else {
+            return false;
+        };
+        deleted_its_opponent
+            && pa.attacker == carrier
+            && !pa.cancelled
+            && !pa.security_check_started
+            && !pa.effect_battle_piercing_pending
+            && self.handle_still_attacking(carrier)
+            && self.has_keyword(carrier, Keyword::Piercing)
+            && !self.player(1 - carrier.player).security.is_empty()
+    }
+
+    /// `<Piercing>`'s activation (§16-7-4; DCGO `PierceProcess`
+    /// `DoSecurityCheck = true`): the security check becomes pending
+    /// processing, performed immediately before the End of Attack timing by
+    /// `fire_piercing_or_finish`, whether or not the attacker keeps the
+    /// keyword (official Q&A Q3931).
+    pub(crate) fn activate_piercing(&mut self, carrier: PermanentHandle) {
+        if let Some(pa) = self.pending_attack.as_mut() {
+            if pa.attacker == carrier && !pa.security_check_started {
+                pa.effect_battle_piercing_pending = true;
+            }
         }
     }
 
@@ -3477,8 +3497,15 @@ impl Game {
                         }
                         let (winner_identity, winner_snapshot) =
                             self.battle_winner_referent(winner);
+                        // §14-2-4: the effects triggered by the battle
+                        // ("wins a battle") resolve first; the end of the
+                        // battle timing (§14-2-5) follows in
+                        // `EndOfSecurityBattleTimingDrain`, which reads the
+                        // same winner referent.
+                        self.security_battle_end_referent =
+                            Some((winner_identity, winner_snapshot.clone()));
                         self.enqueue_triggered(
-                            EffectTiming::EndOfBattle,
+                            EffectTiming::BattleResult,
                             TriggerSource::BattleResolved {
                                 winner,
                                 // Rule 14-2-3: beating a Security Digimon does
@@ -3488,8 +3515,35 @@ impl Game {
                                 winner_snapshot,
                             },
                         );
+                    }
+                    self.drain_effect_queue();
+                    if self.pending_selection.is_some() {
+                        return None;
+                    }
+                    self.set_security_phase(SecurityPhase::EndOfSecurityBattleTimingDrain);
+                }
+                SecurityPhase::EndOfSecurityBattleTimingDrain => {
+                    // §14-2-5: the end of the battle timing, once the effects
+                    // triggered by the battle have resolved.
+                    if !state.phase_enqueue_done {
+                        if let Some(st) = self.security_resolution.as_mut() {
+                            st.phase_enqueue_done = true;
+                        }
+                        let (winner_identity, winner_snapshot) =
+                            self.security_battle_end_referent.take().unwrap_or((None, None));
+                        let winner = winner_identity
+                            .and_then(|identity| self.permanent_by_battle_identity(identity));
+                        self.enqueue_triggered(
+                            EffectTiming::EndOfBattle,
+                            TriggerSource::BattleResolved {
+                                winner,
+                                deleters: Vec::new(),
+                                winner_identity,
+                                winner_snapshot,
+                            },
+                        );
                         // §18-1-2: pending processing due at the end of the
-                        // battle pools with the `EndOfBattle` observers
+                        // battle pools with the end-of-battle effects
                         // (enqueued once: the guard above survives a park).
                         self.enqueue_scheduled_for_timing(EffectTiming::EndOfBattle);
                     }
@@ -3898,9 +3952,13 @@ impl Game {
     /// caller. Called from both `begin_attack` (early-exit paths) and
     /// `advance_pending_attack` (normal terminal paths).
     fn cleanup_attack(&mut self, outcome: AttackResult) -> AttackResult {
-        // Effect battles can remove the declared target before the attack's
-        // normal battle. Their earned Piercing still resolves before EndOfAttack,
-        // after battle rewards, but never after an ordinary security transition.
+        // A `<Piercing>` that activated in a battle's trigger pool -- the
+        // attack's own battle, or an effect battle the attacking Digimon won
+        // during the attack (which can also remove the declared target before
+        // the attack's normal battle) -- left its check pending (§16-7-4). It
+        // is processed here, immediately before the End of Attack timing,
+        // after the battle's triggered effects, but never after an ordinary
+        // security transition (§16-7-5).
         if let Some(pa) = self.pending_attack.as_ref() {
             if pa.effect_battle_piercing_pending && !pa.security_check_started && !pa.cancelled
                 && self.handle_still_attacking(pa.attacker)
@@ -4422,6 +4480,7 @@ impl Game {
             winner_snapshot,
             is_attack,
             in_call: true,
+            result_enqueued: false,
         };
         let index = self.pending_battle_resolutions.len();
         self.pending_battle_resolutions.push(state);
@@ -4532,8 +4591,100 @@ impl Game {
         }
     }
 
+    /// The battle-area Digimon whose stack carries battle identity
+    /// `(controller, identity)` on the current board, if it is still there.
+    fn permanent_by_battle_identity(
+        &self,
+        (controller, identity): (PlayerId, u64),
+    ) -> Option<PermanentHandle> {
+        self.player(controller)
+            .battle_area
+            .iter()
+            .position(|perm| perm.battle_identity == Some(identity))
+            .map(|index| PermanentHandle {
+                player: controller,
+                index: index as u8,
+            })
+    }
+
+    /// The `TriggerSource::BattleResolved` payload of `state` on the current
+    /// board: the winner found by identity (`None` on a tie or once it has
+    /// left the field), every combatant that deleted its battle opponent, and
+    /// the winner's identity + last-known information from the comparison --
+    /// carried even when `winner` no longer resolves, so a "wins a battle"
+    /// qualifier reads what the winner was (§15-8-3-8;
+    /// G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX).
+    fn battle_resolved_source(&self, state: &PendingBattleResolution) -> TriggerSource {
+        let winner = state
+            .winner_identity
+            .and_then(|identity| self.permanent_by_battle_identity(identity));
+        let mut deleters = Vec::new();
+        if state.defender_deleted {
+            deleters.push(state.attacker.clone());
+        }
+        if state.attacker_deleted {
+            deleters.push(state.defender.clone());
+        }
+        TriggerSource::BattleResolved {
+            winner,
+            deleters,
+            winner_identity: state.winner_identity,
+            winner_snapshot: state.winner_snapshot.clone(),
+        }
+    }
+
+    /// Enqueue the effects triggered BY the innermost pending battle (§14-2-4)
+    /// -- the "wins a battle" / "deletes in battle" observers and <Piercing>
+    /// (`EffectTiming::BattleResult`) -- once.
+    ///
+    /// The battle's deletion batch calls this after its trash stage and before
+    /// its single trigger flush (`complete_deletion_batch_after_replacements`
+    /// stage 4d), so these effects pend in ONE pool with the loser's
+    /// `[On Deletion]` and the deletion observers: they trigger simultaneously
+    /// (§15-4-3-2, §16-7-4), the turn player activates theirs first and a
+    /// player with 2+ orders them in a `TriggerOrder` (§15-4-3-5-1; official
+    /// Q&A Q3931, EX8-045 Callismon). A battle in which no Digimon was
+    /// deleted (a replacement cancelled every deletion) never reaches that
+    /// flush; `resume_pending_battle_resolutions` enqueues it then.
+    /// G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION.
+    pub(crate) fn enqueue_pending_battle_result_triggers(&mut self) {
+        let Some(state) = self.pending_battle_resolutions.last() else {
+            return;
+        };
+        if state.result_enqueued {
+            return;
+        }
+        // Declarative state reflects the deletion before the trigger scan: a
+        // keyword gained at this exact timing triggers (EX11-016's inherited
+        // "[Your Turn] while your opponent has no Digimon with digivolution
+        // cards" <Piercing> turns on when the battle deletes that last
+        // sourced Digimon -- official Q&A: the freshly gained keyword DOES
+        // trigger).
+        self.tick_declarative_effects();
+        let Some(state) = self.pending_battle_resolutions.last_mut() else {
+            return;
+        };
+        state.result_enqueued = true;
+        let state = state.clone();
+        let source = self.battle_resolved_source(&state);
+        let first = self.effect_queue.len();
+        self.enqueue_triggered(EffectTiming::BattleResult, source);
+        // §16-7-5: one <Piercing> check per attack however many instances the
+        // attacker has; DCGO stacks exactly one (`CardController.cs`
+        // `PutStackedSkill(skillInfos_Pierce[0])`). Keep one <Piercing> entry
+        // per Digimon so identical instances are not offered as distinct
+        // ordering branches.
+        self.collapse_duplicate_keyword_triggers(first, Keyword::Piercing);
+    }
+
     /// Finish the event after every replacement/rest-of-batch choice has settled.
     /// Pop before fanout: nested battles get their own payload and one fanout.
+    ///
+    /// §14-2-4 then §14-2-5: the effects triggered by the battle -- the
+    /// loser's `[On Deletion]` and the `BattleResult` effects, one pool (see
+    /// `enqueue_pending_battle_result_triggers`) -- all resolve before the
+    /// end of the battle timing (`EndOfBattle`), which pools with the pending
+    /// processing due at the end of the battle (§18-1-1 / §18-1-2).
     pub(crate) fn resume_pending_battle_resolutions(&mut self) {
         while self.pending_selection.is_none() && self.pending_deletion_batch_rest.is_empty() {
             if !self
@@ -4543,68 +4694,24 @@ impl Game {
             {
                 return;
             }
-            let mut state = self.pending_battle_resolutions.pop().unwrap();
-            let winner = state.winner_identity.and_then(|(controller, identity)| {
-                self.player(controller)
-                    .battle_area
-                    .iter()
-                    .position(|perm| perm.battle_identity == Some(identity))
-                    .map(|index| PermanentHandle {
-                        player: controller,
-                        index: index as u8,
-                    })
-            });
-            let mut deleters = Vec::new();
-            if state.defender_deleted {
-                deleters.push(state.attacker);
+            // Normally enqueued (and drained) by the battle deletion's flush;
+            // a no-op then.
+            self.enqueue_pending_battle_result_triggers();
+            self.drain_effect_queue();
+            if self.pending_selection.is_some() {
+                return;
             }
-            if state.attacker_deleted {
-                deleters.push(state.defender);
-            }
+            let state = self.pending_battle_resolutions.pop().unwrap();
+            let source = self.battle_resolved_source(&state);
             if state.is_attack && self.pending_attack.is_some() {
                 self.pending_attack_battle_result = Some(state.outcome);
                 if let Some(pa) = self.pending_attack.as_mut() {
                     pa.battle_defender_deleted = state.defender_deleted;
                 }
             }
-            // §16-7-2/4, clarified by Bandai's CRM4 "May battle" notes:
-            // an effect battle during an attack also earns Piercing, but only
-            // for the surviving attacking Digimon that actually deleted its
-            // opponent. Stable winner identity excludes removed/replayed bodies.
-            if !state.is_attack {
-                if let Some(winner) = winner {
-                    let deleted_opponent = match state.outcome {
-                        AttackResult::AttackerWins => state.defender_deleted,
-                        AttackResult::DefenderWins => state.attacker_deleted,
-                        _ => false,
-                    };
-                    self.tick_declarative_effects();
-                    if deleted_opponent && self.handle_still_attacking(winner)
-                        && self.has_keyword(winner, Keyword::Piercing)
-                    {
-                        if let Some(pa) = self.pending_attack.as_mut() {
-                            if pa.attacker == winner && !pa.security_check_started {
-                                pa.effect_battle_piercing_pending = true;
-                            }
-                        }
-                    }
-                }
-            }
-            self.enqueue_triggered(
-                EffectTiming::EndOfBattle,
-                TriggerSource::BattleResolved {
-                    winner,
-                    deleters,
-                    // Carried even when `winner` no longer resolves: the
-                    // loser's `[On Deletion]` (drained before this event) may
-                    // have removed the winner, and its "wins a battle"
-                    // qualifiers then read its last-known information.
-                    winner_identity: state.winner_identity,
-                    winner_snapshot: state.winner_snapshot.take(),
-                },
-            );
+            self.enqueue_triggered(EffectTiming::EndOfBattle, source);
             // §18-1-2: pending processing due at the end of the battle pools
-            // with the `EndOfBattle` observers.
+            // with the end-of-battle effects.
             self.enqueue_scheduled_for_timing(EffectTiming::EndOfBattle);
             self.drain_effect_queue();
         }

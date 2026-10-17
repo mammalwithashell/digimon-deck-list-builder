@@ -700,7 +700,7 @@ fn retaliation_timing_matches_rule() {
     r.place_on_field(0, "LV5_PLAIN", Some(0));
     r.place_on_field(1, "RETALIATION", Some(0));
     use_option(&mut r, 0, "MAIN_DEL1");
-    settle_after_option(&mut r);
+    resolve_prompts(&mut r);
     assert!(
         field_top_ids(&r, 1).is_empty(),
         "RETALIATION deleted by the effect"

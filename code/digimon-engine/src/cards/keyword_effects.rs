@@ -685,7 +685,10 @@ pub(crate) fn partition_extract_and_play(
 /// the reach the former `AllianceOpen` / `RaidOpen` windows had through
 /// `Game::has_keyword`.
 pub(crate) fn keyword_trigger_dispatched_from_registry(keyword: Keyword) -> bool {
-    matches!(keyword, Keyword::Alliance | Keyword::Raid)
+    // `<Piercing>` (§16-7-2) too: its trigger condition (this Digimon won the
+    // battle and deleted its opponent while attacking) lives in the body's
+    // `condition`, which the granted-triggered store would drop.
+    matches!(keyword, Keyword::Alliance | Keyword::Raid | Keyword::Piercing)
 }
 
 /// Map a printed keyword to zero-or-more synthesized `Effect`s that install
@@ -2523,6 +2526,39 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
             .process(|ctx| {
                 if let Some(attacker) = ctx.source_permanent {
                     ctx.game.install_raid_switch_selection(attacker);
+                }
+            })
+            .build()],
+
+        // §16-7-2 (Ver. 4.3): <Piercing> "is a trigger-type effect that
+        // triggers and activates when a Digimon with this effect battles an
+        // opponent's Digimon and the opponent's Digimon is deleted in battle";
+        // §16-7-1: only while attacking. §16-7-4: it "will trigger
+        // simultaneously with effects triggered by the battle" (the loser's
+        // [On Deletion] among them), so it rides the battle's `BattleResult`
+        // pool and the turn player orders it with their other effects
+        // (§15-4-3-5-1); activating it makes the security check pending
+        // processing, performed immediately before the End of Attack timing
+        // (`Game::fire_piercing_or_finish`). §16-7-3: the check is mandatory,
+        // so the activation is too. Official Q&A Q3931 (EX8-045 Callismon): the
+        // turn player's <Piercing> activates before the opponent's [On
+        // Deletion], and the check is performed "even if <Piercing> is lost
+        // after activation". DCGO `CardEffectFactory/KeyWordEffects/Pierce.cs`
+        // (`CanTriggerPierce` / `CanActivatePierce` / `PierceProcess`): a
+        // non-optional `ActivateClass` stacked with the battle's effects
+        // (`CardController.cs`, one per battle) whose body sets
+        // `DoSecurityCheck`; it activates only while this Digimon is still the
+        // attacking Digimon, the opponent has security and no check is pending
+        // yet -- see `Game::piercing_trigger_applies`.
+        Keyword::Piercing => vec![Effect::battle_result(card)
+            .name("<Piercing>")
+            .condition(|ctx| {
+                ctx.source_permanent
+                    .is_some_and(|carrier| ctx.game.piercing_trigger_applies(carrier))
+            })
+            .process(|ctx| {
+                if let Some(carrier) = ctx.source_permanent {
+                    ctx.game.activate_piercing(carrier);
                 }
             })
             .build()],

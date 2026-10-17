@@ -595,4 +595,69 @@ Tasks 16–20 touch disjoint files and may run in parallel sessions (each on its
 - [ ] **Step 4: Sidecar:** add the tests under `15-4-3-5-1` and `16-7-4` (flip to proven if gap). Regenerate; `--check`. Entry RESOLVED.
 - [ ] **Step 5: Commit** — `engine: battle-result observers pool with the battle deletion's [On Deletion], turn player first (§14-2-4, §15-4-3-5-1, §16-7-4; G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION)`.
 
-**Phase G in Task 23's closure:** the digest headline and the "blocking gaps with no task" list are updated to reflect these four.
+### Task 29: W5 owner ruling — an unqualified reference to a DUAL card reads its Digimon information
+
+**Owner ruling (2026-10-17, final):** "This would be the Digimon colour/s." An unqualified reference to a DUAL card in a card zone (hand, deck, trash, security) — one that names no card category, e.g. "trash 1 purple card from your hand" — reads the DUAL card's Digimon information only (reading (b) of worksheet item W5). A `kind: option` qualifier reads the Option information (§4-6-6-2); a `kind: digimon` qualifier or any field reference reads the Digimon information (§4-6-5-2, §4-6-3). This supersedes Task 18's provisional reading (a) (either information, OR'd at the root). **Rules:** §4-6-1, §4-6-5-2, §4-6-6-2, §4-6-3. Also records W12 as confirmed (linking player chooses the replaced link card; already implemented by Task 3).
+
+**Files:**
+- Modify: `code/digimon-engine/src/dsl_cards/predicate.rs` — the root DUAL decision (~L62-81: `conjunct_dual_ref(pred) == DualRef::Either` → evaluate Digimon OR Option) becomes: an unqualified (`Either`) reference evaluates with `DualRef::Digimon` only; `kind: option` keeps `DualRef::Option`; remove the root OR. Keep `DualRef` and `conjunct_dual_ref` (the qualifier logic is unchanged); update the doc comments that cite "reading (a)".
+- Modify (controller-authorised re-pins, owner ruling): `tests/rules_conformance/ch16_new_keywords.rs::dual_unqualified_colour_reference_matches_either_information` → rename to `dual_unqualified_colour_reference_reads_digimon_information` and re-pin: a picker whose filter matches the DUAL's Digimon colour finds it, a picker matching only its Option colour does not, a picker matching neither does not (use the existing `HAND_PICK_*_ANY` fixtures and `DUAL_ARTS`; read `fixtures/ch16_new/DUAL_ARTS.yaml` for the two faces' colours). `::dual_unqualified_reference_holds_through_one_information` → re-pin to the Digimon information: "purple Lv.6 card" matches iff the Digimon face is purple AND Lv.6; `not: red` matches iff the Digimon face is not red. Keep every `cite!` id; fingerprints are per id and unchanged. Do NOT touch `dual_use_declares_digimon_or_option_information`, `dual_traits_belong_to_both_informations` (traits are read on both informations when the card is referenced as a Digimon card AND as an Option card; that is a qualified reference pair), or `dual_digivolution_card_on_field_reads_digimon_information`.
+- Modify: `qa/rules/cr_obligations_status.yaml` `4-6-1` note (ruling (b): unqualified reference reads the Digimon information; list the renamed test), `4-6-5-2` / `4-6-6-2` notes if they mention reading (a); regenerate the JSON.
+- Modify: `qa/rules/mechanics-gaps-2026-10.md` W5: "**Owner ruled (b) 2026-10-17: Digimon information.** Fixed in Task 29 (<sha>)."; W12: "**Confirmed by owner 2026-10-17** (linking player chooses; implemented by Task 3)." `docs/RUST_ENGINE_GAPS.md` `G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH` Resolution line: append "Owner ruling 2026-10-17: unqualified references read the Digimon information (W5 (b)); the Option information is read only under `kind: option`."
+- Keep green: `--test dsl`, `--test dsl_eval_arm_coverage` (no wildcard arm), `--test rules_conformance` (whole), `--test cards_behavioral -- dual bt26_032 bt26_056 st24_07 blast_dna` (filter), `--test judge_quiz`, then the FULL `cards_behavioral` (a production DUAL searched by an unqualified colour reference may change outcome; list every card test that flips and confirm each against the card's printed text and the ruling).
+
+- [ ] **Step 1: Re-pin the two tests; run → FAIL under reading (a).**
+- [ ] **Step 2: Implement** the root change; update doc comments.
+- [ ] **Step 3: Run → PASS**; regression list; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar notes**, digest W5/W12, gap Resolution line. Regenerate; `--check`.
+- [ ] **Step 5: Commit** — `engine: an unqualified reference to a DUAL card reads its Digimon information (owner ruling W5 (b); §4-6-1, §4-6-5-2, §4-6-6-2)`.
+
+### Task 30: an effect-driven link at the link limit offers the replacement choice
+
+**Gap:** `G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE` (blocking; filed by Task 3). **Rules:** §4-9-5 (linking at the limit trashes the same number of existing link cards), §10-1-3-1 with W12 (the linking player, the host's controller, chooses which). Task 3 gave the declared link and the Plug-In Option link a `ResumeFrame::LinkCardTrashChoice` prompt; effect-driven links (the DSL `link_cards` step's pick loop and the relink/absorb path) still take a forced single-card replacement only, and with 2+ existing link cards they commit without a choice.
+
+**Files:**
+- Modify: `code/digimon-engine/src/dsl_cards/step/link_cards.rs` (the pick loop's attach, ~the site that calls `trash_forced_link_replacement`) and `dsl_cards/step/selections.rs` / `link_cards.rs` relink absorb path — when the host is at or over the limit with 2+ existing link cards, park the same `LinkCardTrashChoice` frame (purpose: effect link) with the step's outer continuations (`wrap_outer_conts` as Task 3 did for the Option-link purpose at `step/mod.rs` ~L407), then resume into the attach; with exactly one existing card keep the forced trim; with zero, attach directly.
+- Modify: `code/digimon-engine/src/game_actions/link.rs` — a shared entry (`park_link_replacement_choice` already exists; give it the effect-link purpose and the resume site) so all three link entry points share ONE replacement path; `trash_forced_link_replacement` keeps only the one-card case (and handle `excess >= 2` with one card, noted by the Task 3 re-review, by trashing it directly).
+- Tests: un-ignore `tests/rules_conformance/ch16_processing_keywords.rs::effect_link_at_limit_replaces_existing_link_card_by_choice` (the `#[ignore]`d §4-9-5 reproducer: 3 options offered, the new card excluded, the linking player chooses); add `effect_relink_at_limit_offers_the_same_choice` for the relink/absorb path (cite 4-9-5); a card test for one production effect-link carrier at the limit (pick from `code/digimon-engine/cards/` a `link_cards` user; stage a host with `<Link +1>` and two link cards).
+- Keep green: `ch16_processing_keywords` link tests, `ch17_rule_checks` link tests, `--test option_flow`, `--test cards_behavioral -- link plug_in appmon` (filter), `--test rules_conformance`, then the FULL `cards_behavioral` (the ~81 fixtures Task 3 repaired must stay green).
+
+- [ ] **Step 1: Un-ignore; write the relink and card tests; run → FAIL.**
+- [ ] **Step 2: Implement** the shared replacement path for effect links.
+- [ ] **Step 3: Run → PASS**; regression list; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** `4-9-5` → proven (all its tests green and un-ignored); remove `blocks_training` / `gap_id`. Regenerate; `--check`. Entry RESOLVED; `G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED` Resolution line updated (no longer says 4-9-5 stays gap).
+- [ ] **Step 5: Commit** — `engine: effect-driven links at the limit offer the replacement choice (§4-9-5, §10-1-3-1; G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE)`.
+
+### Task 31: a battle winner's traits are read from its top card
+
+**Gap:** `G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS` (blocking; filed by the Task 28 polish round). **Ruling (controller, provisional):** a Digimon's traits are those of its top card; §4-7-7 ("the bottom cards of a stack are treated as part of the information on the top card; they aren't considered to be placed on the field") governs stack membership and removal (§4-7-8), not the Digimon's characteristics. DCGO reads `permanent.TopCard` (`BT25_020.cs` ~L184 `CanTriggerWhenWinBattle`). Digivolution cards contribute only inherited effects. Cost if wrong: one re-pin.
+
+**Files:**
+- Modify: the winner-trait reader(s) (`trigger_context.rs::battle_winner_has_trait`, the winner snapshot builder in `combat/mod.rs::battle_winner_referent`, and any `event_winner_*` predicate that scans sources): read the top card's traits (plus Rule-granted traits per `all_traits`), not every card in the stack. Audit the sibling readers: `has_trait` on a permanent elsewhere in `dsl_cards/predicate.rs` (`trait_has` family) — if the general permanent trait predicate already reads the top card only, align the winner reader with it; if the GENERAL predicate also scans the stack, that is the real defect: fix it once at the shared helper and list every card test that flips (each confirmed against printed text: a Digimon with a [TS] digivolution card but a non-[TS] top card is NOT a [TS] Digimon).
+- Tests: un-ignore `tests/dsl/battle_deleter.rs::turn_players_observer_reads_the_winners_top_card_before_de_digivolution`; add a conformance test in `ch15_08_effect_categories.rs` (or the chapter holding §4-7 if one exists) `battle_winner_trait_is_the_top_cards_trait` citing 4-7-7 (fingerprint from an existing 4-7-7 citer, or add the obligation) and a general `permanent_trait_is_the_top_cards_trait` if the shared predicate changed.
+- Keep green: `ch15_08`, `--test dsl -- battle_deleter trait`, `--test combat`, `--test cards_behavioral -- bt25_020 trait ts_ royal_knight` (filter), whole `rules_conformance`, then the FULL `cards_behavioral`.
+
+- [ ] **Step 1: Un-ignore; write the tests; run → FAIL.**
+- [ ] **Step 2: Implement** at the shared reader.
+- [ ] **Step 3: Run → PASS**; regression list; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** list the tests under `4-7-7` (flip to proven if gap). Regenerate; `--check`. Entry RESOLVED.
+- [ ] **Step 5: Commit** — `engine: a Digimon's traits are its top card's; the battle-winner qualifier reads the top card (§4-7-7; G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS)`.
+
+### Task 32: a battle-result trigger's condition is checked when it triggers
+
+**Gap:** `G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER` (blocking; filed by the Task 28 polish round). **Rules:** §15-8-3-1 (a trigger-type effect triggers when its trigger condition is met), §15-8-3-8 (a reference in the triggered state is read as it was then), §15-4-4-5 (a pending effect whose trigger conditions are no longer met cannot activate). DCGO checks the condition at stack time (`CanTriggerWhenWinBattle`).
+
+**Ours:** `enqueue_triggered` queues every `BattleResult` effect of the matching timing without evaluating its clause-level trigger qualifier; the drainer's non-firing filter is transient (`non_firing_queued_effect_indices_for`), so an entry whose condition was false at the battle stays queued while another player has firing entries, and activates once a sibling (the loser's `[On Deletion]`) makes it true. The ratified P1-staged `dsl::battle_deleter::winner_predicates_follow_ordinary_evolution_during_opponents_on_deletion` pins the wrong outcome.
+
+**Files:**
+- Modify: `code/digimon-engine/src/effect_queue.rs` — evaluate the trigger qualifier (the `active_when` / event-qualifier half, per Task 1's split: qualifier at trigger, processing conditions live) at ENQUEUE for `BattleResult` entries, using the Task 27 winner snapshot captured at the comparison; an entry whose qualifier is false at the trigger is not queued (§15-8-3-1). Check whether the same enqueue-time gap exists for OTHER pooled timings (OnDeletion observers, OnAnyDeletion, OnPlay observers): Task 1 introduced `gate_trigger_context` for qualifiers on departed referents; if non-battle timings already evaluate qualifiers at enqueue, mirror that path; if they also rely on the transient filter, fix the shared site once and say so.
+- Tests: invert `winner_predicates_follow_ordinary_evolution_during_opponents_on_deletion` (the ratification is withdrawn by this task; comment cites §15-8-3-1 / §15-8-3-8 and this gap id); new conformance test `battle_result_trigger_condition_false_at_the_battle_never_activates` in `ch15_08_effect_categories.rs` (cite 15-8-3-1 and 15-4-4-5: the loser's `[On Deletion]` gives the winner the trait AFTER the battle → the "[X] Digimon wins a battle" observer does not activate); a converse test that a condition TRUE at the battle and false afterwards still activates with last-known information (already Task 27's departed-winner test — list it).
+- Keep green: `ch15_08`, `ch15_04`, `--test dsl -- battle_deleter`, `--test combat`, `--test timing_dispatch`, whole `rules_conformance`, then the FULL `cards_behavioral`.
+
+- [ ] **Step 1: Write the tests; invert the pin; run → FAIL.**
+- [ ] **Step 2: Implement** qualifier evaluation at enqueue for the battle-result pool (and the shared site if the gap is general).
+- [ ] **Step 3: Run → PASS**; regression list; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** list the tests under `15-8-3-1` and `15-4-4-5`. Regenerate; `--check`. Entry RESOLVED.
+- [ ] **Step 5: Commit** — `engine: battle-result triggers check their condition when they trigger (§15-8-3-1, §15-8-3-8, §15-4-4-5; G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER)`.
+
+**Phase G in Task 23's closure:** the digest headline and the "blocking gaps with no task" list are updated to reflect Tasks 25-32; W5 and W12 are recorded as owner-decided; the §4-7-7 trait ruling (Task 31) is listed for owner sign-off.

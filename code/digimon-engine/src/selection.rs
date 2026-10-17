@@ -1010,16 +1010,22 @@ pub enum SecurityPhase {
     /// Digimon-vs-security DP battle (§13-1-8-3-1; skipped for non-Digimon
     /// security per §13-1-8-3-2).
     BattleResolved,
-    /// Finish deletion/replacement processing, then notify battle observers
-    /// (with the pending processing due at the end of the battle in the same
-    /// pool, §18-1-2) before disposing of the revealed card or starting
-    /// another check.
+    /// Finish deletion/replacement processing, then resolve the effects
+    /// triggered by the battle (`BattleResult`, §14-2-4) before the end of
+    /// the battle timing, disposing of the revealed card or starting another
+    /// check.
     /// The comparison is captured once; a paused effect must not rerun it.
     EndOfSecurityBattleDrain {
         attacker: PermanentHandle,
         attacker_top: Option<CardHandle>,
         winner: Option<PermanentHandle>,
     },
+    /// The end of the battle timing (§14-2-5) once the battle's triggered
+    /// effects (`EndOfSecurityBattleDrain`, §14-2-4) have resolved: enqueue +
+    /// drain `EndOfBattle` with the pending processing due at the end of the
+    /// battle (§18-1-2), reading the winner referent the previous phase took
+    /// (`Game::security_battle_end_referent`).
+    EndOfSecurityBattleTimingDrain,
     /// Offer `WhenWouldLoseSecurity` replacements before the revealed card is
     /// finally removed from the security stack.
     WhenWouldLoseSecurity,
@@ -1185,8 +1191,16 @@ pub struct PendingAttack {
     /// shifts down into its slot, so re-probing `effective_target` with
     /// `handle_valid` misreads the bystander as a surviving defender.
     pub battle_defender_deleted: bool,
-    /// A battle caused by an effect earned Piercing for this attacking Digimon.
-    /// Processing waits until immediately before the attack ends (16-6-4).
+    /// A `<Piercing>` of this attacking Digimon ACTIVATED in a battle's
+    /// trigger pool (the attack's own battle or an effect battle it won
+    /// during the attack): its security check is pending processing,
+    /// performed immediately before the End of Attack timing (§16-7-4) even
+    /// if the keyword is lost afterwards (official Q&A Q3931).
+    ///
+    /// The name predates that: the flag once covered only effect battles.
+    /// It is kept because the `PendingAttack` `Debug` text feeds the
+    /// verification digest (`tests/pending_attack_debug_compat.rs` pins it)
+    /// and the DCGO exam harness builds `PendingAttack` literals by name.
     pub effect_battle_piercing_pending: bool,
     /// Only one transition to security checking is allowed during one attack,
     /// including ordinary checks and any number of Piercing activations.

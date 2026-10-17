@@ -227,3 +227,11 @@ triage this note asks for, not a drive-by edit. Next dispatch should decide
 whether the snapshot boundary is a harness property (in which case the exam
 differ should tolerate it for activation-cost rows) or a real ordering
 divergence, and re-record the verdict either way.
+
+### 2026-10-17 — the trash-order row is gone (§9-1-5)
+`F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE` (Plan 4 Task 7): §9-1-5 (Ver. 4.3)
+makes the used Option's trash uninterrupted, so our engine no longer asks the
+"Trash the used Option" ordering pick (and `ReplayDriver::auto_answer_option_trash_order`
+is gone). The scenario's `sim_only` `choice:` row was dropped and its `assert: at:`
+index moved down by one; no compared row changed. Re-run the oracle diff at the
+next dispatch to re-earn the verdict on the current engine.

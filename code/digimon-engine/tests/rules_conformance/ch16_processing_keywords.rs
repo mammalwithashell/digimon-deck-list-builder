@@ -116,16 +116,8 @@ fn current_prompt(r: &DebugRunner) -> Option<Prompt> {
     })
 }
 
-/// Whether `p` is the engine's "order the used Option's trash" decision.
-fn is_option_trash_order(p: &Prompt) -> bool {
-    p.labels
-        .iter()
-        .any(|l| l.starts_with("Trash the used Option"))
-}
-
-/// Settle every pending decision: trash a used Option first whenever the
-/// engine asks to order it, DECLINE every optional prompt, and take the only
-/// option of every other prompt. Returns the decisions offered, in order.
+/// Settle every pending decision: DECLINE every optional prompt, and take the
+/// only option of every other prompt. Returns the decisions offered, in order.
 fn settle_declining(r: &mut DebugRunner) -> Vec<Prompt> {
     let mut seen = Vec::new();
     for _ in 0..24 {
@@ -133,9 +125,6 @@ fn settle_declining(r: &mut DebugRunner) -> Vec<Prompt> {
             return seen;
         };
         seen.push(p.clone());
-        if trash_used_option_first(r) {
-            continue;
-        }
         if p.optional {
             r.decline_optional_trigger()
                 .unwrap_or_else(|e| panic!("decline {p:?}: {e:?}"));
@@ -156,9 +145,6 @@ fn advance_to(r: &mut DebugRunner, want: impl Fn(&Prompt) -> bool) -> bool {
         if want(&p) {
             return true;
         }
-        if trash_used_option_first(r) {
-            continue;
-        }
         if p.optional {
             r.decline_optional_trigger()
                 .unwrap_or_else(|e| panic!("decline {p:?}: {e:?}"));
@@ -178,13 +164,10 @@ fn offered_to(prompts: &[Prompt], player: PlayerId) -> bool {
     prompts.iter().any(|p| optional_for(player)(p))
 }
 
-/// Decisions other than the engine's used-Option trash ordering.
+/// Every decision offered. (§9-1-5: the used Option's trash is never one,
+/// so nothing is filtered out.)
 fn decisions(prompts: &[Prompt]) -> Vec<Prompt> {
-    prompts
-        .iter()
-        .filter(|p| !is_option_trash_order(p))
-        .cloned()
-        .collect()
+    prompts.to_vec()
 }
 
 /// Whether `player` may take `action` now (its mask bit).
@@ -1016,9 +999,6 @@ fn settle_declaring_max(r: &mut DebugRunner) {
         let Some(p) = current_prompt(r) else {
             return;
         };
-        if trash_used_option_first(r) {
-            continue;
-        }
         if p.optional {
             r.decline_optional_trigger()
                 .unwrap_or_else(|e| panic!("decline {p:?}: {e:?}"));
@@ -1072,7 +1052,7 @@ fn de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3() 
     let (mut r, target) = dedigi_board("DEDIGI2_OPT", &[FILL, "LV4_PLAIN", "LV5_PLAIN"], None);
     use_on_opponent_slot(&mut r, "DEDIGI2_OPT", target.index as u16);
     let p = current_prompt(&r)
-        .filter(|p| p.player == 0 && !is_option_trash_order(p))
+        .filter(|p| p.player == 0)
         .expect("P0 declares how many cards to trash");
     assert!(!p.optional, "once activated, 0 can't be chosen: {p:?}");
     assert_eq!(p.actions.len(), 2, "the numbers 1 and 2: {p:?}");
@@ -1358,9 +1338,6 @@ fn settle_accepting(r: &mut DebugRunner) -> Vec<Prompt> {
             return seen;
         };
         seen.push(p.clone());
-        if trash_used_option_first(r) {
-            continue;
-        }
         if p.optional && p.actions.len() != 1 {
             r.accept_optional_trigger()
                 .unwrap_or_else(|e| panic!("accept {p:?}: {e:?}"));
@@ -1648,7 +1625,6 @@ fn save_kind_matches_rule() {
     let mut r = save_board(&["INH_OD_MEM", "SAVE"], true);
     let cp = r.event_checkpoint();
     use_on_opponent_slot(&mut r, "MAIN_DEL1", 0);
-    trash_used_option_first(&mut r);
     let mut ids: Vec<String> = order_choices(&r, 1)
         .iter()
         .map(|l| branch_card(l).to_string())
@@ -2125,7 +2101,6 @@ fn fortitude_kind_matches_rule() {
     let mut r = save_board(&["INH_OD_MEM", "FORT"], false);
     let cp = r.event_checkpoint();
     use_on_opponent_slot(&mut r, "MAIN_DEL1", 0);
-    trash_used_option_first(&mut r);
     let mut ids: Vec<String> = order_choices(&r, 1)
         .iter()
         .map(|l| branch_card(l).to_string())
@@ -2742,7 +2717,6 @@ fn declared_link_at_limit_replaces_existing_link_card_by_choice() {
 /// to trim one of all 4, `LINK_A` included
 /// (`G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE`).
 #[test]
-#[ignore = "G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE (§4-9-5)"]
 fn effect_link_at_limit_replaces_existing_link_card_by_choice() {
     cite!(
         "4-9-5",
@@ -2775,6 +2749,90 @@ fn effect_link_at_limit_replaces_existing_link_card_by_choice() {
         choice.iter().all(|c| c.source_card != Some(link_a)),
         "the newly linked card is not a replacement option: {choice:?}"
     );
+}
+
+/// §4-9-5 "When linking to a Digimon that has already reached the link
+/// limit, the same number of the existing link cards are trashed at the same
+/// time as the newly linked cards." -- for an effect that links its own
+/// standing Digimon (the relink twin of
+/// `effect_link_at_limit_replaces_existing_link_card_by_choice`).
+///
+/// P0's `LINKPLUS2` (max 3) holds 3 `LINK_B`. P0 plays `RELINK` ("[On Play]
+/// Link this Digimon to 1 of your other Digimon") and picks `LINKPLUS2`.
+/// Before anything moves, P0 (the linking player) is asked which EXISTING link
+/// card is replaced: the 3 `LINK_B`, never `RELINK`; the host never holds 4
+/// and `RELINK` is still standing. The pick trashes it in the link itself:
+/// nothing is left for a later §17-1-3-2-5 trim.
+#[test]
+fn effect_relink_at_limit_offers_the_same_choice() {
+    cite!(
+        "4-9-5",
+        "fcec093c198b9ce1bb55b9d769eefe9b189ae82d63c7002091435e834fb2c980"
+    );
+    let mut r = board(&["RELINK"], &[]);
+    let host = r.place_on_field(0, "LINKPLUS2", Some(0));
+    for _ in 0..3 {
+        r.push_linked_owned(host, "LINK_B", 0);
+    }
+    r.game.tick_declarative_effects();
+    let relink = r.game.player(0).hand[0].handle();
+    let existing: Vec<_> = r.game.player(0).battle_area[0]
+        .linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    r.play(0, 0).expect("RELINK is played");
+    let mut choice = None;
+    for _ in 0..8 {
+        let Some(sel) = r.pending_selection() else {
+            break;
+        };
+        if sel.prompt.starts_with("Choose a link card to trash") {
+            choice = Some((
+                sel.selecting_player,
+                sel.effect_choices.clone().unwrap_or_default(),
+            ));
+            break;
+        }
+        let (player, action) = (sel.selecting_player, sel.valid_action_ids[0]);
+        r.execute_action(player, action)
+            .unwrap_or_else(|e| panic!("pick rejected: {e:?}"));
+    }
+    let (chooser, options) = choice.expect("P0 chooses the replaced link card");
+    assert_eq!(chooser, 0, "the linking player chooses");
+    let offered: Vec<_> = options.iter().filter_map(|c| c.source_card).collect();
+    assert_eq!(
+        offered, existing,
+        "exactly the existing link cards are offered"
+    );
+    assert!(!offered.contains(&relink), "the relinked card is not an option");
+    assert_eq!(
+        r.game.player(0).battle_area[0].linked_cards.len(),
+        3,
+        "nothing trashed or linked before the choice; never 4"
+    );
+    assert!(
+        r.game.player(0).battle_area.iter().any(|p| p.top_card().handle() == relink),
+        "RELINK is still standing during the choice"
+    );
+    assert!(trash_ids(&r, 0).is_empty(), "{:?}", trash_ids(&r, 0));
+
+    let pick = r.pending_selection().unwrap().valid_action_ids[0];
+    r.execute_action(0, pick).expect("pick the first LINK_B");
+    assert!(
+        r.pending_selection().is_none(),
+        "the trash happened in the link; no §17-1-3-2-5 trim follows: {:?}",
+        r.pending_selection()
+    );
+    let linked: Vec<_> = r.game.player(0).battle_area[0]
+        .linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(linked.len(), 3);
+    assert!(linked.contains(&relink), "RELINK linked");
+    assert!(!linked.contains(&existing[0]), "the picked LINK_B left");
+    assert_eq!(trash_ids(&r, 0), vec!["LINK_B".to_string()]);
 }
 
 // ─── §16-41 <Training> ──────────────────────────────────────────────────────

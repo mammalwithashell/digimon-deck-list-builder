@@ -38,16 +38,16 @@
   note: "Same sentence as 15-4-2-3, restated for pending activation."
 "15-4-3-2":
   status: proven
-  tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool"]
-  note: "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). Known open defect in another pool: a battle loser's [On Deletion] and the battle-result observers ('wins a battle', 'deletes in battle') are drained in sequence, not as one pool -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION (no test here yet)."
+  tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first"]
+  note: "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). A battle's 'wins a battle' trigger, the deletion observer and the loser's [On Deletion] pend in one pool: the turn player's TriggerOrder offers its battle-result trigger and its deletion observer together (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved)."
 "16-24-2":
   status: proven
   tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool", "ch16_attack_keywords::alliance_kind_matches_rule"]
   note: "<Alliance> is a [When Attacking] trigger-type body (keyword_to_auto_effect) pending with the attack declaration's other triggers; its ally pick is the body."
 "15-4-3-5-1":
   status: proven
-  tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"]
-  note: "P0 orders only its own simultaneously triggered attack effects and resolves all of them before the non-turn player chooses. Known open defect: after a battle the non-turn player's [On Deletion] activates before the turn player's battle-result observers -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION (no test here yet)."
+  tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first", "ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool"]
+  note: "P0 orders only its own simultaneously triggered attack effects and resolves all of them before the non-turn player chooses. After a battle the turn player's battle-result triggers ('wins a battle', <Piercing>) activate before the non-turn player's [On Deletion] (official Q&A Q3931; G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved)."
 "15-4-3-5-2":
   status: proven
   tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player"]
@@ -279,11 +279,9 @@
   tests: ["ch18_pending_overwrite::used_option_is_in_no_area_during_its_main"]
   note: "While the used Option's [Main] waits on its hand pick, the Option is in neither the hand, the trash nor the battle area."
 "9-1-5":
-  status: gap
-  blocks_training: true
-  gap_id: F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE
+  status: proven
   tests: ["ch18_pending_overwrite::used_option_trashed_immediately_after_first_main_uninterrupted"]
-  note: "Two interruptions, both red: (1) the rule check deletes a 0 DP Digimon the [Main] caused before the Option is trashed (its would-be-deleted decision parks with P0's trash empty); (2) a trigger the [Main] caused makes the engine offer 'Trash the used Option' as a TriggerOrder branch. Test is #[ignore]d. The Option's trash itself emits no event (G-ENGINE-OPTION-TRASH-NO-EVENT, non-blocking), so the test reads the trash at parked decisions."
+  note: "The used Option is disposed in the step that finishes its [Main] body (drain_effect_queue_inner right after the OptionMain entry; the top of drain_effect_queue when the body's last selection has just resolved), before the rules check and any trigger, and logs a GameEvent::Trash. Both halves green: a 0 DP rule-check deletion's would-be-deleted decision parks with the Option already trashed, and a triggered [On Play]'s decision is the next one (no 'Trash the used Option' TriggerOrder branch); the event log orders the Option's Trash before the rule check's effect and deletion and before the [On Play]'s memory gain (F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE, G-ENGINE-OPTION-TRASH-NO-EVENT resolved). Proven for a player-used Option only: an Option used by an effect from inside a selection callback can still see a rules check before its trash, and only the last queued [Main] (not the 1st) ends the period; both are recorded as residuals in the F- entry, untested."
 "18-3-1":
   status: proven
   tests: ["ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared", "ch18_pending_overwrite::long_finite_chain_is_not_an_infinite_loop", "ch18_pending_overwrite::dp_progress_chain_is_not_an_infinite_loop"]
@@ -312,8 +310,8 @@
   note: "Per-repetition decision (ruling W10): an optional prompt, or the DSL effect-text choose-one ('you may X instead'), lets the player repeat the loop as many times as they choose (40 / 30 in the tests, past any fixed cap), then stop it."
 "16-7-4":
   status: proven
-  tests: ["ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack"]
-  note: "The rule's example: <Piercing> deletes a Digimon with '[On Deletion] Gain 1 memory'; event order is the [On Deletion] memory, then the single SecurityReveal, then the attacker's [End of Attack] memory. Related open defect: the other effects triggered by the battle (battle-result observers) do not pend with the [On Deletion] -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION."
+  tests: ["ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack", "ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool"]
+  note: "The rule's example: <Piercing> deletes a Digimon with '[On Deletion] Gain 1 memory'; event order is the [On Deletion] memory, then the single SecurityReveal, then the attacker's [End of Attack] memory. <Piercing> is a BattleResult trigger in the battle's pool with the [On Deletion]: the turn player's <Piercing> activates first, so the [On Deletion] that ends its condition (Q3931 / EX8-045 shape) does not stop the pending check, which is still performed after the [On Deletion] (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved)."
 "16-7-5":
   status: proven
   tests: ["ch18_pending_overwrite::piercing_checks_security_once_however_many_instances", "ch11_14_attack_procedure::one_security_check_per_attack_sa_plus_counts_inside_it"]
@@ -422,12 +420,12 @@
   note: "Each loser is in its owner's trash after the battle. Equal DP: both are deleted, and with an [On Deletion] on each both Trash events precede the first [On Deletion] (deleted at the same time, before either effect resolves)."
 "14-2-4":
   status: proven
-  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]
-  note: "The deleted Digimon's [On Deletion], triggered by the battle, resolves before the end of battle effect."
+  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first"]
+  note: "The deleted Digimon's [On Deletion], triggered by the battle, resolves before the end of battle effect; so do the battle-result triggers ('wins a battle'), which pend with it."
 "14-2-5":
   status: proven
-  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle"]
-  note: "An '[All Turns] At the end of a battle, gain 1 memory' resolves exactly once after each battle, after the battle-triggered effects."
+  tests: ["ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first"]
+  note: "An '[All Turns] At the end of a battle, gain 1 memory' resolves exactly once after each battle, after the battle-triggered effects (the [On Deletion] and the 'wins a battle' triggers of one pool)."
 "16-9-1":
   status: proven
   tests: ["ch11_14_attack_procedure::jamming_survives_security_battle_only"]
@@ -1175,8 +1173,6 @@
   status: proven
   tests: ["ch16_processing_keywords::training_optional_cost_then_mandatory_place_also_in_breeding_area", "ch16_processing_keywords::training_optionality_matches_rule"]
 "4-9-5":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE
-  tests: ["ch16_processing_keywords::link_max_base_is_one", "ch16_processing_keywords::declared_link_at_limit_replaces_existing_link_card_by_choice", "ch16_processing_keywords::effect_link_at_limit_replaces_existing_link_card_by_choice"]
-  note: "Declared-link half proven (link_max_base_is_one, declared_link_at_limit_replaces_existing_link_card_by_choice; the rule-check trims excess_link_cards_* are ch17's 17-1-3-2-5): base limit 1 (Game::link_limit), and a declared link at the limit has the linking player choose the replaced existing link cards in the link step. Effect-link half open: an effect-driven link at a limit above 1 gets no in-step choice and the later 17-1-3-2-5 trim can remove the new card (effect_link_at_limit_replaces_existing_link_card_by_choice, #[ignore]d)."
+  status: proven
+  tests: ["ch16_processing_keywords::link_max_base_is_one", "ch16_processing_keywords::declared_link_at_limit_replaces_existing_link_card_by_choice", "ch16_processing_keywords::effect_link_at_limit_replaces_existing_link_card_by_choice", "ch16_processing_keywords::effect_relink_at_limit_offers_the_same_choice"]
+  note: "Base limit 1 (Game::link_limit). Every link at the limit replaces existing link cards in the link itself: a declared link (link_max_base_is_one, declared_link_at_limit_replaces_existing_link_card_by_choice), an effect's link_cards pick (effect_link_at_limit_replaces_existing_link_card_by_choice) and an effect relinking its own Digimon (effect_relink_at_limit_offers_the_same_choice). With 2+ existing link cards and fewer to replace, the linking player chooses which (one shared LinkCardTrashChoice frame; §10-1-3-1, W12); the new card is never an option and no later 17-1-3-2-5 trim follows. With nothing to choose the replaced cards are trashed directly. The rule-check trims excess_link_cards_* are ch17's 17-1-3-2-5."

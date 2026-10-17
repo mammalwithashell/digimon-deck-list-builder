@@ -264,7 +264,6 @@ impl Game {
             interactive_option_use_reducer_prompted: false,
             on_use_option_armed: None,
             option_body_pending: false,
-            option_trash_order_deferred: false,
             pending_cost_reduction_amount_override: None,
             cost_payment_receipts: Vec::new(),
             next_cost_payment_receipt: 1,
@@ -292,6 +291,7 @@ impl Game {
             active_deletion_batch: None,
             pending_battle_resolutions: Vec::new(),
             pending_attack_battle_result: None,
+            security_battle_end_referent: None,
             next_battle_identity: 1,
             attack_attacker_identity: None,
             event_snapshot_cache: None,
@@ -449,7 +449,6 @@ impl Game {
         self.interactive_option_use_reducer_prompted = false;
         self.on_use_option_armed = None;
         self.option_body_pending = false;
-        self.option_trash_order_deferred = false;
         self.pending_cost_reduction_amount_override = None;
         self.cost_payment_receipts.clear();
         self.next_cost_payment_receipt = 1;
@@ -474,6 +473,7 @@ impl Game {
         self.active_deletion_batch = None;
         self.pending_battle_resolutions.clear();
         self.pending_attack_battle_result = None;
+        self.security_battle_end_referent = None;
         self.next_battle_identity = 1;
         self.attack_attacker_identity = None;
         self.event_snapshot_cache = None;

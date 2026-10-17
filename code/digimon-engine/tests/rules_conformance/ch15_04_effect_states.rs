@@ -14,6 +14,8 @@ use crate::fixtures;
 use crate::support::*;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{EffectTiming, Keyword, PlaySource};
+use digimon_engine::events::GameEvent;
+use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::SelectionKind;
 
 // ─── §15-4-2-3 / §15-4-4-2 ──────────────────────────────────────────────────
@@ -222,6 +224,176 @@ fn turn_player_orders_first_then_non_turn_player() {
         ],
         "every turn-player effect activates before any non-turn-player effect"
     );
+}
+
+// ─── §14-2-4 / §15-4-3-5-1 / §16-7-4 — the battle's simultaneous pool ──────
+
+/// The board of the two battle-pool tests: P0 (the turn player) has `p0` and
+/// attacks P1's suspended `defender` with `attacker`; P1's hand is `p1_hand`.
+fn battle_pool_board(
+    p0: &[&str],
+    attacker: &str,
+    defender: &str,
+    p1_hand: &[&str],
+) -> (DebugRunner, PermanentHandle, usize) {
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards(), fixtures::ch11_14_cards()])
+        .hand(1, p1_hand)
+        .deck(0, &[FILL; 4])
+        .deck(1, &[FILL; 4])
+        .security(1, &[FILL; 3])
+        .memory(3)
+        .start();
+    for id in p0 {
+        r.place_on_field(0, id, Some(0));
+    }
+    let attacker = r.place_on_field(0, attacker, Some(0));
+    let defender = r.place_on_field(1, defender, Some(0));
+    set_suspended(&mut r, defender, true);
+    let cp = r.event_checkpoint();
+    r.attack_digimon(attacker, defender, false);
+    (r, attacker, cp)
+}
+
+/// §14-2-4 "If an effect is triggered by a battle, that effect is to be
+/// resolved. The next action won't begin until all of the processing is
+/// resolved for the current action."
+/// §15-4-3-2: effects triggered before a single rule or effect is resolved
+/// trigger simultaneously and are pending activation together.
+/// §15-4-3-5-1: the turn player chooses among their simultaneously triggered
+/// effects first.
+/// §14-2-5: an effect triggered by the end of the battle timing resolves when
+/// the battle ends.
+/// Official Q&A Q3931 (EX8-045 Callismon): the attacker's battle trigger and
+/// the deleted Digimon's [On Deletion] "will trigger simultaneously, then the
+/// turn player's will activate first."
+///
+/// P0's `WIN_MEM` ("[All Turns] When this Digimon wins a battle, gain 1
+/// memory") attacks and deletes P1's `OD_MEM` ("[On Deletion] Gain 1
+/// memory"); P0 also has the Tamer `OBS_OPP_DEL_MEM` ("[All Turns] When one of
+/// your opponent's Digimon is deleted, gain 1 memory") and `EOB_OBS` ("[All
+/// Turns] At the end of a battle, gain 1 memory"). The battle win, the
+/// deletion observer and the [On Deletion] are one pool: P0 orders its two
+/// effects in one choice and both activate before P1's [On Deletion]; the end
+/// of battle effect resolves after the pool. (DCGO: `Destroy()` stacks
+/// `OnDestroyedAnyone`, the battle stacks its "wins a battle" effects on the
+/// same list, and one `AutoProcessCheck` resolves both, turn player first.)
+#[test]
+fn battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first() {
+    cite!(
+        "14-2-4",
+        "2e2abfeea7dd5c9b26f20c6fb0bc32ff1f90ed476a8e1ee77441f2c64a5677f2"
+    );
+    cite!(
+        "14-2-5",
+        "2a85b51d06f6d8c5131ab14caa6bbce08a733d80eb911587ac8ee1471c330c91"
+    );
+    cite!(
+        "15-4-3-2",
+        "9806b36822f7fbe00db55ccc91fbb1cd9e2988f7064073bf57491efb6f425b57"
+    );
+    cite!(
+        "15-4-3-5-1",
+        "d89bb63cefda9cf4c0485d6d3b9c0c7f799c40b360e7255e3e91e64c3cfd0616"
+    );
+    let (mut r, _, cp) =
+        battle_pool_board(&["OBS_OPP_DEL_MEM", "EOB_OBS"], "WIN_MEM", "OD_MEM", &[]);
+
+    assert!(field_top_ids(&r, 1).is_empty(), "OD_MEM was deleted in battle");
+    let p0 = order_choices(&r, 0);
+    assert_eq!(
+        p0.len(),
+        2,
+        "the battle win and the deletion observer pend together for the turn player: {p0:?}"
+    );
+    assert!(
+        p0.iter().any(|l| branch_card(l) == "WIN_MEM")
+            && p0.iter().any(|l| branch_card(l) == "OBS_OPP_DEL_MEM"),
+        "{p0:?}"
+    );
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "nothing activated before the turn player ordered the pool: {:?}",
+        memory_sources(&r, cp)
+    );
+
+    choose(&mut r, "WIN_MEM");
+    resolve_prompts(&mut r);
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![
+            (0, "WIN_MEM".to_string()),
+            (0, "OBS_OPP_DEL_MEM".to_string()),
+            (1, "OD_MEM".to_string()),
+            (0, "EOB_OBS".to_string()),
+        ],
+        "the turn player's battle-triggered effects, then the [On Deletion], then the end of battle"
+    );
+}
+
+/// §16-7-4 "<Piercing> is pending processing that is processed immediately
+/// before the transition to the end of attack timing. Therefore, it will
+/// trigger simultaneously with effects triggered by the battle, but it is
+/// processed before the end of the attack." Its example: the [On Deletion] of
+/// the Digimon deleted in the battle is resolved first, then <Piercing> is
+/// processed.
+/// §15-4-3-5-1: the turn player's simultaneously triggered effects activate
+/// first.
+/// Official Q&A Q3931 (EX8-045 Callismon, whose <Piercing> holds only while
+/// the opponent has no Digimon with as much or more DP): the <Piercing> and the
+/// deleted Digimon's [On Deletion] "will trigger simultaneously, then the turn
+/// player's will activate first"; the check is then performed before the End
+/// of Attack timing "even if <Piercing> is lost after activation."
+///
+/// P0's `PIERCE_IF_TOP` (8000 DP; "[Your Turn] While your opponent has no
+/// Digimon with as much or more DP as this Digimon, this Digimon gains
+/// <Piercing>") deletes P1's `OD_PLAY_LV6` ("[On Deletion] Play 1 level 6
+/// Digimon card from your hand without paying the cost") in battle. The
+/// <Piercing> (P0's) activates before the [On Deletion] (P1's), which plays
+/// `BIG_LV6` (12000 DP) and so ends the <Piercing>; the check was already
+/// pending and is performed after the [On Deletion], once.
+#[test]
+fn piercing_triggers_with_the_battle_deletion_pool() {
+    cite!(
+        "16-7-4",
+        "b5591590a21a8204243c527c38e7b651c10bb88a277084b7153a0d3babc80d91"
+    );
+    cite!(
+        "15-4-3-5-1",
+        "d89bb63cefda9cf4c0485d6d3b9c0c7f799c40b360e7255e3e91e64c3cfd0616"
+    );
+    let (mut r, _, cp) = battle_pool_board(&[], "PIERCE_IF_TOP", "OD_PLAY_LV6", &["BIG_LV6"]);
+    resolve_prompts(&mut r); // the [On Deletion]'s hand pick: BIG_LV6
+
+    assert_eq!(
+        field_top_ids(&r, 1),
+        owned(&["BIG_LV6"]),
+        "the [On Deletion] played the level 6 Digimon"
+    );
+    let events = r.events_since(cp);
+    let play = events
+        .iter()
+        .position(|e| {
+            matches!(e, GameEvent::Play { player: 1, card_id, .. } if card_id == "BIG_LV6")
+        })
+        .expect("the [On Deletion] resolved");
+    let checks: Vec<usize> = events
+        .iter()
+        .enumerate()
+        .filter(|(_, e)| matches!(e, GameEvent::SecurityReveal { defender: 1, .. }))
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(
+        checks.len(),
+        1,
+        "<Piercing> activated before the [On Deletion]: its check is performed although \
+         <Piercing> was lost"
+    );
+    assert!(
+        play < checks[0],
+        "the [On Deletion] (#{play}) resolves before the <Piercing> check (#{})",
+        checks[0]
+    );
+    assert_eq!(r.security_count(1), 2);
 }
 
 // ─── §15-4-4-3 ──────────────────────────────────────────────────────────────
