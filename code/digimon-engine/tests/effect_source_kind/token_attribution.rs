@@ -27,7 +27,8 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, EffectSourceKind};
+use digimon_engine::enums::{CardColor, CardKind, EffectSourceKind, Expiry};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::replacement::ReplacementCause;
 
@@ -157,5 +158,75 @@ fn a_digimon_deleted_by_a_tokens_effect_is_deleted_by_an_opponents_digimon_effec
         *victim_witness.lock().unwrap(),
         Some((true, Some(ReplacementCause::OpponentEffect))),
         "the victim was deleted by its opponent's (the token's) effect"
+    );
+}
+
+/// The token's "[On Deletion] 1 of your Digimon gets -1000 DP for the turn"
+/// (aimed at `OWN-IMM`, the controller's only other Digimon).
+struct TokenShrinksOwnDigimon;
+
+impl CardEffect for TokenShrinksOwnDigimon {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_deletion(card)
+            .name("[On Deletion] 1 of your Digimon gets -1000 DP for the turn")
+            .process(|ctx| {
+                let own = field_index(ctx.game, ctx.player, "OWN-IMM");
+                ctx.add_dp_modifier(
+                    PermanentHandle {
+                        player: ctx.player,
+                        index: own,
+                    },
+                    -1000,
+                    Expiry::EndOfTurn,
+                );
+            })
+            .build()]
+    }
+}
+
+/// An immunity to the OPPONENT's Digimon effects filters on the effect's
+/// controller as well as its kind (§15-15-5-1): P0's Digimon token is P0's
+/// Digimon, so its effect on P0's own `OWN-IMM` (immune to P1's Digimon
+/// effects) applies — the kind change does not widen an opponent-only shield.
+#[test]
+fn a_tokens_effect_on_its_controllers_digimon_ignores_an_opponent_only_immunity() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATTR-TOKEN", CardKind::Token, 3000))
+        .add_card(card("OWN-IMM", CardKind::Digimon, 6000))
+        .add_card(card("ATTR-KILLER", CardKind::Digimon, 5000))
+        .start();
+    r.register_effect("ATTR-TOKEN", Arc::new(TokenShrinksOwnDigimon));
+    r.register_effect("ATTR-KILLER", Arc::new(DeletesTheToken));
+
+    r.place_on_field(0, "ATTR-TOKEN", Some(0));
+    let own = r.place_on_field(0, "OWN-IMM", Some(0));
+    r.game.modifiers.add(
+        own,
+        ModifierEntry::cannot_be_affected_by_opponents_source_kind(
+            EffectSourceKind::Digimon,
+            Expiry::EndOfTurn,
+            0,
+        ),
+    );
+    assert!(
+        r.game.permanent_is_unaffected_by_effect(own, 1, EffectSourceKind::Digimon),
+        "precondition: P1's Digimon effects don't affect it"
+    );
+    assert!(
+        !r.game.permanent_is_unaffected_by_effect(own, 0, EffectSourceKind::Digimon),
+        "precondition: its own controller's Digimon effects do"
+    );
+    let killer = r.place_on_field(1, "ATTR-KILLER", Some(0));
+    r.fire_on_play(1, killer.index as usize);
+    r.game.drain_effect_queue();
+
+    let own = PermanentHandle {
+        player: 0,
+        index: field_index(&r.game, 0, "OWN-IMM"),
+    };
+    assert_eq!(
+        r.effective_dp(own),
+        Some(5000),
+        "the token's own-side effect is its controller's effect: it applies"
     );
 }
