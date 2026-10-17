@@ -577,4 +577,22 @@ Tasks 16–20 touch disjoint files and may run in parallel sessions (each on its
 - [ ] **Step 4: Sidecar:** `15-8-3-8` → proven if it is a gap today, else add the tests to its list; `15-8-3-1` likewise. Regenerate; `--check`. Entry RESOLVED.
 - [ ] **Step 5: Commit** — `engine: battle-winner qualifier resolves the winner by identity with last-known information (§15-8-3-1, §15-8-3-8, §15-4-4-5; G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX)`.
 
-**Phase G in Task 23's closure:** the digest headline and the "blocking gaps with no task" list are updated to reflect these three.
+### Task 28: battle-result observers trigger together with the battle deletion's `[On Deletion]`
+
+**Gap:** `G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION` (blocking; filed by the Task 27 polish round). **Rules:** §14-2-1/-2/-4 (the battle is one rule process; effects triggered by it are resolved before the next action), §15-4-3-2 and §15-4-3-5-1 (simultaneous triggers pool; the turn player orders theirs first), §16-7-4 (`<Piercing>` "will trigger simultaneously with effects triggered by the battle", with an `[On Deletion]` as the example); official Q&A Q3931 (Callismon EX8-045: a battle-result trigger and the deleted Digimon's `[On Deletion]` trigger simultaneously, then the turn player's activate first). DCGO: `Destroy()` stacks the `[On Deletion]` effects, the battle stacks the "wins a battle" effects on the same list, and one `AutoProcessCheck` resolves both.
+
+**Ours:** the battle resolution drains the whole `[On Deletion]` pool before enqueueing the battle-result observers (`combat/mod.rs` ~L4496-4573, after Task 27), so when the turn player's attacker wins, the non-turn player's `[On Deletion]` resolves before the turn player's "wins a battle" effect. Pinned wrong by `dsl::battle_deleter::on_deletion_choice_finishes_before_end_of_battle_observer_after_clone` (`tests/dsl/battle_deleter.rs` ~L381-405).
+
+**Files:**
+- Modify: `code/digimon-engine/src/combat/mod.rs` battle resolution — enqueue the battle-result observers (`TriggerSource::BattleResolved`: wins / loses / deletes-in-battle, and `<Piercing>`'s trigger per §16-7-4) BEFORE the deletion batch's single flush so they pool with the loser's `[On Deletion]` (Task 5's `TriggerFlush`) and the drainer's turn-player-first `TriggerOrder` orders them; the `EndOfBattle` timing (§14-2-5) stays after the pool resolves. The Task 27 winner snapshot is already captured at the comparison, so pooling does not change what the qualifier reads.
+- Modify: `tests/dsl/battle_deleter.rs::on_deletion_choice_finishes_before_end_of_battle_observer_after_clone` — invert with a §15-4-3-5-1 / Q3931 comment: with P0 the turn player and winner, P0's observer is ordered first (or a `TriggerOrder` is offered to P0 when it has 2+); the clone-faithfulness half of the test stays.
+- New conformance tests (`ch15_04_simultaneous.rs` or the chapter module that holds §15-4-3-5 today; each `cite!`): `battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first` (Q3931 shape: P0 attacker with a "when this wins a battle" effect, P1 defender with `[On Deletion]`; the pool offers P0 first; both resolve before `EndOfBattle` observers); `piercing_triggers_with_the_battle_deletion_pool` (§16-7-4: `<Piercing>` and the defender's `[On Deletion]` are one pool; the security check happens in the pool's order).
+- Keep green: `--test combat`, `--test dsl -- battle_deleter`, `ch15_08_effect_categories` (Task 27's departed-winner test is re-shaped with P1 as turn player so it survives this change), `--test timing_dispatch`, `--test cards_behavioral -- bt25_020 ex8_045 piercing wins_a_battle` (filter), then the FULL `cards_behavioral`.
+
+- [ ] **Step 1: Write the two conformance tests; run → FAIL (observer after `[On Deletion]`).**
+- [ ] **Step 2: Implement** the pooled enqueue; invert the named dsl test.
+- [ ] **Step 3: Run → PASS**; regression list; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** add the tests under `15-4-3-5-1` and `16-7-4` (flip to proven if gap). Regenerate; `--check`. Entry RESOLVED.
+- [ ] **Step 5: Commit** — `engine: battle-result observers pool with the battle deletion's [On Deletion], turn player first (§14-2-4, §15-4-3-5-1, §16-7-4; G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION)`.
+
+**Phase G in Task 23's closure:** the digest headline and the "blocking gaps with no task" list are updated to reflect these four.
