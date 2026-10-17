@@ -252,7 +252,7 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 
 ### keywords
 
-**G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS**: `PDF-explicit` (+ Q6178) — filed 2026-10-16 (Plan 4 Task 24 fix round 1)
+**G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS**: `PDF-explicit` (+ Q6178) — filed 2026-10-16 (Plan 4 Task 24 fix round 1) — **FIXED** (`20646307f`, Plan 4 Task 25; see "Retracted or resolved")
 - Rules: §16-39-1 (<Progress>), §15-15-5-1.
 - Test: `ch15_15_unaffected::progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking`; `progress_attacker_effect_applied_during_attack_applies_after_it` (green: an opponent's effect applied DURING the attack is held and applies after it).
 - Cause: `<Progress>` is decided at install time (`held_while_attacking`); `ModifierRegistry::get` cannot read the attack state, so an opponent's modifier installed before the attack keeps applying while the Digimon attacks (a 6000-DP attacker under an earlier -3000 battles at 3000).
@@ -356,6 +356,8 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 - `G-ENGINE-OPTION-TRASH-NO-EVENT` (§9-1-5, no obligation of its own): a used Option's trash emits no `GameEvent`.
 - `G-ENGINE-ENGAGE-EOT-PASS-ONLY-STEP` (§16-44-1, no obligation of its own): after an <Engage> attack the turn parks once more with PASS as the only legal action.
 - `G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP` (§15-15-5-2 / §15-15-5-4): a keyword granted (`grant_keyword`) to an immune Digimon is skipped instead of suppressed, so it never applies after the immunity ends; no authored opponent-side keyword grant (BT22-029 grants <Blocker> to its own Puppet Digimon); reachable only as an own grant under an own-effect immunity (the Quantumon shape), in both directions (granted while immune is lost; granted before keeps applying, against Q6178). Modifier-backed gains and granted triggered effects are fixed (`G-ENGINE-UNAFFECTED-SKIPS-INSTEAD-OF-SUPPRESSES`).
+- `G-ENGINE-PROGRESS-SHIELD-BYPASSED-BY-TIMING-DISABLE-AND-FORMULA-AURAS` (§16-39-1 / §15-15-5-1): the `<Progress>` shield and the immunity filter cover `ModifierRegistry::get` only; `is_timing_disabled`, `permanent_modifiers_iter` / `any_with_type`, the live formula-aura sum inside `effective_dp` (`live_declarative_formula_sum`) and raw registry installs from card scripts bypass both. Latent: no authored opponent-side reach.
+- `G-TEST-DEBUGRUNNER-IGNORES-ACTIVE-WHEN-ON-OWN-GRANT-KEYWORD` (test harness, no obligation of its own): `DebugRunner::card_data_from_compiled` folds a card's own conditional `grant_keyword` into its printed keywords, so a DebugRunner test can never see a "while X, this Digimon gains <KW>" keyword off.
 
 The other 330 non-blocking mechanics-set gaps (and 279 outside it) are untriaged defaults with no test, mostly chapters 1-10.
 
@@ -411,6 +413,7 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 - `G-ENGINE-SECURITY-CHECK-OBSERVERS-AFTER-BATTLE`: resolved by the F2 merge (`b41f3f5f1`, the §13-1-8 reorder `SecuritySkillDrain → OnSecurityCheckDrain → BattleResolved`); `ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle` is un-ignored and green, and §13-1-8 / §13-1-8-2-1 / §13-1-8-3-1 are `proven`.
 - `G-ENGINE-DNA-RESULT-KEEPS-BASE-ORIENTATION`: resolved (§8-2-2-1-1, design F3). Fix `98d4937a6` (PR #737); the per-clause conformance tests `code/digimon-engine/tests/dna_result_new_card.rs` landed with the F3 merge and are green. The tracker entry in `docs/RUST_ENGINE_GAPS.md` is RESOLVED.
 - `G-ENGINE-UNAFFECTED-SKIPS-INSTEAD-OF-SUPPRESSES`: found and resolved in Plan 4 Task 24 (§15-15-5-1 / -2 / -4, `1e3fc9d9e`). Modifiers and granted triggered effects applied to an immune Digimon are recorded and hidden at read time, so they apply once the immunity ends; `tests/rules_conformance/ch15_15_unaffected.rs` (10 tests) is green and 15-15-5-1..4 are `proven`.
+- `G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS`: resolved in Plan 4 Task 25 (§16-39-1 / §15-15-5-1 / §15-15-5-2, `20646307f`). `<Progress>` is a read-time shield on the modifier registry (`ModifierRegistry::progress_shield`, keyed to the attacker by identity), so an opponent's effect applied before the attack stops applying while it attacks and applies again the moment it ends or the attacker loses `<Progress>`; `ch15_15_unaffected` progress tests green, 16-39-1 `proven`.
 - `G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN`: resolved (fixed 2026-08-24 in `73733429d`, confirmed by `delay_scheduled_window_is_optional`); entry moved to `qa/resolved-gaps.md`.
 
 ## Vocabulary gaps filed (`qa/dsl-vocab-gaps.md`, 2026-10-16)

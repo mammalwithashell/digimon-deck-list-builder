@@ -1253,8 +1253,10 @@ impl ModifierRegistry {
     /// Whether `<Progress>` hides `entry` on the shielded `target` (§16-39-1
     /// "isn't affected by your opponent's effects"): the entry was installed
     /// by an effect (an `affecting_source_kind` tag, or a materialized
-    /// declarative aura) controlled by `target`'s opponent. Rule-installed
-    /// entries and the attacker's own effects are not hidden (DCGO
+    /// declarative aura) controlled by `target`'s opponent. Untagged
+    /// (engine-installed) entries and the attacker's own effects are not
+    /// hidden; an opponent effect of any `EffectSourceKind`, `Rule` included,
+    /// is (DCGO
     /// `Progress.cs` `SkillCondition`: an opponent effect with a source card).
     fn hidden_by_progress_shield(target: PermanentHandle, entry: &ModifierEntry) -> bool {
         entry.source_player != target.player
