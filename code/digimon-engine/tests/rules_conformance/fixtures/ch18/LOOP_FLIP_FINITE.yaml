@@ -1,0 +1,42 @@
+# LOOP_FLIP_FINITE -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] Suspend this Digimon.
+#   [All Turns] When this Digimon suspends, trash the top card of your deck.
+#   Then, if you have a card in your deck, unsuspend it.
+#   [All Turns] When this Digimon unsuspends, suspend it.
+# A long chain that is NOT an infinite loop (§18-3-1): the same two
+# [All Turns] effects re-trigger each other, all mandatory, but each
+# suspension trashes a deck card and the chain stops by itself once the deck
+# is empty. Game progress is never lost, so the chain must run to its end.
+card: LOOP_FLIP_FINITE
+name: Windupmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] Suspend this Digimon."
+    process:
+      - suspend: { target: source }
+  - when: on_suspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon suspends, trash the top card of your deck. Then, if you have a card in your deck, unsuspend it."
+    process:
+      - trash_from_top: { of: you, count: 1 }
+      - if:
+          condition:
+            count_gte:
+              filter: { of: you, zone: [deck] }
+              n: 1
+          then:
+            - unsuspend: { target: source }
+  - when: on_unsuspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon unsuspends, suspend it."
+    process:
+      - suspend: { target: source }

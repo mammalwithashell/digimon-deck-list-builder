@@ -70,6 +70,10 @@ pub enum TerminalOutcomeReason {
     /// `Game::concede`). Emitted with a winner equal to the conceder's
     /// opponent. Surfaces to Python as `win_reason = "concede"`.
     Concede,
+    /// §18-3-2 (Ver. 4.3): "If an infinite loop occurs and neither player has
+    /// the ability to stop it, that game ends in a draw." Emitted with no
+    /// winner, after a `GameEvent::InfiniteLoop`.
+    InfiniteLoopDraw,
 }
 
 impl TerminalOutcomeReason {
@@ -83,12 +87,13 @@ impl TerminalOutcomeReason {
             Self::Crash => "crash",
             Self::UnknownDraw => "unknown_draw",
             Self::Concede => "concede",
+            Self::InfiniteLoopDraw => "infinite_loop_draw",
         }
     }
 
     pub fn result(self) -> &'static str {
         match self {
-            Self::Crash | Self::UnknownDraw => "draw",
+            Self::Crash | Self::UnknownDraw | Self::InfiniteLoopDraw => "draw",
             Self::SecurityAttack | Self::DeckOut | Self::EngineDeclared | Self::UnknownWin => "win",
             Self::StepLimit => "win",
             Self::Concede => "win",
@@ -654,12 +659,21 @@ pub struct Game {
     /// driven by `Game::advance_security_resolution`, called from
     /// `resolve_generic_selection`. See RUST_PYTHON_PARITY Â§2.5j.
     pub security_resolution: Option<SecurityResolutionState>,
-    /// Safety rail matching Python's `_resolve_effect_stack` max-iterations=50
-    /// cap. Incremented per drain step; reset to 0 when the queue empties.
-    /// Prevents a self-triggering chain from hanging the engine.
-    /// Consumed by the drainer in PR2.
-    #[allow(dead_code)]
+    /// Resolutions in the current chain: incremented per drain step, reset to
+    /// 0 when the queue empties, and restarted (to 1, keeping the "inside a
+    /// chain" marker that `cancel_pending_attack_from_effect_checked` and
+    /// `reevaluate_until_condition_modifiers_if_dirty` read) whenever a
+    /// player decision resolves, so a loop its owner keeps choosing to repeat
+    /// (§18-3-3-3) is never mistaken for an unbounded one. Past
+    /// `effect_queue::MAX_CHAIN_DEPTH` (a far backstop behind the §18-3
+    /// signature watch) the game ends in the §18-3-2 draw.
     pub(crate) effect_chain_depth: u16,
+    /// §18-3 infinite-loop watch: how many times each loop signature
+    /// (`Game::loop_signature`) has been seen since the last player decision
+    /// resolved or the outermost drain settled. See `game::infinite_loop`.
+    /// Transient: empty at every decision point, so clones taken for search
+    /// always carry an empty watch.
+    pub(crate) loop_watch: std::collections::BTreeMap<u64, u8>,
     /// Last Â§15-4-5 trigger-batch id handed out by the drainer (see
     /// `QueuedEffect::trigger_batch`). Monotonic within a game.
     pub(crate) trigger_batch_seq: u32,
@@ -1367,6 +1381,7 @@ pub struct Game {
 
 // Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md Â§3).
 mod handles;
+pub mod infinite_loop;
 mod lifecycle;
 mod memory;
 mod opt;

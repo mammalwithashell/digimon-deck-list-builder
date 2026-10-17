@@ -226,6 +226,7 @@ impl Game {
             pending_option_placed_link_resume: None,
             security_resolution: None,
             effect_chain_depth: 0,
+            loop_watch: std::collections::BTreeMap::new(),
             trigger_batch_seq: 0,
             effect_drain_depth: 0,
             logger: Box::new(SilentLogger),
@@ -408,6 +409,7 @@ impl Game {
         self.pending_option_placed_link_resume = None;
         self.security_resolution = None;
         self.effect_chain_depth = 0;
+        self.loop_watch.clear();
         // logger intentionally preserved (session owns the logger choice).
         self.events = Vec::new();
         self.event_seq = 0;

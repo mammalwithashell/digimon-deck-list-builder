@@ -267,6 +267,18 @@ impl Game {
         winner_id: PlayerId,
         reason: TerminalOutcomeReason,
     ) {
+        self.finish_game(Some(winner_id), reason);
+    }
+
+    /// End the game in a draw (`winner == None`) with an explicit terminal
+    /// reason, e.g. §18-3-2's infinite-loop draw.
+    pub fn declare_draw_with_reason(&mut self, reason: TerminalOutcomeReason) {
+        self.finish_game(None, reason);
+    }
+
+    /// Shared terminal bookkeeping for a win or a draw: drop in-flight
+    /// receipts and declarations, enter `GameOver`, emit `GameEvent::GameOver`.
+    fn finish_game(&mut self, winner: Option<PlayerId>, reason: TerminalOutcomeReason) {
         self.game_over = true;
         self.cancel_all_prepared_source_plays();
         self.source_play_receipts.clear();
@@ -280,7 +292,7 @@ impl Game {
         self.abort_effect_digivolve_scopes();
         self.pending_security_moves.clear();
         self.current_deletion_receipt = None;
-        self.winner = Some(winner_id);
+        self.winner = winner;
         self.terminal_outcome_reason = Some(reason);
         self.current_phase = GamePhase::GameOver;
         let seq = self.next_event_seq();

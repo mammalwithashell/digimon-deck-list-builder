@@ -1372,6 +1372,24 @@ fn event_to_dto(event: GameEvent) -> GameEventDto {
             dto.source_card_name = Some(card_name);
             dto.meta = serde_json::json!({ "source_zone": format!("{:?}", source_zone) });
         }
+        GameEvent::InfiniteLoop {
+            player,
+            card_id,
+            card_name,
+            repetitions,
+            backstop,
+            ..
+        } => {
+            if let Some(player) = player {
+                dto.player = py_player_id(player);
+            }
+            dto.source_card_id = card_id;
+            dto.source_card_name = card_name;
+            dto.meta = serde_json::json!({
+                "repetitions": repetitions,
+                "backstop": backstop,
+            });
+        }
         GameEvent::GameOver { winner, reason, .. } => {
             dto.meta = serde_json::json!({
                 "winner": winner.map(py_player_id),

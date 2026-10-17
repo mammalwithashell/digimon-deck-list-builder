@@ -844,7 +844,6 @@ fn loop_board(loop_card: &str) -> (DebugRunner, usize, usize) {
 /// The scenario runs on its own thread with a time limit, so an engine that
 /// loops forever fails the test instead of hanging the suite.
 #[test]
-#[ignore = "G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED (§18-3-2)"]
 fn infinite_loop_is_stopped_not_silently_cleared() {
     cite!(
         "18-3-1",
@@ -989,6 +988,71 @@ fn stoppable_loop_repeats_until_its_owner_stops_it() {
             memory_deltas(&r, cp),
             vec![(1, "OBS_OPP_PLAY_MEM".to_string(), 1)],
             "the trigger pending since the play activates once the loop stops"
+        );
+    });
+}
+
+/// §18-3-1 "An infinite loop refers to a state where a set of processing will
+/// continue infinitely or must be continued infinitely as a result of
+/// processing for a rule or effect, and game progress is no longer possible."
+///
+/// A long chain that ends by itself is not an infinite loop, however many
+/// times its effects re-trigger each other. P0's `LOOP_FLIP_FINITE` suspends
+/// itself on play; "[All Turns] When this Digimon suspends, trash the top card
+/// of your deck. Then, if you have a card in your deck, unsuspend it." and
+/// "[All Turns] When this Digimon unsuspends, suspend it." (all mandatory)
+/// re-trigger each other once per card of P0's 60-card deck: some 120 chained
+/// resolutions, far past any small iteration cap, after which the deck is
+/// empty and the chain stops. Every link runs (the deck ends empty and the
+/// Digimon ends suspended, on its last suspension), the game goes on with no
+/// infinite-loop event and no `GameOver`, and P1's `OBS_OPP_PLAY_MEM`,
+/// triggered by the same play, activates once the chain has ended.
+#[test]
+fn long_finite_chain_is_not_an_infinite_loop() {
+    cite!(
+        "18-3-1",
+        "ed4b8654d01a7037421af96f1ccf80ac81741aaff69b040659d881003f0e2d79"
+    );
+    within("finite chain", Duration::from_secs(30), || {
+        let mut r = ch18()
+            .hand(0, &["LOOP_FLIP_FINITE"])
+            .deck(0, &[FILL; 60])
+            .deck(1, &[FILL; 4])
+            .memory(5)
+            .start();
+        r.place_on_field(1, "OBS_OPP_PLAY_MEM", Some(0));
+        let cp = r.event_checkpoint();
+        r.play(0, 0);
+        assert!(
+            r.pending_selection().is_none(),
+            "a mandatory chain asks nothing: {:?}",
+            r.pending_selection()
+        );
+        assert_eq!(r.deck_size(0), 0, "every link of the chain ran");
+        let loop_perm = r.perm_handle(0, 0);
+        assert!(
+            is_suspended(&r, loop_perm),
+            "the chain ends on its last suspension"
+        );
+        assert!(!r.game_over(), "a finite chain does not end the game");
+        let terminal: Vec<&str> = r
+            .events_since(cp)
+            .iter()
+            .map(|e| e.type_str())
+            .filter(|t| matches!(*t, "InfiniteLoop" | "GameOver"))
+            .collect();
+        assert!(terminal.is_empty(), "no loop was detected: {terminal:?}");
+        // Who and how often, not the sign: `MemoryChange.delta` is the gauge's
+        // delta from the turn player's side (events.rs), so P1's gain during
+        // P0's turn reads -1.
+        let deltas = memory_deltas(&r, cp);
+        assert_eq!(
+            deltas
+                .iter()
+                .map(|(p, id, _)| (*p, id.as_str()))
+                .collect::<Vec<_>>(),
+            vec![(1, "OBS_OPP_PLAY_MEM")],
+            "the trigger pending since the play activates once the chain ends: {deltas:?}"
         );
     });
 }

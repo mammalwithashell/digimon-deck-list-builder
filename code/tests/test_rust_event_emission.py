@@ -74,6 +74,7 @@ def test_new_event_variants_serialize_through_pyo3_with_expected_keys() -> None:
         "Mill",
         "SecurityReveal", # newly emitted
         "Reveal",         # non-security reveal sites (RevealZone)
+        "InfiniteLoop",   # §18-3-2 draw, emitted just before its GameOver
         "GameOver",
         "Concede",
         "EffectFizzled",
