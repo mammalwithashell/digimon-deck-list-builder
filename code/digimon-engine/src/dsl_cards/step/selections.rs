@@ -2805,10 +2805,10 @@ fn per_color_delete_candidates(
         if !colors.contains(&color) {
             continue;
         }
-        // <Progress> / immunity: a Digimon the effect can't affect is no target.
-        if game.progress_excludes(handle, Some(state.prov.controller)) {
-            continue;
-        }
+        // §15-15-5-3: a Digimon the effect can't affect (e.g. a `<Progress>`
+        // attacker, §16-39-1) is still a legal target; the processing then
+        // skips or holds it (`EffectContext::can_affect_permanent`,
+        // `held_while_attacking`).
         // Extra author restriction (default: none).
         if let Some(filter) = &state.filter {
             if !eval_predicate_with_bindings(
@@ -7042,10 +7042,9 @@ fn install_select_opponent_permanent(
     // Pre-filter candidates using the compiled predicate so that an empty
     // result short-circuits without installing a PendingSelection.
     let opponent = ctx.game.next_clockwise(ctx.player);
-    let candidates: Vec<_> = collect_matching_permanents(ctx, opponent, &filter, Some(&bindings))
-        .into_iter()
-        .filter(|handle| !ctx.game.progress_excludes(*handle, Some(ctx.player)))
-        .collect();
+    // §15-15-5-3: an unaffected Digimon (a `<Progress>` attacker) stays a
+    // candidate; it is chosen and not affected.
+    let candidates: Vec<_> = collect_matching_permanents(ctx, opponent, &filter, Some(&bindings));
     let selected_field = select_field_extreme(ctx.game, &candidates, selector);
     if candidates.is_empty() {
         return;
@@ -7081,14 +7080,12 @@ fn install_select_opponent_permanent(
                 source_kind,
                 player,
             );
-            !game.progress_excludes(handle, Some(player))
-                && eval_predicate_with_bindings(
-                    &filter,
-                    &read_ctx,
-                    PredicateSubject::Permanent(handle),
-                    Some(&filter_bindings),
-                )
-                && matches_selected_field(game, handle, selector, selected_field)
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Permanent(handle),
+                Some(&filter_bindings),
+            ) && matches_selected_field(game, handle, selector, selected_field)
         },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();

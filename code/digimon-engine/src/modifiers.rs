@@ -377,14 +377,14 @@ impl ModifierEntry {
         self
     }
 
-    /// Tag the entry with the category of the effect installing it, so an
-    /// immunity on the target suppresses it at read time (§15-15-5-2).
     /// Hold the entry until the current attack ends (§16-39-1 `<Progress>`).
     pub fn with_held_while_attacking(mut self, held: bool) -> Self {
         self.held_while_attacking = held;
         self
     }
 
+    /// Tag the entry with the category of the effect installing it, so an
+    /// immunity on the target suppresses it at read time (§15-15-5-2).
     pub fn with_affecting_source_kind(mut self, kind: EffectSourceKind) -> Self {
         self.affecting_source_kind = Some(kind);
         self

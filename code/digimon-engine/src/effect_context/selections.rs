@@ -319,13 +319,13 @@ impl<'a> EffectContext<'a> {
         C: FnOnce(&mut EffectContext<'_>, PermanentHandle) + Send + Sync + 'static,
     {
         let target_player = self.game.next_clockwise(self.player);
-        let source = Some(self.player);
-        let composed = move |game: &Game, h: PermanentHandle| -> bool {
-            if game.progress_excludes(h, source) {
-                return false;
-            }
-            filter(game, h)
-        };
+        // §15-15-5-3: an "isn't affected by effects" Digimon -- including a
+        // `<Progress>` attacker (§16-39-1) -- can still be chosen; the effect's
+        // processing then doesn't affect it (`can_affect_permanent` skips
+        // one-shot processing, a modifier is held until the attack ends).
+        // DCGO `SelectPermanentEffect` has no `CanNotBeAffected` candidacy
+        // filter either.
+        let composed = move |game: &Game, h: PermanentHandle| -> bool { filter(game, h) };
         self.install_field_selection(
             SelectionKind::OppField,
             GamePhase::SelectTarget,
