@@ -594,10 +594,11 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 }
 
                 // §4.6 attack bits: Vortex / MayAttack / ForceAttack / Engage
-                // all share the 100-399 attack range. Vortex keeps its special
-                // opponent-Digimon targeting; normal MayAttack/ForceAttack and
-                // Engage use the same suspended / Raid / CanAttackUnsuspended
-                // target legality as Main-phase attacks.
+                // all share the 100-399 attack range and use the same
+                // suspended / Raid / CanAttackUnsuspended target legality as
+                // Main-phase attacks (§11-2-7-1). <Vortex> grants the attack
+                // and the played-this-turn exemption, not a target permission
+                // (§16-33-1; contrast <Execute> §16-38-1).
                 let vortex = game.has_keyword(handle, Keyword::Vortex);
                 let may_attack = game.modifiers.has(handle, ModifierType::MayAttack);
                 let force_attack = game.modifiers.has(handle, ModifierType::ForceAttack);
@@ -627,7 +628,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     .modifiers
                     .has(handle, ModifierType::CanAttackUnsuspended);
                 let has_raid = game.has_keyword(handle, Keyword::Raid);
-                let raid_max_dp = if normal_eot_can_attack && has_raid && !can_attack_unsuspended {
+                let raid_max_dp = if has_raid && !can_attack_unsuspended {
                     let mut best: Option<i32> = None;
                     for j in 0..max_opp {
                         let target = &opp.battle_area[j];
@@ -667,13 +668,15 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     if game.attack_target_blocked_by_modifier(handle, t_handle) {
                         continue;
                     }
-                    let normal_target_legal = normal_eot_can_attack
-                        && (game.player(opp_id).battle_area[j].is_suspended
-                            || can_attack_unsuspended
-                            || raid_max_dp.is_some_and(|max_dp| {
-                                game.effective_dp(t_handle).is_some_and(|dp| dp == max_dp)
-                            }));
-                    if !vortex_can_attack && !normal_target_legal {
+                    // Either grant (checked above) attacks only a legal
+                    // target: suspended, or one this attacker may attack
+                    // unsuspended (§11-2-7-1).
+                    let target_legal = game.player(opp_id).battle_area[j].is_suspended
+                        || can_attack_unsuspended
+                        || raid_max_dp.is_some_and(|max_dp| {
+                            game.effective_dp(t_handle).is_some_and(|dp| dp == max_dp)
+                        });
+                    if !target_legal {
                         continue;
                     }
                     mask[encode_attack(i as u16, j as u16) as usize] = 1.0;

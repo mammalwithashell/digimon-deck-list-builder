@@ -12,7 +12,7 @@
 //!     the pilot), attack continues against the original target
 //!   - attacker deleted during Counter → state machine skips BlockOpen/Battle
 //!     and lands in Cleanup; no AttackerWins is claimed
-//!   - Vortex bypasses CounterTiming
+//!   - a Vortex attack opens CounterTiming too (§11-1-5; Q3869)
 //!   - Counter → Block sequence (declare Counter then Block fires next)
 //!   - Player-target attack ALSO opens Counter (general_rule 11-1-3;
 //!     G-ENGINE-COUNTER-NO-WINDOW-ON-PLAYER-ATTACK)
@@ -372,12 +372,32 @@ fn counter_that_deletes_attacker_skips_block_and_battle() {
     );
 }
 
+/// §11-1-5 "Once an attack declaration has been made, all of the timings that
+/// follow will occur." / Q3869 (EX7-064): after activating <Vortex> and making
+/// the attack declaration, "the counter timing will occur". A <Vortex> attack
+/// opens the defender's counter timing like any other attack. (Inverted from
+/// `vortex_bypasses_counter`, which pinned the short-circuit to the battle;
+/// G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK.)
 #[test]
-fn vortex_bypasses_counter() {
+fn vortex_attack_has_counter_timing() {
     let (mut r, atk) = scenario_with_blast_in_hand("TEST-013", 3, 0, 5000);
     let result = r.attack_digimon(atk, r.perm_handle(1, 0), /* vortex = */ true);
-    assert_eq!(result, AttackResult::AttackerWins);
-    assert!(r.game.pending_selection.is_none());
+    assert_eq!(result, AttackResult::InProgress);
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming);
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("the <Vortex> attack opens the counter timing");
+    assert_eq!(sel.selecting_player, 1, "the attacked player chooses");
+    assert!(sel.is_optional);
+    assert_eq!(sel.valid_action_ids, vec![encode_digivolve(0, 0)]);
+
+    // Declining the counter: the attack proceeds to the battle.
+    r.game.resolve_selection(1, PASS).expect("decline counter");
+    let _ = r.auto_resolve();
+    assert!(r.game.pending_attack.is_none(), "attack completes");
+    assert_eq!(r.battle_area_size(1), 0, "BASE (3000) lost the battle");
 }
 
 #[test]

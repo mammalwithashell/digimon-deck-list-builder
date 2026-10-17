@@ -228,7 +228,7 @@ Phase 3 added `CardData::keywords` field populated at load time by `parse_printe
 
 New return variant `AttackResult::InProgress` signals that an attack is parked on a `PendingSelection`; the terminal outcome arrives once the resolution chain completes.
 
-**Coverage:** [tests/block_interrupt.rs](../code/digimon-engine/tests/block_interrupt.rs) (10 cases); [tests/alliance_interrupt.rs](../code/digimon-engine/tests/alliance_interrupt.rs) (7 cases); [tests/counter_interrupt.rs](../code/digimon-engine/tests/counter_interrupt.rs) (12 cases: no-candidates baseline, invalid-pairing skip, prompt install, mask rendering, decline, declaration + stack growth + `WhenDigivolving` firing, attacker-delete cascade to Cleanup, Vortex bypass, Counter → Block sequence, player-target attack opens Counter, wrong-player rejection, encode/decode round-trip).
+**Coverage:** [tests/block_interrupt.rs](../code/digimon-engine/tests/block_interrupt.rs) (10 cases); [tests/alliance_interrupt.rs](../code/digimon-engine/tests/alliance_interrupt.rs) (7 cases); [tests/counter_interrupt.rs](../code/digimon-engine/tests/counter_interrupt.rs) (12 cases: no-candidates baseline, invalid-pairing skip, prompt install, mask rendering, decline, declaration + stack growth + `WhenDigivolving` firing, attacker-delete cascade to Cleanup, a Vortex attack opens Counter too, Counter → Block sequence, player-target attack opens Counter, wrong-player rejection, encode/decode round-trip).
 
 ### 2.3-residual 🟡 `OnCounterTiming` distinct timing
 
@@ -579,9 +579,9 @@ End-of-turn surface is complete for mask parity — Vortex (§4.6a) + Overclock/
 
 **Python** — [action_mask.py:321-335](../code/engine_py_legacy/engine/game/action_mask.py#L321): during `GamePhase.EndOfTurnAction`, permanents with `_is_vortex` and a passing `can_attack(is_vortex=True)` emit attack bits against any enemy Digimon.
 
-**Rust** — [mask.rs](../code/digimon-engine/src/action/mask.rs) `GamePhase::EndOfTurnAction` arm: mirrors Python via `modifiers.has_keyword(handle, Keyword::Vortex)` + `can_attack(handle, /* vortex = */ true)`. Any enemy Digimon (suspended or not) is a valid target.
+**Rust** — [mask.rs](../code/digimon-engine/src/action/mask.rs) `GamePhase::EndOfTurnAction` arm: mirrors Python via `modifiers.has_keyword(handle, Keyword::Vortex)` + `can_attack(handle, /* vortex = */ true)`. **Diverges from Python (intentionally, 2026-10-17):** only a suspended enemy Digimon, or one the attacker may attack unsuspended (Raid / `CanAttackUnsuspended`), is a valid target (§11-2-7-1, §16-33-1; G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON), and the attack runs the counter and block timings (§11-1-5; G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK).
 
-**Coverage:** [tests/mask_end_of_turn_parity.rs](../code/digimon-engine/tests/mask_end_of_turn_parity.rs) — `mask_vortex_emits_attacks_in_end_of_turn_phase`, `mask_vortex_without_keyword_only_emits_pass`, `mask_vortex_bypasses_summoning_sickness`, `mask_vortex_targets_unsuspended_digimon_too`.
+**Coverage:** [tests/mask_end_of_turn_parity.rs](../code/digimon-engine/tests/mask_end_of_turn_parity.rs) — `mask_vortex_emits_attacks_in_end_of_turn_phase`, `mask_vortex_without_keyword_only_emits_pass`, `mask_vortex_bypasses_summoning_sickness`, `mask_vortex_does_not_target_unsuspended_digimon`.
 
 ### 4.6b 🟢 Phase transition into `EndOfTurnAction` — implemented
 
@@ -612,7 +612,7 @@ translates the flag appropriately).
 
 **Python** — [action_decoder.py:501-522](../code/engine_py_legacy/engine/game/action_decoder.py#L501) `_initiate_overclock`: installs a `SelectTarget` prompt over Token-or-Digimon sacrifices on the turn player's field; the callback deletes the sacrifice and calls `resolve_attack(overclock_perm, opponent_player, without_suspend=True, return_phase=EndOfTurnAction)`. The attacker is not suspended.
 
-**Rust** — [game.rs](../code/digimon-engine/src/game.rs) `Game::activate_overclock(overclock_index)` validates phase + keyword + sacrifice-availability, then installs an `OwnField` selection via direct `pending_selection = Some(...)` install (no `EffectContext` because this is an engine-level action, not an effect). The callback calls `Game::delete_permanent_with_effects(sacrifice)` then `Game::begin_attack_overclock(overclock_handle, AttackTarget::Player(opponent))`. Interrupts (Alliance / Counter / Block) still fire normally — only Vortex is uninterruptible per DCGO.
+**Rust** — [game.rs](../code/digimon-engine/src/game.rs) `Game::activate_overclock(overclock_index)` validates phase + keyword + sacrifice-availability, then installs an `OwnField` selection via direct `pending_selection = Some(...)` install (no `EffectContext` because this is an engine-level action, not an effect). The callback calls `Game::delete_permanent_with_effects(sacrifice)` then `Game::begin_attack_overclock(overclock_handle, AttackTarget::Player(opponent))`. Interrupts (Alliance / Counter / Block) still fire normally, as for every attack, Vortex included (§11-1-5).
 
 The suspend-skip flows through a new `is_overclock: bool` field on `PendingAttack` + a `begin_attack_overclock` constructor that delegates to a shared `begin_attack_impl(vortex, is_overclock)` private helper. When `is_overclock`, the declaration-time `suspend_and_count_attack` call is skipped; everything else (OnAttack triggers, state machine, interrupts, cleanup) matches the normal path.
 

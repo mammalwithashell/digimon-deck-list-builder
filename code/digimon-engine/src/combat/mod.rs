@@ -25,8 +25,11 @@
 //! bodies, all park through `PendingSelection` when they create
 //! player-visible choices.
 //!
-//! Vortex short-circuits directly from `Declared` to `Battle` after OnAttack
-//! — Vortex attacks are uninterruptible per Digimon TCG rules.
+//! A `<Vortex>` attack runs this same state machine: §11-1-5 "Once an attack
+//! declaration has been made, all of the timings that follow will occur", and
+//! nothing in §16-33 exempts it (Q3869, EX7-064: after the <Vortex> attack
+//! declaration "the counter timing will occur"). `AttackInitiator::Vortex`
+//! only relaxes the played-this-turn check (§16-33-1).
 
 use crate::card_source::CardHandle;
 use crate::enums::{CardKind, EffectTiming, Expiry, GamePhase, Keyword, ModifierType, PlayerId};
@@ -391,8 +394,9 @@ impl Game {
     /// return a terminal outcome — inspect it via `last_attack_result`
     /// after the selection chain clears.
     ///
-    /// `vortex` — see [`Game::can_attack`]. Vortex attacks bypass all
-    /// interrupt windows per Digimon TCG rules.
+    /// `vortex` — see [`Game::can_attack`]. It only exempts the
+    /// played-this-turn check (§16-33-1); a Vortex attack still runs the
+    /// counter and block timings (§11-1-5; Q3869).
     pub fn attack_digimon(
         &mut self,
         attacker: PermanentHandle,
@@ -489,8 +493,8 @@ impl Game {
     ///
     /// - The attacker is **not** suspended on declaration (§4.6c-residual
     ///   parity — matches Python `resolve_attack(..., without_suspend=True)`).
-    /// - Interrupts (Alliance / Counter / Block) still fire normally; per
-    ///   DCGO only Vortex is uninterruptible.
+    /// - Interrupts (Alliance / Counter / Block) still fire normally, as
+    ///   for every attack (§11-1-5).
     pub fn begin_attack_overclock(
         &mut self,
         attacker: PermanentHandle,
@@ -702,12 +706,10 @@ impl Game {
             return result;
         }
 
-        // Vortex short-circuits interrupts.
-        if vortex {
-            self.transition_attack_state(AttackState::Battle);
-        } else {
-            self.transition_attack_state(AttackState::RaidOpen);
-        }
+        // Every attack, a <Vortex> attack included, runs the counter and
+        // block timings (§11-1-5, §11-4-1; Q3869). `vortex` only exempted
+        // the played-this-turn check above (§16-33-1).
+        self.transition_attack_state(AttackState::RaidOpen);
 
         self.advance_pending_attack()
     }

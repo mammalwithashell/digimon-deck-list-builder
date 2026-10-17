@@ -5,10 +5,11 @@
 //!   - `PASS` (always, to decline the end-of-turn action)
 //!   - Digimon-target attack bits for any permanent with modifier-granted
 //!     `Keyword::Vortex` whose `can_attack(vortex=true)` returns true.
-//!     Vortex bypasses both summoning sickness (via §2.1 plumbing) and the
-//!     Main-phase "unsuspended targets require Raid / CAN_ATTACK_UNSUSPENDED"
-//!     rule — any enemy Digimon is a valid target. Player/security targets
-//!     require a separate `VortexCanAttackPlayer` extension.
+//!     Vortex bypasses summoning sickness (via §2.1 plumbing) but NOT the
+//!     target rule: only a suspended enemy Digimon, or one the attacker may
+//!     attack unsuspended (Raid / CAN_ATTACK_UNSUSPENDED), is a valid target
+//!     (§11-2-7-1, §16-33-1). Player/security targets require a separate
+//!     `VortexCanAttackPlayer` extension.
 //!
 //! Phase-transition logic (deciding *when* to enter `EndOfTurnAction`),
 //! Overclock / MAY_ATTACK / FORCE_ATTACK bits, and the full interrupt-
@@ -51,8 +52,8 @@ fn make_digimon(id: &str, color: CardColor, dp: i32) -> CardData {
     }
 }
 
-/// Vortex grants a bit for every enemy Digimon (suspended or not) when the
-/// phase is active, but base Vortex does not grant player/security attacks.
+/// Vortex grants a bit for a suspended enemy Digimon when the phase is
+/// active, but base Vortex does not grant player/security attacks.
 #[test]
 fn mask_vortex_emits_attacks_in_end_of_turn_phase() {
     let mut r = DebugRunner::builder()
@@ -276,6 +277,9 @@ fn fresh_vortex_may_attack_emits_and_decodes_digimon_target_as_vortex() {
     let opp = 1 - tp;
     let attacker = r.place_on_field(tp, "ATK", None);
     let defender = r.place_on_field(opp, "DEF", Some(0));
+    // Only a suspended Digimon is a legal <Vortex> target (§11-2-7-1,
+    // §16-33-1).
+    r.game.players[opp as usize].battle_area[defender.index as usize].is_suspended = true;
     r.game
         .modifiers
         .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
@@ -373,6 +377,9 @@ fn decode_vortex_attack_uses_vortex_flag_for_fresh_attacker() {
     let opp = 1 - tp;
     let attacker = r.place_on_field(tp, "ATK", None);
     let defender = r.place_on_field(opp, "DEF", Some(0));
+    // Only a suspended Digimon is a legal <Vortex> target (§11-2-7-1,
+    // §16-33-1).
+    r.game.players[opp as usize].battle_area[defender.index as usize].is_suspended = true;
     r.game
         .modifiers
         .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
@@ -388,10 +395,16 @@ fn decode_vortex_attack_uses_vortex_flag_for_fresh_attacker() {
     );
 }
 
-/// Vortex targets unsuspended enemy Digimon — no Raid-style DP tiebreak or
-/// CAN_ATTACK_UNSUSPENDED requirement. Any enemy Digimon is valid.
+/// §11-2-7-1 "they choose either the opponent or 1 of the opponent's
+/// suspended Digimon as the attack target"; §16-33-1 <Vortex> grants the
+/// attack, not a target permission (contrast <Execute> §16-38-1; W2 reading
+/// (a), DCGO `CanAttackTargetDigimon` requires `IsSuspended || isExecute`).
+/// Inverted from `mask_vortex_targets_unsuspended_digimon_too`, which pinned
+/// "any enemy Digimon is valid" (G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON):
+/// with both enemy Digimon unsuspended no Vortex target bit is lit, and
+/// suspending one lights exactly that one.
 #[test]
-fn mask_vortex_targets_unsuspended_digimon_too() {
+fn mask_vortex_does_not_target_unsuspended_digimon() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("ATK", CardColor::Red, 5000))
         .add_card(make_digimon_without_dp("WEAK", CardColor::Blue))
@@ -416,13 +429,26 @@ fn mask_vortex_targets_unsuspended_digimon_too() {
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
         mask[encode_attack(attacker.index as u16, weak_idx as u16) as usize],
-        1.0,
-        "Vortex targets any enemy Digimon — weak (unsuspended) is valid",
+        0.0,
+        "an unsuspended enemy Digimon is not a <Vortex> target (weak)",
     );
     assert_eq!(
         mask[encode_attack(attacker.index as u16, strong_idx as u16) as usize],
+        0.0,
+        "an unsuspended enemy Digimon is not a <Vortex> target (strong)",
+    );
+
+    r.game.players[opp as usize].battle_area[weak_idx as usize].is_suspended = true;
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, weak_idx as u16) as usize],
         1.0,
-        "Vortex targets any enemy Digimon — strong (unsuspended) is valid",
+        "the suspended enemy Digimon is a <Vortex> target",
+    );
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, strong_idx as u16) as usize],
+        0.0,
+        "the still-unsuspended one is not",
     );
 }
 
@@ -446,6 +472,9 @@ fn mask_vortex_respects_cannot_attack_target() {
     let opp = 1 - tp;
     let attacker = r.place_on_field(tp, "ATK", Some(0));
     let defender = r.place_on_field(opp, "DEF", Some(0));
+    // Suspended, so only CannotAttackTarget can suppress the bit (an
+    // unsuspended Digimon is no <Vortex> target at all: §11-2-7-1).
+    r.game.players[opp as usize].battle_area[defender.index as usize].is_suspended = true;
 
     r.game
         .modifiers

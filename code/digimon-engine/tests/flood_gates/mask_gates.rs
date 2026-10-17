@@ -301,6 +301,10 @@ fn cannot_attack_also_gates_end_of_turn_attack_bits() {
     // Place a Vortex-granted attacker (turn_played = 0, not summoning-sick).
     let attacker = r.place_on_field(tp, "ATCK", Some(0));
     let defender = r.place_on_field(opp, "DEF", Some(0));
+    // A <Vortex> attack targets only a suspended Digimon (§11-2-7-1,
+    // §16-33-1; G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON), so the
+    // defender starts suspended for the setup bit below to be lit.
+    r.game.players[opp as usize].battle_area[defender.index as usize].is_suspended = true;
 
     // Grant Vortex keyword so the EndOfTurnAction arm would normally emit attack bits.
     r.game

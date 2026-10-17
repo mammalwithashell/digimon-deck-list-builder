@@ -1701,7 +1701,6 @@ fn vortex_kind_matches_rule() {
 /// => true`, but `Permanent.CanAttackTargetDigimon` still requires
 /// `Defender.IsSuspended || isExecute`.
 #[test]
-#[ignore = "G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON (§16-33-1)"]
 fn vortex_attack_target_is_a_suspended_digimon() {
     cite!(
         "16-33-1",
@@ -1736,7 +1735,6 @@ fn vortex_attack_target_is_a_suspended_digimon() {
 /// relaxes `CanAttack`'s played-this-turn check; the attack runs the normal
 /// `AttackProcess` (`BlockTiming`).
 #[test]
-#[ignore = "G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK (§16-33-1)"]
 fn vortex_attack_has_block_timing() {
     cite!(
         "16-33-1",
