@@ -5630,6 +5630,27 @@ no dedicated clause test in `dna_result_new_card.rs`.
 - **Fix shape:** keep hosts at their limit as candidates (link filter and Standard state still apply); when the link would exceed the limit, have the linking player choose which existing link card(s) to trash (a resumable selection, rule 28), trash them as part of the same link step, then plug in the new card. Keep the ch17 rule-check trim (`G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE`, §17-1-3-2-5) for hosts that go over their limit later (e.g. a lost <Link +>).
 - **Blocks training:** yes. A legal link is missing from the action space whenever a host is at its limit.
 
+### An effect-driven link at a host's link limit gets no in-step replacement choice  [G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE]
+
+- **Rule:** §4-9-5 (Ver. 4.3) "When linking to a Digimon that has already reached the link limit, the same number of the existing link cards are trashed at the same time as the newly linked cards." It applies to every link, including one an effect makes. DCGO agrees: `Permanent.AddLinkCard` (~L1306) trims `(Count + 1) - LinkedMax` existing link cards before inserting, with the owner choosing when `LinkedMax > 1`.
+- **Ours:** declared links run the §4-9-5 choice in-step (`commit_digimon_link` and `commit_linked_card_no_replace` call `park_link_replacement_choice`, frame `ResumeFrame::LinkCardTrashChoice`). Effect-driven links (the DSL `link_cards` step through `link_chosen_card_into_host`, `relink_self_to_own_digimon` through `absorb_standing_digimon_as_link`) only get the forced case: they share the attach primitive, and `trash_forced_link_replacement` trims a host's only link card. When there is a real choice (2+ existing link cards at the limit), the effect attaches the card anyway. The host goes over its limit, and the §17-1-3-2-5 rule check later asks the controller to trim one of ALL its link cards, the new one included.
+  - Reproducer: `ch16_processing_keywords::effect_link_at_limit_replaces_existing_link_card_by_choice` (`#[ignore]`d), with fixture `ch16_proc/EFFLINK.yaml`. `LINKPLUS2` (max 3) holds 3 `LINK_B`; EFFLINK's [On Play] links `LINK_A` onto it. The choice offered has 4 options, `LINK_A` among them; it should have 3 (the existing cards only).
+- **Why it's not fixed here:** the continuation of an effect link lives in the DSL step (the `link_cards` pick loop: bind, next pick, tail; the relink's `AbsorbStandingAsLink` hook). Parking the choice mid-step needs a new `LinkStage` replacement stage in `dsl_cards/step/link_cards.rs`, plus a matching hook for the relink path, each clone-faithful.
+- **Fix shape:**
+  - In `attach_and_continue`, after paying and before `link_chosen_card_into_host`: when `link_replacement_excess(host) > 0` and the host has 2+ link cards, park a `LinkStage::ReplaceChoice { host, card, source, remaining, picks_left, chosen }` frame. Each pick decodes like `LinkCardTrashChoice`; the last pick trashes the chosen cards (`trash_link_cards_by_rule`), links the card and continues the loop.
+  - Do the same before the relink absorb.
+- **Blocks training:** yes. The choice is missing from the action space, and the rule check's trim can remove the card the effect just linked.
+
+### Printed Link boxes whose link requirement isn't lowered in the engine  [G-DATA-LINK-REQUIREMENT-NOT-LOWERED]
+
+- **Rule:** §17-1-3-2-6 "Link cards that don't meet the link requirements" and §17-1-3-2-7 "Linked cards in a card category other than those specified in the notes for <Link>" are rule-check trash targets. Q4533: an effect can't link a card without `<Link>`.
+- **Ours:** `Game::link_requirement_met_by` reads a card's link requirement from its lowered `link_cost` effect (DSL `kind: link_condition` / `kind: link_requirement`). A card that prints a Link box (`CardData::link_text`, from `link_effect_description_eng`) but has no lowered requirement is treated as meeting it: unknown isn't unmet. So the rule check keeps it, and effect links may offer it. A card with no `link_text` and no requirement has no `[Link]`, and is trashed (§17-1-3-2-7).
+- **Cards (39; printed Link box, no lowered requirement, 2026-10-17):**
+  - With YAML but the requirement omitted (`G-LINK-REQUIREMENTS`): BT22-009.
+  - With no YAML: BT21-041, BT21-053, BT22-016, BT22-030, BT22-033, BT22-035, BT22-050, BT22-055, BT22-058, BT22-075, BT23-007, BT23-009, BT23-016, BT23-021, BT23-022, BT23-028, BT23-033, BT23-039, BT23-052, BT24-032, BT24-038, BT24-053, BT24-056, BT24-057, BT24-071, BT24-077, BT24-092, EX10-014, EX10-016, EX10-017, EX10-019, EX10-024, EX10-029, EX10-030, EX10-038, EX10-043, P-190, ST22-09.
+- **Fix shape:** lower each card's printed `<Link>` requirement (`data/card_bundles/<ID>.md` "Link Condition") as a `kind: link_condition` clause. The fallback in `link_requirement_met_by` can then go.
+- **Blocks training:** no. None of these cards is training-gated; the effect is that an unmet requirement is accepted.
+
 ### `<De-Digivolve>` fires "digivolution cards trashed" observers  [G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED] — RESOLVED (2026-10-16, 6e5298de5)
 
 - **Rule:** §16-12-1 (Ver. 4.3): the declared number of cards "are trashed from the chosen stack(s) of cards starting with the top card"; each card <De-Digivolve> trashes is the top card when it is trashed. §4-8-1 "A digivolution card refers to a card placed under a Digimon." So <De-Digivolve> trashes no digivolution card, and "when digivolution cards are trashed" effects don't trigger on it.

@@ -36,6 +36,8 @@ mod field_top_source_move;
 mod helpers; // facade-decomposition Tier-2 primitives (trash_source_and_fire, would_replacement_*, …)
 pub use helpers::DeDigivolveCountState;
 mod link; // DigiLink Shape-B (Digimon-link) — activate/begin/commit/absorb + facet-#9 chosen-card link
+pub(crate) use link::{LinkCardTrashChoiceState, LinkTrashPurpose};
+pub use link::LinkRuleTarget;
 mod misc;
 mod movement;
 mod grouped_return;
@@ -960,9 +962,10 @@ impl Game {
     }
 
     /// Candidate host Digimon for a Link Option attach: every Standard-state
-    /// own Digimon that is below its link cap and passes the card's
-    /// `link_filter`. Shared by `dispose_option`'s Link arm and the
-    /// dual-mode legality check in `option_legal_play_modes`.
+    /// own Digimon that passes the card's `link_filter`. A host at its link
+    /// limit stays a candidate: the link replaces a link card (§4-9-5).
+    /// Shared by `dispose_option`'s Link arm and the dual-mode legality check
+    /// in `option_legal_play_modes`.
     pub(crate) fn link_host_candidates(
         &self,
         owner: PlayerId,
@@ -981,24 +984,8 @@ impl Game {
             if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
                 continue;
             }
-            let link_max =
-                (5 + self.modifiers.link_max_delta(handle)).clamp(0, u8::MAX as i32) as usize;
-            if perm.linked_cards.len() >= link_max {
-                continue;
-            }
-            let filter_ok =
-                effects
-                    .iter()
-                    .find(|e| e.link_cost.is_some())
-                    .map_or(true, |link_effect| {
-                        if let Some(f) = &link_effect.link_filter {
-                            let read_ctx = EffectReadContext::new(self, source_card, None, owner);
-                            f(&read_ctx, handle)
-                        } else {
-                            true
-                        }
-                    });
-            if filter_ok {
+            // The same requirement test the §17-1-3-2-6 / -7 rule check applies.
+            if self.link_requirement_met_by(source_card, effects, handle, owner) {
                 out.push(handle);
             }
         }
@@ -1398,6 +1385,10 @@ impl Game {
     ///
     /// Idempotent: a handle whose slot is already empty is filtered by the
     /// batched-deletion entrypoint, so a re-run is a no-op.
+    ///
+    /// Also applies the per-host link targets (`collect_link_rule_targets`):
+    /// unqualified link cards are trashed (§17-1-3-2-6 / -7) and a host over
+    /// its link limit parks its controller's choice (§17-1-3-2-5).
     pub(crate) fn run_state_based_rules_check(&mut self) -> bool {
         // Continuous effects must include new entrants (and removed aura
         // sources) before rule processing reads their effective DP. Callers
@@ -1414,6 +1405,13 @@ impl Game {
             /// and is trashed." This is a TRASH of the whole permanent, NOT a
             /// deletion-from-battle-area, so it fires no OnDeletion observers.
             TrashDpLess,
+            /// §17-1-3-2-6 / -7 — link cards the host no longer qualifies
+            /// for are trashed (no choice; the host stays).
+            TrashUnqualifiedLinks(Vec<CardHandle>),
+            /// §17-1-3-2-5 — the host is this many link cards over its link
+            /// limit; its controller chooses which (Q6370), parked after the
+            /// other targets are applied.
+            TrimLinks(usize),
         }
         let mut actions: Vec<(PermanentHandle, RuleAction)> = Vec::new();
         for pid in 0..self.players.len() {
@@ -1471,13 +1469,40 @@ impl Game {
                 }
             }
         }
+        // §17-1-3-2-5..7 per-host link targets (hosts leaving the area are
+        // skipped: their link cards go with them).
+        let leaving: Vec<PermanentHandle> = actions.iter().map(|(h, _)| *h).collect();
+        for (host, target) in self.collect_link_rule_targets() {
+            if leaving.contains(&host) {
+                continue;
+            }
+            actions.push(match target {
+                LinkRuleTarget::Unqualified(cards) => {
+                    (host, RuleAction::TrashUnqualifiedLinks(cards))
+                }
+                LinkRuleTarget::Excess(n) => (host, RuleAction::TrimLinks(n)),
+            });
+        }
         if actions.is_empty() {
             return false;
         }
+        actions.sort_by_key(|(h, _)| (h.player, h.index));
+        let mut trim_pending = false;
         // Apply in descending (player, index) order so each removal — which
         // shifts higher battle-area indices via `Vec::remove` — does not
         // invalidate the handles still pending.
         for (handle, action) in actions.into_iter().rev() {
+            match &action {
+                RuleAction::TrashUnqualifiedLinks(cards) => {
+                    self.trash_link_cards_by_rule(handle, cards);
+                    continue;
+                }
+                RuleAction::TrimLinks(excess) => {
+                    trim_pending |= *excess > 0;
+                    continue;
+                }
+                RuleAction::DeleteZeroDp | RuleAction::TrashDpLess => {}
+            }
             if let RuleAction::TrashDpLess = action {
                 let movement_snapshot = self.movement_snapshot(handle);
                 // §17-1-3-2-1 trash: route every stacked card to the owner's trash
@@ -1530,6 +1555,11 @@ impl Game {
             if self.pending_selection.is_some() {
                 break;
             }
+        }
+        // §17-1-3-2-5: the controller's choice of excess link cards, from a
+        // fresh scan (removals above may have shifted hosts).
+        if trim_pending && self.pending_selection.is_none() {
+            self.park_first_link_excess_trim();
         }
         true
     }

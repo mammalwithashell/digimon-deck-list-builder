@@ -226,6 +226,7 @@ const CH16_PROC: &[&str] = &[
     include_str!("ch16_proc/DELAY_SOYT.yaml"),
     include_str!("ch16_proc/DIGISORB.yaml"),
     include_str!("ch16_proc/DRAW_OPT.yaml"),
+    include_str!("ch16_proc/EFFLINK.yaml"),
     include_str!("ch16_proc/FORT.yaml"),
     include_str!("ch16_proc/IMMUNE_LV4.yaml"),
     include_str!("ch16_proc/LEFT4.yaml"),

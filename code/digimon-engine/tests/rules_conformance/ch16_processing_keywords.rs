@@ -2597,7 +2597,6 @@ fn assert_link_replaces(host: &str, links: usize, aura: bool) {
 /// (2 link cards, nothing trashed); with 2, linking `LINK_A` replaces 1 of
 /// them (still 2, 1 trashed).
 #[test]
-#[ignore = "G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED + G-ENGINE-LINK-MAX-BASE (§16-40-2)"]
 fn link_plus_kind_matches_rule() {
     cite!(
         "16-40-2",
@@ -2626,7 +2625,6 @@ fn link_plus_kind_matches_rule() {
 /// 3, 1 trashed). (The "isn't considered <Link +2>" half is not staged: no
 /// effect here references a <Link +> value.)
 #[test]
-#[ignore = "G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED + G-ENGINE-LINK-MAX-BASE (§16-40-1)"]
 fn link_plus_adds_to_max_link_cards_and_instances_add() {
     cite!(
         "16-40-1",
@@ -2649,7 +2647,6 @@ fn link_plus_adds_to_max_link_cards_and_instances_add() {
 /// with 1, linking `LINK_A` is legal and replaces it (still 1 link card,
 /// `LINK_B` trashed).
 #[test]
-#[ignore = "G-ENGINE-LINK-MAX-BASE + G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED (§4-9-5)"]
 fn link_max_base_is_one() {
     cite!(
         "4-9-5",
@@ -2657,6 +2654,56 @@ fn link_max_base_is_one() {
     );
     assert_link_adds("LINK_HOST_LV4", 0, false);
     assert_link_replaces("LINK_HOST_LV4", 1, false);
+}
+
+/// §4-9-5 "When linking to a Digimon that has already reached the link
+/// limit, the same number of the existing link cards are trashed at the same
+/// time as the newly linked cards." -- for a link made by an effect.
+///
+/// P0's `LINKPLUS2` (max 3) holds 3 `LINK_B`. P0 plays `EFFLINK` ("[On Play]
+/// Link 1 Digimon card from your hand to 1 of your Digimon") and links
+/// `LINK_A` onto it. P0 must choose which EXISTING link card (one of the 3
+/// `LINK_B`) is trashed, as part of the link; `LINK_A` is never one of the
+/// options.
+///
+/// Red: the effect path (`link_cards` → `link_chosen_card_into_host`) adds
+/// `LINK_A` as a 4th link card, and the §17-1-3-2-5 rule check then asks P0
+/// to trim one of all 4, `LINK_A` included
+/// (`G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE`).
+#[test]
+#[ignore = "G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE (§4-9-5)"]
+fn effect_link_at_limit_replaces_existing_link_card_by_choice() {
+    cite!(
+        "4-9-5",
+        "fcec093c198b9ce1bb55b9d769eefe9b189ae82d63c7002091435e834fb2c980"
+    );
+    let mut r = board(&["EFFLINK", "LINK_A"], &[]);
+    let host = r.place_on_field(0, "LINKPLUS2", Some(0));
+    for _ in 0..3 {
+        r.push_linked_owned(host, "LINK_B", 0);
+    }
+    r.game.tick_declarative_effects();
+    r.play(0, 0).expect("EFFLINK is played");
+    let link_a = r.game.player(0).hand[0].handle();
+    let mut choice = None;
+    for _ in 0..8 {
+        let Some(sel) = r.pending_selection() else {
+            break;
+        };
+        if sel.prompt.starts_with("Choose a link card to trash") {
+            choice = Some(sel.effect_choices.clone().unwrap_or_default());
+            break;
+        }
+        let (player, action) = (sel.selecting_player, sel.valid_action_ids[0]);
+        r.execute_action(player, action)
+            .unwrap_or_else(|e| panic!("pick rejected: {e:?}"));
+    }
+    let choice = choice.expect("P0 chooses the replaced link card");
+    assert_eq!(choice.len(), 3, "the 3 existing link cards: {choice:?}");
+    assert!(
+        choice.iter().all(|c| c.source_card != Some(link_a)),
+        "the newly linked card is not a replacement option: {choice:?}"
+    );
 }
 
 // ─── §16-41 <Training> ──────────────────────────────────────────────────────

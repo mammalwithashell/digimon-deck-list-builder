@@ -688,6 +688,11 @@ pub enum ResumeFrame {
     /// Field Digimon Link host prompt. Top-level player action; accept begins
     /// the WhenWouldLink window and then commits/resumes the Digimon link.
     DigimonLinkHostSelection(crate::game_actions::DigimonLinkHostSelectionState),
+    /// Choice of which link cards to trash: the §4-9-5 replacement in a
+    /// declared link (the linking player) or the §17-1-3-2-5 rule-check trim
+    /// (the host's controller). One pick per decision until the count is met;
+    /// the picks are trashed together, then the link (if any) finishes.
+    LinkCardTrashChoice(crate::game_actions::LinkCardTrashChoiceState),
     /// Interactive play-from-hand cost-reduction accept/decline prompt.
     /// Accept applies the reducer and continues the recursive reducer chain;
     /// PASS skips this reducer and continues the chain.

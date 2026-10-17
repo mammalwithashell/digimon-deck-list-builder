@@ -1,0 +1,20 @@
+# EFFLINK -- Tamer, red, play cost 0.
+#   [On Play] Link 1 Digimon card from your hand to 1 of your Digimon without
+#   paying the cost.
+# An effect-driven link (production idiom: BT25-089's `link_cards` to
+# `own_digimon`), for the §4-9-5 replacement at a host's link limit.
+card: EFFLINK
+name: Linker Tamer
+kind: tamer
+color: [red]
+cost: 0
+effects:
+  - when: on_play
+    summary: "[On Play] Link 1 Digimon card from your hand to 1 of your Digimon without paying the cost."
+    process:
+      - link_cards:
+          from: [hand]
+          filter: { kind: digimon }
+          to: own_digimon
+          count: { exactly: 1 }
+          cost: free

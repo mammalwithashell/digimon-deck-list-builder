@@ -213,23 +213,17 @@
   tests: ["ch17_rule_checks::face_down_card_on_field_is_trashed"]
   note: "Rule-check trash target (normative; explicit so the short text is never read as a heading). The rule check never reads face_down: a face-down card on the field stays as a 1000 DP Digimon. Test is #[ignore]d."
 "17-1-3-2-5":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE
+  status: proven
   tests: ["ch17_rule_checks::excess_link_cards_trashed_player_chooses_which", "ch17_rule_checks::excess_link_cards_over_any_limit_prompt_before_trash"]
-  note: "Red for two independent gaps: G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE (no rule-check step trims link cards) + G-ENGINE-LINK-MAX-BASE (the base link limit is 5, not 1, so a 2-link host is never over its limit). The 6-link variant pins the missing trim step alone. Q6370: the player chooses which excess link cards to trash (DCGO agrees: RemoveLinkedCard -> SelectCardEffect by the owner). Both tests are #[ignore]d."
+  note: "A host over its link limit (base 1, §4-9-5) parks its controller's choice of exactly the excess link cards at the rule check (Q6370; one pick per decision, trashed together; a lone removable card is trashed directly). Both the 2-link and 6-link boards are green."
 "17-1-3-2-6":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE
+  status: proven
   tests: ["ch17_rule_checks::link_card_failing_requirement_is_trashed"]
-  note: "Link requirements are checked only when linking: a link card whose host no longer meets its requirement stays linked. Test is #[ignore]d."
+  note: "The rule check re-evaluates each link card's link requirement against its host (collect_link_rule_targets) and trashes the failures with no choice. A printed Link box whose requirement isn't lowered counts as met (G-DATA-LINK-REQUIREMENT-NOT-LOWERED)."
 "17-1-3-2-7":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE
+  status: proven
   tests: ["ch17_rule_checks::linked_card_of_unlisted_category_is_trashed"]
-  note: "run_state_based_rules_check has no category step: a Tamer card linked to a Digimon stays linked. Closest stageable witness (a Tamer has no [Link], so the board also falls under 17-1-3-2-6); no fixture models a category-restricting <Link> note yet. Test is #[ignore]d."
+  note: "A linked card with no [Link] (so no <Link> note names its category) is trashed by the same per-host link step. Closest stageable witness (a Tamer card; it also falls under 17-1-3-2-6); no fixture models a category-restricting <Link> note yet."
 "15-4-3-3":
   status: proven
   tests: ["ch17_rule_checks::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers"]
@@ -1161,23 +1155,17 @@
   tests: ["ch16_processing_keywords::blast_dna_kind_matches_rule"]
   note: "Witness: the field Digimon and the hand card are both chosen before any card moves (no reveal-from-hand event exists to observe the reveal itself)."
 "16-40-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED
+  status: proven
   tests: ["ch16_processing_keywords::link_plus_adds_to_max_link_cards_and_instances_add"]
-  note: "LINKPLUS2 (two <Link +1>, max 3): with 2 link cards a link adds (green half); with 3 it must replace 1 (4-9-5), the engine adds a 4th (base 5 + 2: G-ENGINE-LINK-MAX-BASE); with the base fixed it would refuse (G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED). #[ignore]d."
+  note: "LINKPLUS2 (two <Link +1>, max 3): with 2 link cards a link adds; with 3 it replaces 1 (4-9-5), the linking player choosing which."
 "16-40-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED
+  status: proven
   tests: ["ch16_processing_keywords::link_plus_kind_matches_rule"]
-  note: "A granted <Link +1> (max 2): no decision; with 1 link card a link adds (green half); with 2 it must replace, the engine adds (also G-ENGINE-LINK-MAX-BASE). #[ignore]d."
+  note: "A granted <Link +1> (max 2) applies with no decision; with 1 link card a link adds; with 2 it replaces 1."
 "16-40-3":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED
+  status: proven
   tests: ["ch16_processing_keywords::link_plus_adds_to_max_link_cards_and_instances_add"]
-  note: "Same test as 16-40-1 (two instances add to 3). The 'not considered <Link +2>' half is not staged. Also G-ENGINE-LINK-MAX-BASE. #[ignore]d."
+  note: "Same test as 16-40-1 (two instances add to 3). The 'not considered <Link +2>' half is not staged."
 "16-41-1":
   status: proven
   tests: ["ch16_processing_keywords::training_optional_cost_then_mandatory_place_also_in_breeding_area"]
@@ -1189,8 +1177,6 @@
   status: proven
   tests: ["ch16_processing_keywords::training_optional_cost_then_mandatory_place_also_in_breeding_area", "ch16_processing_keywords::training_optionality_matches_rule"]
 "4-9-5":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-LINK-MAX-BASE
+  status: proven
   tests: ["ch16_processing_keywords::link_max_base_is_one"]
-  note: "Linking to a host with no <Link +> and 1 link card must replace it (count stays 1, the old card trashed at the same time); the engine adds a 2nd (base limit 5). With the base fixed it would refuse the link instead (G-ENGINE-LINK-AT-LIMIT-REFUSED-NOT-REPLACED: link_host_candidates drops hosts at the limit). #[ignore]d. Not the same as ch17's 17-1-3-2-5 rule-check trim (a host over its limit at a rule check)."
+  note: "Base link limit 1 (Game::link_limit). Linking to a host with no <Link +> and 1 link card replaces it (count stays 1, the old card trashed in the same step). Not the same as ch17's 17-1-3-2-5 rule-check trim (a host over its limit at a rule check). An effect-driven link at a limit above 1 still lacks the in-step choice: G-ENGINE-EFFECT-LINK-AT-LIMIT-NO-REPLACEMENT-CHOICE, reproducer ch16_processing_keywords::effect_link_at_limit_replaces_existing_link_card_by_choice (#[ignore]d)."

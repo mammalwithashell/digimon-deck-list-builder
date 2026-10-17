@@ -404,6 +404,7 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::AppFuseResultSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ArtsDigivolveSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkOptionHostSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::LinkCardTrashChoice(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DigimonLinkHostSelection(_))
             | Some(ResumeFrame::OptionHandLinkHostSelection(_)) => unreachable!(
                 "Link declaration prompts are top-level player actions, never nested in a DSL clause"
@@ -1031,7 +1032,11 @@ fn try_run_link_step(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
                 player: owner,
                 index: i as u8,
             };
-            eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle)).then_some(handle)
+            // The card's own link requirement (Q4533; DCGO
+            // `CanLinkToTargetPermanent`), as the rule check reads it.
+            (eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle))
+                && ctx.game.link_card_qualifies_for(handle, source_card))
+            .then_some(handle)
         })
         .collect();
 
@@ -1098,7 +1103,11 @@ fn try_run_link_step_from_security(
                 player: owner,
                 index: i as u8,
             };
-            eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle)).then_some(handle)
+            // The card's own link requirement (Q4533; DCGO
+            // `CanLinkToTargetPermanent`), as the rule check reads it.
+            (eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle))
+                && ctx.game.link_card_qualifies_for(handle, source_card))
+            .then_some(handle)
         })
         .collect();
 

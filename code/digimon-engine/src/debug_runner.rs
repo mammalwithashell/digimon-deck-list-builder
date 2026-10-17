@@ -670,6 +670,38 @@ impl DebugRunner {
         self.game.effect_registry.insert(card_id, effect);
     }
 
+    /// Fixture helper: give `card_id` a printed-style link requirement,
+    /// "[Link] Cost `cost`" accepting any Digimon (what a `kind:
+    /// link_condition` clause with no filter lowers to), on top of whatever
+    /// effects it already has. A synthetic card a test links needs one: a card
+    /// with no `[Link]` can't be linked by an effect (Q4533) and is trashed at
+    /// the rule check (§17-1-3-2-6 / -7).
+    pub fn give_link_requirement(&mut self, card_id: &str, cost: u16) {
+        let inner = self.game.effect_registry.get(card_id);
+        self.game
+            .effect_registry
+            .insert(card_id, Arc::new(WithLinkRequirement { inner, cost }));
+        self.game.effects_cache = Default::default();
+    }
+
+    /// Fixture helper: a granted `<Link +n>` on `host` (a permanent
+    /// `ChangeLinkMax` modifier), so a test can stage more than the base 1
+    /// link card (§4-9-5, §16-40-1) without the rule check trimming them
+    /// (§17-1-3-2-5).
+    pub fn give_link_plus(&mut self, host: PermanentHandle, n: i32) {
+        use crate::modifiers::{ModifierEntry, ModifierPayload};
+        self.game.modifiers.add(
+            host,
+            ModifierEntry::simple(
+                crate::enums::ModifierType::ChangeLinkMax,
+                0,
+                crate::enums::Expiry::Permanent,
+                host.player,
+            )
+            .with_payload(ModifierPayload::LinkMax { delta: n }),
+        );
+    }
+
     pub fn set_formula_extensions(&mut self, registry: FormulaExtensionRegistry) {
         self.game.formula_extensions = registry;
     }
@@ -961,6 +993,9 @@ pub struct DebugRunnerBuilder {
     /// Initial memory value applied after `start()`. Useful for tests that
     /// want to play non-zero-cost cards without thinking about the seesaw.
     initial_memory: Option<i16>,
+    /// `(card_id, cost)` fixture link requirements applied once the registry
+    /// is built (see [`DebugRunner::give_link_requirement`]).
+    link_requirements: Vec<(String, u16)>,
 }
 
 impl Default for DebugRunnerBuilder {
@@ -977,6 +1012,7 @@ impl Default for DebugRunnerBuilder {
             registry: None,
             player_count: None,
             initial_memory: None,
+            link_requirements: Vec::new(),
         }
     }
 }
@@ -1073,6 +1109,15 @@ impl DebugRunnerBuilder {
     /// at memory 0 and most non-zero-cost plays would be unaffordable.
     pub fn memory(mut self, value: i16) -> Self {
         self.initial_memory = Some(value);
+        self
+    }
+
+    /// Fixture: give `card_id` a printed-style link requirement ("[Link] Cost
+    /// `cost`", any Digimon) once the runner is built. See
+    /// [`DebugRunner::give_link_requirement`]; a test that registers the
+    /// card's effects after `start()` calls that instead.
+    pub fn link_requirement(mut self, card_id: &str, cost: u16) -> Self {
+        self.link_requirements.push((card_id.to_string(), cost));
         self
     }
 
@@ -1207,11 +1252,15 @@ impl DebugRunnerBuilder {
             let _ = build_registry; // silence unused-import if path changes
         }
 
-        DebugRunner {
+        let mut runner = DebugRunner {
             game,
             #[cfg(feature = "dsl-yaml-loader")]
             compiled_cards: std::mem::take(&mut self.compiled_cards),
+        };
+        for (card_id, cost) in std::mem::take(&mut self.link_requirements) {
+            runner.give_link_requirement(&card_id, cost);
         }
+        runner
     }
 
     fn make_card(
@@ -1736,5 +1785,37 @@ alt_paths:
         r.play(0, 0); // -3 for cost, +1 for OnPlay = net -2
         assert_eq!(r.memory(), m_before - 3 + 1);
         assert_eq!(r.battle_area_size(0), 1);
+    }
+}
+
+/// [`DebugRunner::give_link_requirement`]'s wrapper: the card's registered
+/// effects plus one unfiltered link requirement.
+struct WithLinkRequirement {
+    inner: Option<Arc<dyn crate::effect::CardEffect>>,
+    cost: u16,
+}
+
+impl crate::effect::CardEffect for WithLinkRequirement {
+    fn effects(&self, card: CardHandle) -> Vec<crate::effect::Effect> {
+        let mut out = self
+            .inner
+            .as_ref()
+            .map(|e| e.effects(card))
+            .unwrap_or_default();
+        out.push(
+            crate::effect::Effect::link_condition(card)
+                .link_host(self.cost, |_, _| true)
+                .build(),
+        );
+        out
+    }
+
+    fn partition_slots(
+        &self,
+        inherited: bool,
+    ) -> Option<Arc<Vec<digimon_dsl::compiled::CompiledPredicate>>> {
+        self.inner
+            .as_ref()
+            .and_then(|e| e.partition_slots(inherited))
     }
 }

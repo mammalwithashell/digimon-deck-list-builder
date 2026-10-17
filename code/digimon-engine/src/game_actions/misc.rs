@@ -1509,6 +1509,15 @@ impl Game {
             return;
         }
 
+        // §4-9-5: at the link limit the Option replaces existing link cards;
+        // with a choice, the linking player picks them, then this resumes.
+        let purpose = LinkTrashPurpose::OptionLink(resume);
+        if self.park_link_replacement_choice(pending.owner, host, purpose) {
+            self.pending_option = Some(pending);
+            return;
+        }
+        self.trash_forced_link_replacement(host);
+
         // Attach.
         let linked_card = pending.card.handle();
         self.player_mut(host.player).battle_area[host.index as usize]

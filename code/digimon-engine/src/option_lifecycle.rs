@@ -108,10 +108,9 @@ impl Game {
         else {
             return false;
         };
-        let insert_at = link_index as usize;
-        let link_max =
-            (5 + self.modifiers.link_max_delta(carrier)).clamp(0, u8::MAX as i32) as usize;
-        insert_at <= host.linked_cards.len() && host.linked_cards.len() < link_max
+        // §4-9-5: a carrier at its link limit (`Game::link_limit`, base 1)
+        // still takes a Plug-In; the install replaces a link card.
+        (link_index as usize) <= host.linked_cards.len()
     }
 
     /// Install an Option as a Delay field permanent.
@@ -197,6 +196,7 @@ impl Game {
         if !self.can_insert_plug_in_at(carrier, link_index) {
             return false;
         }
+        self.trash_forced_link_replacement(carrier);
         let Some(host) = self
             .player_mut(carrier.player)
             .battle_area
@@ -204,7 +204,7 @@ impl Game {
         else {
             return false;
         };
-        let insert_at = link_index as usize;
+        let insert_at = (link_index as usize).min(host.linked_cards.len());
         let placed_card = card.handle();
         host.linked_cards.insert(insert_at, card);
         self.enqueue_triggered(

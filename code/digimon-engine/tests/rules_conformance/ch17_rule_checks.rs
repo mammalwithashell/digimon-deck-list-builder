@@ -449,7 +449,6 @@ fn settle_link_choice(r: &mut DebugRunner) {
 /// `Permanent.RemoveLinkedCard(null, excess)`, a `SelectCardEffect` over the
 /// link cards with `selectPlayer: TopCard.Owner`.
 #[test]
-#[ignore = "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE + G-ENGINE-LINK-MAX-BASE (§17-1-3-2-5)"]
 fn excess_link_cards_trashed_player_chooses_which() {
     cite!(
         "17-1-3-2-5",
@@ -509,7 +508,6 @@ fn excess_link_cards_trashed_player_chooses_which() {
 /// `run_state_based_rules_check` has no link-card step
 /// (`G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE`).
 #[test]
-#[ignore = "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE (§17-1-3-2-5)"]
 fn excess_link_cards_over_any_limit_prompt_before_trash() {
     cite!(
         "17-1-3-2-5",
@@ -546,7 +544,6 @@ fn excess_link_cards_over_any_limit_prompt_before_trash() {
 /// Red: the rule check never re-checks link requirements; `LINK_A` stays
 /// linked to the level 5 host (`G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE`).
 #[test]
-#[ignore = "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE (§17-1-3-2-6)"]
 fn link_card_failing_requirement_is_trashed() {
     cite!(
         "17-1-3-2-6",
@@ -589,7 +586,6 @@ fn link_card_failing_requirement_is_trashed() {
 /// Red: `run_state_based_rules_check` has no category step; the Tamer stays
 /// linked (`G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE`).
 #[test]
-#[ignore = "G-ENGINE-RULE-CHECK-TARGETS-INCOMPLETE (§17-1-3-2-7)"]
 fn linked_card_of_unlisted_category_is_trashed() {
     cite!(
         "17-1-3-2-7",

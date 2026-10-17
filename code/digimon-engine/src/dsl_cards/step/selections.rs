@@ -1471,6 +1471,9 @@ pub(crate) fn run_resume(
         ResumeFrame::DigimonLinkHostSelection(state) => {
             game.run_digimon_link_host_selection_step(state, action_id);
         }
+        ResumeFrame::LinkCardTrashChoice(state) => {
+            game.run_link_card_trash_choice_step(state, action_id);
+        }
         ResumeFrame::PlayFromHandCostReductionPrompt(mut state) => {
             let outer_conts = std::mem::take(&mut state.outer_conts);
             game.run_play_from_hand_cost_reduction_prompt_step(state, action_id, is_pass);
