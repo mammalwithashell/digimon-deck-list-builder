@@ -470,6 +470,7 @@ fn attack_result_str(r: AttackResult) -> &'static str {
         AttackResult::SecurityCheckSurvived => "SecurityCheckSurvived",
         AttackResult::AttackerDeletedBySecurity => "AttackerDeletedBySecurity",
         AttackResult::GameWon => "GameWon",
+        AttackResult::Unsuccessful => "Unsuccessful",
         AttackResult::InProgress => "InProgress",
         AttackResult::Cancelled => "Cancelled",
     }
