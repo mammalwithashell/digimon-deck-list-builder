@@ -3445,23 +3445,10 @@ impl Game {
                                 deleters: Vec::new(),
                             },
                         );
-                    }
-                    self.drain_effect_queue();
-                    if self.pending_selection.is_some() {
-                        return None;
-                    }
-                    self.set_security_phase(SecurityPhase::EndOfSecurityBattleScheduledDrain);
-                }
-                SecurityPhase::EndOfSecurityBattleScheduledDrain => {
-                    let enqueue_done = state.phase_enqueue_done;
-                    if !enqueue_done {
-                        if let Some(st) = self.security_resolution.as_mut() {
-                            st.phase_enqueue_done = true;
-                        }
-                        crate::scheduled_effects::fire_scheduled_for_timing(
-                            self,
-                            EffectTiming::EndOfBattle,
-                        );
+                        // §18-1-2: pending processing due at the end of the
+                        // battle pools with the `EndOfBattle` observers
+                        // (enqueued once: the guard above survives a park).
+                        self.enqueue_scheduled_for_timing(EffectTiming::EndOfBattle);
                     }
                     self.drain_effect_queue();
                     if self.pending_selection.is_some() {
@@ -3917,16 +3904,12 @@ impl Game {
                 crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
             );
         }
+        // §18-1-2: pending processing due at the end of the attack joins the
+        // printed `EndOfAttack` effects in one simultaneous pool (ordered by
+        // the turn player), before modifier expiry / the `pending_attack`
+        // clear, so both see the same attack context.
+        self.enqueue_scheduled_for_timing(crate::enums::EffectTiming::EndOfAttack);
         self.drain_effect_queue();
-
-        // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
-        // EndOfAttack after the printed-observer fan-out. Fires before
-        // modifier expiry / pending_attack clear so scheduled bodies see
-        // the same attack context as printed observers.
-        crate::scheduled_effects::fire_scheduled_for_timing(
-            self,
-            crate::enums::EffectTiming::EndOfAttack,
-        );
 
         self.modifiers.expire_end_of_attack();
         self.pending_attack = None;
@@ -4517,8 +4500,10 @@ impl Game {
                 EffectTiming::EndOfBattle,
                 TriggerSource::BattleResolved { winner, deleters },
             );
+            // §18-1-2: pending processing due at the end of the battle pools
+            // with the `EndOfBattle` observers.
+            self.enqueue_scheduled_for_timing(EffectTiming::EndOfBattle);
             self.drain_effect_queue();
-            crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfBattle);
         }
     }
 

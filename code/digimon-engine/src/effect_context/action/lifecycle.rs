@@ -29,11 +29,13 @@ impl<'a> EffectContext<'a> {
     /// Task 3) for card text like "at the end of your next turn, do X".
     ///
     /// The effect's `body`, `captured_bindings`, source card, and source
-    /// permanent are stored on `Game::scheduled_effects`. When
-    /// `scheduled_effects::fire_scheduled_for_timing(game, when)` drains the
-    /// queue, a fresh `EffectContext` is constructed against the captured
-    /// `(controller, source_card, source_permanent)` and the body runs
-    /// through `run_steps` with the captured bindings replayed.
+    /// permanent are stored on `Game::scheduled_effects`. When the `when`
+    /// timing occurs, `Game::enqueue_scheduled_for_timing` moves the entry
+    /// into the effect queue beside that timing's printed triggers (one
+    /// simultaneous pool, §18-1-2); when it resolves, a fresh `EffectContext`
+    /// is constructed against the captured `(controller, source_card,
+    /// source_permanent)` and the body runs through `run_steps` with the
+    /// captured bindings replayed.
     pub fn schedule_delayed(
         &mut self,
         when: EffectTiming,

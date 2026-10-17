@@ -8485,15 +8485,15 @@
       "text": "Pending processing refers to processing for rules or effects that is pending. Pending processing will be processed at the predetermined timing for the corresponding rule or effect, similar to triggered effects. (Example: If an effect reads \"[When Attacking] Gain 3 memory. Lose 3 memory at the end of the turn,\" \"lose 3 memory at the end of the turn\" is pending processing that is processed similar to how it would be processed if it triggered at the end of the turn.)"
     },
     "18-1-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 18,
       "fingerprint": "1b5f8339dafb6d36f24a37380b4ccbcf4131788de779f4d1800da5a65bbd3372",
-      "gap_id": "G-ENGINE-PENDING-PROCESSING-OUTSIDE-TRIGGER-POOL",
+      "gap_id": null,
       "mechanisms": [
         "other-information"
       ],
-      "note": "fire_end_of_your_turn drains the printed [End of Your Turn] effects, then runs scheduled effects with no prompt: with EOT_MEM on board there is no TriggerOrder and the order is always EOT_MEM +2, then the pending -3. Test is #[ignore]d.",
-      "status": "gap",
+      "note": "The 18-1-1 board plus EOT_MEM ([End of Your Turn] Gain 2 memory): at the end of P0's turn the pending -3 and EOT_MEM are offered in ONE TriggerOrder to P0 before either is processed, and both orders are honoured. Every timing site enqueues its due ScheduledEffects (Game::enqueue_scheduled_for_timing) into the same batch as the printed triggers before draining.",
+      "status": "proven",
       "tests": [
         "ch18_pending_overwrite::pending_processing_orders_with_simultaneous_triggers"
       ],
@@ -15235,9 +15235,9 @@
         "total": 16
       },
       "18": {
-        "gap": 8,
+        "gap": 7,
         "not_testable": 3,
-        "proven": 4,
+        "proven": 5,
         "total": 15
       },
       "2": {
@@ -15289,7 +15289,7 @@
         "total": 13
       }
     },
-    "gap": 657,
+    "gap": 656,
     "mechanics": {
       "gap_blocking": 38,
       "gap_nonblocking": 330,
@@ -15297,7 +15297,7 @@
       "proven": 195
     },
     "not-testable": 246,
-    "proven": 216
+    "proven": 217
   },
   "version": 1
 }

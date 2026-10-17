@@ -299,7 +299,6 @@ impl Game {
             dsl_resolved_tail_bindings: None,
             dsl_clause_aborted: false,
             scheduled_effects: Vec::new(),
-            scheduled_drain_tail: None,
             scheduled_provenance_deletions: Vec::new(),
             scheduled_provenance_deletions_opp: Vec::new(),
             pending_delayed_option_lifecycle: None,
@@ -475,7 +474,6 @@ impl Game {
         self.dsl_resolved_tail_bindings = None;
         self.dsl_clause_aborted = false;
         self.scheduled_effects = Vec::new();
-        self.scheduled_drain_tail = None;
         self.scheduled_provenance_deletions = Vec::new();
         self.scheduled_provenance_deletions_opp = Vec::new();
         self.pending_delayed_option_lifecycle = None;

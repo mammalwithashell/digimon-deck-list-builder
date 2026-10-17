@@ -241,11 +241,9 @@
   tests: ["ch18_pending_overwrite::pending_processing_fires_at_its_timing_like_a_trigger"]
   note: "The rule's example '[When Attacking] Gain 3 memory. Lose 3 memory at the end of the turn' (schedule_delayed): after the attack only +3 is applied and the turn goes on; on pass the -3 is processed before P1's TurnStart."
 "18-1-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-PENDING-PROCESSING-OUTSIDE-TRIGGER-POOL
+  status: proven
   tests: ["ch18_pending_overwrite::pending_processing_orders_with_simultaneous_triggers"]
-  note: "fire_end_of_your_turn drains the printed [End of Your Turn] effects, then runs scheduled effects with no prompt: with EOT_MEM on board there is no TriggerOrder and the order is always EOT_MEM +2, then the pending -3. Test is #[ignore]d."
+  note: "The 18-1-1 board plus EOT_MEM ([End of Your Turn] Gain 2 memory): at the end of P0's turn the pending -3 and EOT_MEM are offered in ONE TriggerOrder to P0 before either is processed, and both orders are honoured. Every timing site enqueues its due ScheduledEffects (Game::enqueue_scheduled_for_timing) into the same batch as the printed triggers before draining."
 "18-2-1":
   status: proven
   tests: ["ch18_pending_overwrite::instead_overwrites_the_normal_processing"]

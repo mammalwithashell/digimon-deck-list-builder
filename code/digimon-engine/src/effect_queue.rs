@@ -201,6 +201,11 @@ impl Game {
         &self,
         qe: &QueuedEffect,
     ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
+        // Pending processing (§18-1-2) carries its own body and has no
+        // `Effect` in any card's list; slot 0 of the source card is NOT it.
+        if qe.scheduled.is_some() {
+            return None;
+        }
         match qe.keyword_effect {
             Some(keyword) => Some(std::sync::Arc::new(
                 crate::cards::keyword_effects::keyword_to_auto_effect(keyword, qe.source_card),
@@ -230,6 +235,7 @@ impl Game {
             granted_effect_id: None,
             keyword_effect: None,
             trigger_batch: 0,
+            scheduled: None,
         }
     }
 
@@ -976,6 +982,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                scheduled: None,
             });
         }
     }
@@ -1048,6 +1055,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
+                    scheduled: None,
                 });
             }
         }
@@ -1120,6 +1128,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                scheduled: None,
             });
         }
     }
@@ -2576,6 +2585,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                scheduled: None,
             });
         }
     }
@@ -2683,6 +2693,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                scheduled: None,
             });
         }
     }
@@ -2755,6 +2766,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                scheduled: None,
             });
         }
     }
@@ -2861,6 +2873,7 @@ impl Game {
                 granted_effect_id: Some(body_id),
                 keyword_effect: None,
                 trigger_batch: 0,
+                scheduled: None,
             });
         }
 
@@ -2910,6 +2923,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
+                    scheduled: None,
                 });
             }
         }
@@ -3006,6 +3020,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: Some(keyword),
                     trigger_batch: 0,
+                    scheduled: None,
                 });
             }
         }
@@ -3072,6 +3087,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
+                    scheduled: None,
                 });
             }
         }
@@ -3164,6 +3180,7 @@ impl Game {
                         granted_effect_id: None,
                         keyword_effect: None,
                         trigger_batch: 0,
+                        scheduled: None,
                     });
                 }
             }
@@ -3238,6 +3255,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
+                    scheduled: None,
                 });
             }
         }
@@ -3305,6 +3323,7 @@ impl Game {
                 granted_effect_id: Some(body_id),
                 keyword_effect: None,
                 trigger_batch: 0,
+                scheduled: None,
             });
         }
 
@@ -3335,6 +3354,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
+                    scheduled: None,
                 });
             }
         }
@@ -3383,6 +3403,7 @@ impl Game {
                     granted_effect_id: None,
                     keyword_effect: None,
                     trigger_batch: 0,
+                    scheduled: None,
                 });
             }
         }
@@ -3552,7 +3573,7 @@ impl Game {
     }
 
     fn queued_single_effect_condition_passes(&mut self, qe: &QueuedEffect) -> bool {
-        if qe.granted_effect_id.is_some() {
+        if qe.granted_effect_id.is_some() || qe.scheduled.is_some() {
             // Granted effects have no clause condition — keep them.
             return true;
         }
@@ -3781,7 +3802,14 @@ impl Game {
         out
     }
 
-    fn run_queued_effect_inner(&mut self, qe: QueuedEffect) {
+    fn run_queued_effect_inner(&mut self, mut qe: QueuedEffect) {
+        // §18-1-2 pending processing: the captured `schedule_delayed` body,
+        // performed at its timing whatever happened to its source (§18-1-1)
+        // -- no condition / cost / OPT / liveness gates.
+        if let Some(scheduled) = qe.scheduled.take() {
+            crate::scheduled_effects::run_scheduled_body(self, *scheduled, qe.source_permanent);
+            return;
+        }
         // Track H §3 Phase 4i — granted-triggered-effect branch.
         // Granted bodies are inline closures with no Effect metadata
         // (no condition, pay_cost, optional, max_per_turn). We fetch
@@ -4196,8 +4224,16 @@ impl Game {
     /// OnDeletion snapshots intentionally activate from the deleted object;
     /// zone-scoped entries without a field carrier retain their own liveness.
     pub(crate) fn invalidate_pending_field_effects(&mut self, carriers: &[PermanentHandle]) {
-        self.effect_queue.retain(|qe| {
+        self.effect_queue.retain_mut(|qe| {
             let source_changed = qe.source_permanent.is_some_and(|h| carriers.contains(&h));
+            // Pending processing outlives its source: it is performed at its
+            // timing (§18-1-1), not activated from the carrier (15-4-4-3).
+            // The carrier is a new card now, so the body no longer refers to
+            // it (and the stale slot must not address whatever shifts in).
+            if source_changed && qe.scheduled.is_some() {
+                qe.source_permanent = None;
+                return true;
+            }
             !source_changed
                 || (qe.timing == EffectTiming::OnDeletion
                     && qe
@@ -5476,10 +5512,6 @@ impl Game {
 
         if self.pending_selection.is_none() {
             self.resume_pending_effect_security_removal();
-        }
-
-        if self.pending_selection.is_none() {
-            crate::scheduled_effects::resume_scheduled_drain(self);
         }
 
         // If the callback parked a fresh selection, leave the drainer alone.

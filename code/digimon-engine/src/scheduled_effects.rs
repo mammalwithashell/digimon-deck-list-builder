@@ -1,7 +1,7 @@
 //! Phase 2f4 Task 1 — `ScheduledEffect` queue. One-shot delayed effects
-//! scheduled by `EffectContext::schedule_delayed`; drained at observer-fire
-//! boundaries that match the scheduled `when:` timing (Task 2 will wire the
-//! drain into game-phase transitions).
+//! ("pending processing", §18-1-1) scheduled by
+//! `EffectContext::schedule_delayed`; processed at the timing boundary that
+//! matches the scheduled `when:`.
 //!
 //! Design notes:
 //!
@@ -10,21 +10,34 @@
 //! - Each entry stores a `CardHandle` (Copy) instead of a `CardSource`
 //!   (heavier clone). At fire time we reconstruct an `EffectContext` from
 //!   `(controller, card_handle, source_permanent, source_kind)`.
-//! - `fire_scheduled_for_timing` drains in FIFO order. Effects scheduled
-//!   DURING a drain (from inside a firing body) land at the back of the queue
-//!   and do NOT fire in the same pass. Re-entrancy is bounded by the outer
-//!   caller's next observer-fire boundary.
+//! - §18-1-2: pending processing performed at the same time as other
+//!   processing is performed like simultaneously triggered effects
+//!   (§15-4-3). Each timing site therefore calls
+//!   [`Game::enqueue_scheduled_for_timing`] BEFORE it drains the timing's
+//!   printed triggers: the due entries become `QueuedEffect`s (carrying the
+//!   `ScheduledEffect` in `QueuedEffect::scheduled`) in the same trigger
+//!   batch, so the drainer's turn-player / `TriggerOrder` logic orders them
+//!   (§15-4-3-5-1), and a body that parks resumes through the ordinary
+//!   selection path. DCGO agrees: player effects
+//!   (`AddEffectToPlayer(..., EffectTiming.OnEndTurn, ...)`) are stacked in
+//!   the same `AutoProcessing.StackSkillInfos(null, OnEndTurn)` batch as the
+//!   card skills.
+//! - The due set is taken once, when the timing occurs. An effect scheduled
+//!   WHILE that pool drains (from inside a resolving body) stays on
+//!   `Game::scheduled_effects` and is processed at the next matching
+//!   boundary, never in the current pool.
 //! - Non-matching effects remain queued.
 
 use digimon_dsl::compiled::CompiledStep;
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::step::{run_steps_with_runtime, RunOutcome, StepRuntime};
+use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::effect_context::EffectContext;
 use crate::enums::{EffectSourceKind, EffectTiming, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
+use crate::selection::QueuedEffect;
 use crate::trigger_context::{EventSubject, ProvenanceToken};
 
 /// A one-shot delayed effect waiting on a future timing boundary.
@@ -50,31 +63,18 @@ pub struct ScheduledEffect {
     pub runtime: StepRuntime,
 }
 
-#[derive(Debug, Clone)]
-pub struct ScheduledDrainTail {
-    pub timing: EffectTiming,
-    pub remaining: Vec<ScheduledEffect>,
-}
-
-/// Drain every `ScheduledEffect` whose `when` matches `t`, running each body
-/// via `run_steps` against a fresh `EffectContext`.
+/// Process every due `ScheduledEffect` for timing `t` on its own: enqueue
+/// them ([`Game::enqueue_scheduled_for_timing`]) and drain the effect queue.
 ///
-/// Effects are processed in FIFO order. Effects scheduled DURING this drain
-/// (from inside a firing body) land at the back of the queue and do NOT
-/// fire in the same pass — re-entrancy is bounded by the outer caller's
-/// next observer-fire boundary.
-///
-/// Non-matching effects remain queued.
+/// Engine timing sites do NOT use this: they enqueue the scheduled entries
+/// into the same batch as the timing's printed triggers before their own
+/// drain (§18-1-2). It remains the entry point for exercising scheduled
+/// bodies in isolation (tests, tools). Several due entries still form one
+/// simultaneous pool, ordered by the turn player.
 pub fn fire_scheduled_for_timing(game: &mut Game, t: EffectTiming) {
-    let queued = std::mem::take(&mut game.scheduled_effects);
-    drain_scheduled_for_timing(game, t, queued);
-}
-
-pub fn resume_scheduled_drain(game: &mut Game) {
-    let Some(tail) = game.scheduled_drain_tail.take() else {
-        return;
-    };
-    drain_scheduled_for_timing(game, tail.timing, tail.remaining);
+    if game.enqueue_scheduled_for_timing(t) > 0 {
+        game.drain_effect_queue();
+    }
 }
 
 fn can_fire_scheduled(effect: &ScheduledEffect, current_turn: u16) -> bool {
@@ -96,63 +96,92 @@ fn timing_controller_matches(game: &Game, effect: &ScheduledEffect) -> bool {
     }
 }
 
-fn drain_scheduled_for_timing(game: &mut Game, t: EffectTiming, queued: Vec<ScheduledEffect>) {
-    let mut still_pending: Vec<ScheduledEffect> = Vec::new();
-    let mut iter = queued.into_iter().peekable();
-    while let Some(eff) = iter.next() {
-        if eff.when != t
-            || !can_fire_scheduled(&eff, game.turn_count)
-            || !timing_controller_matches(game, &eff)
-        {
-            still_pending.push(eff);
-            continue;
-        }
-        let ScheduledEffect {
-            body,
-            source_card,
-            source_permanent,
-            source_kind,
-            controller,
-            captured_bindings,
-            runtime,
-            ..
-        } = eff;
-        let mut bindings = captured_bindings;
-        // Phase 2f4 Task 2: parked-selection guard. With `dsl_outer_tail`'s
-        // single-outstanding invariant, two scheduled bodies parking in the
-        // same drain pass would clobber each other's outer-tail slot. In
-        // practice scheduled bodies are end-of-turn housekeeping
-        // (gain_memory / draw / plain modifier application) that don't
-        // park, so we assert rather than break-on-Parked. If a printed
-        // card needs a multi-parking drain in the future, Phase 3 should
-        // replace this with break-and-resume retry logic.
-        debug_assert!(
-            game.dsl_outer_tail.is_none(),
-            "scheduled effect fired while a previous parked selection is still outstanding"
-        );
-        let mut ctx = EffectContext::new_with_source_kind(
-            game,
-            source_card,
-            source_permanent,
-            source_kind,
-            controller,
-        );
-        let outcome = run_steps_with_runtime(&body, &mut ctx, &mut bindings, &runtime);
-        if matches!(outcome, RunOutcome::Parked) {
-            let mut remaining = still_pending;
-            remaining.extend(iter);
-            ctx.game.scheduled_drain_tail = Some(ScheduledDrainTail {
-                timing: t,
-                remaining,
+impl Game {
+    /// §18-1-2: materialise every `ScheduledEffect` due at timing `t` as a
+    /// `QueuedEffect` (`QueuedEffect::scheduled`), appended to the effect
+    /// queue WITHOUT draining. Returns how many were enqueued.
+    ///
+    /// Timing sites call this before draining the timing's printed triggers
+    /// (in the same deferred-drain scope), so the pending processing and the
+    /// triggered effects form one simultaneous pool (§15-4-3) that the turn
+    /// player orders (§15-4-3-5-1). Entries not yet due (another timing, a
+    /// "next turn" window that has not come, the wrong turn player) stay on
+    /// `Game::scheduled_effects`; so does anything scheduled later, while
+    /// this pool drains (it is processed at the next matching boundary).
+    pub fn enqueue_scheduled_for_timing(&mut self, t: EffectTiming) -> usize {
+        let turn = self.turn_count;
+        let queued = std::mem::take(&mut self.scheduled_effects);
+        let (due, not_due): (Vec<ScheduledEffect>, Vec<ScheduledEffect>) =
+            queued.into_iter().partition(|eff| {
+                eff.when == t
+                    && can_fire_scheduled(eff, turn)
+                    && timing_controller_matches(self, eff)
             });
-            return;
+        self.scheduled_effects = not_due;
+        let turn_player = self.turn_player();
+        let count = due.len();
+        for eff in due {
+            let card_id = self
+                .card_data_for_handle(eff.source_card)
+                .map(|data| data.card_id.clone())
+                .unwrap_or_default();
+            self.effect_queue.push_back(QueuedEffect {
+                source_card: eff.source_card,
+                source_permanent: eff.source_permanent,
+                source_kind: eff.source_kind,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: true,
+                controller: eff.controller,
+                timing: t,
+                trigger_context: None,
+                effect_slot: 0,
+                // Pending processing is performed at its timing (§18-1-1);
+                // it is not a "you may" effect.
+                is_optional: false,
+                is_turn_player: eff.controller == turn_player,
+                card_id,
+                allow_below_top_liveness: false,
+                dna_origin_context: None,
+                granted_effect_id: None,
+                keyword_effect: None,
+                trigger_batch: 0,
+                scheduled: Some(Box::new(eff)),
+            });
         }
+        count
     }
-    // Restore non-matching effects, then append any newly-scheduled effects
-    // that landed during firing (these go to the back of the queue).
-    let mut new_queue = still_pending;
-    new_queue.append(&mut game.scheduled_effects);
-    game.scheduled_effects = new_queue;
+}
+
+/// Run one scheduled body (a `QueuedEffect::scheduled` payload) through
+/// `run_steps` with its captured bindings and runtime, against a fresh
+/// `EffectContext` whose controller is the scheduling effect's controller.
+/// `source_permanent` is the queue entry's (battle-area removals re-key it
+/// while it waits). A body that parks on a selection resumes through the
+/// ordinary selection path; the drainer then continues the pool.
+pub(crate) fn run_scheduled_body(
+    game: &mut Game,
+    effect: ScheduledEffect,
+    source_permanent: Option<PermanentHandle>,
+) {
+    let ScheduledEffect {
+        body,
+        source_card,
+        source_kind,
+        controller,
+        captured_bindings,
+        runtime,
+        ..
+    } = effect;
+    let mut bindings = captured_bindings;
+    let mut ctx = EffectContext::new_with_source_kind(
+        game,
+        source_card,
+        source_permanent,
+        source_kind,
+        controller,
+    );
+    let _ = run_steps_with_runtime(&body, &mut ctx, &mut bindings, &runtime);
 }
 
 // ─── PUPPETS-G003 — provenance-keyed turn-end self-deletion ──────────────────
@@ -178,8 +207,8 @@ pub struct ScheduledProvenanceDeletion {
 /// Drain every [`ScheduledProvenanceDeletion`] queued this turn, deleting each
 /// still-present permanent and discarding the queue.
 ///
-/// Called from `fire_end_of_your_turn` after the printed `EndOfYourTurn`
-/// observers and the `EndOfYourTurn` scheduled-effect drain — the played
+/// Called from `fire_end_of_your_turn` after the `EndOfYourTurn` pool
+/// (printed observers + due scheduled effects) has drained — the played
 /// Digimon's own end-of-turn effects (if any) have already had their window.
 ///
 /// Each token is resolved against the live battle areas:
@@ -192,8 +221,8 @@ pub struct ScheduledProvenanceDeletion {
 /// The deletion routes through `delete_permanent_with_cause`, which honours
 /// `WhenWouldBeDeleted` replacement windows (e.g. `<Scapegoat>`). If a
 /// replacement parks a selection, the remaining entries are preserved on the
-/// queue; re-draining them is guaranteed only via an end-turn continuation
-/// resume (i.e. `resume_scheduled_drain` called from the end-turn path).
+/// queue (`Game::scheduled_provenance_deletions`); no resume hook re-drives
+/// them after that selection resolves.
 pub fn fire_scheduled_provenance_deletions(game: &mut Game) {
     use crate::replacement::ReplacementCause;
 

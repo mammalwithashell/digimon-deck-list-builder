@@ -82,7 +82,11 @@ impl Game {
             turn_count: self.turn_count,
         });
 
-        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::UntilNextUnsuspend);
+        // Pending processing due at the turn player's next unsuspend phase
+        // (§18-1-1). Several due at once are one simultaneous pool (§18-1-2).
+        if self.enqueue_scheduled_for_timing(EffectTiming::UntilNextUnsuspend) > 0 {
+            self.drain_effect_queue();
+        }
 
         // Reset per-turn state. [Once Per Turn] counters reset for BOTH
         // players — "per turn" is per GAME turn, so an [All Turns][Once Per
@@ -504,15 +508,11 @@ impl Game {
                 );
             }
         }
+        // §18-1-2: pending processing due at the end of the opponent's turn
+        // pools with the printed `EndOfOpponentsTurn` effects above.
+        self.enqueue_scheduled_for_timing(EffectTiming::EndOfOpponentsTurn);
+        self.enqueue_scheduled_for_timing(EffectTiming::EndOfOpponentsNextTurn);
         self.drain_effect_queue();
-
-        // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
-        // EndOfOpponentsTurn after the printed-observer fan-out.
-        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfOpponentsTurn);
-        crate::scheduled_effects::fire_scheduled_for_timing(
-            self,
-            EffectTiming::EndOfOpponentsNextTurn,
-        );
 
         // PUPPETS-G016: drain provenance-keyed deletions scheduled for
         // the end of the opponent's turn ("At the end of your opponent's
@@ -1043,21 +1043,20 @@ impl Game {
                 crate::selection::TriggerSource::SecurityStackCard { player, card },
             );
         }
-        self.drain_effect_queue();
-
-        // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
-        // EndOfYourTurn here. Printed observers fire first (above);
-        // scheduled bodies fire AFTER — they're the turn-end
-        // housekeeping that printed text scheduled when its own observer
-        // ran earlier.
+        // §18-1-2: pending processing due at the end of this turn
+        // (`ScheduledEffect`s for `EndOfYourTurn` / `EndOfYourNextTurn`)
+        // joins the printed `[End of Your Turn]` effects in ONE simultaneous
+        // pool, ordered by the turn player (§15-4-3-5-1) -- not run after
+        // them. G-ENGINE-PENDING-PROCESSING-OUTSIDE-TRIGGER-POOL.
         //
         // Note: `EffectTiming` does not have a unified `EndOfTurn`
         // variant — the enum collapses to `EndOfYourTurn` (active
         // player) and `EndOfOpponentsTurn` (inactive players, fired
-        // from `rotate_turn_player`). Both peer drains are wired
+        // from `rotate_turn_player`). Both peer pools are built
         // separately at their respective observer-fire sites.
-        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfYourTurn);
-        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfYourNextTurn);
+        self.enqueue_scheduled_for_timing(EffectTiming::EndOfYourTurn);
+        self.enqueue_scheduled_for_timing(EffectTiming::EndOfYourNextTurn);
+        self.drain_effect_queue();
 
         // PUPPETS-G003: drain provenance-keyed turn-end self-deletions ("At
         // turn end, delete the Digimon this effect played"). Runs after the

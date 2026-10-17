@@ -1169,12 +1169,10 @@ pub struct Game {
     pub(crate) dsl_clause_aborted: bool,
 
     /// Phase 2f4 Task 1 â€” one-shot delayed-effect queue. Entries are scheduled
-    /// via `EffectContext::schedule_delayed` and drained by
-    /// `scheduled_effects::fire_scheduled_for_timing` whose `when:` matches.
-    /// Task 2 wires the drain into observer-fire boundaries (turn end, etc.).
+    /// via `EffectContext::schedule_delayed` and moved into the effect queue by
+    /// `Game::enqueue_scheduled_for_timing` when their `when:` timing occurs,
+    /// joining that timing's printed triggers in one pool (§18-1-2).
     pub scheduled_effects: Vec<crate::scheduled_effects::ScheduledEffect>,
-    /// Continuation for a scheduled-effect drain paused by a DSL selection.
-    pub scheduled_drain_tail: Option<crate::scheduled_effects::ScheduledDrainTail>,
 
     /// PUPPETS-G003 â€” provenance-keyed deletions scheduled for this turn's
     /// end. An effect that plays a Digimon and must delete *that specific

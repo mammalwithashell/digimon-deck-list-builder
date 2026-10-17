@@ -225,7 +225,6 @@ fn pending_processing_fires_at_its_timing_like_a_trigger() {
 /// §15-4-3-5-1) chooses their order in ONE `TriggerOrder` prompt, and either
 /// order is honoured.
 #[test]
-#[ignore = "G-ENGINE-PENDING-PROCESSING-OUTSIDE-TRIGGER-POOL (§18-1-2)"]
 fn pending_processing_orders_with_simultaneous_triggers() {
     cite!(
         "18-1-2",

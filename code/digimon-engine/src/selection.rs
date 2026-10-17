@@ -493,6 +493,17 @@ pub struct QueuedEffect {
     /// resolved) — derived triggers resolve before the still-pending ones
     /// (DCGO `MultipleSkills.cs` nested `TriggeredSkillProcess`).
     pub trigger_batch: u32,
+    /// §18-1-2 — when `Some`, this entry is PENDING PROCESSING (a
+    /// `ScheduledEffect` from `EffectContext::schedule_delayed`) that joined
+    /// its timing's simultaneous pool via `Game::enqueue_scheduled_for_timing`.
+    /// The drainer orders it like any trigger, then runs the captured body
+    /// (`scheduled_effects::run_scheduled_body`) instead of looking up
+    /// `effects_for_card(card_id)[effect_slot]`: it has no `Effect` metadata
+    /// (no condition, cost, OPT or optionality) and no source-liveness gate,
+    /// since pending processing is performed at its timing even when its
+    /// source has left (§18-1-1). `card_id` / `effect_slot` (0) only label
+    /// the `TriggerOrder` branch. Plain data, so `Game: Clone` stays faithful.
+    pub scheduled: Option<Box<crate::scheduled_effects::ScheduledEffect>>,
 }
 
 /// Queued triggered effect parked after its `pay_cost_fn` installed a
@@ -989,16 +1000,15 @@ pub enum SecurityPhase {
     /// security per §13-1-8-3-2).
     BattleResolved,
     /// Finish deletion/replacement processing, then notify battle observers
-    /// before disposing of the revealed card or starting another check.
+    /// (with the pending processing due at the end of the battle in the same
+    /// pool, §18-1-2) before disposing of the revealed card or starting
+    /// another check.
     /// The comparison is captured once; a paused effect must not rerun it.
     EndOfSecurityBattleDrain {
         attacker: PermanentHandle,
         attacker_top: Option<CardHandle>,
         winner: Option<PermanentHandle>,
     },
-    /// Scheduled battle effects wait for ordinary battle observers and have
-    /// their own one-shot enqueue guard across parked choices.
-    EndOfSecurityBattleScheduledDrain,
     /// Offer `WhenWouldLoseSecurity` replacements before the revealed card is
     /// finally removed from the security stack.
     WhenWouldLoseSecurity,
