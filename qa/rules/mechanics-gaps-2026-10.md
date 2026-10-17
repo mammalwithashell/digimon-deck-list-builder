@@ -356,6 +356,7 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 - `G-ENGINE-OPTION-TRASH-NO-EVENT` (§9-1-5, no obligation of its own): a used Option's trash emits no `GameEvent`.
 - `G-ENGINE-ENGAGE-EOT-PASS-ONLY-STEP` (§16-44-1, no obligation of its own): after an <Engage> attack the turn parks once more with PASS as the only legal action.
 - `G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP` (§15-15-5-2 / §15-15-5-4): a keyword granted (`grant_keyword`) to an immune Digimon is skipped instead of suppressed, so it never applies after the immunity ends; no authored opponent-side keyword grant (BT22-029 grants <Blocker> to its own Puppet Digimon); reachable only as an own grant under an own-effect immunity (the Quantumon shape), in both directions (granted while immune is lost; granted before keeps applying, against Q6178). Modifier-backed gains and granted triggered effects are fixed (`G-ENGINE-UNAFFECTED-SKIPS-INSTEAD-OF-SUPPRESSES`).
+- `G-ENGINE-DEPARTED-TOKEN-CONTEXT-FALLS-BACK-TO-RULE` (§15-2-1-1, no obligation of its own; filed by Plan 4 Task 26 review): a context rebuilt by handle for a token that has left play (`dsl_cards/step/mod.rs` ~L273 tail rewrap) resolves as a rule effect, because the kind fallback looks the token up by zone; no authored token reaches it (all token effects are raw_rust and carry their kind).
 
 The other 330 non-blocking mechanics-set gaps (and 279 outside it) are untriaged defaults with no test, mostly chapters 1-10.
 

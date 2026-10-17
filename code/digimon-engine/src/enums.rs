@@ -41,6 +41,10 @@ impl EffectSourceKind {
     /// effect"); DCGO agrees (`AutoProcessing.cs` sets `IsDigimonEffect` for a
     /// token permanent's effects). `Rule` is kept for genuinely card-less
     /// processing only. G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE.
+    ///
+    /// `CardKind::Token` means a Digimon token: every registered token prints
+    /// as a Digimon (`token_registry.rs`; no Tamer token exists). A future
+    /// non-Digimon token needs its own kind, not this arm.
     pub fn for_card_kind(kind: CardKind) -> Self {
         match kind {
             CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual | CardKind::Token => {

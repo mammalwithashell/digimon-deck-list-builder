@@ -1005,9 +1005,11 @@ pub struct Game {
     /// The cause of the deletion currently being observed by `OnDeletion`
     /// effects. Set by `commit_permanent_deletion` immediately before
     /// `enqueue_triggered(OnDeletion, ...)`; cleared after the drain via a
-    /// panic-safe `catch_unwind` scope at the fire-site. Read by
+    /// panic-safe `catch_unwind` scope at the fire-site. The fallback for
     /// `EffectContext::deletion_cause()` / `was_deleted_by_effect()` /
-    /// `was_deleted_by_opponent()`.
+    /// `was_deleted_by_opponent()`: all three read the deleted object's
+    /// snapshot cause first (`observed_deletion_cause`, rule 25), since this
+    /// slot is already restored when the `[On Deletion]` bundle is deferred.
     ///
     /// `None` outside an OnDeletion observer body. Phase B Â§B5.
     #[doc(hidden)]
