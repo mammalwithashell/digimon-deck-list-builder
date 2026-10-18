@@ -1616,7 +1616,7 @@ EndOfOpponentsNextTurn      # Track H — "until the end of their next turn" (EX
                             # then expires at the SECOND end-of-opp-turn after install.
                             # Tracked via a `pending_skips` counter on `ModifierEntry`.
 EndOfYourNextTurn           # Track H — symmetric mirror, "until the end of your next turn"
-EndOfAttack                 # cleared when the current attack resolves
+EndOfAttack                 # cleared when the current attack ends, i.e. after its End of Attack pool has resolved (§11-6-2)
 EndOfBattle                 # cleared when the current battle resolution finishes
 UntilLeaveField             # cleared when the source permanent leaves the field
 UntilCondition              # active while a per-entry boolean predicate holds; re-evaluated
@@ -3290,6 +3290,8 @@ retarget rider was deleted (2026-10-17, G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUS
 
 **`AttackState::PostBattle`** — processes owed `<Piercing>` before EndOfAttack, after battle rewards resolve. The active attacking Digimon can earn Piercing by deleting an opponent in either the attack's ordinary battle or an effect-caused battle during that attack. A vanished declared target does not erase this pending check. There is only one transition to security checking per attack: an ordinary player-attack check consumes that transition, and multiple Piercing activations cannot add another. A nonattacking effect battler cannot earn Piercing for the attacker. Ending the attack by an effect skips to EndOfAttack; removing the attacker also prevents its pending check. See official rules 16-6-2/4, 15-15-1-1 and [Bandai's CRM4 clarification](https://en.digimoncard.com/rule/revised/).
 
+**`AttackState::EndOfAttackDrain(outcome)`** — the End of Attack timing (§11-6-2: "the attack won't end until all processing has been resolved"). `cleanup_attack` enqueues the `EndOfAttack` effects of every battle area plus the scheduled pending processing due then (one §18-1-2 pool, e.g. `<Execute>`'s deletion, §16-38-4), sets this state carrying the attack's outcome, and drains. While the pool resolves the attack is still in progress: `pending_attack` stays set, the attacker keeps `is_attacking` (`current_attacker()` is valid), and the "for the attack" (`Expiry::EndOfAttack`) modifiers still apply. If the pool parks on a decision the attack entry point returns `AttackResult::InProgress`; the `resolve_selection` tail drains the rest and re-enters `advance_pending_attack`, whose `EndOfAttackDrain` arm calls `finish_attack_after_end_of_attack_timing`: clear `is_attacking`, `expire_end_of_attack()`, clear `pending_attack`, rule check, turn-end check, and return the carried outcome. The state is plain data (clone-safe). After an end-of-turn attack (`PendingAttack::return_phase == EndOfTurnAction`) the finish arms `settle_end_of_turn_attack` (`game_phases.rs`): once nothing is resolving it re-checks `has_end_of_turn_keywords` and rotates the turn when no end-of-turn action is left (§16-44-1; no PASS-only step), otherwise the `EndOfTurnAction` window stays open. An effect in the End of Attack pool must not declare a new attack (`begin_attack_open` refuses it while this state is held; no card does so).
+
 ### Keyword consumers wired
 
 | Keyword | Consumer site | Behavior |
@@ -4603,8 +4605,12 @@ API via `Effect` builders.
 `PendingSelection` during `GamePhase::EndOfTurnAction`; it never auto-deletes a
 cost permanent. The selection stores the exact legal cost action IDs in
 `valid_action_ids`, uses the selecting Overclock controller as
-`selecting_player`, sets `is_optional = true`, and restores
-`EndOfTurnAction` after either a cost pick or `PASS`.
+`selecting_player`, sets `is_optional = true`. `PASS` restores
+`EndOfTurnAction`. A cost pick deletes the cost and starts the Overclock
+attack from `EndOfTurnAction`; once that attack has ended (after its End of
+Attack pool, §11-6-2) the end of turn continues: the `EndOfTurnAction` window
+stays open only if another end-of-turn action is still available, otherwise
+the turn rotates (§16-34-1, §16-44-1; `settle_end_of_turn_attack`).
 
 Candidate action IDs reuse the field-target half of the attack range:
 `encode_attack(0, field_index)`. The action mask must emit only those stored

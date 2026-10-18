@@ -478,6 +478,9 @@ impl Game {
         // don't leak across turns. Matches Python's clear in `switch_turn`.
         self.revealed_cards.clear();
         self.declined_overclock_this_eot.clear();
+        // An end-of-turn attack's settle request belongs to this turn's end:
+        // never carry it into the next turn's `EndOfTurnAction` window.
+        self.end_of_turn_attack_settle_pending = false;
 
         // Expire end-of-turn modifiers/keywords for the ending player's turn.
         // Track H Phase 4k: collect body_ids from granted-triggered entries
@@ -595,6 +598,44 @@ impl Game {
         }
         let ending_player = self.turn_player();
         self.rotate_turn_player(ending_player);
+    }
+
+    /// §16-44-1 (Ver. 4.3): the <Engage> Digimon "may attack at the end of
+    /// your turn"; once that attack is over the end of turn continues, with
+    /// no further decision. Same for <Execute> (§16-38-1), <Vortex>
+    /// (§16-33-1) and <Overclock> (§16-34-1). After an end-of-turn attack has
+    /// ended (`finish_attack_after_end_of_attack_timing` sets
+    /// `end_of_turn_attack_settle_pending`) and nothing is resolving any
+    /// more, re-check the end-of-turn keywords: if another end-of-turn
+    /// action is still available the `EndOfTurnAction` window stays open
+    /// (PASS declines it); otherwise the turn rotates here instead of
+    /// parking on a PASS-only step (G-ENGINE-ENGAGE-EOT-PASS-ONLY-STEP).
+    ///
+    /// Called at the attack's end and again from the `resolve_selection`
+    /// tail, once its resolution depth has unwound, for an attack that ended
+    /// inside a selection's resolution (e.g. its End of Attack pool parked,
+    /// or an `<Overclock>` attack declared by the sacrifice pick).
+    pub(crate) fn settle_end_of_turn_attack(&mut self) {
+        if !self.end_of_turn_attack_settle_pending {
+            return;
+        }
+        if self.pending_selection.is_some()
+            || self.pending_attack.is_some()
+            || !self.effect_queue.is_empty()
+            || self.effect_drain_depth > 0
+            || self.draining_deferred > 0
+            || self.selection_resolution_depth > 0
+        {
+            return;
+        }
+        self.end_of_turn_attack_settle_pending = false;
+        if self.game_over || self.current_phase != GamePhase::EndOfTurnAction {
+            return;
+        }
+        if self.has_end_of_turn_keywords(self.turn_player()) {
+            return;
+        }
+        self.pass_end_of_turn_action();
     }
 
     /// Perform a parked Breeding → Main advance once the selection that

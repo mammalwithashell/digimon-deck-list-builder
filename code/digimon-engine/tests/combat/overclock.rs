@@ -245,8 +245,13 @@ fn full_flow_sacrifice_and_attack_resolves_on_security() {
         !oc_perm.is_suspended,
         "<Overclock> attack must not suspend the attacker"
     );
-    // Phase returned to EndOfTurnAction so further EOT actions can continue.
-    assert_eq!(r.game.current_phase, GamePhase::EndOfTurnAction);
+    // §16-34-1 / §16-44-1 (G-ENGINE-ENGAGE-EOT-PASS-ONLY-STEP): the attack
+    // was the end-of-turn action. With no further end-of-turn action left
+    // (the only other Digimon was sacrificed) the end of turn continues: the
+    // turn passes with no PASS-only `EndOfTurnAction` step. (When another
+    // end-of-turn action remains the window stays open.)
+    assert_ne!(r.game.current_phase, GamePhase::EndOfTurnAction);
+    assert_eq!(r.game.turn_player(), opp, "the turn passed");
 }
 
 #[test]

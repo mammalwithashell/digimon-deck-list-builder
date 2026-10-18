@@ -381,13 +381,15 @@ impl Game {
 
     /// Attack another Digimon on the opponent's field.
     ///
-    /// Returns the terminal battle outcome — **unless** an interrupt
-    /// (Block, Alliance, Counter) parks the attack on a `PendingSelection`,
+    /// Returns the terminal battle outcome — **unless** a decision parks the
+    /// attack on a `PendingSelection` (an interrupt such as Block or
+    /// Counter, an effect's pick, or a decision in the End of Attack pool,
+    /// §11-6-2, which keeps the attack in `AttackState::EndOfAttackDrain`),
     /// in which case `AttackResult::InProgress` is returned and the caller
-    /// continues resolving via `Game::resolve_selection`. The attack
-    /// resumes automatically inside that callback and will eventually
-    /// return a terminal outcome — inspect it via `last_attack_result`
-    /// after the selection chain clears.
+    /// continues resolving via `Game::resolve_selection`. The attack resumes
+    /// automatically in the post-selection tail; once the chain clears,
+    /// `pending_attack` is `None` and the result shows in the game state
+    /// (no result value is stored).
     ///
     /// `vortex` — see [`Game::can_attack`]. It only exempts the
     /// played-this-turn check (§16-33-1); a Vortex attack still runs the
@@ -532,6 +534,19 @@ impl Game {
         let TargetConstraint::Forced(target) = target_constraint else {
             return AttackResult::Invalid;
         };
+        // §11-6-2: while the End of Attack timing's pool is resolving
+        // (`AttackState::EndOfAttackDrain`, parked or inline) the previous
+        // attack has not ended. A new declaration would overwrite its
+        // `pending_attack`, so its end (is_attacking clear, end-of-attack
+        // expiry) would never run. No card declares an attack from an End of
+        // Attack effect today; refuse rather than corrupt the attack in
+        // progress (G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE).
+        if matches!(
+            self.pending_attack.as_ref().map(|pa| pa.state),
+            Some(AttackState::EndOfAttackDrain(_))
+        ) {
+            return AttackResult::Invalid;
+        }
         let vortex = matches!(initiator, AttackInitiator::Vortex);
         let skips_suspend_cost = !suspend_attacker;
 
@@ -769,6 +784,13 @@ impl Game {
             let declaration_committed = pa.declaration_committed;
             let security_check_started = pa.security_check_started;
 
+            // §11-6-2: the End of Attack timing's pool parked on a decision
+            // and has now resolved (the loop-top guard yields while anything
+            // is pending): only now does the attack end.
+            if let AttackState::EndOfAttackDrain(outcome) = state {
+                return self.finish_attack_after_end_of_attack_timing(outcome);
+            }
+
             // Phase 9: a `WhenWouldAttack` / `WhenWouldBeAttackTarget`
             // replacement (or a `ctx.cancel_attack()` from a later phase)
             // may have flagged the attack as cancelled while an optional
@@ -933,6 +955,14 @@ impl Game {
                     // Shouldn't normally reach here — cleanup_attack is
                     // called on transition into Cleanup. Defensive exit.
                     return self.cleanup_attack(AttackResult::Invalid);
+                }
+                AttackState::EndOfAttackDrain(outcome) => {
+                    // Unreachable: handled by the early arm above, which must
+                    // precede the cancel / liveness checks (an attacker
+                    // deleted in the pool, e.g. by <Execute>, must not divert
+                    // to `cleanup_attack` and run the End of Attack again).
+                    // Kept only for exhaustiveness; same single finish.
+                    return self.finish_attack_after_end_of_attack_timing(outcome);
                 }
             }
         }
@@ -3903,10 +3933,21 @@ impl Game {
         }
     }
 
-    /// End-of-attack cleanup: clear `is_attacking`, expire EndOfAttack
-    /// modifiers, drop `pending_attack`, and pass `outcome` through to the
-    /// caller. Called from both `begin_attack` (early-exit paths) and
-    /// `advance_pending_attack` (normal terminal paths).
+    /// The End of Attack timing, then the end of the attack. Called from
+    /// both `begin_attack` (early-exit paths) and `advance_pending_attack`
+    /// (normal terminal paths).
+    ///
+    /// §11-6-2 (Ver. 4.3): "For the end of the attack timing, the attack
+    /// won't end until all processing has been resolved." The timing's pool
+    /// is drained while the attack is still in progress; if it parks on a
+    /// decision, `pending_attack` stays set in
+    /// `AttackState::EndOfAttackDrain(outcome)` and this returns
+    /// `InProgress`. The post-selection resume (`advance_pending_attack`)
+    /// then calls `finish_attack_after_end_of_attack_timing`, which clears
+    /// `is_attacking`, expires the end-of-attack modifiers, drops
+    /// `pending_attack` and returns `outcome`. DCGO `AttackProcess.cs`
+    /// `EndAttack()` likewise yields on the `OnEndAttack` stack before its
+    /// clean-up step.
     fn cleanup_attack(&mut self, outcome: AttackResult) -> AttackResult {
         // A `<Piercing>` that activated in a battle's trigger pool -- the
         // attack's own battle, or an effect battle the attacking Digimon won
@@ -3940,23 +3981,11 @@ impl Game {
                     .unwrap_or(false)),
             "pre-declaration cancellation cannot have reached battle"
         );
-        // The attacker by identity: a DNA / DigiXros field removal does not
-        // re-key `pa.attacker`, and a Digimon that compacted into its slot is
-        // not the attacker. Nothing to clear once it has left.
-        if let Some(h) = self.live_attack_attacker() {
-            if let Some(perm) = self
-                .player_mut(h.player)
-                .battle_area
-                .get_mut(h.index as usize)
-            {
-                perm.is_attacking = false;
-            }
-        }
-
         // EndOfAttack: observer timing, fires in every player's battle area.
-        // Used by "at the end of an attack" effects. Fires before modifiers
-        // are expired and pending_attack is cleared, so effects can still
-        // inspect the attack context.
+        // Used by "at the end of an attack" effects. The attack is still in
+        // progress (§11-6-2): the attacker is still attacking, the modifiers
+        // "for the attack" still apply and `pending_attack` is still set, so
+        // every effect in the pool sees the attack context.
         for pid in 0..self.players.len() {
             self.enqueue_triggered(
                 crate::enums::EffectTiming::EndOfAttack,
@@ -3968,7 +3997,53 @@ impl Game {
         // the turn player), before modifier expiry / the `pending_attack`
         // clear, so both see the same attack context.
         self.enqueue_scheduled_for_timing(crate::enums::EffectTiming::EndOfAttack);
+        self.transition_attack_state(AttackState::EndOfAttackDrain(outcome));
         self.drain_effect_queue();
+        // §11-6-2: a decision in the pool (a `TriggerOrder`, an optional
+        // effect, a body's own pick) holds the attack open; the resume
+        // re-enters `advance_pending_attack`, whose `EndOfAttackDrain` arm
+        // finishes it. (No `pending_attack` means no attack to hold open:
+        // finish at once, as before.)
+        //
+        // Park on a selection ONLY, not on a non-empty queue: the resume is
+        // the `resolve_selection` tail, so only a selection re-enters
+        // `advance_pending_attack`; parking on a queue with no selection would
+        // strand the attack. `drain_effect_queue` returns with a non-empty
+        // queue and no selection only when the game halted (the queue is
+        // cleared then), so the two predicates agree in practice. Do not
+        // "align" this with the resume's loop-top guard.
+        if self.pending_selection.is_some() && self.pending_attack.is_some() {
+            return AttackResult::InProgress;
+        }
+        self.finish_attack_after_end_of_attack_timing(outcome)
+    }
+
+    /// The end of the attack, once the End of Attack timing's processing has
+    /// all resolved (§11-6-2): the attacker stops attacking, the
+    /// end-of-attack modifiers expire, `pending_attack` clears, the rule
+    /// check and the turn-end check run, and an end-of-turn attack lets the
+    /// end of turn continue. Returns `outcome`.
+    pub(crate) fn finish_attack_after_end_of_attack_timing(
+        &mut self,
+        outcome: AttackResult,
+    ) -> AttackResult {
+        let end_of_turn_attack = self
+            .pending_attack
+            .as_ref()
+            .is_some_and(|pa| pa.return_phase == crate::enums::GamePhase::EndOfTurnAction);
+        // The attacker by identity: a DNA / DigiXros field removal does not
+        // re-key `pa.attacker`, and a Digimon that compacted into its slot is
+        // not the attacker. Nothing to clear once it has left (e.g. deleted
+        // by `<Execute>` in the End of Attack pool).
+        if let Some(h) = self.live_attack_attacker() {
+            if let Some(perm) = self
+                .player_mut(h.player)
+                .battle_area
+                .get_mut(h.index as usize)
+            {
+                perm.is_attacking = false;
+            }
+        }
 
         self.modifiers.expire_end_of_attack();
         self.pending_attack = None;
@@ -4001,6 +4076,13 @@ impl Game {
         // unless memory < 0 with no pending selection.
         if self.current_phase == crate::enums::GamePhase::Main {
             self.check_turn_end();
+        }
+        // §16-44-1 / §16-38-1 / §16-33-1 / §16-34-1: an end-of-turn attack is
+        // over; the end of turn continues (no PASS-only step). Settled once
+        // nothing is resolving (`settle_end_of_turn_attack`).
+        if end_of_turn_attack {
+            self.end_of_turn_attack_settle_pending = true;
+            self.settle_end_of_turn_attack();
         }
         outcome
     }
@@ -4154,8 +4236,8 @@ impl Game {
     /// occupant of the slot as the attacker.
     ///
     /// Judged by the attacker's stack identity captured at declaration, not
-    /// by `is_attacking` (which `cleanup_attack` clears before EndOfAttack,
-    /// when the attacker is still there).
+    /// by `is_attacking` (which `finish_attack_after_end_of_attack_timing`
+    /// clears once the End of Attack timing has resolved, §11-6-2).
     pub(crate) fn live_attack_attacker(&self) -> Option<PermanentHandle> {
         let pa = self.pending_attack.as_ref()?;
         if !pa.declaration_committed {

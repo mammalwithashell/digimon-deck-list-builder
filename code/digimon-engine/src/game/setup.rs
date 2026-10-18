@@ -314,6 +314,7 @@ impl Game {
             pending_end_turn_resume: None,
             pending_turn_boundary_resume: None,
             pending_enter_main_after_selection: false,
+            end_of_turn_attack_settle_pending: false,
             draining_deferred: 0,
             source_trash_event_open: false,
             turn_end_check_deferred: false,
@@ -501,6 +502,7 @@ impl Game {
         self.pending_end_turn_resume = None;
         self.pending_turn_boundary_resume = None;
         self.pending_enter_main_after_selection = false;
+        self.end_of_turn_attack_settle_pending = false;
         self.draining_deferred = 0;
         self.source_trash_event_open = false;
         self.turn_end_check_deferred = false;

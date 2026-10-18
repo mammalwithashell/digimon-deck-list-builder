@@ -1290,6 +1290,13 @@ pub struct Game {
     /// Breeding phase (double `StartOfYourMainPhase` â€” user bug 2026-07-09).
     /// Re-entered from `resolve_selection` via `resume_pending_enter_main`.
     pub(crate) pending_enter_main_after_selection: bool,
+    /// An end-of-turn attack (`<Engage>`, `<Execute>`, `<Vortex>`,
+    /// `<Overclock>`; `PendingAttack::return_phase == EndOfTurnAction`) has
+    /// ended while processing was still resolving (inside a selection's
+    /// resolution or an effect drain). `settle_end_of_turn_attack` re-checks
+    /// the end-of-turn keywords once everything has settled and lets the end
+    /// of turn continue (§16-44-1). Plain data: survives `Game::clone`.
+    pub(crate) end_of_turn_attack_settle_pending: bool,
 
     /// Deferred-drain depth counter (post-2026-05-23 architectural change).
     ///
