@@ -35,7 +35,7 @@
 #       (PermanentOfThisCard().TopCard.ContainsCardName("Imperialdramon")
 #        || PermanentOfThisCard().TopCard.CardTraits.Contains("Free"))
 #     The inherited clause is now implemented as an inherited self aura with
-#     `active_when`; `self_digivolution_contains_name` scans the carrier stack,
+#     `active_when`; `source_name_contains` checks the carrier top card's name,
 #     `source_permanent_trait_has` checks the carrier top card's [Free] trait,
 #     and `your_turn` gates the materialized keyword tick.
 

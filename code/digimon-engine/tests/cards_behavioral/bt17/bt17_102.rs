@@ -26,7 +26,7 @@
 //!
 //! # Patterns covered
 //! - Standard + alt digivolve paths (Lv.3 Red and Lv.3 w/Agumon name)
-//! - [When Digivolving] conditional DP buff via `source_name_contains` (this Digimon's name)
+//! - [When Digivolving] conditional DP buff via `source_name_is` (this Digimon's name, exact)
 //! - [All Turns] dynamic source-derived effective names
 //! - [On Deletion] modal branch (play OR hatch) with optional decline
 //! - Inherited [On Deletion] mirror clause via `scope: inherited`
@@ -37,7 +37,7 @@
 //! |---------------------------------------------------------|------------------------------------------------------------------------------|-----------------------|
 //! | Standard digivolve Lv.3 Red / cost 3                    | `alt_paths[0]` `level_eq: 3, color_is: red, cost: 3`                         | OK                    |
 //! | Alt digivolve Lv.3 w/Agumon-name / cost 2               | `alt_paths[1]` `level_eq: 3, name_contains: Agumon, cost: 2, ignore_reqs`    | OK                    |
-//! | [When Digivolving] +3000 DP if name is [Koromon]        | `condition: { source_name_contains: Koromon }` + `add_dp_modifier`           | OK                    |
+//! | [When Digivolving] +3000 DP if name is [Koromon]        | `condition: { source_name_is: Koromon }` + `add_dp_modifier`                 | OK                    |
 //! | [When Digivolving] then delete opp Digimon ≤ self DP    | `select_opponent_permanent` + `dp_lte: { formula: { source_dp: {} } }`       | OK (G-FORMULA-SOURCE-DP resolved) |
 //! | [All Turns] dynamic name aliasing from material stack   | `identity.source_name_aliases: [{ level_lte: 3 }]`                            | OK                    |
 //! | [On Deletion] may play Tai/Kari Tamer free OR hatch     | `when: on_deletion`, `optional: true`, `select_effect_choice` + 2 branches    | OK                    |
@@ -71,7 +71,7 @@
 //!   current level-3-or-lower source cards and routes name predicates through
 //!   the synthesized permanent identity.
 //!
-//! - **G-DSL-SELF-NAME-IS** — RESOLVED: `source_name_contains` reads this
+//! - **G-DSL-SELF-NAME-IS** — RESOLVED: `source_name_is` reads this
 //!   Digimon's name (its top card's synthesized names, including the names the
 //!   [All Turns] clause gains). The stack-scanning
 //!   `self_digivolution_contains_name` it used before also counted a
@@ -369,7 +369,7 @@ fn bt17_102_when_digivolving_with_koromon_in_stack_buffs_self_3000() {
     let stack = runner.place_stack(0, &["KORO", "BT17-102"]);
 
     // Manually fire the [When Digivolving] timing via OnPlay for the top card
-    // (carrier). The DSL clause's `condition: { source_name_contains:
+    // (carrier). The DSL clause's `condition: { source_name_is:
     // "Koromon" }` should match because the [All Turns] clause gives this
     // Digimon the name of its level-2 Koromon digivolution card.
     fire_when_digivolving(&mut runner, stack);
@@ -861,4 +861,29 @@ fn bt17_102_real_digivolve_over_koromon_line_buffs_3000() {
     assert_eq!(top, "BT17-102", "BT17-102 digivolved onto the Lv.3 [Agumon]");
     let dp = runner.effective_dp(base).expect("perm has DP");
     assert_eq!(dp, 8000, "the gained [Koromon] name enables +3000; got {dp}");
+}
+
+/// Near-miss exact name: a level-2 digivolution card named "Koromon (X
+/// Antibody)" gives this Digimon that name through the [All Turns] name gain,
+/// but "this Digimon's name is [Koromon]" is an exact match (DCGO
+/// `EqualsCardName`; `source_name_is`): no +3000.
+#[test]
+fn bt17_102_when_digivolving_requires_the_exact_koromon_name() {
+    let mut near_miss = make_koromon("KORO-X");
+    near_miss.card_name = "Koromon (X Antibody)".to_string();
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-102")
+        .expect("BT17-102 in embedded DSL pack")
+        .add_card(near_miss)
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    let stack = runner.place_stack(0, &["KORO-X", "BT17-102"]);
+    runner.game.tick_declarative_effects();
+    fire_when_digivolving(&mut runner, stack);
+    let _ = runner.auto_resolve();
+
+    let dp = runner.effective_dp(stack).expect("perm has DP");
+    assert_eq!(dp, 5000, "[Koromon (X Antibody)] is not [Koromon]; got {dp}");
 }

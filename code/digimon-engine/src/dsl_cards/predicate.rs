@@ -694,6 +694,23 @@ fn eval_predicate_ref(
             return false;
         }
     }
+    if let Some(ref want) = pred.source_name_is {
+        // "this Digimon is [X]" / "this Digimon's name is [X]": an EXACT match
+        // on one of the carrier's names -- its top card's synthesized rules
+        // names (printed, "also treated as", gained by effects), the same
+        // identity `source_name_contains` reads. Digivolution cards are not
+        // read (§4-8-2; DCGO `TopCard.EqualsCardName`).
+        // G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS.
+        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+            return false;
+        };
+        if !rctx
+            .game
+            .card_rules_name_matches(perm.top_card().handle(), |name| name == want.as_str())
+        {
+            return false;
+        }
+    }
     if let Some(ref trait_name) = pred.source_permanent_trait_has {
         let Some(perm) = subject_or_source_permanent(subject, rctx) else {
             return false;

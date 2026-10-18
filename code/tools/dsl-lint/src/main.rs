@@ -198,11 +198,19 @@ fn lint_file(
     }
 }
 
-/// Cards confirmed to use `self_digivolution_contains_name` for a printed
-/// "[X] in its name or digivolution cards" clause (the one shape that reads
-/// the top card AND the digivolution cards), as `(card id, printed clause)`.
-/// Empty: no production card prints that shape today.
-const SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST: &[(&str, &str)] = &[];
+/// Clauses confirmed to use `self_digivolution_contains_name` for a printed
+/// "[X] in its name or with [X] in its digivolution cards" condition (the one
+/// shape that reads the top card AND the digivolution cards), as
+/// `(card id, clause summary, printed clause)`. An entry exempts only the
+/// clause whose `summary:` equals its summary, never the whole card.
+///
+/// Empty today: no authored card uses that shape. Its future legitimate users
+/// are the unauthored BT9-096 ([Jellymon]), BT10-102 ([Angoramon]) and
+/// BT11-034 ([Dorulumon]), which print "a Digimon in play with [X] in its name
+/// or with [X] in its digivolution cards" (a candidate Digimon in play, read
+/// inside a permanent filter): add each here with its printed clause when it
+/// is authored.
+const SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST: &[(&str, &str, &str)] = &[];
 
 #[derive(Debug, PartialEq, Eq)]
 struct LintFinding {
@@ -214,29 +222,32 @@ struct LintFinding {
 /// scans the top card AND every digivolution card. A Digimon's name is its top
 /// card's (§4-7-7 ruling; Q3225; DCGO `TopCard`), and digivolution cards are
 /// read only when the text references them (§4-8-2). So:
-/// - "this Digimon's name / has [X] in its name / is [X]" -> `source_name_contains`;
+/// - "this Digimon has [X] in its name" -> `source_name_contains`;
+/// - "this Digimon is [X]" / "this Digimon's name is [X]" -> `source_name_is`;
 /// - "[X] is in this Digimon's digivolution cards" -> `self_digivolution_sources_contain_name`;
-/// - only "[X] in its name or digivolution cards" may keep the stack scan.
+/// - only "[X] in its name or with [X] in its digivolution cards" (BT9-096,
+///   BT10-102, BT11-034) may keep the stack scan.
 ///
 /// The linter cannot tell these apart reliably from the summary, so every use
 /// outside `SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST` is a warning that names
 /// the clause summary for the reviewer.
 fn check_carrier_name_stack_scan(spec: &digimon_engine::dsl::spec::CardSpec) -> Vec<LintFinding> {
-    if SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST
-        .iter()
-        .any(|(id, _)| *id == spec.card)
-    {
-        return Vec::new();
-    }
     let Ok(value) = serde_json::to_value(spec) else {
         return Vec::new();
     };
     let mut out = Vec::new();
-    walk_for_stack_name_scan(&value, String::new(), None, &mut out);
+    walk_for_stack_name_scan(&spec.card, &value, String::new(), None, &mut out);
     out
 }
 
+fn stack_name_scan_allowlisted(card: &str, summary: Option<&str>) -> bool {
+    SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST
+        .iter()
+        .any(|(id, clause_summary, _printed)| *id == card && summary == Some(*clause_summary))
+}
+
 fn walk_for_stack_name_scan(
+    card: &str,
     v: &serde_json::Value,
     path: String,
     summary: Option<&str>,
@@ -254,32 +265,37 @@ fn walk_for_stack_name_scan(
                 } else {
                     format!("{path}.{k}")
                 };
-                if k == "self_digivolution_contains_name" {
+                if k == "self_digivolution_contains_name"
+                    && !child.is_null()
+                    && !stack_name_scan_allowlisted(card, summary)
+                {
                     out.push(LintFinding {
                         path: child_path.clone(),
                         message: format!(
                             concat!(
                                 "carrier-name/stack-scan: `self_digivolution_contains_name: {}` ",
                                 "reads the top card AND every digivolution card. Use ",
-                                "`source_name_contains` for \"this Digimon's name / is [X]\" and ",
-                                "`self_digivolution_sources_contain_name` for \"[X] in this ",
+                                "`source_name_contains` for \"this Digimon has [X] in its name\", ",
+                                "`source_name_is` for \"this Digimon is [X]\" and ",
+                                "`self_digivolution_sources_contain_name` for \"[X] is in this ",
                                 "Digimon's digivolution cards\" (§4-7-7, §4-8-2; ",
                                 "G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS). Only an \"[X] in ",
-                                "its name or digivolution cards\" clause may keep it: add the card ",
-                                "to SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST with the printed ",
-                                "clause. Clause summary: {}"
+                                "its name or with [X] in its digivolution cards\" clause (BT9-096, ",
+                                "BT10-102, BT11-034) may keep it: add the clause to ",
+                                "SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST with its summary and ",
+                                "printed clause. Clause summary: {}"
                             ),
                             child,
                             summary.unwrap_or("<none>")
                         ),
                     });
                 }
-                walk_for_stack_name_scan(child, child_path, summary, out);
+                walk_for_stack_name_scan(card, child, child_path, summary, out);
             }
         }
         serde_json::Value::Array(items) => {
             for (i, child) in items.iter().enumerate() {
-                walk_for_stack_name_scan(child, format!("{path}[{i}]"), summary, out);
+                walk_for_stack_name_scan(card, child, format!("{path}[{i}]"), summary, out);
             }
         }
         _ => {}

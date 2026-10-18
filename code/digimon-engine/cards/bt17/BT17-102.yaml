@@ -59,8 +59,8 @@
 # card's names in the synthesized identity — the printed [Greymon] plus the
 # names the [All Turns] clause gains from level 3 or lower digivolution cards
 # (DCGO `TopCard.EqualsCardName("Koromon")` with `ChangeCardNamesClass`
-# applied). `source_name_contains: "Koromon"` reads exactly that; it is exact
-# in practice ("Koromon" is no other card's name or a substring of one).
+# applied). `source_name_is: "Koromon"` reads exactly that, as an exact
+# name match (never a substring).
 # FIX (G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS, 2026-10-17): was
 # `self_digivolution_contains_name: "Koromon"`, which scanned every card in
 # the stack and so also counted a [Koromon]-named card the name gain does not
@@ -125,8 +125,8 @@ effects:
   #   or less DP as this Digimon."
   #
   # Implementation status:
-  #   - +3000 DP if Koromon: IMPLEMENTED via `source_name_contains:
-  #     "Koromon"` — this Digimon's name, including the names the [All Turns]
+  #   - +3000 DP if Koromon: IMPLEMENTED via `source_name_is:
+  #     "Koromon"` — this Digimon's name (exact), including the names the [All Turns]
   #     clause gains from level 3 or lower digivolution cards (DCGO
   #     `TopCard.EqualsCardName` with `ChangeCardNamesClass`).
   #   - Delete sub-clause: IMPLEMENTED (G-FORMULA-SOURCE-DP resolved
@@ -148,7 +148,7 @@ effects:
     process:
       - if:
           condition:
-            source_name_contains: "Koromon"
+            source_name_is: "Koromon"
           then:
             - add_dp_modifier:
                 target: source

@@ -1431,3 +1431,71 @@ fn event_card_color_has_matches_when_any_listed_color_present() {
         "green event card does not match `has: [blue]`"
     );
 }
+
+/// `source_name_is` (G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS): "this
+/// Digimon is [X]" is an EXACT match on the carrier's top-card rules names
+/// (DCGO `TopCard.EqualsCardName`). It never matches a longer name that merely
+/// contains [X], and never reads a digivolution card (§4-8-2).
+fn source_name_is_gains_memory(top_name: &str, base: Option<(&str, &str)>) -> i16 {
+    let yaml = format!(
+        r#"
+card: T-SRC-NAME-IS
+name: "{top_name}"
+kind: digimon
+level: 6
+color: [white]
+cost: 12
+dp: 12000
+effects:
+  - when: when_digivolving
+    condition: {{ source_name_is: Omnimon }}
+    process:
+      - gain_memory: 1
+"#
+    );
+    let mut builder = DebugRunner::builder().from_dsl_yaml(&yaml).unwrap();
+    if let Some((id, name)) = base {
+        let mut c = make_test_card(id, name);
+        c.card_kind = CardKind::Digimon;
+        builder = builder.add_card(c);
+    }
+    let mut runner = builder.memory(0).start();
+    let stack: Vec<&str> = match base {
+        Some((id, _)) => vec![id, "T-SRC-NAME-IS"],
+        None => vec!["T-SRC-NAME-IS"],
+    };
+    let target = runner.place_stack(0, &stack);
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(target));
+    runner.game.drain_effect_queue();
+    runner.memory()
+}
+
+#[test]
+fn source_name_is_compiles_and_matches_the_top_card_name_exactly() {
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(
+        "card: T\nname: T\nkind: digimon\nlevel: 6\ncolor: [white]\ncost: 1\ndp: 1000\neffects:\n  - when: when_digivolving\n    condition: { source_name_is: Omnimon }\n    process:\n      - gain_memory: 1\n",
+    )
+    .expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    assert_eq!(
+        triggered.condition.as_ref().and_then(|c| c.source_name_is.as_deref()),
+        Some("Omnimon")
+    );
+
+    assert_eq!(source_name_is_gains_memory("Omnimon", None), 1, "exact name matches");
+    assert_eq!(
+        source_name_is_gains_memory("Omnimon (X Antibody)", None),
+        0,
+        "a longer name that contains [Omnimon] is not [Omnimon]"
+    );
+    assert_eq!(
+        source_name_is_gains_memory("Plainmon", Some(("BASE-OMNI", "Omnimon"))),
+        0,
+        "an [Omnimon] digivolution card does not make this Digimon [Omnimon]"
+    );
+}

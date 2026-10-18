@@ -713,3 +713,29 @@ fn bt20_059_inherited_applies_when_jesmon_gx_is_the_top_card() {
     assert!(runner.game.has_keyword(plain, Keyword::Reboot));
     assert!(runner.game.has_keyword(plain, Keyword::Blocker));
 }
+
+/// Near-miss exact name: a top card named "Jesmon GX (X Antibody)" contains
+/// "Jesmon GX" but is not [Jesmon GX]. "While this Digimon is [Jesmon GX]" is an
+/// exact name match (DCGO `EqualsCardName`; `source_name_is`): no grant.
+#[test]
+fn bt20_059_inherited_requires_the_exact_jesmon_gx_name() {
+    let near_miss = {
+        let mut c = jesmon_gx_card();
+        c.card_id = "JESMON-GX-X".to_string();
+        c.card_name = "Jesmon GX (X Antibody)".to_string();
+        c
+    };
+    let mut runner = builder()
+        .add_card(near_miss)
+        .add_card(own_digimon("ALLY-PLAIN", "Agumon", &["Reptile"]))
+        .memory(20)
+        .start();
+    let _carrier = runner.place_stack(0, &[CARD_ID, "JESMON-GX-X"]);
+    let plain = runner.place_on_field(0, "ALLY-PLAIN", Some(0));
+
+    runner.game.turn_player_idx = 1;
+    runner.game.tick_declarative_effects();
+
+    assert!(!runner.game.has_keyword(plain, Keyword::Reboot));
+    assert!(!runner.game.has_keyword(plain, Keyword::Blocker));
+}

@@ -565,6 +565,9 @@ pub struct CompiledPredicate {
     pub source_is_unsuspended: Option<bool>,
     pub is_source_permanent: Option<bool>,
     pub source_name_contains: Option<String>,
+    /// Exact match on the carrier's top-card rules names (synthesized
+    /// identity). See `PredicateSpec::source_name_is`.
+    pub source_name_is: Option<String>,
     pub source_permanent_trait_has: Option<String>,
     pub is_face_down: Option<bool>,
     pub is_bottom_source: Option<bool>,
