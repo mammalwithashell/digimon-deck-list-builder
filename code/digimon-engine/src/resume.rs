@@ -725,6 +725,15 @@ pub enum ResumeFrame {
     /// End-of-turn `<Overclock>` sacrifice prompt. Decode the chosen own-field
     /// sacrifice or PASS, then continue the keyword attack flow.
     OverclockSelection(crate::game_phases::OverclockSelectionState),
+    /// `<Blitz>`'s optional attack declaration (§16-16-3 "This Digimon may
+    /// attack" is optional processing): one prompt whose choices are the
+    /// carrier's legal attack declarations plus PASS (decline). A pick declares
+    /// the attack through the normal procedure (`begin_attack_open`); PASS
+    /// declares nothing. Either way the enclosing effect's remaining steps
+    /// (`outer_conts`) run after. Shaped as "carrier + legal targets +
+    /// decline" so other effect-offered attack declarations can share it.
+    /// See [`AttackDeclarationDecisionState`].
+    BlitzAttackDecision(AttackDeclarationDecisionState),
     /// BO3 between-game play-order prompt (`Game::request_play_order_selection`).
     /// Decode `PLAY_FIRST` / `PLAY_SECOND` and write `Game::last_play_order_choice`.
     /// This is an engine/lifecycle prompt, never nested inside a DSL clause.
@@ -811,6 +820,23 @@ pub struct PerColorDeleteState {
     pub trigger_context: Option<TriggerContext>,
     /// Outer-tail continuations composed when nested inside another clause. Run at
     /// the TERMINAL (after batch-delete + inner_tail), in push order.
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+/// A parked effect-offered attack declaration (`ResumeFrame::BlitzAttackDecision`).
+/// `valid_action_ids` are the `encode_attack(attacker, target)` declarations
+/// offered when the prompt was installed (§11-2-7-1 target legality, no
+/// Main-phase memory gate); PASS declines. Plain data, no closures.
+#[derive(Debug, Clone)]
+pub struct AttackDeclarationDecisionState {
+    /// The Digimon that may attack.
+    pub attacker: PermanentHandle,
+    /// The card whose effect offered the attack (the attack's initiator).
+    pub source_card: CardHandle,
+    /// The offered declarations (attack action ids of `attacker`).
+    pub valid_action_ids: Vec<u16>,
+    /// Outer-tail continuations composed when nested inside a DSL clause; run
+    /// after the declaration (or the decline), in push order.
     pub outer_conts: Vec<OuterContinuation>,
 }
 

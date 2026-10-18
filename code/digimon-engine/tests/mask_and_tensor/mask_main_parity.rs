@@ -4,7 +4,7 @@
 //! RUST_PYTHON_PARITY.md so that regressions are caught immediately.
 //!
 //! §4.2 — Option card color requirement
-//! §4.3 — Blitz attack exception (memory < 0)
+//! §4.3 — no Blitz attack exception (memory < 0; §16-16-2)
 //! §4.4 — CAN_ATTACK_UNSUSPENDED target rule (unsuspended targets); <Raid>
 //!         adds no declaration target (§11-2-7-1, §16-23-1)
 
@@ -173,11 +173,15 @@ fn mask_option_color_check_accepts_tamer() {
 
 // ─── §4.3 Blitz under negative memory ──────────────────────────────────
 
-/// A Digimon that digivolved this turn and has modifier-granted Blitz can
-/// attack even when memory < 0 (§4.3 parity with Python's action_mask.py
-/// lines 107-114).
+/// §16-16-2 (Ver. 4.3) "<Blitz> effects execute processing": the <Blitz>
+/// attack is offered as its own decision inside the effect that executes it
+/// (`ResumeFrame::BlitzAttackDecision`), never through the Main-phase mask.
+/// So a Digimon that digivolved this turn and merely HAS <Blitz> gets no
+/// Main-phase attack bit while the memory is on the opponent's side. (This
+/// test used to pin the retired "Blitz + digivolved this turn" carve-out;
+/// G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK.)
 #[test]
-fn mask_blitz_can_attack_under_negative_memory() {
+fn mask_blitz_keyword_does_not_unlock_main_phase_attack_under_negative_memory() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("ATK", CardColor::Red))
         .add_card(make_digimon("DEF", CardColor::Red))
@@ -197,31 +201,19 @@ fn mask_blitz_can_attack_under_negative_memory() {
     r.game.enter_main_phase();
     r.game.set_memory(-3);
 
-    // Baseline: no Blitz → no attack bit while memory<0.
-    let mask_no_blitz = build_action_mask(&r.game, tp);
     let sec_bit = encode_attack(attacker.index as u16, SECURITY_TARGET) as usize;
     let dig_bit = encode_attack(attacker.index as u16, 0) as usize;
-    assert_eq!(
-        mask_no_blitz[sec_bit], 0.0,
-        "no Blitz + memory<0 → no security attack"
-    );
-    assert_eq!(
-        mask_no_blitz[dig_bit], 0.0,
-        "no Blitz + memory<0 → no digimon attack"
-    );
-
-    // Grant Blitz → both attack bits should light up.
     r.game
         .modifiers
         .grant_keyword(attacker, Keyword::Blitz, Expiry::EndOfTurn, tp);
     let mask_blitz = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask_blitz[sec_bit], 1.0,
-        "Blitz + digivolved this turn → security"
+        mask_blitz[sec_bit], 0.0,
+        "§16-16: having <Blitz> is no Main-phase memory exemption (security)"
     );
     assert_eq!(
-        mask_blitz[dig_bit], 1.0,
-        "Blitz + digivolved this turn → digimon"
+        mask_blitz[dig_bit], 0.0,
+        "§16-16: having <Blitz> is no Main-phase memory exemption (Digimon)"
     );
 }
 

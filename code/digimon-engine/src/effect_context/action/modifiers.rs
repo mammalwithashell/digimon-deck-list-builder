@@ -618,6 +618,13 @@ impl<'a> EffectContext<'a> {
         self.game.mark_until_condition_dirty();
         // §16-39-2: a `<Progress>` gained mid-attack shields at once.
         self.game.refresh_progress_shield();
+        // §16-16-2: "<Blitz> effects execute processing." The effect that
+        // grants <Blitz> ("[When Digivolving] <Blitz>", "Then, <Blitz>")
+        // executes its processing here, in place: the optional attack
+        // declaration, gated on the opponent's memory at activation.
+        if keyword == Keyword::Blitz {
+            crate::cards::keyword_effects::blitz_process(self, target);
+        }
     }
 
     /// Register the granted keyword's TRIGGERED auto-effect(s) so they fire

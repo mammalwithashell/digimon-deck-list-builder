@@ -57,32 +57,36 @@ fn grant_force_attack(
     );
 }
 
+/// A forced attack only restricts choices already legal in Main, so the
+/// Main-phase memory gate holds for forced attackers too. A printed <Blitz>
+/// digivolved this turn is no exemption: §16-16-2 (Ver. 4.3) "<Blitz> effects
+/// execute processing", offered inside the effect that executes it
+/// (`ResumeFrame::BlitzAttackDecision`), never through the Main-phase mask.
+/// (This test used to pin the retired "Blitz + digivolved this turn"
+/// carve-out as a legal forced attack; G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK.)
 #[test]
-fn forced_mask_preserves_normal_memory_and_blitz_eligibility() {
+fn forced_mask_preserves_normal_memory_gate_without_blitz_exemption() {
     let mut blitz = make_digimon("BLITZ", CardColor::Red, 5000);
     blitz.keywords.push(Keyword::Blitz);
     let mut r = DebugRunner::builder().add_card(blitz)
         .add_card(make_digimon("FORCED", CardColor::Red, 5000)).start();
     let tp = r.game.turn_player();
     let forced = r.place_on_field(tp, "FORCED", Some(0));
-    let eligible = r.place_on_field(tp, "BLITZ", Some(0));
-    r.game.players[tp as usize].battle_area[eligible.index as usize].turn_digivolved = r.game.turn_count;
+    let blitz = r.place_on_field(tp, "BLITZ", Some(0));
+    r.game.players[tp as usize].battle_area[blitz.index as usize].turn_digivolved = r.game.turn_count;
     r.game.enter_main_phase();
     // Inspect the Main boundary before end-turn advancement; no chooser is
     // installed, so this compares the same normal and forced mask contract.
     r.game.memory = -1;
     let normal = build_action_mask(&r.game, tp);
-    let illegal = encode_attack(forced.index as u16, SECURITY_TARGET) as usize;
-    let legal = encode_attack(eligible.index as u16, SECURITY_TARGET) as usize;
-    assert_eq!(normal[illegal], 0.0);
-    assert_eq!(normal[legal], 1.0);
+    let forced_bit = encode_attack(forced.index as u16, SECURITY_TARGET) as usize;
+    let blitz_bit = encode_attack(blitz.index as u16, SECURITY_TARGET) as usize;
+    assert_eq!(normal[forced_bit], 0.0);
+    assert_eq!(normal[blitz_bit], 0.0, "§16-16: <Blitz> is no Main-phase memory exemption");
     grant_force_attack(&mut r, forced, tp);
     assert_eq!(build_action_mask(&r.game, tp), normal, "ineligible forced attacker preserves the normal choices");
-    grant_force_attack(&mut r, eligible, tp);
-    let mask = build_action_mask(&r.game, tp);
-    assert_eq!(mask[illegal], 0.0);
-    assert_eq!(mask[legal], 1.0);
-    assert_eq!(mask[PASS as usize], 0.0);
+    grant_force_attack(&mut r, blitz, tp);
+    assert_eq!(build_action_mask(&r.game, tp), normal, "a forced <Blitz> Digimon gains no attack under memory<0");
 }
 
 #[test]

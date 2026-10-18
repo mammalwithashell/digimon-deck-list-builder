@@ -692,6 +692,65 @@ pub(crate) fn keyword_trigger_dispatched_from_registry(keyword: Keyword) -> bool
     matches!(keyword, Keyword::Alliance | Keyword::Raid | Keyword::Piercing)
 }
 
+/// `<Blitz>`'s processing (§16-16), executed in place by the effect that
+/// grants it (the DSL idiom `grant_keyword: { keyword: Blitz }`, EX3-063):
+///
+/// - §16-16-3 / §16-16-5: the processing condition is 1 or more memory on
+///   the opponent's side, read NOW, at activation (after any effect resolved
+///   earlier in the same pool moved it). At 0 or more on the carrier's
+///   controller's side, no attack can be made with it.
+/// - §16-16-3: "This Digimon may attack" is optional processing: one
+///   decision offering the carrier's legal attack declarations (the same
+///   target legality as every effect-offered attack, §11-2-7-1, without the
+///   Main-phase memory gate) and the decline
+///   (`Game::install_attack_declaration_decision`,
+///   `ResumeFrame::BlitzAttackDecision`). While it is parked the turn cannot
+///   end (a selection is pending) and nothing else is legal.
+/// - §16-16-4: once declared, the attack proceeds through the normal
+///   procedure even if the memory returns to 0 or more.
+///
+/// Like DCGO `CardEffectCommons.CanActivateBlitz`, nothing is offered while
+/// an attack is already in progress, when the carrier is not its
+/// controller's turn-player Digimon on the battle area, or when it cannot
+/// attack (no legal declaration).
+pub(crate) fn blitz_process(
+    ctx: &mut EffectContext<'_>,
+    carrier: crate::permanent::PermanentHandle,
+) {
+    let game = &*ctx.game;
+    if game.pending_attack.is_some() || game.pending_selection.is_some() {
+        return;
+    }
+    if carrier.player != game.turn_player() {
+        return;
+    }
+    let Some(source_card) = game
+        .player(carrier.player)
+        .battle_area
+        .get(carrier.index as usize)
+        .map(|p| p.top_card().handle())
+    else {
+        return;
+    };
+    // `game.memory` is kept from the turn player's side; the carrier's
+    // controller is the turn player (above).
+    if game.memory >= 0 {
+        return;
+    }
+    let declarations = crate::action::mask::effect_attack_target_action_ids(
+        game,
+        carrier,
+        crate::effect_context::AttackTargetRestriction::Any,
+        false,
+    );
+    ctx.game.install_attack_declaration_decision(
+        carrier,
+        source_card,
+        declarations,
+        "<Blitz> - this Digimon may attack",
+    );
+}
+
 /// Map a printed keyword to zero-or-more synthesized `Effect`s that install
 /// the matching `WhenWouldBe*` replacements. Returns an empty `Vec` for
 /// keywords that do not carry replacement semantics (or that are explicitly
@@ -2577,6 +2636,16 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 }
             })
             .build()],
+
+        // §16-16-2 (Ver. 4.3): "<Blitz> effects execute processing." <Blitz>
+        // is never a standalone trigger: every printing is "[When Digivolving]
+        // ... <Blitz>" / "Then, <Blitz>", processing of the effect that
+        // contains it. So nothing is installed on the permanent here (a
+        // timing-bound body would fire outside its effect, e.g. EX3-063's
+        // DNA-only clause on any digivolution). The body is
+        // [`blitz_process`], executed in place by the effect that grants
+        // <Blitz> (`EffectContext::grant_keyword`).
+        Keyword::Blitz => Vec::new(),
 
         // `<Digisorption -N>` acts from the HAND, before the digivolution
         // cost is paid (§16-10-2): the digivolve reducer chain reads the hand

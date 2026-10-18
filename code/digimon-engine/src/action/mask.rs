@@ -178,9 +178,13 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // --- Attack (100-399) ---
             // §4.7e CannotAttack (player-scoped) — zero ALL attack bits for
             // this player. Check before entering the per-attacker loop.
-            // Memory gate is per-attacker: baseline requires memory >= 0,
-            // but §4.3 Blitz carves out "Blitz + digivolved this turn" even
-            // when memory < 0. Native/static Blitz parsing remains §4.3b.
+            // Memory gate: a Main-phase attack needs the memory on this
+            // player's side. There is no <Blitz> carve-out: <Blitz> offers its
+            // attack as its own decision inside the effect that executes it
+            // (§16-16-2/-3, `keyword_effects::blitz_process` →
+            // `ResumeFrame::BlitzAttackDecision`), never through the Main-phase
+            // mask, so a Digimon that merely has <Blitz> cannot attack with the
+            // memory on the opponent's side.
             let attack_blocked = game
                 .modifiers
                 .player_has(player_id, ModifierType::CannotAttack);
@@ -197,11 +201,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 if !can_basic_attack(attacker, handle, game.turn_count, &game.card_data, game) {
                     continue;
                 }
-                let memory_ok = game.memory >= 0 || {
-                    let digivolved_this_turn = attacker.turn_digivolved == game.turn_count;
-                    digivolved_this_turn && game.has_keyword(handle, Keyword::Blitz)
-                };
-                if !memory_ok {
+                if game.memory < 0 {
                     continue;
                 }
 
@@ -1043,7 +1043,7 @@ fn apply_force_attack_mask_replacement(
     player_id: PlayerId,
 ) {
     // A forced attack restricts the choices that are already legal in Main.
-    // Reuse the normal mask so memory/Blitz, player prohibitions, effective
+    // Reuse the normal mask so memory, player prohibitions, effective
     // kind, freshness, suspension and target restrictions cannot drift apart.
     let mut replacement = vec![0.0f32; ACTION_SPACE_SIZE];
     for i in 0..game.player(player_id).battle_area.len().min(FIELD_SLOTS) {

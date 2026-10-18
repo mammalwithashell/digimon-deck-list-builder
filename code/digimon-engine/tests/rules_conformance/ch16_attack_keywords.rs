@@ -963,7 +963,6 @@ fn decline_blitz(r: &mut DebugRunner) {
 /// - P0 attacks: it checks P1's security, then the turn passes to P1.
 /// - Or P0 declines: no attack; the turn passes to P1.
 #[test]
-#[ignore = "G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK (§16-16-1)"]
 fn blitz_optionality_matches_rule() {
     cite!(
         "16-16-1",
@@ -1005,7 +1004,6 @@ fn blitz_optionality_matches_rule() {
 /// first (memory 1 on P1's side), then `BLITZ`'s effect: <Blitz> offers the
 /// attack (only it and its decline are legal) and P0 attacks.
 #[test]
-#[ignore = "G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK (§16-16-2)"]
 fn blitz_kind_matches_rule() {
     cite!(
         "16-16-2",
@@ -1041,7 +1039,6 @@ fn blitz_kind_matches_rule() {
 /// moves the memory to 1 on P0's side: the attack proceeds and checks P1's
 /// security.
 #[test]
-#[ignore = "G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK (§16-16-4)"]
 fn blitz_attack_proceeds_after_memory_returns_to_zero_or_more() {
     cite!(
         "16-16-4",
@@ -1075,7 +1072,6 @@ fn blitz_attack_proceeds_after_memory_returns_to_zero_or_more() {
 /// - Control: P0 activates the observer first (memory 2 on P1's side), then
 ///   <Blitz>: the attack is offered.
 #[test]
-#[ignore = "G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK (§16-16-5)"]
 fn blitz_cannot_attack_when_memory_already_zero_or_more() {
     cite!(
         "16-16-5",
