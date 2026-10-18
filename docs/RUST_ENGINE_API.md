@@ -1731,7 +1731,7 @@ storage entry, lifecycle, and DSL string published.
 | `CannotAttack` | permanent | `WhenWouldAttack` replacement (Phase 9) |
 | `CannotAttackTarget` | permanent | `WhenWouldBeAttackTarget` replacement (Phase 9) |
 | `CannotSwitchAttackTarget` | permanent | `combat::redirect_attack_target` (Track D) |
-| `CannotBeRedirectedAsAttackTarget` | permanent | retarget candidate filter in `try_enter_block` and Raid post-block rider (Track D) |
+| `CannotBeRedirectedAsAttackTarget` | permanent | retarget candidate filter in `try_enter_block` and the `<Raid>` switch (`raid_switch_candidates`) (Track D) |
 | `CanAttackTargetDefendingPermanent` | permanent | `combat::is_legal_attack_target` — overrides negative gates (Track D) |
 | `CannotAddMemory` | permanent | `Game::adjust_memory_by_effect` |
 | `CannotAddSecurity` | permanent | `Game::add_security_by_effect` |
@@ -3224,7 +3224,7 @@ pub fn attack_target_change(&self) -> Option<AttackTargetChange>;
 ```
 
 The payload is present for script-facing `ctx.redirect_attack`, Blocker
-retargets, printed `RaidOpen` switches, and the post-Block target-loss rider.
+retargets, and `<Raid>` switches (resolved in the declaration's trigger pool).
 Rejected retarget attempts do not fire the timing or install a payload.
 
 DSL `on_attack_target_change` predicates can read the same payload:
@@ -3270,22 +3270,23 @@ the final pick, while up-to-N selections expose PASS only after `min` is met.
 
 ### New state machine transitions
 
-**Retarget validation** — every current attack-target rewrite source routes through `Game::validate_attack_redirect_target`: script-facing `ctx.redirect_attack`, Blocker candidate selection/resolution, and the post-Block Raid retarget rider. This keeps `CannotAttackTarget`, `CannotBeRedirectedAsAttackTarget`, and `CanNotSwitchAttackTarget` semantics consistent and prevents rejected redirects from firing `OnAttackTargetChange`.
+**Retarget validation** — every current attack-target rewrite source routes through `Game::validate_attack_redirect_target`: script-facing `ctx.redirect_attack`, Blocker candidate selection/resolution, and the `<Raid>` switch. This keeps `CannotAttackTarget`, `CannotBeRedirectedAsAttackTarget`, and `CanNotSwitchAttackTarget` semantics consistent and prevents rejected redirects from firing `OnAttackTargetChange`.
 
-**`AttackState::RaidOpen`** — after declaration and attack-target replacement
-checks, before Alliance / Counter / Blocker windows. If the attacker has
-`<Raid>` (printed or modifier-granted), and the opponent has one or more
-unsuspended Digimon tied for highest DP that pass the shared retarget validator,
-the engine installs an optional pending selection for the attacker's controller.
-PASS keeps the declared target. Choosing a candidate rewrites `effective_target`
-and fires `OnAttackTargetChange { reason: Raid }`.
+**`<Raid>` switch** (`AttackState::RaidOpen` is now a pass-through state) —
+`<Raid>` is a trigger-type effect that triggers once, when its Digimon attacks,
+and is optional (§16-23-2 / §16-23-3). It pends in the attack declaration's
+trigger pool (`fire_on_attack`); its body (`install_raid_switch_selection`)
+offers the opponent's unsuspended Digimon tied for highest DP that pass the
+shared retarget validator, as an optional pending selection for the
+attacker's controller. PASS keeps the target. Choosing a candidate rewrites
+`effective_target` and fires `OnAttackTargetChange { reason: Raid }`.
 
-**`AttackState::PostBlock`** — after the Block window resolves. This state keeps
-the older target-loss rescue path: if the effective target has been invalidated
-since declaration (e.g. destroyed by a Block-window effect, returned to hand, or
-otherwise no longer legal), the engine can surface a final retarget/decline
-selection instead of silently resolving against a stale handle. Ordinary printed
-`<Raid>` switching happens in `RaidOpen`.
+**`AttackState::PostBlock`** — after the Block window resolves; transitions
+straight to `Battle`. There is no retarget here: a removed attack target
+remains the attack target and the attack fails (§11-2-6), so `Battle` ends it
+as `AttackResult::Unsuccessful` (§11-5-1-4-1). The former post-Block `<Raid>`
+retarget rider was deleted (2026-10-17, G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED):
+`<Raid>` triggers only when the Digimon attacks (§16-23-2) and is optional.
 
 **`AttackState::PostBattle`** — processes owed `<Piercing>` before EndOfAttack, after battle rewards resolve. The active attacking Digimon can earn Piercing by deleting an opponent in either the attack's ordinary battle or an effect-caused battle during that attack. A vanished declared target does not erase this pending check. There is only one transition to security checking per attack: an ordinary player-attack check consumes that transition, and multiple Piercing activations cannot add another. A nonattacking effect battler cannot earn Piercing for the attacker. Ending the attack by an effect skips to EndOfAttack; removing the attacker also prevents its pending check. See official rules 16-6-2/4, 15-15-1-1 and [Bandai's CRM4 clarification](https://en.digimoncard.com/rule/revised/).
 
@@ -3296,7 +3297,7 @@ selection instead of silently resolving against a stale handle. Ordinary printed
 | `<Piercing>` | `AttackState::PostBattle` | Post-Digimon-battle security check against defending player (§4.3 of spec). |
 | `<Collision>` | `AttackState::BlockOpen` mask builder | Flips `is_optional = false` on the block window; the PASS/no-block action bit drops from the mask. `CannotBlock` modifier still gates individual defenders before Collision elevates the choice to mandatory. |
 | `<Reboot>` | Opponent's unsuspend phase | Unsuspends the Reboot permanent during the opponent's unsuspend step. Gated by `CannotUnsuspend` / `CannotBeUnsuspendedByEffect` modifiers. |
-| `<Raid>` | `AttackState::PostBlock` | Retarget rider as described above. |
+| `<Raid>` | Attack declaration trigger pool (`fire_on_attack`) | Optional once-at-declaration switch, as described above (§16-23-2 / §16-23-3). |
 
 ### New observer dispatch
 
@@ -3363,9 +3364,9 @@ Effect::new(card, EffectTiming::OnAllyAttack)
 
 1. **Counter-chain depth > 1 is not supported.** `pending_attack.counter_fired` is a boolean, not a counter. Printed rules today do not require recursive Counter-chains; if a future card requires Counter-in-response-to-Counter, this becomes a multi-level fired-set.
 2. **Attacker-side substitution (`WhenWouldAttack` with `Substituted`) is a `debug_assert`**, not a printed mechanic. No card moves the attacker slot via a replacement; the variant is kept for shape symmetry with `WhenWouldBeAttackTarget`.
-3. **Single Raid retarget per attack.** `AttackState::PostBlock` fires the retarget check once. If the retargeted target also invalidates before `Battle`, the state machine falls through to `Battle`, which handles zero-target cleanup trivially (no damage, no security check).
-4. **Raid retarget candidate set is stricter than declaration-time mask.** v1 prefers unsuspended Digimon; suspended fallback only fires when no unsuspended target exists. Declaration-time mask has no such ordering. This is a parity gap between the two selection flows — tracked in `RUST_PYTHON_PARITY.md` §15.4.
-5. **Native `<Raid>` parsing is still modifier-only.** Phase 3 parsed `<Collision>`, `<Piercing>`, `<Reboot>` off the card face; `<Raid>` is still mask-layer-only (same pre-existing gap, not introduced by Phase 9). Printed Raid cards require a modifier emission to honor the retarget rider in v1.
+3. **One `<Raid>` switch per attack, at the declaration.** A target removed afterwards is not retargeted: the attack fails (§11-2-6), `AttackResult::Unsuccessful`, no damage, no security check.
+4. *(Removed 2026-10-17.)* The post-Block Raid retarget rider and its suspended-Digimon fallback were deleted (§11-2-6, §16-23-2).
+5. **Native `<Raid>` parsing is still modifier-only.** Phase 3 parsed `<Collision>`, `<Piercing>`, `<Reboot>` off the card face; `<Raid>` is still mask-layer-only (same pre-existing gap, not introduced by Phase 9). Printed Raid cards require a modifier emission to honor the `<Raid>` switch in v1.
 6. **Piercing on direct-player-attack does NOT fire.** Piercing is a post-Digimon-battle rule only. An attack declared against the opposing player (not a Digimon) that lands zero damage is not a Piercing trigger.
 7. **`ACTION_SPACE_SIZE` unchanged at 2168.** All Phase 9 interrupts reuse existing action ranges: Counter window Option plays route through the Phase 8 `PLAY_HAND` range, Raid retargets reuse the target-selection range, Counter passes reuse the `SEL_REPLACEMENT_PASS` bit. No tensor or mask growth.
 
