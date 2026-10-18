@@ -7,8 +7,8 @@
 //!     `Keyword::Vortex` whose `can_attack(vortex=true)` returns true.
 //!     Vortex bypasses summoning sickness (via §2.1 plumbing) but NOT the
 //!     target rule: only a suspended enemy Digimon, or one the attacker may
-//!     attack unsuspended (Raid / CAN_ATTACK_UNSUSPENDED), is a valid target
-//!     (§11-2-7-1, §16-33-1). Player/security targets require a separate
+//!     attack unsuspended (CAN_ATTACK_UNSUSPENDED), is a valid target
+//!     (§11-2-7-1, §16-33-1); <Raid> switches after the declaration (§16-23-1). Player/security targets require a separate
 //!     `VortexCanAttackPlayer` extension.
 //!
 //! Phase-transition logic (deciding *when* to enter `EndOfTurnAction`),
@@ -496,21 +496,27 @@ fn vortex_with_can_attack_unsuspended_targets_an_unsuspended_digimon() {
     );
 }
 
-/// PINS CURRENT BEHAVIOUR, KNOWN WRONG: G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED.
+/// §11-2-7-1: the attack declaration targets the opponent or a SUSPENDED
+/// Digimon; §16-23-1 / §16-23-2: <Raid> SWITCHES the target after the
+/// declaration (a [When Attacking] trigger in the attack's pool), it adds no
+/// declaration target. A <Vortex> + <Raid> Digimon at the end of turn: the
+/// mask and the decoder offer only the suspended `SUS`, not the unsuspended
+/// `LOW` / `HIGH` (the highest-DP one included); declared on `SUS`, <Raid>
+/// then offers its optional switch to `HIGH` (the highest-DP unsuspended
+/// Digimon), and the switched attack battles `HIGH`.
 ///
-/// Today the end-of-turn mask and decoder (like the Main-phase arm) treat
-/// <Raid> as a declaration-time target permission: a <Vortex> + <Raid>
-/// Digimon may DECLARE its attack on the opponent's highest-DP unsuspended
-/// Digimon. Under 4.3 the declaration target is the opponent or a suspended
-/// Digimon (§11-2-7-1), and <Raid> only SWITCHES the target after the
-/// declaration (§16-23-1 / §16-23-2, the attack's trigger pool). When that gap
-/// is fixed both unsuspended bits go dark here and this test is inverted.
+/// Re-pinned from `vortex_with_raid_declares_on_highest_dp_unsuspended_today`
+/// (which pinned the declaration-time <Raid> arm;
+/// G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED, resolved). DCGO:
+/// `Permanent.CanAttackTargetDigimon` has no <Raid> arm; `Raid.cs` switches on
+/// `OnAllyAttack`.
 #[test]
-fn vortex_with_raid_declares_on_highest_dp_unsuspended_today() {
+fn vortex_with_raid_declares_on_a_legal_target_then_may_switch() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("ATK", CardColor::Red, 5000))
         .add_card(make_digimon("LOW", CardColor::Blue, 3000))
         .add_card(make_digimon("HIGH", CardColor::Blue, 4000))
+        .add_card(make_digimon("SUS", CardColor::Blue, 1000))
         .start();
 
     let tp = r.game.turn_player();
@@ -518,6 +524,8 @@ fn vortex_with_raid_declares_on_highest_dp_unsuspended_today() {
     let attacker = r.place_on_field(tp, "ATK", None);
     let low = r.place_on_field(opp, "LOW", Some(0));
     let high = r.place_on_field(opp, "HIGH", Some(0));
+    let sus = r.place_on_field(opp, "SUS", Some(0));
+    r.game.players[opp as usize].battle_area[sus.index as usize].is_suspended = true;
     r.game
         .modifiers
         .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
@@ -528,29 +536,42 @@ fn vortex_with_raid_declares_on_highest_dp_unsuspended_today() {
 
     let low_attack = encode_attack(attacker.index as u16, low.index as u16);
     let high_attack = encode_attack(attacker.index as u16, high.index as u16);
+    let sus_attack = encode_attack(attacker.index as u16, sus.index as u16);
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(mask[low_attack as usize], 0.0, "not the lower-DP unsuspended Digimon");
     assert_eq!(
-        mask[high_attack as usize], 1.0,
-        "today: the highest-DP unsuspended Digimon is a declaration target \
-         (G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED)",
+        mask[high_attack as usize], 0.0,
+        "not the highest-DP unsuspended Digimon either: <Raid> adds no declaration          target (§11-2-7-1, §16-23-1)",
     );
+    assert_eq!(mask[sus_attack as usize], 1.0, "the suspended Digimon");
 
+    // The decoder agrees: a declaration on HIGH is refused (nothing happens).
     r.game.decode_action(high_attack, tp);
-    // <Raid> itself then triggers (§16-23-2) and offers its optional switch
-    // to the highest-DP unsuspended Digimon other than the target (LOW;
-    // DCGO `Raid.cs` excludes the defending permanent). Decline it.
+    assert!(r.game.pending_attack.is_none(), "the decoder refused HIGH");
+    assert!(r.game.pending_selection.is_none(), "no <Raid> prompt: no attack");
+    assert_eq!(r.game.players[opp as usize].battle_area.len(), 3);
+
+    r.game.decode_action(sus_attack, tp);
+    // <Raid> triggers (§16-23-2) and offers its optional switch to the
+    // highest-DP unsuspended Digimon (HIGH).
     let sel = r.game.pending_selection.as_ref().expect("the <Raid> switch prompt");
     assert_eq!(sel.selecting_player, tp);
     assert!(sel.is_optional);
-    r.game.resolve_selection(tp, PASS).expect("decline the <Raid> switch");
+    assert_eq!(sel.valid_action_ids, vec![encode_attack(0, high.index as u16)]);
+    r.game
+        .resolve_selection(tp, encode_attack(0, high.index as u16))
+        .expect("switch to HIGH");
     assert!(r.game.pending_attack.is_none(), "the attack resolved");
     let left: Vec<String> = r.game.players[opp as usize]
         .battle_area
         .iter()
         .map(|p| p.top_card().card_id(&r.game.card_data).to_string())
         .collect();
-    assert_eq!(left, vec!["LOW".to_string()], "the decoder agreed; HIGH lost");
+    assert_eq!(
+        left,
+        vec!["LOW".to_string(), "SUS".to_string()],
+        "the switched attack battled HIGH; SUS was not battled"
+    );
 }
 
 // Helper with distinct DP so we can verify Vortex ignores DP-tiebreak logic

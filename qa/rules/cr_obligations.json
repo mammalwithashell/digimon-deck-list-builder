@@ -1054,10 +1054,11 @@
       "mechanisms": [
         "attack-and-timing"
       ],
-      "note": "At the end of P0's turn a <Vortex> attack is offered against P1's suspended Digimon but not its UNSUSPENDED one (only a suspended Digimon or the opponent is a legal target; <Vortex> adds no target permission, contrast <Execute> 16-38-1). Main-phase target legality is not covered here.",
+      "note": "At the end of P0's turn a <Vortex> attack is offered against P1's suspended Digimon but not its UNSUSPENDED one (only a suspended Digimon or the opponent is a legal target; <Vortex> adds no target permission, contrast <Execute> 16-38-1). In the Main phase a <Raid> attacker may declare on the opponent or a suspended Digimon, never on an unsuspended one (the highest-DP ones included); <Raid> adds no declaration target.",
       "status": "proven",
       "tests": [
-        "ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon"
+        "ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon",
+        "ch16_attack_keywords::raid_attacker_declares_on_a_legal_target_then_may_switch"
       ],
       "text": "When a player makes an attack declaration, they choose either the opponent or 1 of the opponent's suspended Digimon as the attack target."
     },
@@ -6202,10 +6203,11 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "The switch offers only the highest-DP unsuspended Digimon; the attack battles the chosen one and checks nothing.",
+      "note": "The switch offers only the highest-DP unsuspended Digimon; the attack battles the chosen one and checks nothing. <Raid> SWITCHES after the declaration: it adds no declaration target (an unsuspended Digimon is not offered at declaration), and the switch is offered after a declaration on the opponent or on a suspended Digimon (G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED, resolved).",
       "status": "proven",
       "tests": [
-        "ch16_attack_keywords::raid_switches_to_highest_dp_unsuspended_attacker_chooses_tie"
+        "ch16_attack_keywords::raid_switches_to_highest_dp_unsuspended_attacker_chooses_tie",
+        "ch16_attack_keywords::raid_attacker_declares_on_a_legal_target_then_may_switch"
       ],
       "text": "<Raid> is a keyword effect that can switch the target of attack to the opponent's unsuspended Digimon with the highest DP when a Digimon with this keyword effect attacks."
     },

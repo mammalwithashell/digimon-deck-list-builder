@@ -240,7 +240,8 @@ fn execute_no_self_delete_when_attack_declined() {
 /// Verify the action mask actually surfaces an attack-against-
 /// unsuspended bit when the Execute carrier is the attacker. The
 /// default end-of-turn-attack mask emits unsuspended bits ONLY when
-/// the attacker has `CanAttackUnsuspended` (or `Raid`); plain
+/// the attacker has `CanAttackUnsuspended` (`<Raid>` switches after the
+/// declaration, §16-23-1, and adds no declaration target); plain
 /// `MayAttack` without the unsuspended grant would only mask
 /// suspended targets. This test pins the unsuspended-target widening
 /// to Execute's modifier bundle.

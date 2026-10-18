@@ -365,6 +365,11 @@ fn effect_attack_respects_target_ban_and_explicit_target_permission() {
     }
 }
 
+// §11-2-7-1: an attack declaration targets the opponent or a suspended
+// Digimon; only a "can attack unsuspended" grant (mode 2; §16-38-1 <Execute>)
+// widens it. <Raid> (mode 1) switches the target AFTER the declaration
+// (§16-23-1 / §16-23-2), so it adds no declaration target: inverted from the
+// declaration-time <Raid> arm (G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED).
 #[test]
 fn effect_attack_widens_unsuspended_targets_only_with_permission() {
     for mode in 0..3 {
@@ -379,7 +384,7 @@ fn effect_attack_widens_unsuspended_targets_only_with_permission() {
         assert_eq!(r.game.players[1].battle_area.iter().filter(|p| p.is_suspended).count(), 2);
         pick(&mut r, "PICK-DIGIMON");
         let mask = build_action_mask(&r.game, 0);
-        for index in 0..3 { assert_eq!(mask[encode_attack(1, index) as usize], if mode != 0 || r.game.players[1].battle_area[index as usize].is_suspended { 1.0 } else { 0.0 }); }
+        for index in 0..3 { assert_eq!(mask[encode_attack(1, index) as usize], if mode == 2 || r.game.players[1].battle_area[index as usize].is_suspended { 1.0 } else { 0.0 }); }
         act(&mut r, PASS);
     }
 }

@@ -5,7 +5,8 @@
 //!
 //! §4.2 — Option card color requirement
 //! §4.3 — Blitz attack exception (memory < 0)
-//! §4.4 — Raid + CAN_ATTACK_UNSUSPENDED target rule (unsuspended targets)
+//! §4.4 — CAN_ATTACK_UNSUSPENDED target rule (unsuspended targets); <Raid>
+//!         adds no declaration target (§11-2-7-1, §16-23-1)
 
 use digimon_engine::action::{
     build_action_mask, encode_attack, DNA_DIGIVOLVE_START, SECURITY_TARGET,
@@ -256,10 +257,16 @@ fn mask_blitz_without_digivolving_does_not_attack_under_negative_memory() {
 
 // ─── §4.4 Raid + CAN_ATTACK_UNSUSPENDED target rules ───────────────────
 
-/// With Raid, an attacker can target unsuspended enemies tied for the
-/// highest effective DP. Lower-DP unsuspended enemies remain off-limits.
+/// §11-2-7-1: the attack declaration targets the opponent or a SUSPENDED
+/// Digimon. <Raid> switches the target AFTER the declaration (§16-23-1 /
+/// §16-23-2, the attack's [When Attacking] pool), so it is not a
+/// declaration-time permission: with <Raid> the unsuspended enemies, the
+/// highest-DP one included, stay off-limits in the mask. (Inverted from the
+/// Python-parity pin `mask_raid_targets_highest_dp_unsuspended`;
+/// G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED. DCGO
+/// `Permanent.CanAttackTargetDigimon` has no <Raid> arm.)
 #[test]
-fn mask_raid_targets_highest_dp_unsuspended() {
+fn mask_raid_adds_no_unsuspended_declaration_target() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon_dp("ATK", CardColor::Red, 5000))
         .add_card(make_digimon_dp("WEAK", CardColor::Blue, 2000))
@@ -292,25 +299,33 @@ fn mask_raid_targets_highest_dp_unsuspended() {
         "no Raid → unsuspended strong is off-limits"
     );
 
-    // Grant Raid → only the highest-DP unsuspended target (STRONG) lights up.
+    // Grant Raid → still no unsuspended target; the player stays legal.
     r.game
         .modifiers
         .grant_keyword(attacker, Keyword::Raid, Expiry::EndOfTurn, tp);
     let raid_mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        raid_mask[strong_bit], 1.0,
-        "Raid → highest-DP unsuspended is attackable"
+        raid_mask[strong_bit], 0.0,
+        "Raid → the highest-DP unsuspended Digimon is NOT a declaration target (§11-2-7-1)"
     );
     assert_eq!(
         raid_mask[weak_bit], 0.0,
         "Raid → lower-DP unsuspended is NOT attackable"
     );
+    assert_eq!(
+        raid_mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        1.0,
+        "Raid → the opponent is a declaration target"
+    );
 }
 
-/// When multiple unsuspended enemies share the highest DP, Raid allows
-/// attacking any of them (matches Python's `any(... == max(...))`).
+/// §11-2-7-1 / §16-23-1: unsuspended enemies tied for the highest DP are
+/// <Raid>'s SWITCH candidates (§16-23-4), not declaration targets: none of
+/// them lights up in the mask. (Inverted from the Python-parity pin
+/// `mask_raid_allows_all_tied_for_highest`;
+/// G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED.)
 #[test]
-fn mask_raid_allows_all_tied_for_highest() {
+fn mask_raid_tied_highest_are_not_declaration_targets() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon_dp("ATK", CardColor::Red, 5000))
         .add_card(make_digimon_dp("TWIN", CardColor::Blue, 4000))
@@ -333,13 +348,13 @@ fn mask_raid_allows_all_tied_for_highest() {
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
         mask[encode_attack(attacker.index as u16, twin_a as u16) as usize],
-        1.0,
-        "Raid → first tied-for-max target is attackable",
+        0.0,
+        "Raid → first tied-for-max target is not a declaration target",
     );
     assert_eq!(
         mask[encode_attack(attacker.index as u16, twin_b as u16) as usize],
-        1.0,
-        "Raid → second tied-for-max target is also attackable",
+        0.0,
+        "Raid → second tied-for-max target is not a declaration target either",
     );
 }
 

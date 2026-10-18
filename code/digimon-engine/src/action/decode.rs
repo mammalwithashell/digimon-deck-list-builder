@@ -372,44 +372,15 @@ impl Game {
         // Either grant attacks only a legal target: suspended, or one this
         // attacker may attack unsuspended (§11-2-7-1). <Vortex> grants the
         // attack, not a target permission (§16-33-1; contrast <Execute>
-        // §16-38-1). A legal <Vortex> grant is preferred for the flag (it
-        // carries the played-this-turn exemption).
+        // §16-38-1), and <Raid> switches the target after the declaration
+        // (§16-23-1), so neither adds a declaration target. A legal <Vortex>
+        // grant is preferred for the flag (it carries the played-this-turn
+        // exemption).
         let flag = vortex_legal;
 
         let can_attack_unsuspended = self
             .modifiers
             .has(attacker, ModifierType::CanAttackUnsuspended);
-        if target.is_suspended || can_attack_unsuspended {
-            return Some(flag);
-        }
-        if self.has_keyword(attacker, Keyword::Raid) {
-            let max_opp = self
-                .player(opponent)
-                .battle_area
-                .len()
-                .min(crate::action::space::MAX_FIELD_SLOTS as usize);
-            let mut best: Option<i32> = None;
-            for j in 0..max_opp {
-                let candidate = &self.player(opponent).battle_area[j];
-                let candidate_handle = PermanentHandle {
-                    player: opponent,
-                    index: j as u8,
-                };
-                if candidate.is_suspended || !self.permanent_is_digimon_for_rules(candidate_handle)
-                {
-                    continue;
-                }
-                if let Some(dp) = self.effective_dp(candidate_handle) {
-                    best = Some(best.map_or(dp, |b| b.max(dp)));
-                }
-            }
-            if best.is_some_and(|max_dp| {
-                self.effective_dp(defender)
-                    .is_some_and(|defender_dp| defender_dp == max_dp)
-            }) {
-                return Some(flag);
-            }
-        }
-        None
+        (target.is_suspended || can_attack_unsuspended).then_some(flag)
     }
 }
