@@ -2601,9 +2601,11 @@ impl Game {
     /// 2. Only fires when `effective_target` is INVALID — i.e. the
     ///    handle no longer resolves to a legal attack target.
     /// 3. Only fires when the attacker has `<Raid>` (modifier-granted
-    ///    or native). Mirrors the mask-layer Raid check (see
-    ///    `action/mask.rs:137`).
-    /// 4. Candidate list uses the Raid-mask prioritization:
+    ///    or native). The declaration itself follows §11-2-7-1 (the
+    ///    opponent or a suspended Digimon; the mask has no <Raid> arm),
+    ///    and <Raid>'s own switch is the [When Attacking] trigger
+    ///    (§16-23-1 / §16-23-2, `raid_switch_options`).
+    /// 4. Candidate list prioritization:
     ///    unsuspended opposing Digimon first (tied on max DP),
     ///    falling back to any legal opposing Digimon if no unsuspended
     ///    candidates exist. Legality excludes `CannotAttackTarget`
@@ -2665,10 +2667,10 @@ impl Game {
     }
 
     /// Enumerate legal Raid retarget candidates on the opposing side.
-    /// Priority mirrors the mask-layer Raid selection (see
-    /// `action/mask.rs:137`): unsuspended Digimon tied at max effective
-    /// DP, falling back to any legal opposing Digimon when no
-    /// unsuspended candidate exists.
+    /// Priority: unsuspended Digimon tied at max effective DP (the
+    /// candidates of the <Raid> switch trigger, §16-23-1 / §16-23-4),
+    /// falling back to any legal opposing Digimon when no unsuspended
+    /// candidate exists.
     ///
     /// Legality filters:
     /// - Must be a Digimon (not Tamer/Option/DigiEgg).

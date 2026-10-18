@@ -8,8 +8,9 @@
 //!     Vortex bypasses summoning sickness (via §2.1 plumbing) but NOT the
 //!     target rule: only a suspended enemy Digimon, or one the attacker may
 //!     attack unsuspended (CAN_ATTACK_UNSUSPENDED), is a valid target
-//!     (§11-2-7-1, §16-33-1); <Raid> switches after the declaration (§16-23-1). Player/security targets require a separate
-//!     `VortexCanAttackPlayer` extension.
+//!     (§11-2-7-1, §16-33-1); <Raid> switches the target after the
+//!     declaration (§16-23-1) and adds none. Player/security targets
+//!     require a separate `VortexCanAttackPlayer` extension.
 //!
 //! Phase-transition logic (deciding *when* to enter `EndOfTurnAction`),
 //! Overclock / MAY_ATTACK / FORCE_ATTACK bits, and the full interrupt-
@@ -541,7 +542,8 @@ fn vortex_with_raid_declares_on_a_legal_target_then_may_switch() {
     assert_eq!(mask[low_attack as usize], 0.0, "not the lower-DP unsuspended Digimon");
     assert_eq!(
         mask[high_attack as usize], 0.0,
-        "not the highest-DP unsuspended Digimon either: <Raid> adds no declaration          target (§11-2-7-1, §16-23-1)",
+        "not the highest-DP unsuspended Digimon either: <Raid> adds no declaration target \
+         (§11-2-7-1, §16-23-1)",
     );
     assert_eq!(mask[sus_attack as usize], 1.0, "the suspended Digimon");
 
@@ -574,8 +576,9 @@ fn vortex_with_raid_declares_on_a_legal_target_then_may_switch() {
     );
 }
 
-// Helper with distinct DP so we can verify Vortex ignores DP-tiebreak logic
-// (unlike Raid in §4.4).
+// Helper with distinct DP so we can verify Vortex target legality ignores
+// DP (§11-2-7-1: a suspended Digimon or a CanAttackUnsuspended grant; DP
+// matters only to the <Raid> switch trigger after the declaration, §16-23-1).
 fn make_digimon_without_dp(id: &str, color: CardColor) -> CardData {
     make_digimon(id, color, 3000)
 }
@@ -699,8 +702,9 @@ fn mask_may_attack_emits_attack_bits_against_suspended_digimon_and_security() {
         "MayAttack permits attacking security",
     );
     // Normal MayAttack uses Main-phase target legality (37152674): an
-    // unsuspended enemy Digimon is not a target without Raid /
-    // CanAttackUnsuspended (the same rule as for Vortex, §11-2-7-1) ...
+    // unsuspended enemy Digimon is not a declaration target without a
+    // CanAttackUnsuspended grant (the same rule as for Vortex, §11-2-7-1;
+    // <Raid> only switches after the declaration, §16-23-1) ...
     assert_eq!(
         mask[encode_attack(attacker.index as u16, defender.index as u16) as usize],
         0.0,
@@ -771,8 +775,9 @@ fn mask_force_attack_emits_attack_bits_in_eot() {
         "ForceAttack permits attacking security in EOT",
     );
     // Normal ForceAttack uses Main-phase target legality (37152674): an
-    // unsuspended enemy Digimon is not a target without Raid /
-    // CanAttackUnsuspended (the same rule as for Vortex, §11-2-7-1) ...
+    // unsuspended enemy Digimon is not a declaration target without a
+    // CanAttackUnsuspended grant (the same rule as for Vortex, §11-2-7-1;
+    // <Raid> only switches after the declaration, §16-23-1) ...
     assert_eq!(
         mask[encode_attack(attacker.index as u16, defender.index as u16) as usize],
         0.0,

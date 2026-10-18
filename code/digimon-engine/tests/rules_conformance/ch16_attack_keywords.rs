@@ -1304,12 +1304,20 @@ fn raid_attacker_declares_on_a_legal_target_then_may_switch() {
     assert_eq!(p.kind, SelectionKind::OppField, "{p:?}");
     assert!(p.optional, "{p:?}");
     assert_eq!(offered_slots(&p), vec![0, 2], "the tied highest-DP Digimon");
+    assert!(
+        r.game.player(1).battle_area[s as usize].is_suspended,
+        "the declared target is still suspended (the switch offers UNSUSPENDED Digimon only)"
+    );
     pick_field(&mut r, 0);
     settle_declining(&mut r);
     assert_eq!(
         field_top_ids(&r, 1),
         owned(&[FILL, "LV4_PLAIN", FILL]),
         "the switched-to Digimon battled and was deleted; the suspended FILL was not"
+    );
+    assert!(
+        r.game.player(1).battle_area[2].is_suspended,
+        "the suspended FILL (now slot 2) is untouched"
     );
     assert!(revealed(&r, cp, 1).is_empty(), "no security check");
 }
