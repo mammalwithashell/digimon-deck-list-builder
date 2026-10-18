@@ -36,7 +36,7 @@
 //! | (0) Raid declarative grant | G-DECLARATIVE-KEYWORD: never enqueued at runtime | compiled/structural only |
 //! | (1) Piercing declarative grant | G-DECLARATIVE-KEYWORD | compiled/structural only |
 //! | (2) When Digivolving flood-gate | No gap — add_player_modifier fully implemented | IMPLEMENTED |
-//! | (2) Conditional security trash | self_digivolution_contains_name in if-condition | IMPLEMENTED |
+//! | (2) Conditional security trash | self_digivolution_sources_contain_name in if-condition (§4-8-2) | IMPLEMENTED |
 //! | (3) OPT trigger structure | on_opponent_security_removed + once_per_turn | IMPLEMENTED |
 //! | (3) Delete <= self DP | source_dp formula | IMPLEMENTED |
 //! | (3) OPT enforcement | once_per_turn trigger lockout | IMPLEMENTED |
@@ -627,5 +627,77 @@ fn bt20_020_gate_blocks_security_played_tamer() {
         trash_ids,
         vec!["ST1-12", "ST1-12"],
         "both Tai end in the trash"
+    );
+}
+
+// ─── Section 8 — [When Digivolving] "if [Imperialdramon: Dragon Mode] is in
+//                this Digimon's digivolution cards" (§4-8-2;
+//                G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS) ────────────────
+
+fn fire_when_digivolving(
+    runner: &mut DebugRunner,
+    ifm: digimon_engine::permanent::PermanentHandle,
+) {
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(ifm),
+    );
+    runner.game.drain_effect_queue();
+}
+
+fn wd_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card("BT20-020")
+        .expect("BT20-020 YAML loads")
+        .add_card(make_test_card("DRAGON-MODE", "Imperialdramon: Dragon Mode"))
+        .add_card(make_test_card("PLAIN-SOURCE", "Plain Source"))
+        .add_card(make_test_card("SEC", "Security Filler"))
+        .security(1, &["SEC", "SEC", "SEC"])
+        .memory(10)
+        .start()
+}
+
+/// A [Dragon Mode] digivolution card satisfies the condition: the opponent's
+/// top security card is trashed.
+#[test]
+fn bt20_020_when_digivolving_trashes_security_with_dragon_mode_digivolution_card() {
+    let mut runner = wd_runner();
+    let ifm = runner.place_stack(0, &["DRAGON-MODE", "BT20-020"]);
+    let before = runner.security_count(1);
+
+    fire_when_digivolving(&mut runner, ifm);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.security_count(1),
+        before - 1,
+        "[Imperialdramon: Dragon Mode] in the digivolution cards must trash 1 security"
+    );
+}
+
+/// §4-8-2: digivolution-card information is read only from the cards under
+/// this Digimon. The top card itself treated as [Imperialdramon: Dragon Mode]
+/// (a runtime "also treated as" name), with no such digivolution card, must
+/// NOT trash security.
+#[test]
+fn bt20_020_when_digivolving_ignores_dragon_mode_name_on_the_top_card() {
+    let mut runner = wd_runner();
+    let ifm = runner.place_stack(0, &["PLAIN-SOURCE", "BT20-020"]);
+    runner.game.players[0].battle_area[ifm.index as usize]
+        .card_sources
+        .last_mut()
+        .expect("top card")
+        .also_treated_as
+        .push("Imperialdramon: Dragon Mode".to_string());
+    let before = runner.security_count(1);
+
+    fire_when_digivolving(&mut runner, ifm);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.security_count(1),
+        before,
+        "the top card is not a digivolution card: a [Dragon Mode] name on it must not \
+         satisfy \"is in this Digimon's digivolution cards\""
     );
 }

@@ -652,3 +652,90 @@ fn bt20_059_inherited_inactive_when_carrier_is_not_jesmon_gx() {
         "inherited ESS must be inactive when the carrier is not [Jesmon GX]"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// "While this Digimon is [Jesmon GX]" reads the TOP card's name (§4-7-7 /
+// §4-8-2; Q3225; DCGO `TopCard.EqualsCardName("Jesmon GX")`;
+// G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS)
+// ═══════════════════════════════════════════════════════════════════════════
+
+fn jesmon_gx_card() -> CardData {
+    let mut c = make_test_card("JESMON-GX", "Jesmon GX");
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![CardColor::Black];
+    c.level = Some(7);
+    c.dp = Some(15000);
+    c.play_cost = 14;
+    c
+}
+
+/// A non-[Jesmon GX] top card over a [Jesmon GX] digivolution card: the
+/// Digimon is not [Jesmon GX], so the inherited grant must NOT apply.
+#[test]
+fn bt20_059_inherited_ignores_jesmon_gx_digivolution_card_under_unrelated_top() {
+    let mut runner = builder()
+        .add_card(jesmon_gx_card())
+        .add_card(plain_source("CARRIER-OTHER"))
+        .add_card(own_digimon("ALLY-PLAIN", "Agumon", &["Reptile"]))
+        .memory(20)
+        .start();
+    let _carrier = runner.place_stack(0, &[CARD_ID, "JESMON-GX", "CARRIER-OTHER"]);
+    let plain = runner.place_on_field(0, "ALLY-PLAIN", Some(0));
+
+    runner.game.turn_player_idx = 1;
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        !runner.game.has_keyword(plain, Keyword::Reboot),
+        "a [Jesmon GX] digivolution card does not make this Digimon [Jesmon GX]"
+    );
+    assert!(
+        !runner.game.has_keyword(plain, Keyword::Blocker),
+        "a [Jesmon GX] digivolution card does not make this Digimon [Jesmon GX]"
+    );
+}
+
+/// Positive control: the same cards with Jesmon GX on top.
+#[test]
+fn bt20_059_inherited_applies_when_jesmon_gx_is_the_top_card() {
+    let mut runner = builder()
+        .add_card(jesmon_gx_card())
+        .add_card(plain_source("CARRIER-OTHER"))
+        .add_card(own_digimon("ALLY-PLAIN", "Agumon", &["Reptile"]))
+        .memory(20)
+        .start();
+    let _carrier = runner.place_stack(0, &[CARD_ID, "CARRIER-OTHER", "JESMON-GX"]);
+    let plain = runner.place_on_field(0, "ALLY-PLAIN", Some(0));
+
+    runner.game.turn_player_idx = 1;
+    runner.game.tick_declarative_effects();
+
+    assert!(runner.game.has_keyword(plain, Keyword::Reboot));
+    assert!(runner.game.has_keyword(plain, Keyword::Blocker));
+}
+
+/// Near-miss exact name: a top card named "Jesmon GX (X Antibody)" contains
+/// "Jesmon GX" but is not [Jesmon GX]. "While this Digimon is [Jesmon GX]" is an
+/// exact name match (DCGO `EqualsCardName`; `source_name_is`): no grant.
+#[test]
+fn bt20_059_inherited_requires_the_exact_jesmon_gx_name() {
+    let near_miss = {
+        let mut c = jesmon_gx_card();
+        c.card_id = "JESMON-GX-X".to_string();
+        c.card_name = "Jesmon GX (X Antibody)".to_string();
+        c
+    };
+    let mut runner = builder()
+        .add_card(near_miss)
+        .add_card(own_digimon("ALLY-PLAIN", "Agumon", &["Reptile"]))
+        .memory(20)
+        .start();
+    let _carrier = runner.place_stack(0, &[CARD_ID, "JESMON-GX-X"]);
+    let plain = runner.place_on_field(0, "ALLY-PLAIN", Some(0));
+
+    runner.game.turn_player_idx = 1;
+    runner.game.tick_declarative_effects();
+
+    assert!(!runner.game.has_keyword(plain, Keyword::Reboot));
+    assert!(!runner.game.has_keyword(plain, Keyword::Blocker));
+}

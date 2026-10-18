@@ -23,7 +23,8 @@
 //!   bucket and Tai Kamiya Tamer bucket) using `select_reveal_buckets`.
 //! - D4 — Conditional inherited DP buff (carrier-name gated aura) via
 //!   `scope: inherited`, `kind: aura`, `target: {}`, `dp_modifier: 1000`,
-//!   gated by `self_digivolution_contains_name` (any_of Greymon / Omnimon).
+//!   gated by `source_name_contains` (any_of Greymon / Omnimon; the carrier's
+//!   top-card name).
 //!
 //! # Faithfulness notes (DCGO comparison)
 //! - DCGO `CanSelectCardCondition`: Digimon AND (HasGreymonName OR
@@ -35,12 +36,11 @@
 //!   `select_reveal_buckets` with `no_duplicate_cards: true` plus a trailing
 //!   `place_remainder_on_deck { position: bottom }` step matches.
 //! - Aura: DCGO `Condition` checks `card.PermanentOfThisCard().TopCard.HasGreymonName
-//!   || ContainsCardName("Omnimon")`. The closest DSL primitive is
-//!   `self_digivolution_contains_name` which scans the carrier's full source
-//!   stack. Because BT12-059 itself is "Agumon" (no Greymon/Omnimon), the
-//!   only way the condition fires is if a Greymon-named or Omnimon-named card
-//!   is stacked on top — exactly matching "TopCard.HasGreymonName" in
-//!   practice for the Lv3 Agumon source slot.
+//!   || ContainsCardName("Omnimon")`. The DSL reads it with
+//!   `source_name_contains` (the carrier's top-card rules name). The
+//!   stack-scanning `self_digivolution_contains_name` it used before also
+//!   matched a Greymon/Omnimon card lower in the stack
+//!   (G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS; Section 4).
 
 use digimon_dsl::compiled::{
     CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
@@ -429,8 +429,8 @@ fn bt12_059_digimon_bucket_rejects_tamer_with_greymon_name() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Stack BT12-059 under a "Greymon" carrier. The aura's
-/// `self_digivolution_contains_name` condition must pass (the stack contains a
-/// card named "Greymon"), so `source_dp_contribution` for BT12-059's source
+/// `source_name_contains` condition must pass (the top card is named
+/// "Greymon"), so `source_dp_contribution` for BT12-059's source
 /// slot is +1000.
 #[test]
 fn bt12_059_inherited_dp_active_when_carrier_name_contains_greymon() {
@@ -498,8 +498,8 @@ fn bt12_059_inherited_dp_inactive_when_carrier_name_unrelated() {
 }
 
 /// BT12-059 alone on the field (no top card stacked yet): the only card in
-/// the stack is BT12-059 itself, named "Agumon". The `self_digivolution_contains_name`
-/// scan finds neither Greymon nor Omnimon, so the aura does not contribute.
+/// the stack is BT12-059 itself, named "Agumon". The `source_name_contains`
+/// check finds neither Greymon nor Omnimon, so the aura does not contribute.
 ///
 /// Note: `source_dp_contribution(_, 0)` queries the contribution from the
 /// source at index 0 — which here is BT12-059 (the whole permanent). The
@@ -521,5 +521,55 @@ fn bt12_059_inherited_dp_inactive_when_alone_on_field() {
         contribution, 0,
         "with no Greymon/Omnimon-named card in its own stack, the inherited \
          aura must not fire; got {contribution}"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 4 — "this Digimon's name" is the TOP card's name (§4-7-7 / §4-8-2;
+//             Q3225; G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// A non-matching top card ("Tyrannomon") over a matching digivolution card
+/// ("Greymon"): the Digimon's name is its top card's (official Q&A Q3225;
+/// DCGO `PermanentOfThisCard().TopCard.HasGreymonName`), so "While this
+/// Digimon has [Greymon] or [Omnimon] in its name" is false and BT12-059's
+/// inherited +1000 DP must NOT apply. A stack-wide name scan wrongly grants it.
+#[test]
+fn bt12_059_inherited_dp_ignores_greymon_digivolution_card_under_unrelated_top() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT12-059")
+        .expect("BT12-059 YAML loads")
+        .add_card(make_named_digimon("GREYMON-SRC", "Greymon"))
+        .add_card(make_named_digimon("OMNIMON-SRC", "Omnimon"))
+        .add_card(make_named_digimon("TYRANNO", "Tyrannomon"))
+        .memory(0)
+        .start();
+
+    let handle = runner.place_stack(0, &["BT12-059", "GREYMON-SRC", "OMNIMON-SRC", "TYRANNO"]);
+    let contribution = runner.game.source_dp_contribution(handle, 0);
+    assert_eq!(
+        contribution, 0,
+        "[Greymon] / [Omnimon] digivolution cards under a [Tyrannomon] top card do not \
+         put those names in this Digimon's name; got {contribution}"
+    );
+}
+
+/// Positive control for the test above: the same cards, with the Greymon card
+/// on top, give the Digimon the name [Greymon] and the +1000 DP applies.
+#[test]
+fn bt12_059_inherited_dp_applies_when_greymon_card_is_the_top_card() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT12-059")
+        .expect("BT12-059 YAML loads")
+        .add_card(make_named_digimon("GREYMON-SRC", "Greymon"))
+        .add_card(make_named_digimon("TYRANNO", "Tyrannomon"))
+        .memory(0)
+        .start();
+
+    let handle = runner.place_stack(0, &["BT12-059", "TYRANNO", "GREYMON-SRC"]);
+    let contribution = runner.game.source_dp_contribution(handle, 0);
+    assert_eq!(
+        contribution, 1000,
+        "a [Greymon] top card gives this Digimon [Greymon] in its name; got {contribution}"
     );
 }

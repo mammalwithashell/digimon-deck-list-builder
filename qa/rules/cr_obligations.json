@@ -12771,11 +12771,12 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": "Controller ruling (provisional, owner sign-off pending): the bottom cards are part of the top card's information -- they contribute inherited effects (4-7-4) -- but a Digimon's traits are its top card's (with its (Rule) Trait grants, 2-3-4-2); a [TS] digivolution card does not make the Digimon a [TS] Digimon. The manual has no explicit 'traits are the top card's' sentence; official Q&A Q3225 (EX1-038: trashing the top card leaves a Digimon 'without [Free] in its traits' while the [Free] EX1-038 is still a digivolution card) and DCGO (BT25_020.cs / EX8_047.cs read permanent.TopCard) are the ruling. Counted: the battle-winner trait qualifier ('any of your [TS] trait Digimon win a battle') and the host-Digimon trait predicate ('trash this card from a [TS] trait Digimon's digivolution cards') read the top card, each with a top-card control (G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS resolved). Status (review round 1): the tests pin the Q3225 / DCGO top-card reading of the characteristics consequence; neither sentence is proven as written; the second sentence (bottom cards not on the field; place-under removes) is untested. EX1-038's own inherited text ('[Imperialdramon] in its name or [Free] in its traits', while EX1-038 itself is [Free]) is the strongest card-text evidence for the top-card reading.",
+      "note": "Controller ruling (provisional, owner sign-off pending): the bottom cards are part of the top card's information -- they contribute inherited effects (4-7-4) -- but a Digimon's traits are its top card's (with its (Rule) Trait grants, 2-3-4-2); a [TS] digivolution card does not make the Digimon a [TS] Digimon. The manual has no explicit 'traits are the top card's' sentence; official Q&A Q3225 (EX1-038: trashing the top card leaves a Digimon 'without [Free] in its traits' while the [Free] EX1-038 is still a digivolution card) and DCGO (BT25_020.cs / EX8_047.cs read permanent.TopCard) are the ruling. Counted: the battle-winner trait qualifier ('any of your [TS] trait Digimon win a battle') and the host-Digimon trait predicate ('trash this card from a [TS] trait Digimon's digivolution cards') read the top card, each with a top-card control (G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS resolved). Status (review round 1): the tests pin the Q3225 / DCGO top-card reading of the characteristics consequence; neither sentence is proven as written; the second sentence (bottom cards not on the field; place-under removes) is untested. EX1-038's own inherited text ('[Imperialdramon] in its name or [Free] in its traits', while EX1-038 itself is [Free]) is the strongest card-text evidence for the top-card reading. Name: Controller ruling (Tasks 31 / 35, provisional, for owner sign-off): 4-7-7 governs stack membership; a Digimon's characteristics (name, traits) are its top card's -- official Q&A Q3225 (EX1-038: after its top card is trashed the Digimon is 'without [Free] in its traits or [Imperialdramon] in its name' although EX1-038 [Free] stays in the stack; EX1-038's own 'While this Digimon has [Imperialdramon] in its name or [Free] in its traits' would always hold under a stack scan) and DCGO TopCard reads. digimon_name_is_the_top_cards_name pins the NAME half ('While this Digimon has [Greymon] in its name': a [Greymon] digivolution card under a non-[Greymon] top card gives no +1000; G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS). Neither sentence is proven as written; the second sentence (not on the field / place-under removes from the field) is untested.",
       "status": "gap",
       "tests": [
         "ch15_08_effect_categories::battle_winner_trait_is_the_top_cards_trait",
-        "ch15_08_effect_categories::permanent_trait_is_the_top_cards_trait"
+        "ch15_08_effect_categories::permanent_trait_is_the_top_cards_trait",
+        "ch15_08_effect_categories::digimon_name_is_the_top_cards_name"
       ],
       "text": "The bottom cards of a stack are treated as part of the information on the top card. They aren't considered to be placed on the field. (Example: When \"[When Digivolving] Place one of your opponent's level 3 or lower Digimon under another of your opponent's Digimon as its bottom digivolution card or under an opponent's Tamer\" is used to place a Digimon under a card, that card is considered to be removed from the field.)"
     },
@@ -12839,9 +12840,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Proven for names: 'While [Greymon] is in this Digimon's digivolution cards' (production idiom self_digivolution_sources_contain_name, BT16-027 / BT20-020 / BT20-102) is not satisfied by a [Greymon] top card and is satisfied by a [Greymon] digivolution card. The same test pins the converse for 4-7-7 (a Digimon's name is its top card's). Traits / level / colour of digivolution cards are not staged here.",
+      "status": "proven",
+      "tests": [
+        "ch15_08_effect_categories::digimon_name_is_the_top_cards_name"
+      ],
       "text": "When referencing digivolution card information, the information is referenced on cards that are treated as digivolution cards."
     },
     "4-9": {
@@ -15315,9 +15318,9 @@
         "total": 66
       },
       "4": {
-        "gap": 85,
+        "gap": 84,
         "not_testable": 34,
-        "proven": 20,
+        "proven": 21,
         "total": 139
       },
       "5": {
@@ -15351,7 +15354,7 @@
         "total": 13
       }
     },
-    "gap": 609,
+    "gap": 608,
     "mechanics": {
       "gap_blocking": 9,
       "gap_nonblocking": 320,
@@ -15359,7 +15362,7 @@
       "proven": 234
     },
     "not-testable": 246,
-    "proven": 264
+    "proven": 265
   },
   "version": 1
 }

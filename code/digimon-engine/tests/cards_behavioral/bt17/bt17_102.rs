@@ -26,7 +26,7 @@
 //!
 //! # Patterns covered
 //! - Standard + alt digivolve paths (Lv.3 Red and Lv.3 w/Agumon name)
-//! - [When Digivolving] conditional DP buff via `self_digivolution_contains_name`
+//! - [When Digivolving] conditional DP buff via `source_name_is` (this Digimon's name, exact)
 //! - [All Turns] dynamic source-derived effective names
 //! - [On Deletion] modal branch (play OR hatch) with optional decline
 //! - Inherited [On Deletion] mirror clause via `scope: inherited`
@@ -37,7 +37,7 @@
 //! |---------------------------------------------------------|------------------------------------------------------------------------------|-----------------------|
 //! | Standard digivolve Lv.3 Red / cost 3                    | `alt_paths[0]` `level_eq: 3, color_is: red, cost: 3`                         | OK                    |
 //! | Alt digivolve Lv.3 w/Agumon-name / cost 2               | `alt_paths[1]` `level_eq: 3, name_contains: Agumon, cost: 2, ignore_reqs`    | OK                    |
-//! | [When Digivolving] +3000 DP if name is [Koromon]        | `condition: { self_digivolution_contains_name: Koromon }` + `add_dp_modifier`| OK                    |
+//! | [When Digivolving] +3000 DP if name is [Koromon]        | `condition: { source_name_is: Koromon }` + `add_dp_modifier`                 | OK                    |
 //! | [When Digivolving] then delete opp Digimon ≤ self DP    | `select_opponent_permanent` + `dp_lte: { formula: { source_dp: {} } }`       | OK (G-FORMULA-SOURCE-DP resolved) |
 //! | [All Turns] dynamic name aliasing from material stack   | `identity.source_name_aliases: [{ level_lte: 3 }]`                            | OK                    |
 //! | [On Deletion] may play Tai/Kari Tamer free OR hatch     | `when: on_deletion`, `optional: true`, `select_effect_choice` + 2 branches    | OK                    |
@@ -71,16 +71,12 @@
 //!   current level-3-or-lower source cards and routes name predicates through
 //!   the synthesized permanent identity.
 //!
-//! - **G-DSL-SELF-NAME-IS** (= G-DSL-SELF-NAME-CONTAINS, see AD1-014:170) —
-//!   no DSL BoolPredicate evaluates "the carrier permanent's TOP CARD name
-//!   contains/equals X". Closest is `self_digivolution_contains_name` (RESOLVED
-//!   2026-05-02; scans the digivolution material stack but NOT the top card).
-//!   For BT17-102 [When Digivolving], stack-scanning is the faithful proxy
-//!   in the standard play pattern (Koromon → Agumon → Greymon), and matches
-//!   the [All Turns] alias semantics. The `name_is`/`name_contains` filters
-//!   exist but apply only to CANDIDATE cards in `select_*` filters, not to
-//!   the carrier itself. Already a known gap; this card is one more affected
-//!   case if the [All Turns] dynamic-name-alias gap also remains open.
+//! - **G-DSL-SELF-NAME-IS** — RESOLVED: `source_name_is` reads this
+//!   Digimon's name (its top card's synthesized names, including the names the
+//!   [All Turns] clause gains). The stack-scanning
+//!   `self_digivolution_contains_name` it used before also counted a
+//!   [Koromon] card the name gain does not cover
+//!   (G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS).
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -373,8 +369,9 @@ fn bt17_102_when_digivolving_with_koromon_in_stack_buffs_self_3000() {
     let stack = runner.place_stack(0, &["KORO", "BT17-102"]);
 
     // Manually fire the [When Digivolving] timing via OnPlay for the top card
-    // (carrier). The DSL clause's `condition: { self_digivolution_contains_name:
-    // "Koromon" }` should match because Koromon sits in the source stack.
+    // (carrier). The DSL clause's `condition: { source_name_is:
+    // "Koromon" }` should match because the [All Turns] clause gives this
+    // Digimon the name of its level-2 Koromon digivolution card.
     fire_when_digivolving(&mut runner, stack);
     let _ = runner.auto_resolve();
 
@@ -760,4 +757,133 @@ fn bt17_102_inherited_on_deletion_no_legal_targets_resolves_to_noop() {
         runner.battle_area_size(0) <= battle_area_before,
         "battle area must not grow when the inherited On Deletion has no legal target"
     );
+}
+
+// ─── Section 6 — "If this Digimon's name is [Koromon]" reads the Digimon's
+//                name (§4-7-7 / §4-8-2; Q3225; DCGO
+//                `TopCard.EqualsCardName("Koromon")`;
+//                G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS) ────────────────
+
+/// A level-4 card named [Koromon] in the digivolution cards: BT17-102's
+/// [All Turns] name gain covers only "level 3 or lower cards in its
+/// digivolution cards", so this Digimon's name is not [Koromon] and the
+/// +3000 DP must NOT apply. A stack-wide name scan wrongly grants it.
+#[test]
+fn bt17_102_when_digivolving_ignores_koromon_named_card_above_level_3() {
+    let mut koromon_lv4 = make_koromon("KORO-LV4");
+    koromon_lv4.level = Some(4);
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-102")
+        .expect("BT17-102 in embedded DSL pack")
+        .add_card(koromon_lv4)
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    let stack = runner.place_stack(0, &["KORO-LV4", "BT17-102"]);
+    runner.game.tick_declarative_effects();
+    fire_when_digivolving(&mut runner, stack);
+    let _ = runner.auto_resolve();
+
+    let dp = runner.effective_dp(stack).expect("perm has DP");
+    assert_eq!(
+        dp, 5000,
+        "a level-4 [Koromon] digivolution card gives no name, so this Digimon's name \
+         is not [Koromon]; got {dp}"
+    );
+}
+
+/// Positive control: a level-2 [Koromon] digivolution card gives this Digimon
+/// the name [Koromon] through the [All Turns] name gain, and the +3000 applies.
+#[test]
+fn bt17_102_when_digivolving_buffs_when_name_gained_from_koromon() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-102")
+        .expect("BT17-102 in embedded DSL pack")
+        .add_card(make_koromon("KORO"))
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    let stack = runner.place_stack(0, &["KORO", "BT17-102"]);
+    runner.game.tick_declarative_effects();
+    fire_when_digivolving(&mut runner, stack);
+    let _ = runner.auto_resolve();
+
+    let dp = runner.effective_dp(stack).expect("perm has DP");
+    assert_eq!(dp, 8000, "base 5000 + 3000; got {dp}");
+}
+
+/// End-to-end: a real hand digivolution (no staging, no manual tick) of
+/// BT17-102 onto a Koromon -> Agumon stack. The [All Turns] name gain must be
+/// in place when [When Digivolving] reads "this Digimon's name", so the +3000
+/// applies (5000 -> 8000).
+#[test]
+fn bt17_102_real_digivolve_over_koromon_line_buffs_3000() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-102")
+        .expect("BT17-102 in embedded DSL pack")
+        .add_card(make_koromon("KORO"))
+        .add_card({
+            let mut agumon = make_agumon("AGU");
+            agumon.colors = vec![digimon_engine::enums::CardColor::Red];
+            agumon
+        })
+        .add_card(make_test_card("FILL", "FILL"))
+        .hand(0, &["BT17-102"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .memory(10)
+        .start();
+    runner.skip_mulligan();
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    runner.game.turn_player_idx = 0;
+    let base = runner.place_stack(0, &["KORO", "AGU"]);
+    let hand_idx = runner.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "BT17-102")
+        .expect("BT17-102 in hand");
+    // Two routes (Red Lv.3 / cost 3 and Lv.3 [Agumon] / cost 2): the call may
+    // park a cost choice (returning false); `auto_resolve` answers it.
+    let _ = runner.game.digivolve_from_hand(
+        0,
+        hand_idx,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByDigivolve,
+    );
+    let _ = runner.auto_resolve();
+
+    let top = runner.game.players[0].battle_area[base.index as usize]
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(top, "BT17-102", "BT17-102 digivolved onto the Lv.3 [Agumon]");
+    let dp = runner.effective_dp(base).expect("perm has DP");
+    assert_eq!(dp, 8000, "the gained [Koromon] name enables +3000; got {dp}");
+}
+
+/// Near-miss exact name: a level-2 digivolution card named "Koromon (X
+/// Antibody)" gives this Digimon that name through the [All Turns] name gain,
+/// but "this Digimon's name is [Koromon]" is an exact match (DCGO
+/// `EqualsCardName`; `source_name_is`): no +3000.
+#[test]
+fn bt17_102_when_digivolving_requires_the_exact_koromon_name() {
+    let mut near_miss = make_koromon("KORO-X");
+    near_miss.card_name = "Koromon (X Antibody)".to_string();
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-102")
+        .expect("BT17-102 in embedded DSL pack")
+        .add_card(near_miss)
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    let stack = runner.place_stack(0, &["KORO-X", "BT17-102"]);
+    runner.game.tick_declarative_effects();
+    fire_when_digivolving(&mut runner, stack);
+    let _ = runner.auto_resolve();
+
+    let dp = runner.effective_dp(stack).expect("perm has DP");
+    assert_eq!(dp, 5000, "[Koromon (X Antibody)] is not [Koromon]; got {dp}");
 }

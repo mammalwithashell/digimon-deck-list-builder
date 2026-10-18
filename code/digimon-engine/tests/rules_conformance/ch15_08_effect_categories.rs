@@ -1463,3 +1463,69 @@ fn immediate_effect_with_condition_met_later_can_activate() {
         "the processing condition was never met: the Digimon was deleted"
     );
 }
+
+// ─── §4-8-2 / §4-7-7 (a Digimon's name) ─────────────────────────────────────
+
+/// §4-8-2 "When referencing digivolution card information, the information is
+/// referenced on cards that are treated as digivolution cards."
+///
+/// The converse, read with §4-7-7 and the provisional controller ruling of
+/// Task 31 / Task 35 (official Q&A Q3225, EX1-038: a Digimon whose top card
+/// was trashed is "without ... [Imperialdramon] in its name" although such a
+/// card may remain in the stack; DCGO reads `PermanentOfThisCard().TopCard`):
+/// a Digimon's NAME is its top card's, and digivolution cards are read only
+/// when the text references digivolution cards
+/// (G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS).
+///
+/// 1. `INH_GREY_NAME_DP` ("While this Digimon has [Greymon] in its name, it
+///    gets +1000 DP") under a [Greymon] digivolution card and a non-[Greymon]
+///    top card: no +1000. With the [Greymon] card on top: +1000.
+/// 2. `GREY_DIGICARD_DP` (named [Greymon]; "While [Greymon] is in this
+///    Digimon's digivolution cards, this Digimon gets +1000 DP"): its own
+///    top-card name does not count; a [Greymon] digivolution card does.
+#[test]
+fn digimon_name_is_the_top_cards_name() {
+    cite!(
+        "4-8-2",
+        "0f82c2964b229056dd15ce7131f53fd3b0582382f8e266c3504a06596dc0b8df"
+    );
+    cite!(
+        "4-7-7",
+        "d4517eedd82a9caf085a83c46d1898d22958f368614580d07fac9600f57fbeb4"
+    );
+    let dp = |stack: &[&str]| {
+        let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
+            .deck(0, &[FILL; 4])
+            .deck(1, &[FILL; 4])
+            .memory(3)
+            .start();
+        let h = r.place_stack(0, stack);
+        r.game.tick_declarative_effects();
+        r.effective_dp(h).expect("the Digimon has DP")
+    };
+
+    // 1. "this Digimon's name" — the top card's.
+    assert_eq!(
+        dp(&["INH_GREY_NAME_DP", "GREY_LV4", "LV5_PLAIN"]),
+        7000,
+        "a [Greymon] digivolution card under a [Fivemon] top card does not put [Greymon] in \
+         this Digimon's name: no +1000"
+    );
+    assert_eq!(
+        dp(&["INH_GREY_NAME_DP", "LV4_PLAIN", "GREY_LV4"]),
+        6000,
+        "control: a [Greymon] top card gives this Digimon [Greymon] in its name: +1000"
+    );
+
+    // 2. "in this Digimon's digivolution cards" — only the cards under it.
+    assert_eq!(
+        dp(&["LV4_PLAIN", "GREY_DIGICARD_DP"]),
+        7000,
+        "the [Greymon] top card is not a digivolution card: no +1000"
+    );
+    assert_eq!(
+        dp(&["GREY_LV4", "GREY_DIGICARD_DP"]),
+        8000,
+        "a [Greymon] digivolution card satisfies the condition: +1000"
+    );
+}

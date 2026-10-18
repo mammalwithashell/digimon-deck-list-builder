@@ -167,6 +167,14 @@ fn lint_file(
     }
 
     lint_battle_result_conditions(&spec, &file, diags);
+    for f in check_carrier_name_stack_scan(&spec) {
+        diags.push(Diagnostic {
+            file: file.clone(),
+            severity: Severity::Warning,
+            path: f.path,
+            message: f.message,
+        });
+    }
 
     if let Some(sections) = printed.and_then(|p| p.get(&spec.card)) {
         for f in check_security_icons(&spec, sections) {
@@ -276,6 +284,110 @@ fn lint_battle_result_conditions(
     }
 }
 
+/// Clauses confirmed to use `self_digivolution_contains_name` for a printed
+/// "[X] in its name or with [X] in its digivolution cards" condition (the one
+/// shape that reads the top card AND the digivolution cards), as
+/// `(card id, clause summary, printed clause)`. An entry exempts only the
+/// clause whose `summary:` equals its summary, never the whole card.
+///
+/// Empty today: no authored card uses that shape. Its future legitimate users
+/// are the unauthored BT9-096 ([Jellymon]), BT10-102 ([Angoramon]) and
+/// BT11-034 ([Dorulumon]), which print "a Digimon in play with [X] in its name
+/// or with [X] in its digivolution cards" (a candidate Digimon in play, read
+/// inside a permanent filter): add each here with its printed clause when it
+/// is authored.
+const SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST: &[(&str, &str, &str)] = &[];
+
+#[derive(Debug, PartialEq, Eq)]
+struct LintFinding {
+    path: String,
+    message: String,
+}
+
+/// G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS: `self_digivolution_contains_name`
+/// scans the top card AND every digivolution card. A Digimon's name is its top
+/// card's (§4-7-7 ruling; Q3225; DCGO `TopCard`), and digivolution cards are
+/// read only when the text references them (§4-8-2). So:
+/// - "this Digimon has [X] in its name" -> `source_name_contains`;
+/// - "this Digimon is [X]" / "this Digimon's name is [X]" -> `source_name_is`;
+/// - "[X] is in this Digimon's digivolution cards" -> `self_digivolution_sources_contain_name`;
+/// - only "[X] in its name or with [X] in its digivolution cards" (BT9-096,
+///   BT10-102, BT11-034) may keep the stack scan.
+///
+/// The linter cannot tell these apart reliably from the summary, so every use
+/// outside `SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST` is a warning that names
+/// the clause summary for the reviewer.
+fn check_carrier_name_stack_scan(spec: &digimon_engine::dsl::spec::CardSpec) -> Vec<LintFinding> {
+    let Ok(value) = serde_json::to_value(spec) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    walk_for_stack_name_scan(&spec.card, &value, String::new(), None, &mut out);
+    out
+}
+
+fn stack_name_scan_allowlisted(card: &str, summary: Option<&str>) -> bool {
+    SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST
+        .iter()
+        .any(|(id, clause_summary, _printed)| *id == card && summary == Some(*clause_summary))
+}
+
+fn walk_for_stack_name_scan(
+    card: &str,
+    v: &serde_json::Value,
+    path: String,
+    summary: Option<&str>,
+    out: &mut Vec<LintFinding>,
+) {
+    match v {
+        serde_json::Value::Object(map) => {
+            let summary = map
+                .get("summary")
+                .and_then(|s| s.as_str())
+                .or(summary);
+            for (k, child) in map {
+                let child_path = if path.is_empty() {
+                    k.clone()
+                } else {
+                    format!("{path}.{k}")
+                };
+                if k == "self_digivolution_contains_name"
+                    && !child.is_null()
+                    && !stack_name_scan_allowlisted(card, summary)
+                {
+                    out.push(LintFinding {
+                        path: child_path.clone(),
+                        message: format!(
+                            concat!(
+                                "carrier-name/stack-scan: `self_digivolution_contains_name: {}` ",
+                                "reads the top card AND every digivolution card. Use ",
+                                "`source_name_contains` for \"this Digimon has [X] in its name\", ",
+                                "`source_name_is` for \"this Digimon is [X]\" and ",
+                                "`self_digivolution_sources_contain_name` for \"[X] is in this ",
+                                "Digimon's digivolution cards\" (§4-7-7, §4-8-2; ",
+                                "G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS). Only an \"[X] in ",
+                                "its name or with [X] in its digivolution cards\" clause (BT9-096, ",
+                                "BT10-102, BT11-034) may keep it: add the clause to ",
+                                "SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST with its summary and ",
+                                "printed clause. Clause summary: {}"
+                            ),
+                            child,
+                            summary.unwrap_or("<none>")
+                        ),
+                    });
+                }
+                walk_for_stack_name_scan(card, child, child_path, summary, out);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for (i, child) in items.iter().enumerate() {
+                walk_for_stack_name_scan(card, child, format!("{path}[{i}]"), summary, out);
+            }
+        }
+        _ => {}
+    }
+}
+
 fn walk_yaml(path: &Path) -> Vec<PathBuf> {
     if path.is_file() {
         return vec![path.to_path_buf()];
@@ -381,5 +493,79 @@ fn real_main() -> ExitCode {
         ExitCode::from(2)
     } else {
         ExitCode::SUCCESS
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Parse a test card through the same `loader::load_file` the CLI uses.
+    fn spec(yaml: &str) -> digimon_engine::dsl::spec::CardSpec {
+        let dir = std::env::temp_dir().join(format!(
+            "dsl_lint_carrier_name_{}_{}",
+            std::process::id(),
+            yaml.len()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("card.yaml");
+        std::fs::write(&path, yaml).unwrap();
+        let s = loader::load_file(&path).expect("test card loads");
+        let _ = std::fs::remove_dir_all(&dir);
+        s
+    }
+
+    #[test]
+    fn stack_name_scan_is_flagged_with_its_clause_summary() {
+        let s = spec(
+            r#"
+card: LINT_PROBE
+name: Probemon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 1000
+effects:
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - self_digivolution_contains_name: "Greymon"
+    target: {}
+    dp_modifier: 1000
+    summary: "[All Turns] While this Digimon has [Greymon] in its name, it gets +1000 DP."
+"#,
+        );
+        let f = check_carrier_name_stack_scan(&s);
+        assert_eq!(f.len(), 1, "{f:?}");
+        assert!(f[0].path.ends_with("self_digivolution_contains_name"), "{}", f[0].path);
+        assert!(f[0].message.contains("has [Greymon] in its name"), "{}", f[0].message);
+    }
+
+    #[test]
+    fn top_card_and_sources_only_predicates_are_not_flagged() {
+        let s = spec(
+            r#"
+card: LINT_PROBE_OK
+name: Probemon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 1000
+effects:
+  - kind: aura
+    active_when:
+      any_of:
+        - source_name_contains: "Greymon"
+        - self_digivolution_sources_contain_name: "Greymon"
+    target: {}
+    dp_modifier: 1000
+    summary: "probe"
+"#,
+        );
+        assert!(check_carrier_name_stack_scan(&s).is_empty());
     }
 }
