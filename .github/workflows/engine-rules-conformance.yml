@@ -1,10 +1,10 @@
-name: Engine Rules Conformance & Binary Rot Guard
+name: Engine Rules Conformance
 
 # Why this is its own workflow (not a second job in engine-clone-safety.yml):
 # engine-clone-safety.yml is the make-engine-cloneable gate -- its single job,
 # its path filter and its header all say "Game: Clone stays faithful". This
 # workflow guards a different property -- that the rules-conformance deliverable
-# and every OTHER integration-test binary of `digimon-engine` keeps compiling
+# and the curated integration-test binaries of `digimon-engine` keep compiling
 # and passing -- and it also fires on rules-ledger / rules-doc edits that the
 # clone-safety filter has no reason to watch. Separate files also give the two
 # gates independent caches, required-check names and re-run buttons, and the
@@ -16,20 +16,22 @@ name: Engine Rules Conformance & Binary Rot Guard
 # keyword_semantics_matrix). Every other `tests/*.rs` and `tests/<dir>/main.rs`
 # binary rotted unnoticed -- five stale tests had accumulated in
 # blocker_current_defender, force_attack_effect_tail_order and timing_dispatch
-# by the time the rules-conformance campaign looked. This workflow runs them all.
+# by the time the rules-conformance campaign looked. This workflow (PR gate) plus
+# engine-binary-rot.yml (nightly) now run them all.
 #
 # NOT duplicated here (already gated by engine-clone-safety.yml): cards_behavioral,
 # dsl, archetypes, judge_quiz, selection, clone_fuzz and the engine lib tests.
 # bench_engine_throughput is a `--release` benchmark, not a test.
 #
-# Two parallel jobs:
-#   * rules-conformance-and-core-binaries -- the two rules ledger checks, the
-#     rules_conformance deliverable, the binaries named by the campaign, and
-#     every other `tests/<dir>/main.rs` binary, listed explicitly.
-#   * top-level-regression-binaries -- every top-level `tests/*.rs` regression
-#     file (~180 one-file binaries), discovered by GLOB so a newly added file
-#     is covered automatically and cannot rot unnoticed again. Sharded 4 ways
-#     because each file links its own test executable.
+# This workflow is the PR gate: the rules ledger checks, the rules_conformance
+# deliverable, the binaries named by the campaign and every other
+# `tests/<dir>/main.rs` binary, listed explicitly (31 binaries). The ~176
+# one-file top-level `tests/*.rs` regression binaries are too slow to build
+# per PR (each links its own executable); they run from engine-binary-rot.yml
+# nightly, on push to main and on demand.
+#
+# Every cargo step uses --no-fail-fast and every step after the cache step
+# runs `if: !cancelled()`, so one red suite never hides the others.
 
 on:
   pull_request:
@@ -54,6 +56,8 @@ jobs:
   rules-conformance-and-core-binaries:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -76,13 +80,14 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-engine-rules-${{ hashFiles('Cargo.lock', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-engine-rules-core-${{ hashFiles('Cargo.lock', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
 
       # Cheap and first: fails in seconds, before any Rust compile.
       # build_obligations --check: the committed qa/rules obligations JSON is
       # exactly a fresh parse of docs/digimon-rules/cr-4.3.txt (the
       # 1,119-rule denominator).
       - name: Rules obligations ledger is fresh
+        if: ${{ !cancelled() }}
         env:
           PYTHONPATH: code
         run: python -m tools.rules.build_obligations --check
@@ -90,6 +95,7 @@ jobs:
       # coverage_report --check: every test a `proven` obligation names really
       # exists in the Rust suites; prints the denominator.
       - name: Rules coverage ledger names only real tests
+        if: ${{ !cancelled() }}
         env:
           PYTHONPATH: code
         run: python -m tools.rules.coverage_report --check
@@ -100,12 +106,13 @@ jobs:
       # rules_faq: generated official-Q&A conformance cases.
       # keyword_semantics_matrix: per-keyword optional/mandatory table vs engine.
       - name: Rules conformance suites
+        if: ${{ !cancelled() }}
         env:
           RUST_MIN_STACK: "268435456"
         run: >
           cargo test -p digimon-engine
           --test rules_conformance --test rules_faq --test keyword_semantics_matrix
-          -- --test-threads=8
+          --no-fail-fast -- --test-threads=8
 
       # --- Binaries that rotted outside CI -----------------------------------
       # timing_dispatch: trigger timing / dispatch ordering (simultaneous
@@ -115,13 +122,14 @@ jobs:
       # force_attack_effect_tail_order: forced-attack effect tails resolve in
       #   rule order relative to the attack.
       - name: Timing, cost and attack-order regressions
+        if: ${{ !cancelled() }}
         env:
           RUST_MIN_STACK: "268435456"
         run: >
           cargo test -p digimon-engine
           --test timing_dispatch --test cost_hooks
           --test blocker_current_defender --test force_attack_effect_tail_order
-          -- --test-threads=8
+          --no-fail-fast -- --test-threads=8
 
       # combat: attack state machine + interrupts (Alliance/Counter/Block).
       # mask_and_tensor: action-mask + observation-tensor contracts.
@@ -129,6 +137,7 @@ jobs:
       # effect_context: the EffectContext card-scripting API surface.
       # replacements: replacement-effect pipeline (would-X substitutions).
       - name: Combat, mask/tensor, keyword phases, effect context, replacements
+        if: ${{ !cancelled() }}
         env:
           RUST_MIN_STACK: "268435456"
         run: >
@@ -136,7 +145,7 @@ jobs:
           --test combat --test mask_and_tensor
           --test keyword_phase_d --test keyword_phase_e --test keyword_phase_f
           --test effect_context --test replacements
-          -- --test-threads=8
+          --no-fail-fast -- --test-threads=8
 
       # phase_flow: turn/phase state machine.  effects / effect_source_kind:
       # effect execution + source attribution.  event_emission: event stream.
@@ -145,6 +154,7 @@ jobs:
       # prohibition effects.  dual_cards: DUAL-card handling.  policies:
       # built-in agent policies.  infra: determinism guard + harness infra.
       - name: Engine domain suites (phase flow, effects, events, deletion, options, ...)
+        if: ${{ !cancelled() }}
         env:
           RUST_MIN_STACK: "268435456"
         run: >
@@ -152,13 +162,14 @@ jobs:
           --test phase_flow --test effects --test effect_source_kind
           --test event_emission --test deletion_batching --test option_flow
           --test flood_gates --test dual_cards --test policies --test infra
-          -- --test-threads=8
+          --no-fail-fast -- --test-threads=8
 
       # deck_tools: deck parse/validate.  ffi_parity / onnx_parity: binding and
       # ONNX observation parity.  determinization / search / selfplay: the
       # add-determinized-search stack (infoset sampling, PUCT, self-play).
       # invariant_fuzz: random-playout invariant checker (~90 s).
       - name: Tooling, parity and search suites
+        if: ${{ !cancelled() }}
         env:
           RUST_MIN_STACK: "268435456"
         run: >
@@ -166,57 +177,4 @@ jobs:
           --test deck_tools --test ffi_parity --test onnx_parity
           --test determinization --test search --test selfplay
           --test invariant_fuzz
-          -- --test-threads=8
-
-  # Every top-level tests/*.rs file is its own integration binary (Cargo
-  # auto-discovers them). They are discovered by glob here, so a regression
-  # file added next month is gated from its first commit.
-  top-level-regression-binaries:
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [0, 1, 2, 3]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo registry + target
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-engine-rules-${{ hashFiles('Cargo.lock', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
-
-      - name: Top-level regression binaries (shard ${{ matrix.shard }} of 4)
-        env:
-          RUST_MIN_STACK: "268435456"
-          SHARD: ${{ matrix.shard }}
-          SHARDS: "4"
-        shell: bash
-        run: |
-          # Excluded top-level files (space-delimited):
-          #   bench_engine_throughput -- a `--release` benchmark, not a test
-          #   timing_dispatch, blocker_current_defender,
-          #   force_attack_effect_tail_order -- run by the other job
-          #   hina_pending_target_departure, replay_empty_replacement_window,
-          #   specialized_top_stacked_movement -- RED on head c3f8098a0 (one
-          #     failing test each), found while building this workflow. Fix the
-          #     test or the engine, then delete the name from EXCLUDE.
-          EXCLUDE=" bench_engine_throughput timing_dispatch blocker_current_defender force_attack_effect_tail_order hina_pending_target_departure replay_empty_replacement_window specialized_top_stacked_movement "
-          i=0
-          args=()
-          for f in $(ls code/digimon-engine/tests/*.rs | sort); do
-            n=$(basename "$f" .rs)
-            case "$EXCLUDE" in *" $n "*) continue ;; esac
-            if [ $((i % SHARDS)) -eq "$SHARD" ]; then args+=(--test "$n"); fi
-            i=$((i + 1))
-          done
-          echo "shard $SHARD: $(( ${#args[@]} / 2 )) binaries"
-          cargo test -p digimon-engine "${args[@]}" --no-fail-fast -- --test-threads=8
+          --no-fail-fast -- --test-threads=8
