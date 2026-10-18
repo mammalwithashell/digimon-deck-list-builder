@@ -289,10 +289,14 @@ fn force_attack_respects_cannot_attack_target() {
 }
 
 #[test]
-fn force_attack_respects_raid_on_unsuspended_enemies() {
-    // Forced attacker with Raid can target unsuspended enemies tied for
-    // highest DP. Same semantics as normal Main-phase Raid at §4.4, carried
-    // through the replacement.
+fn force_attack_with_raid_declares_on_no_unsuspended_enemy() {
+    // §11-2-7-1: the declaration targets the opponent or a suspended
+    // Digimon; <Raid> switches the target AFTER the declaration (§16-23-1 /
+    // §16-23-2), so a forced <Raid> attacker gets no unsuspended declaration
+    // target, the highest-DP one included; the forced attack goes to the
+    // player and <Raid> may switch it then. (Inverted from the Python-parity
+    // pin `force_attack_respects_raid_on_unsuspended_enemies`;
+    // G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED.)
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("RAIDER", CardColor::Red, 6000))
         .add_card(make_digimon("HIGH", CardColor::Blue, 5000))
@@ -314,12 +318,17 @@ fn force_attack_respects_raid_on_unsuspended_enemies() {
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
         mask[encode_attack(raider.index as u16, high.index as u16) as usize],
-        1.0,
-        "Raid targets tied-for-highest unsuspended DP enemy",
+        0.0,
+        "Raid adds no declaration target: not the highest-DP unsuspended enemy",
     );
     assert_eq!(
         mask[encode_attack(raider.index as u16, low.index as u16) as usize],
         0.0,
         "Raid must not include the lower-DP unsuspended enemy",
+    );
+    assert_eq!(
+        mask[encode_attack(raider.index as u16, SECURITY_TARGET) as usize],
+        1.0,
+        "the forced attack declares on the player",
     );
 }

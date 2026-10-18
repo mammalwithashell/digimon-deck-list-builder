@@ -499,13 +499,13 @@ Python cards can set `card._match_color_requirement = False` or register a `_mat
 
 Same pattern as §2.1b — only modifier-granted Blitz is honored because `CardData` has no `keywords` field. Native Blitz printed on a card's face awaits §4.5 effect-listing / keyword-parsing infra.
 
-### 4.4 🟢 Raid target rule — implemented
+### 4.4 🟢 Raid target rule — diverges from Python (intentionally, 2026-10-17)
 
 **Python** — [action_mask.py:121-140](../code/engine_py_legacy/engine/game/action_mask.py#L121): unsuspended enemies are targetable if attacker has `CAN_ATTACK_UNSUSPENDED` (any unsuspended) or Raid (tied-for-highest-DP unsuspended).
 
-**Rust** — [mask.rs](../code/digimon-engine/src/action/mask.rs): target loop precomputes the max effective DP across unsuspended enemy Digimon and emits attack bits for each target whose `effective_dp` equals the max under Raid; emits for every unsuspended target under `ModifierType::CanAttackUnsuspended`. DP tiebreak uses `Game::effective_dp` so `ChangeDp` modifiers are honored (slight improvement over Python's raw `.dp`). **The Raid arm is not 4.3 behaviour:** §11-2-7-1 limits the declaration target to the opponent or a suspended Digimon, and <Raid> switches the target after the declaration (§16-23-1/-2), which the attack's trigger pool already does; tracked as G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED (`docs/RUST_ENGINE_GAPS.md`).
+**Rust** — [mask.rs](../code/digimon-engine/src/action/mask.rs): emits an attack bit for every unsuspended target under `ModifierType::CanAttackUnsuspended`, and for no unsuspended target under Raid. §11-2-7-1 limits the declaration target to the opponent or a suspended Digimon, and <Raid> switches the target after the declaration (§16-23-1/-2) as a [When Attacking] trigger in the attack's pool (`Game::raid_switch_options`); the Python-parity Raid arm (tied-for-highest-DP unsuspended targets) was removed from the Main-phase, end-of-turn and effect-granted sites and the end-of-turn decoder (G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED, resolved).
 
-**Coverage:** [tests/mask_main_parity.rs](../code/digimon-engine/tests/mask_main_parity.rs) — `mask_raid_targets_highest_dp_unsuspended`, `mask_raid_allows_all_tied_for_highest`, `mask_can_attack_unsuspended_modifier_allows_all_unsuspended`.
+**Coverage:** [tests/mask_main_parity.rs](../code/digimon-engine/tests/mask_main_parity.rs) — `mask_raid_adds_no_unsuspended_declaration_target`, `mask_raid_tied_highest_are_not_declaration_targets`, `mask_can_attack_unsuspended_modifier_allows_all_unsuspended`; `rules_conformance::ch16_attack_keywords::raid_attacker_declares_on_a_legal_target_then_may_switch`.
 
 ### 4.5 🟡 Entire action categories ungenerated — partial
 
@@ -579,7 +579,7 @@ End-of-turn surface is complete for mask parity — Vortex (§4.6a) + Overclock/
 
 **Python** — [action_mask.py:321-335](../code/engine_py_legacy/engine/game/action_mask.py#L321): during `GamePhase.EndOfTurnAction`, permanents with `_is_vortex` and a passing `can_attack(is_vortex=True)` emit attack bits against any enemy Digimon.
 
-**Rust** — [mask.rs](../code/digimon-engine/src/action/mask.rs) `GamePhase::EndOfTurnAction` arm: mirrors Python via `modifiers.has_keyword(handle, Keyword::Vortex)` + `can_attack(handle, /* vortex = */ true)`. **Diverges from Python (intentionally, 2026-10-17):** only a suspended enemy Digimon, or one the attacker may attack unsuspended (`CanAttackUnsuspended`; plus, for now, the Raid arm of G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED), is a valid target (§11-2-7-1, §16-33-1; G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON), and the attack runs the counter and block timings (§11-1-5; G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK).
+**Rust** — [mask.rs](../code/digimon-engine/src/action/mask.rs) `GamePhase::EndOfTurnAction` arm: mirrors Python via `modifiers.has_keyword(handle, Keyword::Vortex)` + `can_attack(handle, /* vortex = */ true)`. **Diverges from Python (intentionally, 2026-10-17):** only a suspended enemy Digimon, or one the attacker may attack unsuspended (`CanAttackUnsuspended`; <Raid> switches after the declaration, G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED), is a valid target (§11-2-7-1, §16-33-1; G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON), and the attack runs the counter and block timings (§11-1-5; G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK).
 
 **Coverage:** [tests/mask_end_of_turn_parity.rs](../code/digimon-engine/tests/mask_end_of_turn_parity.rs) — `mask_vortex_emits_attacks_in_end_of_turn_phase`, `mask_vortex_without_keyword_only_emits_pass`, `mask_vortex_bypasses_summoning_sickness`, `mask_vortex_does_not_target_unsuspended_digimon`.
 
@@ -677,9 +677,9 @@ to mask-side reduced-cost affordability, and per-action context discriminants
 
 **Python** — [action_mask.py:227-280](../code/engine_py_legacy/engine/game/action_mask.py#L227): if any friendly Digimon has `ModifierType::FORCE_ATTACK`, every non-attack bit is zeroed and only those Digimons' attack bits remain. Falls through to the normal mask when no forced Digimon can legally act (all suspended, etc.).
 
-**Rust** — [mask.rs](../code/digimon-engine/src/action/mask.rs) `apply_force_attack_mask_replacement` runs at the tail of the `GamePhase::Main` arm. Builds a fresh replacement mask, walks forced attackers through `can_basic_attack` + the same Raid / CanAttackUnsuspended / CannotAttackTarget filters the normal Main-phase attack loop uses, and `mask.copy_from_slice(&replacement)` when at least one attack bit was emitted. No memory gate on forced attackers (matches Python).
+**Rust** — [mask.rs](../code/digimon-engine/src/action/mask.rs) `apply_force_attack_mask_replacement` runs at the tail of the `GamePhase::Main` arm. Builds a fresh replacement mask, walks forced attackers through `can_basic_attack` + the same CanAttackUnsuspended / CannotAttackTarget filters the normal Main-phase attack loop uses, and `mask.copy_from_slice(&replacement)` when at least one attack bit was emitted. No memory gate on forced attackers (matches Python).
 
-**Coverage:** [tests/mask_force_attack.rs](../code/digimon-engine/tests/mask_force_attack.rs) — 5 cases: non-attack bits zeroed when active, multiple forced Digimon all retain attacks, fall-through when forced attacker is suspended, CannotAttackTarget filtering, Raid-target tiebreak against unsuspended enemies.
+**Coverage:** [tests/mask_force_attack.rs](../code/digimon-engine/tests/mask_force_attack.rs) — 5 cases: non-attack bits zeroed when active, multiple forced Digimon all retain attacks, fall-through when forced attacker is suspended, CannotAttackTarget filtering, a forced <Raid> attacker gets no unsuspended declaration target (`force_attack_with_raid_declares_on_no_unsuspended_enemy`).
 
 ### 4.7e 🟡 DigiXros cost-reduction — resolver/DSL landed, mask parity residual
 

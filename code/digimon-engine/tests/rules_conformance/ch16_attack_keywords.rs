@@ -1232,6 +1232,96 @@ fn raid_kind_matches_rule() {
     assert!(memory_sources(&r, cp).is_empty(), "nothing resolved yet");
 }
 
+/// §11-2-7-1 "When a player makes an attack declaration, they choose either
+/// the opponent or 1 of the opponent's suspended Digimon as the attack
+/// target."
+/// §16-23-1 "<Raid> is a keyword effect that can SWITCH the target of attack
+/// to the opponent's unsuspended Digimon with the highest DP when a Digimon
+/// with this keyword effect attacks."
+///
+/// <Raid> switches the target after the declaration; it is not a permission
+/// to declare on an unsuspended Digimon (contrast <Execute>, §16-38-1).
+/// - P1 has only unsuspended Digimon (`raid_board`): P0's `RAID` may declare
+///   its attack on P1 and on none of them, the highest-DP ones included.
+///   Declared on P1, <Raid> then offers the optional switch to the two
+///   highest-DP Digimon; P0 declines and the attack checks security.
+/// - P1 also has a suspended `FILL` (slot 3): `RAID` may declare on it (and
+///   still not on the unsuspended ones); <Raid> then offers the same switch;
+///   P0 switches to slot 0, which battles and is deleted, and the suspended
+///   `FILL` is untouched.
+///
+/// DCGO: `Permanent.CanAttackTargetDigimon` has no <Raid> arm (a Digimon
+/// target is suspended, or the attacker may attack unsuspended Digimon);
+/// `KeyWordEffects/Raid.cs` switches the defender on `OnAllyAttack`.
+#[test]
+fn raid_attacker_declares_on_a_legal_target_then_may_switch() {
+    cite!(
+        "16-23-1",
+        "baa73e73e69753c0ecf0648f0d2bf6a59b8ef1da68985c91e493a96caa491d4a"
+    );
+    cite!(
+        "11-2-7-1",
+        "3a19c7490ca53f977f6a6cee04e7633ba2b90a9877d2cc013604793ac461d9d8"
+    );
+    // Only unsuspended Digimon: the opponent is the only legal target.
+    let mut r = raid_board();
+    let attacker = r.place_on_field(0, "RAID", Some(0));
+    let a = attacker.index as u16;
+    assert!(legal(&r, 0, encode_attack(a, SECURITY_TARGET)), "the opponent");
+    for slot in 0..3 {
+        assert!(
+            !legal(&r, 0, encode_attack(a, slot)),
+            "not the unsuspended Digimon in slot {slot}"
+        );
+    }
+    let cp = r.event_checkpoint();
+    r.game.decode_action(encode_attack(a, SECURITY_TARGET), 0);
+    let p = current_prompt(&r).expect("the <Raid> switch after the declaration");
+    assert_eq!(p.player, 0, "{p:?}");
+    assert_eq!(p.kind, SelectionKind::OppField, "{p:?}");
+    assert!(p.optional, "{p:?}");
+    assert_eq!(offered_slots(&p), vec![0, 2], "the tied highest-DP Digimon");
+    r.decline_optional_trigger().expect("decline <Raid>");
+    settle_declining(&mut r);
+    assert_eq!(revealed(&r, cp, 1), owned(&[FILL]), "the attack stayed on P1");
+
+    // A suspended Digimon is a legal declaration target too.
+    let mut r = raid_board();
+    let attacker = r.place_on_field(0, "RAID", Some(0));
+    let a = attacker.index as u16;
+    let suspended = place_suspended(&mut r, 1, FILL);
+    let s = suspended.index as u16;
+    assert!(legal(&r, 0, encode_attack(a, s)), "the suspended Digimon");
+    for slot in 0..3 {
+        assert!(
+            !legal(&r, 0, encode_attack(a, slot)),
+            "not the unsuspended Digimon in slot {slot}"
+        );
+    }
+    let cp = r.event_checkpoint();
+    r.game.decode_action(encode_attack(a, s), 0);
+    let p = current_prompt(&r).expect("the <Raid> switch after the declaration");
+    assert_eq!(p.kind, SelectionKind::OppField, "{p:?}");
+    assert!(p.optional, "{p:?}");
+    assert_eq!(offered_slots(&p), vec![0, 2], "the tied highest-DP Digimon");
+    assert!(
+        r.game.player(1).battle_area[s as usize].is_suspended,
+        "the declared target is still suspended (the switch offers UNSUSPENDED Digimon only)"
+    );
+    pick_field(&mut r, 0);
+    settle_declining(&mut r);
+    assert_eq!(
+        field_top_ids(&r, 1),
+        owned(&[FILL, "LV4_PLAIN", FILL]),
+        "the switched-to Digimon battled and was deleted; the suspended FILL was not"
+    );
+    assert!(
+        r.game.player(1).battle_area[2].is_suspended,
+        "the suspended FILL (now slot 2) is untouched"
+    );
+    assert!(revealed(&r, cp, 1).is_empty(), "no security check");
+}
+
 // ─── §16-24 <Alliance> ──────────────────────────────────────────────────────
 
 /// P0 has `ALLIANCE` (5000 DP, slot 0) and `LV4_PLAIN` (5000 DP, slot 1).

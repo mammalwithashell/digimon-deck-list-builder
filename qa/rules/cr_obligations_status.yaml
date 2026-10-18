@@ -799,8 +799,8 @@
   note: "Not proven, in either half. The no-attack half (memory 0 when <Blitz> activates, observer then moves it to the opponent's side) passes today only because the engine ends the turn after any digivolution that leaves the memory on the opponent's side, never offering a <Blitz> attack at all; the control (memory on the opponent's side when <Blitz> activates) is never offered the attack. #[ignore]d."
 "16-23-1":
   status: proven
-  tests: ["ch16_attack_keywords::raid_switches_to_highest_dp_unsuspended_attacker_chooses_tie"]
-  note: "The switch offers only the highest-DP unsuspended Digimon; the attack battles the chosen one and checks nothing."
+  tests: ["ch16_attack_keywords::raid_switches_to_highest_dp_unsuspended_attacker_chooses_tie", "ch16_attack_keywords::raid_attacker_declares_on_a_legal_target_then_may_switch"]
+  note: "The switch offers only the highest-DP unsuspended Digimon; the attack battles the chosen one and checks nothing. <Raid> SWITCHES after the declaration: it adds no declaration target (an unsuspended Digimon is not offered at declaration), and the switch is offered after a declaration on the opponent or on a suspended Digimon (G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED, resolved)."
 "16-23-2":
   status: proven
   tests: ["ch16_attack_keywords::raid_kind_matches_rule", "ch16_attack_keywords::raid_timing_matches_rule"]
@@ -937,8 +937,8 @@
   note: "Not attacking (another Digimon attacks), it can be chosen and gets -3000 DP."
 "11-2-7-1":
   status: proven
-  tests: ["ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon"]
-  note: "At the end of P0's turn a <Vortex> attack is offered against P1's suspended Digimon but not its UNSUSPENDED one (only a suspended Digimon or the opponent is a legal target; <Vortex> adds no target permission, contrast <Execute> 16-38-1). Main-phase target legality is not covered here."
+  tests: ["ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon", "ch16_attack_keywords::raid_attacker_declares_on_a_legal_target_then_may_switch"]
+  note: "At the end of P0's turn a <Vortex> attack is offered against P1's suspended Digimon but not its UNSUSPENDED one (only a suspended Digimon or the opponent is a legal target; <Vortex> adds no target permission, contrast <Execute> 16-38-1). In the Main phase a <Raid> attacker may declare on the opponent or a suspended Digimon, never on an unsuspended one (the highest-DP ones included); <Raid> adds no declaration target."
 "11-4-1":
   status: proven
   tests: ["ch16_attack_keywords::vortex_attack_has_block_timing"]
