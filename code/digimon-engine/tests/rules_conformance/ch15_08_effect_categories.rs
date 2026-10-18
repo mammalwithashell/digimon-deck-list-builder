@@ -762,6 +762,70 @@ fn processing_condition_is_still_read_at_activation() {
     );
 }
 
+/// P0's Tamer `OBS_ATK_GE10K` ("[Your Turn] When one of your Digimon with
+/// 10000 DP or more attacks, gain 1 memory") and P0's 7000 DP `LV5_PLAIN`;
+/// P0 holds `PUMP_OPT` ("[Main] 1 of your Digimon gets +3000 DP for the
+/// turn"). With `pump`, P0 uses it on `LV5_PLAIN` first. Then `LV5_PLAIN`
+/// attacks P1. Returns the runner and an event checkpoint taken just before
+/// the attack.
+fn pumped_attacker_board(pump: bool) -> (DebugRunner, usize) {
+    let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
+        .hand(0, &["PUMP_OPT"])
+        .deck(0, &[FILL; 4])
+        .security(1, &[FILL; 3])
+        .memory(5)
+        .start();
+    r.place_on_field(0, "OBS_ATK_GE10K", Some(0));
+    let attacker = r.place_on_field(0, "LV5_PLAIN", Some(0));
+    if pump {
+        use_option(&mut r, 0, "PUMP_OPT");
+        if r.pending_selection().is_some() {
+            pick_field(&mut r, attacker.index as u16);
+        }
+        resolve_prompts(&mut r);
+    }
+    assert_eq!(
+        r.effective_dp(attacker),
+        Some(if pump { 10000 } else { 7000 }),
+        "the attacker's DP before it attacks"
+    );
+    let cp = r.event_checkpoint();
+    r.attack_player(attacker, 1, false);
+    resolve_prompts(&mut r);
+    (r, cp)
+}
+
+/// §15-8-3-1 "Trigger-type effects trigger as soon as their trigger
+/// conditions are met." The trigger condition is checked against the game
+/// state when the event happens; a referent still on the field is read live,
+/// and a DP modifier is part of that state (only a referent that has left is
+/// read through its last-known information, §15-8-3-8).
+///
+/// `LV5_PLAIN` prints 7000 DP. Pumped to 10000 DP by `PUMP_OPT` before it
+/// attacks, it meets "one of your Digimon with 10000 DP or more attacks" (the
+/// `trigger_if:` qualifier) and the Tamer's effect activates. Control: the
+/// unpumped 7000 DP attack does not meet it.
+#[test]
+fn trigger_qualifier_reads_live_state_of_a_present_referent() {
+    cite!(
+        "15-8-3-1",
+        "f6da78dabd1b18295353a717881824e6ae0d9133240bedc83b290853047e1483"
+    );
+    let (r, cp) = pumped_attacker_board(true);
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(0, "OBS_ATK_GE10K".to_string())],
+        "a 10000 DP attacker (10000 only through a DP modifier) meets the trigger condition"
+    );
+
+    let (r, cp) = pumped_attacker_board(false);
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "control: a 7000 DP attacker does not meet it: {:?}",
+        memory_sources(&r, cp)
+    );
+}
+
 // ─── §15-8-3-1 / §15-8-3-8 — "wins a battle" after the winner leaves ───────
 
 /// P0's `winner` and P0's Tamer `OBS_WIN_TS` ("[All Turns] When any of your

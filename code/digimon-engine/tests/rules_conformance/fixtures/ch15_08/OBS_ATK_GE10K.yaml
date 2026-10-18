@@ -1,0 +1,21 @@
+# OBS_ATK_GE10K -- Tamer, red, play cost 3.
+#   [Your Turn] When one of your Digimon with 10000 DP or more attacks, gain 1
+#   memory.
+# "with 10000 DP or more" qualifies the trigger condition (`trigger_if:`); the
+# attacker is on the field when it attacks, so its DP is read live, DP
+# modifiers included (§15-8-3-1).
+card: OBS_ATK_GE10K
+name: Gauge Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_ally_attack
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_dp_gte: 10000
+    summary: "[Your Turn] When one of your Digimon with 10000 DP or more attacks, gain 1 memory."
+    process:
+      - gain_memory: 1
