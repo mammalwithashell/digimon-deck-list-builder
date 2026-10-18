@@ -584,21 +584,40 @@ fn winner_identity_after_deletion_with_turn(
     );
 }
 
+/// §15-8-3-1 / §15-8-3-4: a battle-result trigger decides its trigger
+/// condition at the battle, and §15-8-3-8: the winner it reads is the Digimon
+/// as it was then. BD-HERO's top card has no [Evolved] trait at the battle --
+/// the [Evolved] BD-SOURCE is only one of its digivolution cards, and a
+/// Digimon's traits are its top card's (§4-7-7, official Q&A Q3225) -- so the
+/// "[Evolved] Digimon wins a battle" observer never triggers. It stays silent
+/// when P1 (the turn player) de-digivolves the winner first, making BD-SOURCE
+/// its top card, and when P1 replays the de-digivolved body from the trash:
+/// a qualifier that was false at the battle is not revisited once a pooled
+/// sibling makes it true. (Before Tasks 31/32 the no-replay branch pinned the
+/// activation, security 3.) The P0-turn-player branches are
+/// `turn_players_observer_reads_the_winners_top_card_before_de_digivolution`.
+/// G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS,
+/// G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER.
 #[test]
-fn winner_predicates_follow_de_digivolution_during_opponents_on_deletion() {
-    winner_after_de_digivolution(false);
+fn observer_never_triggers_when_the_winners_top_card_lacked_the_trait_at_the_battle() {
+    for replay in [false, true] {
+        winner_after_de_digivolution_with_turn(replay, 1, false);
+    }
 }
 
+/// Converse of the test above: with [Evolved] on BD-HERO's own top card the
+/// observer triggers at the battle (§15-8-3-1) and activates whichever player
+/// is the turn player, whether the winner is de-digivolved first (it is still
+/// the same Digimon, now with the [Evolved] BD-SOURCE on top) or replayed
+/// from the trash (the winner has left: the trigger reads it as it last was,
+/// §15-8-3-8, and the trashing needs no winner on the field).
 #[test]
-fn winner_predicates_do_not_follow_a_de_digivolved_body_replayed_from_trash() {
-    winner_after_de_digivolution(true);
-}
-
-fn winner_after_de_digivolution(replay: bool) {
-    // P1 the turn player: its [On Deletion] de-digivolves the winner first.
-    // (The P0-turn-player outcome is pinned by
-    // `turn_players_observer_reads_the_winners_top_card_before_de_digivolution`.)
-    winner_after_de_digivolution_with_turn(replay, 1);
+fn observer_triggered_at_the_battle_activates_after_the_winner_de_digivolves() {
+    for replay in [false, true] {
+        for turn_player in [0, 1] {
+            winner_after_de_digivolution_with_turn(replay, turn_player, true);
+        }
+    }
 }
 
 /// §15-4-3-5-1: with P0 the turn player, P0's observer activates before P1's
@@ -611,20 +630,24 @@ fn winner_after_de_digivolution(replay: bool) {
 #[test]
 fn turn_players_observer_reads_the_winners_top_card_before_de_digivolution() {
     for replay in [false, true] {
-        winner_after_de_digivolution_with_turn(replay, 0);
+        winner_after_de_digivolution_with_turn(replay, 0, false);
     }
 }
 
-fn winner_after_de_digivolution_with_turn(replay: bool, turn_player: usize) {
+fn winner_after_de_digivolution_with_turn(replay: bool, turn_player: usize, hero_evolved: bool) {
     let observer = OBSERVER.replace(
         "      event_battle_deleter:\n        owner: you\n        kind: digimon\n        name_is: Hero",
         "      event_winner_owner: you\n      event_winner_trait_has: Evolved");
     let mut source = card("BD-SOURCE", "Surviving Hero", 7000);
     source.traits = vec!["Evolved".into()];
+    let mut hero_card = card("BD-HERO", "Hero", 8000);
+    if hero_evolved {
+        hero_card.traits = vec!["Evolved".into()];
+    }
     let mut r = DebugRunner::builder()
         .from_dsl_yaml(&observer)
         .unwrap()
-        .add_card(card("BD-HERO", "Hero", 8000))
+        .add_card(hero_card)
         .add_card(card("BD-VILLAIN", "Villain", 5000))
         .add_card(card("BD-PAD", "Pad", 1000))
         .add_card(source)
@@ -669,8 +692,8 @@ fn winner_after_de_digivolution_with_turn(replay: bool, turn_player: usize) {
         .any(|p| p.top_card().card_id(&r.game.card_data) == "BD-SOURCE"));
     assert_eq!(
         r.security_count(1),
-        if turn_player == 0 || replay { 4 } else { 3 },
-        "only the same surviving Digimon retains its battle win (turn player P{turn_player})"
+        if hero_evolved { 3 } else { 4 },
+        "the observer's trigger condition is decided at the battle from the winner's top card          (hero [Evolved]: {hero_evolved}, turn player P{turn_player}, replay: {replay})"
     );
 }
 
