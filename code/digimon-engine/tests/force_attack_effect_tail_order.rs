@@ -6,7 +6,7 @@ use digimon_engine::{
         space::{encode_attack, PASS, SECURITY_TARGET},
     },
     debug_runner::DebugRunner,
-    enums::GamePhase,
+    enums::{GamePhase, Keyword},
     selection::SelectionKind,
 };
 fn act(r: &mut DebugRunner, a: u16) {
@@ -189,8 +189,11 @@ fn prompt_is(r: &DebugRunner, text: &str, actor: u8) {
 }
 // The card's printed (non-keyword) trigger from `id`. EX13-045's <Raid> is a
 // trigger-type effect (§16-23-2) pending in the same TriggerOrder as its
-// effect-battle payout; it is left for last here, so the line below still
-// reaches the Raid switch after both printed triggers.
+// effect-battle payout, and so is its <Piercing>: the effect battle was fought
+// while attacking and deleted the opponent's Digimon, so <Piercing> "triggers
+// simultaneously with effects triggered by the battle" (§16-7-2, §16-7-4;
+// official Q&A Q3931, Q7365). Both keywords are left until the printed
+// triggers have resolved; `order_raid_and_piercing` then orders them.
 fn ordered_source(r: &DebugRunner, id: &str) -> u16 {
     let p = r.game.pending_selection.as_ref().unwrap();
     assert_eq!(p.kind, SelectionKind::TriggerOrder);
@@ -222,18 +225,18 @@ fn complete_trigger(r: &mut DebugRunner, id: &str) {
         cloned_act(r, a);
     }
     if id == "EX13-021" {
-        // Selecting an optional TriggerOrder branch activates it directly.
-        // A lone remaining optional trigger instead installs its outer gate.
-        if !selected_order {
-            prompt_is(r, "EX13-021", 0);
-            let p = r.game.pending_selection.as_ref().unwrap();
-            assert!(p.is_optional);
-            let a = *p
-                .valid_action_ids
-                .first()
-                .expect("legal unsuspend acceptance");
-            cloned_act(r, a);
-        }
+        // Picking a branch of a multi-entry TriggerOrder only decides the
+        // activation order (§15-4-3-5-1); "it may unsuspend" keeps its own
+        // accept / decline decision (§15-9-2-2, `Game::run_picked_trigger`), and
+        // a lone remaining optional trigger installs the same outer gate.
+        prompt_is(r, "EX13-021", 0);
+        let p = r.game.pending_selection.as_ref().unwrap();
+        assert!(p.is_optional);
+        let a = *p
+            .valid_action_ids
+            .first()
+            .expect("legal unsuspend acceptance");
+        cloned_act(r, a);
         assert!(
             !r.game.players[0].battle_area[0].is_suspended,
             "accepted inherited effect unsuspends carrier"
@@ -256,6 +259,40 @@ fn complete_trigger(r: &mut DebugRunner, id: &str) {
             .any(|p| r.game.card_data[p.top_card().data_index].card_id == "BT20-023"));
     }
 }
+// After both printed triggers, the turn player still has <Raid> (from the
+// attack declaration) and <Piercing> (from the effect battle) pending
+// together, and orders them (§15-4-3-5-1). Activating <Piercing> only makes
+// its security check pending processing, performed immediately before the
+// End of Attack timing (§16-7-4) -- so no card is checked here -- and it is
+// the attack's only check even though the attack battle deletes a Digimon
+// too (§16-7-5; Q7364). `piercing_first` drives either order; with <Raid>
+// first the lone <Piercing> left after the switch activates on its own.
+fn order_raid_and_piercing(r: &mut DebugRunner, piercing_first: bool) {
+    let p = r.game.pending_selection.as_ref().expect("Raid/Piercing order");
+    assert_eq!(p.kind, SelectionKind::TriggerOrder);
+    assert_eq!(p.selecting_player, 0);
+    let choices = p.effect_choices.as_ref().unwrap();
+    let keywords: Vec<_> = choices.iter().map(|e| e.keyword).collect();
+    assert_eq!(
+        keywords.len(),
+        2,
+        "only <Raid> and <Piercing> remain: {keywords:?}"
+    );
+    let entry = |kw: Keyword| {
+        choices
+            .iter()
+            .find(|e| e.keyword == Some(kw))
+            .unwrap_or_else(|| panic!("{kw:?} pending: {keywords:?}"))
+            .action_id
+    };
+    let (piercing, raid) = (entry(Keyword::Piercing), entry(Keyword::Raid));
+    cloned_act(r, if piercing_first { piercing } else { raid });
+    assert_eq!(
+        r.security_count(1),
+        5,
+        "<Piercing>'s check waits for the End of Attack timing"
+    );
+}
 fn complete_attack_with_order(first: &str, block: bool) {
     let mut r = setup_completion(true);
     cloned_act(&mut r, encode_attack(0, SECURITY_TARGET));
@@ -271,6 +308,7 @@ fn complete_attack_with_order(first: &str, block: bool) {
             "EX13-021"
         },
     );
+    order_raid_and_piercing(&mut r, first == "EX13-045");
     prompt_is(&r, "Raid - switch attack target", 0);
     assert_eq!(r.security_count(1), 5);
     cloned_act(&mut r, encode_attack(0, 0));
@@ -445,13 +483,23 @@ fn direct_battle_loss_removes_attacker_and_cancels_attack_before_raid_in_clones(
         r.game.players[0].battle_area.is_empty(),
         "the declared attacker lost the direct effect battle"
     );
+    // §11-1-5 (Ver. 4.3): "Once an attack declaration has been made, all of
+    // the timings that follow will occur. (Example: Even if an attacking
+    // Digimon leaves the battle area, the non-turn player's counter timing
+    // and block timing will still occur.)" The departed attacker's pending
+    // <Raid> can no longer activate (§15-4-4-3), so the next decision is the
+    // opponent's Counter timing, not a Raid switch; P1 has no <Blocker>, and
+    // the unsuccessful attack then takes no other action (§11-5-1-4-1).
+    prompt_is(&r, "Counter (", 1);
+    assert_eq!(r.game.current_phase, GamePhase::CounterTiming);
+    cloned_act(&mut r, PASS);
     assert!(
         r.game.pending_selection.is_none(),
-        "no Raid, Counter or Block window after attacker leaves"
+        "no Raid or Block decision after the attacker leaves"
     );
     assert!(
         r.game.pending_attack.is_none(),
-        "invalidated attack reaches cleanup"
+        "the unsuccessful attack reaches cleanup"
     );
     assert_eq!(
         r.security_count(1),
