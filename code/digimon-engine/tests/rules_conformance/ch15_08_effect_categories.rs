@@ -27,7 +27,7 @@ use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::parse_printed_keywords;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{GamePhase, Keyword};
+use digimon_engine::enums::{GamePhase, Keyword, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::SelectionKind;
 
@@ -63,7 +63,6 @@ fn tamer_trash_board(trasher: &str) -> (DebugRunner, PermanentHandle) {
 /// - the Option `MAIN_TRASH_UNDER_MEM` ([Main]);
 /// - the Digimon `OP_TRASH_UNDER_MEM` ([On Play]), itself a triggered effect.
 #[test]
-#[ignore = "G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS (§15-8-3-2)"]
 fn trigger_type_waits_for_causing_effect_to_finish() {
     cite!(
         "15-8-3-2",
@@ -787,6 +786,194 @@ fn battle_winner_qualifier_reads_the_material_after_the_winner_dna_digivolves() 
         memory_sources(&r, cp),
         vec![(0, "OBS_WIN_TS".to_string())],
         "a [TS] Digimon won the battle: the effect activates after it became a new Digimon"
+    );
+}
+
+/// §15-8-3-1 "A trigger-type effect will always trigger as soon as its
+/// trigger conditions are met, then the effect will activate." (and
+/// §15-8-3-4: it won't trigger when they aren't met) and §15-4-4-5 (a pending
+/// effect whose trigger conditions are no longer met can't activate -- the
+/// activation-time re-check is not where a trigger is decided).
+///
+/// P0's `LV5_PLAIN` (no [TS] trait) attacks P1's `VANILLA_LV3` and wins. P0's
+/// Tamer `OBS_WIN_DIGI_TS` ("[All Turns] When any of your Digimon win a
+/// battle, 1 of your Digimon may digivolve into a [TS] trait Digimon card in
+/// your hand without paying the cost") triggers; P0's Tamer `OBS_WIN_TS`
+/// ("[All Turns] When any of your [TS] trait Digimon win a battle, gain 1
+/// memory") does not: the Digimon that won had no [TS] trait. Its digivolution
+/// into the [TS] `TS_LV6` after the battle makes the winner a [TS] Digimon,
+/// but the battle was not won by a [TS] Digimon, so `OBS_WIN_TS` never
+/// triggered and never activates. (DCGO: `CanTriggerWhenWinBattle` is
+/// evaluated when the battle stacks its `OnEndBattle` effects; the converse,
+/// a [TS] winner that leaves before activation, is
+/// `battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves`.)
+/// G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER.
+#[test]
+fn battle_result_trigger_condition_false_at_the_battle_never_activates() {
+    cite!(
+        "15-8-3-1",
+        "f6da78dabd1b18295353a717881824e6ae0d9133240bedc83b290853047e1483"
+    );
+    cite!(
+        "15-8-3-4",
+        "71d0451f75557827933628c0bf96a1437a5c750f4cd432b91ad8ce246f9be375"
+    );
+    cite!(
+        "15-4-4-5",
+        "71bf5b7f1273d0267e98f23107451b614fc0644a66410a19605e28c4c4274329"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
+        .hand(0, &["TS_LV6"])
+        .security(1, &[FILL; 3])
+        .memory(3)
+        .start();
+    let winner = r.place_on_field(0, "LV5_PLAIN", Some(0));
+    r.place_on_field(0, "OBS_WIN_TS", Some(0));
+    r.place_on_field(0, "OBS_WIN_DIGI_TS", Some(0));
+    let loser = r.place_on_field(1, "VANILLA_LV3", Some(0));
+    let cp = r.event_checkpoint();
+    r.attack_digimon(winner, loser, false);
+    // `OBS_WIN_DIGI_TS`: its only Digimon is the winner; it digivolves.
+    step_prompt(&mut r);
+    pick_hand_card(&mut r, 0, "TS_LV6");
+    resolve_prompts(&mut r);
+    assert!(
+        trash_ids(&r, 1).contains(&"VANILLA_LV3".to_string()),
+        "P0's Digimon won the battle"
+    );
+    assert_eq!(
+        field_top_ids(&r, 0),
+        owned(&["TS_LV6", "OBS_WIN_TS", "OBS_WIN_DIGI_TS"]),
+        "the winner digivolved into a [TS] Digimon after the battle"
+    );
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "no [TS] Digimon won the battle: the effect never triggered: {:?}",
+        memory_sources(&r, cp)
+    );
+}
+
+// ─── §4-7-7 — a Digimon's traits are its top card's ─────────────────────────
+
+/// P0's stack `stack` (bottom first, top card last), P0's Tamer `OBS_WIN_TS`
+/// ("[All Turns] When any of your [TS] trait Digimon win a battle, gain 1
+/// memory"), P0's other cards `extra` and P1's `VANILLA_LV3` (1000 DP). On
+/// P0's turn the stack attacks P1's Digimon and wins. Returns the memory
+/// gains since the attack.
+fn stack_wins_battle(stack: &[&str], extra: &[&str]) -> Vec<(PlayerId, String)> {
+    let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
+        .security(1, &[FILL; 3])
+        .memory(3)
+        .start();
+    let winner = r.place_stack(0, stack);
+    r.place_on_field(0, "OBS_WIN_TS", Some(0));
+    for id in extra {
+        r.place_on_field(0, id, Some(0));
+    }
+    let loser = r.place_on_field(1, "VANILLA_LV3", Some(0));
+    let cp = r.event_checkpoint();
+    r.attack_digimon(winner, loser, false);
+    resolve_prompts(&mut r);
+    assert!(
+        trash_ids(&r, 1).contains(&"VANILLA_LV3".to_string()),
+        "P0's Digimon won the battle"
+    );
+    memory_sources(&r, cp)
+}
+
+/// §4-7-7 "The bottom cards of a stack are treated as part of the information
+/// on the top card. They aren't considered to be placed on the field." The
+/// bottom cards are part of the top card's information -- they contribute
+/// their inherited effects (§4-7-4) -- but the Digimon IS its top card: its
+/// traits are the top card's (with its `(Rule) Trait` grants, §2-3-4-2).
+/// The manual has no sentence that says "a Digimon's traits are its top
+/// card's"; official Q&A Q3225 (EX1-038 Stingmon) is the ruling: trashing the
+/// top card turns the Digimon into one "without [Free] in its traits" while
+/// the [Free] EX1-038 is still one of its digivolution cards. DCGO reads
+/// `permanent.TopCard.HasTSTraits` (`BT25_020.cs`, `CanTriggerWhenWinBattle`).
+///
+/// The [TS] `TS_LV5` is the digivolution card of a `LV5_PLAIN` (no traits)
+/// that wins a battle: no [TS] Digimon won, so `OBS_WIN_TS` does not trigger.
+/// Control: the same two cards with `TS_LV5` on top -- a [TS] Digimon won.
+/// Second control: a `LV5_PLAIN` alone under P0's `AURA_TS_TAMER` ("[Your
+/// Turn] All of your Digimon gain the [TS] trait") -- the top card's traits
+/// with the trait-changing effect applied (DCGO `CardSource.CardTraits`
+/// applies `IChangeTraitsEffect`).
+#[test]
+fn battle_winner_trait_is_the_top_cards_trait() {
+    cite!(
+        "4-7-7",
+        "d4517eedd82a9caf085a83c46d1898d22958f368614580d07fac9600f57fbeb4"
+    );
+    let gains = stack_wins_battle(&["TS_LV5", "LV5_PLAIN"], &[]);
+    assert!(
+        gains.is_empty(),
+        "the winner's top card has no [TS] trait; its [TS] digivolution card does not make it a [TS] Digimon: {gains:?}"
+    );
+
+    let gains = stack_wins_battle(&["LV5_PLAIN", "TS_LV5"], &[]);
+    assert_eq!(
+        gains,
+        vec![(0, "OBS_WIN_TS".to_string())],
+        "control: the winner's top card is [TS]"
+    );
+
+    let gains = stack_wins_battle(&["LV5_PLAIN"], &["AURA_TS_TAMER"]);
+    assert_eq!(
+        gains,
+        vec![(0, "OBS_WIN_TS".to_string())],
+        "control: an effect gives the winner the [TS] trait"
+    );
+}
+
+/// P0's stack `INH_TRASHED_FROM_TS` (inherited: "When effects trash this card
+/// from a [TS] trait Digimon's digivolution cards, gain 1 memory") under
+/// `middle` under `top`; P0 uses `MAIN_TRASH_BOTTOM_SRC` ("[Main] Trash the
+/// bottom digivolution card of 1 of your Digimon") on it. Returns the memory
+/// gains from the inherited effect.
+fn trash_from_stack(middle: &str, top: &str) -> Vec<(PlayerId, String)> {
+    let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
+        .hand(0, &["MAIN_TRASH_BOTTOM_SRC"])
+        .deck(0, &[FILL; 4])
+        .memory(3)
+        .start();
+    r.place_stack(0, &["INH_TRASHED_FROM_TS", middle, top]);
+    let cp = r.event_checkpoint();
+    use_option(&mut r, 0, "MAIN_TRASH_BOTTOM_SRC");
+    resolve_prompts(&mut r);
+    assert!(
+        trash_ids(&r, 0).contains(&"INH_TRASHED_FROM_TS".to_string()),
+        "the bottom digivolution card was trashed"
+    );
+    memory_sources(&r, cp)
+        .into_iter()
+        .filter(|(_, id)| id == "INH_TRASHED_FROM_TS")
+        .collect()
+}
+
+/// §4-7-7 (see `battle_winner_trait_is_the_top_cards_trait`): the shared
+/// permanent trait reader, not only the battle winner's. "a [TS] trait
+/// Digimon's digivolution cards" names the Digimon the card is trashed from;
+/// a [TS] card that is another of its digivolution cards does not make it a
+/// [TS] Digimon (official Q&A Q3225; DCGO `EX8_047.cs` reads
+/// `trashedPermanent.TopCard.ContainsTraits`). Control: the [TS] card on top.
+#[test]
+fn permanent_trait_is_the_top_cards_trait() {
+    cite!(
+        "4-7-7",
+        "d4517eedd82a9caf085a83c46d1898d22958f368614580d07fac9600f57fbeb4"
+    );
+    let gains = trash_from_stack("TS_LV5", "LV5_PLAIN");
+    assert!(
+        gains.is_empty(),
+        "the Digimon's top card has no [TS] trait: {gains:?}"
+    );
+
+    let gains = trash_from_stack("LV5_PLAIN", "TS_LV5");
+    assert_eq!(
+        gains,
+        vec![(0, "INH_TRASHED_FROM_TS".to_string())],
+        "control: the Digimon's top card is [TS]"
     );
 }
 

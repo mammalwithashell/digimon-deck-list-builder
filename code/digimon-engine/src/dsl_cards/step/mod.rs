@@ -655,14 +655,17 @@ fn run_steps_with_runtime_inner(
     bindings: &mut Bindings,
     runtime: &StepRuntime,
 ) -> RunOutcome {
-    // A selection is ALREADY pending before the first step runs. This happens
-    // when a tail resumes inside a selection callback whose synchronous work
-    // fired an observer that drained inline and parked — a source trashed from
-    // under a Tamer (`fire_digivolution_card_trashed` drains synchronously by
-    // design, see EX10-036). Installing this slice's next selection now would
-    // overwrite — silently drop — the observer's prompt, so park the whole
-    // slice behind it, exactly as the post-step check below does after a
-    // synchronous step. G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION.
+    // A selection is ALREADY pending before the first step runs: park the
+    // whole slice behind it, exactly as the post-step check below does after
+    // a synchronous step, so installing this slice's next selection cannot
+    // overwrite (silently drop) it. Source-trash observers no longer drain
+    // inline (§15-8-3-2), so they are not a cause any more
+    // (G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION's origin,
+    // G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS), but the park stays
+    // load-bearing: `DeleteReceiptFinalize` re-enters this function with
+    // `steps[i..]` after a deletion-batch member parks, and without the park
+    // that re-entry recurses on the same slice forever (EX13-065
+    // <Guard> + nested <Decode>).
     if !steps.is_empty() && ctx.game.pending_selection.is_some() {
         let tail_trigger_context = ctx.game.current_trigger_context.clone();
         wrap_pending_selection_with_tail(

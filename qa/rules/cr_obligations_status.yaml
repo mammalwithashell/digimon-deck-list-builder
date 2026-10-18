@@ -60,8 +60,8 @@
   tests: ["ch15_04_effect_states::digivolving_mid_pending_cancels_sibling_when_attacking"]
 "15-4-4-5":
   status: proven
-  tests: ["ch15_04_effect_states::pending_effect_whose_trigger_condition_lapsed_cannot_activate"]
-  note: "Trigger-condition qualifier ('When one of your Digimon with 4000 DP or less is played'): a sibling [On Play] raising the played Digimon to 6000 DP first makes the pending observer unable to activate; control ordering activates it."
+  tests: ["ch15_04_effect_states::pending_effect_whose_trigger_condition_lapsed_cannot_activate", "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"]
+  note: "Trigger-condition qualifier ('When one of your Digimon with 4000 DP or less is played'): a sibling [On Play] raising the played Digimon to 6000 DP first makes the pending observer unable to activate; control ordering activates it. The activation-time re-check is not where a trigger is decided: 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers, though a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER)."
 "15-8-3-9-2":
   status: proven
   tests: ["ch15_04_effect_states::pending_effect_whose_condition_lapsed_is_dropped"]
@@ -80,14 +80,18 @@
 # ── ch15-08 Effect Categories (§15-8) — tests/rules_conformance/ch15_08_effect_categories.rs ──
 "15-8-3-1":
   status: proven
-  tests: ["ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves"]
-  note: "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not. G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX."
+  tests: ["ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves", "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"]
+  note: "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not (G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX). Converse: with a winner without [TS] the effect never triggers, even when a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER)."
 "15-8-3-2":
+  status: proven
+  tests: ["ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish"]
+  note: "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: the observer waits for the trashing effect's 'Then, gain 1 memory' whether the cause is an Option [Main] or an [On Play] trigger. fire_digivolution_card_trashed no longer drains inline; source-trash observers are enqueued inside a deferred-drain event scope (G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS resolved)."
+"15-8-3-4":
   status: gap
   blocks_training: true
-  gap_id: G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS
-  tests: ["ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish"]
-  note: "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: from an Option [Main] the observer waits (green half); from an [On Play] it resolves before 'Then, gain 1 memory' (inline drain in fire_digivolution_card_trashed). Test is #[ignore]d."
+  gap_id: G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER
+  tests: ["ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"]
+  note: "Battle half proven: 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers, though a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (the battle result decides its trigger condition at the battle, Game::discard_entries_not_triggered). Every other observer timing still enqueues without deciding its trigger condition, and the DSL can't tell a trigger qualifier from a processing condition in condition / active_when (OBS_PLAY_LE4K vs OBS_OPP_PLAY_GE4), so a qualifier false at the event activates once a pooled sibling makes it true."
 "15-8-3-5":
   status: proven
   tests: ["ch15_08_effect_categories::inherited_on_deletion_is_pending_on_the_former_top_card"]
@@ -120,11 +124,9 @@
   tests: ["ch15_08_effect_categories::removal_trigger_processing_condition_uses_trigger_state"]
   note: "The rule's example text: deleted with a digivolution card it may play itself from the trash; deleted alone it can't."
 "15-8-4-4-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED
+  status: proven
   tests: ["ch15_08_effect_categories::activation_type_declarable_only_when_optional_condition_payable", "ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen"]
-  note: "Printed <Training> (parsed from the printed text; the DSL grant_keyword: Training clause is declaration-only by design) is correct and its test passes: not in the action mask while suspended; declared while unsuspended, it suspends with no skip prompt and places the deck top face down. The general case is not: '[Main] By trashing your top security card, <Draw 1>' is in the action mask with 0 security cards and declaring it draws for free (ch15_07 test, #[ignore]d). Only self-cost activation_cost kinds and <Digi-Burst> gate the mask."
+  note: "Printed <Training> (parsed from the printed text; the DSL grant_keyword: Training clause is declaration-only by design): not in the action mask while suspended; declared while unsuspended, it suspends with no skip prompt and places the deck top face down. General case: '[Main] By trashing your top security card, <Draw 1>' is not in the action mask with 0 security cards and is with 1. The engine derives the [Main]'s leading cost steps' payability (dsl_cards/lower_triggered.rs leading_cost_guard -> Effect::optional_condition_guard; main_effect_select::field_main_match and Game::activate_field_main skip it), alongside the self-cost activation_cost kinds."
 "15-8-5-2":
   status: proven
   tests: ["ch15_08_effect_categories::immediate_effect_interrupts_before_cause"]
@@ -151,17 +153,13 @@
   tests: ["ch15_07_optional_conditions::declining_condition_skips_everything_after_it"]
   note: "The rule's example (trash 2 → unsuspend; After, if [WereGarurumon] in sources, may return a [Garurumon]): declining leaves the Digimon suspended and never offers the 'After' return; control: trashing 2 unsuspends and the return is offered and performed."
 "15-7-3":
-  status: gap
-  blocks_training: false
-  gap_id: G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK
+  status: proven
   tests: ["ch15_07_optional_conditions::partial_payment_of_compound_condition_is_impossible"]
-  note: "DSL vocabulary gap (controller ruling, task 9 review): the rule's example in BT18-019's production idiom authors the compound condition as two independent picks, so with only [Kimeramon] in the trash it is returned alone and the [Millenniummon] play is still offered; the engine has no way to know the second pick belongs to the condition. BT18-019 is affected (qa/dsl-vocab-gaps.md). Control (both present) passes. Test is #[ignore]d."
+  note: "The rule's example in BT18-019's production idiom (two sequential trash picks, each returned): with only [Kimeramon] in the trash the condition can be performed only in part, so it is not offered; nothing is returned and [Millenniummon] is not played. Control (both present) passes. The engine gates the leading run of same-zone picks all-or-nothing (leading_cost_guard: one distinct card per pick). Compounds across DIFFERENT step kinds are not composed (gated on the first part only); that stays the DSL by: block, G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK (OPEN)."
 "15-7-4":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED
+  status: proven
   tests: ["ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen"]
-  note: "Ver. 4.3 REVERSED 3.6 (3.6: the player could choose an unpayable condition; 4.3: can't). Owner ruling 2026-10-10 #6. The rule's example with 0 security cards: the engine parks the optional prompt, and accepting trashes nothing yet applies the -5000 DP. [Main] mirror: '[Main] By trashing your top security card, <Draw 1>' is in the action mask at 0 security. Production cards avoid it only by hand-authoring a payability condition per card. Test is #[ignore]d."
+  note: "Ver. 4.3 REVERSED 3.6 (3.6: the player could choose an unpayable condition; 4.3: can't). Owner ruling 2026-10-10 #6. The rule's example with 0 security cards: no optional prompt is offered, the -5000 DP never applies and the 7000 DP defender wins. [Main] mirror: '[Main] By trashing your top security card, <Draw 1>' is masked at 0 security and offered at 1. The engine derives the condition's payability from the clause's leading cost steps (leading_cost_guard: security / memory / suspend / hand and trash pick runs counted per pick / own sources / face-down cards under Tamers) and gates the outer prompt, the pre-cost prompt, the TriggerOrder bundle, the run itself (dropped as if declined), optional replacements and optional cost reducers; the DSL by: block (G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK) remains the long-term vocabulary."
 "15-7-5":
   status: proven
   tests: ["ch15_07_optional_conditions::payable_condition_offered_even_when_payload_has_no_target"]
@@ -323,11 +321,9 @@
 
 # ── ch11-14 Attack, Block, Security Check, Battle (§11-§14), §15-16-10-2, §16-7-5, §16-9-1 — tests/rules_conformance/ch11_14_attack_procedure.rs ──
 "11-1-5":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES
+  status: proven
   tests: ["ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution", "ch16_attack_keywords::vortex_attack_has_block_timing"]
-  note: "The rule's example: an attacker that deletes itself on its [When Attacking]. The end of attack timing arrives (EOA_OBS resolves), but the defender is never offered the counter timing: the engine abandons the attack as soon as the attacker leaves. Test is #[ignore]d. Second, independent violation: a <Vortex> attack skips the counter and block timings altogether (G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK, linked through 11-4-1; vortex_attack_has_block_timing, #[ignore]d)."
+  note: "The rule's example is proven: an attacker that deletes itself on its [When Attacking] still gives the defender the counter timing, the block timing offers no block (12-1-6), nothing checks security and the end of attack timing arrives (attack_timings_continue_when_attacker_leaves_mid_resolution, green since G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES was resolved). Remaining, independent violation: a <Vortex> attack skips the counter and block timings altogether (G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK, linked through 11-4-1; vortex_attack_has_block_timing, #[ignore]d). Task 13 merged: the Vortex half (vortex_attack_has_block_timing) is proven too, so 11-1-5 is proven in full (controller, at the Task 10 merge)."
 "12-1-6":
   status: proven
   tests: ["ch11_14_attack_procedure::block_not_offered_when_attacker_left_battle_area"]
@@ -659,8 +655,8 @@
   note: "Overwrite: the card is not in the trash at the decision and never reaches it when accepted. Matrix row ArtsDigivolve (optional) agrees."
 "4-6-1":
   status: proven
-  tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information", "ch16_new_keywords::dual_traits_belong_to_both_informations", "ch16_new_keywords::dual_unqualified_colour_reference_matches_either_information", "ch16_new_keywords::dual_unqualified_reference_holds_through_one_information"]
-  note: "In the hand a DUAL is offered both as an Option (use) and as a Digimon (digivolve), and matches both 'Digimon card' and 'Option card' trait searches; an unqualified reference (no category named) matches if the WHOLE reference holds through either information (ruling W5 reading (a)): 'purple card' and 'red card' find the DUAL, 'purple Lv.6 card' does not, 'card that is not red' does."
+  tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information", "ch16_new_keywords::dual_traits_belong_to_both_informations", "ch16_new_keywords::dual_unqualified_colour_reference_reads_digimon_information", "ch16_new_keywords::dual_unqualified_reference_holds_through_one_information"]
+  note: "In the hand a DUAL is offered both as an Option (use) and as a Digimon (digivolve), and matches both 'Digimon card' and 'Option card' trait searches; an unqualified reference (no category named) reads the Digimon information only (owner ruling W5 (b), 2026-10-17; Task 29 superseded the provisional reading (a)): 'red card' finds the red-Digimon / purple-Option DUAL, 'purple card', 'blue card', 'purple Lv.6 card' and 'card that is not red' do not (test renamed from dual_unqualified_colour_reference_matches_either_information)."
 "4-6-2":
   status: proven
   tests: ["ch16_new_keywords::dual_use_declares_digimon_or_option_information"]
@@ -697,6 +693,10 @@
   status: proven
   tests: ["ch16_new_keywords::dual_effects_are_digimon_or_option_effects_by_information"]
   note: "The Option information's [Main] is an Option card effect: blocked by 'not affected by your opponent's Option cards' effects', like a plain Option's (control)."
+"4-7-7":
+  status: gap
+  tests: ["ch15_08_effect_categories::battle_winner_trait_is_the_top_cards_trait", "ch15_08_effect_categories::permanent_trait_is_the_top_cards_trait"]
+  note: "Controller ruling (provisional, owner sign-off pending): the bottom cards are part of the top card's information -- they contribute inherited effects (4-7-4) -- but a Digimon's traits are its top card's (with its (Rule) Trait grants, 2-3-4-2); a [TS] digivolution card does not make the Digimon a [TS] Digimon. The manual has no explicit 'traits are the top card's' sentence; official Q&A Q3225 (EX1-038: trashing the top card leaves a Digimon 'without [Free] in its traits' while the [Free] EX1-038 is still a digivolution card) and DCGO (BT25_020.cs / EX8_047.cs read permanent.TopCard) are the ruling. Counted: the battle-winner trait qualifier ('any of your [TS] trait Digimon win a battle') and the host-Digimon trait predicate ('trash this card from a [TS] trait Digimon's digivolution cards') read the top card, each with a top-card control (G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS resolved). Status (review round 1): the tests pin the Q3225 / DCGO top-card reading of the characteristics consequence; neither sentence is proven as written; the second sentence (bottom cards not on the field; place-under removes) is untested. EX1-038's own inherited text ('[Imperialdramon] in its name or [Free] in its traits', while EX1-038 itself is [Free]) is the strongest card-text evidence for the top-card reading."
 
 # ── ch16 attack keywords (§16-4, 5, 7, 9, 13, 15, 16, 23, 24, 30, 33, 34, 35, 38, 39) + §11-5-1-2-1 — tests/rules_conformance/ch16_attack_keywords.rs ──
 "16-4-1":
@@ -799,8 +799,8 @@
   note: "Not proven, in either half. The no-attack half (memory 0 when <Blitz> activates, observer then moves it to the opponent's side) passes today only because the engine ends the turn after any digivolution that leaves the memory on the opponent's side, never offering a <Blitz> attack at all; the control (memory on the opponent's side when <Blitz> activates) is never offered the attack. #[ignore]d."
 "16-23-1":
   status: proven
-  tests: ["ch16_attack_keywords::raid_switches_to_highest_dp_unsuspended_attacker_chooses_tie"]
-  note: "The switch offers only the highest-DP unsuspended Digimon; the attack battles the chosen one and checks nothing."
+  tests: ["ch16_attack_keywords::raid_switches_to_highest_dp_unsuspended_attacker_chooses_tie", "ch16_attack_keywords::raid_attacker_declares_on_a_legal_target_then_may_switch"]
+  note: "The switch offers only the highest-DP unsuspended Digimon; the attack battles the chosen one and checks nothing. <Raid> SWITCHES after the declaration: it adds no declaration target (an unsuspended Digimon is not offered at declaration), and the switch is offered after a declaration on the opponent or on a suspended Digimon (G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED, resolved)."
 "16-23-2":
   status: proven
   tests: ["ch16_attack_keywords::raid_kind_matches_rule", "ch16_attack_keywords::raid_timing_matches_rule"]
@@ -846,11 +846,9 @@
   tests: ["ch16_attack_keywords::collision_blocker_grant_affects_digimon_forced_block_affects_player"]
   note: "A Digimon unaffected by the attacker's Digimon effects does not gain <Blocker> (effect_can_affect gate) and is not a forced candidate; the forced block still falls on the opponent player."
 "16-33-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON
+  status: proven
   tests: ["ch16_attack_keywords::vortex_optional_eot_attack_on_digimon_and_same_turn_played", "ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon", "ch16_attack_keywords::vortex_attack_has_block_timing"]
-  note: "Proven: a Digimon played this turn may attack an opponent's suspended Digimon (not the player) at the end of the turn. Fails: the <Vortex> attack is also offered against UNSUSPENDED Digimon (this gap), and it skips the counter / block timings (G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK). Both tests #[ignore]d."
+  note: "A Digimon played this turn may attack an opponent's suspended Digimon (not the player) at the end of the turn; not an UNSUSPENDED one (W2 reading (a): <Vortex> grants the attack, not a target permission); and the attack is an ordinary attack: P1's block timing follows it (Q3869)."
 "16-33-2":
   status: gap
   blocks_training: true
@@ -938,17 +936,13 @@
   tests: ["ch16_attack_keywords::progress_persistent_only_while_attacking"]
   note: "Not attacking (another Digimon attacks), it can be chosen and gets -3000 DP."
 "11-2-7-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON
-  tests: ["ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon"]
-  note: "At the end of P0's turn a <Vortex> attack is offered against P1's UNSUSPENDED Digimon (only a suspended Digimon or the opponent is a legal target; <Vortex> adds no target permission, contrast <Execute> 16-38-1). #[ignore]d. Main-phase target legality is not covered here."
+  status: proven
+  tests: ["ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon", "ch16_attack_keywords::raid_attacker_declares_on_a_legal_target_then_may_switch"]
+  note: "At the end of P0's turn a <Vortex> attack is offered against P1's suspended Digimon but not its UNSUSPENDED one (only a suspended Digimon or the opponent is a legal target; <Vortex> adds no target permission, contrast <Execute> 16-38-1). In the Main phase a <Raid> attacker may declare on the opponent or a suspended Digimon, never on an unsuspended one (the highest-DP ones included); <Raid> adds no declaration target."
 "11-4-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK
+  status: proven
   tests: ["ch16_attack_keywords::vortex_attack_has_block_timing"]
-  note: "A <Vortex> attack at the end of P0's turn offers P1 no block timing (nor counter timing): the engine jumps from the declaration straight to the battle. Ordinary attacks' block timing is proven in ch11_14 (one_block_per_attack et al.). #[ignore]d."
+  note: "A <Vortex> attack at the end of P0's turn offers P1 the block timing: P1's <Blocker> blocks and battles instead of the target (the counter timing also opens: combat::counter_interrupt::vortex_attack_has_counter_timing). Ordinary attacks' block timing is proven in ch11_14 (one_block_per_attack et al.)."
 
 # ── ch16 processing keywords (§16-6..§16-41) — tests/rules_conformance/ch16_processing_keywords.rs ──
 "4-8-1":
@@ -1036,11 +1030,9 @@
   tests: ["ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential"]
   note: "With a Tamer card exposed after the 1st card (top category changes), the 2nd card is still trashed."
 "16-12-7":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS
+  status: proven
   tests: ["ch16_processing_keywords::de_digivolve_separate_instances_processed_separately"]
-  note: "Two <De-Digivolve 1> instances in one Option [Main]: both cards trashed, but the 'top stacked card trashed' observer triggers once instead of once per instance (15-4-2-4, owner ruling 2026-10-10 #5; DCGO runs IDegeneration twice, each stacking WhenTopCardTrashed). #[ignore]d."
+  note: "Two <De-Digivolve 1> instances in one Option [Main]: both cards trashed, and the 'top stacked card trashed' observer triggers once per instance (15-4-2-4, owner ruling 2026-10-10 #5; DCGO runs IDegeneration twice, each stacking WhenTopCardTrashed). The 1st event's trigger used to fail its condition because event_host_is_own_digimon located the host by the top card the 2nd instance trashed; it now locates an OnTopCardTrashed host by stack identity (G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS resolved)."
 "16-12-8":
   status: proven
   tests: ["ch16_processing_keywords::de_digivolve_state_confirmed_after_each_instance"]

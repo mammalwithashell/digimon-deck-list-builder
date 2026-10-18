@@ -2239,8 +2239,10 @@ fn no_security_reveal(r: &DebugRunner, cp: usize) -> bool {
 /// returns the attacker to hand, P1's pending observer still activates
 /// (§15-8-3-1: a trigger-type effect activates once triggered; the attack
 /// was declared, so its trigger condition was met and does not un-happen).
-/// The attack itself ends: no battle, no security check. The observer must
-/// not read the Digimon that later occupies the attacker's old slot.
+/// The attack itself is not successful (§11-1-5, §11-5-1-4-1: the attacking
+/// Digimon left the battle area after the declaration): no battle, no
+/// security check, but the end of attack timing still occurs. The observer
+/// must not read the Digimon that later occupies the attacker's old slot.
 #[test]
 fn on_opponent_attack_observer_still_fires_after_ally_observer_removes_attacker() {
     let mut r = DebugRunner::builder()
@@ -2274,8 +2276,8 @@ fn on_opponent_attack_observer_still_fires_after_ally_observer_removes_attacker(
 
     assert_eq!(
         result,
-        digimon_engine::combat::AttackResult::Invalid,
-        "the attack ends once an ally observer removes the attacker"
+        digimon_engine::combat::AttackResult::Unsuccessful,
+        "the attack is unsuccessful once an ally observer removes the attacker (§11-1-5)"
     );
     assert_eq!(r.security_count(1), 1, "no security check");
     assert!(no_security_reveal(&r, cp), "the attack never reached security");

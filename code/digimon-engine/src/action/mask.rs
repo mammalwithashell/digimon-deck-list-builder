@@ -210,40 +210,18 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     mask[sec_action as usize] = 1.0;
                 }
 
-                // Digimon attacks (§4.4). Suspended enemies are always valid.
-                // Unsuspended enemies are valid iff attacker has:
-                //   - CAN_ATTACK_UNSUSPENDED modifier (any unsuspended), or
-                //   - Raid keyword (unsuspended enemies tied for highest
-                //     effective DP).
-                // Native `_is_can_attack_unsuspended` keyword awaits §4.5.
+                // Digimon attacks: the declaration targets the opponent or a
+                // suspended Digimon (§11-2-7-1), or an unsuspended one when
+                // the attacker carries a CAN_ATTACK_UNSUSPENDED grant
+                // (§16-38-1 <Execute>; DCGO `Permanent.CanAttackTargetDigimon`).
+                // <Raid> is NOT a declaration-time permission: it switches the
+                // target after the declaration (§16-23-1 / §16-23-2), as a
+                // [When Attacking] trigger in the attack's pool
+                // (`Game::raid_switch_options`).
                 let can_attack_unsuspended = game
                     .modifiers
                     .has(handle, ModifierType::CanAttackUnsuspended);
-                let has_raid = game.has_keyword(handle, Keyword::Raid);
                 let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
-
-                // Precompute max effective DP among unsuspended enemy Digimon
-                // only if Raid is relevant (skip when CAN_ATTACK_UNSUSPENDED
-                // already broadens targeting).
-                let raid_max_dp = if has_raid && !can_attack_unsuspended {
-                    let mut best: Option<i32> = None;
-                    for j in 0..max_opp {
-                        let t = &opp.battle_area[j];
-                        let t_handle = PermanentHandle {
-                            player: opp_id,
-                            index: j as u8,
-                        };
-                        if t.is_suspended || !game.permanent_is_digimon_for_rules(t_handle) {
-                            continue;
-                        }
-                        if let Some(dp) = game.effective_dp(t_handle) {
-                            best = Some(best.map_or(dp, |b| b.max(dp)));
-                        }
-                    }
-                    best
-                } else {
-                    None
-                };
 
                 for j in 0..max_opp {
                     let t_handle = PermanentHandle {
@@ -270,14 +248,6 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     }
                     if can_attack_unsuspended {
                         mask[action_bit] = 1.0;
-                        continue;
-                    }
-                    if let Some(max_dp) = raid_max_dp {
-                        if let Some(dp) = game.effective_dp(t_handle) {
-                            if dp == max_dp {
-                                mask[action_bit] = 1.0;
-                            }
-                        }
                     }
                 }
             }
@@ -594,10 +564,12 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 }
 
                 // §4.6 attack bits: Vortex / MayAttack / ForceAttack / Engage
-                // all share the 100-399 attack range. Vortex keeps its special
-                // opponent-Digimon targeting; normal MayAttack/ForceAttack and
-                // Engage use the same suspended / Raid / CanAttackUnsuspended
-                // target legality as Main-phase attacks.
+                // all share the 100-399 attack range and use the same
+                // suspended / CanAttackUnsuspended target legality as
+                // Main-phase attacks (§11-2-7-1). <Vortex> grants the attack
+                // and the played-this-turn exemption, not a target permission
+                // (§16-33-1; contrast <Execute> §16-38-1); <Raid> switches the
+                // target after the declaration (§16-23-1), not before.
                 let vortex = game.has_keyword(handle, Keyword::Vortex);
                 let may_attack = game.modifiers.has(handle, ModifierType::MayAttack);
                 let force_attack = game.modifiers.has(handle, ModifierType::ForceAttack);
@@ -626,28 +598,6 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 let can_attack_unsuspended = game
                     .modifiers
                     .has(handle, ModifierType::CanAttackUnsuspended);
-                let has_raid = game.has_keyword(handle, Keyword::Raid);
-                let raid_max_dp = if normal_eot_can_attack && has_raid && !can_attack_unsuspended {
-                    let mut best: Option<i32> = None;
-                    for j in 0..max_opp {
-                        let target = &opp.battle_area[j];
-                        let target_handle = PermanentHandle {
-                            player: opp_id,
-                            index: j as u8,
-                        };
-                        if target.is_suspended
-                            || !game.permanent_is_digimon_for_rules(target_handle)
-                        {
-                            continue;
-                        }
-                        if let Some(dp) = game.effective_dp(target_handle) {
-                            best = Some(best.map_or(dp, |b| b.max(dp)));
-                        }
-                    }
-                    best
-                } else {
-                    None
-                };
 
                 for j in 0..max_opp {
                     let t_handle = PermanentHandle {
@@ -667,13 +617,12 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     if game.attack_target_blocked_by_modifier(handle, t_handle) {
                         continue;
                     }
-                    let normal_target_legal = normal_eot_can_attack
-                        && (game.player(opp_id).battle_area[j].is_suspended
-                            || can_attack_unsuspended
-                            || raid_max_dp.is_some_and(|max_dp| {
-                                game.effective_dp(t_handle).is_some_and(|dp| dp == max_dp)
-                            }));
-                    if !vortex_can_attack && !normal_target_legal {
+                    // Either grant (checked above) attacks only a legal
+                    // target: suspended, or one this attacker may attack
+                    // unsuspended (§11-2-7-1).
+                    let target_legal =
+                        game.player(opp_id).battle_area[j].is_suspended || can_attack_unsuspended;
+                    if !target_legal {
                         continue;
                     }
                     mask[encode_attack(i as u16, j as u16) as usize] = 1.0;
@@ -1048,27 +997,7 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
         let can_attack_unsuspended = game
             .modifiers
             .has(attacker, ModifierType::CanAttackUnsuspended);
-        let has_raid = game.has_keyword(attacker, Keyword::Raid);
         let max_opp = game.player(opponent).battle_area.len().min(FIELD_SLOTS);
-        let raid_max_dp = if has_raid && !can_attack_unsuspended {
-            let mut best: Option<i32> = None;
-            for j in 0..max_opp {
-                let target = &game.player(opponent).battle_area[j];
-                let target_handle = PermanentHandle {
-                    player: opponent,
-                    index: j as u8,
-                };
-                if target.is_suspended || !game.permanent_is_digimon_for_rules(target_handle) {
-                    continue;
-                }
-                if let Some(dp) = game.effective_dp(target_handle) {
-                    best = Some(best.map_or(dp, |b| b.max(dp)));
-                }
-            }
-            best
-        } else {
-            None
-        };
 
         for j in 0..max_opp {
             let target_handle = PermanentHandle {
@@ -1086,12 +1015,10 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
             if game.attack_target_blocked_by_modifier(attacker, target_handle) {
                 continue;
             }
-            let legal = target.is_suspended
-                || can_attack_unsuspended
-                || raid_max_dp.is_some_and(|max_dp| {
-                    game.effective_dp(target_handle)
-                        .is_some_and(|dp| dp == max_dp)
-                });
+            // §11-2-7-1: a suspended Digimon, or any Digimon under a
+            // CAN_ATTACK_UNSUSPENDED grant. <Raid> switches after the
+            // declaration (§16-23-1), so it adds no declaration target.
+            let legal = target.is_suspended || can_attack_unsuspended;
             if legal {
                 action_ids.push(encode_attack(attacker_index, j as u16));
             }
@@ -1103,7 +1030,7 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
 
 /// §4.7d FORCE_ATTACK global mask replacement. If any friendly Digimon
 /// carries `ModifierType::ForceAttack` AND has at least one legal attack
-/// available (respecting summoning sickness, Raid / CanAttackUnsuspended
+/// available (respecting summoning sickness, CanAttackUnsuspended
 /// targeting, and CannotAttackTarget per-target filtering), replace the
 /// passed-in `mask` with a fresh all-zero mask populated only with those
 /// attackers' attack bits.

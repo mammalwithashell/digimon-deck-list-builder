@@ -1,8 +1,8 @@
 # HAND_PICK_PURPLE_LV6_ANY -- Option, red, use cost 0.
 #   [Main] Trash 1 purple Lv.6 card from your hand.
-# An UNQUALIFIED reference whose two properties must both hold on ONE
-# information of a DUAL card (§4-6-1): DUAL_ARTS' Option information is purple
-# but has no level; its Digimon information is Lv.6 but red.
+# An UNQUALIFIED reference: both properties are read on a DUAL card's Digimon
+# information (§4-6-1, §4-6-5-2; owner ruling W5 (b)): DUAL_ARTS' Digimon
+# information is Lv.6 but red (its purple Option information is not read).
 card: HAND_PICK_PURPLE_LV6_ANY
 name: Any purple Lv.6 Audit
 kind: option

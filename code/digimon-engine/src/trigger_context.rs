@@ -164,6 +164,10 @@ pub struct BattleCombatantSnapshot {
 pub struct TriggerContext {
     /// Physical members of one simultaneous play event. Each member has no nested group.
     pub simultaneous_play_members: Vec<TriggerContext>,
+    /// Transient stamp: this entry was enqueued by the source-trash event that
+    /// is still open (`Game::source_trash_event_open`). Cleared when the event
+    /// closes and its entries are coalesced; never set between steps.
+    pub(crate) in_source_trash_event: bool,
     /// Captured physical eligible subjects for one paid deletion-prevention effect.
     pub replacement_deletion_members: Vec<(PlayerId, u16, u64)>,
     /// Immutable effect lookup retained while its physical payer leaves.
@@ -301,13 +305,23 @@ impl TriggerContext {
     /// §15-8-3-1 / §15-8-3-8). The one reader behind the DSL
     /// `event_winner_trait_has` and `EffectContext::battle_winner_has_trait`.
     /// G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX.
+    ///
+    /// Both branches read the winner's TOP card (with trait-changing effects),
+    /// never its digivolution cards: the live read is
+    /// `Permanent::has_trait_for_rules` (the DSL `trait_has` reading) and the
+    /// snapshot's `traits` are its synthesized identity's
+    /// (`Game::build_snapshot_for_handle`). §4-7-7; official Q&A Q3225; DCGO
+    /// `BT25_020.cs` `permanent.TopCard.HasTSTraits`.
+    /// G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS.
     pub fn battle_winner_has_trait(&self, game: &crate::game::Game, trait_name: &str) -> bool {
         match self.resolve_battle_winner(game) {
             Some(winner) => game
                 .player(winner.player)
                 .battle_area
                 .get(winner.index as usize)
-                .is_some_and(|perm| perm.has_trait(trait_name, &game.card_data)),
+                .is_some_and(|perm| {
+                    perm.has_trait_for_rules(trait_name, &game.card_data, &game.modifiers, winner)
+                }),
             None => {
                 self.battle_winner_identity.is_some()
                     && self.deleted_object.as_ref().is_some_and(|snapshot| {
@@ -446,6 +460,7 @@ impl std::fmt::Debug for TriggerContext {
         if let Some(value)=&self.replacement_paid_prevention { d.field("replacement_paid_prevention", value); }
         if let Some(value)=&self.replacement_deletion_cause { d.field("replacement_deletion_cause", value); }
         if !self.simultaneous_play_members.is_empty() { d.field("simultaneous_play_members", &self.simultaneous_play_members); }
+        if self.in_source_trash_event { d.field("in_source_trash_event", &self.in_source_trash_event); }
         d.finish()
     }
 }

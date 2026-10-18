@@ -160,6 +160,7 @@ Grouped by the mechanism the defect lives in; when the obligation's Aegis taxono
 - DCGO: agrees (`SetIsVortex()` only relaxes the played-this-turn check).
 - Aegis: none found.
 - Fix: drop the short-circuit; keep `AttackInitiator::Vortex` only for the same-turn exemption; invert `tests/combat/counter_interrupt.rs::vortex_bypasses_counter`.
+- **Fixed** (Plan 4 Task 13, `4967a8120`): §11-4-1 `proven`.
 
 **G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON**: `PDF-explicit` (confirmation question W2)
 - Rules: §11-2-7-1; §16-33-1 (keywords).
@@ -168,7 +169,15 @@ Grouped by the mechanism the defect lives in; when the obligation's Aegis taxono
 - DCGO: suspended targets only (`CanAttackTargetDigimon` requires `IsSuspended || isExecute`).
 - Aegis: mixed (scenario "16-33-1: <Vortex> does not bypass the normal suspended-target requirement"; the 2026-09-05 `vortex-timing.md` audit describes allowing "unsuspended opposing Digimon").
 - Classification: §11-2-7-1 names the legal targets ("the opponent or 1 of the opponent's suspended Digimon"); §16-33-1 grants an attack on a Digimon but no target permission, and the manual spells such a permission out wherever it exists (§16-38-1 <Execute>, the §15-1-3 example).
-- Fix: apply the normal suspended / `CanAttackUnsuspended` / <Raid> target legality to Vortex-only attacks in the mask and the decoder; keep the same-turn exemption.
+- Fix: apply the normal declaration-time target legality (suspended, or a `CanAttackUnsuspended` grant) to Vortex-only attacks in the mask and the decoder; keep the same-turn exemption. The engine's declaration legality also still carries a <Raid> highest-DP arm; that arm is not 4.3 behaviour (<Raid> switches the target after the declaration, §16-23-1/-2) and is tracked as `G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED`.
+- **Fixed** (Plan 4 Task 13, `4967a8120`): §11-2-7-1, §16-33-1 `proven`.
+
+**G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED**: `PDF-explicit` — filed 2026-10-17 (Plan 4 Task 13 review round 1) — **fixed (Plan 4 Task 33, `d5b90d8fb`)**: the declaration legality has no <Raid> arm at any of the four sites; `ch16_attack_keywords::raid_attacker_declares_on_a_legal_target_then_may_switch` is green and listed under §16-23-1 / §11-2-7-1; the pinning tests are inverted.
+- Rules: §11-2-7-1; §16-23-1, §16-23-2 (keywords, <Raid>).
+- Tests: `ch16_attack_keywords::raid_attacker_declares_on_a_legal_target_then_may_switch` (green; listed under 16-23-1 and 11-2-7-1, both `proven`). The former pins are inverted: `mask_main_parity::mask_raid_adds_no_unsuspended_declaration_target` and `::mask_raid_tied_highest_are_not_declaration_targets` (were `mask_raid_targets_highest_dp_unsuspended` / `mask_raid_allows_all_tied_for_highest`), `mask_end_of_turn_parity::vortex_with_raid_declares_on_a_legal_target_then_may_switch` (was `vortex_with_raid_declares_on_highest_dp_unsuspended_today`), plus `force_attack_mask`, `bt20_044_optional_attacker`, `bt20_040`, `bt24_011`.
+- Cause: the declaration-time target legality in `action/mask.rs` (Main-phase, end-of-turn and effect-granted attack arms) and `action/decode.rs` `end_of_turn_attack_vortex_flag` lets a <Raid> attacker declare on the opponent's highest-DP unsuspended Digimon, although <Raid> only switches the target after the declaration (implemented in the attack's trigger pool since Task 1).
+- DCGO: agrees with the rule (`Permanent.CanAttackTargetDigimon` has no <Raid> arm; `Raid.cs` is an `OnAllyAttack` `SwitchDefender`).
+- Fix: drop the <Raid> arm from the declaration-time legality at all four sites; invert the three pinning tests.
 
 ### battle
 
@@ -186,11 +195,17 @@ Grouped by the mechanism the defect lives in; when the obligation's Aegis taxono
 - DCGO: agrees with the rule (`StackSkillInfos` evaluates `CanTrigger` when the battle stacks it).
 - Fix: evaluate the trigger condition at the battle's enqueue and drop entries that did not trigger; keep the §15-4-4-5 activation re-check.
 
-**G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS**: `needs-reading` — filed 2026-10-17 (Plan 4 Task 28 review round)
+**G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS**: `needs-reading` — filed 2026-10-17 (Plan 4 Task 28 review round) — **fixed (Plan 4 Task 31, `8834bec70`)**: a Digimon's traits are its top card's (controller ruling, provisional; §4-7-7, Q3225, DCGO `permanent.TopCard`); `Permanent::has_trait` (now `has_printed_trait`) reads the top card and the winner / host-Digimon trait readers use `has_trait_for_rules`; the pinning test is un-ignored and `ch15_08_effect_categories::battle_winner_trait_is_the_top_cards_trait` / `::permanent_trait_is_the_top_cards_trait` are green. §4-7-7 stays `gap` (tests listed; they pin the characteristics reading, not the rule's text).
 - Rules: §4-7-7 (bottom cards are part of the top card's information) vs DCGO's top-card trait read (`BT25_020.cs`).
 - Test: `dsl::battle_deleter::turn_players_observer_reads_the_winners_top_card_before_de_digivolution` (ignored).
 - Cause: `TriggerContext::battle_winner_has_trait` reads the live winner through `Permanent::has_trait`, which scans every card in the stack.
 - Fix: read the winner's synthesized identity (top card + trait modifiers), once the reading is confirmed.
+
+**G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS**: `needs-reading` (same ruling as the trait gap above) — filed 2026-10-17 (Plan 4 Task 31 review round)
+- Rules: §4-7-7 + Q3225 (a Digimon "without ... [Imperialdramon] in its name" once its top card is trashed); DCGO `TopCard.ContainsCardName`.
+- Cards: BT12-059, EX1-014, BT20-059, BT17-102 read "this Digimon's name / is [X]" through `self_digivolution_contains_name` (top card + every digivolution card); BT16-027 / BT20-020 read "in its digivolution cards" through the same scan (harmless today).
+- Cause: `Permanent::contains_card_name` scans the whole stack.
+- Fix: re-author those cards onto a top-card name predicate (`source_name_contains`; BT17-102 on the synthesized names) and BT16-027 / BT20-020 onto `self_digivolution_sources_contain_name`; leave `contains_card_name` as is.
 
 (§14 is 7 of 10 proven.)
 
@@ -386,6 +401,9 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 - `G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED` residuals (§18-3-3): the watch now spans outermost drains (resets only on a player decision); the choose-one lookahead stays a documented residual; the §18-3-3-1/-2 repeat-count declaration has a design note in the gap entry and awaits a ruling (W10 stands).
 - `F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE` residuals (§9-1-5) — **RESOLVED 2026-10-17**: an effect-used Option (inside a selection callback) is trashed before the rule check its [Main] caused; a two-[Main] Option is trashed after the first; hand / deck redirects log `GameEvent::CardToHand` / `CardToDeck`. The `play_from_hand_free` half stays open.
 - `G-ENGINE-STANDING-LINK-ABSORB-DRAINS-MID-PROCESS` (§4-9-5, no obligation of its own; filed by Plan 4 Task 30 review): `absorb_standing_digimon_as_link` drains the effect queue after each trashed digivolution card and after the source's own link cards, so on the §4-9-5 choice path the replaced link cards' `OnLinkedCardTrashed` triggers resolve before the new card attaches (and a trigger removing a lower-index permanent could leave the host handle stale); fix: queue only and drain once after `OnLink`. Shared by the declared standing link and the effect relink (only `_examples/EX11-027` authors it).
+- `G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH` (§15-8-3-2, no obligation of its own): `fire_digivolution_card_returned_to_deck_bottom`, `digivolve_replacement_subject_without_cost`, `play_token` and `place_self_as_delay_option_permanent` still drain the queue inline; the source-trash paths were fixed under `G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS`.
+
+- `G-ENGINE-REPLACED-TRAIT-STILL-COUNTS-FROM-PRINTED-TOP-CARD` (no obligation of its own; filed by the Plan 4 Task 31 review): `has_trait_for_rules` and the general `trait_has` OR the synthesized identity with the printed top card, so a replacing `ChangeTraits` / non-additive `TreatAsDigimon` cannot remove a printed trait, and the live winner read can disagree with its snapshot.
 
 The other 330 non-blocking mechanics-set gaps (and 279 outside it) are untriaged defaults with no test, mostly chapters 1-10.
 
@@ -400,7 +418,8 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 
 **W2. Confirmation: §16-33-1 <Vortex> attack target.** (`G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON`, classified `PDF-explicit`; does not hold up the fix.)
 - (a) Suspended Digimon only: §11-2-7-1 names the legal targets; §16-33-1 grants the attack, not a target permission, while §16-38-1 <Execute> and the §15-1-3 example spell such a permission out. DCGO and Aegis's current scenario agree. Suite and fix assume (a).
-- (b) Any opponent Digimon, reading §16-33-1's "attack an opponent's Digimon" as unqualified. Aegis's 2026-09-05 audit once implemented (b); the engine does (b) today.
+- (b) Any opponent Digimon, reading §16-33-1's "attack an opponent's Digimon" as unqualified. Aegis's 2026-09-05 audit once implemented (b); the engine did (b) until Task 13.
+- **Fixed (Task 13) on reading (a); owner may override.** Task 13 of Plan 4 (`4967a8120`) applies the normal declaration-time target legality (suspended, or a `CanAttackUnsuspended` grant; the engine's leftover <Raid> arm is `G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED`) to the <Vortex> attack in the mask and the decoder; `ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon` is un-ignored and §11-2-7-1 / §16-33-1 are `proven`. Reading (b) would invert that test's second assertion and `mask_end_of_turn_parity::mask_vortex_does_not_target_unsuspended_digimon`.
 
 **W3. Confirmation: end-of-turn attack order for <Engage>, <Execute>, <Overclock>.** Q3868/Q3869 are rulings on <Vortex> (EX7-064): another end-of-turn effect ordered after it resolves after the attack declaration and before the counter timing. For the other three this is not analogy alone: §11-1-4 ("After declaring an attack, the counter timing won't begin until any triggered [When Attacking] effects and other triggered effects have been resolved") gives the same order for any pending trigger once an attack is declared. (Does not hold up the fix.)
 - (a) The same order for every trigger-type end-of-turn "may attack" keyword (declaration < other effect < counter timing), per §11-1-4 + Q3869. Suite assumes (a) for all four.
@@ -416,7 +435,8 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 - (b) The Digimon information only (the card's default, top-level face), as the engine does for every reference today.
 - (c) Neither colour unless the effect names the category.
 - DCGO: not checked. Suite: unasserted; the fix must pin whichever is chosen.
-- **Fixed on reading (a); owner may override.** Task 18 of Plan 4 pins it: a `kind: option` / `kind: digimon` reference reads that information only (§4-6-5-2, §4-6-6-2); an unqualified reference matches if the whole reference holds through either information (§4-6-1), pinned by `ch16_new_keywords::dual_unqualified_colour_reference_matches_either_information` and `dual_unqualified_reference_holds_through_one_information` ("purple Lv.6 card" does not match a red-Lv.6 / purple-Option DUAL; "card that is not red" does); digivolution cards on the field read the Digimon information only (§4-6-3). Reading (b) or (c) would invert that test's two positive picks.
+- *Superseded by the owner ruling below.* History: Task 18 of Plan 4 pinned provisional reading (a) (an unqualified reference matched if the whole reference held through either information), while `kind: option` / `kind: digimon` read that information only (§4-6-5-2, §4-6-6-2) and on-field digivolution cards read the Digimon information only (§4-6-3); those three still hold.
+- **Owner ruled (b) 2026-10-17: Digimon information.** Fixed in Task 29 (421e95064). An unqualified reference reads the DUAL card's Digimon information only; the Option information is read only under `kind: option` (§4-6-6-2). `dual_unqualified_colour_reference_reads_digimon_information` (renamed from `..._matches_either_information`) and `dual_unqualified_reference_holds_through_one_information` are re-pinned: "red card" finds the red-Digimon / purple-Option DUAL; "purple card", "purple Lv.6 card" and "card that is not red" do not.
 
 **W6. Sign-off: §15-8-3-9-4 versus Q1009** (15-8-3-9-2 sidecar note, `05d39e4cb`). §15-8-3-9-4 covers the removed card's own last-known state; references to general game state (e.g. your security count) are made when processing is performed (§15-8-3-9-3), as Q1009 rules for BT2-034. Proven on that reading (`pending_effect_whose_condition_lapsed_is_dropped`).
 
@@ -433,6 +453,7 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 **W11. `blocks_training` judgement calls.** Overflow (`G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT`: the outcome differs only when the memory marker hits ±10 mid-sequence) and DUAL search (`G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH`) are flagged blocking (`173375296`). Keep, or downgrade to non-blocking?
 
 **W12. Link-time replacement chooser (§4-9-5).** §4-9-5 says the same number of existing link cards are trashed but not who chooses which. Q6370 gives the choice to "the player" for the rule-check trim. Reading: the linking player (who controls the host, §10-1-3-1) chooses. DCGO: the owner chooses when the maximum is above 1. Confirmation only.
+- **Confirmed by owner 2026-10-17** (linking player chooses; implemented by Task 3).
 
 ## Retracted or resolved during the campaign
 
@@ -444,6 +465,7 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 - `G-ENGINE-UNAFFECTED-SKIPS-INSTEAD-OF-SUPPRESSES`: found and resolved in Plan 4 Task 24 (§15-15-5-1 / -2 / -4, `1e3fc9d9e`). Modifiers and granted triggered effects applied to an immune Digimon are recorded and hidden at read time, so they apply once the immunity ends; `tests/rules_conformance/ch15_15_unaffected.rs` (10 tests) is green and 15-15-5-1..4 are `proven`.
 - `G-ENGINE-PROGRESS-DOES-NOT-HIDE-EARLIER-OPPONENT-EFFECTS`: resolved in Plan 4 Task 25 (§16-39-1 / §15-15-5-1 / §15-15-5-2, `20646307f`). `<Progress>` is a read-time shield on the modifier registry (`ModifierRegistry::progress_shield`, keyed to the attacker by identity), so an opponent's effect applied before the attack stops applying while it attacks and applies again the moment it ends or the attacker loses `<Progress>`; `ch15_15_unaffected` progress tests green, 16-39-1 `proven`.
 - `G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION`: found in the Task 27 review and resolved in Plan 4 Task 28 (§14-2-4, §15-4-3-5-1, §16-7-4; `055806250`). The battle-result triggers and <Piercing> pend with the loser's [On Deletion] in one pool, the turn player's first (Q3931); the end-of-battle timing (§14-2-5) follows the pool.
+- `G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS`: found in the Task 28 review and resolved in Plan 4 Task 31 (§4-7-7; `8834bec70`). A Digimon's traits are its top card's (controller ruling, provisional; official Q&A Q3225; DCGO reads `permanent.TopCard`): the shared `Permanent::has_trait` (now `has_printed_trait`) no longer scans the digivolution cards, so the battle-winner qualifier and the host-Digimon trait predicate read the top card.
 - `G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN`: resolved (fixed 2026-08-24 in `73733429d`, confirmed by `delay_scheduled_window_is_optional`); entry moved to `qa/resolved-gaps.md`.
 
 ## Vocabulary gaps filed (`qa/dsl-vocab-gaps.md`, 2026-10-16)
@@ -464,7 +486,7 @@ By blast radius: substrate first, so later fixes land on the corrected loop.
    - `G-ENGINE-ON-DELETION-DRAINED-BEFORE-DELETION-OBSERVERS`;
    - `G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS` (#726 rework) and `F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE` (§9-1-5).
 2. **Optional-condition legality:** `G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED`, then `G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION` (shares the gate).
-3. **Attack procedure:** `G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES`, `G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED`, `G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE`, `G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK`, `G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK`, `G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON`, `G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED`.
+3. **Attack procedure:** `G-ENGINE-ATTACK-TIMINGS-SKIPPED-WHEN-ATTACKER-LEAVES`, `G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED`, `G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE`, `G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK`, `G-ENGINE-VORTEX-ATTACK-SKIPS-COUNTER-AND-BLOCK`, `G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON`, `G-ENGINE-COLLISION-BLOCKER-NOT-GRANTED`, `G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED` (filed 2026-10-17).
 4. **Keyword implementations:** `G-ENGINE-KEYWORD-DIGISORPTION-UNIMPLEMENTED`; `G-ENGINE-MATERIAL-SAVE-AFTER-DELETION` + `G-ENGINE-MATERIAL-SAVE-MAY-PLACE-FEWER`; `G-ENGINE-BLAST-DNA-IGNORES-DNA-REQUIREMENTS`; De-Digivolve ×3 (`G-ENGINE-DEDIGIVOLVE-LEVEL-FLOOR-READS-NEXT-CARD`, `G-DEDIGIVOLVE-NO-DECLARATION`, `G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED` with `G-DSL-TOP-CARD-TRASHED-TIMING`); `G-ENGINE-OVERFLOW-SIMULTANEOUS-ORDER-PER-PERMANENT`; `G-ENGINE-DUAL-OPTION-INFO-NOT-REFERENCED-IN-CARD-SEARCH` (the fix pins whichever reading W5 confirms); `G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS` (Engage / Execute / Vortex / Overclock end-of-turn ordering, after the attack-procedure fixes).
 5. **Loops:** `G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED` (either prompt shape in W10 passes the test).
 

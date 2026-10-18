@@ -58,37 +58,26 @@ pub fn eval_predicate_with_bindings(
 ) -> bool {
     // §4-6-1: a DUAL card can be treated as either a Digimon card or an Option
     // card. A reference that names neither category (no `kind:` Digimon /
-    // Option anywhere in its conjunction) matches when the WHOLE predicate
-    // holds read through either information -- not leaf by leaf (a "purple
-    // Lv.6 card" needs one information that is both purple and Lv.6).
-    // Only a DUAL card in a card zone has two readings: on the field it is a
-    // Digimon (§4-6-3) and `eval_card_fields` reads it as one.
-    // (`if let`, not a `match` with a wildcard arm: `dsl_eval_arm_coverage`
-    // forbids wildcard catch-alls inside this function so new subjects get an
-    // explicit decision.)
-    let is_dual_card = if let PredicateSubject::Card(c) | PredicateSubject::RevealedCard(c) = subject {
-        rctx.game
-            .card_data_for_handle(c)
-            .is_some_and(|d| d.dual.is_some())
-            && !rctx.game.card_is_on_field(c)
-    } else {
-        false
-    };
-    if is_dual_card && conjunct_dual_ref(pred) == DualRef::Either {
-        return eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Digimon)
-            || eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Option);
-    }
-    eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Either)
+    // Option anywhere in its conjunction) reads the DUAL card's Digimon
+    // information only, as a `kind: digimon` reference does (§4-6-5-2; owner
+    // ruling W5 (b), 2026-10-17: "This would be the Digimon colour/s"). The
+    // Option information is read only under a `kind: option` qualifier
+    // (§4-6-6-2), which `conjunct_dual_ref` resolves node by node. A DUAL card
+    // on the field is a Digimon (§4-6-3); `eval_card_fields` enforces that
+    // from the card's location whatever reference reaches it.
+    eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Digimon)
 }
 
 /// Which information of a DUAL card a card-zone search reads (§4-6-5-2,
 /// §4-6-6-2). `kind: digimon` references the card as a Digimon card (Digimon
 /// information only), `kind: option` as an Option card (Option information
-/// only). `Either` is the unresolved state of a reference that names neither
-/// category: `eval_predicate_with_bindings` resolves it for a DUAL card by
-/// evaluating the whole predicate once per information (§4-6-1; owner-pending
-/// ruling W5, reading (a)), so a leaf only ever sees `Digimon` or `Option` for
-/// a DUAL. A card that is not a DUAL has one set of information.
+/// only). `Either` is what `conjunct_dual_ref` returns for a node that names
+/// neither category; such a node inherits its enclosing node's reference, and
+/// the root reference (`eval_predicate_with_bindings`) is `Digimon`, so an
+/// unqualified reference reads the Digimon information (§4-6-1, §4-6-5-2;
+/// owner ruling W5 (b)) and a leaf only ever sees `Digimon` or `Option`. A
+/// card that is not a DUAL has one set of information, read whatever the
+/// reference.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DualRef {
     Either,
@@ -2257,19 +2246,36 @@ fn eval_event_fields(
         // Digimon owned by the observer that still stands in the battle area.
         // Located by the host's TOP CARD (`event_host_card`), not its index:
         // the battle area compacts when a <Delay> carrier trashes itself.
-        let host_card = rctx
-            .game
-            .current_trigger_context
-            .as_ref()
-            .and_then(|t| t.event_host_card);
-        let is_own_digimon = host_card
-            .and_then(|card| {
+        // When the host IS the event permanent (`OnTopCardTrashed`), it is
+        // located by its stack identity instead: a LATER event can trash the
+        // top card this event exposed (two separate <De-Digivolve 1>
+        // instances, §16-12-7), and the earlier event's trigger is still met
+        // on the same Digimon (§15-4-2-4; owner ruling 2026-10-10 #5).
+        // G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+        let trigger = rctx.game.current_trigger_context.as_ref();
+        let host_by_identity = trigger
+            .filter(|t| {
+                t.event_permanent_identity.is_some()
+                    && t.event_host_permanent.is_some()
+                    && t.event_host_permanent == t.event_permanent
+            })
+            .map(|t| {
+                t.resolve_event_permanent(rctx.game)
+                    .filter(|h| h.player == rctx.player)
+                    .map(|h| h.index as usize)
+            });
+        let host_card = trigger.and_then(|t| t.event_host_card);
+        let host_index = match host_by_identity {
+            Some(index) => index,
+            None => host_card.and_then(|card| {
                 rctx.game
                     .player(rctx.player)
                     .battle_area
                     .iter()
                     .position(|perm| perm.top_card().handle() == card)
-            })
+            }),
+        };
+        let is_own_digimon = host_index
             .map(|index| {
                 rctx.game
                     .permanent_is_digimon_for_rules(crate::permanent::PermanentHandle {
@@ -2494,10 +2500,23 @@ fn eval_event_fields(
         }
     }
     if let Some(ref trait_name) = pred.host_permanent_trait_has {
+        // "a [X] trait Digimon's digivolution cards": the host's traits are
+        // its top card's (with trait-changing effects), never another
+        // digivolution card's (§4-7-7; DCGO `EX8_047.cs`
+        // `trashedPermanent.TopCard.ContainsTraits`).
+        // G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS.
         let live_host_matches = rctx
             .event_host_permanent()
-            .and_then(|host| permanent_for_handle(rctx, host))
-            .map(|perm| perm.has_trait(trait_name, rctx.card_data()))
+            .and_then(|host| {
+                permanent_for_handle(rctx, host).map(|perm| {
+                    perm.has_trait_for_rules(
+                        trait_name,
+                        rctx.card_data(),
+                        &rctx.game.modifiers,
+                        host,
+                    )
+                })
+            })
             .unwrap_or(false);
         let host_snapshot_matches = rctx
             .event_host_card()

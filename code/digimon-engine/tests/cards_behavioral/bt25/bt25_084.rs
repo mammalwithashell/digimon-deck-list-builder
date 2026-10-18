@@ -460,3 +460,36 @@ fn bt25_084_leave_prevention_trashes_two_and_stays_then_deletes_lowest() {
     // The 2-card trash is one hand-trash event → one lowest-DP delete.
     assert_eq!(opp_field(&runner), vec!["OPP-BIG".to_string()]);
 }
+
+/// Comprehensive Rules Ver. 4.3 §15-7-4: "If executing an optional processing
+/// condition's contents isn't possible, then the player can't choose to
+/// execute them." With 1 card in hand, "by trashing 2 cards in your hand"
+/// can't be executed, so the leave-prevention is not offered and Titamon
+/// leaves (DCGO BT25_084.cs `CanActivateCondition`: `HandCards.Count() >= 2`).
+/// The engine derives this from the two leading hand picks
+/// (`leading_cost_guard`); the YAML carries no hand-count gate.
+/// G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+#[test]
+fn bt25_084_leave_prevention_not_offered_with_one_hand_card() {
+    let mut runner = base().hand(0, &["PAD"]).memory(13).start();
+    runner.set_first_player(0);
+    let titamon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.set_effect_source_player_for_test(Some(1));
+    runner.game.delete_permanent_with_effects(titamon);
+    runner.game.set_effect_source_player_for_test(None);
+    assert!(
+        runner
+            .pending_selection_view()
+            .is_none_or(|v| v.kind != SelectionKind::Replacement),
+        "1 card in hand: the 2-card condition can't be chosen, so no prevention is offered"
+    );
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.game.players[0].hand.len(), 1, "nothing was trashed");
+    assert!(
+        !runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
+        "Titamon left the battle area"
+    );
+}

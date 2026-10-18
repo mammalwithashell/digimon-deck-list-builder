@@ -1141,6 +1141,12 @@ pub struct Game {
     /// (`fire_on_attack`). `Game::live_attack_attacker` uses it to tell the
     /// attacker from a later occupant of its compacted slot.
     pub(crate) attack_attacker_identity: Option<(PlayerId, u64)>,
+    /// The declared attacker's top card, captured with
+    /// `attack_attacker_identity`. §11-1-5: the counter timing still occurs
+    /// after the attacker leaves the battle area, and its prompt names the
+    /// attacking card from this stored context instead of the attacker's
+    /// (possibly reused) battle-area slot.
+    pub(crate) attack_attacker_card: Option<CardHandle>,
     /// Scratch cache scoped to one `enqueue_triggered` call (empty outside
     /// it): the event Digimon's last-known snapshot, built once per event
     /// and shared by every context of that event.
@@ -1302,6 +1308,16 @@ pub struct Game {
     /// where `dsl_outer_tail` is empty.
     #[doc(hidden)]
     pub(crate) draining_deferred: u32,
+    /// A source-trash event is open (`Game::begin_source_trash_event`): every
+    /// `OnDigivolutionCardTrashed` entry enqueued meanwhile is stamped
+    /// (`TriggerContext::in_source_trash_event`). One effect step trashing
+    /// several digivolution cards is ONE event: its observers are coalesced
+    /// to one trigger per observer when the event closes (§15-5-2), and a
+    /// later event triggers them again (§15-4-2-4). Coalescing selects the
+    /// stamped entries wherever they sit, so a queue `retain_mut` or swap
+    /// mid-event cannot misattribute entries. Transient: always `false`
+    /// between steps. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+    pub(crate) source_trash_event_open: bool,
     /// 6-1-4-1: memory crossed to the opponent's side while an effect was
     /// still resolving (inside a drain or a deferred-drain scope), so
     /// `check_turn_end` held the turn end back. The outermost

@@ -1802,9 +1802,18 @@ impl Game {
                                 // condition (if any) currently passes. If the
                                 // condition would suppress the effect anyway,
                                 // auto-fire so it silently skips — no prompt.
+                                // §15-7-4 (Ver. 4.3): an activation cost that
+                                // can't be paid can't be chosen either — no
+                                // prompt; `run_queued_effect_inner` then
+                                // drops the effect as if declined.
                                 let has_cost = eff.activation_cost_fn.is_some();
-                                let condition_passes = has_cost && self.queued_effect_condition_passes(idx);
-                                has_cost && condition_passes
+                                let payable = has_cost
+                                    && self.queued_optional_condition_payable(
+                                        &self.effect_queue[idx],
+                                        eff,
+                                    );
+                                // `payable` implies `has_cost`.
+                                payable && self.queued_effect_condition_passes(idx)
                             } else {
                                 false
                             }
@@ -3610,11 +3619,35 @@ impl Game {
             if self.queued_effect_opt_exhausted(i)
                 || !self.queued_effect_condition_passes(i)
                 || !self.queued_effect_index_is_live(i)
+                || self.queued_optional_condition_unpayable(i)
             {
                 to_skip.push(i);
             }
         }
         to_skip
+    }
+
+    /// True when `effect_queue[i]` is an OPTIONAL effect whose optional
+    /// processing condition can't be executed right now (§15-7-4, Ver. 4.3:
+    /// it can't be chosen; owner ruling 2026-10-10 #6: not offered). Like the
+    /// other `non_firing` exclusions this is transient: the entry stays queued
+    /// and is re-evaluated after a sibling resolves (which may make it
+    /// payable), matching DCGO's per-pick `CanActivate` re-filter.
+    /// G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+    fn queued_optional_condition_unpayable(&self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if !qe.is_optional || qe.granted_effect_id.is_some() {
+            return false;
+        }
+        let Some(effects) = self.effects_for_queued(qe) else {
+            return false;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return false;
+        };
+        !self.queued_optional_condition_payable(qe, effect)
     }
 
     /// True when `effect_queue[i]` is a `[X Per Turn]` effect whose per-turn
@@ -3805,14 +3838,70 @@ impl Game {
     /// ("When THIS Digimon unsuspends") are unaffected: only the entry whose
     /// event permanent is the source passes.
     pub(crate) fn collapse_simultaneous_event_batch(&mut self, first_index: usize) {
-        self.collapse_event_batch(first_index, false);
+        self.collapse_event_batch(first_index, false, false);
     }
 
     pub(crate) fn collapse_simultaneous_play_event_batch(&mut self, first_index: usize) {
-        self.collapse_event_batch(first_index, true);
+        self.collapse_event_batch(first_index, true, false);
     }
 
-    fn collapse_event_batch(&mut self, first_index: usize, retain_play_subjects: bool) {
+    /// Coalesce one source-trash event (`Game::begin_source_trash_event`):
+    /// the `OnDigivolutionCardTrashed` entries the event stamped
+    /// (`TriggerContext::in_source_trash_event`, selected wherever they sit,
+    /// so a queue `retain_mut` or swap mid-event cannot misattribute them)
+    /// were enqueued once per trashed card, but cards trashed at the same
+    /// time are ONE event, so each observer triggers once for it (§15-5-2,
+    /// owner ruling 2026-10-10 #4; DCGO stacks one
+    /// `OnDigivolutionCardDiscarded` carrying the whole trashed list). Every
+    /// trashed card stays a member of the kept entry, exactly as for a
+    /// simultaneous play: the condition holds when any member meets it, and a
+    /// singular "that card" reference becomes a choice among the matching
+    /// members. Each member's `moved_card_sets` names the whole event's cards.
+    /// A trashed card's own inherited "when this card is trashed" effect is a
+    /// different effect per card, so each still triggers. Other timings
+    /// enqueued meanwhile are left alone. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+    pub(crate) fn coalesce_source_trash_event(&mut self) {
+        let stamped = |qe: &QueuedEffect| {
+            qe.trigger_context
+                .as_ref()
+                .is_some_and(|c| c.in_source_trash_event)
+        };
+        let mut cards: Vec<CardHandle> = Vec::new();
+        for qe in self.effect_queue.iter().filter(|qe| stamped(qe)) {
+            if let Some(card) = qe.trigger_context.as_ref().and_then(|c| c.event_source_card) {
+                if !cards.contains(&card) {
+                    cards.push(card);
+                }
+            }
+        }
+        if cards.len() >= 2 {
+            for qe in self.effect_queue.iter_mut().filter(|qe| stamped(qe)) {
+                if let Some(context) = qe.trigger_context.as_mut() {
+                    for set in context.moved_card_sets.iter_mut() {
+                        set.cards = cards.clone();
+                    }
+                }
+            }
+            self.collapse_event_batch(0, true, true);
+        }
+        // The stamp only scopes this event: clear it (members included) so a
+        // later event, and the §18-3 loop signature, never see it.
+        for qe in self.effect_queue.iter_mut() {
+            if let Some(context) = qe.trigger_context.as_mut() {
+                context.in_source_trash_event = false;
+                for member in context.simultaneous_play_members.iter_mut() {
+                    member.in_source_trash_event = false;
+                }
+            }
+        }
+    }
+
+    fn collapse_event_batch(
+        &mut self,
+        first_index: usize,
+        retain_play_subjects: bool,
+        source_trash_event: bool,
+    ) {
         type Key = (
             CardHandle,
             u8,
@@ -3822,6 +3911,12 @@ impl Game {
             EffectTiming,
         );
         let len = self.effect_queue.len();
+        // A source-trash event also separates entries by WHERE they are
+        // pending: a digivolution card's inherited effect enqueued from its
+        // host's scan (pending on the host, `source_permanent: Some`) and the
+        // same card's own "when this card is trashed" entry once it is in the
+        // trash (`source_permanent: None`) are different pending effects.
+        let by_location = source_trash_event;
         let key_of = |qe: &QueuedEffect| -> Key {
             (
                 qe.source_card,
@@ -3830,7 +3925,11 @@ impl Game {
                 // A dynamic grant shares its body across carriers, but each
                 // carrier owns a distinct effect. Collapse repeated observer
                 // scans for that carrier only, never another recipient's copy.
-                qe.granted_effect_id.and(qe.source_permanent),
+                if by_location {
+                    qe.source_permanent
+                } else {
+                    qe.granted_effect_id.and(qe.source_permanent)
+                },
                 qe.keyword_effect,
                 qe.timing,
             )
@@ -3838,6 +3937,16 @@ impl Game {
         // Group batch entries by identity, preserving queue order.
         let mut groups: Vec<(Key, Vec<usize>)> = Vec::new();
         for i in first_index..len {
+            // A source-trash event collapses only the entries it stamped,
+            // wherever they sit in the queue.
+            if source_trash_event
+                && !self.effect_queue[i]
+                    .trigger_context
+                    .as_ref()
+                    .is_some_and(|c| c.in_source_trash_event)
+            {
+                continue;
+            }
             let key = key_of(&self.effect_queue[i]);
             match groups.iter_mut().find(|(k, _)| *k == key) {
                 Some((_, members)) => members.push(i),
@@ -3920,6 +4029,80 @@ impl Game {
         for idx in drop.into_iter().rev() {
             self.effect_queue.remove(idx);
         }
+    }
+
+    /// Drop the entries at `first_index..` whose trigger condition is not met
+    /// when the event triggers them. A trigger-type effect triggers as soon as
+    /// its trigger conditions are met and won't trigger when they aren't
+    /// (§15-8-3-1, §15-8-3-4), and what its condition names is read in the
+    /// state where the event triggered it (§15-8-3-8). The drainer's
+    /// per-iteration non-firing filter (`non_firing_queued_effect_indices_for`)
+    /// only HIDES such an entry, so without this it activates once a sibling
+    /// effect in the same pool makes its condition true. The activation-time
+    /// re-check is unchanged (§15-4-4-5). DCGO evaluates `CanUseCondition`
+    /// when the event stacks the effect (`AutoProcessing.StackSkillInfos`;
+    /// `CanTriggerWhenWinBattle`).
+    ///
+    /// Each entry is evaluated through `queued_effect_condition_passes`, with
+    /// the trigger context attached to it: live while the event referent is
+    /// on the field, its last-known snapshot once it has left
+    /// (`Game::gate_trigger_context`).
+    ///
+    /// Only for a timing whose clause-level condition IS its trigger
+    /// condition (the battle result: "when ... wins a battle" / "deletes ...
+    /// in battle", §14-2-4). The DSL does not separate a clause's trigger
+    /// condition from a processing condition authored in the same
+    /// `condition` / `active_when` (§15-8-3-9-1: "if that Digimon is level 4
+    /// or higher" must still be read at activation), so other observer
+    /// timings keep the activation-time reading alone
+    /// (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER). Kept
+    /// as is: keyword bodies (`<Piercing>`'s gate mixes its trigger condition
+    /// with activation conditions -- DCGO `CanActivatePierce`: still the
+    /// attacking Digimon, the opponent has security), granted bodies and
+    /// pending processing (no clause condition).
+    /// G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER.
+    pub(crate) fn discard_entries_not_triggered(&mut self, first_index: usize) {
+        // Scope guard until the general fix gives the DSL a trigger-condition
+        // field: only the battle result's clause condition is known to be its
+        // trigger condition.
+        debug_assert!(
+            self.effect_queue
+                .iter()
+                .skip(first_index)
+                .all(|qe| qe.timing == EffectTiming::BattleResult),
+            "discard_entries_not_triggered is BattleResult-only \
+             (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER)"
+        );
+        let mut i = first_index;
+        while i < self.effect_queue.len() {
+            if self.queued_entry_has_clause_trigger_condition(i)
+                && !self.queued_effect_condition_passes(i)
+            {
+                self.effect_queue.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    /// True when `effect_queue[i]` is a card's own clause (not a keyword
+    /// body, granted body or pending processing) with a clause-level
+    /// condition. See [`Self::discard_entries_not_triggered`].
+    fn queued_entry_has_clause_trigger_condition(&self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if qe.granted_effect_id.is_some()
+            || qe.keyword_effect.is_some()
+            || qe.pending_processing.is_some()
+        {
+            return false;
+        }
+        self.effects_for_queued(qe).is_some_and(|effects| {
+            effects.get(qe.effect_slot as usize).is_some_and(|effect| {
+                effect.keyword_source.is_none() && effect.condition.is_some()
+            })
+        })
     }
 
     fn queued_effect_activation_kind(&self, qe: &QueuedEffect) -> EffectSourceKind {
@@ -4132,6 +4315,18 @@ impl Game {
                     return;
                 }
             }
+        }
+        // §15-7-4 (Ver. 4.3) "If executing an optional processing condition's
+        // contents isn't possible, then the player can't choose to execute
+        // them"; §15-7-2: then nothing after the condition is processed. An
+        // OPTIONAL effect whose condition can't be executed now is dropped as
+        // if declined -- no prompt was offered for it (the gates above call
+        // the same check), so its payload must not run for free and its
+        // [Once Per Turn] is not consumed. Evaluated here, at activation, not
+        // at trigger time (DCGO `CanActivateCondition`, e.g. BT22_041.cs
+        // `SecurityCards.Any()`). G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+        if qe.is_optional && !self.queued_optional_condition_payable(&qe, effect) {
+            return;
         }
         // Note: pay_cost_fn is NOT gated by skip_condition. For SecuritySkill
         // timing, pay_cost_fn still fires (intentional — pay-costs are
@@ -5179,6 +5374,16 @@ impl Game {
                 return false;
             }
         }
+        // §15-7-4 (Ver. 4.3): an optional processing condition that can't be
+        // executed can't be chosen, so no "you may" prompt is installed (and
+        // no `optional_decision_mark` set); `run_queued_effect_inner` then
+        // drops the effect as if declined instead of running its payload
+        // for free. G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+        if let Some(cost_guard) = &effect.optional_condition_guard {
+            if !cost_guard.holds(&rctx) {
+                return false;
+            }
+        }
         true
     }
 
@@ -5534,15 +5739,45 @@ impl Game {
         if self.queued_effect_wants_outer_optional_prompt(qe) {
             return true;
         }
-        let has_activation_cost = self
+        // §15-7-4 (Ver. 4.3): an unpayable activation cost can't be chosen,
+        // so it parks no pre-cost decline; `run_queued_effect_inner` drops it.
+        let has_payable_activation_cost = self
             .effects_for_queued(qe)
             .and_then(|effects| {
-                effects
-                    .get(qe.effect_slot as usize)
-                    .map(|effect| effect.activation_cost_fn.is_some())
+                effects.get(qe.effect_slot as usize).map(|effect| {
+                    effect.activation_cost_fn.is_some()
+                        && self.queued_optional_condition_payable(qe, effect)
+                })
             })
             .unwrap_or(false);
-        has_activation_cost && self.queued_entry_condition_passes(qe)
+        has_payable_activation_cost && self.queued_entry_condition_passes(qe)
+    }
+
+    /// §15-7-4 (Ver. 4.3) "If executing an optional processing condition's
+    /// contents isn't possible, then the player can't choose to execute
+    /// them." Can the queued effect's optional processing condition — its
+    /// lifted activation cost (`ActivationCostKind::is_payable`) and its
+    /// leading cost steps (`Effect::optional_condition_guard`, evaluated by
+    /// `Game::cost_guard_holds_at`) — be executed right now? Owner ruling
+    /// 2026-10-10 #6: a trigger whose condition can't be paid is not offered.
+    /// `G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED`.
+    pub(crate) fn queued_optional_condition_payable(
+        &self,
+        qe: &QueuedEffect,
+        effect: &crate::effect::Effect,
+    ) -> bool {
+        if let Some(kind) = effect.activation_cost_kind {
+            if !kind.is_payable(self, qe.source_permanent) {
+                return false;
+            }
+        }
+        if let Some(guard) = &effect.optional_condition_guard {
+            let source = qe.attribution_source_card.unwrap_or(qe.source_card);
+            if !self.cost_guard_holds_at(guard, source, qe.source_permanent, qe.controller) {
+                return false;
+            }
+        }
+        true
     }
 
     /// Resolve any pending selection — `TriggerOrder`, `Target`, `Hand`,

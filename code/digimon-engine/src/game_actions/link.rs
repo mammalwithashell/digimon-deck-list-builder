@@ -753,19 +753,25 @@ impl Game {
         };
         let top_handle = top.handle();
         let top_owner = top.owner;
-        // Digivolution sources under the top → owner's trash + trigger.
+        // Digivolution sources under the top → owner's trash + trigger, all
+        // at the same time: ONE event (§15-5-2), enqueued without draining —
+        // nothing activates before the link has finished (§15-8-3-2).
+        let mut trashed = Vec::new();
         for card in sources {
             let scard = card.handle();
             let owner = card.owner;
             self.player_mut(owner).trash.push(card);
-            self.fire_digivolution_card_trashed(
-                source.player,
-                source,
-                top_handle,
-                scard,
-                crate::trigger_context::EventCause::OwnEffect,
-            );
+            trashed.push(super::TrashedSource {
+                player: source.player,
+                host: source,
+                host_card: top_handle,
+                card: scard,
+            });
         }
+        self.enqueue_digivolution_cards_trashed(
+            trashed,
+            crate::trigger_context::EventCause::OwnEffect,
+        );
         // The source's own linked cards (rare) → trash + OnLinkedCardTrashed.
         let had_linked = !perm.linked_cards.is_empty();
         for card in perm.linked_cards {
@@ -779,7 +785,6 @@ impl Game {
                     TriggerSource::PlayerBattleArea(pid as PlayerId),
                 );
             }
-            self.drain_effect_queue();
         }
         // Fix the host handle after the Vec shift, then attach the top card.
         let host_adj = Game::shift_handle_after_soft_remove(source, host);
@@ -814,7 +819,9 @@ impl Game {
                 },
             );
         }
-        self.drain_effect_queue();
+        // The link has finished: its trash and link observers activate now,
+        // unless an effect is still resolving around it (§15-8-3-2).
+        self.maybe_drain_effect_queue();
     }
 
     /// Facet #9 — link a **chosen card** from a non-battle-area zone (hand,

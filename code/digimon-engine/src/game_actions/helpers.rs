@@ -51,15 +51,20 @@ impl Game {
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
         self.apply_ace_overflow_for_sources(&removed);
-        for source in removed {
-            self.enqueue_digivolution_card_trashed(
-                host.player,
-                host,
-                host_card,
-                source.handle(),
-                cause,
-            );
-        }
+        // One payment trashes every selected card at the same time: one
+        // event (§15-5-2).
+        self.enqueue_digivolution_cards_trashed(
+            removed
+                .iter()
+                .map(|source| super::TrashedSource {
+                    player: host.player,
+                    host,
+                    host_card,
+                    card: source.handle(),
+                })
+                .collect(),
+            cause,
+        );
         count
     }
 

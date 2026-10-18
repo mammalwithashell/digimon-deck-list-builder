@@ -1271,7 +1271,6 @@ fn de_digivolve_multi_card_trash_is_simultaneous_but_sequential() {
 /// it activates, that effect will be triggered again"; owner ruling
 /// 2026-10-10 #5): 2 triggers.
 #[test]
-#[ignore = "G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS (§16-12-7)"]
 fn de_digivolve_separate_instances_processed_separately() {
     cite!(
         "16-12-7",

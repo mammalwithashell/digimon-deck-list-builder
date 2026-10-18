@@ -380,10 +380,14 @@ fn bt24_011_own_raid_active_on_field() {
     );
 }
 
-/// Own Raid enables attacking an unsuspended opponent Digimon with the
-/// highest DP via the action mask.
+/// §11-2-7-1: the attack declaration targets the opponent or a suspended
+/// Digimon. Cyclonemon's own <Raid> switches the target AFTER the
+/// declaration (§16-23-1 / §16-23-2); it adds no declaration target, so no
+/// unsuspended opponent Digimon (the highest-DP one included) is in the mask.
+/// Inverted from `bt24_011_own_raid_mask_includes_highest_dp_unsuspended_target`
+/// (G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED).
 #[test]
-fn bt24_011_own_raid_mask_includes_highest_dp_unsuspended_target() {
+fn bt24_011_own_raid_adds_no_unsuspended_declaration_target() {
     let mut high_dp = make_test_card("HIGH-DP", "HighDp");
     high_dp.dp = Some(8000);
     let mut low_dp = make_test_card("LOW-DP", "LowDp");
@@ -411,14 +415,14 @@ fn bt24_011_own_raid_mask_includes_highest_dp_unsuspended_target() {
     // Advance from Breeding to Main phase so the action mask includes attacks.
     runner.game.enter_main_phase();
 
-    // Cyclonemon has Raid → should be able to attack the highest-DP unsuspended target.
+    // Cyclonemon has Raid → still no unsuspended declaration target.
     let mask = build_action_mask(&runner.game, 0);
     let attack_high = encode_attack(cyclonemon.index as u16, high_handle.index as u16) as usize;
     let attack_low = encode_attack(cyclonemon.index as u16, low_handle.index as u16) as usize;
 
     assert_eq!(
-        mask[attack_high], 1.0,
-        "Raid must allow Cyclonemon to target the highest-DP unsuspended opponent"
+        mask[attack_high], 0.0,
+        "Raid adds no declaration target: not the highest-DP unsuspended opponent (§11-2-7-1)"
     );
     assert_eq!(
         mask[attack_low], 0.0,

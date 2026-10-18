@@ -1,7 +1,8 @@
 # HAND_PICK_PURPLE_ANY -- Option, red, use cost 0.
 #   [Main] Trash 1 purple card from your hand.
 # An UNQUALIFIED color reference (no "Digimon card" / "Option card"): a DUAL
-# card in the hand matches if EITHER of its informations is purple (§4-6-1).
+# card in the hand matches if its Digimon information is purple (§4-6-1,
+# §4-6-5-2; owner ruling W5 (b)).
 card: HAND_PICK_PURPLE_ANY
 name: Any purple Audit
 kind: option

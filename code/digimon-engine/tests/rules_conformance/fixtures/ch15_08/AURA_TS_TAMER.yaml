@@ -1,0 +1,18 @@
+# AURA_TS_TAMER -- Tamer, red, play cost 3.
+#   [Your Turn] All of your Digimon gain the [TS] trait.
+# A trait-changing effect (lowers to `ChangeTraits`, add): a Digimon whose
+# top card has no [TS] trait is a [TS] Digimon while it applies.
+card: AURA_TS_TAMER
+name: Banner Bearer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - kind: aura
+    target:
+      of: you
+      zone: [battle_area]
+      kind: digimon
+    active_when: { your_turn: true }
+    grant_traits: [TS]
+    summary: "[Your Turn] All of your Digimon gain the [TS] trait."

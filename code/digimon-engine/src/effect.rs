@@ -497,6 +497,17 @@ pub struct Effect {
     /// pre-evaluated). `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     pub outer_optional_guard: Option<ConditionFn>,
 
+    /// The payability of the effect's optional processing condition (its
+    /// leading "by X" cost steps; DSL-derived by
+    /// `dsl_cards::lower_triggered::leading_cost_guard`). §15-7-4 (Ver. 4.3):
+    /// a condition that can't be executed can't be chosen, so an OPTIONAL
+    /// effect whose guard fails installs no "you may" prompt and does not run
+    /// (as if declined); §15-8-4-4-1: a `[Main]` field ability whose guard
+    /// fails is not declarable (masked). Evaluated by
+    /// `Game::cost_guard_holds`. Plain data — clone-safe.
+    /// `G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED`.
+    pub optional_condition_guard: Option<Arc<crate::dsl_cards::lower_triggered::CostGuard>>,
+
     /// `BeforePayCost` cost reducers only: when `true`, this reducer's
     /// `pay_cost_fn` begins with a declinable (PASS-able) selection, so
     /// running it surfaces the player's own opt-in/opt-out rather than
@@ -957,6 +968,7 @@ impl EffectBuilder {
                 when_playing_this: false,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
+                optional_condition_guard: None,
                 pay_cost_self_gated: false,
                 pay_cost_interactive: false,
             },
@@ -1113,6 +1125,16 @@ impl EffectBuilder {
         F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     {
         self.inner.outer_optional_guard = Some(Arc::new(f));
+        self
+    }
+
+    /// Attach the payability guard of the effect's optional processing
+    /// condition (§15-7-4, §15-8-4-4-1). See `Effect::optional_condition_guard`.
+    pub fn optional_condition_guard(
+        mut self,
+        guard: crate::dsl_cards::lower_triggered::CostGuard,
+    ) -> Self {
+        self.inner.optional_condition_guard = Some(Arc::new(guard));
         self
     }
 

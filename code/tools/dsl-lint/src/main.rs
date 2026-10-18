@@ -166,6 +166,8 @@ fn lint_file(
         }
     }
 
+    lint_battle_result_conditions(&spec, &file, diags);
+
     if let Some(sections) = printed.and_then(|p| p.get(&spec.card)) {
         for f in check_security_icons(&spec, sections) {
             diags.push(Diagnostic {
@@ -185,6 +187,91 @@ fn lint_file(
                 path: e.path,
                 message: e.message,
             });
+        }
+    }
+}
+
+/// Keys an `on_ally_won_battle` clause's `condition` / `active_when` may
+/// read: the battle itself (its winner and deleters) and the turn. That
+/// condition is the effect's TRIGGER condition, decided when the battle
+/// triggers it (`Game::discard_entries_not_triggered`, §15-8-3-1 /
+/// §15-8-3-4): it is not re-read later as a processing condition, so a
+/// processing "if" there would drop the effect at the battle.
+const BATTLE_RESULT_TRIGGER_KEYS: &[&str] = &[
+    "event_winner_owner",
+    "event_winner_trait_has",
+    "event_winner_is_source",
+    "event_battle_deleter",
+    "event_battle_surviving_deleter",
+    "your_turn",
+    "opponents_turn",
+    "all_turns",
+];
+
+/// Warn when an `on_ally_won_battle` clause's `condition` / `active_when`
+/// reads anything but the battle and the turn: until the DSL has a separate
+/// trigger-condition field, a processing condition ("if you have 3 or fewer
+/// security cards") must be a body `if:`.
+/// G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER.
+fn lint_battle_result_conditions(
+    spec: &digimon_engine::dsl::spec::CardSpec,
+    file: &str,
+    diags: &mut Vec<Diagnostic>,
+) {
+    use digimon_engine::dsl::clause::{Timing, TimingSet};
+    fn foreign_keys(value: &serde_json::Value, out: &mut Vec<String>) {
+        let Some(map) = value.as_object() else {
+            return;
+        };
+        for (key, v) in map {
+            let absent = v.is_null() || v.as_array().is_some_and(|a| a.is_empty());
+            if absent || BATTLE_RESULT_TRIGGER_KEYS.contains(&key.as_str()) {
+                continue;
+            }
+            match key.as_str() {
+                "all_of" | "any_of" | "none_of" => {
+                    for p in v.as_array().into_iter().flatten() {
+                        foreign_keys(p, out);
+                    }
+                }
+                "not" => foreign_keys(v, out),
+                _ => out.push(key.clone()),
+            }
+        }
+    }
+    for (i, clause) in spec.effects.iter().enumerate() {
+        let Some(t) = clause.as_triggered() else {
+            continue;
+        };
+        let battle_result = match &t.when {
+            TimingSet::Single(w) => *w == Timing::OnAllyWonBattle,
+            TimingSet::Multi(ws) => ws.contains(&Timing::OnAllyWonBattle),
+        };
+        if !battle_result {
+            continue;
+        }
+        for (field, pred) in [("active_when", &t.active_when), ("condition", &t.condition)] {
+            let Some(pred) = pred else {
+                continue;
+            };
+            let mut keys = Vec::new();
+            if let Ok(value) = serde_json::to_value(pred) {
+                foreign_keys(&value, &mut keys);
+            }
+            for key in keys {
+                diags.push(Diagnostic {
+                    file: file.to_string(),
+                    severity: Severity::Warning,
+                    path: format!("effects[{i}].{field}"),
+                    message: format!(
+                        "battle-result trigger condition reads `{key}`: an `on_ally_won_battle` {}{}{}",
+                        format_args!("clause's {field} is its trigger condition, decided at the battle "),
+                        "(§15-8-3-1, §15-8-3-4) and not re-read as a processing condition; ",
+                        "author a processing condition as a body `if:` \
+                         (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER)"
+                    ),
+                });
+            }
         }
     }
 }

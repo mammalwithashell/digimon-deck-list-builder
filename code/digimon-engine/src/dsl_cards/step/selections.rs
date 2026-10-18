@@ -1849,6 +1849,9 @@ fn finish_non_dsl_count_capped(
     );
     match state.terminal {
         crate::resume::NonDslCountCappedTerminal::KeywordFragment { subject } => {
+            // <Fragment> trashes its N cards at the same time: one event
+            // (§15-5-2).
+            let event = ctx.game.begin_source_trash_event();
             let paid = state
                 .accum
                 .iter()
@@ -1857,6 +1860,9 @@ fn finish_non_dsl_count_capped(
             if paid == state.max as usize {
                 ctx.cancel_leave();
             }
+            // Closed after the replacement is applied: nothing activates
+            // mid-<Fragment> (§15-8-3-2).
+            ctx.game.end_source_trash_event(event);
         }
         crate::resume::NonDslCountCappedTerminal::KeywordPartition { subject } => {
             crate::cards::keyword_effects::partition_extract_and_play(
@@ -6842,18 +6848,36 @@ fn install_link_card_trash_second_selection(
 fn total_face_down_sources_under_tamers(
     ctx: &EffectContext<'_>,
     player: PlayerId,
-    bindings: &Bindings,
+    _bindings: &Bindings,
+) -> usize {
+    face_down_sources_under_tamers(&ctx.as_read(), player)
+}
+
+/// Face-down digivolution cards across `player`'s Tamers that carry a
+/// face-down stash (`{ kind: tamer, has_face_down_source: true }`, the
+/// fixed filter of the `trash_bottom_face_down_source(s)_under_tamer(s)`
+/// costs). Shared by those steps and by the read-only payability guard
+/// (`dsl_cards::lower_triggered::CostGuard::FaceDownUnderTamers`, §15-7-4)
+/// so the two can't drift.
+pub(crate) fn face_down_sources_under_tamers(
+    read: &EffectReadContext<'_>,
+    player: PlayerId,
 ) -> usize {
     let filter = CompiledPredicate {
         kind: Some(digimon_dsl::compiled::CompiledCardKind::Tamer),
         has_face_down_source: Some(true),
         ..CompiledPredicate::default()
     };
-    let tamers = collect_matching_permanents(ctx, player, &filter, Some(bindings));
-    tamers
-        .iter()
+    (0..read.game.player(player).battle_area.len())
+        .map(|index| PermanentHandle {
+            player,
+            index: index as u8,
+        })
+        .filter(|handle| {
+            eval_predicate_with_bindings(&filter, read, PredicateSubject::Permanent(*handle), None)
+        })
         .map(|handle| {
-            ctx.game
+            read.game
                 .player(handle.player)
                 .battle_area
                 .get(handle.index as usize)

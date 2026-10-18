@@ -413,8 +413,12 @@ impl Game {
                 }
             }
             if let Some(process) = &effect.process {
+                // One effect: triggers it causes wait until it has finished
+                // (§15-8-3-2). G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+                self.enter_deferred_drain();
                 let mut ctx = EffectContext::new(self, handle, None, player_id);
                 process(&mut ctx);
+                self.exit_deferred_drain_and_flush();
             }
             return true;
         }
@@ -535,6 +539,21 @@ impl Game {
                         continue;
                     }
                 }
+                // §15-8-4-4-1: a `[Main]` whose optional processing condition
+                // can't be performed is not declarable — skip it exactly as
+                // the mask (`main_effect_select::field_main_match`) does, so
+                // first-match-wins picks the same effect on both sides.
+                // G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+                if let Some(cost_guard) = &effect.optional_condition_guard {
+                    if !self.cost_guard_holds_at(
+                        cost_guard,
+                        source_handle,
+                        Some(perm_handle),
+                        player_id,
+                    ) {
+                        continue;
+                    }
+                }
                 // Python records activation before invoking the callback so a
                 // panic inside the process still counts toward OPT. Mirror that.
                 if let Some(perm) = self.players[player_id as usize]
@@ -557,22 +576,26 @@ impl Game {
                 // and the OPT slot stays consumed (recorded just above), so a
                 // cost-impossible activation cannot be retried this turn.
                 // `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID`.
+                // The activated effect resolves as ONE effect: triggers it
+                // causes (e.g. "when digivolution cards are trashed") wait
+                // until it has finished (§15-8-3-2), exactly as a queued
+                // effect's body does. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+                self.enter_deferred_drain();
+                let mut paid = true;
                 if let Some(activation_cost) = &effect.activation_cost_fn {
-                    let paid = {
-                        let mut ctx =
-                            EffectContext::new(self, source_handle, Some(perm_handle), player_id);
-                        activation_cost(&mut ctx)
-                    };
-                    if !paid {
-                        return false;
-                    }
-                }
-                if let Some(process) = &effect.process {
                     let mut ctx =
                         EffectContext::new(self, source_handle, Some(perm_handle), player_id);
-                    process(&mut ctx);
+                    paid = activation_cost(&mut ctx);
                 }
-                return true;
+                if paid {
+                    if let Some(process) = &effect.process {
+                        let mut ctx =
+                            EffectContext::new(self, source_handle, Some(perm_handle), player_id);
+                        process(&mut ctx);
+                    }
+                }
+                self.exit_deferred_drain_and_flush();
+                return paid;
             }
         }
         false
@@ -619,8 +642,12 @@ impl Game {
                 }
             }
             if let Some(process) = &effect.process {
+                // One effect: triggers it causes wait until it has finished
+                // (§15-8-3-2). G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+                self.enter_deferred_drain();
                 let mut ctx = EffectContext::new(self, handle, None, player_id);
                 process(&mut ctx);
+                self.exit_deferred_drain_and_flush();
             }
             return true;
         }
