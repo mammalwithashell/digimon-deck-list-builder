@@ -40,7 +40,7 @@ effects:
   # `ModifierType::CannotSwitchAttackTarget` on the carrier each declarative
   # tick when its controller is the turn player. Track D consult sites read it
   # in `try_enter_block` (early-return, suppressing the Block window),
-  # `try_enter_raid_retarget` (suppressing Raid retarget), and
+  # `raid_switch_options` (no <Raid> switch), and
   # `apply_attack_target_substitution` (no-op for replacement / redirect_attack
   # retargets).
   #

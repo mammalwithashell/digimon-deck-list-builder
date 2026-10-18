@@ -7,7 +7,7 @@
 //! installs `ModifierType::CannotSwitchAttackTarget` on the host permanent
 //! every declarative tick when the host's controller is the turn player.
 //! Track D's combat consult sites read the modifier in `try_enter_block`,
-//! `try_enter_raid_retarget`, and `apply_attack_target_substitution`.
+//! `raid_switch_options`, and `apply_attack_target_substitution`.
 //!
 //! DCGO reference: DCGO/Assets/Scripts/CardEffect/BT24/Black/BT24_062.cs.
 

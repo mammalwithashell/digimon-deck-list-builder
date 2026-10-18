@@ -128,22 +128,6 @@ pub struct AttackOpen {
     pub cost_upgrade: Option<AttackCostUpgrade>,
 }
 
-/// Phase 9 Task 4 — result of the PostBlock Raid retarget rider.
-/// Crate-private; the state machine arm routes on this.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum RaidRetargetOutcome {
-    /// Rider didn't apply (target still valid, no Raid, or Player target).
-    /// Caller transitions to `Battle`.
-    Proceed,
-    /// A retarget `PendingSelection` was installed. Caller yields —
-    /// `advance_pending_attack` exits on `pending_selection.is_some()`.
-    SelectionInstalled,
-    /// Rider applied (Raid attacker + invalid target) but no legal
-    /// retarget candidate exists. `cleanup_attack` has already run;
-    /// caller returns the terminal result directly.
-    Fizzled,
-}
-
 /// Phase 9 internal dispatcher result for the pair of attack-declaration
 /// replacements (`WhenWouldAttack` + `WhenWouldBeAttackTarget`). Kept
 /// crate-private; callers route back into the public `AttackResult` enum.
@@ -614,7 +598,7 @@ impl Game {
             attacker,
             original_target: target,
             effective_target: target,
-            effective_target_removed_by_dna: false,
+            effective_target_removed: false,
             is_blocked: false,
             blocker: None,
             is_vortex: vortex,
@@ -634,6 +618,10 @@ impl Game {
         // `<Progress>` applies from the declaration.
         self.attack_attacker_identity = None;
         self.attack_attacker_card = None;
+        // §11-2-6: the declared target is tracked by its stack identity, so
+        // a Digimon that compacts into its slot after it leaves is never read
+        // as the target.
+        self.capture_attack_target_identity();
         self.refresh_progress_shield();
 
         // `GameEvent::Attack` emission — spec
@@ -862,31 +850,23 @@ impl Game {
                     }
                 }
                 AttackState::PostBlock => {
-                    // Phase 9 Task 4 — post-Block Raid retarget rider. If
-                    // `effective_target` became invalid during the Block
-                    // window (OnAttack side-effects, Counter bodies, block
-                    // redirects, etc.) AND the attacker has `<Raid>` AND at
-                    // least one legal retarget exists, install a retarget
-                    // selection. Otherwise fall through to Battle (which
-                    // handles its own trivial-connect for invalid targets).
-                    match self.try_enter_raid_retarget() {
-                        RaidRetargetOutcome::Proceed => {
-                            self.transition_attack_state(AttackState::Battle);
-                        }
-                        RaidRetargetOutcome::SelectionInstalled => {
-                            // Selection parked — next loop iteration yields
-                            // on `pending_selection.is_some()`.
-                        }
-                        RaidRetargetOutcome::Fizzled => {
-                            // Raid applies, no retarget candidates —
-                            // cleanup_attack already ran; exit the state
-                            // machine with a terminal Cancelled result.
-                            return AttackResult::Cancelled;
-                        }
-                    }
+                    // §11-2-6 (Ver. 4.3): a removed attack target remains the
+                    // target and the attack fails; nothing retargets it.
+                    // `<Raid>` is a trigger-type effect that triggers once,
+                    // when the Digimon attacks, and is optional (§16-23-2 /
+                    // §16-23-3) -- it is resolved in the declaration's
+                    // trigger pool (`install_raid_switch_selection`), never
+                    // here. DCGO `AttackProcess.cs` goes from the block
+                    // timing straight to `DetermineAttackOutcome`.
+                    self.transition_attack_state(AttackState::Battle);
                 }
                 AttackState::Battle => {
                     let outcome = self.resolve_pending_battle();
+                    if outcome == AttackResult::Unsuccessful {
+                        // §11-2-6 / §11-5-1-4-1: the target was removed; the
+                        // same not-successful end as an attacker that left.
+                        return self.end_attack_unsuccessful();
+                    }
                     if matches!(outcome, AttackResult::InProgress) {
                         // Paused mid-security (a SecuritySkill effect
                         // installed a pending_selection). Keep
@@ -1180,16 +1160,24 @@ impl Game {
         reason: AttackTargetChangeReason,
     ) {
         // No active attack — silent no-op (callers should have checked).
-        let Some(pa) = self.pending_attack.as_mut() else {
-            return;
-        };
-        let old_target = pa.effective_target;
-        // Firing-guard: a redirect to the current effective target is a
-        // no-op — don't re-fire OnAttackTargetChange.
-        if old_target == new_target && !pa.effective_target_removed_by_dna {
+        if self.pending_attack.is_none() {
             return;
         }
-        let attacker = pa.attacker;
+        // The attacking Digimon by identity: once it has left the battle area
+        // its slot may hold another Digimon, and there is no attacking
+        // Digimon whose target could switch (DCGO `AttackProcess.cs`
+        // `SwitchDefender` yields when `AttackingPermanent.TopCard == null`).
+        let Some(attacker) = self.live_attack_attacker() else {
+            return;
+        };
+        let target_removed = self.attack_target_removed();
+        let old_target = self.pending_attack.as_ref().map_or(new_target, |pa| pa.effective_target);
+        // Firing-guard: a redirect to the current effective target is a
+        // no-op — don't re-fire OnAttackTargetChange. A removed target
+        // (§11-2-6) is never the current one.
+        if old_target == new_target && !target_removed {
+            return;
+        }
 
         // Track C: `CannotSwitchAttackTarget` on the attacker locks the
         // target — silently drop the substitution. Covers both the
@@ -1214,8 +1202,14 @@ impl Game {
             }
         }
 
+        let Some(pa) = self.pending_attack.as_mut() else {
+            return;
+        };
+        // A block (§12-1-7), redirect or `<Raid>` switch installs a NEW
+        // attack target: the removed one (§11-2-6) no longer matters.
         pa.effective_target = new_target;
-        pa.effective_target_removed_by_dna = false;
+        pa.effective_target_removed = false;
+        self.capture_attack_target_identity();
 
         self.fire_attack_target_change_observers(attacker, old_target, new_target, reason);
     }
@@ -2227,6 +2221,10 @@ impl Game {
         // opponent Digimon gains is granted declaratively in
         // `Game::has_keyword` (`collision_grants_blocker`), not here.
         let attacker_has_collision = self.has_keyword(attacker, Keyword::Collision);
+        // §12-1-5: the attack target can't block. Found by identity: a
+        // removed target (§11-2-6) is not on the field, and the Digimon that
+        // compacted into its slot is not the attack target.
+        let live_target = self.live_attack_target_digimon();
 
         let battle_area_len = self.player(defender_player).battle_area.len();
         let mut candidates: Vec<u8> = Vec::new();
@@ -2244,7 +2242,7 @@ impl Game {
             // Official rule 12-1-5: the current attack target cannot block.
             // Use the effective target after Raid/Counter redirects, not the
             // originally declared target. Other unsuspended blockers remain legal.
-            if !pa.effective_target_removed_by_dna && pa.effective_target == AttackTarget::Digimon(h) {
+            if live_target == Some(h) {
                 continue;
             }
             let perm = &self.player(defender_player).battle_area[i];
@@ -2398,10 +2396,9 @@ impl Game {
                 game.advance_pending_attack();
             }),
             on_decline: Some(Box::new(move |game: &mut Game| {
-                // Block declined — advance to PostBlock (Raid retarget
-                // rider, then Battle). Attack proceeds against its
-                // original target unless the target became invalid
-                // during the Block window.
+                // Block declined — advance to PostBlock, then Battle. The
+                // attack proceeds against its target; a target removed
+                // meanwhile makes it fail (§11-2-6).
                 if let Some(pa) = game.pending_attack.as_mut() {
                     pa.state = AttackState::PostBlock;
                 }
@@ -2489,12 +2486,13 @@ impl Game {
     /// `<Raid>`'s switch options for `attacker` (§16-23-1 / §16-23-4): empty
     /// unless `attacker` is the Digimon currently attacking and its target can
     /// be switched. Gates the `<Raid>` trigger (DCGO `CanActivateRaid`) and
-    /// feeds its body. Distinct from the post-Block Raid retarget rider below,
-    /// which only rescues an attack whose Digimon target became invalid.
+    /// feeds its body. There is no other `<Raid>` retarget: a removed attack
+    /// target makes the attack fail (§11-2-6).
     pub(crate) fn raid_switch_options(&self, attacker: PermanentHandle) -> Vec<u8> {
-        let Some(pa) = self.pending_attack.as_ref().filter(|pa| pa.attacker == attacker) else {
+        // `attacker` must be the attacking Digimon, found by identity.
+        if self.live_attack_attacker() != Some(attacker) {
             return Vec::new();
-        };
+        }
         // Track C: `CannotSwitchAttackTarget` locks the attack onto its
         // declared target, so <Raid> has nothing to switch to.
         if self
@@ -2503,11 +2501,8 @@ impl Game {
         {
             return Vec::new();
         }
-        self.raid_switch_candidates(
-            attacker,
-            pa.effective_target,
-            pa.effective_target_removed_by_dna,
-        )
+        let (current_target, current_removed) = self.attack_target_for_switch();
+        self.raid_switch_candidates(attacker, current_target, current_removed)
     }
 
     /// Enumerate Raid's printed candidates: opponent unsuspended Digimon tied
@@ -2627,7 +2622,9 @@ impl Game {
         &mut self,
         attacker: PermanentHandle,
         opponent_player: PlayerId,
-        mode: crate::resume::CombatRaidSelectionMode,
+        // Single-variant since the post-Block retarget was removed; kept so
+        // the `ResumeFrame::RaidSelection` shape is unchanged.
+        _mode: crate::resume::CombatRaidSelectionMode,
         action_id: u16,
         is_pass: bool,
     ) {
@@ -2653,14 +2650,6 @@ impl Game {
                 AttackTarget::Digimon(new_target),
                 AttackTargetChangeReason::Raid,
             );
-        } else if mode == crate::resume::CombatRaidSelectionMode::Retarget {
-            self.cleanup_attack(AttackResult::Cancelled);
-            return;
-        }
-
-        if mode == crate::resume::CombatRaidSelectionMode::Retarget {
-            self.transition_attack_state(AttackState::Battle);
-            self.advance_pending_attack();
         }
     }
 
@@ -2774,242 +2763,6 @@ impl Game {
         });
     }
 
-    /// Phase 9 Task 4 — Raid target-switch rider. Evaluates the
-    /// post-Block checkpoint:
-    ///
-    /// 1. Only fires for Digimon-shaped targets. Direct player attacks
-    ///    do not retarget via Raid (spec §4.2 — the attack was already
-    ///    aimed at a player, Raid's "pick a new Digimon" semantics
-    ///    don't apply).
-    /// 2. Only fires when `effective_target` is INVALID — i.e. the
-    ///    handle no longer resolves to a legal attack target.
-    /// 3. Only fires when the attacker has `<Raid>` (modifier-granted
-    ///    or native). The declaration itself follows §11-2-7-1 (the
-    ///    opponent or a suspended Digimon; the mask has no <Raid> arm),
-    ///    and <Raid>'s own switch is the [When Attacking] trigger
-    ///    (§16-23-1 / §16-23-2, `raid_switch_options`).
-    /// 4. Candidate list prioritization:
-    ///    unsuspended opposing Digimon first (tied on max DP),
-    ///    falling back to any legal opposing Digimon if no unsuspended
-    ///    candidates exist. Legality excludes `CannotAttackTarget`
-    ///    (Phase 6 restriction) and requires `OptionState::Standard`.
-    ///
-    /// Returns `true` iff a selection was installed (and the state
-    /// machine must yield). Returns `false` when the rider doesn't
-    /// apply OR when no candidates exist; the `false` path leaves the
-    /// state machine to transition to Battle, whose existing
-    /// "invalid defender → Unsuccessful" fallback preserves Phase 4
-    /// semantics for the no-Raid / no-Raid-candidate case.
-    ///
-    /// When Raid candidates exist but the legal set is empty (all
-    /// opposing Digimon carry `CannotAttackTarget`, for instance), this
-    /// helper runs `cleanup_attack` directly and returns `Fizzled` —
-    /// the attack terminates with no battle resolution.
-    fn try_enter_raid_retarget(&mut self) -> RaidRetargetOutcome {
-        let Some(pa) = self.pending_attack.as_ref() else {
-            return RaidRetargetOutcome::Proceed;
-        };
-        // Raid retarget only applies to Digimon targets. Player attacks
-        // don't gain a new target via Raid.
-        let target_handle = match pa.effective_target {
-            AttackTarget::Digimon(h) => h,
-            AttackTarget::Player(_) => return RaidRetargetOutcome::Proceed,
-        };
-        // If the target is still valid, fall through to Battle — no
-        // retarget needed.
-        if !pa.effective_target_removed_by_dna && self.handle_valid(target_handle) {
-            return RaidRetargetOutcome::Proceed;
-        }
-        let attacker = pa.attacker;
-        if !self.has_keyword(attacker, Keyword::Raid) {
-            return RaidRetargetOutcome::Proceed;
-        }
-        // Track C: `CannotSwitchAttackTarget` on the attacker suppresses
-        // Raid retarget. The attack proceeds with its (now-invalid)
-        // effective_target — `resolve_pending_battle` treats a deleted
-        // defender as a clean attacker-wins, matching the no-Raid path.
-        // Without this gate the engine would still install the mandatory
-        // retarget selection, then `apply_attack_target_substitution`
-        // would silently no-op when the user picks — confusing UX.
-        if self
-            .modifiers
-            .has(attacker, ModifierType::CannotSwitchAttackTarget)
-        {
-            return RaidRetargetOutcome::Proceed;
-        }
-
-        let candidates = self.raid_retarget_candidates(attacker);
-        if candidates.is_empty() {
-            // Raid applies but no legal retarget — fizzle the attack.
-            self.cleanup_attack(AttackResult::Cancelled);
-            return RaidRetargetOutcome::Fizzled;
-        }
-
-        self.install_raid_retarget_selection(attacker, candidates);
-        RaidRetargetOutcome::SelectionInstalled
-    }
-
-    /// Enumerate legal Raid retarget candidates on the opposing side.
-    /// Priority: unsuspended Digimon tied at max effective DP (the
-    /// candidates of the <Raid> switch trigger, §16-23-1 / §16-23-4),
-    /// falling back to any legal opposing Digimon when no unsuspended
-    /// candidate exists.
-    ///
-    /// Legality filters:
-    /// - Must be a Digimon (not Tamer/Option/DigiEgg).
-    /// - Must be in `OptionState::Standard` (excludes Delayed/Training/
-    ///   Linked option permanents).
-    /// - Must pass shared attack-retarget validation, including
-    ///   `CannotAttackTarget`, `CannotBeRedirectedAsAttackTarget` on
-    ///   the candidate, and `CanNotSwitchAttackTarget` on the attacker.
-    ///
-    /// Returns permanent indices on the opposing side (same ordering
-    /// as battle_area).
-    fn raid_retarget_candidates(&self, attacker: PermanentHandle) -> Vec<u8> {
-        let opp_id = 1 - attacker.player;
-        if (opp_id as usize) >= self.players.len() {
-            return Vec::new();
-        }
-        let opp = self.player(opp_id);
-        let max_opp = opp.battle_area.len();
-
-        // First pass: unsuspended candidates + track max DP.
-        let mut unsuspended: Vec<(u8, i32)> = Vec::new();
-        for j in 0..max_opp {
-            let t = &opp.battle_area[j];
-            if !matches!(t.option_state, crate::permanent::OptionState::Standard) {
-                continue;
-            }
-            let t_handle = PermanentHandle {
-                player: opp_id,
-                index: j as u8,
-            };
-            if !self.permanent_is_digimon_for_rules(t_handle) {
-                continue;
-            }
-            if self
-                .validate_attack_redirect_target(attacker, AttackTarget::Digimon(t_handle))
-                .is_err()
-            {
-                continue;
-            }
-            if t.is_suspended {
-                continue;
-            }
-            let dp = self.effective_dp(t_handle).unwrap_or(0);
-            unsuspended.push((j as u8, dp));
-        }
-
-        if !unsuspended.is_empty() {
-            let max_dp = unsuspended.iter().map(|&(_, dp)| dp).max().unwrap_or(0);
-            return unsuspended
-                .into_iter()
-                .filter(|&(_, dp)| dp == max_dp)
-                .map(|(j, _)| j)
-                .collect();
-        }
-
-        // Fallback: any legal opposing Digimon (suspended or otherwise)
-        // when no unsuspended candidates exist. Raid rules permit this
-        // — "highest DP if no unsuspended available".
-        let mut fallback: Vec<u8> = Vec::new();
-        for j in 0..max_opp {
-            let t = &opp.battle_area[j];
-            if !matches!(t.option_state, crate::permanent::OptionState::Standard) {
-                continue;
-            }
-            let t_handle = PermanentHandle {
-                player: opp_id,
-                index: j as u8,
-            };
-            if !self.permanent_is_digimon_for_rules(t_handle) {
-                continue;
-            }
-            if self
-                .validate_attack_redirect_target(attacker, AttackTarget::Digimon(t_handle))
-                .is_err()
-            {
-                continue;
-            }
-            fallback.push(j as u8);
-        }
-        fallback
-    }
-
-    /// Install the Raid retarget `PendingSelection`. The selecting
-    /// player is the attacker's controller. On resolution the selection
-    /// routes through `apply_attack_target_substitution` — reusing the
-    /// Task 2 entry point that fires `OnAttackTargetChange` globally —
-    /// then transitions to `AttackState::Battle` and re-enters the state
-    /// machine.
-    fn install_raid_retarget_selection(&mut self, attacker: PermanentHandle, candidates: Vec<u8>) {
-        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
-
-        let attacker_player = attacker.player;
-        let opp_id = 1 - attacker_player;
-        let valid_action_ids: Vec<u16> = candidates
-            .iter()
-            .map(|&j| encode_attack(0, j as u16))
-            .collect();
-
-        let source_card = self.player(attacker_player).battle_area[attacker.index as usize]
-            .top_card()
-            .handle();
-        let previous_phase = self.current_phase;
-
-        self.pending_selection = Some(PendingSelection {
-            zone_owner: None,
-            kind: SelectionKind::OppField,
-            selecting_player: attacker_player,
-            previous_phase,
-            valid_action_ids,
-            // Raid retarget is mandatory: once a legal retarget exists,
-            // the attacker must pick one (the alternative — fizzling —
-            // is reserved for the no-candidates path, which never
-            // installs a selection).
-            is_optional: false,
-            prompt: "Raid — pick a new target".to_string(),
-            effect_choices: None,
-            source_card,
-            source_permanent: Some(attacker),
-            source_kind: crate::enums::EffectSourceKind::Digimon,
-            callback: Box::new(move |game: &mut Game, action_id: u16| {
-                let offset = action_id.saturating_sub(ATTACK_START);
-                let new_index = (offset % TARGETS_PER_ATTACKER) as u8;
-                let new_target = PermanentHandle {
-                    player: opp_id,
-                    index: new_index,
-                };
-                if game
-                    .validate_attack_redirect_target(attacker, AttackTarget::Digimon(new_target))
-                    .is_err()
-                {
-                    game.cleanup_attack(AttackResult::Cancelled);
-                    return;
-                }
-                // Reuse the shared entry point — rewrites
-                // `effective_target` and fires OnAttackTargetChange.
-                game.apply_attack_target_substitution_with_reason(
-                    AttackTarget::Digimon(new_target),
-                    AttackTargetChangeReason::Raid,
-                );
-                game.transition_attack_state(AttackState::Battle);
-                game.advance_pending_attack();
-            }),
-            on_decline: None,
-        });
-        self.pending_selection_resume = Some(crate::resume::ResumeStack {
-            frames: vec![crate::resume::ResumeFrame::RaidSelection(
-                crate::resume::CombatRaidSelectionState {
-                    attacker,
-                    opponent_player: opp_id,
-                    mode: crate::resume::CombatRaidSelectionMode::Retarget,
-                    outer_conts: Vec::new(),
-                },
-            )],
-        });
-    }
-
     /// Resolve the battle once all interrupt windows have cleared.
     /// Reads `effective_target` (which block / counter may have
     /// rewritten) and dispatches to the Digimon-vs-Digimon or
@@ -3018,6 +2771,9 @@ impl Game {
         if let Some(outcome) = self.pending_attack_battle_result.take() {
             return outcome;
         }
+        // Re-key both handles by identity first (a DNA / DigiXros field
+        // removal skips the slot shift), and record a removed target.
+        self.sync_attack_target();
         let Some(pa) = self.pending_attack.as_ref() else {
             return AttackResult::Invalid;
         };
@@ -3029,12 +2785,20 @@ impl Game {
         }
 
         match target {
-            AttackTarget::Digimon(defender) => {
-                if pa.effective_target_removed_by_dna || !self.handle_valid(defender) {
-                    // Defender was removed between declaration and battle:
-                    // the attack is not successful (§11-2-6, §11-5-1-4-1).
-                    return AttackResult::Unsuccessful;
-                }
+            AttackTarget::Digimon(_) => {
+                // §11-2-6 (Ver. 4.3): "Even if the attack target Digimon is
+                // removed during an attack, that Digimon remains the attack
+                // target, but the attack fails." Keyed on the recorded
+                // removal, never on whatever now occupies the target's slot
+                // (DCGO `DetermineAttackOutcome` battles only when
+                // `IsPermanentExistsOnBattleAreaDigimon(DefendingPermanent)`).
+                let defender = match self.live_attack_target_digimon() {
+                    // A target still on the field that is no longer a
+                    // Digimon in the standard state can't be battled either.
+                    Some(defender) if self.handle_valid(defender) => defender,
+                    // The attack is not successful (§11-5-1-4-1).
+                    _ => return AttackResult::Unsuccessful,
+                };
                 self.resolve_battle(attacker, defender)
             }
             AttackTarget::Player(defender_player) => {
@@ -4162,8 +3926,10 @@ impl Game {
                     .unwrap_or(false)),
             "pre-declaration cancellation cannot have reached battle"
         );
-        if let Some(pa) = self.pending_attack.as_ref() {
-            let h = pa.attacker;
+        // The attacker by identity: a DNA / DigiXros field removal does not
+        // re-key `pa.attacker`, and a Digimon that compacted into its slot is
+        // not the attacker. Nothing to clear once it has left.
+        if let Some(h) = self.live_attack_attacker() {
             if let Some(perm) = self
                 .player_mut(h.player)
                 .battle_area
@@ -4194,6 +3960,7 @@ impl Game {
         self.pending_attack = None;
         self.attack_attacker_identity = None;
         self.attack_attacker_card = None;
+        self.attack_target_identity = None;
         // `expire_end_of_attack` dropped the `<Progress>` shield; keep the
         // registry in step with `progress_shield_target` (now `None`).
         self.refresh_progress_shield();
@@ -4343,7 +4110,16 @@ impl Game {
                 shift(h);
             }
             if let AttackTarget::Digimon(h) = &mut pa.effective_target {
-                shift(h);
+                // §11-2-6 (Ver. 4.3): the removed Digimon remains the attack
+                // target and the attack fails. Record the removal instead of
+                // leaving a handle that the next permanent shifts into. A
+                // blocker is the effective target once it blocks (§12-1-7),
+                // so a removed blocker is covered here too.
+                if h.player == player && h.index == removed_index {
+                    pa.effective_target_removed = true;
+                } else {
+                    shift(h);
+                }
             }
             if let Some(h) = pa.blocker.as_mut() {
                 shift(h);
@@ -4382,6 +4158,105 @@ impl Game {
                 player,
                 index: index as u8,
             })
+    }
+
+    /// §11-2-6 (Ver. 4.3): whether the in-flight attack's Digimon target (the
+    /// declared one, or the Digimon a block, redirect or `<Raid>` switched it
+    /// to) has been removed from the battle area. It remains the attack
+    /// target and the attack fails. Recorded by
+    /// `shift_pending_attack_after_battle_area_remove` and by DNA
+    /// (`PendingAttack::effective_target_removed`); the target's stack
+    /// identity (`Game::attack_target_identity`) also catches a removal that
+    /// did not re-key the pending attack's handles. Never true for a player
+    /// target.
+    pub(crate) fn attack_target_removed(&self) -> bool {
+        self.pending_attack
+            .as_ref()
+            .is_some_and(|pa| matches!(pa.effective_target, AttackTarget::Digimon(_)))
+            && self.live_attack_target_digimon().is_none()
+    }
+
+    /// The in-flight attack's Digimon target on the current board, found by
+    /// its stack identity when one was captured. `None` with no attack, on a
+    /// player target, or once the target was removed (§11-2-6): a Digimon
+    /// that compacted into the target's slot is never returned.
+    pub(crate) fn live_attack_target_digimon(&self) -> Option<PermanentHandle> {
+        let pa = self.pending_attack.as_ref()?;
+        let AttackTarget::Digimon(handle) = pa.effective_target else {
+            return None;
+        };
+        if pa.effective_target_removed {
+            return None;
+        }
+        match self.attack_target_identity {
+            Some((player, identity)) => self.resolve_digivolve_host_identity(player, identity),
+            None => Some(handle),
+        }
+    }
+
+    /// The in-flight attack's target as effects see it: the player, or the
+    /// live Digimon target; `None` with no attack or once the Digimon target
+    /// was removed (§11-2-6).
+    pub(crate) fn live_attack_target(&self) -> Option<AttackTarget> {
+        match self.pending_attack.as_ref()?.effective_target {
+            AttackTarget::Player(player) => Some(AttackTarget::Player(player)),
+            AttackTarget::Digimon(_) => self.live_attack_target_digimon().map(AttackTarget::Digimon),
+        }
+    }
+
+    /// The current target a switch compares against, and whether it was
+    /// removed (§11-2-6: a removed target is never "the current target", so
+    /// any candidate is a switch). Callers must have a pending attack.
+    pub(crate) fn attack_target_for_switch(&self) -> (AttackTarget, bool) {
+        let fallback = self
+            .pending_attack
+            .as_ref()
+            .map_or(AttackTarget::Player(0), |pa| pa.effective_target);
+        let current = self
+            .live_attack_target_digimon()
+            .map_or(fallback, AttackTarget::Digimon);
+        (current, self.attack_target_removed())
+    }
+
+    /// Record the effective Digimon target's stack identity (allocating one if
+    /// the permanent has none yet) for `live_attack_target_digimon`; `None`
+    /// for a player target.
+    fn capture_attack_target_identity(&mut self) {
+        let target = self.pending_attack.as_ref().and_then(|pa| match pa.effective_target {
+            AttackTarget::Digimon(h) if !pa.effective_target_removed => Some(h),
+            _ => None,
+        });
+        let target = target.filter(|h| {
+            self.players
+                .get(h.player as usize)
+                .is_some_and(|p| p.battle_area.get(h.index as usize).is_some())
+        });
+        let identity = target.map(|h| (h.player, self.capture_digivolve_host_identity(h)));
+        self.attack_target_identity = identity;
+    }
+
+    /// Bring the pending attack's slot handles in line with the stack
+    /// identities: re-key `attacker` to where the attacking Digimon is now
+    /// (left alone once it has left, §11-1-5), and for a Digimon target
+    /// record its removal (§11-2-6) or re-key `effective_target`.
+    fn sync_attack_target(&mut self) {
+        let attacker = self.live_attack_attacker();
+        let removed = self.attack_target_removed();
+        let live = self.live_attack_target_digimon();
+        let Some(pa) = self.pending_attack.as_mut() else {
+            return;
+        };
+        if let Some(attacker) = attacker {
+            pa.attacker = attacker;
+        }
+        if !matches!(pa.effective_target, AttackTarget::Digimon(_)) {
+            return;
+        }
+        if removed {
+            pa.effective_target_removed = true;
+        } else if let Some(handle) = live {
+            pa.effective_target = AttackTarget::Digimon(handle);
+        }
     }
 
     /// Record the declared attacker's stack identity (allocating one if the
@@ -4651,7 +4526,7 @@ impl Game {
         };
         let is_attack = self.pending_attack.as_ref().is_some_and(|pa| {
             pa.state == AttackState::Battle
-                && !pa.effective_target_removed_by_dna
+                && !pa.effective_target_removed
                 && pa.attacker == attacker
                 && pa.effective_target == AttackTarget::Digimon(defender)
         });
@@ -4780,6 +4655,37 @@ impl Game {
                 perm.battle_identity = None;
                 perm.native_play_incarnation = None;
             }
+        }
+    }
+
+    /// Whether the Digimon whose top card was `deleted_top` was `carrier`'s
+    /// opponent in the battle being resolved, read from the battle's own
+    /// record (combatant identities + top cards at the comparison). `None`
+    /// when no battle is being resolved or `carrier` is not one of its
+    /// combatants. A deleted combatant has no battle-area handle, and since
+    /// §11-2-6 the attack no longer names the Digimon that compacted into
+    /// its slot, so "this Digimon deleted its battle opponent" is answered
+    /// here rather than through a slot comparison.
+    pub(crate) fn battle_record_opponent_was(
+        &self,
+        carrier: PermanentHandle,
+        deleted_top: CardHandle,
+    ) -> Option<bool> {
+        let state = self.pending_battle_resolutions.last()?;
+        let identity = self
+            .player(carrier.player)
+            .battle_area
+            .get(carrier.index as usize)?
+            .battle_identity?;
+        let is = |c: &crate::trigger_context::BattleCombatantSnapshot| {
+            c.controller == carrier.player && c.battle_identity == identity
+        };
+        if is(&state.attacker) {
+            Some(state.defender.top_card == deleted_top)
+        } else if is(&state.defender) {
+            Some(state.attacker.top_card == deleted_top)
+        } else {
+            None
         }
     }
 
@@ -5024,7 +4930,7 @@ effects:
             attacker: atk,
             original_target: AttackTarget::Player(1),
             effective_target: AttackTarget::Player(1),
-            effective_target_removed_by_dna: false,
+            effective_target_removed: false,
             is_blocked: false,
             blocker: None,
             is_vortex: false,
@@ -5067,7 +4973,7 @@ effects:
             attacker: crate::permanent::PermanentHandle { player: 0, index: 0 },
             original_target: AttackTarget::Player(1),
             effective_target: AttackTarget::Player(1),
-            effective_target_removed_by_dna: false,
+            effective_target_removed: false,
             is_blocked: false,
             blocker: None,
             is_vortex: false,

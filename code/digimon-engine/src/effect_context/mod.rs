@@ -724,11 +724,9 @@ impl<'a> EffectReadContext<'a> {
     }
 
     pub fn attack_target(&self) -> Option<crate::AttackTarget> {
-        self.game
-            .pending_attack
-            .as_ref()
-            .filter(|attack| !attack.effective_target_removed_by_dna)
-            .map(|attack| attack.effective_target)
+        // §11-2-6: a removed target has no live handle; never the Digimon
+        // that compacted into its slot.
+        self.game.live_attack_target()
     }
 
     pub fn security_digimon(&self) -> Option<CardHandle> {
@@ -1488,11 +1486,9 @@ impl<'a> EffectContext<'a> {
     }
 
     pub fn attack_target(&self) -> Option<crate::AttackTarget> {
-        self.game
-            .pending_attack
-            .as_ref()
-            .filter(|attack| !attack.effective_target_removed_by_dna)
-            .map(|attack| attack.effective_target)
+        // §11-2-6: a removed target has no live handle; never the Digimon
+        // that compacted into its slot.
+        self.game.live_attack_target()
     }
 
     /// The handle of the security card currently being resolved (the card

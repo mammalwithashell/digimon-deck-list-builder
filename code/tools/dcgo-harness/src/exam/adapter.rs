@@ -3564,7 +3564,7 @@ mod physical_permanent_wire_tests {
    .deck(0,&["ATTACKER";12]).deck(1,&["TWIN";12]).start();r.skip_mulligan();r.place_on_field(0,"ATTACKER",Some(0));r.place_on_field(1,"TWIN",Some(0));r.place_on_field(1,"TWIN",Some(0));
   for p in &mut r.game.players[1].battle_area{p.is_suspended=true;}
   let h=PermanentHandle{player:0,index:0};let target=AttackTarget::Digimon(PermanentHandle{player:1,index:0});
-  r.game.pending_attack=Some(PendingAttack{attacker:h,original_target:target,effective_target:target,effective_target_removed_by_dna:false,is_blocked:false,blocker:None,is_vortex:false,is_overclock:false,declaration_committed:true,cancelled:false,battle_occurred:false,battle_defender_deleted:false,effect_battle_piercing_pending:false,security_check_started:false,return_phase:GamePhase::Main,state:AttackState::CounterOpen,counter_depth:0});r.game
+  r.game.pending_attack=Some(PendingAttack{attacker:h,original_target:target,effective_target:target,effective_target_removed:false,is_blocked:false,blocker:None,is_vortex:false,is_overclock:false,declaration_committed:true,cancelled:false,battle_occurred:false,battle_defender_deleted:false,effect_battle_piercing_pending:false,security_check_started:false,return_phase:GamePhase::Main,state:AttackState::CounterOpen,counter_depth:0});r.game
  }
  #[test] fn explicit_second_twin_keeps_attack_target_discriminator_on_wire(){
   let g=fixture();let (_,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.1".into()]),None).unwrap();

@@ -259,7 +259,6 @@ fn block_not_offered_when_attacker_left_battle_area() {
 /// memory", does not resolve; neither the attacker nor `LV5_PLAIN` is
 /// deleted) and no security check.
 #[test]
-#[ignore = "G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED (§11-2-6)"]
 fn removed_target_stays_the_target_and_attack_fails() {
     cite!(
         "11-2-6",

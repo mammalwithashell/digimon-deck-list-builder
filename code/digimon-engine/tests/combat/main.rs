@@ -25,6 +25,7 @@ mod progress_partial;
 mod raid_retarget;
 mod reboot_unsuspend;
 mod redirect_and_cancel;
+mod removed_target;
 mod rush_exemption;
 mod scenarios;
 mod security_attack_keyword;

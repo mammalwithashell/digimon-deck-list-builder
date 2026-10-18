@@ -830,16 +830,15 @@ impl Game {
         &self,
         handle: PermanentHandle,
     ) -> Option<PermanentHandle> {
-        let pa = self.pending_attack.as_ref()?;
-        if pa.effective_target_removed_by_dna { return None; }
-        let defender = match pa.effective_target {
-            crate::AttackTarget::Digimon(h) => h,
-            crate::AttackTarget::Player(_) => return None,
-        };
-        if handle == pa.attacker {
+        // Both combatants by identity: a removed target (§11-2-6) or a
+        // departed attacker has no battle opponent, and a Digimon that
+        // compacted into either slot is not a combatant.
+        let defender = self.live_attack_target_digimon()?;
+        let attacker = self.live_attack_attacker()?;
+        if handle == attacker {
             Some(defender)
         } else if handle == defender {
-            Some(pa.attacker)
+            Some(attacker)
         } else {
             None
         }
