@@ -314,6 +314,14 @@ fn complete_attack_with_order(first: &str, block: bool) {
     cloned_act(&mut r, encode_attack(0, 0));
     prompt_is(&r, "Counter (", 1);
     assert_eq!(r.game.current_phase, GamePhase::CounterTiming);
+    // In both orders <Piercing> has activated by now (with <Raid> first, the
+    // lone <Piercing> activated as the switch resolved); its one check is
+    // still pending processing at the End of Attack (§16-7-4, §16-7-5).
+    assert_eq!(
+        r.security_count(1),
+        5,
+        "<Piercing>'s check waits for End of Attack"
+    );
     assert!(
         !r.game
             .pending_selection
@@ -326,6 +334,11 @@ fn complete_attack_with_order(first: &str, block: bool) {
     cloned_act(&mut r, PASS);
     prompt_is(&r, "Declare a blocker", 1);
     assert_eq!(r.game.current_phase, GamePhase::BlockTiming);
+    assert_eq!(
+        r.security_count(1),
+        5,
+        "<Piercing>'s check waits for End of Attack (§16-7-5)"
+    );
     assert_eq!(build_action_mask(&r.game, 1)[encode_attack(0, 0) as usize], 0.0, "the current defender cannot block");
     cloned_act(&mut r, if block { encode_attack(0, 2) } else { PASS });
     assert!(
