@@ -11,6 +11,7 @@ mod counter_interrupt;
 mod deletion_cause_observer;
 mod effect_battle;
 mod effect_granted_attack;
+mod end_of_attack_drain;
 mod force_attack_mask;
 mod group6_keywords;
 mod group6_overclock;

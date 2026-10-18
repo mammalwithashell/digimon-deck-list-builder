@@ -2163,7 +2163,6 @@ fn execute_board(extra: &[&str]) -> (DebugRunner, PermanentHandle) {
 /// `EOA_OBS` first: its memory gain happens while `EXECUTE` is still in the
 /// battle area, then `EXECUTE` is deleted.
 #[test]
-#[ignore = "G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE (§16-38-4)"]
 fn execute_optional_eot_attack_then_pending_deletion_at_end_of_attack() {
     cite!(
         "16-38-1",

@@ -1135,6 +1135,16 @@ pub enum AttackState {
     PostBattle,
     /// Post-battle: clear EndOfAttack modifiers, fire EndOfAttack triggers.
     Cleanup,
+    /// §11-6-2 (Ver. 4.3): "For the end of the attack timing, the attack
+    /// won't end until all processing has been resolved." The End of Attack
+    /// timing's pool (printed `[End of Attack]` / "at the end of an attack"
+    /// effects and the pending processing due then, e.g. `<Execute>`'s
+    /// deletion, §16-38-4) parked on a decision. The attack is still in
+    /// progress: `pending_attack` and the attacker's `is_attacking` stay set
+    /// and the "for the attack" modifiers still apply. The post-selection
+    /// resume (`advance_pending_attack`) finishes the attack once the pool
+    /// has resolved and returns the carried outcome.
+    EndOfAttackDrain(crate::combat::AttackResult),
 }
 
 /// The target of an attack. Counter effects can redirect by rewriting the

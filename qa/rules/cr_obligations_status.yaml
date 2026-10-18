@@ -338,11 +338,9 @@
   tests: ["ch11_14_attack_procedure::unsuccessful_attack_reaches_end_of_attack_timing"]
   note: "The target is deleted by the attacker's [When Attacking] (no other opponent Digimon): no battle (no end of battle), no security check, the end of attack timing occurs (EOA_OBS resolves) and the attack ends."
 "11-6-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE
+  status: proven
   tests: ["ch11_14_attack_procedure::attack_does_not_end_until_all_processing_resolved"]
-  note: "While an optional [End of Attack] waits on its decision, pending_attack is already None and the attack's '+2000 DP for the attack' has expired. Test is #[ignore]d."
+  note: "While an optional [End of Attack] waits on its decision the attack is still in progress (pending_attack set, AttackState::EndOfAttackDrain) and '+2000 DP for the attack' still applies; once it resolves the attack ends and the DP expires (G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE resolved)."
 "12-1-2":
   status: proven
   tests: ["ch11_14_attack_procedure::one_block_per_attack"]
@@ -890,11 +888,9 @@
   tests: ["ch16_attack_keywords::iceclad_kind_matches_rule"]
   note: "An <Iceclad> gained by [When Attacking] decides the battle at once; no decision."
 "16-38-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE
+  status: proven
   tests: ["ch16_attack_keywords::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack"]
-  note: "The end-of-turn attack (an unsuspended Digimon or the player) is offered and resolves; but when another end-of-attack effect pends with the deletion, the attack has already ended (pending_attack cleared) when the deletion resolves, so the <Execute> Digimon is never deleted, in either order. Without another end-of-attack effect it is deleted (tests/keyword_phase_f/execute.rs). #[ignore]d."
+  note: "The end-of-turn attack (an unsuspended Digimon or the player) is offered and resolves; with another end-of-attack effect pending with the deletion the attack stays in progress until both resolve, so the <Execute> Digimon is deleted in the chosen order, and the turn then passes with no PASS-only step (G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE resolved)."
 "16-38-2":
   status: gap
   blocks_training: true
@@ -906,11 +902,9 @@
   tests: ["ch16_attack_keywords::execute_optionality_matches_rule"]
   note: "PASS declines: no attack, not deleted, the turn passes. Matrix row Execute (optional) agrees."
 "16-38-4":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE
+  status: proven
   tests: ["ch16_attack_keywords::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack"]
-  note: "The deletion does pend with EOA_OBS in one TriggerOrder (the 18-1-2 half holds), but it never deletes (see 16-38-1). #[ignore]d."
+  note: "The deletion pends with EOA_OBS in one TriggerOrder (18-1-2); taking EOA_OBS first, its memory gain resolves while EXECUTE is still in the battle area, then EXECUTE is deleted."
 "16-39-1":
   status: proven
   tests: ["ch16_attack_keywords::progress_persistent_only_while_attacking", "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it", "ch15_15_unaffected::progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking", "ch15_15_unaffected::progress_shield_follows_the_attacker_through_compaction"]

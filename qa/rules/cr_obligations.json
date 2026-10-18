@@ -1381,15 +1381,15 @@
       "text": "The end of attack timing arrives and the attack ends."
     },
     "11-6-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 11,
       "fingerprint": "1ff1d8bbe91ca39303301f28674c016bedbefa0af1de276c657c3d443fed84f7",
-      "gap_id": "G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE",
+      "gap_id": null,
       "mechanisms": [
         "attack-and-timing"
       ],
-      "note": "While an optional [End of Attack] waits on its decision, pending_attack is already None and the attack's '+2000 DP for the attack' has expired. Test is #[ignore]d.",
-      "status": "gap",
+      "note": "While an optional [End of Attack] waits on its decision the attack is still in progress (pending_attack set, AttackState::EndOfAttackDrain) and '+2000 DP for the attack' still applies; once it resolves the attack ends and the DP expires (G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE resolved).",
+      "status": "proven",
       "tests": [
         "ch11_14_attack_procedure::attack_does_not_end_until_all_processing_resolved"
       ],
@@ -7307,15 +7307,15 @@
       "text": "<Execute>"
     },
     "16-38-1": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "b090a85e9f9c4f35e89d7a59494000303d11788a70b96c098e7123119e38c356",
-      "gap_id": "G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "The end-of-turn attack (an unsuspended Digimon or the player) is offered and resolves; but when another end-of-attack effect pends with the deletion, the attack has already ended (pending_attack cleared) when the deletion resolves, so the <Execute> Digimon is never deleted, in either order. Without another end-of-attack effect it is deleted (tests/keyword_phase_f/execute.rs). #[ignore]d.",
-      "status": "gap",
+      "note": "The end-of-turn attack (an unsuspended Digimon or the player) is offered and resolves; with another end-of-attack effect pending with the deletion the attack stays in progress until both resolve, so the <Execute> Digimon is deleted in the chosen order, and the turn then passes with no PASS-only step (G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE resolved).",
+      "status": "proven",
       "tests": [
         "ch16_attack_keywords::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack"
       ],
@@ -7353,15 +7353,15 @@
       "text": "The processing from <Execute> is optional."
     },
     "16-38-4": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "7128885b633f7006c37746edcd94e3a1a4a50abee76aa37d909ca823b1c4509a",
-      "gap_id": "G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "The deletion does pend with EOA_OBS in one TriggerOrder (the 18-1-2 half holds), but it never deletes (see 16-38-1). #[ignore]d.",
-      "status": "gap",
+      "note": "The deletion pends with EOA_OBS in one TriggerOrder (18-1-2); taking EOA_OBS first, its memory gain resolves while EXECUTE is still in the battle area, then EXECUTE is deleted.",
+      "status": "proven",
       "tests": [
         "ch16_attack_keywords::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack"
       ],
@@ -15258,9 +15258,9 @@
         "total": 10
       },
       "11": {
-        "gap": 26,
+        "gap": 25,
         "not_testable": 8,
-        "proven": 6,
+        "proven": 7,
         "total": 40
       },
       "12": {
@@ -15288,9 +15288,9 @@
         "total": 244
       },
       "16": {
-        "gap": 6,
+        "gap": 4,
         "not_testable": 44,
-        "proven": 156,
+        "proven": 158,
         "total": 206
       },
       "17": {
@@ -15354,15 +15354,15 @@
         "total": 13
       }
     },
-    "gap": 607,
+    "gap": 604,
     "mechanics": {
-      "gap_blocking": 8,
+      "gap_blocking": 5,
       "gap_nonblocking": 320,
       "not_testable": 152,
-      "proven": 235
+      "proven": 238
     },
     "not-testable": 246,
-    "proven": 266
+    "proven": 269
   },
   "version": 1
 }

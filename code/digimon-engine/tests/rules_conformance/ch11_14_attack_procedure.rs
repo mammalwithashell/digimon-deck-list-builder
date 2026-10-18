@@ -341,7 +341,6 @@ fn unsuccessful_attack_reaches_end_of_attack_timing() {
 /// progress and the "+2000 DP for the attack" still applies (8000 DP). Once
 /// the effect resolves, the attack ends and the DP is back to 6000.
 #[test]
-#[ignore = "G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE (§11-6-2)"]
 fn attack_does_not_end_until_all_processing_resolved() {
     cite!(
         "11-6-2",

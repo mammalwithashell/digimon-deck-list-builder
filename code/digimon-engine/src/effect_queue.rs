@@ -6096,6 +6096,9 @@ impl Game {
         {
             self.check_turn_end();
         }
+        // §16-44-1: an end-of-turn attack that ended inside this resolution
+        // lets the end of turn continue now that the resolution has unwound.
+        self.settle_end_of_turn_attack();
         Ok(())
     }
 

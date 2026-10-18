@@ -73,22 +73,6 @@ fn red_anchor(r: &mut DebugRunner) {
     r.place_on_field(0, "TAMER_PLAIN", Some(0));
 }
 
-/// After an end-of-turn attack, the engine parks in `EndOfTurnAction` with
-/// PASS as the only legal action (nothing is left to attack with); take it.
-fn finish_end_of_turn(r: &mut DebugRunner) {
-    for _ in 0..4 {
-        if r.current_phase() != GamePhase::EndOfTurnAction {
-            return;
-        }
-        let tp = r.turn_player();
-        let mask = build_action_mask(&r.game, tp);
-        let legal: Vec<usize> = (0..mask.len()).filter(|&i| mask[i] == 1.0).collect();
-        assert_eq!(legal, vec![PASS as usize], "only PASS is left");
-        r.game.decode_action(PASS, tp);
-        settle_declining(r);
-    }
-}
-
 /// A decision the engine offered.
 #[derive(Debug, Clone, PartialEq)]
 struct Prompt {
@@ -574,7 +558,9 @@ fn engage_attack_offered(r: &DebugRunner, engage: PermanentHandle) -> bool {
 ///
 /// P0 ends its turn: P0 is offered an attack with `ENGAGE` (and PASS). It
 /// attacks P1: the attack checks P1's top security card, then the turn passes
-/// to P1.
+/// to P1. Once the attack is over the end of turn continues with no further
+/// decision (§16-44-1: the Digimon "may attack at the end of your turn";
+/// nothing else is offered): no PASS-only step follows the attack.
 #[test]
 fn engage_optional_eot_attack() {
     cite!(
@@ -596,7 +582,13 @@ fn engage_optional_eot_attack() {
     settle_declining(&mut r);
     assert_eq!(revealed(&r, cp, 1), owned(&[FILL]), "ENGAGE attacked");
     assert_eq!(r.security_count(1), 2);
-    finish_end_of_turn(&mut r);
+    // §16-44-1: the attack was the end-of-turn action; the turn has already
+    // passed, with no PASS-only `EndOfTurnAction` step after it.
+    assert_ne!(
+        r.current_phase(),
+        GamePhase::EndOfTurnAction,
+        "no PASS-only step after the attack"
+    );
     assert_eq!(r.turn_player(), 1, "then the turn ended");
 }
 
