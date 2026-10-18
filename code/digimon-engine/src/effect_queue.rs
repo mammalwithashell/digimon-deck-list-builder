@@ -1373,7 +1373,7 @@ impl Game {
         // effects and rule checks don't interrupt the period between [Main]
         // effect activation and trashing" -- so before the rules check below.
         if self.option_body_pending
-            && self.draining_deferred == 0
+            && self.draining_deferred <= self.option_body_outer_deferred
             && self.pending_selection.is_none()
         {
             self.complete_option_body_if_done();
@@ -1383,13 +1383,14 @@ impl Game {
         // while its trigger was parked is deleted by the rules check first,
         // so the trigger's source is gone when activation is attempted).
         // Outermost entries only; nested drains are mid-effect (Q6/Q13/Q14).
-        if self.effect_drain_depth == 1 && self.pending_selection.is_none() {
+        if self.effect_drain_depth == 1 && self.pending_selection.is_none() && !self.game_over {
             self.run_state_based_rules_check();
         }
         self.drain_effect_queue_inner();
-        // A §18-3-2 infinite-loop draw ends the game: no flush or rules
-        // processing runs after it.
-        if self.effect_drain_depth == 1 && !self.halted_by_infinite_loop() {
+        // §1-2-2: the game ends when a player wins or loses -- a §18-3-2
+        // infinite-loop draw, a §1-2-6 win/lose effect, a deck-out -- and no
+        // flush or rules processing runs after it.
+        if self.effect_drain_depth == 1 && !self.game_over {
             // Flush the OnDiscardHand batch window (G-ENGINE-ON-DISCARD-HAND):
             // the causing effect body has finished, so the whole discard batch
             // is known. Fire the trigger ONCE per affected owner (DCGO
@@ -1398,11 +1399,11 @@ impl Game {
             // a selection (a park means the effect body is not finished — the
             // resuming drain flushes it). Loop-guarded because an OnDiscardHand
             // observer can itself trash a hand (a nested batch).
-            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
+            if self.pending_selection.is_none() && !self.game_over {
                 let mut discard_guard: u16 = 0;
                 while self.pending_hand_discard.is_some()
                     && self.pending_selection.is_none()
-                    && !self.halted_by_infinite_loop()
+                    && !self.game_over
                 {
                     self.flush_pending_hand_discard();
                     if !self.effect_queue.is_empty() {
@@ -1423,11 +1424,11 @@ impl Game {
             // `FireOnAddLibraryAnyone` once per added list), then drain.
             // Every later block re-checks for the §18-3-2 draw: a pass above
             // may have ended the game in it, and nothing runs after that.
-            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
+            if self.pending_selection.is_none() && !self.game_over {
                 let mut deck_guard: u16 = 0;
                 while self.pending_deck_add.is_some()
                     && self.pending_selection.is_none()
-                    && !self.halted_by_infinite_loop()
+                    && !self.game_over
                 {
                     self.flush_pending_deck_add();
                     if !self.effect_queue.is_empty() {
@@ -1448,11 +1449,11 @@ impl Game {
             // ONCE per host (DCGO `AddDigivolutionCards*` once per list;
             // rule 15-5-2), then drain the observers. Loop-guarded because an
             // observer can itself place sources (a nested batch).
-            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
+            if self.pending_selection.is_none() && !self.game_over {
                 let mut added_guard: u16 = 0;
                 while !self.pending_added_sources.is_empty()
                     && self.pending_selection.is_none()
-                    && !self.halted_by_infinite_loop()
+                    && !self.game_over
                 {
                     self.flush_pending_added_sources();
                     if !self.effect_queue.is_empty() {
@@ -1469,9 +1470,21 @@ impl Game {
             }
             let mut guard: u16 = 0;
             loop {
-                if self.pending_selection.is_some() || self.halted_by_infinite_loop() {
+                if self.pending_selection.is_some() || self.game_over {
                     break;
                 }
+                // Explicit termination: a pass that acted but changed nothing
+                // observable (a 0 DP Digimon that can't be deleted, a trash
+                // every protection refuses) has reached the rule check's
+                // fixpoint. §17-1-1 defines a rule check as the processing
+                // for "certain circumstances"; §17-1-2-1's example ("a rule
+                // check will only be performed after the previous rule check
+                // is resolved") is what makes the next pass; a pass that
+                // changed nothing leaves no new circumstance, so there is no
+                // next pass. Without this, such a stable state would spin
+                // until the §18-3 loop watch declared a draw that no loop
+                // exists for.
+                let before = self.loop_signature(crate::game::infinite_loop::LoopSite::RulesCheck);
                 if !self.run_state_based_rules_check() {
                     break;
                 }
@@ -1486,16 +1499,22 @@ impl Game {
                 if self.pending_selection.is_none() && !self.effect_queue.is_empty() {
                     self.drain_effect_queue_inner();
                 }
+                if self.pending_selection.is_none()
+                    && self.loop_signature(crate::game::infinite_loop::LoopSite::RulesCheck) == before
+                {
+                    break;
+                }
             }
         }
         self.effect_drain_depth = self.effect_drain_depth.saturating_sub(1);
-        if self.effect_drain_depth == 0 && self.pending_selection.is_none() {
-            // §18-3: the outermost drain has settled with nothing parked, so
-            // this processing is over; a later drain starts its own loop
-            // watch. A drain parked on a decision keeps its watch: whether it
-            // starts over depends on that decision (declinable or forced).
-            self.reset_loop_watch();
-        }
+        // §18-3: the loop watch is NOT reset when the outermost drain settles.
+        // A loop can span several outermost drains with no decision between
+        // them (an effect that starts a new attack, a turn-structure step that
+        // re-fires the same triggers); only a player's decision -- a
+        // declinable prompt (`resolve_generic_selection`) or a turn action
+        // (`decode_action`, `end_turn`, a declared attack or play) -- starts a
+        // new watch. Nothing that happens between two player decisions can
+        // legitimately return the whole game to the same state three times.
         // G-ENGINE-TURN-END-MID-EFFECT: a turn end that `check_turn_end` held
         // back while an effect was resolving runs now that the outermost
         // drain has settled with nothing parked (6-1-4-1).
@@ -1551,9 +1570,10 @@ impl Game {
             if self.pending_selection.is_some() {
                 return;
             }
-            // §18-3-2: the game ended in an infinite-loop draw (possibly in a
-            // nested drain an effect body performed); nothing more resolves.
-            if self.halted_by_infinite_loop() {
+            // §1-2-2: the game ended (an infinite-loop draw, a win/lose effect,
+            // possibly in a nested drain an effect body performed); nothing
+            // more resolves.
+            if self.game_over {
                 self.effect_queue.clear();
                 return;
             }
@@ -1561,7 +1581,9 @@ impl Game {
             // disposed before any trigger that body caused resolves. Skipped
             // inside a deferred-drain scope (the body is still running there);
             // the flush at scope exit re-enters here.
-            if self.option_body_pending && self.draining_deferred == 0 {
+            if self.option_body_pending
+                && self.draining_deferred <= self.option_body_outer_deferred
+            {
                 self.complete_option_body_if_done();
                 if self.pending_selection.is_some() {
                     return;
@@ -1645,16 +1667,19 @@ impl Game {
                     // §9-1-5: the used Option is trashed in the step that
                     // finishes its `[Main]` body, uninterrupted -- before the
                     // rules check below and before any trigger the body
-                    // caused is offered. (A body that parked a selection is
-                    // disposed once that selection's resolution has finished
-                    // the body: see the top of `drain_effect_queue`.)
-                    if self.draining_deferred == 0 {
+                    // caused is offered -- also when the use is an effect's,
+                    // from inside that effect's selection callback (the
+                    // baseline depth is then > 0). (A body that parked a
+                    // selection is disposed once that selection's resolution
+                    // has finished the body: see the top of
+                    // `drain_effect_queue`.)
+                    if self.draining_deferred <= self.option_body_outer_deferred {
                         self.complete_option_body_if_done();
                     }
                     self.rules_check_between_queued_effects();
                     continue;
                 }
-                if self.draining_deferred > 0 {
+                if self.draining_deferred > self.option_body_outer_deferred {
                     // The body has been popped but `complete_option_body_if_done`
                     // has not released it yet: we are INSIDE the `[Main]`'s
                     // resolution, reached through a nested `drain_effect_queue`
@@ -4126,6 +4151,16 @@ impl Game {
         let prev_effect_source_permanent = self.effect_source_permanent;
         let prev_trigger_context = self.current_trigger_context.clone();
         let prev_dna_origin = self.current_dna_origin;
+        // §9-1-5 "as soon as the timing when its 1st [Main] effect has been
+        // resolved": this is the in-flight Option's `[Main]` body (whichever
+        // path runs it -- the drain's OptionMain arm or the outer-optional
+        // ACCEPT callback), so once it has run the first [Main] is resolved
+        // and `complete_option_body_if_done` may dispose the card.
+        let is_pending_option_main = qe.timing == EffectTiming::OptionMain
+            && self
+                .pending_option
+                .as_ref()
+                .is_some_and(|p| p.card.handle() == qe.source_card);
         let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
         self.effect_source_player = Some(qe.controller);
         self.effect_source_card = Some(attribution_source_card);
@@ -4135,6 +4170,9 @@ impl Game {
             self.current_dna_origin = qe.dna_origin_context;
         }
         let out = self.run_queued_effect_inner(qe);
+        if is_pending_option_main {
+            self.option_first_main_resolved = true;
+        }
         self.current_dna_origin = prev_dna_origin;
         self.current_trigger_context = prev_trigger_context;
         self.effect_source_permanent = prev_effect_source_permanent;
@@ -5868,6 +5906,13 @@ impl Game {
         if self.effect_chain_depth > 0 {
             self.effect_chain_depth = 1;
         }
+        // §9-1-5: whatever scopes the in-flight Option's body was started under
+        // have unwound while its selection waited; the resolving callback
+        // opens its own deferred scope, so the body has finished once the drain
+        // is back at the depth we are at NOW (see `option_body_outer_deferred`).
+        if self.option_body_pending {
+            self.option_body_outer_deferred = self.draining_deferred;
+        }
 
         // Take the selection, restore phase, invoke the appropriate callback.
         let sel = self.pending_selection.take().expect("checked Some above");
@@ -6265,11 +6310,20 @@ impl Game {
         if pending.resolution_phase != crate::selection::OptionResolutionPhase::MainEffectDrain {
             return;
         }
+        // §9-1-5 "as soon as the timing when its 1st [Main] effect has been
+        // resolved": the FIRST body entry decides, not the last -- an Option
+        // with two `[Main]` effects is trashed after the first; the second
+        // still resolves afterwards, as the pending effect of a card in the
+        // trash (§9-1-4 keeps the card out of every area only during the 1st).
+        // A body that never went through the queue (no `OptionMain` effect: a
+        // placed Delay / Training Option, a TS Option with no [Main]) has
+        // nothing to wait for.
         let card = pending.card.handle();
-        if self
-            .effect_queue
-            .iter()
-            .any(|q| q.timing == EffectTiming::OptionMain && q.source_card == card)
+        if !self.option_first_main_resolved
+            && self
+                .effect_queue
+                .iter()
+                .any(|q| q.timing == EffectTiming::OptionMain && q.source_card == card)
         {
             return;
         }

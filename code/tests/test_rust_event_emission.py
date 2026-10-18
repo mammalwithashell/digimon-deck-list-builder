@@ -71,6 +71,8 @@ def test_new_event_variants_serialize_through_pyo3_with_expected_keys() -> None:
         "Digivolve",
         "Attack",         # newly emitted
         "Trash",          # newly emitted
+        "CardToHand",     # a used Option returned to the hand instead of the trash
+        "CardToDeck",     # a used Option redirected to the deck instead of the trash
         "Mill",
         "SecurityReveal", # newly emitted
         "Reveal",         # non-security reveal sites (RevealZone)

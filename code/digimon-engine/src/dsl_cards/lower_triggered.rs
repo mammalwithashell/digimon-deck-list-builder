@@ -346,7 +346,8 @@ pub fn lower_for_kind_with_clause_index(
             builder = builder.replacement_process(move |rctx| {
                 let mut bindings = Bindings::new();
                 let runtime = StepRuntime::new(raw_for_process.clone())
-                    .with_dna_origin(rctx.effect.game.current_dna_origin);
+                    .with_dna_origin(rctx.effect.game.current_dna_origin)
+                    .with_source_kind(rctx.effect.source_kind);
                 run_steps_with_runtime(
                     process_steps.as_slice(),
                     rctx.effect,
@@ -364,7 +365,8 @@ pub fn lower_for_kind_with_clause_index(
                 let runtime = StepRuntime::new(raw_for_process.clone())
                     .with_dna_origin(ctx.game.current_dna_origin)
                     .with_opt_key(shared_opt_group)
-                    .with_opt_key_inherited(opt_key_inherited);
+                    .with_opt_key_inherited(opt_key_inherited)
+                    .with_source_kind(ctx.source_kind);
                 run_steps_with_runtime(process_steps.as_slice(), ctx, &mut bindings, &runtime);
             });
         }

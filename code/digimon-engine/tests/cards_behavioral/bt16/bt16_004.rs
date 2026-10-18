@@ -458,6 +458,8 @@ fn bt16_004_fires_during_opponents_turn_all_turns_scope() {
         .add_card(make_dual_color_carrier("CARRIER-DUAL"))
         .add_card(make_weak_opp("OPP-WEAK"))
         .memory(0)
+        .deck(0, &["OPP-WEAK"; 8])
+        .deck(1, &["OPP-WEAK"; 8])
         .start();
 
     // Player 0's carrier (2000 DP) sits on defense; player 1's weak attacker

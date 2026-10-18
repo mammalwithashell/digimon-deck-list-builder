@@ -117,9 +117,11 @@ fn infer_effect_source_kind(
             }
         }
     }
-    game.card_kind_for_handle(source_card)
-        .map(source_kind_for_card_kind)
-        .unwrap_or(EffectSourceKind::Rule)
+    // The source is not (or no longer) the top of `source_permanent`: a
+    // departed source (the `[On Deletion]` of a deleted token, removed from
+    // the game by §4-21-5) is read from the deletion snapshot or the in-flight
+    // card data before the zone lookup gives up and calls it a rule effect.
+    game.effect_source_kind_for_handle(source_card)
 }
 
 /// Read-only view of game state for effect condition closures.
@@ -930,6 +932,16 @@ fn observed_deletion_cause(game: &Game) -> Option<ReplacementCause> {
     {
         if let Some(rc) = replacement_cause_from_event_cause(snap.cause) {
             return Some(rc);
+        }
+        // A deletion by the game rules (the §17-1-3-1-1 0 DP rule check) is
+        // not a deletion by an effect, whatever effect lowered the DP
+        // (official Q&A Q1348 / Q2828; DCGO `!IsByEffect`). The snapshot's
+        // `Rule` is terminal: the live `current_deletion_cause` slot still
+        // holds the cause `infer_deletion_cause` guessed for the batch
+        // (Own/OpponentEffect between effects) and must not be read for it.
+        // G-ENGINE-RULE-CHECK-DELETION-READS-LIVE-EFFECT-CAUSE.
+        if snap.cause == crate::trigger_context::EventCause::Rule {
+            return None;
         }
     }
     match game.current_deletion_event_cause_override {

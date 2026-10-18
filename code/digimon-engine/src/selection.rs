@@ -1274,12 +1274,16 @@ pub enum SelectionError {
     /// Selection plumbing exists but the resolver has not landed yet.
     /// Temporary — removed when PR3 lands the full decoder.
     NotYetImplemented,
+    /// The game is over: no decision but the between-games play-order choice
+    /// is accepted any more.
+    GameOver,
 }
 
 impl std::fmt::Display for SelectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NoPendingSelection => write!(f, "no pending selection to resolve"),
+            Self::GameOver => write!(f, "the game is over; no further decision is accepted"),
             Self::WrongPlayer => write!(f, "wrong player for this selection"),
             Self::InvalidAction => write!(f, "action is not in valid_action_ids"),
             Self::NotYetImplemented => {

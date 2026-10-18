@@ -1,0 +1,26 @@
+# MAIN_ALL_MINUS3000 -- Option, red, use cost 0.
+#   [Main] All of your opponent's Digimon get -3000 DP for the turn.
+# A [Main] that parks NO decision (`for_each`, the AD1-025 idiom): used by an
+# effect from inside that effect's selection callback, its whole body runs
+# there (`draining_deferred > 0`), which is the shape of the §9-1-5 residual
+# in F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE.
+card: MAIN_ALL_MINUS3000
+name: Field Sap
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] All of your opponent's Digimon get -3000 DP for the turn."
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          bind_as: victim
+          body:
+            - add_dp_modifier:
+                target: victim
+                value: -3000
+                expiry: end_of_turn

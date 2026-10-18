@@ -2978,3 +2978,65 @@ fn training_optionality_matches_rule() {
     assert!(is_suspended(&r, train));
     assert_eq!(stack_ids(&r, train).len(), 2);
 }
+
+// ─── §4-8-1: a trashed TOP card is not a digivolution card ──────────────────
+
+/// §4-8-1 "A digivolution card refers to a card placed under a Digimon."
+///
+/// An effect that trashes a Digimon's TOP card ("trash the top card of 1 of
+/// your Digimon", the Burst Digivolve turn-end trash idiom) trashes no
+/// digivolution card: the card was on top, not under the Digimon. P0's
+/// `OPT_TRASH_OWN_TOP` on P0's own `[FILL, LV4_PLAIN, LV5_PLAIN]`: P0's
+/// `OBS_SRC_TRASH_MEM` ("When cards are trashed from the digivolution cards
+/// of one of your Digimon, gain 1 memory") does not trigger, and P0's
+/// `OBS_TOP_TRASH_MEM` ("When the top stacked card of one of your Digimon is
+/// trashed, gain 1 memory") triggers once. "Trash the top 2 stacked cards"
+/// (`OPT_TRASH_OWN_TOP2`, the BT21-030 idiom) trashes both by ONE event: the
+/// top-card observer triggers once for the two cards (§16-12-5's "trashed at
+/// the same time" reading, DCGO `ITrashStack`), the source observer never.
+#[test]
+fn trashing_a_top_card_is_not_a_digivolution_card_trash() {
+    cite!(
+        "4-8-1",
+        "c7f86609e036189f3d1409393cec5bb311f782d477519631c8aa7d60f34ee357"
+    );
+    let mut r = board(&["OPT_TRASH_OWN_TOP"], &[]);
+    let stack = r.place_stack(0, &[FILL, "LV4_PLAIN", "LV5_PLAIN"]);
+    r.place_on_field(0, "OBS_SRC_TRASH_MEM", Some(0));
+    r.place_on_field(0, "OBS_TOP_TRASH_MEM", Some(0));
+    let cp = r.event_checkpoint();
+    use_option(&mut r, 0, "OPT_TRASH_OWN_TOP");
+    pick_field(&mut r, stack.index as u16);
+    resolve_prompts(&mut r);
+    assert_eq!(
+        stack_ids(&r, stack),
+        owned(&[FILL, "LV4_PLAIN"]),
+        "the top card is trashed"
+    );
+    assert_eq!(
+        memory_events_from(&r, cp, "OBS_SRC_TRASH_MEM"),
+        0,
+        "no digivolution card was trashed"
+    );
+    assert_eq!(
+        memory_events_from(&r, cp, "OBS_TOP_TRASH_MEM"),
+        1,
+        "the top card was trashed"
+    );
+
+    let mut r = board(&["OPT_TRASH_OWN_TOP2"], &[]);
+    let stack = r.place_stack(0, &[FILL, "LV4_PLAIN", "LV5_PLAIN"]);
+    r.place_on_field(0, "OBS_SRC_TRASH_MEM", Some(0));
+    r.place_on_field(0, "OBS_TOP_TRASH_MEM", Some(0));
+    let cp = r.event_checkpoint();
+    use_option(&mut r, 0, "OPT_TRASH_OWN_TOP2");
+    pick_field(&mut r, stack.index as u16);
+    resolve_prompts(&mut r);
+    assert_eq!(stack_ids(&r, stack), owned(&[FILL]), "2 top cards trashed");
+    assert_eq!(memory_events_from(&r, cp, "OBS_SRC_TRASH_MEM"), 0);
+    assert_eq!(
+        memory_events_from(&r, cp, "OBS_TOP_TRASH_MEM"),
+        1,
+        "one event for the two cards"
+    );
+}

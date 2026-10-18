@@ -516,6 +516,19 @@ impl Game {
             allow_cancel: _,
             cost_upgrade,
         } = open;
+        // A finished game declares no attack.
+        if self.game_over {
+            return AttackResult::Invalid;
+        }
+        // §18-3: a player-declared attack is a decision (an effect-forced
+        // attack is not); the loop watch starts over (see
+        // `drain_effect_queue`).
+        if matches!(
+            initiator,
+            AttackInitiator::NaturalMainPhase | AttackInitiator::Vortex | AttackInitiator::Overclock
+        ) {
+            self.reset_loop_watch();
+        }
         let TargetConstraint::Forced(target) = target_constraint else {
             return AttackResult::Invalid;
         };
@@ -723,16 +736,16 @@ impl Game {
     /// `pending_attack.state` (e.g. to `Battle` after a block declaration)
     /// and re-invokes this method to continue.
     pub fn advance_pending_attack(&mut self) -> AttackResult {
-        // §18-3-2: a drain inside this attack (e.g. its [When Attacking]
-        // effects) ended the game in the infinite-loop draw: no later attack
-        // timing, battle or security check runs. `GameWon` is the engine's
-        // "game over" result, as in the security-check guard; the terminal
-        // outcome itself is `Game::winner` / `terminal_outcome_reason`.
-        // Scoped to the loop draw: many card tests stage an opponent's-turn
-        // attack on a board whose `end_turn` decked a player out, and expect
-        // the attack to resolve. Every terminal outcome is still final
+        // §1-2-2: once the game has ended -- a drain inside this attack
+        // (e.g. its [When Attacking] effects) ended it in the §18-3-2 draw or
+        // by a §1-2-6 win/lose effect, or a security check won it -- no later
+        // attack timing, battle or security check runs and no prompt is
+        // installed (it could not be answered: `SelectionError::GameOver`).
+        // `GameWon` is the engine's "game over" result, as in the
+        // security-check guard; the terminal outcome itself is `Game::winner`
+        // / `terminal_outcome_reason`, and every terminal outcome is final
         // (`finish_game` keeps the first one).
-        if self.halted_by_infinite_loop() {
+        if self.game_over {
             return AttackResult::GameWon;
         }
         // A declaration made while resolving an effect is only declared here.
@@ -2679,7 +2692,9 @@ impl Game {
         valid_action_ids: Vec<u16>,
         prompt: &str,
     ) -> bool {
-        if valid_action_ids.is_empty() || self.pending_selection.is_some() {
+        // A finished game offers no decisions (§1-2-2; G-ENGINE-GAME-OVER-NOT-TERMINAL):
+        // the drainer stops on `game_over`, and so does this installer.
+        if self.game_over || valid_action_ids.is_empty() || self.pending_selection.is_some() {
             return false;
         }
         let state = crate::resume::AttackDeclarationDecisionState {

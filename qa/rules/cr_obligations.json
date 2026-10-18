@@ -3185,7 +3185,7 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Scope matrix: an opponent-Digimon-effect immunity (Atratusmon ST23-09 idiom) is affected by Option [Main] and [Security]-activated [Main] effects, Tamer effects and its own controller's effects, not by opponent Digimon effects; a full opponent-effect immunity (Magnamon (X Antibody) BT16-102 idiom) blocks opponent Option ([Main] and [Security]), Tamer, Digimon and token effects but not its own controller's; battles and the 0-DP rule check are not effects (Q6279). An immunity that starts mid-effect covers that effect's later steps; one that starts after a -DP effect stops it affecting the card (Q6178; read-time suppression in ModifierRegistry::get).",
+      "note": "Scope matrix: an opponent-Digimon-effect immunity (Atratusmon ST23-09 idiom) is affected by Option [Main] and [Security]-activated [Main] effects, Tamer effects and its own controller's effects, not by opponent Digimon effects; a full opponent-effect immunity (Magnamon (X Antibody) BT16-102 idiom) blocks opponent Option ([Main] and [Security]), Tamer, Digimon and token effects but not its own controller's; battles and the 0-DP rule check are not effects (Q6279). An immunity that starts mid-effect covers that effect's later steps; one that starts after a -DP effect stops it affecting the card (Q6178; read-time suppression in ModifierRegistry::get). Update (2026-10-17): a keyword gained BEFORE the immunity stops being had when it starts (Q6178), and an opponent's live formula aura stops reaching the card (G-ENGINE-PROGRESS-SHIELD-BYPASSED-BY-TIMING-DISABLE-AND-FORMULA-AURAS resolved).",
       "status": "proven",
       "tests": [
         "ch15_15_unaffected::digimon_only_immunity_is_affected_by_opponent_option_main",
@@ -3194,7 +3194,9 @@
         "ch15_15_unaffected::full_opponent_immunity_blocks_option_tamer_digimon_and_token_effects",
         "ch15_15_unaffected::full_opponent_immunity_does_not_block_rule_processing",
         "ch15_15_unaffected::effect_applied_before_immunity_stops_affecting_when_immunity_starts",
-        "ch15_15_unaffected::immunity_granted_mid_effect_covers_later_steps"
+        "ch15_15_unaffected::immunity_granted_mid_effect_covers_later_steps",
+        "ch15_15_unaffected::granted_keyword_stops_being_had_when_immunity_starts",
+        "ch15_15_unaffected::immunity_suppresses_an_opponent_formula_aura_while_it_lasts"
       ],
       "text": "When a card isn't affected by effects, it won't be affected by processing caused by effects. (Example: Even if a card that isn't affected by effects is chosen for an \"[On Play] Suspend 1 of your opponent's Digimon\" effect, it isn't suspended.)"
     },
@@ -3206,13 +3208,16 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Record-and-suppress (2026-10-16): a modifier applied to an immune card is recorded (ModifierEntry::affecting_source_kind) and hidden while a covering CannotBeAffected entry exists; it applies as soon as the immunity lapses (the rule's 'while suspended' example: -3000 DP applies on unsuspend) or expires (Atratusmon shape, Q831), for the rest of its own duration. Previously EffectContext::add_modifier skipped the install, so the effect never applied. <Progress> (2026-10-17): an opponent's -3000 DP hidden while the attacker has <Progress> applies the moment it loses <Progress> mid-attack (it battles at 3000 DP and loses), not at the end of the attack; the hidden -3000 DP on the attacker never moves to the Digimon that slides into its slot.",
+      "note": "Record-and-suppress (2026-10-16): a modifier applied to an immune card is recorded (ModifierEntry::affecting_source_kind) and hidden while a covering CannotBeAffected entry exists; it applies as soon as the immunity lapses (the rule's 'while suspended' example: -3000 DP applies on unsuspend) or expires (Atratusmon shape, Q831), for the rest of its own duration. Previously EffectContext::add_modifier skipped the install, so the effect never applied. <Progress> (2026-10-17): an opponent's -3000 DP hidden while the attacker has <Progress> applies the moment it loses <Progress> mid-attack (it battles at 3000 DP and loses), not at the end of the attack; the hidden -3000 DP on the attacker never moves to the Digimon that slides into its slot. Update (2026-10-17): the same for a gained keyword (registry grant) and for a live FORMULA aura (summed inside effective_dp, no stored entry): both apply again the moment the immunity lapses or the attack ends.",
       "status": "proven",
       "tests": [
         "ch15_15_unaffected::effect_applied_while_immune_starts_affecting_when_immunity_lapses",
         "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it",
         "ch15_15_unaffected::progress_lost_mid_attack_applies_held_opponent_effects_immediately",
-        "ch15_15_unaffected::progress_shield_follows_the_attacker_through_compaction"
+        "ch15_15_unaffected::progress_shield_follows_the_attacker_through_compaction",
+        "ch15_15_unaffected::granted_keyword_not_considered_had_while_immune_had_once_immunity_lapses",
+        "ch15_15_unaffected::progress_attacker_not_affected_by_opponent_formula_aura_while_attacking",
+        "ch15_15_unaffected::immunity_suppresses_an_opponent_formula_aura_while_it_lasts"
       ],
       "text": "When a card isn't affected by effects, then it can be affected again, effects will immediately start affecting that card. (Example: When a -3000 DP effect is applied to a suspended Digimon with an \"[All Turns] While this Digimon is suspended, this Digimon isn't affected by the effects of your opponent's Digimon\" effect, the Digimon will get - 3000 DP as soon as it's unsuspended.)"
     },
@@ -3241,10 +3246,12 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "A <Security A. -1> gained from an opponent's Digimon effect while immune is not counted (1 check); once the immunity ends with the grant still in its duration the Digimon checks 0 cards (Q6179). A granted '[End of Your Turn] Delete this Digimon' (EX6-057 idiom) given while immune activates at the end of the carrier's next turn once the immunity has ended (Q2120 / Q3871). Covers modifier-backed gains (the production SecurityAttackChange idiom) and granted triggered effects; keyword-registry grants (grant_keyword; no authored opponent-side use, reachable only under an own-effect immunity) are still an install-time skip in both directions -- a keyword gained while immune is lost, and one gained BEFORE the immunity keeps applying through it, against Q6178 -- non-blocking (G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP).",
+      "note": "A <Security A. -1> gained from an opponent's Digimon effect while immune is not counted (1 check); once the immunity ends with the grant still in its duration the Digimon checks 0 cards (Q6179). A granted '[End of Your Turn] Delete this Digimon' (EX6-057 idiom) given while immune activates at the end of the carrier's next turn once the immunity has ended (Q2120 / Q3871). Covers modifier-backed gains (the production SecurityAttackChange idiom) and granted triggered effects; keyword-registry grants (grant_keyword; no authored opponent-side use, reachable only under an own-effect immunity) are still an install-time skip in both directions -- a keyword gained while immune is lost, and one gained BEFORE the immunity keeps applying through it, against Q6178 -- non-blocking (G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP). Update (2026-10-17): keyword-registry grants (grant_keyword) are now recorded and read-time gated exactly like modifiers (KeywordEntry::affecting_source_kind; G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP resolved): a <Security A. -1> gained as a KEYWORD while immune is not had (1 check) and is had once the immunity ends (0 checks); one an opponent granted to a <Progress> attacker is not had while it attacks (§16-39-1).",
       "status": "proven",
       "tests": [
-        "ch15_15_unaffected::granted_effect_not_considered_had_while_immune"
+        "ch15_15_unaffected::granted_effect_not_considered_had_while_immune",
+        "ch15_15_unaffected::granted_keyword_not_considered_had_while_immune_had_once_immunity_lapses",
+        "ch15_15_unaffected::progress_attacker_does_not_have_a_keyword_an_opponent_granted_while_attacking"
       ],
       "text": "Even if a Digimon that isn't affected by effects gains an effect, the Digimon won't be considered to34 have that effect. (Example: If an effect reads \"[On Play] 1 of your opponent's Digimon gains <Security A. -1> until the end of their turn,\" even if a Digimon that isn't affected by effects gains <Security A. -1>, the Digimon won't be considered to have <Security A. -1>."
     },
@@ -3873,10 +3880,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "A token is a Digimon (§4-21-1), so its effect is a Digimon effect: the Familiar Token's [On Deletion] -3000 DP does not affect a Digimon immune to its opponent's Digimon effects (Atratusmon idiom; 12000 DP). Token effects carry EffectSourceKind::Digimon (EffectSourceKind::for_card_kind); Rule is kept for card-less processing only. Attribution witness: effect_source_kind::token_attribution.",
+      "note": "A token is a Digimon (§4-21-1), so its effect is a Digimon effect: the Familiar Token's [On Deletion] -3000 DP does not affect a Digimon immune to its opponent's Digimon effects (Atratusmon idiom; 12000 DP). Token effects carry EffectSourceKind::Digimon (EffectSourceKind::for_card_kind); Rule is kept for card-less processing only. Attribution witness: effect_source_kind::token_attribution. Update (2026-10-17): still a Digimon effect after the token has left the game -- a YAML token's [On Deletion] that chooses, then applies -3000 DP from a rebuilt context, does not affect the immune Digimon (G-ENGINE-DEPARTED-TOKEN-CONTEXT-FALLS-BACK-TO-RULE resolved).",
       "status": "proven",
       "tests": [
-        "ch15_15_unaffected::digimon_only_immunity_blocks_a_digimon_tokens_effect"
+        "ch15_15_unaffected::digimon_only_immunity_blocks_a_digimon_tokens_effect",
+        "ch15_15_unaffected::departed_tokens_deferred_effect_is_still_a_digimon_effect"
       ],
       "text": "An effect activated by a Digimon card, Digimon, or Security Digimon is considered a Digimon effect."
     },
@@ -7388,13 +7396,15 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "The opponent's 'when an opponent's Digimon attacks, 1 of your opponent's Digimon gets -3000 DP' CAN choose the attacking <Progress> Digimon (§15-15-5-3) and doesn't affect it while it attacks; the -3000 DP applies when the attack ends. An opponent's -12000 DP applied during the attack applies when the attack ends. An opponent's -3000 DP applied BEFORE the attack stops affecting it while it attacks (it battles at its printed 6000 DP and wins) and affects it again after (Q6178). Read-time shield (2026-10-17): ModifierRegistry::progress_shield, refreshed by Game::refresh_progress_shield, hides every opponent effect's entry on the attacker, which it follows through battle-area compaction by identity.",
+      "note": "The opponent's 'when an opponent's Digimon attacks, 1 of your opponent's Digimon gets -3000 DP' CAN choose the attacking <Progress> Digimon (§15-15-5-3) and doesn't affect it while it attacks; the -3000 DP applies when the attack ends. An opponent's -12000 DP applied during the attack applies when the attack ends. An opponent's -3000 DP applied BEFORE the attack stops affecting it while it attacks (it battles at its printed 6000 DP and wins) and affects it again after (Q6178). Read-time shield (2026-10-17): ModifierRegistry::progress_shield, refreshed by Game::refresh_progress_shield, hides every opponent effect's entry on the attacker, which it follows through battle-area compaction by identity. Update (2026-10-17): the shield also hides a keyword an opponent's effect granted (not had while attacking, had again after) and an opponent's live formula aura (battles at full DP, affected again after); timing disables and the raw modifier scans read through the same gate (registry unit tests).",
       "status": "proven",
       "tests": [
         "ch16_attack_keywords::progress_persistent_only_while_attacking",
         "ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it",
         "ch15_15_unaffected::progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking",
-        "ch15_15_unaffected::progress_shield_follows_the_attacker_through_compaction"
+        "ch15_15_unaffected::progress_shield_follows_the_attacker_through_compaction",
+        "ch15_15_unaffected::progress_attacker_does_not_have_a_keyword_an_opponent_granted_while_attacking",
+        "ch15_15_unaffected::progress_attacker_not_affected_by_opponent_formula_aura_while_attacking"
       ],
       "text": "<Progress> is a keyword effect that reads \"this Digimon isn't affected by your opponent's effects while attacking.\""
     },
@@ -8656,7 +8666,7 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "A mandatory suspend/unsuspend loop: GameEvent::InfiniteLoop then GameOver { winner: None, reason: InfiniteLoopDraw }. Forced decisions do not reset the loop watch, so a loop whose repetitions only ask a mandatory pick (one option or two) or an immediate-replacement order also draws. The draw is final: one declared inside an attack stops the attack (no later security check, no second GameOver; the first terminal outcome stands). MAX_CHAIN_DEPTH (10_000) remains a far backstop that ends in the same draw, counted both on the chain depth and on the loop watch's age (steps since the last optional decision), so a forced-prompt loop whose DP grows without bound also draws; nothing is cleared with the game going on.",
+      "note": "A mandatory suspend/unsuspend loop: GameEvent::InfiniteLoop then GameOver { winner: None, reason: InfiniteLoopDraw }. Forced decisions do not reset the loop watch, so a loop whose repetitions only ask a mandatory pick (one option or two) or an immediate-replacement order also draws. The draw is final: one declared inside an attack stops the attack (no later security check, no second GameOver; the first terminal outcome stands). MAX_CHAIN_DEPTH (10_000) remains a far backstop that ends in the same draw, counted both on the chain depth and on the loop watch's age (steps since the last optional decision), so a forced-prompt loop whose DP grows without bound also draws; nothing is cleared with the game going on. Update (2026-10-17): the watch now spans outermost drains -- it resets only on a player decision (a declinable prompt, a runner action, end_turn, a declared attack or a play from hand), never when a drain merely settles, so a loop that runs through several drains with no decision between them (an effect-started attack, a re-fired turn-structure trigger) also draws (game::infinite_loop::loop_watch_tests).",
       "status": "proven",
       "tests": [
         "ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared",
@@ -8691,7 +8701,7 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). The turn-player-first order of declarations is not asserted. (residual; see Resolution)",
+      "note": "repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). The turn-player-first order of declarations is not asserted. (residual; see Resolution) Design note for the declaration (2026-10-17, not implemented, awaiting a ruling) in the G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED entry: a count prompt (existing count-choice ids) per player when a signature recurs across declinable decisions, then the loop's optional decision is answered for the declared count.",
       "status": "gap",
       "tests": [],
       "text": "The turn player declares to repeat the processing a certain number of times. If the turn player doesn't have the ability to stop the infinite loop, skip this step and go on to the next step."
@@ -8704,7 +8714,7 @@
       "mechanisms": [
         "other-information"
       ],
-      "note": "repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). As 18-3-3-1, for the non-turn player. (residual; see Resolution)",
+      "note": "repeat-count declaration not modelled; per-repetition prompt satisfies 18-3-3-3 (ruling W10). As 18-3-3-1, for the non-turn player. (residual; see Resolution) Design note (2026-10-17): see 18-3-3-1.",
       "status": "gap",
       "tests": [],
       "text": "The non-turn player declares to repeat the processing a certain number of times. If the non- turn player doesn't have the ability to stop the infinite loop, skip this step and go on to the next step."
@@ -12827,9 +12837,11 @@
       "mechanisms": [
         "terminology-and-identity"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A digivolution card is a card UNDER a Digimon: an effect that trashes a Digimon's top card ('trash the top card of 1 of your Digimon', the Burst Digivolve turn-end idiom; 'trash the top 2 stacked cards', BT21-030) trashes no digivolution card -- the source-trash observer does not trigger and the top-card-trashed observer triggers once per event (once for a 2-card batch); <De-Digivolve> is the same case (16-12-1, ch16_processing_keywords::de_digivolve_trashes_top_cards_not_digivolution_cards). G-ENGINE-TRASH-TOP-SOURCE-FIRES-DIGIVOLUTION-CARD-TRASHED resolved 2026-10-17.",
+      "status": "proven",
+      "tests": [
+        "ch16_processing_keywords::trashing_a_top_card_is_not_a_digivolution_card_trash"
+      ],
       "text": "A digivolution card refers to a card placed under a Digimon. (For details, refer to 4-5 \"Stacked Cards\")4-7"
     },
     "4-8-2": {
@@ -15139,10 +15151,12 @@
       "mechanisms": [
         "card-use-and-costs"
       ],
-      "note": "The used Option is disposed in the step that finishes its [Main] body (drain_effect_queue_inner right after the OptionMain entry; the top of drain_effect_queue when the body's last selection has just resolved), before the rules check and any trigger, and logs a GameEvent::Trash. Both halves green: a 0 DP rule-check deletion's would-be-deleted decision parks with the Option already trashed, and a triggered [On Play]'s decision is the next one (no 'Trash the used Option' TriggerOrder branch); the event log orders the Option's Trash before the rule check's effect and deletion and before the [On Play]'s memory gain (F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE, G-ENGINE-OPTION-TRASH-NO-EVENT resolved). Proven for a player-used Option only: an Option used by an effect from inside a selection callback can still see a rules check before its trash, and only the last queued [Main] (not the 1st) ends the period; both are recorded as residuals in the F- entry, untested.",
+      "note": "The used Option is disposed in the step that finishes its [Main] body (drain_effect_queue_inner right after the OptionMain entry; the top of drain_effect_queue when the body's last selection has just resolved), before the rules check and any trigger, and logs a GameEvent::Trash. Both halves green: a 0 DP rule-check deletion's would-be-deleted decision parks with the Option already trashed, and a triggered [On Play]'s decision is the next one (no 'Trash the used Option' TriggerOrder branch); the event log orders the Option's Trash before the rule check's effect and deletion and before the [On Play]'s memory gain (F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE, G-ENGINE-OPTION-TRASH-NO-EVENT resolved). Proven for a player-used Option only: an Option used by an effect from inside a selection callback can still see a rules check before its trash, and only the last queued [Main] (not the 1st) ends the period; both are recorded as residuals in the F- entry, untested. Update (2026-10-17): both residuals closed -- an Option an effect uses from inside its selection callback is trashed before the rule check its [Main] caused (the disposal gate compares to the deferred-depth baseline the body started under), and an Option with two [Main] effects is trashed after the FIRST, the second resolving afterwards from the trash; hand / deck redirects log GameEvent::CardToHand / CardToDeck.",
       "status": "proven",
       "tests": [
-        "ch18_pending_overwrite::used_option_trashed_immediately_after_first_main_uninterrupted"
+        "ch18_pending_overwrite::used_option_trashed_immediately_after_first_main_uninterrupted",
+        "ch18_pending_overwrite::option_used_by_an_effect_is_trashed_before_the_rule_check_its_main_caused",
+        "ch18_pending_overwrite::option_with_two_mains_is_trashed_after_the_first"
       ],
       "text": "A used Option card is immediately trashed as pending processing as soon as the timing when its 1st [Main] effect has been resolved, unless that Option card is considered to be placed in an area. Other effects and rule checks don't interrupt the period between [Main] effect activation and trashing. (For details, refer to 18-1 \"Pending Processing\")"
     },
@@ -15318,9 +15332,9 @@
         "total": 66
       },
       "4": {
-        "gap": 84,
+        "gap": 83,
         "not_testable": 34,
-        "proven": 21,
+        "proven": 22,
         "total": 139
       },
       "5": {
@@ -15354,7 +15368,7 @@
         "total": 13
       }
     },
-    "gap": 607,
+    "gap": 606,
     "mechanics": {
       "gap_blocking": 8,
       "gap_nonblocking": 320,
@@ -15362,7 +15376,7 @@
       "proven": 235
     },
     "not-testable": 246,
-    "proven": 266
+    "proven": 267
   },
   "version": 1
 }

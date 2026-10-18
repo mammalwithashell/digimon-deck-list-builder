@@ -319,11 +319,18 @@ fn ex13_060_chronicle_trigger_is_once_per_turn() {
     let mut runner = builder()
         .hand(0, &["CHR-TAMER", "CHR-TAMER-2"])
         .memory(10)
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
         .start();
     runner.skip_mulligan();
     runner.place_on_field(0, CARD_ID, Some(0));
     let slot = hand_index(&runner, 0, "CHR-TAMER");
     runner.play(0, slot).expect("tamer plays");
+    // Decline the trigger's attack (P1 has no security: an attack would win
+    // the game at once, and a finished game accepts no second play) and the
+    // refire, as the single-trigger test does.
+    runner.execute_action(0, PASS).expect("decline the attack");
+    runner.execute_action(0, PASS).expect("decline the refire");
     let _ = runner.auto_resolve();
     let slot = hand_index(&runner, 0, "CHR-TAMER-2");
     runner.play(0, slot).expect("second tamer plays");

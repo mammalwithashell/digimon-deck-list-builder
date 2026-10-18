@@ -109,6 +109,8 @@ fn ex11_020_inherited_may_delete_other_digimon_to_end_opponent_attack() {
         .add_card(make_test_card("ATTACKER", "Attacker"))
         .add_card(make_test_card("SECURITY", "Security"))
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_stack(0, &["EX11-020", "CARRIER"]);
     runner.place_on_field(0, "OTHER", Some(0));
@@ -166,6 +168,8 @@ fn ex11_020_inherited_decline_does_not_delete_or_end_attack() {
         .add_card(make_test_card("ATTACKER", "Attacker"))
         .add_card(make_test_card("SECURITY", "Security"))
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_stack(0, &["EX11-020", "CARRIER"]);
     runner.place_on_field(0, "OTHER", Some(0));
@@ -204,6 +208,8 @@ fn ex11_020_inherited_lone_carrier_cannot_end_attack_for_free() {
         .add_card(make_test_card("ATTACKER", "Attacker"))
         .add_card(make_test_card("SECURITY", "Security"))
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_stack(0, &["EX11-020", "CARRIER"]);
     let attacker = runner.place_on_field(1, "ATTACKER", Some(0));

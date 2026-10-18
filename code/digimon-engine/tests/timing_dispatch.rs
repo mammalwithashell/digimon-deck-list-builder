@@ -841,6 +841,10 @@ fn end_of_attack_fires_for_all_players() {
         .hand(0, &["ATK", "OBS"])
         .deck(0, &filler)
         .deck(1, &filler)
+        // P1 keeps a security card: an attack on a player with 0 security
+        // wins the game at once (§1-2-3-1) and a finished game processes no
+        // [End of Attack] (§1-2-2; G-ENGINE-GAME-OVER-NOT-TERMINAL).
+        .security(1, &["F"])
         .memory(10)
         .start();
     r.register_effect("OBS", Arc::new(EoAttackMemoryGain));

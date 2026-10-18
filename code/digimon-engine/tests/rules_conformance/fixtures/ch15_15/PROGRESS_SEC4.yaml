@@ -1,0 +1,21 @@
+# PROGRESS_SEC4 -- Digimon, Lv.4, red, 4000 DP, play cost 4.
+#   [All Turns] While you have 4 or more security cards, this Digimon gains
+#   <Progress> (While attacking, your opponent's effects don't affect this
+#   Digimon.)
+# A SELF-conditional <Progress>: the card's own `grant_keyword` with an
+# `active_when`, lost as soon as the security count drops below 4. The
+# DebugRunner must not fold it into the printed keywords, or the condition
+# could never be seen off in a test
+# (G-TEST-DEBUGRUNNER-IGNORES-ACTIVE-WHEN-ON-OWN-GRANT-KEYWORD).
+card: PROGRESS_SEC4
+name: Vanguardmon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+effects:
+  - kind: grant_keyword
+    keyword: Progress
+    active_when: { security_count_gte: 4 }
+    summary: "[All Turns] While you have 4 or more security cards, this Digimon gains <Progress> (While attacking, your opponent's effects don't affect this Digimon.)"

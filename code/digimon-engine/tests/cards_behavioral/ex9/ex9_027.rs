@@ -208,6 +208,8 @@ fn ex9_027_inherited_may_delete_carrier_to_end_opponent_attack() {
         .add_card(make_test_card("ATTACKER", "Attacker"))
         .add_card(make_test_card("SECURITY", "Security"))
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_stack(0, &["EX9-027", "CARRIER"]);
     let attacker = runner.place_on_field(1, "ATTACKER", Some(0));

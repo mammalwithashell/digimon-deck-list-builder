@@ -1319,6 +1319,35 @@ fn event_to_dto(event: GameEvent) -> GameEventDto {
                 "target_dp": target_dp,
             });
         }
+        GameEvent::CardToHand {
+            player,
+            card_id,
+            card_name,
+            source,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = Some(card_id);
+            dto.source_card_name = Some(card_name);
+            dto.meta = serde_json::json!({ "destination": "hand", "source": source });
+        }
+        GameEvent::CardToDeck {
+            player,
+            card_id,
+            card_name,
+            position,
+            source,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = Some(card_id);
+            dto.source_card_name = Some(card_name);
+            dto.meta = serde_json::json!({
+                "destination": "deck",
+                "position": position,
+                "source": source,
+            });
+        }
         GameEvent::Trash {
             player,
             card_id,

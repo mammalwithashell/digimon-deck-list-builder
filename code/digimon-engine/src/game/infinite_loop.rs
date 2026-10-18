@@ -22,9 +22,12 @@
 //! handles, suspension, effective DP, per-turn activation counts, memory) --
 //! the state a repeating set of processing keeps returning to. Resolving a
 //! DECLINABLE player decision (`selection_can_stop_a_loop`) clears the watch,
-//! and so does the outermost drain settling with nothing parked; a forced
-//! decision (a mandatory pick, a trigger order) does not, since it gives no
-//! ability to stop the loop. A signature seen [`LOOP_SIGNATURE_REPEATS`]
+//! and so does a player's turn action (a runner action, `end_turn`, a
+//! declared attack, a play from hand; see `Game::reset_loop_watch`); the
+//! outermost drain settling does NOT -- a loop can span several drains with
+//! no decision between them. A forced decision (a mandatory pick, a trigger
+//! order) does not clear it either, since it gives no ability to stop the
+//! loop. A signature seen [`LOOP_SIGNATURE_REPEATS`]
 //! times therefore means the same state recurred with no optional decision
 //! offered within the cycle: neither player can stop it, and the game ends in
 //! the §18-3-2 draw (`GameEvent::InfiniteLoop`,
@@ -155,6 +158,12 @@ impl Game {
             player.battle_area.len().hash(&mut h);
             for (index, permanent) in player.battle_area.iter().enumerate() {
                 hash_permanent(permanent, &mut h);
+                // A transiently empty slot (a just-emptied material carrier
+                // mid-cleanup) has no top card and no DP; the rule check skips
+                // it too.
+                if permanent.card_sources.is_empty() {
+                    continue;
+                }
                 // Effective DP: a chain whose only progress is DP ("+1000
                 // DP; then, if it has less than 6000 DP, ...") is finite.
                 self.effective_dp(PermanentHandle {
@@ -225,9 +234,12 @@ impl Game {
             self.pending_selection.as_ref().map(OptionalDecisionMark::of);
     }
 
-    /// A declinable player decision resolved, or the outermost drain settled
-    /// with nothing parked: whatever repeats from here on had an optional
-    /// decision (or fresh processing) in between, so it starts a new watch.
+    /// A player's decision resolved -- a declinable prompt, or a turn action
+    /// (`decode_action`'s non-selection path, `end_turn`, a player-declared
+    /// attack, a play from hand, every DebugRunner action wrapper): whatever
+    /// repeats from here on had that decision in between, so it starts a new
+    /// watch. An outermost drain settling is NOT a decision and keeps the
+    /// watch (§18-3-1: a loop can run through several drains).
     pub(crate) fn reset_loop_watch(&mut self) {
         self.loop_watch.clear();
         self.loop_watch_steps = 0;
@@ -268,10 +280,10 @@ impl Game {
         });
         self.effect_queue.clear();
         // The processing the loop cut off is over with the game: drop the
-        // outermost-drain batch windows it left open, so nothing flushes them
-        // later. Done here, not in `finish_game`: other terminal outcomes let
-        // in-flight processing finish (card tests resolve attacks on boards an
-        // `end_turn` decked out), while the loop draw halts all processing.
+        // outermost-drain batch windows it left open. Every game over halts
+        // the drainer (`drain_effect_queue` checks `game_over`, §1-2-2); the
+        // loop draw additionally empties the windows because its queue is
+        // what the loop was made of.
         self.pending_hand_discard = None;
         self.pending_deck_add = None;
         self.pending_added_sources.clear();
@@ -313,5 +325,122 @@ mod tests {
             !selection_can_stop_a_loop(sel, None),
             "without the mark the prompt would be forced"
         );
+    }
+}
+
+#[cfg(test)]
+mod loop_watch_tests {
+    use std::sync::Arc;
+
+    use super::{LOOP_SIGNATURE_REPEATS, LOOP_WATCH_START};
+    use crate::card_source::CardHandle;
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    use crate::effect::{CardEffect, Effect};
+    use crate::game::TerminalOutcomeReason;
+
+    /// "[On Play] Suspend this Digimon." -- mandatory; a no-op once suspended,
+    /// so every drain that resolves it returns the board to the same state.
+    struct SuspendSelfOnPlay;
+
+    impl CardEffect for SuspendSelfOnPlay {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            vec![Effect::on_play(card)
+                .name("[On Play] Suspend this Digimon")
+                .process(|ctx| {
+                    if let Some(me) = ctx.source_permanent {
+                        ctx.suspend(me);
+                    }
+                })
+                .build()]
+        }
+    }
+
+    fn runner() -> (DebugRunner, crate::permanent::PermanentHandle) {
+        let card = make_test_card("LOOP-DRAIN", "Drainmon");
+        let mut r = DebugRunner::builder().add_card(card).start();
+        r.register_effect("LOOP-DRAIN", Arc::new(SuspendSelfOnPlay));
+        let h = r.place_on_field(0, "LOOP-DRAIN", None);
+        (r, h)
+    }
+
+    /// §18-3-1 / §18-3-2: a loop that spans several OUTERMOST drains with no
+    /// decision between them is still a loop neither player can stop. Each
+    /// `Game::fire_on_play` is its own outermost drain (the engine-internal
+    /// stand-in for processing that re-fires the same trigger, e.g. an effect
+    /// that starts a new attack with no decision); nothing is parked and no
+    /// decision is made, so the watch spans the drains and the repeating
+    /// state ends the game in the draw.
+    #[test]
+    fn loop_across_outermost_drains_with_no_decision_ends_in_a_draw() {
+        let (mut r, h) = runner();
+        let budget = u32::from(LOOP_WATCH_START) + u32::from(LOOP_SIGNATURE_REPEATS) + 2;
+        let mut drains = 0;
+        for _ in 0..budget {
+            r.game.fire_on_play(0, h.index as usize);
+            drains += 1;
+            if r.game.game_over {
+                break;
+            }
+        }
+        assert!(
+            r.game.game_over,
+            "the same state recurred across {drains} outermost drains with no decision: a loop"
+        );
+        assert_eq!(r.game.winner, None, "the §18-3-2 draw");
+        assert_eq!(
+            r.game.terminal_outcome_reason,
+            Some(TerminalOutcomeReason::InfiniteLoopDraw)
+        );
+    }
+
+    /// The same repetitions driven as PLAYER DECISIONS (the DebugRunner's
+    /// wrapper, like a runner's `decode_action`) start a new watch each
+    /// time: no loop, the game goes on.
+    #[test]
+    fn repeated_player_decisions_are_not_a_loop() {
+        let (mut r, h) = runner();
+        let budget = u32::from(LOOP_WATCH_START) + u32::from(LOOP_SIGNATURE_REPEATS) + 10;
+        for _ in 0..budget {
+            r.fire_on_play(0, h.index as usize);
+        }
+        assert!(!r.game.game_over, "each wrapper call is a decision: no loop");
+    }
+}
+
+#[cfg(test)]
+mod rule_check_fixpoint_tests {
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    use crate::enums::{Expiry, ModifierType};
+    use crate::modifiers::ModifierEntry;
+
+    /// §17-1-1: the rule check's fixpoint ends when a pass changes nothing,
+    /// not at the §18-3 loop watch. A 0 DP Digimon that can't be deleted is a
+    /// stable state: the rule check acts on it every pass and nothing
+    /// happens; the drain must settle with the game going on, not declare a
+    /// draw for a loop that does not exist.
+    #[test]
+    fn rule_check_that_makes_no_progress_terminates_without_a_draw() {
+        let card = make_test_card("STUCK-ZERO", "Stuckmon");
+        let mut r = DebugRunner::builder().add_card(card).start();
+        let h = r.place_on_field(0, "STUCK-ZERO", None);
+        r.game.modifiers.add(
+            h,
+            ModifierEntry::simple(ModifierType::CannotBeDestroyed, 1, Expiry::EndOfTurn, 0),
+        );
+        r.game.modifiers.add(
+            h,
+            ModifierEntry::simple(ModifierType::ChangeDp, -100_000, Expiry::EndOfTurn, 1),
+        );
+        r.game.drain_effect_queue();
+        assert!(!r.game.game_over, "a stable rule-check state is not a loop");
+        assert_eq!(r.game.terminal_outcome_reason, None);
+        assert!(
+            r.game.players[0]
+                .battle_area
+                .iter()
+                .any(|p| p.top_card().card_id(&r.game.card_data) == "STUCK-ZERO"),
+            "it can't be deleted: it stays at 0 DP"
+        );
+        assert!(r.game.pending_selection.is_none());
     }
 }

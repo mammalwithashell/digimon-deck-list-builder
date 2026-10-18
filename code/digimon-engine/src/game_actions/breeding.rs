@@ -36,6 +36,9 @@ impl Game {
     /// Process the Training trash list in reverse index order so earlier
     /// deletes don't shift later indices out from under us.
     pub fn move_from_breeding(&mut self, player_id: PlayerId) -> bool {
+        if self.game_over {
+            return false;
+        }
         let field_slots = self.rules.field_slots;
         {
             let player = self.player(player_id);

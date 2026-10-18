@@ -139,6 +139,8 @@ fn geogrey_runner() -> DebugRunner {
         .expect("BT21-042 found in embedded DSL pack")
         .add_card(make_filler("FILL"))
         .memory(12)
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
         .start()
 }
 
@@ -614,8 +616,10 @@ fn bt21_042_observer_accept_free_digivolves_self_into_rizegreymon() {
     // Hand: -2 (Marcus Damon played + RizeGreymon free-digivolved on top).
     assert_eq!(
         runner.hand_size(0),
-        hand_before - 2,
-        "hand decreased by 2: Marcus Damon played, RizeGreymon free-digivolved"
+        // -2 for the two cards that left the hand, +1 for the card the
+        // digivolution drew (the runner now has a deck to draw from).
+        hand_before - 2 + 1,
+        "hand decreased by 2: Marcus Damon played, RizeGreymon free-digivolved, digivolution drew 1"
     );
 }
 

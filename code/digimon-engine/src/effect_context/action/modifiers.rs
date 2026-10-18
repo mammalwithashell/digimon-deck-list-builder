@@ -239,14 +239,15 @@ impl<'a> EffectContext<'a> {
         keyword: Keyword,
         predicate: crate::modifiers::UntilConditionFn,
     ) {
-        if !self.can_affect_permanent(target) {
-            return;
-        }
-        self.game.modifiers.grant_keyword_with_until_condition(
+        // §15-15-5-2 / §15-15-5-4 record-and-suppress (as `add_modifier`): the
+        // grant is recorded even on an immune or `<Progress>`-shielded target
+        // and is not had until it can be affected again.
+        self.game.modifiers.grant_keyword_with_until_condition_from_effect(
             target,
             keyword,
             predicate,
             self.player,
+            self.source_kind,
         );
         self.game.mark_until_condition_dirty();
         // §16-39-2: a `<Progress>` gained mid-attack shields at once.
@@ -608,12 +609,20 @@ impl<'a> EffectContext<'a> {
     }
 
     pub fn grant_keyword(&mut self, target: PermanentHandle, keyword: Keyword, expiry: Expiry) {
-        if !self.can_affect_permanent(target) {
-            return;
-        }
-        self.game
-            .modifiers
-            .grant_keyword(target, keyword, expiry, self.player);
+        // §15-15-5-2 / §15-15-5-4 record-and-suppress (as `add_modifier`): a
+        // keyword gained while the target is immune (or `<Progress>`-shielded)
+        // is recorded and not had; it is had as soon as the target can be
+        // affected again, for the rest of the grant's duration (Q6179), and
+        // one gained BEFORE an immunity stops being had while it lasts
+        // (Q6178). The granted TRIGGERED bodies below are fire-time gated.
+        // G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP.
+        self.game.modifiers.grant_keyword_from_effect(
+            target,
+            keyword,
+            expiry,
+            self.player,
+            self.source_kind,
+        );
         self.grant_keyword_triggered_auto_effects(target, keyword, expiry);
         self.game.mark_until_condition_dirty();
         // §16-39-2: a `<Progress>` gained mid-attack shields at once.
@@ -621,8 +630,13 @@ impl<'a> EffectContext<'a> {
         // §16-16-2: "<Blitz> effects execute processing." The effect that
         // grants <Blitz> ("[When Digivolving] <Blitz>", "Then, <Blitz>")
         // executes its processing here, in place: the optional attack
-        // declaration, gated on the opponent's memory at activation.
-        if keyword == Keyword::Blitz {
+        // declaration, gated on the opponent's memory at activation. The grant
+        // above is record-and-suppress, but the processing is one-shot: like
+        // delete / suspend it keeps the `can_affect_permanent` skip, so an
+        // immune or `<Progress>`-shielded target gains the (suppressed) keyword
+        // and is NOT offered the attack (§15-15-5-2; merge note from the
+        // G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP review).
+        if keyword == Keyword::Blitz && self.can_affect_permanent(target) {
             crate::cards::keyword_effects::blitz_process(self, target);
         }
     }

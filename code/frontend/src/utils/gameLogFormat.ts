@@ -122,6 +122,15 @@ export function formatEvent(
       if (!card) return [];
       return [`${actor} milled ${card}.`];
     }
+    case 'card_to_hand': {
+      if (!card) return [];
+      return [`${actor} returned ${card} to their hand.`];
+    }
+    case 'card_to_deck': {
+      if (!card) return [];
+      const position = event.meta.position === 'top' ? 'top' : 'bottom';
+      return [`${actor} placed ${card} on the ${position} of their deck.`];
+    }
     case 'reveal': {
       if (!card) return [];
       const zone = event.meta.source_zone as string | undefined;

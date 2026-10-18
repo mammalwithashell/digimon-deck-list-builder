@@ -122,7 +122,6 @@ use crate::card_source::CardHandle;
 use crate::effect::Effect;
 use crate::effect_context::{CountCappedZone, EffectContext, EffectReadContext};
 use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, Zone};
-use crate::modifiers::ModifierEntry;
 use crate::replacement::{ReplacementCause, ReplacementSubject};
 use crate::resume::{
     KeywordAscensionChoiceState, KeywordMaterialSaveTamerSelectionState,
@@ -2100,26 +2099,18 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     let Some(me) = ctx.source_permanent else {
                         return;
                     };
-                    let owner = me.player;
                     // Grant MayAttack — drives `has_end_of_turn_keywords`
                     // to park the phase in EOT-action and the §4.6 mask
                     // emitter to surface attack bits for this permanent.
-                    ctx.game.modifiers.add(
-                        me,
-                        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, owner),
-                    );
+                    // Through the context's gated install (not a raw
+                    // registry push) so the entry carries the keyword
+                    // effect's category (§15-2-1-1) like every other
+                    // effect-installed modifier.
+                    ctx.add_modifier(me, ModifierType::MayAttack, 1, Expiry::EndOfTurn);
                     // Grant CanAttackUnsuspended — widens the §4.6 mask
                     // to include unsuspended-target attack bits, matching
                     // DCGO's `defenderCondition: !defender.IsSuspended`.
-                    ctx.game.modifiers.add(
-                        me,
-                        ModifierEntry::simple(
-                            ModifierType::CanAttackUnsuspended,
-                            1,
-                            Expiry::EndOfTurn,
-                            owner,
-                        ),
-                    );
+                    ctx.add_modifier(me, ModifierType::CanAttackUnsuspended, 1, Expiry::EndOfTurn);
                 })
                 .build(),
             // (2) EndOfAttack — self-delete when the carrier was the
@@ -2204,11 +2195,8 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 let Some(me) = ctx.source_permanent else {
                     return;
                 };
-                let owner = me.player;
-                ctx.game.modifiers.add(
-                    me,
-                    ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, owner),
-                );
+                // Gated install (see `<Execute>` above).
+                ctx.add_modifier(me, ModifierType::MayAttack, 1, Expiry::EndOfTurn);
             })
             .build()],
 

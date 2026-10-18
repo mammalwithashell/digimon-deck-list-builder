@@ -100,6 +100,13 @@ impl Game {
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
     ) -> Option<usize> {
+        if self.game_over {
+            return None;
+        }
+        // §18-3: a player's play is a decision; the loop watch starts over.
+        if matches!(source, PlaySource::ByHand) {
+            self.reset_loop_watch();
+        }
         self.play_from_hand_with_cost_result(player_id, hand_index, cost_delta, source, true)
             .into_option()
     }
@@ -363,6 +370,10 @@ impl Game {
     /// Hand/Trash per-turn activation counters (§4.5c-residual 🟡) are not
     /// tracked here; see docs/RUST_PYTHON_PARITY.md §4.5c.
     pub fn activate_hand_main(&mut self, player_id: PlayerId, hand_index: usize) -> bool {
+        // §1-2-2: a finished game accepts no action.
+        if self.game_over {
+            return false;
+        }
         let (card_id, handle, card_kind) = {
             let player = match self.players.get(player_id as usize) {
                 Some(p) => p,
@@ -431,6 +442,10 @@ impl Game {
     ///
     /// Mirrors Python's `_execute_field_main_effect`.
     pub fn activate_field_main(&mut self, player_id: PlayerId, field_index: usize) -> bool {
+        // §1-2-2: a finished game accepts no action.
+        if self.game_over {
+            return false;
+        }
         // Phase F Task 6 — breeding-area Training dispatch.
         //
         // `field_index == BREEDING_TARGET (=14)` routes to the breeding-area

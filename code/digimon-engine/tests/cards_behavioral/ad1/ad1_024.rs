@@ -91,7 +91,14 @@ fn fighter_mode_runner(extra: &[CardData]) -> DebugRunner {
     for c in extra {
         b = b.add_card(c.clone());
     }
-    b.hand(0, &["AD1-024"]).memory(10).start()
+    // Both players draw on the turn changes the tests make; a deck-out would
+    // end the game and stop the processing they then expect
+    // (G-ENGINE-GAME-OVER-NOT-TERMINAL).
+    b.hand(0, &["AD1-024"])
+        .deck(0, &["AD1-024-BASE"; 8])
+        .deck(1, &["AD1-024-BASE"; 8])
+        .memory(10)
+        .start()
 }
 
 /// Resolve the currently pending selection by its first non-PASS action.

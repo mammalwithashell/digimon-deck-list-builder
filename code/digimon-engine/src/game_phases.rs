@@ -407,6 +407,9 @@ impl Game {
         if self.game_over {
             return;
         }
+        // §18-3: the turn change hands the next decision to the other
+        // player; the loop watch starts over (see `drain_effect_queue`).
+        self.reset_loop_watch();
         self.turn_end_check_deferred = false;
 
         self.set_turn_phase(GamePhase::EndTurn);
@@ -1064,6 +1067,9 @@ impl Game {
     /// over-cost play pushed it there — that overflow is preserved and carried
     /// through the turn switch. Matches Python `game.pass_turn`.
     pub fn pass_turn(&mut self) {
+        if self.game_over {
+            return;
+        }
         if self.memory >= 0 {
             self.memory = -3;
         }

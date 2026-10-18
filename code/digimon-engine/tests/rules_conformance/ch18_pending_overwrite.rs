@@ -1578,3 +1578,139 @@ fn piercing_without_the_attacker_checks_nothing() {
     );
     assert_eq!(r.security_count(1), 3);
 }
+
+// ─── §9-1-5: an Option an EFFECT uses; an Option with two [Main] effects ────
+
+/// §9-1-5 (as above). The Option is used by an EFFECT, from inside that
+/// effect's own selection callback (the EX7-073 / P-180 shape): P0's
+/// `OP_USE_OPT_FREE` ("[On Play] You may use 1 Option card from your hand
+/// without paying the cost") uses `MAIN_ALL_MINUS3000` ("[Main] All of your
+/// opponent's Digimon get -3000 DP for the turn" -- it parks no decision, so
+/// its whole body runs inside the hand-pick callback), which leaves P1's
+/// 3000 DP `WOULD_DEL_MAY_MEM` at 0 DP. The rule check that follows must find
+/// the Option already in the trash: when the 0 DP Digimon's would-be-deleted
+/// decision parks, `MAIN_ALL_MINUS3000` is in P0's trash, and in the event
+/// log its trash precedes the would-be-deleted effect and the deletion.
+///
+/// Red on the base engine (83aa6bf02, Task 7 merged): the body ran with
+/// `draining_deferred > 0`, the OptionMain arm's disposal was skipped, and
+/// the rule check between queued effects deleted the Digimon first -- the
+/// trash was empty at the would-be-deleted decision. (An Option whose [Main]
+/// parks a pick does not show it: its body then finishes inside the pick's
+/// own resolution, at depth 0, where the old gate already disposed it.)
+#[test]
+fn option_used_by_an_effect_is_trashed_before_the_rule_check_its_main_caused() {
+    cite!(
+        "9-1-5",
+        "2886ba315f2847fdd735e7c839b0b9c80cd0bf7391a1596460851d82cc7eb003"
+    );
+    let mut r = fixtures::builder(&[
+        fixtures::ch15_08_cards(),
+        fixtures::ch17_cards(),
+        fixtures::ch18_cards(),
+    ])
+    .hand(0, &["MAIN_ALL_MINUS3000"])
+    .deck(0, &[FILL; 4])
+    .deck(1, &[FILL; 4])
+    .memory(3)
+    .start();
+    r.place_on_field(1, "WOULD_DEL_MAY_MEM", Some(0));
+    let user = r.place_on_field(0, "OP_USE_OPT_FREE", Some(0));
+    let cp = r.event_checkpoint();
+    r.fire_on_play(0, user.index as usize);
+    pick_hand_card(&mut r, 0, "MAIN_ALL_MINUS3000");
+    let sel = r
+        .pending_selection()
+        .expect("the 0 DP Digimon's would-be-deleted decision");
+    assert!(
+        sel.is_optional && sel.selecting_player == 1,
+        "the rule check is about to delete WOULD_DEL_MAY_MEM: {sel:?}"
+    );
+    assert_eq!(
+        field_top_ids(&r, 1),
+        owned(&["WOULD_DEL_MAY_MEM"]),
+        "not deleted yet"
+    );
+    assert_eq!(
+        trash_ids(&r, 0),
+        owned(&["MAIN_ALL_MINUS3000"]),
+        "used from inside an effect's selection callback: the Option was still trashed before \
+         the rule check"
+    );
+    accept(&mut r, 1);
+    resolve_prompts(&mut r);
+    assert!(field_top_ids(&r, 1).is_empty(), "the 0 DP Digimon was deleted");
+    let option_trashed = trash_event_index(&r, cp, "MAIN_ALL_MINUS3000")
+        .expect("GameEvent::Trash for the used Option");
+    let would_del = memory_event_index(&r, cp, "WOULD_DEL_MAY_MEM")
+        .expect("the would-be-deleted effect gained 1 memory");
+    let deleted = trash_event_index(&r, cp, "WOULD_DEL_MAY_MEM")
+        .expect("GameEvent::Trash for the deleted Digimon");
+    assert!(
+        option_trashed < would_del && option_trashed < deleted,
+        "event order: the Option's trash ({option_trashed}) precedes the rule check's \
+         would-be-deleted effect ({would_del}) and deletion ({deleted})"
+    );
+}
+
+/// §9-1-5 "... as soon as the timing when its 1st [Main] effect has been
+/// resolved". P0's `MAIN_TWO` has two [Main] effects: "1 of your opponent's
+/// Digimon gets -3000 DP for the turn" and "Gain 1 memory". After the FIRST
+/// has been resolved the card is trashed; the rule check then deletes the
+/// 0 DP `WOULD_DEL_MAY_MEM` (its would-be-deleted decision parks with the
+/// Option already in the trash and the second [Main] not yet resolved), and
+/// the second [Main] resolves afterwards, as the pending effect of a card in
+/// the trash: the event log shows the Option's trash, then the would-be-
+/// deleted effect's memory, then the second [Main]'s memory.
+#[test]
+fn option_with_two_mains_is_trashed_after_the_first() {
+    cite!(
+        "9-1-5",
+        "2886ba315f2847fdd735e7c839b0b9c80cd0bf7391a1596460851d82cc7eb003"
+    );
+    let mut r = fixtures::builder(&[
+        fixtures::ch15_08_cards(),
+        fixtures::ch17_cards(),
+        fixtures::ch18_cards(),
+    ])
+    .hand(0, &["MAIN_TWO"])
+    .deck(0, &[FILL; 4])
+    .deck(1, &[FILL; 4])
+    .memory(3)
+    .start();
+    r.place_on_field(0, FILL, Some(0));
+    r.place_on_field(1, "WOULD_DEL_MAY_MEM", Some(0));
+    let cp = r.event_checkpoint();
+    use_option(&mut r, 0, "MAIN_TWO");
+    pick_field(&mut r, 0);
+    let sel = r
+        .pending_selection()
+        .expect("the 0 DP Digimon's would-be-deleted decision");
+    assert!(
+        sel.is_optional && sel.selecting_player == 1,
+        "the rule check is about to delete WOULD_DEL_MAY_MEM: {sel:?}"
+    );
+    assert_eq!(
+        trash_ids(&r, 0),
+        owned(&["MAIN_TWO"]),
+        "trashed as soon as its 1st [Main] was resolved"
+    );
+    assert!(
+        memory_event_index(&r, cp, "MAIN_TWO").is_none(),
+        "the 2nd [Main] has not resolved yet"
+    );
+    accept(&mut r, 1);
+    resolve_prompts(&mut r);
+    assert!(field_top_ids(&r, 1).is_empty(), "the 0 DP Digimon was deleted");
+    let option_trashed = trash_event_index(&r, cp, "MAIN_TWO")
+        .expect("GameEvent::Trash for the used Option");
+    let would_del = memory_event_index(&r, cp, "WOULD_DEL_MAY_MEM")
+        .expect("the would-be-deleted effect gained 1 memory");
+    let second_main = memory_event_index(&r, cp, "MAIN_TWO")
+        .expect("the 2nd [Main] gained 1 memory");
+    assert!(
+        option_trashed < would_del && would_del < second_main,
+        "event order: trash ({option_trashed}) < would-be-deleted ({would_del}) < 2nd [Main] \
+         ({second_main})"
+    );
+}

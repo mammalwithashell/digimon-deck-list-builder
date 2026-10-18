@@ -41,7 +41,7 @@
 use crate::fixtures;
 use crate::support::*;
 use digimon_engine::debug_runner::{DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{EffectSourceKind, PlayerId};
+use digimon_engine::enums::{EffectSourceKind, Keyword, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 
 fn ch15_15() -> DebugRunnerBuilder {
@@ -803,6 +803,44 @@ fn progress_lost_mid_attack_applies_held_opponent_effects_immediately() {
         3,
         "deleted by the rule check before any security check"
     );
+
+    // The direct shape: the attacker's OWN "[All Turns] While you have 4 or
+    // more security cards, this Digimon gains <Progress>" (`PROGRESS_SEC4`,
+    // 4000 DP) -- the same sequence, with the conditional keyword read from
+    // the card's own clause (G-TEST-DEBUGRUNNER-IGNORES-ACTIVE-WHEN-ON-OWN-
+    // GRANT-KEYWORD: the DebugRunner no longer folds it into the printed
+    // keywords, so it is seen switching off).
+    let mut r = ch15_15()
+        .deck(0, &[FILL; 6])
+        .deck(1, &[FILL; 6])
+        .security(0, &[FILL; 4])
+        .security(1, &[FILL; 3])
+        .memory(10)
+        .start();
+    let attacker = r.place_on_field(0, "PROGRESS_SEC4", Some(0));
+    assert!(r.game.has_keyword(attacker, Keyword::Progress), "4 security cards: <Progress>");
+    play_and_resolve(&mut r, 1, "DIGI_MINUS_3K");
+    assert_eq!(dp(&r, attacker), 1000, "precondition: affected before attacking");
+    r.place_on_field(1, "OPP_WA_MINUS3000", Some(0));
+    r.place_on_field(1, "OPP_ATK_TRASH_OPP_SEC", Some(0));
+    r.attack_player(attacker, 1, false);
+    assert_eq!(
+        dp(&r, attacker),
+        4000,
+        "attacking with its own conditional <Progress>: the earlier -3000 DP doesn't affect it"
+    );
+    choose(&mut r, "OPP_WA_MINUS3000");
+    resolve_prompts(&mut r);
+    assert_eq!(r.security_count(0), 3, "P1's effect trashed P0's top security card");
+    assert!(
+        !on_field(&r, 0, "PROGRESS_SEC4"),
+        "3 security cards: no <Progress>, both -3000 DP apply at once, 0 DP, deleted"
+    );
+    assert_eq!(
+        r.security_count(1),
+        3,
+        "deleted by the rule check before any security check"
+    );
 }
 
 /// §16-39-1 (as above). §15-15-5-2 (as above).
@@ -903,4 +941,272 @@ fn digimon_only_immunity_blocks_a_digimon_tokens_effect() {
         12000,
         "the token's [On Deletion] is a Digimon effect: it doesn't affect it"
     );
+}
+
+// ─── §15-15-5-4 / §15-15-5-2 / §16-39-1: a GAINED KEYWORD (registry grant) ──
+
+/// §15-15-5-4 (as above: the rule's own example is a gained <Security A. -1>).
+/// §15-15-5-2 (as above). Official Q&A Q6179.
+///
+/// `granted_effect_not_considered_had_while_immune` authors the gained
+/// <Security A. -1> with the modifier idiom; this is the same effect authored
+/// as a keyword grant (`DIGI_GRANT_KW_SA_MINUS1`, the `grant_keyword` registry
+/// path), which must agree: P1's `IMMUNE_DIGI_ONLY` (P0's Digimon effects
+/// don't affect it until the end of P0's turn) gains <Security A. -1> until
+/// the end of P1's turn --
+/// - in P0's turn it is not considered to have it: it checks 1 card;
+/// - in P1's turn the immunity has ended and the gained keyword, still in
+///   its duration, is had: it checks 0 cards, and its attack on P0 removes
+///   none of P0's security.
+#[test]
+fn granted_keyword_not_considered_had_while_immune_had_once_immunity_lapses() {
+    cite!(
+        "15-15-5-4",
+        "affbf2f4ae2c52abeb3bcbd00844ac85000dfdc830bb29ea70095ec8e0801229"
+    );
+    cite!(
+        "15-15-5-2",
+        "780144a7af6d35d35c824ad67fea8c742362d65bff1707531bdbd9955dc54ffc"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let imm = play_and_resolve(&mut r, 1, "IMMUNE_DIGI_ONLY");
+    play_and_resolve(&mut r, 0, "DIGI_GRANT_KW_SA_MINUS1");
+    assert_eq!(
+        r.game.effective_security_strike(imm),
+        1,
+        "immune: not considered to have the gained <Security A. -1>"
+    );
+    assert!(
+        !r.game.has_keyword(imm, Keyword::SecurityAttackMinus(1)),
+        "immune: the keyword is not had"
+    );
+    r.pass_turn();
+    resolve_prompts(&mut r);
+    assert_eq!(r.turn_player(), 1, "P1's turn");
+    assert!(
+        r.game.has_keyword(imm, Keyword::SecurityAttackMinus(1)),
+        "no longer immune: the gained keyword, still in its duration, is had"
+    );
+    assert_eq!(
+        r.game.effective_security_strike(imm),
+        0,
+        "no longer immune: it has the gained <Security A. -1>"
+    );
+    let before = r.security_count(0);
+    r.attack_player(imm, 0, false);
+    resolve_prompts(&mut r);
+    assert_eq!(r.security_count(0), before, "it checks 0 security cards");
+}
+
+/// §15-15-5-1 (as above). Official Q&A Q6178 (ST23-09): "As soon as it gains
+/// the 'effects don't affect' effect, it will no longer be affected."
+///
+/// The converse direction for a gained keyword: P1's `IMMUNE_DIGI_ONLY` (its
+/// [On Play] not yet activated) gains <Security A. -1> from P0's
+/// `DIGI_GRANT_KW_SA_MINUS1` and has it (it would check 0 cards). Its [On
+/// Play] then activates (P0's Digimon effects don't affect it): the keyword
+/// is no longer had -- it checks 1 card again -- for as long as the immunity
+/// lasts.
+#[test]
+fn granted_keyword_stops_being_had_when_immunity_starts() {
+    cite!(
+        "15-15-5-1",
+        "5f62baf83d024884f00e48e9464e881636542e141762f6036fdc9c43db57c3d2"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let imm = r.place_on_field(1, "IMMUNE_DIGI_ONLY", Some(0));
+    play_and_resolve(&mut r, 0, "DIGI_GRANT_KW_SA_MINUS1");
+    assert!(
+        r.game.has_keyword(imm, Keyword::SecurityAttackMinus(1)),
+        "precondition: the gained keyword is had"
+    );
+    assert_eq!(r.game.effective_security_strike(imm), 0, "precondition");
+    r.fire_on_play(1, imm.index as usize);
+    resolve_prompts(&mut r);
+    assert!(
+        !r.game.has_keyword(imm, Keyword::SecurityAttackMinus(1)),
+        "immune: the keyword gained before the immunity is no longer had"
+    );
+    assert_eq!(
+        r.game.effective_security_strike(imm),
+        1,
+        "immune: it checks 1 card again"
+    );
+}
+
+/// §16-39-1 (as above). §15-15-5-4 (as above).
+///
+/// P1's `DIGI_GRANT_KW_SA_MINUS1` gives P0's `PROGRESS` <Security A. -1>
+/// until the end of P0's turn; not attacking, `PROGRESS` has it (0 checks).
+/// It attacks P1 (3 security cards): while attacking it isn't affected by
+/// P1's effect, so the gained keyword is not had and it checks 1 card. When
+/// the attack ends the keyword (still in its duration) is had again.
+#[test]
+fn progress_attacker_does_not_have_a_keyword_an_opponent_granted_while_attacking() {
+    cite!(
+        "16-39-1",
+        "e7e71a76297e6988256aba87d4bd179c8bdfee7253b8123a05dd238fa6870119"
+    );
+    cite!(
+        "15-15-5-4",
+        "affbf2f4ae2c52abeb3bcbd00844ac85000dfdc830bb29ea70095ec8e0801229"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let attacker = r.place_on_field(0, "PROGRESS", Some(0));
+    play_and_resolve(&mut r, 1, "DIGI_GRANT_KW_SA_MINUS1");
+    assert!(
+        r.game.has_keyword(attacker, Keyword::SecurityAttackMinus(1)),
+        "not attacking: the opponent's granted keyword is had"
+    );
+    assert_eq!(r.game.effective_security_strike(attacker), 0, "0 checks");
+    r.attack_player(attacker, 1, false);
+    resolve_prompts(&mut r);
+    assert_eq!(
+        r.security_count(1),
+        2,
+        "while attacking the gained <Security A. -1> is not had: it checked 1 card"
+    );
+    assert!(on_field(&r, 0, "PROGRESS"), "6000 DP beats the 1000-DP security Digimon");
+    assert!(
+        r.game.has_keyword(attacker, Keyword::SecurityAttackMinus(1)),
+        "the attack is over: the keyword is had again"
+    );
+}
+
+// ─── §16-39-1 / §15-15-5-1: a FORMULA aura (computed live, no stored entry) ─
+
+/// §16-39-1 (as above). §15-15-5-2 (as above).
+///
+/// P1's `OPP_AURA_MINUS_PER_FIELD` ("[All Turns] All of your opponent's
+/// Digimon get -1000 DP for each Digimon and Tamer you have") is a formula
+/// aura, summed live inside `effective_dp` rather than stored as a modifier
+/// entry. P1 has it and a suspended `DIGI_MINUS_3K` (4000 DP): P0's
+/// `PROGRESS` (6000 DP) is at 4000 DP. It attacks the suspended Digimon:
+/// while attacking it isn't affected by P1's aura, battles at 6000 DP, wins
+/// and survives. After the attack P1 has one permanent left: 5000 DP.
+///
+/// Control: P0's `LV5_PLAIN` (7000 DP, no <Progress>) is at 5000 DP and
+/// attacks the same 4000-DP target at 5000 DP: it wins too, but battled
+/// affected (a 4000-DP control would have been deleted with its target).
+#[test]
+fn progress_attacker_not_affected_by_opponent_formula_aura_while_attacking() {
+    cite!(
+        "16-39-1",
+        "e7e71a76297e6988256aba87d4bd179c8bdfee7253b8123a05dd238fa6870119"
+    );
+    cite!(
+        "15-15-5-2",
+        "780144a7af6d35d35c824ad67fea8c742362d65bff1707531bdbd9955dc54ffc"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let attacker = r.place_on_field(0, "PROGRESS", Some(0));
+    r.place_on_field(1, "OPP_AURA_MINUS_PER_FIELD", Some(0));
+    let target = r.place_on_field(1, "DIGI_MINUS_3K", Some(0));
+    set_suspended(&mut r, target, true);
+    assert_eq!(dp(&r, attacker), 4000, "precondition: -2000 DP from the aura");
+    r.attack_digimon(attacker, target, false);
+    resolve_prompts(&mut r);
+    assert!(
+        !on_field(&r, 1, "DIGI_MINUS_3K"),
+        "6000 DP while attacking: it wins the battle"
+    );
+    assert!(on_field(&r, 0, "PROGRESS"), "it survives the battle");
+    assert_eq!(
+        dp(&r, attacker),
+        5000,
+        "affected again after the attack (P1 has one permanent left)"
+    );
+
+    // Control: the same battle without <Progress> is fought at the reduced DP.
+    let mut r = board(&[], &[FILL; 3]);
+    let attacker = r.place_on_field(0, "DIGI_MINUS_3K", Some(0));
+    r.place_on_field(1, "OPP_AURA_MINUS_PER_FIELD", Some(0));
+    let target = r.place_on_field(1, "DIGI_MINUS_3K", Some(0));
+    set_suspended(&mut r, target, true);
+    assert_eq!(dp(&r, attacker), 2000, "control: 4000 - 2000");
+    r.attack_digimon(attacker, target, false);
+    resolve_prompts(&mut r);
+    assert!(
+        !on_field(&r, 0, "DIGI_MINUS_3K"),
+        "control: at 2000 DP the attacker loses to the 4000-DP target"
+    );
+    assert!(on_field(&r, 1, "DIGI_MINUS_3K"), "control: the target survives");
+}
+
+/// §15-15-5-1 (as above). §15-15-5-2 (as above).
+///
+/// P0's `OPP_AURA_MINUS_PER_FIELD` (a Digimon effect) reaches P1's
+/// `IMMUNE_DIGI_ONLY` (12000 DP) before its [On Play]: 11000 DP. Once P0's
+/// Digimon effects don't affect it, the live formula aura doesn't either:
+/// 12000 DP. In P1's turn the immunity has ended: 11000 DP again.
+#[test]
+fn immunity_suppresses_an_opponent_formula_aura_while_it_lasts() {
+    cite!(
+        "15-15-5-1",
+        "5f62baf83d024884f00e48e9464e881636542e141762f6036fdc9c43db57c3d2"
+    );
+    cite!(
+        "15-15-5-2",
+        "780144a7af6d35d35c824ad67fea8c742362d65bff1707531bdbd9955dc54ffc"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    r.place_on_field(0, "OPP_AURA_MINUS_PER_FIELD", Some(0));
+    let imm = r.place_on_field(1, "IMMUNE_DIGI_ONLY", Some(0));
+    assert_eq!(dp(&r, imm), 11000, "precondition: the formula aura affects it");
+    r.fire_on_play(1, imm.index as usize);
+    resolve_prompts(&mut r);
+    assert_eq!(dp(&r, imm), 12000, "immune: the formula aura doesn't affect it");
+    r.pass_turn();
+    resolve_prompts(&mut r);
+    assert_eq!(r.turn_player(), 1, "P1's turn");
+    assert_eq!(dp(&r, imm), 11000, "the immunity ended: affected again");
+}
+
+// ─── §15-2-1-1: a departed token's deferred effect ──────────────────────────
+
+/// §15-2-1-1 (as above). §4-21-5 (a token that leaves the battle area is
+/// removed from the game).
+///
+/// P0's `TOKEN_OD_MINUS_3K` ("[On Deletion] 1 of your opponent's Digimon gets
+/// -3000 DP for the turn") attacks P1's suspended `IMMUNE_DIGI_ONLY` (P0's
+/// Digimon effects don't affect it until the end of P0's turn), loses and is
+/// deleted. Its [On Deletion] offers P1's two Digimon; P0 chooses the immune
+/// one. The -3000 DP is applied after the choice, by a context rebuilt when
+/// the token is already out of the game -- it is still the token's Digimon
+/// effect, so the immune Digimon is not affected: 12000 DP. Control: chosen,
+/// P1's `LV5_PLAIN` (7000 DP) is affected: 4000 DP.
+#[test]
+fn departed_tokens_deferred_effect_is_still_a_digimon_effect() {
+    cite!(
+        "15-2-1-1",
+        "1b26b455c5b8ddc666117716e988f4eaf37a39f7c247beb3eba6b1a6334497a2"
+    );
+    let mut r = board(&[], &[FILL; 3]);
+    let imm = play_and_resolve(&mut r, 1, "IMMUNE_DIGI_ONLY");
+    let plain = r.place_on_field(1, "LV5_PLAIN", Some(0));
+    set_suspended(&mut r, imm, true);
+    let token = r.place_on_field(0, "TOKEN_OD_MINUS_3K", Some(0));
+    r.attack_digimon(token, imm, false);
+    assert!(!on_field(&r, 0, "TOKEN_OD_MINUS_3K"), "the token lost the battle");
+    let sel = r.pending_selection().expect("the token's [On Deletion] choice");
+    assert_eq!(sel.selecting_player, 0, "{sel:?}");
+    assert_eq!(sel.valid_action_ids.len(), 2, "both of P1's Digimon are offered: {sel:?}");
+    pick_field(&mut r, imm.index as u16);
+    resolve_prompts(&mut r);
+    assert_eq!(
+        dp(&r, imm),
+        12000,
+        "the departed token's effect is a Digimon effect: it doesn't affect the immune Digimon"
+    );
+    assert_eq!(dp(&r, plain), 7000, "the other Digimon was not chosen");
+
+    let mut r = board(&[], &[FILL; 3]);
+    let imm = play_and_resolve(&mut r, 1, "IMMUNE_DIGI_ONLY");
+    let plain = r.place_on_field(1, "LV5_PLAIN", Some(0));
+    set_suspended(&mut r, imm, true);
+    let token = r.place_on_field(0, "TOKEN_OD_MINUS_3K", Some(0));
+    r.attack_digimon(token, imm, false);
+    pick_field(&mut r, plain.index as u16);
+    resolve_prompts(&mut r);
+    assert_eq!(dp(&r, plain), 4000, "control: the chosen plain Digimon is affected");
 }

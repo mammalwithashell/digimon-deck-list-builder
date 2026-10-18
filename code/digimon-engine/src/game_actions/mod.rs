@@ -1935,18 +1935,23 @@ impl Game {
         outcome: crate::replacement::ReplacementOutcome,
     ) {
         use crate::replacement::ReplacementOutcome;
+        let card_id = pending.card.card_id(&self.card_data).to_string();
+        let card_name = self.card_data[pending.card.data_index].card_name.clone();
         match outcome {
             ReplacementOutcome::None => {
                 self.trash_card(pending.owner, pending.card);
             }
             ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
                 self.player_mut(pending.owner).hand.push(pending.card);
+                self.log_card_to_hand(pending.owner, card_id, card_name);
             }
             ReplacementOutcome::Redirected(crate::enums::Zone::Deck) => {
                 self.player_mut(pending.owner).deck.insert(0, pending.card);
+                self.log_card_to_deck(pending.owner, card_id, card_name, "bottom");
             }
             ReplacementOutcome::Redirected(crate::enums::Zone::Hand) => {
                 self.player_mut(pending.owner).hand.push(pending.card);
+                self.log_card_to_hand(pending.owner, card_id, card_name);
             }
             ReplacementOutcome::Redirected(other) => {
                 debug_assert!(
@@ -1964,6 +1969,39 @@ impl Game {
                 self.trash_card(pending.owner, pending.card);
             }
         }
+    }
+
+    /// Log `GameEvent::CardToHand` for a used Option a replacement outcome
+    /// returned to its owner's hand instead of the trash.
+    fn log_card_to_hand(&mut self, player: PlayerId, card_id: String, card_name: String) {
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::CardToHand {
+            seq,
+            player,
+            card_id,
+            card_name,
+            source: "option_use".to_string(),
+        });
+    }
+
+    /// Log `GameEvent::CardToDeck` for a used Option a replacement outcome
+    /// redirected to its owner's deck instead of the trash.
+    fn log_card_to_deck(
+        &mut self,
+        player: PlayerId,
+        card_id: String,
+        card_name: String,
+        position: &str,
+    ) {
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::CardToDeck {
+            seq,
+            player,
+            card_id,
+            card_name,
+            position: position.to_string(),
+            source: "option_use".to_string(),
+        });
     }
 
     /// Install a field-selection prompt listing `candidates` as legal host
@@ -2986,8 +3024,24 @@ impl Game {
                 break;
             }
         }
-        self.card_kind_for_handle(handle)
-            .map(source_kind_for_card_kind)
+        // A deleted source's `[On Deletion]` reads its category from the
+        // deletion snapshot (rule 25): a token has left the game by then
+        // (§4-21-5) and is in no zone, yet its effect is a Digimon effect
+        // (§15-2-1-1). G-ENGINE-DEPARTED-TOKEN-CONTEXT-FALLS-BACK-TO-RULE.
+        if let Some(snap) = self
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.deleted_object.as_ref())
+        {
+            if snap.top_card == handle {
+                return source_kind_for_card_kind(snap.card_kind);
+            }
+        }
+        // `card_data_for_handle` also resolves the in-flight transients (an
+        // Option between pay-cost and dispose, the security card being
+        // checked) that the zone scan misses.
+        self.card_data_for_handle(handle)
+            .map(|data| source_kind_for_card_kind(data.card_kind))
             .unwrap_or(EffectSourceKind::Rule)
     }
 

@@ -97,8 +97,13 @@ fn taimatt_runner() -> DebugRunner {
         .from_dsl_yaml(YAML)
         .expect("BT17-081 YAML parses")
         .add_card(make_filler("FILL"))
-        .deck(0, &["FILL", "FILL", "FILL"])
-        .deck(1, &["FILL"])
+        // Decks for the turn rotations, and a security card for P1: the OPT
+        // tests let the clause's Omnimon attack P1, and an attack on a player
+        // with 0 security wins the game at once (§1-2-3-1), after which the
+        // drainer processes nothing more (G-ENGINE-GAME-OVER-NOT-TERMINAL).
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
+        .security(1, &["FILL"; 2])
         .memory(0)
         .start()
 }

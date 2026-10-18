@@ -924,6 +924,9 @@ impl Game {
         field_index: usize,
         source: PlaySource,
     ) -> bool {
+        if self.game_over {
+            return false;
+        }
         // Fresh user-initiated attempt: drop any stale cost-choice. The
         // cost-choice `EffectChoice` callback re-enters `digivolve_from_hand_inner`
         // DIRECTLY (not through here), so the player's pick is preserved across
@@ -2142,6 +2145,9 @@ impl Game {
     /// computes the matching `DnaCost` via `get_dna_stacking_order`,
     /// applies `BeforePayCost` reductions, and pays memory.
     pub fn initiate_dna_digivolve(&mut self, player_id: PlayerId, hand_index: usize) -> bool {
+        if self.game_over {
+            return false;
+        }
         let Some(route_window) = self.current_dna_route_window() else {
             self.logger.log(&format!(
                 "[Rejected] initiate_dna_digivolve: not in DNA action phase (phase={:?})",

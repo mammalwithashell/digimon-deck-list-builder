@@ -1726,6 +1726,38 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             d.set_item("source_card_id", card_id.as_str())?;
             d.set_item("source_card_name", card_name.as_str())?;
         }
+        GameEvent::CardToHand {
+            player,
+            card_id,
+            card_name,
+            source,
+            ..
+        } => {
+            d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
+            let meta = PyDict::new_bound(py);
+            meta.set_item("destination", "hand")?;
+            meta.set_item("source", source.as_str())?;
+            d.set_item("meta", meta)?;
+        }
+        GameEvent::CardToDeck {
+            player,
+            card_id,
+            card_name,
+            position,
+            source,
+            ..
+        } => {
+            d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
+            let meta = PyDict::new_bound(py);
+            meta.set_item("destination", "deck")?;
+            meta.set_item("position", position.as_str())?;
+            meta.set_item("source", source.as_str())?;
+            d.set_item("meta", meta)?;
+        }
         GameEvent::Mill {
             player,
             card_id,

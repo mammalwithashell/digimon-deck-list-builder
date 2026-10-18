@@ -918,6 +918,9 @@ fn ex8_055_clause_b_once_per_turn_lockout() {
         .add_card(tc2)
         .add_card(p1_pad)
         .deck(1, &["OPT-PAD", "OPT-PAD", "OPT-PAD"])
+        // P0 draws when the turn comes back; a deck-out would end the game
+        // (G-ENGINE-GAME-OVER-NOT-TERMINAL).
+        .deck(0, &["OPT-PAD", "OPT-PAD", "OPT-PAD"])
         .memory(10)
         .start();
 
