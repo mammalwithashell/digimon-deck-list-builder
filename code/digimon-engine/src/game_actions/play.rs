@@ -532,6 +532,21 @@ impl Game {
                         continue;
                     }
                 }
+                // §15-8-4-4-1: a `[Main]` whose optional processing condition
+                // can't be performed is not declarable — skip it exactly as
+                // the mask (`main_effect_select::field_main_match`) does, so
+                // first-match-wins picks the same effect on both sides.
+                // G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+                if let Some(cost_guard) = &effect.optional_condition_guard {
+                    if !self.cost_guard_holds_at(
+                        cost_guard,
+                        source_handle,
+                        Some(perm_handle),
+                        player_id,
+                    ) {
+                        continue;
+                    }
+                }
                 // Python records activation before invoking the callback so a
                 // panic inside the process still counts toward OPT. Mirror that.
                 if let Some(perm) = self.players[player_id as usize]

@@ -407,14 +407,18 @@ fn ex10_034_clause_b_on_opponent_attack_prompts_source_multi_2_of_2() {
 // Section 5 — Clause B: negative (fewer than 2 own sources)
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// With `optional: true` and `SelectOwnSources { min: 2 }`, the outer
-// Replacement prompt installs unconditionally (no guard exists for
-// SelectOwnSources in first_step_candidate_guard). After the player accepts,
-// the SourceMulti silently skips because <2 candidates exist. No buffs granted.
+// "By trashing 2 of this Digimon's digivolution cards" is an optional
+// processing condition. Comprehensive Rules Ver. 4.3 §15-7-4: "If executing an
+// optional processing condition's contents isn't possible, then the player
+// can't choose to execute them." With fewer than 2 own sources the clause is
+// therefore NOT offered (no outer Replacement prompt) and nothing resolves.
+// (These tests used to pin the Ver. 3.6 behaviour -- the prompt was offered
+// and accepting silently skipped; inverted for
+// G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.)
 
-/// Negative: with 0 sources, the outer Replacement is still installed
-/// (no guard suppresses it), but after accepting, no SourceMulti appears —
-/// the body silently skips because min: 2 cannot be satisfied.
+/// Negative: with 0 sources the condition can't be executed, so no outer
+/// Replacement prompt is offered (§15-7-4), no SourceMulti appears and no
+/// buff is granted.
 #[test]
 fn ex10_034_clause_b_no_source_multi_when_zero_own_sources() {
     let mut runner = DebugRunner::builder()
@@ -432,14 +436,12 @@ fn ex10_034_clause_b_no_source_multi_when_zero_own_sources() {
     );
     runner.game.drain_effect_queue();
 
-    // Outer Replacement is installed (no guard suppresses it for SelectOwnSources).
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::Replacement),
-        "outer Replacement should still be installed (no guard for SelectOwnSources)"
+    // §15-7-4: the unpayable condition can't be chosen -- no prompt.
+    assert!(
+        runner.pending_selection().is_none(),
+        "0 sources: \"by trashing 2 digivolution cards\" can't be chosen, so nothing is offered: {:?}",
+        runner.pending_kind()
     );
-    // Accept — body runs but silently skips (no candidates for min: 2).
-    runner.auto_resolve().expect("accept outer optional");
     runner.auto_resolve().ok(); // drain any follow-up
 
     // No SourceMulti should appear — body skipped silently.
@@ -462,8 +464,9 @@ fn ex10_034_clause_b_no_source_multi_when_zero_own_sources() {
     );
 }
 
-/// Negative: with exactly 1 source, outer Replacement is installed but after
-/// accepting, no SourceMulti appears (only 1 candidate, min: 2).
+/// Negative: with exactly 1 source the 2-card condition can't be executed
+/// (§15-7-4 takes the count, not "any source"), so no outer Replacement prompt
+/// is offered and no SourceMulti appears.
 #[test]
 fn ex10_034_clause_b_no_source_multi_when_only_one_source() {
     let src = make_source("ONE-SRC");
@@ -484,12 +487,11 @@ fn ex10_034_clause_b_no_source_multi_when_only_one_source() {
     );
     runner.game.drain_effect_queue();
 
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::Replacement),
-        "outer Replacement should still be installed with 1 source (no guard)"
+    assert!(
+        runner.pending_selection().is_none(),
+        "1 source: the 2-card condition can't be chosen, so nothing is offered (§15-7-4): {:?}",
+        runner.pending_kind()
     );
-    runner.auto_resolve().expect("accept outer optional");
     runner.auto_resolve().ok();
 
     assert!(

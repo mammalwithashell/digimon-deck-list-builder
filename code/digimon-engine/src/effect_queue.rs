@@ -1777,9 +1777,18 @@ impl Game {
                                 // condition (if any) currently passes. If the
                                 // condition would suppress the effect anyway,
                                 // auto-fire so it silently skips — no prompt.
+                                // §15-7-4 (Ver. 4.3): an activation cost that
+                                // can't be paid can't be chosen either — no
+                                // prompt; `run_queued_effect_inner` then
+                                // drops the effect as if declined.
                                 let has_cost = eff.activation_cost_fn.is_some();
-                                let condition_passes = has_cost && self.queued_effect_condition_passes(idx);
-                                has_cost && condition_passes
+                                let payable = has_cost
+                                    && self.queued_optional_condition_payable(
+                                        &self.effect_queue[idx],
+                                        eff,
+                                    );
+                                // `payable` implies `has_cost`.
+                                payable && self.queued_effect_condition_passes(idx)
                             } else {
                                 false
                             }
@@ -3585,11 +3594,35 @@ impl Game {
             if self.queued_effect_opt_exhausted(i)
                 || !self.queued_effect_condition_passes(i)
                 || !self.queued_effect_index_is_live(i)
+                || self.queued_optional_condition_unpayable(i)
             {
                 to_skip.push(i);
             }
         }
         to_skip
+    }
+
+    /// True when `effect_queue[i]` is an OPTIONAL effect whose optional
+    /// processing condition can't be executed right now (§15-7-4, Ver. 4.3:
+    /// it can't be chosen; owner ruling 2026-10-10 #6: not offered). Like the
+    /// other `non_firing` exclusions this is transient: the entry stays queued
+    /// and is re-evaluated after a sibling resolves (which may make it
+    /// payable), matching DCGO's per-pick `CanActivate` re-filter.
+    /// G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+    fn queued_optional_condition_unpayable(&self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if !qe.is_optional || qe.granted_effect_id.is_some() {
+            return false;
+        }
+        let Some(effects) = self.effects_for_queued(qe) else {
+            return false;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return false;
+        };
+        !self.queued_optional_condition_payable(qe, effect)
     }
 
     /// True when `effect_queue[i]` is a `[X Per Turn]` effect whose per-turn
@@ -4244,6 +4277,18 @@ impl Game {
                     return;
                 }
             }
+        }
+        // §15-7-4 (Ver. 4.3) "If executing an optional processing condition's
+        // contents isn't possible, then the player can't choose to execute
+        // them"; §15-7-2: then nothing after the condition is processed. An
+        // OPTIONAL effect whose condition can't be executed now is dropped as
+        // if declined -- no prompt was offered for it (the gates above call
+        // the same check), so its payload must not run for free and its
+        // [Once Per Turn] is not consumed. Evaluated here, at activation, not
+        // at trigger time (DCGO `CanActivateCondition`, e.g. BT22_041.cs
+        // `SecurityCards.Any()`). G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+        if qe.is_optional && !self.queued_optional_condition_payable(&qe, effect) {
+            return;
         }
         // Note: pay_cost_fn is NOT gated by skip_condition. For SecuritySkill
         // timing, pay_cost_fn still fires (intentional — pay-costs are
@@ -5291,6 +5336,16 @@ impl Game {
                 return false;
             }
         }
+        // §15-7-4 (Ver. 4.3): an optional processing condition that can't be
+        // executed can't be chosen, so no "you may" prompt is installed (and
+        // no `optional_decision_mark` set); `run_queued_effect_inner` then
+        // drops the effect as if declined instead of running its payload
+        // for free. G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+        if let Some(cost_guard) = &effect.optional_condition_guard {
+            if !cost_guard.holds(&rctx) {
+                return false;
+            }
+        }
         true
     }
 
@@ -5646,15 +5701,45 @@ impl Game {
         if self.queued_effect_wants_outer_optional_prompt(qe) {
             return true;
         }
-        let has_activation_cost = self
+        // §15-7-4 (Ver. 4.3): an unpayable activation cost can't be chosen,
+        // so it parks no pre-cost decline; `run_queued_effect_inner` drops it.
+        let has_payable_activation_cost = self
             .effects_for_queued(qe)
             .and_then(|effects| {
-                effects
-                    .get(qe.effect_slot as usize)
-                    .map(|effect| effect.activation_cost_fn.is_some())
+                effects.get(qe.effect_slot as usize).map(|effect| {
+                    effect.activation_cost_fn.is_some()
+                        && self.queued_optional_condition_payable(qe, effect)
+                })
             })
             .unwrap_or(false);
-        has_activation_cost && self.queued_entry_condition_passes(qe)
+        has_payable_activation_cost && self.queued_entry_condition_passes(qe)
+    }
+
+    /// §15-7-4 (Ver. 4.3) "If executing an optional processing condition's
+    /// contents isn't possible, then the player can't choose to execute
+    /// them." Can the queued effect's optional processing condition — its
+    /// lifted activation cost (`ActivationCostKind::is_payable`) and its
+    /// leading cost steps (`Effect::optional_condition_guard`, evaluated by
+    /// `Game::cost_guard_holds_at`) — be executed right now? Owner ruling
+    /// 2026-10-10 #6: a trigger whose condition can't be paid is not offered.
+    /// `G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED`.
+    pub(crate) fn queued_optional_condition_payable(
+        &self,
+        qe: &QueuedEffect,
+        effect: &crate::effect::Effect,
+    ) -> bool {
+        if let Some(kind) = effect.activation_cost_kind {
+            if !kind.is_payable(self, qe.source_permanent) {
+                return false;
+            }
+        }
+        if let Some(guard) = &effect.optional_condition_guard {
+            let source = qe.attribution_source_card.unwrap_or(qe.source_card);
+            if !self.cost_guard_holds_at(guard, source, qe.source_permanent, qe.controller) {
+                return false;
+            }
+        }
+        true
     }
 
     /// Resolve any pending selection — `TriggerOrder`, `Target`, `Hand`,

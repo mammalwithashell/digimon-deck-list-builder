@@ -67,17 +67,16 @@ effects:
   # Kentaurosmon being suspended (the BT23-077 Sistermon Ciel pattern); another
   # permanent suspending does not over-fire it. optional: true → "by trashing"
   # is an opt-in cost, surfaced as an accept/decline prompt (the AD1-014 "may
-  # unsuspend" idiom). security_count_gte: 1 suppresses the prompt when there is
-  # no top security card to pay the cost. On accept: trash the top security card
-  # (the cost), then unsuspend this Digimon.
+  # unsuspend" idiom). With no top security card the cost can't be paid, so the
+  # engine offers no prompt (§15-7-4, Ver. 4.3: the leading `trash_top_security`
+  # is the optional processing condition; `leading_cost_guard`). On accept: trash
+  # the top security card (the cost), then unsuspend this Digimon.
   - when: on_suspend
     active_when: { all_turns: true }
     once_per_turn: true
     optional: true
     condition:
-      all_of:
-        - event_permanent_is_source: true
-        - security_count_gte: 1
+      event_permanent_is_source: true
     summary: "[All Turns][Once Per Turn] When this Digimon suspends, by trashing your top security card, it unsuspends"
     process:
       - trash_top_security: { of: you }

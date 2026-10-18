@@ -455,6 +455,37 @@ fn bt25_090_option_use_reducer_no_reduction_when_unpayable() {
     );
 }
 
+/// Comprehensive Rules Ver. 4.3 §15-7-4: "If executing an optional processing
+/// condition's contents isn't possible, then the player can't choose to
+/// execute them." With NO face-down stash, "by trashing the bottom face-down
+/// card from under any of your Tamers, reduce the cost" can't be executed, so
+/// the optional reducer is not offered at all: using the Option installs no
+/// accept/decline gate and no "Cost reduction" choice (DCGO gates it out in
+/// `CanActivateCondition`). G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+#[test]
+fn bt25_090_option_use_reducer_not_offered_when_unpayable() {
+    let mut runner = option_runner("GD-OPT", true);
+    let tamer_idx = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == "TAMER")
+        .expect("Tamer on field");
+    runner.game.players[0].battle_area[tamer_idx].card_sources[0].face_down = false;
+    let mem_before = runner.memory();
+
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        !matches!(result, digimon_engine::selection::OptionPlayResult::Pending),
+        "no reducer prompt: the Option is used straight away, got {result:?}"
+    );
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "the unpayable reducer is not offered: {:?}",
+        runner.game.pending_selection.as_ref().map(|s| s.kind.clone())
+    );
+    assert_eq!(mem_before - runner.memory(), 3, "full use cost paid");
+}
+
 /// DECLINE: with an eligible Tamer present, DECLINING the optional reducer must
 /// let the Option play complete at FULL cost (3) — FD stash untouched.
 #[test]

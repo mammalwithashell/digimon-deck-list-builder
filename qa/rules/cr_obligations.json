@@ -4500,27 +4500,27 @@
       "blocks_training": false,
       "chapter": 15,
       "fingerprint": "6fec437e69b9e804b0e88f485422acc9a753dbef3820933d7774817b35686d30",
-      "gap_id": "G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK",
+      "gap_id": null,
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "DSL vocabulary gap (controller ruling, task 9 review): the rule's example in BT18-019's production idiom authors the compound condition as two independent picks, so with only [Kimeramon] in the trash it is returned alone and the [Millenniummon] play is still offered; the engine has no way to know the second pick belongs to the condition. BT18-019 is affected (qa/dsl-vocab-gaps.md). Control (both present) passes. Test is #[ignore]d.",
-      "status": "gap",
+      "note": "The rule's example in BT18-019's production idiom (two sequential trash picks, each returned): with only [Kimeramon] in the trash the condition can be performed only in part, so it is not offered; nothing is returned and [Millenniummon] is not played. Control (both present) passes. The engine gates the leading run of same-zone picks all-or-nothing (leading_cost_guard: one distinct card per pick). Compounds across DIFFERENT step kinds are not composed (gated on the first part only); that stays the DSL by: block, G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK (OPEN).",
+      "status": "proven",
       "tests": [
         "ch15_07_optional_conditions::partial_payment_of_compound_condition_is_impossible"
       ],
       "text": "It isn't possible to only perform some of the optional processing conditions. (Example: If an effect reads \"[On Deletion] By returning 1 [Kimeramon] and 1 [Machinedramon] from your trash to the bottom of the deck, you may play 1 [Millenniummon] from your trash without paying the cost,\" a player can't just return 1 [Kimeramon] or 1 [Machinedramon] to the bottom of their deck."
     },
     "15-7-4": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 15,
       "fingerprint": "210ce11e09b84d8a05b2b4861fcbff3ad5d398894a7da5879d8c869dc6446b14",
-      "gap_id": "G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED",
+      "gap_id": null,
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Ver. 4.3 REVERSED 3.6 (3.6: the player could choose an unpayable condition; 4.3: can't). Owner ruling 2026-10-10 #6. The rule's example with 0 security cards: the engine parks the optional prompt, and accepting trashes nothing yet applies the -5000 DP. [Main] mirror: '[Main] By trashing your top security card, <Draw 1>' is in the action mask at 0 security. Production cards avoid it only by hand-authoring a payability condition per card. Test is #[ignore]d.",
-      "status": "gap",
+      "note": "Ver. 4.3 REVERSED 3.6 (3.6: the player could choose an unpayable condition; 4.3: can't). Owner ruling 2026-10-10 #6. The rule's example with 0 security cards: no optional prompt is offered, the -5000 DP never applies and the 7000 DP defender wins. [Main] mirror: '[Main] By trashing your top security card, <Draw 1>' is masked at 0 security and offered at 1. The engine derives the condition's payability from the clause's leading cost steps (leading_cost_guard: security / memory / suspend / hand and trash pick runs counted per pick / own sources / face-down cards under Tamers) and gates the outer prompt, the pre-cost prompt, the TriggerOrder bundle, the run itself (dropped as if declined), optional replacements and optional cost reducers; the DSL by: block (G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK) remains the long-term vocabulary.",
+      "status": "proven",
       "tests": [
         "ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen"
       ],
@@ -4974,15 +4974,15 @@
       "text": "Activation-Type Effects With Optional Processing Conditions"
     },
     "15-8-4-4-1": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 15,
       "fingerprint": "0e89941fdf078b6f25cc2ef1a3b55a9599c8d919038ff4109430d7112a2fabdd",
-      "gap_id": "G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED",
+      "gap_id": null,
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Printed <Training> (parsed from the printed text; the DSL grant_keyword: Training clause is declaration-only by design) is correct and its test passes: not in the action mask while suspended; declared while unsuspended, it suspends with no skip prompt and places the deck top face down. The general case is not: '[Main] By trashing your top security card, <Draw 1>' is in the action mask with 0 security cards and declaring it draws for free (ch15_07 test, #[ignore]d). Only self-cost activation_cost kinds and <Digi-Burst> gate the mask.",
-      "status": "gap",
+      "note": "Printed <Training> (parsed from the printed text; the DSL grant_keyword: Training clause is declaration-only by design): not in the action mask while suspended; declared while unsuspended, it suspends with no skip prompt and places the deck top face down. General case: '[Main] By trashing your top security card, <Draw 1>' is not in the action mask with 0 security cards and is with 1. The engine derives the [Main]'s leading cost steps' payability (dsl_cards/lower_triggered.rs leading_cost_guard -> Effect::optional_condition_guard; main_effect_select::field_main_match and Game::activate_field_main skip it), alongside the self-cost activation_cost kinds.",
+      "status": "proven",
       "tests": [
         "ch15_08_effect_categories::activation_type_declarable_only_when_optional_condition_payable",
         "ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen"
@@ -15275,9 +15275,9 @@
         "total": 10
       },
       "15": {
-        "gap": 141,
+        "gap": 138,
         "not_testable": 66,
-        "proven": 37,
+        "proven": 40,
         "total": 244
       },
       "16": {
@@ -15347,15 +15347,15 @@
         "total": 13
       }
     },
-    "gap": 618,
+    "gap": 615,
     "mechanics": {
-      "gap_blocking": 17,
-      "gap_nonblocking": 321,
+      "gap_blocking": 15,
+      "gap_nonblocking": 320,
       "not_testable": 152,
-      "proven": 225
+      "proven": 228
     },
     "not-testable": 246,
-    "proven": 255
+    "proven": 258
   },
   "version": 1
 }

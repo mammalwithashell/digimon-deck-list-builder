@@ -124,11 +124,9 @@
   tests: ["ch15_08_effect_categories::removal_trigger_processing_condition_uses_trigger_state"]
   note: "The rule's example text: deleted with a digivolution card it may play itself from the trash; deleted alone it can't."
 "15-8-4-4-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED
+  status: proven
   tests: ["ch15_08_effect_categories::activation_type_declarable_only_when_optional_condition_payable", "ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen"]
-  note: "Printed <Training> (parsed from the printed text; the DSL grant_keyword: Training clause is declaration-only by design) is correct and its test passes: not in the action mask while suspended; declared while unsuspended, it suspends with no skip prompt and places the deck top face down. The general case is not: '[Main] By trashing your top security card, <Draw 1>' is in the action mask with 0 security cards and declaring it draws for free (ch15_07 test, #[ignore]d). Only self-cost activation_cost kinds and <Digi-Burst> gate the mask."
+  note: "Printed <Training> (parsed from the printed text; the DSL grant_keyword: Training clause is declaration-only by design): not in the action mask while suspended; declared while unsuspended, it suspends with no skip prompt and places the deck top face down. General case: '[Main] By trashing your top security card, <Draw 1>' is not in the action mask with 0 security cards and is with 1. The engine derives the [Main]'s leading cost steps' payability (dsl_cards/lower_triggered.rs leading_cost_guard -> Effect::optional_condition_guard; main_effect_select::field_main_match and Game::activate_field_main skip it), alongside the self-cost activation_cost kinds."
 "15-8-5-2":
   status: proven
   tests: ["ch15_08_effect_categories::immediate_effect_interrupts_before_cause"]
@@ -155,17 +153,13 @@
   tests: ["ch15_07_optional_conditions::declining_condition_skips_everything_after_it"]
   note: "The rule's example (trash 2 → unsuspend; After, if [WereGarurumon] in sources, may return a [Garurumon]): declining leaves the Digimon suspended and never offers the 'After' return; control: trashing 2 unsuspends and the return is offered and performed."
 "15-7-3":
-  status: gap
-  blocks_training: false
-  gap_id: G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK
+  status: proven
   tests: ["ch15_07_optional_conditions::partial_payment_of_compound_condition_is_impossible"]
-  note: "DSL vocabulary gap (controller ruling, task 9 review): the rule's example in BT18-019's production idiom authors the compound condition as two independent picks, so with only [Kimeramon] in the trash it is returned alone and the [Millenniummon] play is still offered; the engine has no way to know the second pick belongs to the condition. BT18-019 is affected (qa/dsl-vocab-gaps.md). Control (both present) passes. Test is #[ignore]d."
+  note: "The rule's example in BT18-019's production idiom (two sequential trash picks, each returned): with only [Kimeramon] in the trash the condition can be performed only in part, so it is not offered; nothing is returned and [Millenniummon] is not played. Control (both present) passes. The engine gates the leading run of same-zone picks all-or-nothing (leading_cost_guard: one distinct card per pick). Compounds across DIFFERENT step kinds are not composed (gated on the first part only); that stays the DSL by: block, G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK (OPEN)."
 "15-7-4":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED
+  status: proven
   tests: ["ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen"]
-  note: "Ver. 4.3 REVERSED 3.6 (3.6: the player could choose an unpayable condition; 4.3: can't). Owner ruling 2026-10-10 #6. The rule's example with 0 security cards: the engine parks the optional prompt, and accepting trashes nothing yet applies the -5000 DP. [Main] mirror: '[Main] By trashing your top security card, <Draw 1>' is in the action mask at 0 security. Production cards avoid it only by hand-authoring a payability condition per card. Test is #[ignore]d."
+  note: "Ver. 4.3 REVERSED 3.6 (3.6: the player could choose an unpayable condition; 4.3: can't). Owner ruling 2026-10-10 #6. The rule's example with 0 security cards: no optional prompt is offered, the -5000 DP never applies and the 7000 DP defender wins. [Main] mirror: '[Main] By trashing your top security card, <Draw 1>' is masked at 0 security and offered at 1. The engine derives the condition's payability from the clause's leading cost steps (leading_cost_guard: security / memory / suspend / hand and trash pick runs counted per pick / own sources / face-down cards under Tamers) and gates the outer prompt, the pre-cost prompt, the TriggerOrder bundle, the run itself (dropped as if declined), optional replacements and optional cost reducers; the DSL by: block (G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK) remains the long-term vocabulary."
 "15-7-5":
   status: proven
   tests: ["ch15_07_optional_conditions::payable_condition_offered_even_when_payload_has_no_target"]
