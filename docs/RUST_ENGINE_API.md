@@ -1041,28 +1041,51 @@ Implication for callers: a `PermanentHandle` / index obtained before a backward
 seek is invalid after it (the same rule as across deletions — see the anti-pattern
 below). Re-read indices from the post-seek state.
 
-> **Snapshot alternative is PARTIAL (`make-engine-cloneable`, 2026-06-23).** The
-> premise above ("no state snapshot; closure-bearing `Game`") is **partly lifted**:
-> `Game: Clone` is now live (`ModifierEntry` predicates/effects are `Arc`-shared),
-> and the **DSL card-effect selection-step surface is a resumable data VM** —
-> `pending_selection` is paired with `Game::pending_selection_resume` (a
-> `Vec<ResumeFrame>` of plain data; see `src/resume.rs`), and
-> `resolve_generic_selection` drives those data frames via `run_resume` instead of
-> the legacy `Box<dyn FnOnce>` callback. So a `Game` paused at a flipped DSL select
-> (hand/trash/security/breeding/own+opp/any permanent/reveal/material/union_zone +
-> the permutation/budget/source-multi/count_capped/reveal-bucket multi-picks)
-> **clones faithfully**. **It is NOT yet faithful everywhere** — a large selection
-> surface is still closure-based and clones to a panic-stub that fails on resolve:
-> `select_effect_choice` (the common "choose one" prompt) and several other DSL
-> installers (`use_option`, `choose_from_reveal`, `dna_pair`, `order_remainder`,
-> tamer-cost), plus the **non-DSL** surface — combat/keyword interrupts (Alliance,
-> Counter, Block, Fragment, Save, Decode, …), digivolve cost-choice / reducers,
-> BO3 play-order, Overclock, TriggerOrder / optional-trigger, replacement-accept,
-> Delay. So clone-based **search is usable only on games paused at (or between) the
-> flipped DSL select kinds**, not at a combat/digivolve/play-order node. Flipping
-> the rest + deleting the legacy closure executor is the remaining
-> `make-engine-cloneable` work. NOTE: the replay-stepper still uses reset-and-replay
-> above; converting it to clone-based snapshots is a separate follow-on.
+> **Snapshot alternative exists — clone is faithful on every known production
+> decision path (`make-engine-cloneable`; first noted 2026-06-23, refreshed
+> 2026-10-18).** The premise above ("no state snapshot; closure-bearing `Game`")
+> is historical. `Game` is `#[derive(Debug, Clone)]` (`src/game/mod.rs`):
+> `ModifierEntry` predicates/effects are `Arc`-shared, `card_data` is an
+> `Arc`-shared `CardStore` (`src/card_store.rs`), and `GameLogger` /
+> `RevealSource` clone via `clone_box`. Every `pending_selection` installed on a
+> production path is paired with `Game::pending_selection_resume: Option<ResumeStack>`
+> — a stack of plain-data `ResumeFrame`s (`src/resume.rs`) — and
+> `resolve_generic_selection` (`src/effect_queue.rs`) drives it via `run_resume`
+> instead of the legacy `Box<dyn FnOnce>` callback. That covers the whole DSL
+> selection surface **and** the non-DSL surface (combat/keyword interrupts,
+> digivolve cost-choice + reducers, BO3 play-order, Overclock, TriggerOrder /
+> optional-trigger, refire, option mode-select, link, Assembly, DNA, Delay, …);
+> the after-selection continuation channel is typed data too
+> (`AfterSelectionHook`). Search already relies on this: `src/search/mcts.rs`
+> and `src/determinize/materialize.rs` fork with `Game::clone`, and the
+> `clone_fuzz` integration test (clone at every decision of real-deck playouts,
+> compare, continue from the clone) runs in CI (`engine-clone-safety.yml`).
+>
+> **What still remains** (the `make-engine-cloneable` 6.1 cutover):
+> - the legacy executor branch — `resolve_generic_selection` still falls back to
+>   `sel.on_decline` / `(sel.callback)(…)` when `pending_selection_resume` is `None`;
+> - the callback fields — `PendingSelection.callback` (still non-`Option`) and
+>   `on_decline`, which the resume-backed installs still populate as coexistence
+>   closures; `impl Clone for PendingSelection` (`src/selection.rs`) clones the
+>   data and swaps the callback for a panic-stub, so a clone of a closure-only
+>   selection fails loudly on resolve rather than mis-resolving;
+> - the callback parameters on the 16 shared `EffectContext::select_*` /
+>   `install_*` primitive definitions in `src/effect_context/selections.rs`
+>   (`code/tools/audit_pending_selection_callbacks.py` counts them as
+>   `callback_only`; 2026-10-18: `callback_only=16, resume_backed=42,
+>   resume_stub=13`);
+> - **test-only** closure paths — legacy tests under `tests/selection/`,
+>   `tests/effect_context/`, `tests/cost_hooks/pay_cost_selection.rs` and
+>   `tests/replacements/partition.rs` drive those primitives with no resume
+>   frame, and `select_partition_sources` has no production caller. A clone taken
+>   inside one of those tests would hit the panic-stub; production games do not.
+>
+> Rule for new code (CLAUDE.md rule 28): any new selection must park a
+> `ResumeStack` frame; never rely on the closure callback. `Serialize` /
+> `Deserialize` of game state is NOT implemented. The replay stepper still uses
+> reset-and-replay above (`runners/replay.rs` `seek` → `Game::reset_for_replay`,
+> now in `src/game/setup.rs`); converting it to clone-based snapshots is a
+> separate follow-on.
 
 ### Replacement-process outcome-setters
 
@@ -1392,12 +1415,14 @@ file for the authoritative shape; the table below is for quick lookup.
 `TRASH` = 0b010, `MATERIAL` = 0b100; OR them with `|` to build a multi-zone
 filter.
 
-`PendingSelection` itself carries 11 fields including `selecting_player`,
+`PendingSelection` itself carries 13 fields: `kind`, `selecting_player`,
 `previous_phase`, `valid_action_ids`, `is_optional`, `prompt`,
 `effect_choices`, `source_card`, `source_permanent`, `source_kind`,
-`callback`, and `on_decline` (`selection.rs:165-199`). The non-callback
-subset is mirrored as a `Clone`-able `PendingSelectionView` for FFI and UI
-consumers (`selection.rs:222-249`).
+`callback`, `on_decline`, and `zone_owner` (`selection.rs:276-318`; the
+callbacks are the legacy coexistence path — the resumable continuation lives
+beside it in `Game::pending_selection_resume`). The non-callback subset is
+mirrored as a `Clone`-able `PendingSelectionView` for FFI and UI consumers
+(`selection.rs:374-387`).
 
 ### `TriggerSource` (full taxonomy)
 
@@ -5206,11 +5231,13 @@ For effect-driven security manipulation, sprinkle
 ### Determinism and Clone semantics
 
 `Player` is `Clone`; `OpaqueDeckState` is `Clone` (it owns only the
-composition multiset and a counter). `Game` is `NOT Clone`; the
-`Box<dyn RevealSource>` lives on `Game` so the trait doesn't have to be
-`Clone`. Snapshot/recording use cases that need to clone state can clone
-the `Player` (preserving the composition view) but the reveal source on
-`Game` is single-owner.
+composition multiset and a counter). `Game` is `Clone` too (since
+`make-engine-cloneable`, 2026-06-18): the `Box<dyn RevealSource>` on `Game`
+is cloned through `RevealSource::clone_box` (`src/opaque_deck.rs`; the
+determinizer's sampling source implements it too, `src/determinize/sample.rs`),
+so a cloned `Game` carries an independent reveal source. See the "Snapshot
+alternative" note under the reset-and-replay contract for which pending
+selections clone faithfully.
 
 ### Failure model
 

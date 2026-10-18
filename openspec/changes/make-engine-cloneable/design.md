@@ -1,5 +1,7 @@
 ## Context
 
+> **Status (2026-10-18).** This Context describes the starting point (June 2026). Since then `Game` became `#[derive(Debug, Clone)]` (now `code/digimon-engine/src/game/mod.rs:428`; `game.rs` was split into `src/game/`), `card_data` is an `Arc`-shared copy-on-write `CardStore` (`src/card_store.rs`), the Category-B continuations are defunctionalized into `ResumeFrame` data (`src/resume.rs`, 68 frame variants), and `raw_rust` is 3 effects (all clone-safe). The one remaining `Box<dyn FnOnce>` surface is `PendingSelection.callback`/`on_decline` — kept only as the coexistence fallback until the D6 cutover (tasks.md 6.1).
+
 `Game` (`code/digimon-engine/src/game.rs`) derives only `Debug`. Its non-`Clone` surface splits into two categories:
 
 - **Category A — behavior closures (`Fn`):** `ConditionFn`, `ProcessFn`, `PayCostFn`, modifier predicates. Created from card definitions, immutable "code." `effect_registry` is built once (`build_registry()`) and treated as immutable by `reset_for_replay`. Some are already `Arc<dyn Fn>`. Fix is mechanical (Arc-share, don't deep-clone).
@@ -35,7 +37,7 @@ Everything else in `Game` (zones, memory, counters, `rng: StdRng`, `card_data`) 
 
 **D6 — Incremental, parity-guarded cutover.** The VM and the legacy closure path coexist behind a per-effect switch; cards move over in batches, each batch kept green against `cards_behavioral`, the archetype interaction tests, and the **DCGO recording parity harness** (differential oracle). The legacy path is deleted only when the pool is fully migrated. Alternative (big-bang switch) rejected: unacceptable parity risk for the engine's core.
 
-**D7 — raw_rust becomes clone-safe by policy.** A `raw_rust` effect must be either atomic (no mid-effect `select_*`) or provide an explicit, `Clone`-able resume-state implementing the VM frame contract. Enforced by a guard test / lint and CLAUDE.md rule 28. n=4 today (`bt24_012`/`lm_027`/`bt21_093`/`bt13_040`, capped by the `raw_rust_budget_status` <3%-of-pool guard); standing constraint going forward.
+**D7 — raw_rust becomes clone-safe by policy.** A `raw_rust` effect must be either atomic (no mid-effect `select_*`) or provide an explicit, `Clone`-able resume-state implementing the VM frame contract. Enforced by a guard test / lint and CLAUDE.md rule 28. n=4 at design time (`bt24_012`/`lm_027`/`bt21_093`/`bt13_040`, capped by the `raw_rust_budget_status` <3%-of-pool guard); **n=3 since task 3.3 (2026-06-23)** deleted the dead clone-unsafe `bt13_040` fn — `code/digimon-engine/src/cards/raw_rust/mod.rs` registers only `bt24_012`/`lm_027`/`bt21_093` (re-checked 2026-10-18). Standing constraint going forward.
 
 **D8 — `reset_for_replay` stays, and gains a sibling.** Once `Game: Clone`, snapshot back-step becomes possible, but converting the replay stepper is out of scope; `reset_for_replay` remains the supported path and the new `Clone` is validated by a "clone-then-replay-equals-original" guard test.
 
@@ -91,7 +93,7 @@ The genuine risk concentrates **not** in representability (proven) but in **fram
 ## Open Questions
 
 - ~~VM shape: bytecode vs tree-walking interpreter?~~ **RESOLVED (2026-06-18):** the executor is already a tree-walking interpreter over `CompiledStep` — keep it; defunctionalize the selection continuation, do not rewrite to bytecode. See the inventory section.
-- Serialization format and stability guarantees — is on-disk save/load in scope, or only in-memory `Clone`?
-- Do we adopt a persistent-data-structure crate (`im`) for zones, or hand-roll `Arc`-backed COW? (Optimization per D5 — gated on profiling.)
+- Serialization format and stability guarantees — is on-disk save/load in scope, or only in-memory `Clone`? *(Still open 2026-10-18: no serde derive on `Game`, `ResumeStack`, or `PendingSelection`.)*
+- Do we adopt a persistent-data-structure crate (`im`) for zones, or hand-roll `Arc`-backed COW? (Optimization per D5 — gated on profiling.) *(Partial 2026-10-18: `card_data` went hand-rolled — `CardStore(Arc<Vec<CardData>>)` with `Arc::make_mut` COW, `src/card_store.rs`; zones are still plain deep-copied `Vec`s, no `im` dependency.)*
 - ~~Does `formula_extensions` need the same clone-safety treatment as raw_rust?~~ **RESOLVED (2026-06-18):** no — they are Category-A read-only `Arc<dyn Fn>`; Arc-share, no resume-state.
 - ~~Migration ordering: simplest-first or nastiest-first?~~ **RESOLVED (2026-06-18):** nastiest composition/multi-pick first (replacement windows, pay-cost chains, the 7 trampolines) — they are the only sites exercising the new frame stack, so they validate the design earliest.
