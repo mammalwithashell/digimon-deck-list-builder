@@ -569,9 +569,14 @@ pub enum ResumeFrame {
     /// Accept adds one material to the transaction and re-enters the play
     /// finish path; PASS commits with the currently selected materials.
     DigiXrosMaterialSelection(DigiXrosMaterialSelectionState),
-    /// Outer accept/decline prompt for a lone optional triggered effect whose
-    /// body begins with a mandatory choice. Accept runs the queued effect; PASS
-    /// drops it.
+    /// Accept/decline prompt for a lone OPTIONAL effect, parked before its body
+    /// (`Game::install_outer_optional_trigger_selection`): a queued trigger whose
+    /// body begins with a mandatory step (G-OUTER-OPTIONAL-NOT-INSTALLED), and,
+    /// via `Game::install_single_trigger_optional_gate`, a `TriggerOrder` pick or
+    /// a REFIRED effect ("activate … as an effect of this Digimon", §15-15-7-4)
+    /// that needs either that prompt or a pre-cost decline. Accept runs the
+    /// carried `QueuedEffect` through `run_queued_effect` (refire OPT bypass and
+    /// attribution intact); PASS drops it. `outer_conts` run after either.
     OuterOptionalTrigger(OuterOptionalTriggerState),
     /// Trigger-order selection for a controller's queued triggered effects.
     /// Accept runs the chosen queued effect; optional PASS drops every

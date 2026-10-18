@@ -560,6 +560,12 @@ fn optional_condition_decided_before_processing_effect() {
 /// security cards and 1 card in hand. The mandatory [When Attacking] places
 /// `lender` under it (the only candidate) and activates its [On Play].
 fn borrow_board(lender: &str) -> DebugRunner {
+    borrow_board_by("WA_BORROW_OP", lender)
+}
+
+/// [`borrow_board`] with the activating Digimon `invoker` (`WA_BORROW_OP` or
+/// its sibling `WA_BORROW_OP_THEN_MEM`, which adds "Then, gain 2 memory").
+fn borrow_board_by(invoker: &str, lender: &str) -> DebugRunner {
     let mut r = ch15_07()
         .hand(0, &[FILL])
         .deck(0, &[FILL; 4])
@@ -568,7 +574,7 @@ fn borrow_board(lender: &str) -> DebugRunner {
         .memory(3)
         .start();
     r.inject_trash(0, lender);
-    let attacker = r.place_on_field(0, "WA_BORROW_OP", Some(0));
+    let attacker = r.place_on_field(0, invoker, Some(0));
     let target = r.place_on_field(1, FILL, Some(0));
     set_suspended(&mut r, target, true);
     r.attack_digimon(attacker, target, false);
@@ -659,5 +665,126 @@ fn mandatory_invoker_does_not_force_invoked_optional_condition() {
         r.memory(),
         memory0 + 1,
         "the borrowed effect gained 1 memory"
+    );
+}
+
+/// Deltas of every effect-sourced memory change since `cp`, in event order.
+fn effect_memory_deltas(r: &DebugRunner, cp: usize) -> Vec<i16> {
+    r.events_since(cp)
+        .iter()
+        .filter_map(|e| match e {
+            digimon_engine::events::GameEvent::MemoryChange {
+                delta,
+                source_card_id: Some(_),
+                ..
+            } => Some(*delta),
+            _ => None,
+        })
+        .collect()
+}
+
+/// §15-15-7-4 with a step AFTER the activated effect:
+/// `WA_BORROW_OP_THEN_MEM` "... Activate 1 of that card's [On Play] effects
+/// as an effect of this Digimon. Then, gain 2 memory." Declining the borrowed
+/// `LEND_SEC_MEM` condition drops that effect alone: the activating effect is
+/// mandatory and its "Then, gain 2 memory" still happens. Accepting it runs
+/// the borrowed effect first (+1), then the remaining step (+2).
+#[test]
+fn declining_invoked_optional_condition_keeps_invoker_remaining_steps() {
+    cite!(
+        "15-15-7-4",
+        "dfbb74f72cbbf179b325e51c074de8561efa8fba4c696d24501e848805b2752d"
+    );
+    // Declined: no security card trashed, the invoker's tail still gains 2.
+    let mut r = borrow_board_by("WA_BORROW_OP_THEN_MEM", "LEND_SEC_MEM");
+    let cp = r.event_checkpoint();
+    let memory0 = r.memory();
+    assert_optional_decision(&r, 0, "the borrowed \"by trashing your top security card\"");
+    r.execute_action(0, PASS)
+        .expect("decline the borrowed condition");
+    assert!(
+        r.pending_selection().is_none(),
+        "{:?}",
+        r.pending_selection()
+    );
+    assert_eq!(r.security_count(0), 2, "declined: no security card trashed");
+    assert_eq!(
+        effect_memory_deltas(&r, cp),
+        vec![2],
+        "declined: only the activating effect's \"Then, gain 2 memory\""
+    );
+    assert_eq!(r.memory(), memory0 + 2);
+
+    // Accepted: the borrowed effect, then the invoker's remaining step.
+    let mut r = borrow_board_by("WA_BORROW_OP_THEN_MEM", "LEND_SEC_MEM");
+    let cp = r.event_checkpoint();
+    let memory0 = r.memory();
+    accept(&mut r, 0);
+    assert!(
+        r.pending_selection().is_none(),
+        "{:?}",
+        r.pending_selection()
+    );
+    assert_eq!(r.security_count(0), 1, "the top security card was trashed");
+    assert_eq!(
+        effect_memory_deltas(&r, cp),
+        vec![1, 2],
+        "the borrowed effect (+1) resolves before the remaining step (+2)"
+    );
+    assert_eq!(r.memory(), memory0 + 3);
+}
+
+/// §15-15-7-4, clone safety (`Game: Clone` drives search): the borrowed
+/// effect's optional decision is parked on the resumable VM, so a clone taken
+/// while it is pending resolves it on its own. Two clones of one parked board
+/// take opposite answers -- accept trashes the security card and gains 1
+/// memory, decline does neither -- and each matches the original resolved the
+/// same way (`verification_digest`); the original is untouched until resolved.
+#[test]
+fn invoked_optional_condition_decision_survives_clone() {
+    cite!(
+        "15-15-7-4",
+        "dfbb74f72cbbf179b325e51c074de8561efa8fba4c696d24501e848805b2752d"
+    );
+    let r = borrow_board("LEND_SEC_MEM");
+    assert_optional_decision(&r, 0, "the borrowed \"by trashing your top security card\"");
+    let accept_id = r
+        .pending_selection()
+        .and_then(|sel| sel.valid_action_ids.iter().copied().find(|&a| a != PASS))
+        .expect("an accept action");
+    let parked = r.game.verification_digest();
+    let memory0 = r.memory();
+
+    let mut accepted = r.game.clone();
+    let mut declined = r.game.clone();
+    assert_eq!(accepted.verification_digest(), parked, "a clone is the same state");
+    accepted
+        .resolve_selection(0, accept_id)
+        .expect("the clone accepts via the resumable VM");
+    declined
+        .resolve_selection(0, PASS)
+        .expect("the clone declines via the resumable VM");
+
+    assert!(accepted.pending_selection.is_none());
+    assert_eq!(accepted.players[0].security.len(), 1, "accepted: security trashed");
+    assert_eq!(accepted.memory, memory0 + 1, "accepted: +1 memory");
+    assert!(declined.pending_selection.is_none());
+    assert_eq!(declined.players[0].security.len(), 2, "declined: security kept");
+    assert_eq!(declined.memory, memory0, "declined: no memory");
+
+    // The original was not touched by either clone, and each answer on it
+    // reaches the clone's state.
+    assert_eq!(r.game.verification_digest(), parked);
+    let mut original_decline = r.game.clone();
+    let mut r = r;
+    r.execute_action(0, accept_id)
+        .expect("the original still resolves");
+    assert_eq!(r.game.verification_digest(), accepted.verification_digest());
+    original_decline
+        .resolve_selection(0, PASS)
+        .expect("decline on a fresh clone");
+    assert_eq!(
+        original_decline.verification_digest(),
+        declined.verification_digest()
     );
 }
