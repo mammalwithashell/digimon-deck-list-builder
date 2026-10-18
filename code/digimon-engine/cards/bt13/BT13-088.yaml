@@ -115,18 +115,15 @@ effects:
   # action space (the DSL has no single 2-card hand-trash multi-pick consumer).
   # First pick `optional: true, cost: true` (declining aborts — nothing is
   # trashed, attack proceeds); second pick mandatory (once committed you must
-  # trash exactly 2). Then `end_attack`. The `count_gte` precheck gates the
-  # clause to a payable state (>= 2 hand cards), matching DCGO's
-  # CanActivateCondition.
+  # trash exactly 2). Then `end_attack`. With fewer than 2 hand cards the
+  # condition can't be executed, so the engine does not offer the clause
+  # (§15-7-4, Ver. 4.3: the two leading hand picks are the optional processing
+  # condition; `leading_cost_guard`), matching DCGO's CanActivateCondition.
   - when: on_opponent_attack
     once_per_turn: true
     active_when: { opponents_turn: true }
     optional: true
     summary: "[Opp Turn][OPT] When an opp Digimon attacks, may trash 2 hand cards to end the attack"
-    condition:
-      count_gte:
-        filter: { of: you, zone: [hand] }
-        n: 2
     process:
       - select_hand:
           of: you
