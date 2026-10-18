@@ -450,6 +450,10 @@ fn p_137_clause_c_opt_resets_after_turn_end() {
         .add_card(plain_digimon("SEC-C"))
         .add_card(plain_digimon("SEC-D"))
         .security(1, &["SEC-A", "SEC-B", "SEC-C", "SEC-D"])
+        // The turn cycle below draws for both players; a deck-out would end
+        // the game (G-ENGINE-GAME-OVER-NOT-TERMINAL).
+        .deck(0, &["SEC-A"; 6])
+        .deck(1, &["SEC-A"; 6])
         .build();
 
     let _ = runner.place_on_field(0, "P-137", None);
