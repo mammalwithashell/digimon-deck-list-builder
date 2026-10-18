@@ -104,11 +104,11 @@ effects:
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:
-      all_of:
-        - trashed_source_card_id_is: EX10-039
-        - host_permanent_trait_has: Bagra Army
+      trashed_source_card_id_is: EX10-039
     trigger_if:
-      event_target_owner: you
+      all_of:
+        - event_target_owner: you
+        - host_permanent_trait_has: Bagra Army
     summary: "Inherited: When effects trash this card from a [Bagra Army] trait Digimon's digivolution cards, Draw 1"
     process:
       - draw: { of: you, count: 1 }

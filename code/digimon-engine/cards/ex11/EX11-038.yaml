@@ -70,13 +70,13 @@ effects:
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:
+      trashed_source_card_id_is: EX11-038
+    trigger_if:
       all_of:
-        - trashed_source_card_id_is: EX11-038
+        - event_target_owner: you
         - any_of:
             - host_permanent_trait_has: Mineral
             - host_permanent_trait_has: Rock
-    trigger_if:
-      event_target_owner: you
     summary: "When this source is trashed from a Mineral/Rock Digimon, Draw 1"
     process:
       - draw: { of: you, count: 1 }

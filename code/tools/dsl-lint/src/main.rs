@@ -232,8 +232,20 @@ fn is_observer_timing(t: digimon_engine::dsl::clause::Timing) -> bool {
     )
 }
 
+/// Predicate keys that read the triggering EVENT rather than the board or
+/// the effect's own card: every `event_*` key, plus the event-host key
+/// `host_permanent_trait_has` (the host the event trashed digivolution cards
+/// from -- `EffectReadContext::event_host_permanent` / `event_host_card`;
+/// "When effects trash this card from a [Mineral] or [Rock] trait Digimon's
+/// digivolution cards"). `host_kind_is` is NOT one: it filters a selected
+/// digivolution card by its own host (a `select_own_sources` filter), not
+/// the event.
+fn is_event_facing_key(key: &str) -> bool {
+    key.starts_with("event_") || key == "host_permanent_trait_has"
+}
+
 /// Warn when an observer clause's `condition` / `active_when` reads the
-/// event (`event_*`): `condition` / `active_when` are PROCESSING conditions,
+/// event (`is_event_facing_key`): `condition` / `active_when` are PROCESSING conditions,
 /// read when the effect activates (§15-8-3-9-1 / §15-8-3-9-3), while a
 /// qualifier of the event ("When one of your Digimon **with 4000 DP or
 /// less** is played") is the trigger qualifier, decided when the event
@@ -264,7 +276,7 @@ fn lint_observer_event_conditions(
                     }
                 }
                 "not" => event_keys(v, out),
-                k if k.starts_with("event_") && !out.iter().any(|o| o == k) => {
+                k if is_event_facing_key(k) && !out.iter().any(|o| o == k) => {
                     out.push(key.clone())
                 }
                 _ => {}

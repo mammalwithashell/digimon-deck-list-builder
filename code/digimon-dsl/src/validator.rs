@@ -616,7 +616,7 @@ fn validate_triggered(
                 card_id: card_id.to_string(),
                 path: format!("{prefix}.trigger_if"),
                 message: format!(
-                    "trigger_if qualifies a trigger-type effect's trigger condition (§15-8-3-1);                      `{bad:?}` is an activation-type timing (§15-8-4) -- use `condition` / `active_when`"
+                    "trigger_if qualifies a trigger-type effect's trigger condition (§15-8-3-1); `{bad:?}` is an activation-type timing (§15-8-4) -- use `condition` / `active_when`"
                 ),
             });
         }

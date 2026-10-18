@@ -60,17 +60,17 @@ effects:
 
   - when: on_digivolution_card_trashed
     condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: EX10-063
+        is_unsuspended: true
+    trigger_if:
       all_of:
+        - event_target_owner: you
         - any_of:
             - host_permanent_trait_has: Mineral
             - host_permanent_trait_has: Rock
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            card_number_is: EX10-063
-            is_unsuspended: true
-    trigger_if:
-      event_target_owner: you
     summary: "[All Turns] When effects trash a Mineral/Rock Digimon's source, suspend this Tamer to gain 1 memory"
     process:
       - suspend: { target: source }

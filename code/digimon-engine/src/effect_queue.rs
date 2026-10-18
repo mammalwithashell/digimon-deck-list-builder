@@ -3714,6 +3714,9 @@ impl Game {
             if gate == QueuedGate::Condition {
                 return !self.matching_simultaneous_play_contexts(qe).is_empty();
             }
+            // Defensive: simultaneous-play groups are formed after the
+            // enqueue-time qualifier check (`collapse_event_batch`), so this
+            // arm is not reached by `discard_entries_not_triggered` today.
             let members = group.simultaneous_play_members.clone();
             return members.into_iter().any(|member| {
                 let mut probe = qe.clone();
@@ -4061,6 +4064,11 @@ impl Game {
     /// Kept as is: keyword bodies (`<Piercing>`'s gate mixes its trigger
     /// condition with activation conditions -- DCGO `CanActivatePierce`),
     /// granted bodies and pending processing (none carries a qualifier).
+    /// Entries pushed directly onto `effect_queue` (not through
+    /// `enqueue_triggered*`: `enqueue_self_trashed_from_hand`, the arts-card
+    /// [When Digivolving] and Option [Main] paths, pending processing, the
+    /// delayed Option) bypass this check; no clause on those paths carries a
+    /// qualifier today -- route the helper through here before adding one.
     /// G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER.
     pub(crate) fn discard_entries_not_triggered(&mut self, first_index: usize) {
         let mut i = first_index;
