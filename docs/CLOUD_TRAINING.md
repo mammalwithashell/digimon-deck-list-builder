@@ -115,6 +115,11 @@ runpodctl gpu list      # should list available GPU types
 > check — the old `--dry-run`-only smoke returned before the import chain and so
 > let import-time breakage (a missing dep, a stray `engine_py_legacy` import)
 > ship green.
+>
+> *(updated 2026-10-18: the legacy engine is now deleted outright, and the image
+> also copies `code/tools/train_specialist_league.py` + `code/tools/anchored_eval_cli.py`
+> for the deck-specialist league. It still ships no `configs/` tree and no
+> `code/` prefix — see the `code/` symlink step in A.5 / B.5.)*
 
 Tag and push triggers `.github/workflows/training-image.yml`, which builds
 `Dockerfile.training` and publishes to GHCR:
@@ -268,6 +273,14 @@ ln -sf /workspace/models /app/models
 ln -sf /workspace/data   /app/data
 ln -sf /workspace/jobs   /app/jobs
 
+# The image flattens code/digimon_gym -> /app/digimon_gym, but the
+# TrainingConfig reward-profile defaults are repo-relative
+# (code/digimon_gym/agents/reward/{gameplay,profiles}.yaml) and a configured
+# but missing reward YAML is a hard FileNotFoundError at run start. Recreate
+# the code/ prefix and run from /app so they resolve.
+mkdir -p /app/code && ln -sf /app/digimon_gym /app/code/digimon_gym
+cd /app
+
 # Verify GPU + CUDA before committing to a long run (Task 9.7)
 nvidia-smi --query-gpu=name,memory.total --format=csv
 python -c "import torch; print('cuda:', torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
@@ -329,8 +342,10 @@ The trainer runs in foreground; TB scalars appear in your browser at the
 ```
 
 The `allowed_archetypes` field scopes the eligible deck pool to just those
-archetypes. The resolved set is intersected with the DSL-implemented safety
-floor and written to `models/<run_id>/deck_pool_snapshot.json` for
+archetypes. Each decklist must still pass the training admission gates
+(every card playable in the Rust engine, no not-ready DSL ledger verdict, and
+every card `ready` in `data/oracle_readiness.json` — AGENTS.md §4.5); the
+resolved set is written to `models/<run_id>/deck_pool_snapshot.json` for
 reproducibility. Aliases (e.g. `"RockClose"` for `"Rocks"`) canonicalize
 through `data/archetype_aliases.json` automatically.
 
@@ -375,8 +390,13 @@ were local:
 - `list_runs` shows the cloud run with `latest_step` / `latest_win_rate`
   populated and a `last_modified` that reflects rsync time (so you can tell
   if the mirror is stale).
-- `run_metric` / `run_summary` / `run_per_game_evals` work end-to-end against
-  the mirrored TB event files and eval sidecar.
+- `run_metric` / `run_summary` / `run_anchored_evals` work end-to-end against
+  the mirrored TB event files and `evals.jsonl` / `anchored_evals.jsonl`
+  sidecars (all under the run's `--log-dir`).
+- The model-side tools (`run_per_game_evals`, `run_recordings`,
+  `run_checkpoints`, `run_deck_pool`) read `models/`, which
+  `sync_cloud_runs.sh` does **not** mirror — they light up once you copy the
+  model dir back (A.8).
 
 The `cloud_`-prefixed names from cloud job configs keep them visually
 distinguishable in `list_runs`.
@@ -387,24 +407,33 @@ When the trainer exits cleanly:
 
 ```bash
 # On your LAPTOP
-RUN_ID=cloud_rocks_sp_v1
 scp -i "$SSH_KEY" -P $POD_PORT -r \
-  root@$POD_IP:/workspace/models/${RUN_ID} ./models/
+  root@$POD_IP:/workspace/models ./cloud_models/
 ```
 
-You now have:
+Where the artifacts land depends on the entrypoint (verified against
+`pilot_training.train()`, 2026-10-18):
 
 ```
-models/${RUN_ID}/
+# tools/run_training_job.py (job-config path, no run_name):
+models/pilot_ppo_<output.name>.zip        ← the SB3 model
+models/pilot_ppo_<output.name>.meta.json  ← run metadata / contract sidecar
+models/pilot_ppo_<timestamp>/             ← run dir: deck_pool_snapshot.json
+                                            (generalist), eval_game_log.jsonl
+
+# python -m digimon_gym.agents.pilot_training --set run_name=<RUN_ID>:
+models/<RUN_ID>/
 ├── final.zip                 ← the SB3 model
-├── deck_pool_snapshot.json   ← resolved deck pool (for reproducibility)
+├── final.meta.json           ← run metadata / contract sidecar
+├── deck_pool_snapshot.json   ← resolved deck pool (generalist runs)
 ├── eval_game_log.jsonl       ← per-game eval log
-└── training_run.json         ← run metadata sidecar
+└── checkpoints/              ← step_NNNNNNNNN.zip (checkpoint_every)
 ```
 
 When you're ready to ship it to the client app, upload via the hosted API's
-`/admin/models/upload` endpoint or your existing `tools/upload_model.py`
-flow — this runbook deliberately does NOT automate that step. Curate before
+admin model routes (`POST /admin/models` → presigned PUT → `POST
+/admin/models/{id}/confirm`), driven end-to-end by `code/tools/publish_model.py`
+after an ONNX export — this runbook deliberately does NOT automate that step. Curate before
 publishing.
 
 ## A.9 Tear down
@@ -574,7 +603,7 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER && newgrp docker
 
 # Workspace
-mkdir -p ~/digimon-training/{runs,models,data,training_jobs}
+mkdir -p ~/digimon-training/{runs,models,data,training_jobs,configs,qa/qa-reports}
 cd ~/digimon-training
 ```
 
@@ -585,6 +614,10 @@ cd ~/digimon-training
 rsync -az data/ digimon-train:~/digimon-training/data/
 rsync -az training_jobs/ digimon-train:~/digimon-training/training_jobs/
 rsync -az docker-compose.watch.yml digimon-train:~/digimon-training/
+# The image ships no configs/ tree (the CLI loads configs/training/default.yaml)
+# and no DSL ledger (without it the not-ready-verdict gate is silently skipped).
+rsync -az configs/ digimon-train:~/digimon-training/configs/
+rsync -az qa/qa-reports/validated_cards_dsl.json digimon-train:~/digimon-training/qa/qa-reports/
 
 # On the DROPLET
 docker pull ghcr.io/<your-handle-lowercase>/digimon-trainer:training-v0.1
@@ -624,14 +657,28 @@ docker run -d --name digimon-train --restart=no -e PYTHONUNBUFFERED=1 \
   -v ~/digimon-training/configs:/app/configs \
   -v ~/digimon-training/qa:/app/qa \
   ghcr.io/<owner>/digimon-trainer:training-vX.Y \
-  python -m digimon_gym.agents.pilot_training --generalist --timesteps 1000000 \
+  sh -c 'mkdir -p /app/code && ln -sf /app/digimon_gym /app/code/digimon_gym && \
+    exec python -m digimon_gym.agents.pilot_training --generalist --timesteps 1000000 \
     --match-format single --opponent greedy \
-    --archetypes 'ST-1 Gaia Red' 'ST-2 Cocytus Blue' "ST-3 Heaven's Yellow" \
-    'ST-4 Giga Green' 'ST-5 Machine Black' 'ST-6 Venomous Violet' \
+    --archetypes "ST-1 Gaia Red,ST-2 Cocytus Blue,ST-3 Heaven'"'"'s Yellow,ST-4 Giga Green,ST-5 Machine Black,ST-6 Venomous Violet" \
     --set n_envs=8 --set vec_env_backend=subproc \
     --set tensor_profile=standard_lite_deck_v2 --set run_name=floor_v1 \
-    --log-dir /app/runs/floor_v1 --save-dir /app/models
+    --log-dir /app/runs/floor_v1 --save-dir /app/models'
 ```
+
+`--archetypes` takes **one comma-separated string** (`pilot_training.py`
+splits on `,`); passing each name as a separate argument fails argparse with
+"unrecognized arguments". The `code/` symlink is the same reward-profile path
+fix as in A.5.
+
+`scripts/provision_hetzner_train.sh <name> <vcpus> single|bo3` scripts B.1–B.5
+(cheapest CCX type with ≥ N vCPU, SSH-only firewall, Docker, data staging,
+launch) for the starter floor run; read it before use — its image tag and run
+arguments are hard-coded. `scripts/train_remote.sh <droplet_ip> <job.json>
+[--publish]` is the older DO-GPU-droplet flow: it rsyncs the repo, builds
+`Dockerfile.training` on the droplet, runs the job config, pulls
+`models/pilot_ppo_<output.name>.zip` back, exports ONNX and optionally
+publishes via `code/tools/publish_model.py`.
 
 If you ever do put a GPU on a Hetzner/DO host (Hetzner does sell GPU instances
 under a different SKU), add `--gpus all` and ensure the NVIDIA Container
@@ -711,12 +758,20 @@ an hour of your time.
 
 - **Automatic model upload** to the hosted API on training completion.
   Curate before publishing.
-- **Spot-instance resume** / SB3 checkpoint restart. Runs here are babysat;
-  don't add restart complexity until the cadence justifies it.
+- **Automatic spot-instance resume.** Runs here are babysat; don't add
+  restart complexity until the cadence justifies it. (Manual restart exists:
+  `pilot_training --resume <checkpoint.zip>`.)
 - **Multi-pod orchestration**, parallel-run comparisons, sweep agents.
+  (Cross-pod league fan-out is *specified* in
+  `openspec/changes/add-cross-pod-league-orchestration/` — see A.11 — but not
+  implemented.)
 - **Domain + Let's Encrypt cert** for public TB URLs. RunPod's proxy
   (path A) and Tailscale (path B) are the documented access paths.
-- **Weights & Biases** or any external experiment-tracking SaaS integration.
+- ~~**Weights & Biases** integration~~ — *(updated 2026-10-18: now built as an
+  opt-in flag: `pilot_training --wandb` mirrors TensorBoard scalars via
+  `sync_tensorboard`, reading `WANDB_API_KEY` from the environment and
+  downgrading to offline when it is unset; see `--wandb-project/-entity/-group/
+  -run-name/-mode`.)*
 - **Tailscale inside the RunPod image** for stable cross-pod URLs. Possible
   (bake into `Dockerfile.training`), deferred until cadence justifies it.
 

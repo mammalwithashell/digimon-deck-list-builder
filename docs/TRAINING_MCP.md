@@ -2,16 +2,17 @@
 
 Read-only MCP stdio server for inspecting RL training runs. Companion to the engine debug MCP — the latter owns per-game forensics (`LiveGame` over a single recording or live game); this one owns cross-game training inspection (filesystem artifacts under `runs/` and `models/`).
 
-Shipped by the [`add-training-status-mcp`](../openspec/changes/add-training-status-mcp/) change. Python package at [`code/digimon-training-mcp/`](../code/digimon-training-mcp/).
+Shipped by the [`add-training-status-mcp`](../openspec/changes/archive/2026-05-23-add-training-status-mcp/) change (archived; living spec at [`openspec/specs/training-status-mcp/`](../openspec/specs/training-status-mcp/)). Python package at [`code/digimon-training-mcp/`](../code/digimon-training-mcp/).
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │  pilot_training run                                          │
 │  ├── runs/<name>/console.log                                 │
 │  ├── runs/<name>/evals.jsonl       (structured eval sidecar) │
+│  ├── runs/<name>/anchored_evals.jsonl  (anchored panel)      │
 │  ├── runs/<name>/MaskablePPO_1/    (TB scalar events)        │
 │  └── models/<name>/<run_id>/                                 │
-│      ├── recordings/  ├── checkpoints/  ├── deck_pool.json   │
+│      ├── recordings/ ├── checkpoints/ ├── deck_pool_snapshot │
 └────────────┬──────────────────────────────┬──────────────────┘
              │                              │
              ▼                              ▼
@@ -46,7 +47,7 @@ The MCP dependencies (`mcp`, `tensorboard`) are intentionally kept separate from
 python -m digimon_training_mcp --runs-dir ./runs --models-dir ./models
 ```
 
-Both flags are optional. If omitted, the server walks up to six ancestor directories from the current working directory looking for `./runs` and `./models` (mirrors the engine MCP's `data/cards.json` discovery).
+Both flags are optional (plus `--log-level DEBUG|INFO|WARNING|ERROR`, default `WARNING`, and `--version`). If omitted, the server walks up to six ancestor directories from the current working directory looking for `./runs` and `./models` (mirrors the engine MCP's `data/cards.json` discovery).
 
 The server writes a single banner line to stderr on startup:
 
@@ -56,7 +57,7 @@ digimon-training-mcp: ready (runs_dir=/path/to/runs, models_dir=/path/to/models,
 
 ## Registering with a client
 
-`.mcp.json` is strict JSON in this repo (no comments allowed), so the activation entry is **not** pre-added. After installing, append:
+The repo's committed `.mcp.json` already registers this server (updated 2026-10-18 — earlier versions of this doc said the entry was not pre-added), so in this repo you only need the install step above. For another client, the entry is:
 
 ```json
 {
@@ -112,7 +113,8 @@ List every subdirectory of `--runs-dir` as one logical run.
       "last_modified_epoch": 1716482892.0,
       "active": true,
       "latest_step": 387000,
-      "latest_win_rate": 0.71
+      "latest_win_rate": 0.71,
+      "has_eval_game_log": true
     },
     ...
   ]
@@ -325,7 +327,7 @@ the `has_eval_game_log` flag on each entry.
 
 ## Path resolution
 
-`<runs-dir>` and `<models-dir>` are independent — the operator typically names them similarly (`runs/generalist_v2` paired with `models/generalist_v2`) but the MCP doesn't enforce that. For model-side tools (`run_recordings` / `run_checkpoints` / `run_deck_pool`), `<models-dir>/<name>/` may either contain `recordings/` / `checkpoints/` / `deck_pool_snapshot.json` directly (flat layout) or wrap a timestamped subdirectory (e.g. `pilot_ppo_<timestamp>/`) that holds them (nested layout — the default). The MCP picks the most-recently-modified marker-bearing subdirectory when multiple exist and surfaces the choice in the `model_run_id` field of every response.
+`<runs-dir>` and `<models-dir>` are independent — the operator typically names them similarly (`runs/generalist_v2` paired with `models/generalist_v2`) but the MCP doesn't enforce that. For model-side tools (`run_recordings` / `run_checkpoints` / `run_deck_pool`), `<models-dir>/<name>/` may either contain `recordings/` / `checkpoints/` / `deck_pool_snapshot.json` directly (flat layout) or wrap a timestamped subdirectory (e.g. `pilot_ppo_<timestamp>/`) that holds them (nested layout — what you get from `--save-dir models/<name>` without a `run_name`, since the run dir then defaults to `pilot_ppo_<timestamp>`; a config-driven run with `--set run_name=<name>` writes the flat layout). The MCP picks the most-recently-modified marker-bearing subdirectory when multiple exist and surfaces the choice in the `model_run_id` field of every response.
 
 ## Recipes
 
@@ -385,4 +387,4 @@ run_per_game_evals(name, filter={step_min: 500000, step_max: 500000})
 - [TRAINING_RUNBOOK.md](TRAINING_RUNBOOK.md) — training-run lifecycle context.
 - [qa/archetype-qa/panic-families.json](../qa/archetype-qa/panic-families.json) — machine-readable index of engine panic families.
 - [qa/archetype-qa/engine-gaps.md](../qa/archetype-qa/engine-gaps.md) — prose source-of-truth for those families.
-- [openspec/changes/add-training-status-mcp/](../openspec/changes/add-training-status-mcp/) — design / spec / tasks for this change.
+- [openspec/changes/archive/2026-05-23-add-training-status-mcp/](../openspec/changes/archive/2026-05-23-add-training-status-mcp/) — design / spec / tasks for this change.

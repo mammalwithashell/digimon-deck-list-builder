@@ -1,7 +1,7 @@
 # AGENTS.md - Agent Engineering Guide
 
 Refer to `CLAUDE.md` for repository-wide architecture, service boundaries, and working rules.
-Refer to `docs/RULES_CONTEXT.md` for rule implementation details.
+Refer to `docs/digimon-rules/` (verified derivations of `general_rule.pdf`; `docs/RULES_CONTEXT.md` is a retired pointer) for rule implementation details.
 Refer to `docs/TRAINING_RUNBOOK.md` for training operations and DB-backed pipeline details.
 Refer to `docs/TENSOR_SPEC.md` and `docs/ACTION_SPEC.md` before changing observation or action contracts.
 Refer to `docs/RUST_ENGINE_API.md`, `docs/RUST_DSL_TEST_API.md`, and `docs/RUST_ENGINE_GAPS.md` before planning Rust card-effect or DSL work.
@@ -31,14 +31,14 @@ The no-approximations policy from `CLAUDE.md` applies to agent work: every legal
 
 ## Source Priority for Rules and Card Behavior
 
-When deciding what a card, keyword, timing window, or selection should do, use sources in this order:
+`CLAUDE.md` ("Source priority for card / keyword / rules questions") is authoritative; this is a summary. When deciding what a card, keyword, timing window, or selection should do, use sources in this order:
 
-1. Printed card text in `data/cards.json` (`effect_text`, `inherited_text`, `security_text`).
-2. `docs/RULES_CONTEXT.md`, plus the canonical rules PDF when needed.
-3. Fandom wiki pages for card-specific ruling notes and errata context.
-4. DCGO C# source in `DCGO/` as a behavioral implementation reference and tiebreaker.
+1. The official rules manual `Digimon TCG resources/general_rule.pdf` (+ `glossary.pdf`) — canonical for rules, keyword semantics, and timing. Base-repo only (CLAUDE.md rule 32); the committed verified derivations in `docs/digimon-rules/` are the cheap first stop.
+2. DCGO C# source (base-repo `DCGO/`, CLAUDE.md rule 29) — authority for how a specific card actually resolves; outranks the card-text JSON.
+3. `data/card_overrides.json`, then `data/cards.json` — printed text (`effect_text`, `inherited_text`, `security_text`). API-ingested and lossy.
+4. Fandom wiki pages for card-specific ruling notes and errata context.
 
-DCGO is useful for detailed flow, but it is not the authority on optionality or mandatory behavior. Printed text and rules win.
+For what a card *prints* (traits including Rule-granted ones, costs, printed text, official Q&A), the official Bandai DB mirror (`data/card_official.json`, `data/card_bundles/<ID>.md`, `data/card_qa.json`) and the card image outrank both DCGO and `cards.json`. The retired `docs/RULES_CONTEXT.md` is no longer a source.
 
 ## Engine Status
 
@@ -84,9 +84,9 @@ Group-style roadmap work has one important invariant: do not expand `ACTION_SPAC
 
 New Rust card effects are TDD:
 
-1. Read printed text in `data/cards.json` and relevant rule sections.
-2. Write a failing Rust behavioral test under `code/digimon-engine/tests/`.
-3. Implement through `CardEffect`, `EffectContext`, or DSL lowering without hidden auto-choices.
+1. Read the printed text (card image / `data/card_bundles/<ID>.md` / `data/cards.json`) and relevant rule sections.
+2. Write a failing Rust behavioral test under `code/digimon-engine/tests/cards_behavioral/<set>/`.
+3. Implement DSL-first: a YAML spec in `code/digimon-engine/cards/<set>/` lowered by `code/digimon-dsl/` (widen the DSL/engine when it can't express the card); a hand-written `CardEffect` in `src/cards/raw_rust/` is the last resort (CLAUDE.md rule 28). No hidden auto-choices.
 4. Verify the action mask exposes every legal decision.
 5. Update gap trackers and parity notes when the work closes or discovers a reusable primitive.
 
@@ -199,7 +199,7 @@ Goal: play Digimon matches inside the headless engine to generate win/loss and p
 
 ### MaskablePPO (MLP baseline)
 
-- Feed-forward policy from `sb3_contrib.MaskablePPO` with `"MlpPolicy"`.
+- Feed-forward policy from `sb3_contrib.MaskablePPO` with `"MlpPolicy"` over the `CardEmbeddingExtractor` features extractor (`features_extractor.py`); `--net-arch` sets the pi/vf head widths (default SB3 `[64, 64]`).
 - Uses `ActionMasker` so illegal actions are never sampled.
 - Training entrypoint: `code/digimon_gym/agents/pilot_training.py`.
 - Observation shape comes from the selected observation layout, not from `digimon_engine.TENSOR_SIZE`.
@@ -234,7 +234,7 @@ Default LSTM settings from `pilot_training.py`:
 - `lstm_hidden_size`: `256`.
 - `n_lstm_layers`: `1`.
 - `enable_critic_lstm`: `True`.
-- `net_arch`: `dict(pi=[64], vf=[64])`.
+- `net_arch`: `dict(pi=[64], vf=[64])` unless `--net-arch` / `net_arch` overrides it.
 - `batch_size`: forced to `n_steps` for recurrent training.
 
 Inference rule:
@@ -245,17 +245,16 @@ Inference rule:
 
 ### Greedy Policy (Heuristic)
 
-Location: `digimon_gym.digimon_gym.greedy_policy()`.
+Location: `digimon_gym.digimon_gym.greedy_policy()`, which delegates to the Rust heuristic `runner.greedy_action()` (`code/digimon-engine/src/policies/greedy.rs`) and only falls back to a first-legal-non-pass pick when that binding is unavailable. It never returns concede (action 93) while any other action is legal.
 
-Used as the default fast baseline and common training opponent. Priority logic:
+Used as the default fast baseline and common training opponent. Priority logic (see `greedy.rs` for the authoritative version):
 
-- Mulligan: mulligan if no level-3 Digimon in hand, otherwise keep.
-- Breeding: hatch, then move, then pass.
-- Main: keep-turn digivolve, then attack, then play, then pass.
-- Attack scoring: lethal first, favorable DP trades next.
-- Digivolve scoring: prefers digivolutions with cost not exceeding relative memory.
-- `TRASH_CARD` selection: discard lowest-value card first.
-- Other phases: pass or first valid action.
+- Mulligan: keep if hand contains a level-3 Digimon, else mulligan.
+- `SelectPlayOrder` (BO3): play first when offered, else second.
+- Breeding: hatch; move only if the raising Digimon has value or a hand evolution line; else pass.
+- Main: setup play (search/resource cards or Tamers), then best keep-turn digivolve, then best attack (security pressure before board trades), then best play, then pass.
+- Trash-from-hand selection: discard the lowest-value card (non-Digimon first, then lower cost).
+- Other phases: pass or first valid non-pass action.
 
 ### Random Policy
 
@@ -294,13 +293,10 @@ Mask delivery:
 - `ActionMasker` calls through to `env.action_mask()`/`env.get_action_mask()` through the wrapper chain.
 - Engine masks use `1.0` for legal, `0.0` for illegal; env masks threshold at `> 0.5`.
 
-Reward shaping:
+Reward shaping (`docs/REWARD_PROFILES.md` is the live reference):
 
-- Terminal win: `+1.0`.
-- Terminal loss: `-1.0`.
-- Draw: `0.0`.
-- Dense security delta: `(my_security - opp_security) * 0.01`.
-- Dense board DP delta: `(my_total_DP - opp_total_DP) * 0.0001`.
+- By default `TrainingConfig.reward_profiles_path` / `reward_gameplay_path` point at `code/digimon_gym/agents/reward/{profiles,gameplay}.yaml`, so `RewardProfileWrapper` wraps `DigimonEnv` (inside `OpponentWrapper`), sets `legacy_reward=False`, and supplies the reward. A configured-but-missing YAML is a hard error; setting both paths to null/empty opts back into the legacy recipe.
+- Legacy recipe (`DigimonEnv._compute_reward`, `legacy_reward=True`): win `+10.0` plus up to `+5.0` fast-win bonus (`(200 - steps)/200 * 5`), loss `-10.0`, draw `-1.0`; dense `+1.5` per opponent security card removed and `-0.5` per own security card lost; optional digivolve shaping; `-0.001` per step. Calibrated for BO3 (`add-bo3-match-training/design.md` §D9).
 - `GauntletWrapper` can add a bounty bonus on terminal wins against high-threat opponents.
 
 Truncation:
@@ -326,17 +322,23 @@ The action mask is the legality oracle. Observation metadata may explain phases,
 
 ## 3.4 Wrapper Chain
 
-Full pilot training wrapper chain, innermost to outermost:
+Full pilot training wrapper chain, innermost to outermost (`pilot_training.make_env` / `make_vec_env`):
 
 ```text
 DigimonEnv
+  -> RewardProfileWrapper        (when reward profiles are configured — the default)
   -> OpponentWrapper
-  -> DeckPoolWrapper
-  -> GauntletWrapper
+  -> MatchEnv                    (match_format="bo3" — the TrainingConfig default)
+  -> DeckPoolWrapper             (deck_pool_variants)
+  -> GeneralistDeckPoolWrapper   (--generalist)
+  -> LeaguePoolWrapper           (--opponent league)
+  -> GauntletWrapper             (--gauntlet)
+  -> TrainingRecordingWrapper    (always — engine-panic safety rail + optional recording)
+  -> MulliganLogWrapper          (--mulligan-log on, the default)
   -> ActionMasker
 ```
 
-`DeckPoolWrapper` and `GauntletWrapper` are conditional based on training configuration.
+Only `OpponentWrapper`, `TrainingRecordingWrapper`, and `ActionMasker` are unconditional. `MatchEnv` sits between `OpponentWrapper` and the deck-pool wrappers so deck/opponent sampling fires once per match, not per game (CLAUDE.md rule 26).
 
 ### OpponentWrapper
 
@@ -350,8 +352,9 @@ Converts the two-player game into a single-agent MDP:
 - Discards dense rewards from opponent auto-steps.
 - Only terminal rewards from opponent sequences pass through.
 
-Every accepted opponent mode (`greedy`, `random`, `pool`, `agent`) routes
-Player 2 through this wrapper with a concrete `opponent_fn`. The old
+Every accepted opponent mode (`greedy`, `random`, `pool`, `league`, plus
+the config-only `agent`) routes Player 2 through this wrapper with a concrete
+`opponent_fn`. The old
 `self-play` mode (which skipped the wrapper) is retired and fails at startup:
 observations are built from Player 1's perspective only, so the learner was
 selecting Player 2's actions against wrong-perspective input
@@ -380,11 +383,21 @@ Samples opponent decks from `MetaGauntlet`:
 - Adds `opponent_archetype` and `opponent_threat_index` to `info`.
 - Adds `bounty_bonus` on terminal wins against opponents above `bounty_threshold`.
 
+### LeaguePoolWrapper
+
+Location: `code/digimon_gym/agents/league_opponent.py`.
+
+Used by `--opponent league` (deck-specialist league, `--league-pool-manifest`):
+
+- Samples a coupled (policy, deck) opponent per match from the round-pool manifest and repoints the `LeagueOpponentController` that `OpponentWrapper` calls.
+- Sits outside `MatchEnv`, so one sample spans a whole BO3 match.
+- `sampling_mode` `pfsp` (default; uniform until enough games are observed) or `uniform`; `cache_size` bounds the per-worker loaded-opponent cache.
+
 ### LeagueOpponentWrapper
 
 Location: `code/digimon_gym/agents/league_wrapper.py`.
 
-Used by Stage 2 of `GauntletOrchestrator`:
+Written for Stage 2 of `GauntletOrchestrator` (which records `sampling_mode` in each job's `config_json`). As of 2026-10-18 no non-test code constructs this wrapper:
 
 - `meta_weighted`: samples by meta share with a small minimum weight.
 - `pfsp`: inverse win-rate sampling, uniform until enough games have been observed.
@@ -439,8 +452,10 @@ Then the archetype probability is raised to `sleeper_floor`, and non-sleeper wei
 Within an archetype, prefer higher-quality deck sources:
 
 ```text
-digilab > digimonmeta > egman > digimoncard_io > file/manual/test
+digimonmeta > egman > digimoncard_io > file/manual/test
 ```
+
+(`gauntlet._SOURCE_PREFERENCE`; DigiLab supplies archetype statistics, not decklists.)
 
 Keep this priority aligned with the actual loader/optimizer code when source names change.
 
@@ -455,7 +470,8 @@ code/tools/meta_loader.py -> data/deck_library.json -> MetaGauntlet.load()
 `MetaGauntlet.load()` (and `load_generalist_deck_pool`, which wraps it) admits each decklist on its own:
 
 1. Every card ID is playable (`gauntlet.load_playable_card_ids()`): registered in the Rust engine (`digimon_engine.load_implemented_card_ids()`) and present in the card database `RustHeadlessGame` loads (`data/cards.json`). A YAML spec alone registers a card without giving the runner its card data.
-2. No card has a not-ready verdict in `qa/qa-reports/validated_cards_dsl.json`: `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT` or `AUDITED-MISSING-TESTS`. A playable card with no ledger entry counts as ready.
+2. No card has a not-ready verdict in `qa/qa-reports/validated_cards_dsl.json`: `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT` or `AUDITED-MISSING-TESTS`. A playable card with no ledger entry counts as ready. This gate runs only for the default library path, and is skipped (with a warning) when the ledger file is missing.
+3. Every card is `ready` in `data/oracle_readiness.json` — the DCGO oracle readiness gate (CLAUDE.md rule 34). It applies to every library path and to pool snapshots (`validate_oracle_ready_deck`), has no override, raises `OracleReadinessMissingError` if the artifact is absent, and raises `EmptyTrainingPoolError` naming the top blocking cards when no decklist survives. Regenerate with `PYTHONPATH=code python -m tools.clause_coverage.readiness` (`--plan` picks the next exams).
 
 The ledger's `archetype` field is a batch label and is never matched against library archetype names. An archetype is eligible when at least one of its lists is admitted; `allowed_archetypes` narrows that set and logs, at INFO, each scoped name left with no admitted list.
 
@@ -646,43 +662,9 @@ Do not run Uvicorn with `--reload` for long-running training workers; reload cre
 
 ---
 
-# 11. Generated Script Promotion Workflow
+# 11. Generated Script Promotion Workflow (retired)
 
-This workflow is for legacy Python card scripts that still need promotion into the frozen Python lane during the migration. Cards migrate one direction only: Python legacy reference to Rust ownership.
-
-## Source/Target Layout
-
-- Generated source: `code/engine_py_legacy/engine/data/scripts/generated/<set_id>/<module_name>.py`
-- Frozen target: `code/engine_py_legacy/engine/data/scripts/<set_id>/<module_name>.py`
-- Manifest: `code/engine_py_legacy/engine/data/scripts/_frozen_manifest.json`
-
-## Promotion Contract
-
-- Promotions must go through `promote_script_from_generated` in `code/engine_py_legacy/engine/data/script_promotion.py`.
-- Promotion is hash-guarded with `expected_generated_hash`.
-- Successful promotion copies the generated file to the frozen lane, updates the manifest card record, and increments the manifest version.
-
-Single-card helper:
-
-```bash
-python code/tools/promote_script.py --card-id BT24-001 --set-id bt24 --module-name bt24_001 --expected-generated-hash <sha256>
-```
-
-Bulk promotion definition of pending:
-
-- Generated script has no frozen counterpart.
-- Frozen counterpart exists but its hash differs from generated.
-
-Bulk run steps:
-
-1. Scan `scripts/generated/**/*.py`, excluding `__init__.py`.
-2. For each pending entry, compute the generated sha256 and call `promote_script_from_generated(...)`.
-3. Re-scan and confirm pending count is `0`.
-
-Post-promotion checks:
-
-- `git status --short` should show frozen lane updates/additions plus manifest update.
-- Pending re-scan must return `0`.
+This workflow promoted generated Python card scripts into the frozen lane of the legacy Python engine. It no longer exists: `code/engine_py_legacy/` (including `script_promotion.py` and the scripts manifest) was deleted on 2026-06-15, and `code/tools/promote_script.py` is gone. New cards are authored DSL-first in Rust (§0.2, CLAUDE.md rule 28). Read the old workflow from git history if needed.
 
 ---
 
@@ -692,10 +674,13 @@ Key docs:
 
 - `CLAUDE.md`: current repository architecture and working rules.
 - `docs/ARCHITECTURE.md`: detailed architecture reference.
-- `docs/RULES_CONTEXT.md`: rules and keyword semantics.
+- `docs/digimon-rules/`: verified rules derivations (`keyword-semantics.md`, `digest.md`, `rules-index.json`); `docs/RULES_CONTEXT.md` is a retired pointer.
 - `docs/TENSOR_SPEC.md`: observation tensor layout.
 - `docs/ACTION_SPEC.md`: action IDs and mask contract.
 - `docs/TRAINING_RUNBOOK.md`: training pipeline operations.
+- `docs/CLOUD_TRAINING.md`: cloud training (RunPod GPU / Hetzner-DO CPU), training image, run mirroring.
+- `docs/MODEL_EVALUATION.md`: anchored evaluation (CLAUDE.md rule 30).
+- `docs/REWARD_PROFILES.md`: reward profiles and the gameplay reward shape.
 - `docs/TOOLS.md`: CLI tools and operational workflows.
 - `docs/RUST_ENGINE_API.md`: Rust card scripting API.
 - `docs/RUST_DSL_TEST_API.md`: Rust DSL test helpers and authoring checks.
