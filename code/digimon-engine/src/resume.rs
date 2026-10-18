@@ -827,6 +827,9 @@ pub struct CombatBlockState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Single-variant since the post-Block retarget mode was removed; kept (and
+/// carried by `CombatRaidSelectionState`) so the resume-frame shape, and the
+/// resume-stack hash that walks it, stay unchanged.
 pub enum CombatRaidSelectionMode {
     /// The `<Raid>` trigger body's optional switch. (The mandatory post-Block
     /// "retarget" mode was removed: a removed attack target makes the attack

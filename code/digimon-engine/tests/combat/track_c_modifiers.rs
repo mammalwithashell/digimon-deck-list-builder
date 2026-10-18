@@ -203,8 +203,8 @@ fn cannot_be_redirected_filters_block_candidate() {
 
 // ── Raid retarget gating ───────────────────────────────────────────────
 
-/// `OnAttack` closure that deletes a captured target — used to set up a
-/// PostBlock state where the original Raid target is gone.
+/// `OnAttack` closure that deletes a captured target — used to set up an
+/// attack whose declared target is gone before `<Raid>` resolves.
 struct DeleteOnAttack(PermanentHandle);
 impl CardEffect for DeleteOnAttack {
     fn effects(&self, c: CardHandle) -> Vec<Effect> {
@@ -220,12 +220,11 @@ impl CardEffect for DeleteOnAttack {
 
 #[test]
 fn cannot_switch_attack_target_suppresses_raid_retarget() {
-    // Raid would normally install a mandatory retarget selection when
-    // the original target leaves and a legal candidate exists. With
-    // `CannotSwitchAttackTarget` on the attacker, the retarget is
-    // suppressed and the attack runs through to Battle against the
-    // (now-invalid) target — `resolve_pending_battle` treats a deleted
-    // defender as a clean attacker-wins.
+    // <Raid> would normally offer its optional switch to a legal
+    // candidate after the declared target leaves. With
+    // `CannotSwitchAttackTarget` on the attacker it offers nothing: the
+    // removed target stays the target and the attack fails (§11-2-6,
+    // `AttackResult::Unsuccessful`).
     let mut r = DebugRunner::builder()
         .add_card(digimon("ATK", 5000))
         .add_card(digimon("DEF", 5000))

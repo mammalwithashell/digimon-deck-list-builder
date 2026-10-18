@@ -175,20 +175,16 @@ impl<'a> EffectContext<'a> {
         prompt: &str,
     ) -> Result<(), crate::combat::AttackError> {
         use crate::combat::AttackError;
-        let Some(pa) = self.game.pending_attack.as_ref() else {
+        if self.game.pending_attack.is_none() {
             return Err(AttackError::NoActiveAttack);
-        };
+        }
         // Attacker and target by identity (see `redirect_attack`): no switch
         // once the attacker has left; a removed target (§11-2-6) is not the
         // current target, and neither is the Digimon in its old slot.
         let Some(attacker) = self.game.live_attack_attacker() else {
             return Ok(());
         };
-        let current_target = self
-            .game
-            .live_attack_target_digimon()
-            .map_or(pa.effective_target, AttackTarget::Digimon);
-        let current_target_removed = self.game.attack_target_removed();
+        let (current_target, current_target_removed) = self.game.attack_target_for_switch();
         let opponent = self.game.next_clockwise(attacker.player);
         let mut valid_action_ids = Vec::new();
 

@@ -243,7 +243,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             // the primitive installs the closure selection (the redirect does not
             // consume `pending_attack`), so the parked data frame can decode +
             // substitute without it.
-            let attacker = ctx.game.pending_attack.as_ref().map(|pa| pa.attacker);
+            // By identity: once the attacker has left, no prompt parks (the
+            // primitive switches nothing) and no frame is built.
+            let attacker = ctx.game.live_attack_attacker();
             let trigger_context = ctx.game.current_trigger_context.clone();
             let source_card = ctx.source_card;
             let source_permanent = ctx.source_permanent;

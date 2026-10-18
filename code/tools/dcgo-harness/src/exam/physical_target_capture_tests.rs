@@ -20,6 +20,13 @@
   let(_,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.0".into(),"opp.field.1".into()]),None).unwrap();assert!(!wire.permanent_targets[0].attack_target);assert!(wire.permanent_targets[1].attack_target);
   g.pending_attack.as_mut().unwrap().battle_defender_deleted=true;let(_,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.1".into()]),None).unwrap();assert!(!wire.permanent_targets[0].attack_target);
  }
+ #[test] fn removed_target_slot_occupant_is_not_the_attack_target(){
+  // §11-2-6: the target in opp.field.0 was removed; the twin that compacted into
+  // that slot is not the attack target (the handle still names the slot).
+  let mut g=fixture();g.pending_attack.as_mut().unwrap().effective_target_removed=true;
+  let(_,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.0".into()]),None).unwrap();assert!(!wire.permanent_targets[0].attack_target);
+  let(_,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["own.field.0".into()]),None).unwrap();assert!(wire.permanent_targets[0].attacker,"the attacker role is unaffected");
+ }
  #[test] fn two_link_and_source_orders_are_preserved(){
   let mut g=fixture();let a=g.players[0].battle_area[0].top_card().clone();let b=g.players[1].battle_area[0].top_card().clone();let p=&mut g.players[1].battle_area[1];p.card_sources.insert(0,b.clone());p.card_sources.insert(0,a.clone());p.linked_cards=vec![b,a];let(_,wire)=build_selection_row(&g,0,0,&SelectPayload::Targets(vec!["opp.field.1".into()]),None).unwrap();assert_eq!(wire.permanent_targets[0].sources,vec!["ATTACKER","TWIN"]);assert_eq!(wire.permanent_targets[0].linked,vec!["TWIN","ATTACKER"]);
  }
