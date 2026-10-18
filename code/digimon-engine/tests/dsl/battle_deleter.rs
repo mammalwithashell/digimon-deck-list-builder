@@ -485,16 +485,26 @@ impl digimon_engine::effect::CardEffect for ChangeWinnerOnDeletion {
     }
 }
 
+/// §15-8-3-1 / §15-8-3-4: a trigger-type effect triggers when its trigger
+/// condition is met, and not otherwise; §15-8-3-8: what that condition names
+/// is read in the state where the battle triggered it. BD-HERO, which won the
+/// battle, has no [Evolved] trait, so "When your [Evolved] Digimon wins a
+/// battle" never triggers -- even with P1 the turn player, whose [On Deletion]
+/// digivolves the winner into the [Evolved] BD-EVO before P0's pending effects
+/// activate. (Withdraws the Task 28 ratification that it activated.)
+/// G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER.
 #[test]
-fn winner_predicates_follow_ordinary_evolution_during_opponents_on_deletion() {
+fn winner_that_evolves_into_the_trait_during_opponents_on_deletion_did_not_trigger() {
     winner_identity_after_deletion(false, false);
 }
 
+// Since G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER this passes because the non-[Evolved] winner never triggers the observer at the battle (§15-8-3-4), not because of identity tracking.
 #[test]
 fn winner_predicates_do_not_follow_a_reused_slot_after_winner_deletion() {
     winner_identity_after_deletion(true, false);
 }
 
+// Since G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER this passes because the non-[Evolved] winner never triggers the observer at the battle (§15-8-3-4), not because of identity tracking.
 #[test]
 fn winner_predicates_do_not_follow_materials_into_a_new_dna_digimon() {
     winner_identity_after_deletion(false, true);
@@ -559,11 +569,10 @@ fn winner_identity_after_deletion_with_turn(
     r.game.turn_player_idx = turn_player;
     r.battle_digimon(hero, villain);
     r.auto_resolve().unwrap();
-    assert_eq!(
-        r.security_count(1),
-        if turn_player == 0 || delete_winner || dna_winner { 4 } else { 3 },
-        "turn player P{turn_player}"
-    );
+    // No [Evolved] Digimon won the battle: the observer never triggers, in
+    // any shape or turn order (§15-8-3-1, §15-8-3-8;
+    // G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER).
+    assert_eq!(r.security_count(1), 4, "turn player P{turn_player}");
     let first = &r.game.players[0].battle_area[0];
     assert_eq!(
         first.top_card().card_id(&r.game.card_data),

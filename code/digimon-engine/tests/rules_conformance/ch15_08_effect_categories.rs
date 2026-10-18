@@ -789,6 +789,70 @@ fn battle_winner_qualifier_reads_the_material_after_the_winner_dna_digivolves() 
     );
 }
 
+/// §15-8-3-1 "A trigger-type effect will always trigger as soon as its
+/// trigger conditions are met, then the effect will activate." (and
+/// §15-8-3-4: it won't trigger when they aren't met) and §15-4-4-5 (a pending
+/// effect whose trigger conditions are no longer met can't activate -- the
+/// activation-time re-check is not where a trigger is decided).
+///
+/// P0's `LV5_PLAIN` (no [TS] trait) attacks P1's `VANILLA_LV3` and wins. P0's
+/// Tamer `OBS_WIN_DIGI_TS` ("[All Turns] When any of your Digimon win a
+/// battle, 1 of your Digimon may digivolve into a [TS] trait Digimon card in
+/// your hand without paying the cost") triggers; P0's Tamer `OBS_WIN_TS`
+/// ("[All Turns] When any of your [TS] trait Digimon win a battle, gain 1
+/// memory") does not: the Digimon that won had no [TS] trait. Its digivolution
+/// into the [TS] `TS_LV6` after the battle makes the winner a [TS] Digimon,
+/// but the battle was not won by a [TS] Digimon, so `OBS_WIN_TS` never
+/// triggered and never activates. (DCGO: `CanTriggerWhenWinBattle` is
+/// evaluated when the battle stacks its `OnEndBattle` effects; the converse,
+/// a [TS] winner that leaves before activation, is
+/// `battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves`.)
+/// G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER.
+#[test]
+fn battle_result_trigger_condition_false_at_the_battle_never_activates() {
+    cite!(
+        "15-8-3-1",
+        "f6da78dabd1b18295353a717881824e6ae0d9133240bedc83b290853047e1483"
+    );
+    cite!(
+        "15-8-3-4",
+        "71d0451f75557827933628c0bf96a1437a5c750f4cd432b91ad8ce246f9be375"
+    );
+    cite!(
+        "15-4-4-5",
+        "71bf5b7f1273d0267e98f23107451b614fc0644a66410a19605e28c4c4274329"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
+        .hand(0, &["TS_LV6"])
+        .security(1, &[FILL; 3])
+        .memory(3)
+        .start();
+    let winner = r.place_on_field(0, "LV5_PLAIN", Some(0));
+    r.place_on_field(0, "OBS_WIN_TS", Some(0));
+    r.place_on_field(0, "OBS_WIN_DIGI_TS", Some(0));
+    let loser = r.place_on_field(1, "VANILLA_LV3", Some(0));
+    let cp = r.event_checkpoint();
+    r.attack_digimon(winner, loser, false);
+    // `OBS_WIN_DIGI_TS`: its only Digimon is the winner; it digivolves.
+    step_prompt(&mut r);
+    pick_hand_card(&mut r, 0, "TS_LV6");
+    resolve_prompts(&mut r);
+    assert!(
+        trash_ids(&r, 1).contains(&"VANILLA_LV3".to_string()),
+        "P0's Digimon won the battle"
+    );
+    assert_eq!(
+        field_top_ids(&r, 0),
+        owned(&["TS_LV6", "OBS_WIN_TS", "OBS_WIN_DIGI_TS"]),
+        "the winner digivolved into a [TS] Digimon after the battle"
+    );
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "no [TS] Digimon won the battle: the effect never triggered: {:?}",
+        memory_sources(&r, cp)
+    );
+}
+
 // ─── §4-7-7 — a Digimon's traits are its top card's ─────────────────────────
 
 /// P0's stack `stack` (bottom first, top card last), P0's Tamer `OBS_WIN_TS`

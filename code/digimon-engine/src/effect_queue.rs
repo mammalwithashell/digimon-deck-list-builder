@@ -3973,6 +3973,80 @@ impl Game {
         }
     }
 
+    /// Drop the entries at `first_index..` whose trigger condition is not met
+    /// when the event triggers them. A trigger-type effect triggers as soon as
+    /// its trigger conditions are met and won't trigger when they aren't
+    /// (§15-8-3-1, §15-8-3-4), and what its condition names is read in the
+    /// state where the event triggered it (§15-8-3-8). The drainer's
+    /// per-iteration non-firing filter (`non_firing_queued_effect_indices_for`)
+    /// only HIDES such an entry, so without this it activates once a sibling
+    /// effect in the same pool makes its condition true. The activation-time
+    /// re-check is unchanged (§15-4-4-5). DCGO evaluates `CanUseCondition`
+    /// when the event stacks the effect (`AutoProcessing.StackSkillInfos`;
+    /// `CanTriggerWhenWinBattle`).
+    ///
+    /// Each entry is evaluated through `queued_effect_condition_passes`, with
+    /// the trigger context attached to it: live while the event referent is
+    /// on the field, its last-known snapshot once it has left
+    /// (`Game::gate_trigger_context`).
+    ///
+    /// Only for a timing whose clause-level condition IS its trigger
+    /// condition (the battle result: "when ... wins a battle" / "deletes ...
+    /// in battle", §14-2-4). The DSL does not separate a clause's trigger
+    /// condition from a processing condition authored in the same
+    /// `condition` / `active_when` (§15-8-3-9-1: "if that Digimon is level 4
+    /// or higher" must still be read at activation), so other observer
+    /// timings keep the activation-time reading alone
+    /// (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER). Kept
+    /// as is: keyword bodies (`<Piercing>`'s gate mixes its trigger condition
+    /// with activation conditions -- DCGO `CanActivatePierce`: still the
+    /// attacking Digimon, the opponent has security), granted bodies and
+    /// pending processing (no clause condition).
+    /// G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER.
+    pub(crate) fn discard_entries_not_triggered(&mut self, first_index: usize) {
+        // Scope guard until the general fix gives the DSL a trigger-condition
+        // field: only the battle result's clause condition is known to be its
+        // trigger condition.
+        debug_assert!(
+            self.effect_queue
+                .iter()
+                .skip(first_index)
+                .all(|qe| qe.timing == EffectTiming::BattleResult),
+            "discard_entries_not_triggered is BattleResult-only \
+             (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER)"
+        );
+        let mut i = first_index;
+        while i < self.effect_queue.len() {
+            if self.queued_entry_has_clause_trigger_condition(i)
+                && !self.queued_effect_condition_passes(i)
+            {
+                self.effect_queue.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    /// True when `effect_queue[i]` is a card's own clause (not a keyword
+    /// body, granted body or pending processing) with a clause-level
+    /// condition. See [`Self::discard_entries_not_triggered`].
+    fn queued_entry_has_clause_trigger_condition(&self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i) else {
+            return false;
+        };
+        if qe.granted_effect_id.is_some()
+            || qe.keyword_effect.is_some()
+            || qe.pending_processing.is_some()
+        {
+            return false;
+        }
+        self.effects_for_queued(qe).is_some_and(|effects| {
+            effects.get(qe.effect_slot as usize).is_some_and(|effect| {
+                effect.keyword_source.is_none() && effect.condition.is_some()
+            })
+        })
+    }
+
     fn queued_effect_activation_kind(&self, qe: &QueuedEffect) -> EffectSourceKind {
         // Q2229 classifies native field effects on activation, after earlier
         // simultaneous effects. Cost/body continuations retain this capture.

@@ -4283,10 +4283,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Trigger-condition qualifier ('When one of your Digimon with 4000 DP or less is played'): a sibling [On Play] raising the played Digimon to 6000 DP first makes the pending observer unable to activate; control ordering activates it.",
+      "note": "Trigger-condition qualifier ('When one of your Digimon with 4000 DP or less is played'): a sibling [On Play] raising the played Digimon to 6000 DP first makes the pending observer unable to activate; control ordering activates it. The activation-time re-check is not where a trigger is decided: 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers, though a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER).",
       "status": "proven",
       "tests": [
-        "ch15_04_effect_states::pending_effect_whose_trigger_condition_lapsed_cannot_activate"
+        "ch15_04_effect_states::pending_effect_whose_trigger_condition_lapsed_cannot_activate",
+        "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"
       ],
       "text": "When a card with an effect that's pending activation no longer meets the trigger conditions of that effect before it activates, the effect can no longer be activated."
     },
@@ -4704,10 +4705,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not. G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX.",
+      "note": "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not (G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX). Converse: with a winner without [TS] the effect never triggers, even when a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER).",
       "status": "proven",
       "tests": [
-        "ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves"
+        "ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves",
+        "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"
       ],
       "text": "A trigger-type effect will always trigger as soon as its trigger conditions are met, then the effect will activate. If an effect reads \"[When Attacking] Lose 2 memory\" or \"[Your Turn] When effects suspend this Digimon, suspend 1 of your opponent's Digimon,\" that shows a trigger timing."
     },
@@ -4740,16 +4742,18 @@
       "text": "A trigger-type effect will trigger when the specific conditions are met for the effect on that card to trigger."
     },
     "15-8-3-4": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 15,
       "fingerprint": "71d0451f75557827933628c0bf96a1437a5c750f4cd432b91ad8ce246f9be375",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "Battle half proven: 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers, though a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (the battle result decides its trigger condition at the battle, Game::discard_entries_not_triggered). Every other observer timing still enqueues without deciding its trigger condition, and the DSL can't tell a trigger qualifier from a processing condition in condition / active_when (OBS_PLAY_LE4K vs OBS_OPP_PLAY_GE4), so a qualifier false at the event activates once a pooled sibling makes it true.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"
+      ],
       "text": "Trigger-type effects won't trigger when their trigger conditions aren't met."
     },
     "15-8-3-5": {
@@ -15345,8 +15349,8 @@
     },
     "gap": 618,
     "mechanics": {
-      "gap_blocking": 16,
-      "gap_nonblocking": 322,
+      "gap_blocking": 17,
+      "gap_nonblocking": 321,
       "not_testable": 152,
       "proven": 225
     },
