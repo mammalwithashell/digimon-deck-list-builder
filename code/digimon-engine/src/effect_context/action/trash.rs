@@ -629,22 +629,12 @@ impl<'a> EffectContext<'a> {
     /// Reject-before-mutate discipline: invalid handle, empty or 1-card stack
     /// and a non-Digimon top all return `false` before any state change.
     pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
-        let Some(removed) = self.pop_top_source_for_trash(target) else {
-            return false;
-        };
-        self.trash_popped_top_cards(target, vec![removed]);
-        true
-    }
-
-    /// Guards + pop for [`Self::trash_top_source`]: `None` (no mutation)
-    /// when the slot is missing, the stack has no stacked card under its top
-    /// (§4-7-2) or its top card is not a Digimon card (§8-3-2-1), or a
-    /// protection blocks the trash (`ImmuneFromStackTrashing` on the host, or
-    /// the top card's own source-trash protection).
-    fn pop_top_source_for_trash(
-        &mut self,
-        target: PermanentHandle,
-    ) -> Option<crate::card_source::CardSource> {
+        // §8-3-2-1 / §4-7-2 (the burst turn-end trash's own rule): a lone
+        // card is not a stacked card, and a non-Digimon top trashes nothing.
+        // Checked HERE, not in the shared pop: the generic "trash the top N
+        // stacked cards" (`trash_top_n_stacked_sources`) keeps going past a
+        // Tamer / Option / Digi-Egg it exposes (DCGO `ITrashStack` has no
+        // type check; BT21-030 Q&A "until there are no more stacked cards").
         let eligible = self
             .game
             .player(target.player)
@@ -658,8 +648,26 @@ impl<'a> EffectContext<'a> {
                     )
             });
         if !eligible {
-            return None;
+            return false;
         }
+        let Some(removed) = self.pop_top_source_for_trash(target) else {
+            return false;
+        };
+        self.trash_popped_top_cards(target, vec![removed]);
+        true
+    }
+
+    /// Guards + pop shared by [`Self::trash_top_source`] and the batched
+    /// `trash_top_n_stacked_sources`: `None` (no mutation) when the slot is
+    /// missing or empty, or a protection blocks the trash
+    /// (`ImmuneFromStackTrashing` on the host, or the top card's own
+    /// source-trash protection). Type- and length-agnostic: the §8-3-2-1 /
+    /// §4-7-2 guards belong to `trash_top_source` alone, and the batch has its
+    /// own `len > 1` stop.
+    fn pop_top_source_for_trash(
+        &mut self,
+        target: PermanentHandle,
+    ) -> Option<crate::card_source::CardSource> {
         if let Some(card) = self
             .game
             .player(target.player)

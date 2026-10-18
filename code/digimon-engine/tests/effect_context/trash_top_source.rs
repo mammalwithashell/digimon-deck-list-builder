@@ -267,3 +267,62 @@ fn trash_top_source_non_digimon_top_trashes_nothing() {
     assert_eq!(runner.game.players[0].battle_area[0].card_sources.len(), 2);
     assert!(runner.game.players[0].trash.is_empty());
 }
+
+/// The generic "trash the top N stacked cards" (`trash_top_n_stacked_sources`
+/// with `include_top_card`, the BT21-030 idiom) is NOT bound by §8-3-2-1's
+/// "not a Digimon" clause (that rule is the burst turn-end trash's): it keeps
+/// going past a Digi-Egg or a Tamer it exposes, stopping only when no stacked
+/// card is left or the count is reached (DCGO `ITrashStack`; official Q&A:
+/// "trashed until there are no more stacked cards"). Champion / Rookie / Egg
+/// over a bottom Tamer, "trash the top 3": all three go, the Tamer stays.
+#[test]
+fn trash_top_n_stacked_sources_keeps_going_past_a_non_digimon_card() {
+    let mut tamer = make_test_card("T-TAMER", "BottomTamer");
+    tamer.card_kind = digimon_engine::enums::CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+    let mut egg = make_test_card("T-EGG", "Egg");
+    egg.card_kind = digimon_engine::enums::CardKind::DigiEgg;
+    egg.level = Some(2);
+    egg.dp = None;
+    let mut runner = DebugRunner::builder()
+        .add_card(tamer)
+        .add_card(egg)
+        .add_card(make_test_card("T-ROOKIE", "Rookie"))
+        .add_card(make_test_card("T-CHAMP", "Champion"))
+        .start();
+    let perm_handle = runner.place_on_field(0, "T-TAMER", None);
+    for id in ["T-EGG", "T-ROOKIE", "T-CHAMP"] {
+        let data_idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == id)
+            .expect("registered");
+        let card_index = runner.game.next_card_index();
+        runner.game.players[0].battle_area[0]
+            .card_sources
+            .push(CardSource::new(data_idx, 0, card_index));
+    }
+    assert_eq!(runner.game.players[0].battle_area[0].card_sources.len(), 4);
+    let src_handle = runner.game.players[0].battle_area[0].top_card().handle();
+
+    let trashed = {
+        let mut ctx = EffectContext::new(&mut runner.game, src_handle, Some(perm_handle), 0);
+        ctx.trash_top_n_stacked_sources(perm_handle, 3, true)
+    };
+
+    assert_eq!(trashed, 3, "Champion, Rookie and the exposed Egg are all trashed");
+    assert_eq!(
+        runner.game.players[0].battle_area[0].card_sources.len(),
+        1,
+        "only the bottom Tamer is left (no stacked card remains)"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "T-TAMER"
+    );
+    assert_eq!(runner.game.players[0].trash.len(), 3);
+}
