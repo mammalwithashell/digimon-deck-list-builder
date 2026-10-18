@@ -709,8 +709,6 @@ pub enum CostGuard {
     /// "By trashing N bottom face-down cards from under your Tamers": N
     /// face-down digivolution cards across your Tamers.
     FaceDownUnderTamers { n: usize },
-    /// Every part of a compound condition.
-    All(Vec<CostGuard>),
 }
 
 /// The zone a `CostGuard::ZonePicks` condition draws its cards from.
@@ -737,6 +735,13 @@ pub enum CostPickZone {
 /// - `select_own_sources { target: source }` ⇒ `min` matching sources.
 /// - `trash_bottom_face_down_source(s)_under_tamer(s)` ⇒ that many face-down
 ///   cards under your Tamers.
+///
+/// One guard per clause: a compound condition is gated as a whole only when
+/// it is one pick run (§15-7-3, "1 [A] and 1 [B]" from the same zone, matched
+/// to distinct cards). Compounds across DIFFERENT step kinds ("by suspending
+/// this Tamer and trashing 1 Option card", BT25-092) are gated on their FIRST
+/// recognised part only — composing them is the DSL `by:` block's job
+/// (`G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK`).
 ///
 /// A declinable pick WITHOUT `cost: true` is not a condition (declining it
 /// continues the clause), so it yields no guard. Self-targeted costs
@@ -977,19 +982,11 @@ impl CostGuard {
                     })
             }),
             CostGuard::FaceDownUnderTamers { n } => {
-                let total: usize = game
-                    .player(rctx.player)
-                    .battle_area
-                    .iter()
-                    .filter(|perm| {
-                        perm.top_card().card_kind(rctx.card_data())
-                            == crate::enums::CardKind::Tamer
-                    })
-                    .map(|perm| perm.card_sources.iter().filter(|s| s.face_down).count())
-                    .sum();
-                total >= *n
+                crate::dsl_cards::step::selections::face_down_sources_under_tamers(
+                    rctx,
+                    rctx.player,
+                ) >= *n
             }
-            CostGuard::All(parts) => parts.iter().all(|part| part.holds(rctx)),
         }
     }
 }
@@ -1031,6 +1028,12 @@ impl crate::game::Game {
     /// an effect whose source card is `source` right now (§15-7-4,
     /// §15-8-4-4-1)? The source permanent is the one holding `source` (as its
     /// top or a digivolution card), if any. See [`CostGuard`].
+    ///
+    /// The interface Task 9 (`install_single_trigger_optional_gate`, the
+    /// refired-effect gate, G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION)
+    /// consumes; today's sites know the source permanent and call
+    /// [`Self::cost_guard_holds_at`].
+    #[allow(dead_code)]
     pub(crate) fn cost_guard_holds(
         &self,
         guard: &CostGuard,

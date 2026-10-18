@@ -1787,9 +1787,8 @@ impl Game {
                                         &self.effect_queue[idx],
                                         eff,
                                     );
-                                let condition_passes =
-                                    payable && self.queued_effect_condition_passes(idx);
-                                has_cost && payable && condition_passes
+                                // `payable` implies `has_cost`.
+                                payable && self.queued_effect_condition_passes(idx)
                             } else {
                                 false
                             }
