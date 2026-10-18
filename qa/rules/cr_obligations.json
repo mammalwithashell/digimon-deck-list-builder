@@ -1019,15 +1019,15 @@
       "text": "An attack declaration can't be made using a Digimon that can't suspend."
     },
     "11-2-6": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 11,
       "fingerprint": "e60a2eaee1b38ae5a8c29be9bb45b4cc36ed04dfdad365b10fa5eb3b7953c938",
-      "gap_id": "G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED",
+      "gap_id": null,
       "mechanisms": [
         "attack-and-timing"
       ],
-      "note": "The rule's example: [When Attacking] deletes the target. A second opponent Digimon shifts into the removed target's battle-area slot and is battled (the 6000 DP attacker loses to it) instead of the attack failing. Test is #[ignore]d.",
-      "status": "gap",
+      "note": "The rule's example: [When Attacking] deletes the target; the second opponent Digimon that compacts into its battle-area slot is not battled, the attack fails (no end of battle, no security check). The removal is recorded (PendingAttack::effective_target_removed) and the target is tracked by stack identity, so the slot is never reused (G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED resolved).",
+      "status": "proven",
       "tests": [
         "ch11_14_attack_procedure::removed_target_stays_the_target_and_attack_fails"
       ],
@@ -15244,9 +15244,9 @@
         "total": 10
       },
       "11": {
-        "gap": 27,
+        "gap": 26,
         "not_testable": 8,
-        "proven": 5,
+        "proven": 6,
         "total": 40
       },
       "12": {
@@ -15340,15 +15340,15 @@
         "total": 13
       }
     },
-    "gap": 618,
+    "gap": 617,
     "mechanics": {
-      "gap_blocking": 16,
+      "gap_blocking": 15,
       "gap_nonblocking": 322,
       "not_testable": 152,
-      "proven": 225
+      "proven": 226
     },
     "not-testable": 246,
-    "proven": 255
+    "proven": 256
   },
   "version": 1
 }

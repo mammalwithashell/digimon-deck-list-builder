@@ -1129,6 +1129,12 @@ pub struct Game {
     /// attacking card from this stored context instead of the attacker's
     /// (possibly reused) battle-area slot.
     pub(crate) attack_attacker_card: Option<CardHandle>,
+    /// Stack identity of the in-flight attack's effective Digimon target,
+    /// captured at the declaration and on every target switch (block,
+    /// redirect, `<Raid>`). §11-2-6: `Game::live_attack_target_digimon` uses
+    /// it so a removed target stays the target instead of the Digimon that
+    /// compacts into its slot. `None` for a player target.
+    pub(crate) attack_target_identity: Option<(PlayerId, u64)>,
     /// Scratch cache scoped to one `enqueue_triggered` call (empty outside
     /// it): the event Digimon's last-known snapshot, built once per event
     /// and shared by every context of that event.
@@ -2751,7 +2757,7 @@ impl Game {
         if let Some(attack) = self.pending_attack.as_mut() {
             if matches!(attack.effective_target,
                 crate::selection::AttackTarget::Digimon(h) if materials.contains(&h)) {
-                attack.effective_target_removed_by_dna = true;
+                attack.effective_target_removed = true;
             }
         }
         self.invalidate_battle_winners_for_dna(materials);
@@ -4334,7 +4340,7 @@ mod current_attacker_tests {
             attacker: progress,
             original_target: AttackTarget::Player(1),
             effective_target: AttackTarget::Player(1),
-            effective_target_removed_by_dna: false,
+            effective_target_removed: false,
             is_blocked: false,
             blocker: None,
             is_vortex: false,
@@ -4377,7 +4383,7 @@ mod current_attacker_tests {
             attacker: plain,
             original_target: AttackTarget::Player(1),
             effective_target: AttackTarget::Player(1),
-            effective_target_removed_by_dna: false,
+            effective_target_removed: false,
             is_blocked: false,
             blocker: None,
             is_vortex: false,

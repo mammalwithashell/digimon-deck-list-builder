@@ -9,7 +9,7 @@ fn sample()->PendingAttack {
     PendingAttack {
         attacker:PermanentHandle{player:0,index:2}, original_target:AttackTarget::Player(1),
         effective_target:AttackTarget::Digimon(PermanentHandle{player:1,index:3}),
-        effective_target_removed_by_dna:false, is_blocked:true,
+        effective_target_removed:false, is_blocked:true,
         blocker:Some(PermanentHandle{player:1,index:3}),is_vortex:false,is_overclock:true,
         declaration_committed:true,cancelled:false,battle_occurred:true,battle_defender_deleted:false,
         effect_battle_piercing_pending:true,security_check_started:false,
@@ -28,7 +28,7 @@ fn false_dna_marker_preserves_old_pending_attack_string_and_hash(){
 }
 #[test]
 fn true_dna_marker_is_explicit_distinct_and_clone_stable(){
-    let mut pa=sample();pa.effective_target_removed_by_dna=true;
+    let mut pa=sample();pa.effective_target_removed=true;
     let expected=format!("{}, effective_target_removed_by_dna: true }}",OLD_DEBUG.strip_suffix(" }").unwrap());
     assert_eq!(format!("{pa:?}"),expected);
     assert_eq!(format!("{:?}",pa.clone()),expected);
@@ -38,7 +38,7 @@ fn true_dna_marker_is_explicit_distinct_and_clone_stable(){
 fn both_verification_versions_distinguish_dna_target_state_and_preserve_clone(){
     // Structural digest fixture: no action is executed with these synthetic handles.
     let mut g=DebugRunner::builder().start().game;g.pending_attack=Some(sample());
-    let mut removed=g.clone();removed.pending_attack.as_mut().unwrap().effective_target_removed_by_dna=true;
+    let mut removed=g.clone();removed.pending_attack.as_mut().unwrap().effective_target_removed=true;
     for version in [VerificationDigestVersion::LegacyV2,VerificationDigestVersion::V3] {
         assert_ne!(g.verification_digest_with_version(version),removed.verification_digest_with_version(version));
         assert_eq!(g.verification_digest_with_version(version),g.clone().verification_digest_with_version(version));

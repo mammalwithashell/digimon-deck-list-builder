@@ -1153,9 +1153,14 @@ pub struct PendingAttack {
     pub attacker: PermanentHandle,
     pub original_target: AttackTarget,
     pub effective_target: AttackTarget,
-    /// DNA made the effective target a new Digimon despite retaining its slot.
-    /// A later explicit redirect/block/Raid selection installs a new live target.
-    pub effective_target_removed_by_dna: bool,
+    /// §11-2-6 (Ver. 4.3): the effective Digimon target was removed from the
+    /// battle area (or became a new Digimon through DNA, §8-2-2-1). It
+    /// remains the attack target, but the attack fails; `effective_target`
+    /// then names no Digimon, whatever now occupies that slot. A later
+    /// block / redirect / `<Raid>` switch installs a new live target and
+    /// clears it. `Game::live_attack_target_digimon` reads it together with
+    /// the target's stack identity.
+    pub effective_target_removed: bool,
     pub is_blocked: bool,
     pub blocker: Option<PermanentHandle>,
     pub is_vortex: bool,
@@ -1223,7 +1228,7 @@ pub struct PendingAttack {
 impl std::fmt::Debug for PendingAttack {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Exhaustive destructuring makes future state additions a review point.
-        let Self { attacker, original_target, effective_target, effective_target_removed_by_dna, is_blocked, blocker, is_vortex, is_overclock, declaration_committed, cancelled, battle_occurred, battle_defender_deleted, effect_battle_piercing_pending, security_check_started, return_phase, state, counter_depth } = self;
+        let Self { attacker, original_target, effective_target, effective_target_removed, is_blocked, blocker, is_vortex, is_overclock, declaration_committed, cancelled, battle_occurred, battle_defender_deleted, effect_battle_piercing_pending, security_check_started, return_phase, state, counter_depth } = self;
         let mut debug = f.debug_struct("PendingAttack");
         debug.field("attacker", attacker);
         debug.field("original_target", original_target);
@@ -1241,8 +1246,11 @@ impl std::fmt::Debug for PendingAttack {
         debug.field("return_phase", return_phase);
         debug.field("state", state);
         debug.field("counter_depth", counter_depth);
-        if *effective_target_removed_by_dna {
-            debug.field("effective_target_removed_by_dna", effective_target_removed_by_dna);
+        // The label predates the generalisation from DNA to every removal
+        // (§11-2-6); it is kept so a DNA-removed target hashes as before
+        // (`tests/pending_attack_debug_compat.rs`).
+        if *effective_target_removed {
+            debug.field("effective_target_removed_by_dna", effective_target_removed);
         }
         debug.finish()
     }

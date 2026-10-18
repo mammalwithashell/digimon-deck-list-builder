@@ -147,10 +147,16 @@ impl<'a> EffectContext<'a> {
         new_target: crate::selection::AttackTarget,
     ) -> Result<(), crate::combat::AttackError> {
         use crate::combat::AttackError;
-        let Some(pa) = self.game.pending_attack.as_ref() else {
+        if self.game.pending_attack.is_none() {
             return Err(AttackError::NoActiveAttack);
+        }
+        // The attacking Digimon by identity. Once it has left the battle area
+        // (§11-1-5: the counter timing still occurs) there is no attacking
+        // Digimon whose target could switch; its old slot may hold another
+        // Digimon (DCGO `SwitchDefender` yields when the attacker is gone).
+        let Some(attacker) = self.game.live_attack_attacker() else {
+            return Ok(());
         };
-        let attacker = pa.attacker;
         self.game
             .validate_attack_redirect_target(attacker, new_target)?;
         self.game.apply_attack_target_substitution_with_reason(
@@ -172,9 +178,17 @@ impl<'a> EffectContext<'a> {
         let Some(pa) = self.game.pending_attack.as_ref() else {
             return Err(AttackError::NoActiveAttack);
         };
-        let attacker = pa.attacker;
-        let current_target = pa.effective_target;
-        let current_target_removed = pa.effective_target_removed_by_dna;
+        // Attacker and target by identity (see `redirect_attack`): no switch
+        // once the attacker has left; a removed target (§11-2-6) is not the
+        // current target, and neither is the Digimon in its old slot.
+        let Some(attacker) = self.game.live_attack_attacker() else {
+            return Ok(());
+        };
+        let current_target = self
+            .game
+            .live_attack_target_digimon()
+            .map_or(pa.effective_target, AttackTarget::Digimon);
+        let current_target_removed = self.game.attack_target_removed();
         let opponent = self.game.next_clockwise(attacker.player);
         let mut valid_action_ids = Vec::new();
 

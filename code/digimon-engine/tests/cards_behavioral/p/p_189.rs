@@ -1013,7 +1013,7 @@ fn inject_p189_as_attacker(
         attacker,
         original_target: AttackTarget::Player(1 - attacker.player),
         effective_target: AttackTarget::Player(1 - attacker.player),
-        effective_target_removed_by_dna: false,
+        effective_target_removed: false,
         is_blocked: false,
         blocker: None,
         is_vortex: false,

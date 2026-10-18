@@ -329,11 +329,9 @@
   tests: ["ch11_14_attack_procedure::block_not_offered_when_attacker_left_battle_area"]
   note: "An attacker that deletes itself on its [When Attacking]: P1's unsuspended <Blocker> is not offered a block (no reveal, the blocker stays unsuspended, the end of attack timing arrives); control: an attacker that stays is blocked."
 "11-2-6":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED
+  status: proven
   tests: ["ch11_14_attack_procedure::removed_target_stays_the_target_and_attack_fails"]
-  note: "The rule's example: [When Attacking] deletes the target. A second opponent Digimon shifts into the removed target's battle-area slot and is battled (the 6000 DP attacker loses to it) instead of the attack failing. Test is #[ignore]d."
+  note: "The rule's example: [When Attacking] deletes the target; the second opponent Digimon that compacts into its battle-area slot is not battled, the attack fails (no end of battle, no security check). The removal is recorded (PendingAttack::effective_target_removed) and the target is tracked by stack identity, so the slot is never reused (G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED resolved)."
 "11-5-1-4-1":
   status: proven
   tests: ["ch11_14_attack_procedure::unsuccessful_attack_reaches_end_of_attack_timing"]

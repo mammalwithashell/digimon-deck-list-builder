@@ -614,7 +614,7 @@ impl Game {
             attacker,
             original_target: target,
             effective_target: target,
-            effective_target_removed_by_dna: false,
+            effective_target_removed: false,
             is_blocked: false,
             blocker: None,
             is_vortex: vortex,
@@ -634,6 +634,10 @@ impl Game {
         // `<Progress>` applies from the declaration.
         self.attack_attacker_identity = None;
         self.attack_attacker_card = None;
+        // §11-2-6: the declared target is tracked by its stack identity, so
+        // a Digimon that compacts into its slot after it leaves is never read
+        // as the target.
+        self.capture_attack_target_identity();
         self.refresh_progress_shield();
 
         // `GameEvent::Attack` emission — spec
@@ -887,6 +891,11 @@ impl Game {
                 }
                 AttackState::Battle => {
                     let outcome = self.resolve_pending_battle();
+                    if outcome == AttackResult::Unsuccessful {
+                        // §11-2-6 / §11-5-1-4-1: the target was removed; the
+                        // same not-successful end as an attacker that left.
+                        return self.end_attack_unsuccessful();
+                    }
                     if matches!(outcome, AttackResult::InProgress) {
                         // Paused mid-security (a SecuritySkill effect
                         // installed a pending_selection). Keep
@@ -1180,16 +1189,24 @@ impl Game {
         reason: AttackTargetChangeReason,
     ) {
         // No active attack — silent no-op (callers should have checked).
-        let Some(pa) = self.pending_attack.as_mut() else {
-            return;
-        };
-        let old_target = pa.effective_target;
-        // Firing-guard: a redirect to the current effective target is a
-        // no-op — don't re-fire OnAttackTargetChange.
-        if old_target == new_target && !pa.effective_target_removed_by_dna {
+        if self.pending_attack.is_none() {
             return;
         }
-        let attacker = pa.attacker;
+        // The attacking Digimon by identity: once it has left the battle area
+        // its slot may hold another Digimon, and there is no attacking
+        // Digimon whose target could switch (DCGO `AttackProcess.cs`
+        // `SwitchDefender` yields when `AttackingPermanent.TopCard == null`).
+        let Some(attacker) = self.live_attack_attacker() else {
+            return;
+        };
+        let target_removed = self.attack_target_removed();
+        let old_target = self.pending_attack.as_ref().map_or(new_target, |pa| pa.effective_target);
+        // Firing-guard: a redirect to the current effective target is a
+        // no-op — don't re-fire OnAttackTargetChange. A removed target
+        // (§11-2-6) is never the current one.
+        if old_target == new_target && !target_removed {
+            return;
+        }
 
         // Track C: `CannotSwitchAttackTarget` on the attacker locks the
         // target — silently drop the substitution. Covers both the
@@ -1214,8 +1231,14 @@ impl Game {
             }
         }
 
+        let Some(pa) = self.pending_attack.as_mut() else {
+            return;
+        };
+        // A block (§12-1-7), redirect or `<Raid>` switch installs a NEW
+        // attack target: the removed one (§11-2-6) no longer matters.
         pa.effective_target = new_target;
-        pa.effective_target_removed_by_dna = false;
+        pa.effective_target_removed = false;
+        self.capture_attack_target_identity();
 
         self.fire_attack_target_change_observers(attacker, old_target, new_target, reason);
     }
@@ -2227,6 +2250,10 @@ impl Game {
         // opponent Digimon gains is granted declaratively in
         // `Game::has_keyword` (`collision_grants_blocker`), not here.
         let attacker_has_collision = self.has_keyword(attacker, Keyword::Collision);
+        // §12-1-5: the attack target can't block. Found by identity: a
+        // removed target (§11-2-6) is not on the field, and the Digimon that
+        // compacted into its slot is not the attack target.
+        let live_target = self.live_attack_target_digimon();
 
         let battle_area_len = self.player(defender_player).battle_area.len();
         let mut candidates: Vec<u8> = Vec::new();
@@ -2244,7 +2271,7 @@ impl Game {
             // Official rule 12-1-5: the current attack target cannot block.
             // Use the effective target after Raid/Counter redirects, not the
             // originally declared target. Other unsuspended blockers remain legal.
-            if !pa.effective_target_removed_by_dna && pa.effective_target == AttackTarget::Digimon(h) {
+            if live_target == Some(h) {
                 continue;
             }
             let perm = &self.player(defender_player).battle_area[i];
@@ -2503,11 +2530,10 @@ impl Game {
         {
             return Vec::new();
         }
-        self.raid_switch_candidates(
-            attacker,
-            pa.effective_target,
-            pa.effective_target_removed_by_dna,
-        )
+        let current_target = self
+            .live_attack_target_digimon()
+            .map_or(pa.effective_target, AttackTarget::Digimon);
+        self.raid_switch_candidates(attacker, current_target, self.attack_target_removed())
     }
 
     /// Enumerate Raid's printed candidates: opponent unsuspended Digimon tied
@@ -2703,9 +2729,12 @@ impl Game {
             AttackTarget::Digimon(h) => h,
             AttackTarget::Player(_) => return RaidRetargetOutcome::Proceed,
         };
-        // If the target is still valid, fall through to Battle — no
-        // retarget needed.
-        if !pa.effective_target_removed_by_dna && self.handle_valid(target_handle) {
+        // §11-2-6 (Ver. 4.3): a removed target remains the attack target and
+        // the attack fails; nothing rescues it (DCGO `DetermineAttackOutcome`
+        // battles only a defender still on the field and has no retarget
+        // rider). Battle ends the attack as not successful. A target still
+        // valid needs no retarget either.
+        if self.attack_target_removed() || self.handle_valid(target_handle) {
             return RaidRetargetOutcome::Proceed;
         }
         let attacker = pa.attacker;
@@ -2917,12 +2946,21 @@ impl Game {
         }
 
         match target {
-            AttackTarget::Digimon(defender) => {
-                if pa.effective_target_removed_by_dna || !self.handle_valid(defender) {
-                    // Defender was removed between declaration and battle:
-                    // the attack is not successful (§11-2-6, §11-5-1-4-1).
-                    return AttackResult::Unsuccessful;
-                }
+            AttackTarget::Digimon(_) => {
+                // §11-2-6 (Ver. 4.3): "Even if the attack target Digimon is
+                // removed during an attack, that Digimon remains the attack
+                // target, but the attack fails." Keyed on the recorded
+                // removal, never on whatever now occupies the target's slot
+                // (DCGO `DetermineAttackOutcome` battles only when
+                // `IsPermanentExistsOnBattleAreaDigimon(DefendingPermanent)`).
+                self.sync_attack_target();
+                let defender = match self.live_attack_target_digimon() {
+                    // A target still on the field that is no longer a
+                    // Digimon in the standard state can't be battled either.
+                    Some(defender) if self.handle_valid(defender) => defender,
+                    // The attack is not successful (§11-5-1-4-1).
+                    _ => return AttackResult::Unsuccessful,
+                };
                 self.resolve_battle(attacker, defender)
             }
             AttackTarget::Player(defender_player) => {
@@ -4078,6 +4116,7 @@ impl Game {
         self.pending_attack = None;
         self.attack_attacker_identity = None;
         self.attack_attacker_card = None;
+        self.attack_target_identity = None;
         // `expire_end_of_attack` dropped the `<Progress>` shield; keep the
         // registry in step with `progress_shield_target` (now `None`).
         self.refresh_progress_shield();
@@ -4227,7 +4266,16 @@ impl Game {
                 shift(h);
             }
             if let AttackTarget::Digimon(h) = &mut pa.effective_target {
-                shift(h);
+                // §11-2-6 (Ver. 4.3): the removed Digimon remains the attack
+                // target and the attack fails. Record the removal instead of
+                // leaving a handle that the next permanent shifts into. A
+                // blocker is the effective target once it blocks (§12-1-7),
+                // so a removed blocker is covered here too.
+                if h.player == player && h.index == removed_index {
+                    pa.effective_target_removed = true;
+                } else {
+                    shift(h);
+                }
             }
             if let Some(h) = pa.blocker.as_mut() {
                 shift(h);
@@ -4266,6 +4314,76 @@ impl Game {
                 player,
                 index: index as u8,
             })
+    }
+
+    /// §11-2-6 (Ver. 4.3): whether the in-flight attack's Digimon target (the
+    /// declared one, or the Digimon a block, redirect or `<Raid>` switched it
+    /// to) has been removed from the battle area. It remains the attack
+    /// target and the attack fails. Recorded by
+    /// `shift_pending_attack_after_battle_area_remove` and by DNA
+    /// (`PendingAttack::effective_target_removed`); the target's stack
+    /// identity (`Game::attack_target_identity`) also catches a removal that
+    /// did not re-key the pending attack's handles. Never true for a player
+    /// target.
+    pub(crate) fn attack_target_removed(&self) -> bool {
+        self.pending_attack
+            .as_ref()
+            .is_some_and(|pa| matches!(pa.effective_target, AttackTarget::Digimon(_)))
+            && self.live_attack_target_digimon().is_none()
+    }
+
+    /// The in-flight attack's Digimon target on the current board, found by
+    /// its stack identity when one was captured. `None` with no attack, on a
+    /// player target, or once the target was removed (§11-2-6): a Digimon
+    /// that compacted into the target's slot is never returned.
+    pub(crate) fn live_attack_target_digimon(&self) -> Option<PermanentHandle> {
+        let pa = self.pending_attack.as_ref()?;
+        let AttackTarget::Digimon(handle) = pa.effective_target else {
+            return None;
+        };
+        if pa.effective_target_removed {
+            return None;
+        }
+        match self.attack_target_identity {
+            Some((player, identity)) => self.resolve_digivolve_host_identity(player, identity),
+            None => Some(handle),
+        }
+    }
+
+    /// Record the effective Digimon target's stack identity (allocating one if
+    /// the permanent has none yet) for `live_attack_target_digimon`; `None`
+    /// for a player target.
+    fn capture_attack_target_identity(&mut self) {
+        let target = self.pending_attack.as_ref().and_then(|pa| match pa.effective_target {
+            AttackTarget::Digimon(h) if !pa.effective_target_removed => Some(h),
+            _ => None,
+        });
+        let target = target.filter(|h| {
+            self.players
+                .get(h.player as usize)
+                .is_some_and(|p| p.battle_area.get(h.index as usize).is_some())
+        });
+        let identity = target.map(|h| (h.player, self.capture_digivolve_host_identity(h)));
+        self.attack_target_identity = identity;
+    }
+
+    /// Bring `PendingAttack::effective_target` in line with the target's
+    /// identity: record its removal (§11-2-6), or re-key the slot handle to
+    /// where the target is now.
+    fn sync_attack_target(&mut self) {
+        let removed = self.attack_target_removed();
+        let live = self.live_attack_target_digimon();
+        let Some(pa) = self.pending_attack.as_mut() else {
+            return;
+        };
+        if !matches!(pa.effective_target, AttackTarget::Digimon(_)) {
+            return;
+        }
+        if removed {
+            pa.effective_target_removed = true;
+        } else if let Some(handle) = live {
+            pa.effective_target = AttackTarget::Digimon(handle);
+        }
     }
 
     /// Record the declared attacker's stack identity (allocating one if the
@@ -4535,7 +4653,7 @@ impl Game {
         };
         let is_attack = self.pending_attack.as_ref().is_some_and(|pa| {
             pa.state == AttackState::Battle
-                && !pa.effective_target_removed_by_dna
+                && !pa.effective_target_removed
                 && pa.attacker == attacker
                 && pa.effective_target == AttackTarget::Digimon(defender)
         });
@@ -4664,6 +4782,37 @@ impl Game {
                 perm.battle_identity = None;
                 perm.native_play_incarnation = None;
             }
+        }
+    }
+
+    /// Whether the Digimon whose top card was `deleted_top` was `carrier`'s
+    /// opponent in the battle being resolved, read from the battle's own
+    /// record (combatant identities + top cards at the comparison). `None`
+    /// when no battle is being resolved or `carrier` is not one of its
+    /// combatants. A deleted combatant has no battle-area handle, and since
+    /// §11-2-6 the attack no longer names the Digimon that compacted into
+    /// its slot, so "this Digimon deleted its battle opponent" is answered
+    /// here rather than through a slot comparison.
+    pub(crate) fn battle_record_opponent_was(
+        &self,
+        carrier: PermanentHandle,
+        deleted_top: CardHandle,
+    ) -> Option<bool> {
+        let state = self.pending_battle_resolutions.last()?;
+        let identity = self
+            .player(carrier.player)
+            .battle_area
+            .get(carrier.index as usize)?
+            .battle_identity?;
+        let is = |c: &crate::trigger_context::BattleCombatantSnapshot| {
+            c.controller == carrier.player && c.battle_identity == identity
+        };
+        if is(&state.attacker) {
+            Some(state.defender.top_card == deleted_top)
+        } else if is(&state.defender) {
+            Some(state.attacker.top_card == deleted_top)
+        } else {
+            None
         }
     }
 
@@ -4904,7 +5053,7 @@ effects:
             attacker: atk,
             original_target: AttackTarget::Player(1),
             effective_target: AttackTarget::Player(1),
-            effective_target_removed_by_dna: false,
+            effective_target_removed: false,
             is_blocked: false,
             blocker: None,
             is_vortex: false,
@@ -4947,7 +5096,7 @@ effects:
             attacker: crate::permanent::PermanentHandle { player: 0, index: 0 },
             original_target: AttackTarget::Player(1),
             effective_target: AttackTarget::Player(1),
-            effective_target_removed_by_dna: false,
+            effective_target_removed: false,
             is_blocked: false,
             blocker: None,
             is_vortex: false,

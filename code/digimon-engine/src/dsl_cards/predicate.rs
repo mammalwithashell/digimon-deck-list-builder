@@ -2824,6 +2824,14 @@ fn source_deleted_battle_opponent(rctx: &EffectReadContext<'_>) -> bool {
     if trigger.cause != Some(crate::trigger_context::EventCause::BattleDeletion) {
         return false;
     }
+    // The battle's own record first: the deleted opponent has left the battle
+    // area, so it has no live handle to compare (§11-2-6: a removed attack
+    // target is never read through its old slot).
+    if let Some(deleted) = trigger.deleted_object.as_ref() {
+        if let Some(was) = rctx.game.battle_record_opponent_was(source, deleted.top_card) {
+            return was;
+        }
+    }
     let Some(event_permanent) = trigger.event_permanent.or(trigger.target_permanent) else {
         return false;
     };

@@ -213,7 +213,7 @@ fn set_active_attacker(r: &mut DebugRunner, attacker: PermanentHandle) {
         attacker,
         original_target: target,
         effective_target: target,
-        effective_target_removed_by_dna: false,
+        effective_target_removed: false,
         is_blocked: false,
         blocker: None,
         is_vortex: false,
