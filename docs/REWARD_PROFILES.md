@@ -85,6 +85,12 @@ existing `pilot/concede_rate` TB scalar. If concede rate spikes above
 inherits `gameplay`); draws are always penalized regardless of the apply
 flags.
 
+> Updated 2026-10-18: the concede action (`93`) has been removed from the
+> action mask in all match formats since 2026-06-19
+> (`code/digimon-engine/src/action/mask.rs`), so the agent currently cannot
+> concede and `pilot/concede_rate` should read 0. The loser-side
+> `stall_penalty` still applies; it just has no concede escape hatch.
+
 ---
 
 ## File layout
@@ -195,8 +201,9 @@ of the apply flags.
 
 Otherwise the worst-case win can drop below the best-case loss, and
 the agent will rationally prefer to lose fast over winning slow. The
-`test_terminal_landscape.py::test_win_always_beats_loss_invariant`
-regression catches this at test time.
+`code/tests/rl/test_stall_penalty.py::test_win_always_beats_loss_invariant`
+regression catches this at test time (`test_terminal_landscape.py` pins
+the shipped landscape table).
 
 **`breeding_digivolve` parameters** — `reward_per_level: Mapping[int, float]`
 (required). Default shipped value `{3: 0.4, 4: 0.2, 5: 0.1, 6: -0.4}`.
@@ -279,8 +286,8 @@ calibration (`±30 base + sweep 10 + smart-concede 5 + scared-concede
 -10 + fast(par=450,max=15)`; per-game `±12 + fast(par=150,max=3)`).
 The shipped `gameplay`, `_default`, `dna_omnimon_combo_v1`, and
 `bg_imperialdramon_combo_v1` profiles all omit it. The `_pure_outcome`
-profile includes it for a ±1 match-tier signal — see "Worked examples"
-below.
+and `starter1_6_flat` profiles include it for a ±1 match-tier signal —
+see "Worked examples" below.
 
 Parameters: `win` (1.0), `loss` (-1.0), `draw` (0.0), `sweep_bonus`
 (0.0), `swept_penalty` (0.0), `smart_concede_bonus` (0.0),
@@ -478,8 +485,8 @@ file at every `env.reset()` and re-parse when mtime advances.
 - The per-game `reward_profile_hash` recorded in the eval-game-log sidecar
   reflects the hash **for that game** — runs that reload mid-eval show
   different hashes across rows.
-- The run-start `metadata.json::reward_profiles_hash` is the run-start
-  value, not the latest reload hash. Resume checks compare against the
+- The run-start `reward_profiles.meta.json` hashes (`reward_gameplay_hash`,
+  `reward_profiles_hash`) are the run-start values, not the latest reload hash. Resume checks compare against the
   run-start value.
 
 Disable for reproducibility-first workflows:
@@ -542,9 +549,14 @@ message if YAML still sets `legacy_terminal_exclusivity`.
 
 | Field | Default | Behavior | Removal |
 |---|---|---|---|
-| `digivolve_shaping` | `False` | INERT — accepted, no warning, no effect on profile selection | v2 |
-| `digivolve_reward` | `0.1` | Unread; `DeprecationWarning` if non-default | v2 |
-| `dna_digivolve_bonus` | `3.9` | Unread; `DeprecationWarning` if non-default | v2 |
+| `digivolve_shaping` | `False` (the CLI forces `True` under `match_format: bo3` unless set explicitly) | INERT — accepted, no warning, no effect on profile selection | v2 |
+| `digivolve_reward` | `0.1` | Ignored under reward profiles; `DeprecationWarning` if non-default | v2 |
+| `dna_digivolve_bonus` | `3.9` | Ignored under reward profiles; `DeprecationWarning` if non-default | v2 |
+
+All three are still passed to `DigimonEnv` and drive its legacy digivolve
+terms **only** when reward profiles are disabled (`reward_profiles_path: null`);
+`RewardProfileWrapper` sets `legacy_reward=False`, so the legacy reward never
+fires alongside a profile.
 
 To customize digivolve reward weights, define a custom profile in
 `profiles.yaml` that `inherits: gameplay` and overrides the `digivolve` /
@@ -709,6 +721,20 @@ match):
 | 1-1-1 draw | (+0.2 + -0.2 + 0.0) = 0.0 | 0.0 | **0.0** |
 
 Wins always beat losses; sweeps reward bigger than 2-1; symmetric.
+
+### Starter decks ST-1..6 — `starter1_6_flat`
+
+The default `reward_profile` of both `code/tools/train_starter_curriculum.py`
+and `code/tools/train_specialist_league.py` (selected via
+`--set reward_profile_override=starter1_6_flat`). A data-calibrated, ~10–30×
+flatter version of `gameplay`, re-paced for how starter decks actually win
+(see the profile's header comment in `profiles.yaml` for the calibration):
+per-game terminal ±0.3 (draw −0.02), `quick_win_bonus` peak +0.15 at turn 7
+decaying 0.03/turn, `stall_penalty` from turn 14 (`scale` 0.01, winner cap
+0.5), step −0.0003, security +0.04 / −0.02, digivolve +0.01, DNA 0, small
+breeding / digivolve-driven-attack terms, and a `match_outcome` of ±1.0 (so
+`MatchEnv` defers its match-tier magnitudes to the profile, as in
+`_pure_outcome`).
 
 ### DNA Omnimon — `dna_omnimon_combo_v1`
 

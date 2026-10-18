@@ -17,12 +17,12 @@ callbacks, the in-training anchored panel — is reused verbatim):
 
 | | Phase 1 — floor | Phase 2 — pool |
 |---|---|---|
-| Opponent | `greedy` (parallelizable) | champion pool `v020` + `v022` (single-env) |
+| Opponent | `greedy` (parallel via `--floor-envs`) | champion pool `v020` + `v022` (parallel via `--pool-envs`) |
 | Steps | 1M (`--floor-steps`) | 5M (`--pool-steps`) |
 | Init | fresh MLP | warm-start `--init-from` phase 1 `final.zip` |
 | LR | 3e-4 | 1e-4 |
 | Decks | 6 starters, resolved fresh | reuse phase-1 snapshot (`--curriculum-pool`) |
-| Shared | `standard_lite_deck_v2`, reward `starter1_6_flat`, BO3, curriculum/eval seeds 123/999 |
+| Shared | `standard_lite_deck_v2`, reward `starter1_6_flat`, BO3, curriculum/eval seeds 123/999, eval every 50k × 20, eval games recorded (`--record-games eval`, max 300) |
 
 The "swap after 1M" is the boundary between the two subprocesses; the warm-start
 is plain `--init-from` (same MLP arch + tensor profile across phases, so the
@@ -41,13 +41,17 @@ models/starter_pool_v1/final.zip          ← the candidate
 - **Greedy floor first.** A fresh MLP vs the strong LSTM champions is a steep
   curriculum; the 1M greedy floor establishes a skill floor (and a free
   anchored-eval reference checkpoint) before the swap.
-- **Phase 2 is single-env.** The engine rejects `n_envs > 1` for `pool`
-  opponents (`make_vec_env`: "n_envs>1 currently supports greedy/random"), so the
-  pool phase cannot parallelize and runs at ~8 steps/sec → **5M pool steps is a
-  multi-day run regardless of host/core count.** Phase 1 (greedy) parallelizes
-  via `--floor-envs N`. The champion-loop cadence (TRAINING_RUNBOOK §14) trains
-  1M pool steps/cycle; `--pool-steps 1500000` is the tractable single-night
-  alternative, extended via the next `init_from` cycle.
+- **Both phases parallelize** (updated 2026-10-18). `--floor-envs N` /
+  `--pool-envs N` add `--set n_envs=N --set vec_env_backend=subproc` to their
+  phase. The old "phase 2 is single-env" note predates the 2026-06-18 fix
+  (`vec_env_backend` used to be silently dropped, so every run was serial):
+  `pool` opponents route through `make_vec_env` before the
+  "n_envs>1 currently supports greedy/random" guard, and the frozen champions
+  lazy-load per spawn worker. The pool phase is still the slow one — a frozen
+  neural opponent makes runs inference-bound (TRAINING_RUNBOOK §6.5) — so 5M
+  pool steps remains a long run. The champion-loop cadence (TRAINING_RUNBOOK
+  §14) trains 1M pool steps/cycle; `--pool-steps 1500000` is the tractable
+  shorter alternative, extended via the next `init_from` cycle.
 
 ## Local (quick iteration only)
 
@@ -58,14 +62,19 @@ python code/tools/train_starter_curriculum.py --pool-manifest pool_starters.json
 ```
 
 `--dry-run` prints both phase commands; phase 1 auto-skips if its `final.zip`
-already exists (`--force-floor` to redo, `--skip-floor` to jump to phase 2).
+already exists (`--force-floor` to redo, `--skip-floor` to jump to phase 2,
+`--floor-only` to run just the vs-greedy phase).
+
+Phase 1's starter pool goes through the oracle-readiness gate (TRAINING_RUNBOOK
+"Oracle readiness gate"): starter lists with not-ready cards are dropped, and a
+pool emptied that way stops with `EmptyTrainingPoolError`.
 
 ## Cloud (the real run) — CPU host
 
 ### 0. Pick a provider
 
-**Dedicated vCPU, not shared/burstable, not spot.** Phase 2 runs single-core for
-days; shared/burstable instances throttle and spot instances get reclaimed (no
+**Dedicated vCPU, not shared/burstable, not spot.** Phase 2 is a long
+inference-bound run; shared/burstable instances throttle and spot instances get reclaimed (no
 checkpoint-resume is wired). Cost is a rounding error either way (~$15–45 total).
 
 | Provider | Instance | Dedicated vCPU | RAM | ~$/hr (Jun 2026) |
@@ -86,7 +95,7 @@ filename — so rename them and hand-write a manifest with **container** paths:
 ```bash
 # from your laptop, base repo root
 D=~/digimon-training
-rsync -az data/    droplet:$D/data/        # deck_library, cards, overrides, tested, aliases
+rsync -az data/    droplet:$D/data/        # deck_library, cards, overrides, tested, aliases, oracle_readiness.json
 rsync -az configs/ droplet:$D/configs/     # default.yaml the CLI loads
 scp code/tools/train_starter_curriculum.py droplet:$D/
 scp cloud_downloads/v022-hf4zm2hl82qk48/models/pilot_ppo_starter_decks_generalist_v1.zip droplet:$D/champions/v022.zip
@@ -104,8 +113,9 @@ scp cloud_downloads/v020-3fm5tm9kci2isy/models/pilot_ppo_starter_decks_generalis
 
 ### 2. One detached `docker run` of the driver
 
-The published `digimon-trainer` image bakes only `run_training_job.py`, so mount
-the driver in (it shells the in-image `pilot_training`). Use the latest published
+The published `digimon-trainer` image bakes `run_training_job.py`,
+`train_specialist_league.py` and `anchored_eval_cli.py` from `code/tools/` but
+not this driver, so mount it in (it shells the in-image `pilot_training`). Use the latest published
 tag — ≥ the one that produced `v022`, already on `standard_lite_deck_v2`.
 
 ```bash
@@ -121,12 +131,12 @@ docker run -d --name digimon-train \
   python tools/train_starter_curriculum.py \
     --pool-manifest /app/pool_starters.json --cwd /app \
     --save-dir /app/models --log-dir /app/runs \
-    --floor-envs 8 --floor-steps 1000000 --pool-steps 5000000
+    --floor-envs 8 --pool-envs 8 --floor-steps 1000000 --pool-steps 5000000
 # follow: docker logs -f digimon-train
 ```
 
-`--floor-envs 8` parallelizes the greedy floor across the vCPUs (hours); phase 2
-ignores it. Optional TensorBoard watcher: `docker compose -f
+`--floor-envs 8` / `--pool-envs 8` parallelize each phase across the vCPUs
+(each flag applies only to its own phase). Optional TensorBoard watcher: `docker compose -f
 docker-compose.watch.yml up -d` (tailnet only — see CLOUD_TRAINING.md §B).
 
 ### 3. Mirror, retrieve, judge, tear down
@@ -153,8 +163,9 @@ and the next cycle's pool is larger.
 
 ## Tests
 
-`code/tests/rl/test_starter_curriculum_driver.py` (7 cases) covers both phase
+`code/tests/rl/test_starter_curriculum_driver.py` (8 cases) covers both phase
 command-lines, the phase-1→phase-2 handoff (warm-start checkpoint + reused
-snapshot), shared profile/reward/seeds, and the `--floor-envs` parallelism lever.
+snapshot), shared profile/reward/seeds, distinct per-phase LRs/log dirs,
+default eval-game recording, and the `--floor-envs` parallelism lever.
 The full pipeline (including the champion-pool load + warm-start) was validated
 with a tiny both-phases smoke before first use.

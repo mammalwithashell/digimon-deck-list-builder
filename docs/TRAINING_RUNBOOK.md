@@ -181,14 +181,14 @@ DIGIMON_ONNX_OPPONENT=1 python code/tools/train_specialist_league.py \
 # without it. Same --wandb flag works on a bare `pilot_training` run.
 # LSTM specialists: add --lstm to train MaskableRecurrentPPO specialists. Cross-arch
 # warm-start is supported — an MLP generalist transfers ONLY its shared
-# CardEmbeddingExtractor into the LSTM specialists via --init-extractor-from (the
-# source is loaded by ITS OWN arch, read from <model>.meta.json, not the target's);
-# --init-from is full-checkpoint and requires matching arch. Promotion gating + the
-# 6x6 cross-deck matrix come from --promote-min-wr (keep-best threshold) and --eval-n
-# (games per matrix cell — small n is deck-luck noisy; use >=24).
+# CardEmbeddingExtractor into the LSTM specialists: the league driver detects the
+# arch mismatch (from <model>.meta.json) and passes pilot_training's
+# --init-extractor-from for you (the league tool itself has no such flag); same-arch
+# warm-starts get --init-from (full checkpoint, requires matching arch). Promotion
+# gating + the 6x6 cross-deck matrix come from --promote-min-wr (keep-best threshold)
+# and --eval-n (games per matrix cell — small n is deck-luck noisy; use >=24).
 #   python code/tools/train_specialist_league.py --generalist models/starter_pool_v1/final.zip \
-#     --lstm --init-extractor-from models/starter_pool_v1/final.zip \
-#     --rounds 3 --steps-per-round 500000 --eval-n 24 --promote-min-wr 0.55
+#     --lstm --rounds 3 --steps-per-round 500000 --eval-n 24 --promote-min-wr 0.55
 # Scaling a league ACROSS pods: --topology parallel (multiple specialists in ONE pod)
 # is reliable but NOT a proven speedup and is confounded by RunPod CPU-cgroup
 # throttling — see docs/CLOUD_TRAINING.md §A.11. The scalable path is one specialist
@@ -209,19 +209,44 @@ python -m digimon_gym.agents.pilot_training --lstm --lstm-hidden-size 256 \
 
 ### All CLI Arguments
 
+Most flags default to `None` in argparse and fall through to the YAML config
+(`--config`, default `configs/training/default.yaml`) and then to the
+`TrainingConfig` dataclass (`code/digimon_gym/agents/training_config.py`); the
+defaults below are the effective ones. Any `TrainingConfig` field without a
+dedicated flag (e.g. `n_envs`, `vec_env_backend`, `n_epochs`, `seed`,
+`run_name`, `reward_profile_override`) is set with `--set key=value`.
+
 | Argument | Default | Description |
 |---|---|---|
-| `--timesteps` | 100000 | Total training timesteps |
-| `--opponent` | greedy | Opponent policy (`greedy`, `random`) |
+| `--config` | `configs/training/default.yaml` | `TrainingConfig` YAML to load |
+| `--set key=value` | — | Override one config field (repeatable) |
+| `--resume` | none | Resume from a saved checkpoint `.zip`; exclusive with `--init-from` |
+| `--timesteps` | 500000 | Total training timesteps |
+| `--opponent` | greedy | Opponent policy (`greedy`, `random`, `pool`, `league`) |
 | `--self-play` | — | **RETIRED** — fails at startup with migration guidance (see "Self-play retirement") |
 | `--opponent-pool-manifest` | none | OpponentPool manifest JSON for `--opponent pool` (emit from the champion registry via `champion_admin.py emit-pool`) |
+| `--league-pool-manifest` | none | Coupled (policy, deck) round-pool manifest for `--opponent league` (written by `train_specialist_league.py`) |
 | `--lr` | 3e-4 | Learning rate |
+| `--lr-schedule` | constant | `constant` or `linear` (decay to 0 over the run) |
 | `--batch-size` | 64 | Minibatch size |
 | `--n-steps` | 2048 | Rollout buffer size |
-| `--eval-freq` | 10000 | Steps between evaluations |
-| `--eval-episodes` | 20 | Games per evaluation |
+| `--net-arch` | SB3 `[64,64]` | Policy/value head hidden sizes, e.g. `256,256` |
+| `--eval-freq` | 25000 | Steps between (in-run, training-opponent) evaluations |
+| `--eval-episodes` | 50 | Games (matches, in BO3) per evaluation |
+| `--anchored-eval-freq` | 100000 | Steps between in-training anchored panels (greedy + champions); `0` disables (see §14) |
+| `--anchored-eval-games` | 24 | Seat-balanced games per anchor per panel |
 | `--log-dir` | `runs/pilot_ppo` | TensorBoard log directory |
 | `--save-dir` | `models` | Model save directory |
+| `--match-format` | bo3 | `bo3` (one episode = one best-of-three match) or `single` (see §12) |
+| `--tensor-profile` | `standard_lite_v2` | Observation tensor profile (`standard_lite_deck_v2` also supported) |
+| `--archetypes` | none | Comma-separated archetype scope for the generalist / gauntlet deck pool |
+| `--opponent-archetypes` | same as agent | Separate P2 archetype scope (generalist mode; ignored with `--curriculum-pool`) |
+| `--generalist-sampling` | uniform-archetype | Generalist sampling mode (only `uniform-archetype` today) |
+| `--init-extractor-from` | none | Warm-start only the `CardEmbeddingExtractor` (cross-`--net-arch` / cross-arch transfer); exclusive with `--init-from` / `--resume` |
+| `--reward-profiles-override-mismatch` | off | Bypass the resume-time reward-YAML hash check (see §13) |
+| `--wandb` (+ `--wandb-project/-entity/-group/-run-name/-mode`) | off | Mirror TensorBoard scalars to Weights & Biases; reads `WANDB_API_KEY` |
+| `--mulligan-log` | on | Per-game mulligan records to `models/<run>/mulligan_log_env_<NNN>.jsonl` |
+| `--eval-game-log` | on | Per-game eval rows to `models/<run>/eval_game_log.jsonl` (see §8) |
 | `--gauntlet` | off | Enable MetaGauntlet opponent sampling from training-ready decklists (see §2) |
 | `--gauntlet-sampling` | meta | Sampling mode for `--gauntlet`: `meta` threat-index weights or `random` uniform deck sampling |
 | `--generalist` | off | Sample both player decks from training-ready decklists (see §2) |
@@ -485,8 +510,8 @@ compute**:
 | Lever | How | Effect |
 |---|---|---|
 | **ONNX opponent** | `DIGIMON_ONNX_OPPONENT=1` | frozen MLP opponent runs via ORT (1 intra-op thread/subproc) instead of torch eager → **~2× games/sec**. Parity-safe: opponent plays deterministic argmax, so identical logits → identical action. MLP-only; torch fallback on failure. |
-| Update phase | `--batch-size 256` (default 64), optionally `--n-epochs` ↓ | fewer, bigger PPO minibatches. Helps when update-bound; harmless otherwise. `n_epochs`↓ trades sample reuse — be conservative. |
-| Eval overhead | `--eval-freq 100000 --eval-episodes 8` (from 50k/20) | the in-run win rate is **degenerate** (rule 30 — see §14); minimise time spent computing a number you don't trust. |
+| Update phase | `--batch-size 256` (default 64), optionally `--n-epochs` ↓ (league driver flag; `--set n_epochs=N` on a bare `pilot_training` run) | fewer, bigger PPO minibatches. Helps when update-bound; harmless otherwise. `n_epochs`↓ trades sample reuse — be conservative. |
+| Eval overhead | `--eval-freq 100000 --eval-episodes 8` (league defaults 50k/20; bare `pilot_training` 25k/50) | the in-run win rate is **degenerate** (rule 30 — see §14); minimise time spent computing a number you don't trust. |
 | Logging / hot-reload | mulligan log off; `reward_profiles_hot_reload=False` | trims per-game JSON I/O + per-step file stat. Minor. |
 
 **ONNX-opponent gotchas** (each cost an image rebuild before it worked): the
@@ -530,16 +555,22 @@ champion pool; Tier 2 distributed league with a shared store + per-round barrier
 ### Standard Training Chain
 
 ```
-DigimonEnv                        (1375-obs, 2192-action, reward shaping)
+DigimonEnv                        (obs size per tensor profile — default standard_lite_v2 = 8410; 2192-action)
+  → RewardProfileWrapper         (reward-profile shaping; on by default, see §13)
   → OpponentWrapper              (single-agent MDP, auto-plays P2)
+  → MatchEnv                     (BO3 match episodes; default, absent with --match-format single)
   → DeckPoolWrapper              (agent deck variation, optional)
+  → GeneralistDeckPoolWrapper    (--generalist deck-pair sampling, optional)
+  → LeaguePoolWrapper            (--opponent league coupled policy+deck, optional)
   → GauntletWrapper              (opponent deck sampling from MetaGauntlet, optional)
+  → TrainingRecordingWrapper     (always on — panic safety rail, see §0/§9)
+  → MulliganLogWrapper           (--mulligan-log on, default)
   → ActionMasker                 (SB3 mask interface)
 ```
 
 ### make_env() Parameters
 
-See `pilot_training.make_env()` for the full parameter list covering: opponent selection, deck overrides, gauntlet config, deck pool config, and bounty settings.
+See `pilot_training.make_env()` (single env) and `pilot_training.make_vec_env()` (`n_envs > 1`, pool and league opponents) for the full parameter lists covering: opponent selection, deck overrides, gauntlet config, deck pool config, and bounty settings.
 
 ---
 
@@ -562,6 +593,7 @@ See `pilot_training.make_env()` for the full parameter list covering: opponent s
 | `pilot/agent_archetype/<X>/dna_digivolves_per_game` | Cumulative agent DNA digivolves piloting `<X>` ÷ games as `<X>` |
 | `pilot/archetype/<X>/opponent_digivolves_per_game` | Cumulative opponent digivolves when opp is `<X>` ÷ games vs `<X>` |
 | `pilot/archetype/<X>/opponent_dna_digivolves_per_game` | Cumulative opponent DNA digivolves when opp is `<X>` ÷ games vs `<X>` |
+| `pilot/anchored/<anchor>/win_rate`, `pilot/anchored/panel_mean` | In-training anchored panel (`AnchoredEvalCallback`, every `--anchored-eval-freq` steps) vs greedy + layout-compatible champions; rows also go to `<log-dir>/anchored_evals.jsonl`. See §14 |
 
 Digivolve telemetry fires unconditionally — it is observational, not gated on `digivolve_shaping`. Runs with shaping off emit the same scalar set with their actual (often zero) values, so the shaping-on vs. shaping-off A/B compare uses an identical schema.
 
@@ -573,9 +605,10 @@ tensorboard --logdir runs/pilot_ppo
 
 Default log directory: `runs/pilot_ppo` (override with `--log-dir`).
 
-### Eval Sidecar (`runs/<name>/evals.jsonl`)
+### Eval Sidecar (`<log-dir>/evals.jsonl`)
 
-One JSON line per eval window. Top-level fields include the headline scalars plus four per-eval digivolve means:
+Written directly under `--log-dir` (default `runs/pilot_ppo/evals.jsonl`; the
+starter-curriculum and league drivers pass a per-run `--log-dir <log-base>/<name>`). One JSON line per eval window. Top-level fields include the headline scalars plus four per-eval digivolve means:
 
 | Field | Description |
 |---|---|
@@ -697,10 +730,12 @@ Each artifact wraps the engine recording with run metadata and outcome metadata:
 - `run`: backend, tensor profile, action-space size, source split, environment index, and game index.
 
 Tensor snapshots are useful for model debugging but can be large; keep them off
-unless you need to inspect exact observations and masks. The current server
-replay endpoints still use the legacy Python replay runner, so Rust training
-recordings should be treated as deterministic bug artifacts first. A Rust-native
-replay/seek tool can consume the same JSON contract in a follow-up.
+unless you need to inspect exact observations and masks. Treat Rust training
+recordings as deterministic bug artifacts first. (Updated 2026-10-18: the
+legacy Python replay runner is gone with the Python engine — the server replay
+endpoints now run on the Rust `RustReplayRunner` (`code/server/routers/replays.py`),
+and the engine MCP's `load_recording` steps a recording through the Rust engine;
+see [DEBUG_MCP.md](DEBUG_MCP.md).)
 
 ---
 
@@ -708,8 +743,15 @@ replay/seek tool can consume the same JSON contract in a follow-up.
 
 ### Save Location
 
-- Default: `models/` directory.
-- Filename: `pilot_ppo_{timestamp}.zip` (CLI) or `pilot_ppo_{job_id}.zip` (worker).
+- Default: `models/` directory (`--save-dir`).
+- CLI runs: one directory per run, `models/<run_name>/`, where `run_name`
+  defaults to `pilot_ppo_{YYYYmmdd_HHMMSS}` (pin it with `--set run_name=...`).
+  It holds `final.zip` (+ `final.meta.json`), rotated periodic checkpoints
+  under `checkpoints/step_<N>.zip` (`checkpoint_every` 50000,
+  `keep_last_checkpoints` 3), plus the run sidecars (`deck_pool_snapshot.json`,
+  `eval_game_log.jsonl`, `reward_profiles.meta.json`, mulligan logs).
+- Direct `train()` calls without a config (e.g. the worker) still use the flat
+  `pilot_ppo_{timestamp}.zip` / `pilot_ppo_{job_id}.zip` naming via `save_model()`.
 
 ### Loading a Saved Model
 
@@ -718,10 +760,10 @@ from sb3_contrib import MaskablePPO
 from digimon_gym.agents.maskable_recurrent import MaskableRecurrentPPO
 
 # MLP
-model = MaskablePPO.load("models/pilot_ppo_20260228_120000")
+model = MaskablePPO.load("models/pilot_ppo_20260228_120000/final.zip")
 
 # LSTM
-model = MaskableRecurrentPPO.load("models/pilot_ppo_abc12345")
+model = MaskableRecurrentPPO.load("models/<lstm_run>/final.zip")
 ```
 
 ### Models trained before 2026-10-03 never saw EX12 card identities
@@ -786,13 +828,14 @@ Default Gym episode shape (since `add-bo3-match-training`, 2026-05). One episode
 ### CLI
 
 ```bash
-# Default — BO3 with concede + play-order selection enabled
+# Default — BO3 with play-order selection enabled
 python -m digimon_gym.agents.pilot_training --generalist --timesteps 500000
 
 # Opt out — legacy single-game episodes
 python -m digimon_gym.agents.pilot_training --generalist --match-format single
 
-# Override digivolve shaping default (BO3 turns it on)
+# Override digivolve shaping default (BO3 turns it on). Only matters on the
+# legacy reward path (reward_profiles_path: null) — inert under reward profiles (§13)
 python -m digimon_gym.agents.pilot_training --set digivolve_shaping=false
 ```
 
@@ -800,7 +843,7 @@ python -m digimon_gym.agents.pilot_training --set digivolve_shaping=false
 
 | Action | Meaning | Mask rule |
 |---|---|---|
-| `93` | Concede game (`Game::concede(player)`) | Legal whenever player has any other legal action |
+| `93` | Concede game (`Game::concede(player)`) | **Never in the mask** (updated 2026-10-18: removed from the learnable action space in all match formats on 2026-06-19 — policies abused it as premature surrender; see `code/digimon-engine/src/action/mask.rs`). The primitive still backs human PvP surrender. |
 | `94` | Play first in next game | Legal only during `SelectPlayOrder` |
 | `95` | Play second in next game | Legal only during `SelectPlayOrder` |
 
@@ -808,23 +851,33 @@ python -m digimon_gym.agents.pilot_training --set digivolve_shaping=false
 
 ### Reward calibration
 
+The magnitudes below are `MatchEnv`'s class constants (`code/digimon_gym/agents/match_env.py`)
+and the legacy `DigimonEnv._compute_reward`. With reward profiles active (the default, §13)
+the per-step dense terms and the per-game base come from the profile instead
+(`gameplay.yaml`: +1.5 / −0.5 security, **+0.5 per digivolve, +3.5 additional per DNA**,
+−0.001 step, ±10 terminal + quick-win/stall); `MatchEnv` still applies its per-game
+(BO3 − inner) delta and its match terminal unless the profile declares `match_outcome`
+(see [REWARD_PROFILES.md](REWARD_PROFILES.md#match-tier--match_outcome-path-c-per-bo3-match-terminal)).
+
 ```
-Per-step dense:
+Per-step dense (legacy path, reward_profiles_path: null):
   +1.5 per opponent security removed (asymmetric — was ±2.0 symmetric)
   -0.5 per own security lost
-  +0.1 per agent digivolve, +0.4 per DNA digivolve (default ON in BO3)
+  +0.1 per agent digivolve, +3.9 additional per DNA digivolve (digivolve_shaping, default ON in BO3)
   -0.001 step penalty
 
 Per-game terminal (BO3 only — replaces DigimonEnv's ±10 + up to +5 fast):
-  +12 win, -12 loss, + up to +3 fast-game bonus (par 50, zero at 150)
+  +12 win, -12 loss, + up to +3 fast-game bonus (linear, zero at 150 steps)
 
 Per-match terminal (fires at match end):
   +30 match win, -30 match loss, -1 draw (rare, hard step-limit only)
   +10 sweep bonus (2-0 wins)
   +5 smart-concede bonus (won match AND any conceded game)
   -10 scared-concede penalty (0-2 loss AND any conceded game)
-  + up to +15 fast-match bonus (par 150, zero at 450, win only)
+  + up to +15 fast-match bonus (linear, zero at 450 match steps, win only)
 ```
+
+The two concede terms are unreachable for the agent while action `93` is masked out (see above).
 
 See `openspec/changes/add-bo3-match-training/design.md` §D9 for the full calibration rationale and the scenario-by-scenario payoff table.
 
@@ -878,7 +931,7 @@ generalist: true
 
 **Telemetry**: per-component, per-profile, and boss-arrival scalars surface as `pilot/reward/*`, `pilot/profile/*`, and `pilot/mean_eval_digivolves_into_boss_per_game` in TensorBoard. Two new gameplay-shape TB scalars are emitted per eval window: `pilot/mean_eval_winning_turn` (mean `turn_count` at terminal across agent-win games; not emitted when no wins) and `pilot/mean_eval_digivolve_driven_attacks` (mean agent-side `DigivolveDrivenAttack` count per eval game). Per-archetype × component drilldowns land in `evals.jsonl` under `by_archetype[X].component_means` and `by_agent_archetype[X]`.
 
-**Deprecation**: `digivolve_reward` / `dna_digivolve_bonus` flat fields warn when set to non-default values. `digivolve_shaping: true` is now INERT — it is accepted with no warning and has no effect on profile selection (the universal gameplay shape always carries the new digivolve weights). The `legacy_terminal_exclusivity` flag, the `_digivolve_shaped` profile, and the `_base_terminal` profile have all been removed; the loader errors with a migration message if YAML still sets the flag. Flat-field removal still targeted for v2.
+**Deprecation**: `digivolve_reward` / `dna_digivolve_bonus` flat fields warn when set to non-default values. `digivolve_shaping: true` is now INERT under reward profiles — it is accepted with no warning and has no effect on profile selection (the universal gameplay shape always carries the new digivolve weights); it and the two flat fields only feed the legacy `DigimonEnv` reward when `reward_profiles_path: null`. The `legacy_terminal_exclusivity` flag, the `_digivolve_shaped` profile, and the `_base_terminal` profile have all been removed; the loader errors with a migration message if YAML still sets the flag. Flat-field removal still targeted for v2.
 
 ## 14. Standing cadence: the champion loop
 
@@ -947,20 +1000,26 @@ Key RL/ML packages:
 - `sb3-contrib` >= 2.0
 - `numpy` >= 1.24
 - `tensorboard` (for monitoring)
+- `onnx` + `onnxruntime` (ONNX opponent path, `DIGIMON_ONNX_OPPONENT=1`), `wandb` (optional `--wandb`)
+
+The authoritative list for the training CLI / image is `requirements-training.txt`.
 
 ## Oracle readiness gate (2026-10-04)
 
 Training admits a decklist only when every card in it is oracle-ready:
-every printed clause is confirmed against DCGO, or unreachable/unavailable
-with a reason, or a diverged clause triaged as a cited DCGO quirk. The gate
+every printed clause **and every gating interaction** (since 2026-10-06: the
+card's official Q&A rulings plus promoted risk probes from
+`data/interaction_denominator.json`) is confirmed against DCGO, or
+unreachable/unavailable with a reason, or a diverged item triaged as a cited
+DCGO quirk; an open escalation blocks. The gate
 is always on — there is no flag to disable it. Source of truth:
 `data/oracle_readiness.json`, regenerated with
 
     PYTHONPATH=code python -m tools.clause_coverage.readiness
 
 and checked in CI (`scripts/verify` tier 0). Regenerate it after any verdict
-change under `qa/qa-reports/exam-verdicts/`, any deck-library rebuild, and any
-card-text change (`cards.json`, `card_overrides.json`, `card_official.json`);
+change under `qa/qa-reports/exam-verdicts/`, any deck-library rebuild, any
+change to `data/interaction_denominator.json`, and any card-text change (`cards.json`, `card_overrides.json`, `card_official.json`);
 a clause whose text changed loses its verdict and drops the card back to
 `not_ready`. The artifact also records how many library decklists have every
 card ready (`decklists.oracle_ready`), an upper bound on the admitted pool
