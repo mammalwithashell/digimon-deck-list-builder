@@ -3928,6 +3928,17 @@ impl Game {
     /// pending processing (no clause condition).
     /// G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER.
     pub(crate) fn discard_entries_not_triggered(&mut self, first_index: usize) {
+        // Scope guard until the general fix gives the DSL a trigger-condition
+        // field: only the battle result's clause condition is known to be its
+        // trigger condition.
+        debug_assert!(
+            self.effect_queue
+                .iter()
+                .skip(first_index)
+                .all(|qe| qe.timing == EffectTiming::BattleResult),
+            "discard_entries_not_triggered is BattleResult-only \
+             (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER)"
+        );
         let mut i = first_index;
         while i < self.effect_queue.len() {
             if self.queued_entry_has_clause_trigger_condition(i)
