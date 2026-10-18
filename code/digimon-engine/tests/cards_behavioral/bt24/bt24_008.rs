@@ -509,8 +509,13 @@ fn bt24_008_inherited_does_not_fire_on_opponents_turn() {
     // P1 has its own attacker.
     let p1_perm = runner.place_on_field(1, "P1-LV4", Some(0));
 
-    // Advance to P1's turn.
+    // Advance to P1's turn. `end_turn` seesaws the gauge, so P0's unspent 10
+    // lands on P0's side (-10 for P1): give P1 memory of its own, or the
+    // attack's end-of-processing turn-end check (memory on the opponent's
+    // side) hands the turn straight back to P0 -- which play continuing after
+    // a deck-out used to hide (G-ENGINE-GAME-OVER-NOT-TERMINAL).
     runner.end_turn();
+    runner.game.set_memory(10);
 
     let mem_before = runner.memory();
     let sec_before = runner.security_count(0);
@@ -521,7 +526,7 @@ fn bt24_008_inherited_does_not_fire_on_opponents_turn() {
     // attacker, so it is not scanned. The `active_when: { your_turn: true }`
     // gate is an additional guard for any future engine path that might scan
     // non-attacker fields.
-    runner.attack_player(p1_perm, 0, true);
+    runner.attack_player(p1_perm, 0, false);
     runner.auto_resolve().ok();
 
     assert!(

@@ -783,8 +783,10 @@ fn ex9_012_observer_accept_free_digivolves_self_into_greymon() {
     // Hand: -2 (Garurumon played + Greymon free-digivolved on top of EX9-012).
     assert_eq!(
         runner.hand_size(0),
-        hand_before - 2,
-        "hand decreased by 2: Garurumon played, Greymon free-digivolved"
+        // -2 for the two cards that left the hand, +1 for the card the
+        // digivolution drew (the runner now has a deck to draw from).
+        hand_before - 2 + 1,
+        "hand decreased by 2: Garurumon played, Greymon free-digivolved, digivolution drew 1"
     );
 }
 
