@@ -139,6 +139,15 @@ pub enum Timing {
     /// via `active_when:` — `event_winner_owner: you` (the winner's controller)
     /// and `event_winner_trait_has: <trait>` (the winner's trait). Never fires
     /// on a tie (mutual destruction — no winner) or a direct player attack.
+    /// The clause's `condition` / `active_when` is its TRIGGER condition: it
+    /// is decided when the battle triggers the effect, and an effect whose
+    /// condition fails then never triggers (§15-8-3-1, §15-8-3-4); it is
+    /// re-checked at activation only as "no longer met" (§15-4-4-5), never as
+    /// a processing condition. So read only the battle (`event_winner_*`,
+    /// `event_battle_deleter`, `event_battle_surviving_deleter`) and the turn
+    /// there, and author a processing "if" as a body `if:` (`dsl-lint` warns)
+    /// until the DSL has a separate trigger-condition field
+    /// (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER).
     OnAllyWonBattle,
     /// Hand-discard observer: "[All Turns] When your hand is trashed from, …"
     /// (`when: on_discard_hand`, BT25-080/084; ST16-14; G-ENGINE-ON-DISCARD-HAND).
