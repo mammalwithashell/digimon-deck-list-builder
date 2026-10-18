@@ -48,7 +48,8 @@ champion before launch** (`champion_admin.py promote --candidate <seed>.zip
 --name <name> --force`, layout-compatible) so the panel reads `vs ['greedy',
 '<seed>']` and answers "is this beating what it was seeded from?". The panel
 builds its anchor set lazily at the first panel, so register before the run, not
-during it. See the runbook §6.5 / §14.
+during it. See the runbook §14 (and the league launch recipe in its §1 quick
+reference).
 
 ## 2. The fix: a fixed reference frame
 
@@ -82,7 +83,13 @@ Evaluate against opponents that do **not** move with the learner.
 ```
 
 L0/L1 are already emitted (`runs/<name>/evals.jsonl`,
-`models/<run>/eval_game_log.jsonl`). L2–L4 are the tools below.
+`models/<run>/eval_game_log.jsonl`). L2–L4 are the tools below. L2 also runs
+**in-training** as the anchored panel (`anchored_eval_callback.py`): every
+`anchored_eval_freq` steps (default 100,000; 0 disables) it plays
+`anchored_eval_games` (default 24) seat-balanced games per anchor and logs
+`pilot/anchored/<anchor>/win_rate` + `pilot/anchored/panel_mean` TensorBoard
+scalars plus one row per panel in `runs/<name>/anchored_evals.jsonl` (never
+`evals.jsonl`).
 
 ## 4. Tools
 
@@ -92,9 +99,11 @@ L0/L1 are already emitted (`runs/<name>/evals.jsonl`,
   `--deck-pool-snapshot <run>/deck_pool_snapshot.json` for the exact training
   decks and an adequate `--n`.
 - **Champion registry** — `code/digimon_gym/agents/champion_registry.py`,
-  `models/champions/registry.json`. Frozen, versioned model snapshots with
-  provenance + layout-hash compatibility. Promote with
-  `code/tools/champion_admin.py` (gated ≥55% vs the current panel, or manual).
+  `models/champions/registry.json` (git-ignored, per-machine — `models/` is
+  not committed). Frozen, versioned model snapshots with provenance +
+  layout-hash compatibility. Manage with `code/tools/champion_admin.py`:
+  `list`, `promote` (gated ≥55% vs the current panel, or `--force`), and
+  `emit-pool` (derive an `opponent="pool"` manifest from the registry).
 - **Elo ladder** — `code/digimon_gym/agents/elo_ladder.py`,
   CLI `code/tools/elo_ladder_cli.py`. Seat-balanced round-robin over
   `{checkpoints + champions + greedy}`; Bradley-Terry/Elo fit (greedy = fixed
@@ -121,8 +130,23 @@ is the principled cure for self-play's non-stationarity; the champion registry
 
 > Distinction: AlphaGo Zero = single frozen best + gating. The win-rate-weighted
 > "sample the opponents you lose to" idea is **PFSP** (AlphaStar), a different
-> mechanism. The engine has a PFSP `sample(mode="pfsp")` but it is **dormant** —
-> `record_match` is never called during training, so it degenerates to uniform.
+> mechanism. Where PFSP is live today (verified 2026-10-18):
+>
+> - **`opponent="league"` — live.** `LeaguePoolWrapper`
+>   (`code/digimon_gym/agents/league_opponent.py`) keeps its own in-memory
+>   per-opponent games/wins (`step()` on `terminated`) and, in `pfsp` mode (the
+>   default via `opponent_pool_mode="pfsp"`), weights opponents by
+>   `(1 - agent_wr) ** power` once an opponent has ≥5 games (uniform before).
+>   The tally is per env worker and per process — not persisted, not shared
+>   across `SubprocVecEnv` workers.
+> - **`opponent="pool"` — effectively uniform.** `make_pool_opponent_fn`
+>   (`pilot_training.py`) calls `OpponentPool.sample(mode=cfg.opponent_pool_mode)`
+>   (default `"pfsp"`), but `OpponentPool.record_match` (`opponent_pool.py`) is
+>   still never called outside its unit test, so every entry keeps the
+>   `win_rate_vs_pool` it was written with (`emit-pool` writes 0.5 for all) and
+>   the PFSP weights are flat. The exploiter forces `opponent_pool_mode="uniform"`.
+> - **`LeagueOpponentWrapper`** (`league_wrapper.py`) also has its own PFSP
+>   tracking, but nothing in production constructs it.
 
 ## 6. Robustness & equilibrium methods (horizon)
 
@@ -139,22 +163,29 @@ All three require **cheap forking of game state** to traverse the tree, plus
 explicit infoset / public-belief structure, plus a tractable belief space (a
 50-card deck dwarfs poker's hidden info).
 
-> **Forking precondition PARTIALLY met (`make-engine-cloneable`, 2026-06-23).**
-> `Game: Clone` is live and faithful at the **DSL card-effect selection-step
-> surface** (the flipped installers — hand/trash/permanent/reveal/material/union +
-> the multi-pick trampolines), via a resumable data VM (`src/resume.rs`). So a
-> `Game` paused at those select kinds forks cleanly. **It is NOT yet faithful at
-> the broader engine surface**: combat/keyword interrupts, digivolve cost-choice,
-> BO3 play-order, Overclock, TriggerOrder, replacement-accept, `select_effect_choice`,
-> and several other selections are still closure-based and would panic on a forked
-> resolve. So the *forkability* requirement of Deep CFR / ReBeL / Player of Games
-> is met **only on the flipped subset** — full-game search must wait for the rest
-> of the selection surface to flip + the closure executor to be deleted (remaining
-> `make-engine-cloneable` work). What each method ALSO needs is the **infoset /
-> public-belief structure + the determinization seam** — the **`add-determinized-search`**
-> change (determinized / IS-MCTS over `RevealSource`-sampled worlds, reusing the
-> 2192-action mask + the observation tensor). The forward-only exploiter remains
-> the cheap robustness number meanwhile.
+> **Forking precondition met at the production surface (updated 2026-10-18).**
+> *(History: a 2026-06-23 note here said "PARTIALLY met" — faithful only at the
+> DSL selection-step surface, with combat interrupts, digivolve cost-choice,
+> play-order, Overclock, TriggerOrder, replacement-accept and `select_effect_choice`
+> still closure-based.)* Those non-DSL paths have since flipped: per
+> `make-engine-cloneable` 2.3/6.1 (2026-07-01/02), **every production selection
+> path parks a resume frame** (zero live-closure production call paths), and the
+> clone-fuzz guard (`code/digimon-engine/tests/clone_fuzz/`, CI in
+> `engine-clone-safety.yml`) clones at every decision of real-deck playouts and
+> checks both copies resolve identically. What remains is hygiene — deleting the
+> legacy closure executor + callback fields and porting the closure-path tests
+> (`make-engine-cloneable` 6.1). The determinization seam and search have also
+> **largely landed** (`add-determinized-search`, Phases 0–3): `Infoset`
+> extraction + world sampling/materialization (`code/digimon-engine/src/determinize/`),
+> PUCT-MCTS with PIMC and IS-MCTS modes (`src/search/`), the Rust self-play
+> driver (`src/selfplay/`, `digimon-engine-cli selfplay`), the AlphaZero trainer
+> (`code/digimon_gym/agents/azero_trainer.py`) and the generation loop
+> (`code/tools/run_selfplay_generation.py`). Still open there: leaf batching,
+> per-generation Elo/exploiter evaluation, game-review grades, and the PvP deck
+> prior. Determinized MCTS is the tractable member of this family, not Deep CFR /
+> ReBeL / Player of Games — those remain the horizon (they additionally need
+> public-belief structure and a tractable belief space). The forward-only
+> exploiter remains the robustness number.
 
 ## 7. Recommended workflow
 

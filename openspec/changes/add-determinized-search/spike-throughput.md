@@ -48,7 +48,7 @@ Real-shape untrained MLP (standard_lite_v2: 8410 obs → 2192 logits + value), `
 - Single-core, local Windows box; cloud training hardware will differ (re-run there before sizing a generation).
 - Greedy/random policies bound the step-cost range; a real search policy's action mix sits between.
 - NN eval excluded by design — combine with task 0.3's batched-evaluator evals/sec for the full sim price.
-- The clone-cost numbers are for games paused at *safe* points (the playout never parks mid-closure); once the non-DSL cutover lands, clone cost at interrupt prompts should be re-sampled.
+- The clone-cost numbers are for games paused at *safe* points (the playout never parks mid-closure); once the non-DSL cutover lands, clone cost at interrupt prompts should be re-sampled. *(2026-10-18: the cutover landed 2026-07-02; no dedicated interrupt-prompt clone re-sample is recorded here, but the real self-play profile below — which clones at every expanded search node — puts `Game::clone` at ≤0.1% self-time, so the re-sample is no longer decision-relevant.)*
 
 ## Real self-play profile (post-Phase-3, supersedes the mask-build lever above)
 
