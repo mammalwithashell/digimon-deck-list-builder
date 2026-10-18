@@ -1,10 +1,13 @@
 # MAIN_TWO -- Option, red, use cost 0.
 #   [Main] 1 of your opponent's Digimon gets -3000 DP for the turn.
 #   [Main] Gain 1 memory.
-# An Option with TWO [Main] effects (the BT1-090 / BT22-013 idiom: two
-# `main_from_hand` clauses). §9-1-5 trashes the card as soon as its 1st
-# [Main] has been resolved; the 2nd [Main] resolves after that, as the
-# pending effect of a card in the trash.
+# An Option with TWO [Main] effects. No card in the current pool prints two
+# [Main] effects (a cards.json scan finds none; BT1-090's two YAML
+# `main_from_hand` clauses model one printed [Main]), so this fixture pins the
+# MECHANISM only: §9-1-5 trashes the card as soon as its 1st [Main] has been
+# resolved; the 2nd [Main] resolves after that, as the pending effect of a
+# card in the trash -- how it activates has no rule text (§9-1-9-3 names only
+# the 1st) and awaits an owner ruling.
 card: MAIN_TWO
 name: Double Sap
 kind: option

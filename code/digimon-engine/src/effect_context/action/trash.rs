@@ -614,12 +614,15 @@ impl<'a> EffectContext<'a> {
     /// top-card trash. G-ENGINE-TRASH-TOP-SOURCE-FIRES-DIGIVOLUTION-CARD-
     /// TRASHED. The trashed card moves to its owner's trash.
     ///
-    /// A single-card stack is trashed too: the permanent then has no cards,
-    /// so it leaves the battle area (`soft_remove_if_emptied`; it is not
-    /// deleted, no `[On Deletion]`).
+    /// §8-3-2-1 (the Burst Digivolve turn-end trash, this primitive's only
+    /// authored user): "if there are no stacked cards or that card is not a
+    /// Digimon, no card is trashed", and §4-7-2 "Only 1 card isn't considered
+    /// 'stacked cards'": a 1-card stack, or one whose top card is not a
+    /// Digimon card, trashes nothing and the permanent stays (DCGO
+    /// `SelectBurstDigivolutionEffect` requires >= 1 digivolution card).
     ///
-    /// Reject-before-mutate discipline: invalid handle and empty stack both
-    /// return `false` before any state change.
+    /// Reject-before-mutate discipline: invalid handle, empty or 1-card stack
+    /// and a non-Digimon top all return `false` before any state change.
     pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
         let Some(removed) = self.pop_top_source_for_trash(target) else {
             return false;
@@ -629,13 +632,29 @@ impl<'a> EffectContext<'a> {
     }
 
     /// Guards + pop for [`Self::trash_top_source`]: `None` (no mutation)
-    /// when the slot is missing or empty, or a protection blocks the trash
-    /// (`ImmuneFromStackTrashing` on the host, or the top card's own
-    /// source-trash protection).
+    /// when the slot is missing, the stack has no stacked card under its top
+    /// (§4-7-2) or its top card is not a Digimon card (§8-3-2-1), or a
+    /// protection blocks the trash (`ImmuneFromStackTrashing` on the host, or
+    /// the top card's own source-trash protection).
     fn pop_top_source_for_trash(
         &mut self,
         target: PermanentHandle,
     ) -> Option<crate::card_source::CardSource> {
+        let eligible = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .is_some_and(|p| {
+                p.card_sources.len() > 1
+                    && matches!(
+                        p.top_card().card_kind(&self.game.card_data),
+                        crate::enums::CardKind::Digimon | crate::enums::CardKind::Dual
+                    )
+            });
+        if !eligible {
+            return None;
+        }
         if let Some(card) = self
             .game
             .player(target.player)

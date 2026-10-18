@@ -22,9 +22,12 @@
 //! handles, suspension, effective DP, per-turn activation counts, memory) --
 //! the state a repeating set of processing keeps returning to. Resolving a
 //! DECLINABLE player decision (`selection_can_stop_a_loop`) clears the watch,
-//! and so does the outermost drain settling with nothing parked; a forced
-//! decision (a mandatory pick, a trigger order) does not, since it gives no
-//! ability to stop the loop. A signature seen [`LOOP_SIGNATURE_REPEATS`]
+//! and so does a player's turn action (a runner action, `end_turn`, a
+//! declared attack, a play from hand; see `Game::reset_loop_watch`); the
+//! outermost drain settling does NOT -- a loop can span several drains with
+//! no decision between them. A forced decision (a mandatory pick, a trigger
+//! order) does not clear it either, since it gives no ability to stop the
+//! loop. A signature seen [`LOOP_SIGNATURE_REPEATS`]
 //! times therefore means the same state recurred with no optional decision
 //! offered within the cycle: neither player can stop it, and the game ends in
 //! the §18-3-2 draw (`GameEvent::InfiniteLoop`,
@@ -231,9 +234,12 @@ impl Game {
             self.pending_selection.as_ref().map(OptionalDecisionMark::of);
     }
 
-    /// A declinable player decision resolved, or the outermost drain settled
-    /// with nothing parked: whatever repeats from here on had an optional
-    /// decision (or fresh processing) in between, so it starts a new watch.
+    /// A player's decision resolved -- a declinable prompt, or a turn action
+    /// (`decode_action`'s non-selection path, `end_turn`, a player-declared
+    /// attack, a play from hand, every DebugRunner action wrapper): whatever
+    /// repeats from here on had that decision in between, so it starts a new
+    /// watch. An outermost drain settling is NOT a decision and keeps the
+    /// watch (§18-3-1: a loop can run through several drains).
     pub(crate) fn reset_loop_watch(&mut self) {
         self.loop_watch.clear();
         self.loop_watch_steps = 0;
@@ -274,10 +280,10 @@ impl Game {
         });
         self.effect_queue.clear();
         // The processing the loop cut off is over with the game: drop the
-        // outermost-drain batch windows it left open, so nothing flushes them
-        // later. Done here, not in `finish_game`: other terminal outcomes let
-        // in-flight processing finish (card tests resolve attacks on boards an
-        // `end_turn` decked out), while the loop draw halts all processing.
+        // outermost-drain batch windows it left open. Every game over halts
+        // the drainer (`drain_effect_queue` checks `game_over`, §1-2-2); the
+        // loop draw additionally empties the windows because its queue is
+        // what the loop was made of.
         self.pending_hand_discard = None;
         self.pending_deck_add = None;
         self.pending_added_sources.clear();

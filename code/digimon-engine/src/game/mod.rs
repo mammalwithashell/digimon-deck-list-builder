@@ -890,9 +890,11 @@ pub struct Game {
     pub(crate) option_body_outer_deferred: u32,
     /// §9-1-5 "as soon as the timing when its 1st [Main] effect has been
     /// resolved": set when the in-flight Option's first `OptionMain` entry has
-    /// run; an Option with two `[Main]` effects (BT1-090, BT22-013) is
-    /// disposed after the first, and the second resolves as the pending
-    /// effect of a card in the trash.
+    /// run; an Option with two `[Main]` effects (none in the current pool --
+    /// the fixture `MAIN_TWO` pins the mechanism) is disposed after the
+    /// first, and the second resolves as the pending effect of a card in the
+    /// trash (how it activates has no rule text, §9-1-9-3 names only the 1st;
+    /// owner ruling pending).
     pub(crate) option_first_main_resolved: bool,
 
     /// VARIABLE-amount interactive cost reduction driven by the printed play

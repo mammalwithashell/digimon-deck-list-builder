@@ -181,7 +181,7 @@ fn end_of_attack_optional_fires_deletes_target_returns_trash_and_plays_token() {
         .add_card(trash_card)
         // P1 keeps one security card: an attack on a player with no security
         // wins the game at once, and a finished game processes nothing more
-        // (§1-5; G-ENGINE-GAME-OVER-NOT-TERMINAL), so [End of Attack] would
+        // (§1-2-2, §1-2-3-1; G-ENGINE-GAME-OVER-NOT-TERMINAL), so [End of Attack] would
         // never fire. Medusamon's 12000 DP beats the 6000-DP security Digimon.
         .security(1, &["WEAK"])
         .memory(20)

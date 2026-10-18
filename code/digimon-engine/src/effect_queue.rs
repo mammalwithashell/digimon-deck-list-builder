@@ -1326,13 +1326,14 @@ impl Game {
         // while its trigger was parked is deleted by the rules check first,
         // so the trigger's source is gone when activation is attempted).
         // Outermost entries only; nested drains are mid-effect (Q6/Q13/Q14).
-        if self.effect_drain_depth == 1 && self.pending_selection.is_none() {
+        if self.effect_drain_depth == 1 && self.pending_selection.is_none() && !self.game_over {
             self.run_state_based_rules_check();
         }
         self.drain_effect_queue_inner();
-        // A §18-3-2 infinite-loop draw ends the game: no flush or rules
-        // processing runs after it.
-        if self.effect_drain_depth == 1 && !self.halted_by_infinite_loop() {
+        // §1-2-2: the game ends when a player wins or loses -- a §18-3-2
+        // infinite-loop draw, a §1-2-6 win/lose effect, a deck-out -- and no
+        // flush or rules processing runs after it.
+        if self.effect_drain_depth == 1 && !self.game_over {
             // Flush the OnDiscardHand batch window (G-ENGINE-ON-DISCARD-HAND):
             // the causing effect body has finished, so the whole discard batch
             // is known. Fire the trigger ONCE per affected owner (DCGO
@@ -1341,11 +1342,11 @@ impl Game {
             // a selection (a park means the effect body is not finished — the
             // resuming drain flushes it). Loop-guarded because an OnDiscardHand
             // observer can itself trash a hand (a nested batch).
-            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
+            if self.pending_selection.is_none() && !self.game_over {
                 let mut discard_guard: u16 = 0;
                 while self.pending_hand_discard.is_some()
                     && self.pending_selection.is_none()
-                    && !self.halted_by_infinite_loop()
+                    && !self.game_over
                 {
                     self.flush_pending_hand_discard();
                     if !self.effect_queue.is_empty() {
@@ -1366,11 +1367,11 @@ impl Game {
             // `FireOnAddLibraryAnyone` once per added list), then drain.
             // Every later block re-checks for the §18-3-2 draw: a pass above
             // may have ended the game in it, and nothing runs after that.
-            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
+            if self.pending_selection.is_none() && !self.game_over {
                 let mut deck_guard: u16 = 0;
                 while self.pending_deck_add.is_some()
                     && self.pending_selection.is_none()
-                    && !self.halted_by_infinite_loop()
+                    && !self.game_over
                 {
                     self.flush_pending_deck_add();
                     if !self.effect_queue.is_empty() {
@@ -1391,11 +1392,11 @@ impl Game {
             // ONCE per host (DCGO `AddDigivolutionCards*` once per list;
             // rule 15-5-2), then drain the observers. Loop-guarded because an
             // observer can itself place sources (a nested batch).
-            if self.pending_selection.is_none() && !self.halted_by_infinite_loop() {
+            if self.pending_selection.is_none() && !self.game_over {
                 let mut added_guard: u16 = 0;
                 while !self.pending_added_sources.is_empty()
                     && self.pending_selection.is_none()
-                    && !self.halted_by_infinite_loop()
+                    && !self.game_over
                 {
                     self.flush_pending_added_sources();
                     if !self.effect_queue.is_empty() {
@@ -1412,16 +1413,20 @@ impl Game {
             }
             let mut guard: u16 = 0;
             loop {
-                if self.pending_selection.is_some() || self.halted_by_infinite_loop() {
+                if self.pending_selection.is_some() || self.game_over {
                     break;
                 }
                 // Explicit termination: a pass that acted but changed nothing
                 // observable (a 0 DP Digimon that can't be deleted, a trash
                 // every protection refuses) has reached the rule check's
-                // fixpoint (§17-1-1 "repeated until there are no more rule
-                // check targets" is read as "no more targets it can act on").
-                // Without this, such a stable state would spin until the
-                // §18-3 loop watch declared a draw that no loop exists for.
+                // fixpoint. §17-1-1 defines a rule check as the processing
+                // for "certain circumstances"; §17-1-2-1's example ("a rule
+                // check will only be performed after the previous rule check
+                // is resolved") is what makes the next pass; a pass that
+                // changed nothing leaves no new circumstance, so there is no
+                // next pass. Without this, such a stable state would spin
+                // until the §18-3 loop watch declared a draw that no loop
+                // exists for.
                 let before = self.loop_signature(crate::game::infinite_loop::LoopSite::RulesCheck);
                 if !self.run_state_based_rules_check() {
                     break;
@@ -1508,9 +1513,10 @@ impl Game {
             if self.pending_selection.is_some() {
                 return;
             }
-            // §18-3-2: the game ended in an infinite-loop draw (possibly in a
-            // nested drain an effect body performed); nothing more resolves.
-            if self.halted_by_infinite_loop() {
+            // §1-2-2: the game ended (an infinite-loop draw, a win/lose effect,
+            // possibly in a nested drain an effect body performed); nothing
+            // more resolves.
+            if self.game_over {
                 self.effect_queue.clear();
                 return;
             }

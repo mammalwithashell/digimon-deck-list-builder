@@ -1583,11 +1583,20 @@ fn piercing_without_the_attacker_checks_nothing() {
 /// §9-1-5 (as above). The Option is used by an EFFECT, from inside that
 /// effect's own selection callback (the EX7-073 / P-180 shape): P0's
 /// `OP_USE_OPT_FREE` ("[On Play] You may use 1 Option card from your hand
-/// without paying the cost") uses `MAIN_MINUS3000`, whose [Main] leaves P1's
+/// without paying the cost") uses `MAIN_ALL_MINUS3000` ("[Main] All of your
+/// opponent's Digimon get -3000 DP for the turn" -- it parks no decision, so
+/// its whole body runs inside the hand-pick callback), which leaves P1's
 /// 3000 DP `WOULD_DEL_MAY_MEM` at 0 DP. The rule check that follows must find
 /// the Option already in the trash: when the 0 DP Digimon's would-be-deleted
-/// decision parks, `MAIN_MINUS3000` is in P0's trash, and in the event log
-/// its trash precedes the would-be-deleted effect and the deletion.
+/// decision parks, `MAIN_ALL_MINUS3000` is in P0's trash, and in the event
+/// log its trash precedes the would-be-deleted effect and the deletion.
+///
+/// Red on the base engine (83aa6bf02, Task 7 merged): the body ran with
+/// `draining_deferred > 0`, the OptionMain arm's disposal was skipped, and
+/// the rule check between queued effects deleted the Digimon first -- the
+/// trash was empty at the would-be-deleted decision. (An Option whose [Main]
+/// parks a pick does not show it: its body then finishes inside the pick's
+/// own resolution, at depth 0, where the old gate already disposed it.)
 #[test]
 fn option_used_by_an_effect_is_trashed_before_the_rule_check_its_main_caused() {
     cite!(
@@ -1599,7 +1608,7 @@ fn option_used_by_an_effect_is_trashed_before_the_rule_check_its_main_caused() {
         fixtures::ch17_cards(),
         fixtures::ch18_cards(),
     ])
-    .hand(0, &["MAIN_MINUS3000"])
+    .hand(0, &["MAIN_ALL_MINUS3000"])
     .deck(0, &[FILL; 4])
     .deck(1, &[FILL; 4])
     .memory(3)
@@ -1608,8 +1617,7 @@ fn option_used_by_an_effect_is_trashed_before_the_rule_check_its_main_caused() {
     let user = r.place_on_field(0, "OP_USE_OPT_FREE", Some(0));
     let cp = r.event_checkpoint();
     r.fire_on_play(0, user.index as usize);
-    pick_hand_card(&mut r, 0, "MAIN_MINUS3000");
-    pick_field(&mut r, 0);
+    pick_hand_card(&mut r, 0, "MAIN_ALL_MINUS3000");
     let sel = r
         .pending_selection()
         .expect("the 0 DP Digimon's would-be-deleted decision");
@@ -1624,14 +1632,14 @@ fn option_used_by_an_effect_is_trashed_before_the_rule_check_its_main_caused() {
     );
     assert_eq!(
         trash_ids(&r, 0),
-        owned(&["MAIN_MINUS3000"]),
+        owned(&["MAIN_ALL_MINUS3000"]),
         "used from inside an effect's selection callback: the Option was still trashed before \
          the rule check"
     );
     accept(&mut r, 1);
     resolve_prompts(&mut r);
     assert!(field_top_ids(&r, 1).is_empty(), "the 0 DP Digimon was deleted");
-    let option_trashed = trash_event_index(&r, cp, "MAIN_MINUS3000")
+    let option_trashed = trash_event_index(&r, cp, "MAIN_ALL_MINUS3000")
         .expect("GameEvent::Trash for the used Option");
     let would_del = memory_event_index(&r, cp, "WOULD_DEL_MAY_MEM")
         .expect("the would-be-deleted effect gained 1 memory");

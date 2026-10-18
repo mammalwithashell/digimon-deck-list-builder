@@ -201,3 +201,69 @@ fn trash_top_source_returns_false_on_invalid_handle() {
         "invalid handle: nothing pushed to trash"
     );
 }
+
+/// §8-3-2-1 "if there are no stacked cards ... no card is trashed" and §4-7-2
+/// "Only 1 card isn't considered 'stacked cards'": a 1-card Digimon trashes
+/// nothing; the permanent stays (it is not deleted, no `[On Deletion]`).
+/// This is the Burst Digivolve turn-end trash after an opponent stripped the
+/// burst Digimon down to its top card (DCGO `SelectBurstDigivolutionEffect`
+/// requires >= 1 digivolution card). G-ENGINE-TRASH-TOP-SOURCE-FIRES-
+/// DIGIVOLUTION-CARD-TRASHED.
+#[test]
+fn trash_top_source_single_card_stack_trashes_nothing() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("T-BASE", "BasePermTest"))
+        .start();
+    let perm_handle = runner.place_on_field(0, "T-BASE", None);
+    let src_handle = runner.game.players[0].battle_area[0].top_card().handle();
+
+    let result = {
+        let mut ctx = EffectContext::new(&mut runner.game, src_handle, Some(perm_handle), 0);
+        ctx.trash_top_source(perm_handle)
+    };
+
+    assert!(!result, "a lone card is not a stacked card: nothing is trashed");
+    assert_eq!(runner.game.players[0].battle_area.len(), 1, "the permanent stays");
+    assert_eq!(
+        runner.game.players[0].battle_area[0].card_sources.len(),
+        1,
+        "single-card stack: no mutation"
+    );
+    assert!(runner.game.players[0].trash.is_empty(), "nothing pushed to trash");
+}
+
+/// §8-3-2-1 "... or that card is not a Digimon, no card is trashed": a stack
+/// whose top card is not a Digimon card (a Tamer on top of a stacked card)
+/// trashes nothing.
+#[test]
+fn trash_top_source_non_digimon_top_trashes_nothing() {
+    let mut tamer = make_test_card("T-TAMER", "TamerTop");
+    tamer.card_kind = digimon_engine::enums::CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("T-BASE", "BasePermTest"))
+        .add_card(tamer)
+        .start();
+    let perm_handle = runner.place_on_field(0, "T-BASE", None);
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "T-TAMER")
+        .expect("T-TAMER registered");
+    let card_index = runner.game.next_card_index();
+    runner.game.players[0].battle_area[0]
+        .card_sources
+        .push(CardSource::new(data_idx, 0, card_index));
+    let src_handle = runner.game.players[0].battle_area[0].top_card().handle();
+
+    let result = {
+        let mut ctx = EffectContext::new(&mut runner.game, src_handle, Some(perm_handle), 0);
+        ctx.trash_top_source(perm_handle)
+    };
+
+    assert!(!result, "the top card is not a Digimon: nothing is trashed");
+    assert_eq!(runner.game.players[0].battle_area[0].card_sources.len(), 2);
+    assert!(runner.game.players[0].trash.is_empty());
+}

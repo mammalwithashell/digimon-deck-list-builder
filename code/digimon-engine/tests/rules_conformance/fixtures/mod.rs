@@ -321,6 +321,7 @@ const CH18: &[&str] = &[
     include_str!("ch18/LOOP_TWIN_GUARD.yaml"),
     include_str!("ch18/MAIN_DEL_6000_OR_LOWEST_IF_GREYMON.yaml"),
     include_str!("ch18/MAIN_MEM_AT_EOONT.yaml"),
+    include_str!("ch18/MAIN_ALL_MINUS3000.yaml"),
     include_str!("ch18/MAIN_MINUS3000.yaml"),
     include_str!("ch18/MAIN_PLAY_LV3.yaml"),
     include_str!("ch18/MAIN_PLAY_LV3_DEL_EOT.yaml"),
