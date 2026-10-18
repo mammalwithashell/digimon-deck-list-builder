@@ -475,6 +475,9 @@ impl Game {
         // don't leak across turns. Matches Python's clear in `switch_turn`.
         self.revealed_cards.clear();
         self.declined_overclock_this_eot.clear();
+        // An end-of-turn attack's settle request belongs to this turn's end:
+        // never carry it into the next turn's `EndOfTurnAction` window.
+        self.end_of_turn_attack_settle_pending = false;
 
         // Expire end-of-turn modifiers/keywords for the ending player's turn.
         // Track H Phase 4k: collect body_ids from granted-triggered entries

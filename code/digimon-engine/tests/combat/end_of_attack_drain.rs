@@ -17,13 +17,17 @@
 //! still available the window stays open; once none is left the turn passes
 //! with no PASS-only step.
 
+use std::sync::{Arc, Mutex};
+
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
 use digimon_engine::combat::AttackResult;
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{Expiry, GamePhase, Keyword};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::AttackState;
+use digimon_engine::selection::{AttackState, AttackTarget};
 
 const LINGER_YAML: &str = r#"
 card: EOA-LINGER
@@ -178,4 +182,65 @@ fn end_of_turn_window_stays_open_only_while_another_action_remains() {
         .decode_action(encode_attack(b.index as u16, SECURITY_TARGET), 0);
     assert_eq!(r.security_count(1), 1, "the second attack checked security");
     assert_eq!(r.game.turn_player(), 1, "no PASS-only step: the turn passed");
+}
+
+/// An End of Attack effect that tries to declare a new attack with another
+/// Digimon.
+struct EndOfAttackDeclares(PermanentHandle, Arc<Mutex<Vec<AttackResult>>>);
+impl CardEffect for EndOfAttackDeclares {
+    fn effects(&self, c: CardHandle) -> Vec<Effect> {
+        let other = self.0;
+        let log = self.1.clone();
+        vec![Effect::end_of_attack(c)
+            .name("At the end of an attack, another Digimon attacks")
+            .process(move |ctx| {
+                let result = ctx.game.begin_attack(other, AttackTarget::Player(1), false);
+                log.lock().unwrap().push(result);
+            })
+            .build()]
+    }
+}
+
+/// While the End of Attack timing's pool is resolving the attack has not
+/// ended (§11-6-2), so a new attack declared from it would overwrite the
+/// attack in progress (its attacker would stay marked attacking and its end
+/// would never run). No card does this; the declaration is refused and the
+/// first attack ends normally.
+#[test]
+fn new_attack_declared_from_the_end_of_attack_pool_is_refused() {
+    let mut atk = make_test_card("ATK", "ATK");
+    atk.dp = Some(6000);
+    atk.level = Some(4);
+    let mut ally = make_test_card("ALLY", "ALLY");
+    ally.dp = Some(5000);
+    ally.level = Some(4);
+    let mut fill = make_test_card("FILL", "FILL");
+    fill.dp = Some(1000);
+    fill.level = Some(3);
+    let mut r = DebugRunner::builder()
+        .add_card(atk)
+        .add_card(ally)
+        .add_card(fill)
+        .security(1, &["FILL", "FILL", "FILL"])
+        .start();
+    let a = r.place_on_field(0, "ATK", Some(0));
+    let b = r.place_on_field(0, "ALLY", Some(0));
+    let log = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect("ATK", Arc::new(EndOfAttackDeclares(b, log.clone())));
+
+    let result = r.attack_player(a, 1, false);
+    assert_eq!(result, AttackResult::SecurityCheckSurvived);
+    assert_eq!(
+        *log.lock().unwrap(),
+        vec![AttackResult::Invalid],
+        "the declaration from the End of Attack pool is refused"
+    );
+    assert!(r.game.pending_attack.is_none(), "the first attack ended");
+    assert!(!is_attacking(&r, a));
+    assert!(!is_attacking(&r, b));
+    assert!(
+        !r.game.players[0].battle_area[b.index as usize].is_suspended,
+        "ALLY did not attack"
+    );
+    assert_eq!(r.security_count(1), 2, "only the first attack checked security");
 }
