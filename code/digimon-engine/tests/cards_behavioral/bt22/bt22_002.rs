@@ -173,7 +173,7 @@ fn bt22_002_deletion_observer_uses_deleted_object_event_context() {
         "printed effect is inherited"
     );
     let condition = deletion_clause
-        .condition
+        .trigger_if
         .as_ref()
         .expect("BT22-002 deletion observer must gate on deleted-object context");
     assert!(

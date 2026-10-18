@@ -94,12 +94,13 @@ effects:
     outer_prompt: true
     summary: "[Your Turn] When own Digimon moves from breeding: MAY suspend self to gain 1 memory"
     condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: P-130
+        is_unsuspended: true
+    trigger_if:
       all_of:
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            card_number_is: "P-130"
-            is_unsuspended: true
         - event_target_owner: you
         - event_target_kind: digimon
     process:

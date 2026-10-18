@@ -51,17 +51,17 @@ effects:
     when: on_discard_hand
     once_per_turn: true
     active_when:
+      your_turn: true
+    trigger_if:
       all_of:
-        - your_turn: true
         - event_discard_player: you
-    condition:
-      event_discarded_card_any:
-        all_of:
-          - kind: digimon
-          - level_gte: 4
-          - any_of:
-              - trait_has: Demon
-              - trait_has: Titan
+        - event_discarded_card_any:
+            all_of:
+              - kind: digimon
+              - level_gte: 4
+              - any_of:
+                  - trait_has: Demon
+                  - trait_has: Titan
     summary: "[Inherited][Your Turn][Once Per Turn] When level 4 or higher [Demon]/[Titan] Digimon cards are trashed from your hand, you may play 1 of them with the play cost reduced by 2"
     process:
       - select_union_zone:

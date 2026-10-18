@@ -4705,11 +4705,12 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not (G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX). Converse: with a winner without [TS] the effect never triggers, even when a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER).",
+      "note": "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not (G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX). Converse: with a winner without [TS] the effect never triggers, even when a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER). Every observer timing: 'When your opponent plays a Digimon with 4000 DP or less' (trigger_if:) never triggers on a 6000 DP play, though the played Digimon's own [On Play] lowers it to 4000 DP before the observer would activate; control with a 1000 DP play activates (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER).",
       "status": "proven",
       "tests": [
         "ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves",
-        "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"
+        "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates",
+        "ch15_08_effect_categories::observer_whose_qualifier_was_false_at_the_trigger_never_activates"
       ],
       "text": "A trigger-type effect will always trigger as soon as its trigger conditions are met, then the effect will activate. If an effect reads \"[When Attacking] Lose 2 memory\" or \"[Your Turn] When effects suspend this Digimon, suspend 1 of your opponent's Digimon,\" that shows a trigger timing."
     },
@@ -4742,17 +4743,18 @@
       "text": "A trigger-type effect will trigger when the specific conditions are met for the effect on that card to trigger."
     },
     "15-8-3-4": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 15,
       "fingerprint": "71d0451f75557827933628c0bf96a1437a5c750f4cd432b91ad8ce246f9be375",
-      "gap_id": "G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER",
+      "gap_id": null,
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Battle half proven: 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers, though a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (the battle result decides its trigger condition at the battle, Game::discard_entries_not_triggered). Every other observer timing still enqueues without deciding its trigger condition, and the DSL can't tell a trigger qualifier from a processing condition in condition / active_when (OBS_PLAY_LE4K vs OBS_OPP_PLAY_GE4), so a qualifier false at the event activates once a pooled sibling makes it true.",
-      "status": "gap",
+      "note": "A trigger qualifier (DSL trigger_if:) is decided when the event triggers the effect, at every observer timing (Game::enqueue_triggered -> discard_entries_not_triggered): 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers though a pooled sibling digivolves the winner into a [TS] Digimon first; 'When your opponent plays a Digimon with 4000 DP or less' never triggers on a 6000 DP play though its own [On Play] lowers it to 4000 DP first. Processing conditions (condition / active_when) are still read at activation (15-8-3-9-3).",
+      "status": "proven",
       "tests": [
-        "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"
+        "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates",
+        "ch15_08_effect_categories::observer_whose_qualifier_was_false_at_the_trigger_never_activates"
       ],
       "text": "Trigger-type effects won't trigger when their trigger conditions aren't met."
     },
@@ -4871,12 +4873,13 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "The rule's example text; control (no digivolve) takes the level 3 <Draw 1> branch.",
+      "note": "The rule's example text; control (no digivolve) takes the level 3 <Draw 1> branch. 'When your opponent plays a Digimon, if that Digimon has 4000 DP or less' (condition:) triggers on a 6000 DP play and activates once its own [On Play] has lowered it to 4000 DP: the same board the trigger_if: qualifier decides the other way.",
       "status": "proven",
       "tests": [
         "ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger",
         "ch15_08_effect_categories::trigger_processing_condition_read_at_processing_after_attacker_leaves",
-        "ch15_08_effect_categories::processing_condition_in_active_when_read_at_processing"
+        "ch15_08_effect_categories::processing_condition_in_active_when_read_at_processing",
+        "ch15_08_effect_categories::processing_condition_is_still_read_at_activation"
       ],
       "text": "If a reference is to be made in the processing conditions for a trigger-type effect, the reference is made in the state when the processing is being performed. (Example: If an effect reads \"[All Turns] When your opponent plays a Digimon, by suspending this Tamer, if that Digimon is level 4 or higher, gain 1 memory. If it is level 3, <Draw 1>,\" you will gain 1 memory if your opponent's Digimon is level 4 upon being referenced when this effect activates.)"
     },
@@ -15275,9 +15278,9 @@
         "total": 10
       },
       "15": {
-        "gap": 141,
+        "gap": 140,
         "not_testable": 66,
-        "proven": 37,
+        "proven": 38,
         "total": 244
       },
       "16": {
@@ -15347,15 +15350,15 @@
         "total": 13
       }
     },
-    "gap": 618,
+    "gap": 617,
     "mechanics": {
-      "gap_blocking": 17,
+      "gap_blocking": 16,
       "gap_nonblocking": 321,
       "not_testable": 152,
-      "proven": 225
+      "proven": 226
     },
     "not-testable": 246,
-    "proven": 255
+    "proven": 256
   },
   "version": 1
 }

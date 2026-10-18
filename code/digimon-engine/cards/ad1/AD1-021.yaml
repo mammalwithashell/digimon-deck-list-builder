@@ -78,7 +78,7 @@ effects:
   - when: on_suspend
     active_when: { your_turn: true }
     summary: "[Your Turn] When this Tamer suspends, Draw 1; then 1 of your Digimon may digivolve into a yellow [Greymon] hand card with cost reduced by 3"
-    condition:
+    trigger_if:
       event_permanent_is_source: true
     process:
       - draw: { of: you, count: 1 }

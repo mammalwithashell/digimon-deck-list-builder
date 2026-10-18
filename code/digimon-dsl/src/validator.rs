@@ -597,6 +597,30 @@ fn validate_triggered(
     if let Some(aw) = &t.active_when {
         validate_predicate(aw, &format!("{prefix}.active_when"), card_id, ctx, errors);
     }
+    if let Some(ti) = &t.trigger_if {
+        validate_predicate(ti, &format!("{prefix}.trigger_if"), card_id, ctx, errors);
+        // An activation-type effect is declared, not triggered (§15-8-4): it
+        // has no trigger condition for `trigger_if` to qualify.
+        use crate::clause::{Timing, TimingSet};
+        let timings: Vec<Timing> = match &t.when {
+            TimingSet::Single(x) => vec![*x],
+            TimingSet::Multi(v) => v.clone(),
+        };
+        if let Some(bad) = timings.iter().find(|x| {
+            matches!(
+                x,
+                Timing::Main | Timing::MainFromHand | Timing::MainOnField | Timing::MainFromTrash
+            )
+        }) {
+            errors.push(ValidationError {
+                card_id: card_id.to_string(),
+                path: format!("{prefix}.trigger_if"),
+                message: format!(
+                    "trigger_if qualifies a trigger-type effect's trigger condition (§15-8-3-1);                      `{bad:?}` is an activation-type timing (§15-8-4) -- use `condition` / `active_when`"
+                ),
+            });
+        }
+    }
     for (i, step) in t.process.iter().enumerate() {
         let sp = format!("{prefix}.process[{i}]");
         validate_step(step, &sp, card_id, ctx, errors);

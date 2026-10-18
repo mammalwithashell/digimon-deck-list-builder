@@ -123,7 +123,7 @@ effects:
   - when: on_any_digimon_played
     active_when: { your_turn: true }
     optional: true
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
@@ -136,7 +136,7 @@ effects:
             - event_target_trait_contains: Animal
             - event_target_trait_contains: Sovereign
         - not:
-            event_target_trait_has: "Sea Animal"
+            event_target_trait_has: Sea Animal
     summary: "[Your Turn] When an effect plays your red Digimon with [Avian]/[Bird]/[Beast]/[Animal]/[Sovereign] (other than [Sea Animal]) in any of its traits, by suspending this Tamer, it gains <Rush> for the turn"
     process:
       - activation_cost: { suspend_self: true }

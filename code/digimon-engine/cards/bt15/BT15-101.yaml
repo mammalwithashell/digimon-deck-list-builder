@@ -148,7 +148,7 @@ effects:
     once_per_turn: true
     optional: true
     summary: "[All Turns][OPT] When this Digimon becomes suspended, you may unsuspend it"
-    condition:
+    trigger_if:
       event_permanent_is_source: true
     process:
       - unsuspend: { target: source }

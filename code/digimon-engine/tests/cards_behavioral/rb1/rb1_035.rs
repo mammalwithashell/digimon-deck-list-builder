@@ -70,7 +70,7 @@ fn rb1_035_exposes_opponent_played_digimon_level_branch_observer() {
         "[All Turns] suspend effect is declinable (DCGO SetUpActivateClass true)"
     );
     assert!(
-        observer.condition.is_some(),
+        observer.trigger_if.is_some(),
         "observer must gate on opponent-owned Digimon"
     );
 }

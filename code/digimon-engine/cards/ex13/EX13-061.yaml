@@ -101,26 +101,27 @@ effects:
     once_per_turn: true
     active_when: { all_turns: true }
     condition:
+      any_of:
+        - count_gte:
+            filter:
+              zone: [hand]
+              owner: you
+              kind: option
+              play_cost_lte: 5
+              in_text_contains: Huckmon
+            n: 1
+        - self_source_count:
+            filter:
+              kind: option
+              play_cost_lte: 5
+              in_text_contains: Huckmon
+            op: gte
+            value: 1
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
         - event_target_color_any_of: [white]
-        - any_of:
-            - count_gte:
-                filter:
-                  zone: [hand]
-                  owner: you
-                  kind: option
-                  play_cost_lte: 5
-                  in_text_contains: Huckmon
-                n: 1
-            - self_source_count:
-                filter:
-                  kind: option
-                  play_cost_lte: 5
-                  in_text_contains: Huckmon
-                op: gte
-                value: 1
     summary: "[All Turns][OPT] When any of your white Digimon suspend, you may use 1 use cost 5 or lower [Huckmon]-text Option card from your hand or this Digimon's digivolution cards without paying the cost"
     process:
       - select_union_zone:

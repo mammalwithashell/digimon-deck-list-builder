@@ -1953,6 +1953,10 @@ fn compile_triggered(
             .condition
             .as_ref()
             .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
+        trigger_if: t
+            .trigger_if
+            .as_ref()
+            .map(|p| compile_predicate(p, &format!("{prefix}.trigger_if"), card_id, errors)),
         timing_conditions: t
             .timing_conditions
             .iter()

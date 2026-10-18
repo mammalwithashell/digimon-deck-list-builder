@@ -120,15 +120,20 @@ fn bt24_020_yaml_has_metadata_alt_path_on_play_and_inherited_unsuspend() {
         })
         .expect("BT24-020 must have an inherited OnUnsuspend clause");
     assert!(inherited.once_per_turn);
+    // "When THIS Digimon unsuspends" self-gate (DCGO BT24_020.cs): the
+    // trigger qualifier (§15-8-3-1).
+    assert_eq!(
+        inherited.trigger_if,
+        Some(CompiledPredicate {
+            event_permanent_is_source: Some(true),
+            ..CompiledPredicate::default()
+        }),
+        "inherited clause must be self-gated"
+    );
     assert_eq!(
         inherited.condition,
         Some(CompiledPredicate {
             all_of: vec![
-                // "When THIS Digimon unsuspends" self-gate (DCGO BT24_020.cs).
-                CompiledPredicate {
-                    event_permanent_is_source: Some(true),
-                    ..CompiledPredicate::default()
-                },
                 CompiledPredicate {
                     your_turn: Some(true),
                     ..CompiledPredicate::default()
@@ -147,7 +152,7 @@ fn bt24_020_yaml_has_metadata_alt_path_on_play_and_inherited_unsuspend() {
             ],
             ..CompiledPredicate::default()
         }),
-        "inherited clause must be self-gated and require your turn and hand size <= 7"
+        "inherited clause must require your turn and hand size <= 7"
     );
     assert_eq!(
         inherited.process,

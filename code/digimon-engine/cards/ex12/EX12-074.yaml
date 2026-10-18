@@ -16,8 +16,9 @@ effects:
     once_per_turn: true
     optional: true
     active_when:
+      your_turn: true
+    trigger_if:
       all_of:
-        - your_turn: true
         - event_target_owner: you
         - event_target_trait_has: Shambala
     summary: "[Security][Your Turn][OPT] When your [Shambala] Digimon attacks, it may digivolve into a [Shambala] Digimon in hand with cost reduced by 1"

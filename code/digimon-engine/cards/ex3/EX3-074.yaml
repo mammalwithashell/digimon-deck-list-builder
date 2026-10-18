@@ -46,7 +46,8 @@ effects:
             - play_from_hand_free: { of: you, hand_index: played }
   - when: on_suspend
     once_per_turn: true
-    condition: { event_target_is_source: true }
+    trigger_if:
+      event_target_is_source: true
     summary: "[All Turns][Once Per Turn] When this Digimon suspends, unsuspend it and suspend 1 opposing Digimon"
     process:
       - unsuspend: { target: source }

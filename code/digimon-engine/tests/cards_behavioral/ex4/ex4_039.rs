@@ -178,7 +178,7 @@ fn ex4_039_has_on_play_and_inherited_on_digivolve_clauses() {
         "[Your Turn] requires active_when"
     );
     assert!(
-        inherited.condition.is_some(),
+        inherited.trigger_if.is_some(),
         "inherited clause needs an event_target_owner condition"
     );
 }

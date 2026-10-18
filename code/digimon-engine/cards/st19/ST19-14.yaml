@@ -23,6 +23,12 @@ effects:
     active_when: { your_turn: true }
     summary: "[Your Turn] When effects play your Token/Puppet, suspend this Tamer so it gains Rush"
     condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: ST19-14
+        is_unsuspended: true
+    trigger_if:
       all_of:
         - event_is_effect_initiated: true
         - event_target_owner: you
@@ -31,11 +37,6 @@ effects:
             - all_of:
                 - event_target_kind: digimon
                 - event_target_trait_has: Puppet
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            card_number_is: "ST19-14"
-            is_unsuspended: true
     process:
       - select_effect_choice:
           labels: ["Suspend this Tamer", "Decline"]

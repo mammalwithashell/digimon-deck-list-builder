@@ -128,7 +128,7 @@ effects:
     active_when: { all_turns: true }
     once_per_turn: true
     summary: "Inherited [All Turns][OPT] When any other [Sukamon]-named Digimon is deleted, reveal top 3; you may play 1 cost<=3 [Chuumon]/[Sukamon] Digimon free; trash the rest"
-    condition:
+    trigger_if:
       all_of:
         - any_of:
             - event_target_kind: digimon

@@ -234,7 +234,7 @@ effects:
     active_when: { all_turns: true }
     once_per_turn: true
     summary: "[All Turns][Once Per Turn] When other Digimon are played or digivolve, trash any 3 digivolution cards from your opponent's Digimon; then 1 of their sourceless Digimon can't suspend until their turn ends"
-    condition:
+    trigger_if:
       all_of:
         - event_target_kind: digimon
         - event_permanent_is_source: false

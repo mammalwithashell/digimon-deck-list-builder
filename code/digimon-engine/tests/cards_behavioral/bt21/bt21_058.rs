@@ -502,7 +502,7 @@ fn bt21_058_clause2_gates_on_host_scope_and_vemmon_name() {
     }
 
     let cond = clause2
-        .condition
+        .trigger_if
         .as_ref()
         .expect("clause 2 must carry a condition");
     assert!(

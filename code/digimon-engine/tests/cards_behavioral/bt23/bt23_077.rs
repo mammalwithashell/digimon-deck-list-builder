@@ -124,7 +124,7 @@ fn bt23_077_metadata_blocker_and_supported_clause_shape_match_printed_text() {
         .expect("printed self-suspend De-Digivolve clause should be authored");
     assert!(
         on_suspend
-            .condition
+            .trigger_if
             .as_ref()
             .is_some_and(predicate_has_event_permanent_is_source),
         "BT23-077 OnSuspend must be gated to the suspending event permanent being this source"

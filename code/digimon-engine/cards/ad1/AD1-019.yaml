@@ -110,11 +110,12 @@ effects:
     optional: true
     summary: "[Your Turn] When your Digimon digivolves into an [ADVENTURE], by suspending this Tamer you may play 1 [ADVENTURE] card from hand at reduced cost"
     condition:
+      source_is_unsuspended: true
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
         - event_target_trait_has: ADVENTURE
-        - source_is_unsuspended: true
     process:
       - activation_cost: { suspend_self: true }
       - select_hand:

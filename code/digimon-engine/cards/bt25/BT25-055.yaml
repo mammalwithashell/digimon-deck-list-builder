@@ -100,9 +100,9 @@ effects:
     once_per_turn: true
     optional: true
     active_when:
-      all_of:
-        - all_turns: true
-        - event_target_is_source: true
+      all_turns: true
+    trigger_if:
+      event_target_is_source: true
     summary: "[All Turns][OPT] When this suspends, you may play 1 DP<=4000 Vegetation/Plant/Avian/Bird/TS Digimon from hand free"
     process:
       - select_hand:

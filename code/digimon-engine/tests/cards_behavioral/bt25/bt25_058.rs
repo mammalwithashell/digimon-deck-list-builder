@@ -239,10 +239,9 @@ fn bt25_058_has_all_turns_dedigivolve_battle_clause() {
     );
     // The effect-initiated gate is the structural correctness point.
     let condition = clause
-        .active_when
+        .trigger_if
         .as_ref()
-        .or(clause.condition.as_ref())
-        .expect("All-Turns clause must carry a gate");
+        .expect("All-Turns clause must carry a trigger qualifier");
     let mentions_effect_gate = condition.event_is_effect_initiated == Some(true)
         || condition
             .all_of

@@ -278,7 +278,7 @@ fn bt25_005_single_inherited_optional_opt_your_turn_on_add_digivolution_cards_cl
         Some(true),
         "[Your Turn]"
     );
-    let leaves = &t.condition.as_ref().expect("condition").all_of;
+    let leaves = &t.trigger_if.as_ref().expect("condition").all_of;
     assert!(
         leaves
             .iter()

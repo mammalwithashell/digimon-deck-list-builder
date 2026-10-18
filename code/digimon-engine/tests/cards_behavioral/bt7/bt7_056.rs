@@ -239,7 +239,7 @@ fn bt7_056_has_mandatory_on_play_and_inherited_opt_your_turn_add_sources_clause(
         Some(true),
         "[Your Turn]"
     );
-    let leaves = &inh.condition.as_ref().expect("condition").all_of;
+    let leaves = &inh.trigger_if.as_ref().expect("condition").all_of;
     assert!(
         leaves
             .iter()

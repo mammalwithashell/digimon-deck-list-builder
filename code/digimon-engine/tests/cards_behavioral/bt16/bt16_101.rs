@@ -263,7 +263,7 @@ fn bt16_101_deletion_observer_gates_on_opponent_digimon_and_cause() {
         })
         .expect("OnAnyDeletion observer must exist");
     let cond = del
-        .condition
+        .trigger_if
         .as_ref()
         .expect("deletion observer must gate on the deleted object + cause");
     assert!(

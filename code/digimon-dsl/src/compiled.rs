@@ -1158,6 +1158,11 @@ pub struct CompiledTriggeredClause {
     pub scope: CompiledScope,
     pub active_when: Option<CompiledPredicate>,
     pub condition: Option<CompiledPredicate>,
+    /// The trigger qualifier (`trigger_if:`), decided when the event triggers
+    /// the effect (§15-8-3-1, §15-8-3-4) and re-checked at activation
+    /// (§15-4-4-5). See `TriggeredClause::trigger_if`.
+    #[serde(default)]
+    pub trigger_if: Option<CompiledPredicate>,
     /// Per-timing condition overrides (G-SHARED-OPT-HETEROGENEOUS-TIMING).
     /// When this clause fires from timing `T`, the matching entry's condition
     /// is AND-ed onto the clause-level gates; timings with no entry use only
@@ -3317,6 +3322,7 @@ mod tests {
                 scope: CompiledScope::FaceUp,
                 active_when: None,
                 condition: None,
+                trigger_if: None,
                 timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
@@ -3378,6 +3384,7 @@ mod tests {
                 scope: CompiledScope::FaceUp,
                 active_when: None,
                 condition: Some(pred),
+                trigger_if: None,
                 timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,

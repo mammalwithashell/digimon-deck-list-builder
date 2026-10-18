@@ -158,8 +158,6 @@ effects:
     summary: "[All Turns][OPT] When your Digimon suspends, 1 of your [Dracomon]/[Examon]-text Digimon may battle 1 opponent Digimon"
     condition:
       all_of:
-        - event_target_owner: you
-        - event_target_kind: digimon
         - any_permanent:
             of: you
             zone: [battle_area]
@@ -171,6 +169,10 @@ effects:
             of: opponent
             zone: [battle_area]
             kind: digimon
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
     process:
       - select_own_permanent:
           bind_as: battler
@@ -197,8 +199,6 @@ effects:
     summary: "[Inherited][All Turns][OPT] When your Digimon suspends, 1 of your [Dracomon]/[Examon]-text Digimon may battle 1 opponent Digimon"
     condition:
       all_of:
-        - event_target_owner: you
-        - event_target_kind: digimon
         - any_permanent:
             of: you
             zone: [battle_area]
@@ -210,6 +210,10 @@ effects:
             of: opponent
             zone: [battle_area]
             kind: digimon
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
     process:
       - select_own_permanent:
           bind_as: battler

@@ -108,15 +108,15 @@ effects:
     once_per_turn: true
     optional: true
     condition:
-      all_of:
-        - event_permanent_is_source: true
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            is_source: true
-            any_of:
-              - in_text_contains: Dracomon
-              - in_text_contains: Examon
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        is_source: true
+        any_of:
+          - in_text_contains: Dracomon
+          - in_text_contains: Examon
+    trigger_if:
+      event_permanent_is_source: true
     summary: "Inherited [All Turns][OPT] When this Digimon with [Dracomon] or [Examon] in its text suspends, it may unsuspend"
     process:
       - unsuspend: { target: source }

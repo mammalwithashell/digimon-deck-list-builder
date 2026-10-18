@@ -201,7 +201,7 @@ effects:
   # Marsmon itself. A tie (mutual destruction) has no winner and never fires.
   - when: on_ally_won_battle
     once_per_turn: true
-    active_when:
+    trigger_if:
       all_of:
         - event_winner_owner: you
         - event_winner_trait_has: TS

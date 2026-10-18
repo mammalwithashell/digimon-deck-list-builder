@@ -154,7 +154,7 @@ effects:
     once_per_turn: true
     optional: true
     summary: "[All Turns][OPT] When any of your Digimon suspend, this Digimon may unsuspend"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon

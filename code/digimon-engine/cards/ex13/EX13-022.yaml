@@ -76,7 +76,7 @@ effects:
   - when: on_ally_played
     active_when: { all_turns: true }
     once_per_turn: true
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: tamer
@@ -101,9 +101,9 @@ effects:
     once_per_turn: true
     optional: true
     condition:
-      all_of:
-        - event_permanent_is_source: true
-        - source_name_contains: Veedramon
+      source_name_contains: Veedramon
+    trigger_if:
+      event_permanent_is_source: true
     summary: "Inherited [All Turns][OPT] When this [Veedramon]-name Digimon suspends, it may unsuspend"
     process:
       - unsuspend: { target: source }

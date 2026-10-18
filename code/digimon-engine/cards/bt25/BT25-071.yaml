@@ -90,7 +90,7 @@ effects:
   - when: on_suspend
     once_per_turn: true
     active_when: { all_turns: true }
-    condition:
+    trigger_if:
       event_permanent_is_source: true
     summary: "[All Turns][OPT] On suspend: reveal 3, may play 1 cost<=4 [TS] Digimon free, bottom the rest"
     process:
@@ -118,7 +118,7 @@ effects:
     when: on_suspend
     once_per_turn: true
     active_when: { all_turns: true }
-    condition:
+    trigger_if:
       event_permanent_is_source: true
     summary: "[Inherited][All Turns][OPT] On suspend: reveal 3, may play 1 cost<=4 [TS] Digimon free, bottom the rest"
     process:

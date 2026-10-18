@@ -37,12 +37,12 @@ effects:
   - when: on_suspend
     summary: "When this Digimon suspends, De-Digivolve 1 one opponent Digimon"
     condition:
-      all_of:
-        - event_permanent_is_source: true
-        - any_permanent:
-            of: opponent
-            zone: [battle_area]
-            kind: digimon
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    trigger_if:
+      event_permanent_is_source: true
     process:
       - select_opponent_permanent:
           bind_as: target

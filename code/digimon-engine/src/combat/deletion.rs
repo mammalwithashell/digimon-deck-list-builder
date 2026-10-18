@@ -786,7 +786,6 @@ impl Game {
         };
         self.observe_deletion_dispatch_batch(&kill_list);
         for (handle, snapshot) in kill_list.iter().zip(snapshots.iter()) {
-            let queue_start = self.effect_queue.len();
             // 16-13: capture WHO this carrier battled now, while the attack is
             // live and the carrier is still in its slot -- see
             // `TriggerContext::battle_opponent_card`.
@@ -801,25 +800,21 @@ impl Game {
                         .and_then(|perm| perm.card_sources.last())
                         .map(|c| c.handle())
                 });
-            self.enqueue_triggered(
+            // Thread the snapshot into the just-enqueued entries so OnDeletion
+            // handlers can read `ctx.deleted_self_*()` accessors (and a
+            // trigger qualifier is decided on it).
+            self.enqueue_triggered_with_context(
                 crate::enums::EffectTiming::OnDeletion,
                 crate::selection::TriggerSource::Permanent(*handle),
-            );
-            // Thread the snapshot into the just-enqueued entries so OnDeletion
-            // handlers can read `ctx.deleted_self_*()` accessors.
-            for queued in self.effect_queue.iter_mut().skip(queue_start) {
-                if queued.timing != crate::enums::EffectTiming::OnDeletion {
-                    continue;
-                }
-                if let Some(trigger) = queued.trigger_context.as_mut() {
+                |trigger| {
                     trigger.deleted_object = Some(snapshot.clone());
                     trigger.cause = Some(snapshot.cause);
                     trigger.affected_player = Some(snapshot.former_controller);
                     trigger.subject =
                         Some(crate::trigger_context::EventSubject::Permanent(*handle));
                     trigger.battle_opponent_card = battle_opponent_card;
-                }
-            }
+                },
+            );
         }
     }
 
@@ -902,8 +897,7 @@ impl Game {
             kill_list.iter().zip(snapshots.iter()).zip(top_cards.iter())
         {
             if let Some(card) = top_card_opt {
-                let queue_start = self.effect_queue.len();
-                self.enqueue_triggered(
+                self.enqueue_triggered_with_context(
                     crate::enums::EffectTiming::OnAnyDeletion,
                     crate::selection::TriggerSource::EventObserved {
                         player: handle.player,
@@ -913,22 +907,16 @@ impl Game {
                         // snapshot (`trigger.cause`), not this bit.
                         effect_initiated: false,
                     },
-                );
-                for queued in self.effect_queue.iter_mut().skip(queue_start) {
-                    if queued.timing != crate::enums::EffectTiming::OnAnyDeletion {
-                        continue;
-                    }
-                    if let Some(trigger) = queued.trigger_context.as_mut() {
+                    |trigger| {
                         trigger.deleted_object = Some(snapshot.clone());
                         trigger.cause = Some(snapshot.cause);
                         trigger.affected_player = Some(snapshot.former_controller);
                         trigger.subject =
                             Some(crate::trigger_context::EventSubject::Permanent(*handle));
-                    }
-                }
+                    },
+                );
 
-                let queue_start_lf = self.effect_queue.len();
-                self.enqueue_triggered(
+                self.enqueue_triggered_with_context(
                     crate::enums::EffectTiming::OnLeaveField,
                     crate::selection::TriggerSource::EventObserved {
                         player: handle.player,
@@ -938,19 +926,14 @@ impl Game {
                         // snapshot (`trigger.cause`), not this bit.
                         effect_initiated: false,
                     },
-                );
-                for queued in self.effect_queue.iter_mut().skip(queue_start_lf) {
-                    if queued.timing != crate::enums::EffectTiming::OnLeaveField {
-                        continue;
-                    }
-                    if let Some(trigger) = queued.trigger_context.as_mut() {
+                    |trigger| {
                         trigger.deleted_object = Some(snapshot.clone());
                         trigger.cause = Some(snapshot.cause);
                         trigger.affected_player = Some(snapshot.former_controller);
                         trigger.subject =
                             Some(crate::trigger_context::EventSubject::Permanent(*handle));
-                    }
-                }
+                    },
+                );
             }
         }
         // The post-deletion trigger drain is the caller's scope exit

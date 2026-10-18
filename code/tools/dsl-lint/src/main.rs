@@ -166,7 +166,7 @@ fn lint_file(
         }
     }
 
-    lint_battle_result_conditions(&spec, &file, diags);
+    lint_observer_event_conditions(&spec, &file, diags);
 
     if let Some(sections) = printed.and_then(|p| p.get(&spec.card)) {
         for f in check_security_icons(&spec, sections) {
@@ -191,51 +191,83 @@ fn lint_file(
     }
 }
 
-/// Keys an `on_ally_won_battle` clause's `condition` / `active_when` may
-/// read: the battle itself (its winner and deleters) and the turn. That
-/// condition is the effect's TRIGGER condition, decided when the battle
-/// triggers it (`Game::discard_entries_not_triggered`, §15-8-3-1 /
-/// §15-8-3-4): it is not re-read later as a processing condition, so a
-/// processing "if" there would drop the effect at the battle.
-const BATTLE_RESULT_TRIGGER_KEYS: &[&str] = &[
-    "event_winner_owner",
-    "event_winner_trait_has",
-    "event_winner_is_source",
-    "event_battle_deleter",
-    "event_battle_surviving_deleter",
-    "your_turn",
-    "opponents_turn",
-    "all_turns",
-];
+/// True for a timing whose effect triggers on an EVENT the clause qualifies
+/// ("When one of your Digimon with 4000 DP or less is played", "When any of
+/// your [TS] trait Digimon win a battle"), as opposed to the card's own
+/// timings ([On Play], [When Digivolving], [On Deletion], ...), the phase
+/// timings and activation-type timings, whose trigger is fixed.
+fn is_observer_timing(t: digimon_engine::dsl::clause::Timing) -> bool {
+    use digimon_engine::dsl::clause::Timing as T;
+    !matches!(
+        t,
+        T::OnPlay
+            | T::WhenDigivolving
+            | T::WhenAttacking
+            | T::OnAttack
+            | T::EndOfAttack
+            | T::EndOfBattle
+            | T::OnBlock
+            | T::OnDeletion
+            | T::OnSecurity
+            | T::Main
+            | T::MainFromHand
+            | T::MainOnField
+            | T::MainFromTrash
+            | T::Counter
+            | T::StartOfYourTurn
+            | T::StartOfOpponentsTurn
+            | T::StartOfYourMainPhase
+            | T::StartOfOpponentsMainPhase
+            | T::EndOfYourTurn
+            | T::EndOfOpponentsTurn
+            | T::EndOfYourNextTurn
+            | T::EndOfOpponentsNextTurn
+            | T::UntilNextUnsuspend
+            | T::BeforePayCost
+            | T::BeforePayCostObserve
+            | T::Delayed
+            | T::WhenLinked
+            | T::WhenCardLinkedToThis
+            | T::WhenWouldLinkToThis
+    )
+}
 
-/// Warn when an `on_ally_won_battle` clause's `condition` / `active_when`
-/// reads anything but the battle and the turn: until the DSL has a separate
-/// trigger-condition field, a processing condition ("if you have 3 or fewer
-/// security cards") must be a body `if:`.
+/// Warn when an observer clause's `condition` / `active_when` reads the
+/// event (`event_*`): `condition` / `active_when` are PROCESSING conditions,
+/// read when the effect activates (§15-8-3-9-1 / §15-8-3-9-3), while a
+/// qualifier of the event ("When one of your Digimon **with 4000 DP or
+/// less** is played") is the trigger qualifier, decided when the event
+/// triggers the effect (§15-8-3-1, §15-8-3-4) and authored in `trigger_if:`.
+/// A genuine processing condition on the event ("..., if that Digimon is
+/// level 4 or higher, ...") stays where it is; the warning asks the author to
+/// decide from the printed text.
 /// G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER.
-fn lint_battle_result_conditions(
+fn lint_observer_event_conditions(
     spec: &digimon_engine::dsl::spec::CardSpec,
     file: &str,
     diags: &mut Vec<Diagnostic>,
 ) {
-    use digimon_engine::dsl::clause::{Timing, TimingSet};
-    fn foreign_keys(value: &serde_json::Value, out: &mut Vec<String>) {
+    use digimon_engine::dsl::clause::TimingSet;
+    fn event_keys(value: &serde_json::Value, out: &mut Vec<String>) {
         let Some(map) = value.as_object() else {
             return;
         };
         for (key, v) in map {
             let absent = v.is_null() || v.as_array().is_some_and(|a| a.is_empty());
-            if absent || BATTLE_RESULT_TRIGGER_KEYS.contains(&key.as_str()) {
+            if absent {
                 continue;
             }
             match key.as_str() {
                 "all_of" | "any_of" | "none_of" => {
                     for p in v.as_array().into_iter().flatten() {
-                        foreign_keys(p, out);
+                        event_keys(p, out);
                     }
                 }
-                "not" => foreign_keys(v, out),
-                _ => out.push(key.clone()),
+                "not" => event_keys(v, out),
+                k if k.starts_with("event_") && !out.iter().any(|o| o == k) => {
+                    out.push(key.clone())
+                }
+                _ => {}
             }
         }
     }
@@ -243,11 +275,11 @@ fn lint_battle_result_conditions(
         let Some(t) = clause.as_triggered() else {
             continue;
         };
-        let battle_result = match &t.when {
-            TimingSet::Single(w) => *w == Timing::OnAllyWonBattle,
-            TimingSet::Multi(ws) => ws.contains(&Timing::OnAllyWonBattle),
+        let observer = match &t.when {
+            TimingSet::Single(w) => is_observer_timing(*w),
+            TimingSet::Multi(ws) => ws.iter().any(|w| is_observer_timing(*w)),
         };
-        if !battle_result {
+        if !observer {
             continue;
         }
         for (field, pred) in [("active_when", &t.active_when), ("condition", &t.condition)] {
@@ -256,7 +288,7 @@ fn lint_battle_result_conditions(
             };
             let mut keys = Vec::new();
             if let Ok(value) = serde_json::to_value(pred) {
-                foreign_keys(&value, &mut keys);
+                event_keys(&value, &mut keys);
             }
             for key in keys {
                 diags.push(Diagnostic {
@@ -264,11 +296,12 @@ fn lint_battle_result_conditions(
                     severity: Severity::Warning,
                     path: format!("effects[{i}].{field}"),
                     message: format!(
-                        "battle-result trigger condition reads `{key}`: an `on_ally_won_battle` {}{}{}",
-                        format_args!("clause's {field} is its trigger condition, decided at the battle "),
-                        "(§15-8-3-1, §15-8-3-4) and not re-read as a processing condition; ",
-                        "author a processing condition as a body `if:` \
-                         (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER)"
+                        "observer clause's {field} reads `{key}`: is this a trigger qualifier? use \
+                         `trigger_if:` -- a qualifier of the event (\"When one of your Digimon with \
+                         4000 DP or less is played\") is decided when the event triggers the effect \
+                         (§15-8-3-1, §15-8-3-4); `{field}` is a processing condition read at \
+                         activation (\"..., if that Digimon is level 4 or higher, ...\", \
+                         §15-8-3-9-3) (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER)"
                     ),
                 });
             }

@@ -1,0 +1,19 @@
+# PLAY_DP_DOWN -- Digimon, Lv.4, red, 6000 DP, play cost 4.
+#   [On Play] This Digimon gets -2000 DP for the turn.
+# Played at 6000 DP; its own [On Play] makes it a 4000 DP Digimon before an
+# opponent's observer triggered by the same play would activate.
+card: PLAY_DP_DOWN
+name: Shrinkmon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 6000
+effects:
+  - when: on_play
+    summary: "[On Play] This Digimon gets -2000 DP for the turn."
+    process:
+      - add_dp_modifier:
+          target: source
+          value: -2000
+          expiry: end_of_turn

@@ -127,9 +127,9 @@ effects:
   - when: on_ally_won_battle
     once_per_turn: true
     active_when:
-      all_of:
-        - your_turn: true
-        - event_winner_is_source: true
+      your_turn: true
+    trigger_if:
+      event_winner_is_source: true
     summary: "[Your Turn][OPT] When this Digimon wins a battle, you may play or use 1 play/use cost 12 or lower [Dracomon] or [Examon] text card from your hand or its digivolution cards without paying the cost"
     process:
       - select_union_zone:

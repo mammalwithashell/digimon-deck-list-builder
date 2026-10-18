@@ -222,7 +222,6 @@ effects:
     when: on_digivolution_card_trashed
     condition:
       all_of:
-        - event_target_owner: you
         - trashed_source_card_id_is: EX10-032
         - any_of:
             - host_permanent_trait_has: Mineral
@@ -231,6 +230,8 @@ effects:
             of: opponent
             zone: [battle_area]
             kind: digimon
+    trigger_if:
+      event_target_owner: you
     summary: "When this source is trashed from a Mineral/Rock Digimon, De-Digivolve 1"
     process:
       - select_opponent_permanent:

@@ -97,9 +97,9 @@ effects:
     optional: true
     active_when: { your_turn: true }
     condition:
-      all_of:
-        - event_target_owner: you
-        - event_card_color_has: [blue]
+      event_card_color_has: [blue]
+    trigger_if:
+      event_target_owner: you
     summary: "[Your Turn] When a blue Digimon of yours is played/digivolves, may digivolve this into [Flaremon] from hand, cost -1"
     process:
       - select_hand:

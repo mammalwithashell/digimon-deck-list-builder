@@ -250,7 +250,7 @@ fn ex4_061_clause1_is_your_turn_observer_optional_faceup() {
         "your-turn observer must declare active_when (your_turn: true)"
     );
     assert!(
-        clause.condition.is_some(),
+        clause.trigger_if.is_some(),
         "observer must have a condition (event_target_owner + event_target_kind + name filter)"
     );
 }

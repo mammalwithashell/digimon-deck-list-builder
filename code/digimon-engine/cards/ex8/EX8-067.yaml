@@ -84,16 +84,17 @@ effects:
     active_when: { your_turn: true }
     summary: "[Your Turn] When own Mineral/Rock Digimon digivolves, suspend self to place up to 2 Mineral/Rock from trash as bottom sources"
     condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: EX8-067
+        is_unsuspended: true
+    trigger_if:
       all_of:
         - event_target_owner: you
         - any_of:
             - event_target_trait_has: Mineral
             - event_target_trait_has: Rock
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            card_number_is: "EX8-067"
-            is_unsuspended: true
     process:
       # Accept/decline gate: select Close itself (optional) to confirm
       # activation. Installs is_optional:true OwnField selection. Player can

@@ -75,9 +75,9 @@ effects:
     once_per_turn: true
     optional: true
     condition:
-      all_of:
-        - event_permanent_is_source: true
-        - security_count_gte: 1
+      security_count_gte: 1
+    trigger_if:
+      event_permanent_is_source: true
     summary: "[All Turns][Once Per Turn] When this Digimon suspends, by trashing your top security card, it unsuspends"
     process:
       - trash_top_security: { of: you }

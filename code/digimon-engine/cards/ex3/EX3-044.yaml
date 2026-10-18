@@ -21,7 +21,8 @@ alt_paths:
 effects:
   - when: on_suspend
     once_per_turn: true
-    condition: { event_target_is_source: true }
+    trigger_if:
+      event_target_is_source: true
     summary: "[All Turns][Once Per Turn] When this Digimon becomes suspended, suspend 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
@@ -31,7 +32,7 @@ effects:
       - suspend: { target: suspended_target }
   - when: on_ally_won_battle
     once_per_turn: true
-    condition:
+    trigger_if:
       event_battle_surviving_deleter:
         owner: you
         kind: digimon
@@ -44,7 +45,7 @@ effects:
   - scope: inherited
     when: on_ally_won_battle
     once_per_turn: true
-    condition:
+    trigger_if:
       event_battle_surviving_deleter:
         owner: you
         kind: digimon

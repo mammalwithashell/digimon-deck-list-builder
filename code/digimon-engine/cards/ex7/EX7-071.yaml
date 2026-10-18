@@ -144,9 +144,9 @@ effects:
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:
-      all_of:
-        - event_target_owner: you
-        - trashed_source_card_id_is: EX7-071
+      trashed_source_card_id_is: EX7-071
+    trigger_if:
+      event_target_owner: you
     summary: "When an effect trashes this card from digivolution cards, gain 1 memory"
     process:
       - gain_memory: 1

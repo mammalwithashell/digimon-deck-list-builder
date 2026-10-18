@@ -87,7 +87,7 @@ effects:
   - when: on_any_deletion
     once_per_turn: true
     active_when: { opponents_turn: true }
-    condition:
+    trigger_if:
       all_of:
         - event_target_kind: digimon
         - none_of:

@@ -165,6 +165,7 @@ pub fn lower_for_kind_with_clause_index(
         let process_steps = Arc::new(body_steps);
         let active_when = clause.active_when.clone().map(Arc::new);
         let condition = clause.condition.clone().map(Arc::new);
+        let trigger_if = clause.trigger_if.clone().map(Arc::new);
         // G-SHARED-OPT-HETEROGENEOUS-TIMING: per-timing condition override for
         // THIS timing, if the clause declares one. AND-ed onto the clause-level
         // gates inside the condition closure so each timing of a shared-OPT
@@ -328,6 +329,15 @@ pub fn lower_for_kind_with_clause_index(
                     }
                 }
                 true
+            });
+        }
+        // The trigger qualifier: decided when the event triggers the effect
+        // (`Game::discard_entries_not_triggered`, §15-8-3-1 / §15-8-3-4);
+        // `EffectBuilder::build` folds it into the activation-time
+        // `condition` above (§15-4-4-5).
+        if let Some(p) = trigger_if {
+            builder = builder.trigger_qualifier(move |rctx| {
+                eval_predicate(&p, rctx, predicate_subject_for_source(rctx))
             });
         }
 

@@ -109,13 +109,13 @@ effects:
     optional: true
     outer_prompt: true
     active_when:
-      all_of:
-        - all_turns: true
-        - event_caused_by_own_effect: true
+      all_turns: true
     condition:
       any_field_permanent:
         of: opponent
         kind: digimon
+    trigger_if:
+      event_caused_by_own_effect: true
     summary: "[All Turns][Once Per Turn] When your effects add to decks, you may delete 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:

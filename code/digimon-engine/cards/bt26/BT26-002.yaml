@@ -28,9 +28,9 @@ effects:
     when: on_digivolution_card_trashed
     once_per_turn: true
     active_when:
-      all_of:
-        - your_turn: true
-        - event_host_is_own_tamer: true
+      your_turn: true
+    trigger_if:
+      event_host_is_own_tamer: true
     summary: "Inherited [Your Turn][OPT] When effects trash cards from under your Tamers, <Draw 1>"
     process:
       - draw: { of: you, count: 1 }

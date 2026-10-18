@@ -25,9 +25,9 @@ effects:
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:
-      all_of:
-        - event_target_owner: you
-        - trashed_source_card_id_is: P-180
+      trashed_source_card_id_is: P-180
+    trigger_if:
+      event_target_owner: you
     summary: "[Trigger] When effects trash this card from digivolution cards, delete 1 opp Digimon DP<=7000"
     process:
       - select_opponent_permanent:

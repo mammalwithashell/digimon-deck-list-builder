@@ -124,7 +124,7 @@ fn bt21_086_has_start_main_on_play_security_and_self_suspend_clauses() {
     assert!(on_suspend.once_per_turn, "[Once Per Turn]");
     assert!(
         on_suspend
-            .condition
+            .trigger_if
             .as_ref()
             .is_some_and(predicate_has_event_permanent_is_source),
         "OnSuspend must be gated to the suspending event permanent being this Marcus"

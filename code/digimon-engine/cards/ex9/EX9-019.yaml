@@ -216,12 +216,12 @@ effects:
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] On own [Greymon]/[Matt Ishida] play, may free-digivolve self into a Garurumon-named hand card"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - any_of:
-            - event_card_name_contains: "Greymon"
-            - event_card_name_contains: "Matt Ishida"
+            - event_card_name_contains: Greymon
+            - event_card_name_contains: Matt Ishida
     process:
       - select_hand:
           of: you
@@ -258,11 +258,11 @@ effects:
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] On own digivolve into [Greymon]-named Digimon, may free-digivolve self into a Garurumon-named hand card"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
-        - event_card_name_contains: "Greymon"
+        - event_card_name_contains: Greymon
     process:
       - select_hand:
           of: you

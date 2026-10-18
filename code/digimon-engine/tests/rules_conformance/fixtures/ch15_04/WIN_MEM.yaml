@@ -11,7 +11,7 @@ cost: 5
 dp: 7000
 effects:
   - when: on_ally_won_battle
-    active_when:
+    trigger_if:
       event_winner_is_source: true
     summary: "[All Turns] When this Digimon wins a battle, gain 1 memory."
     process:

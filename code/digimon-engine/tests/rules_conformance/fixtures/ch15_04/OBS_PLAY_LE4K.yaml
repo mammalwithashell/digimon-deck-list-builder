@@ -2,7 +2,8 @@
 #   [Your Turn] When one of your Digimon with 4000 DP or less is played, gain
 #   1 memory.
 # "with 4000 DP or less" qualifies the trigger condition (the event), not a
-# processing condition ("if" / "while", §15-6-1).
+# processing condition ("if" / "while", §15-6-1): `trigger_if:`, decided when
+# the play triggers the effect and re-checked at activation (§15-4-4-5).
 card: OBS_PLAY_LE4K
 name: Scout Tamer
 kind: tamer
@@ -11,7 +12,7 @@ cost: 3
 effects:
   - when: on_any_digimon_played
     active_when: { your_turn: true }
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon

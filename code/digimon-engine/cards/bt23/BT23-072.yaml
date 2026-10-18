@@ -37,12 +37,12 @@ effects:
   - when: on_ally_played
     optional: true
     active_when: { source_is_unsuspended: true }
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
         - any_of:
-            - event_target_trait_has: "Royal Knight"
+            - event_target_trait_has: Royal Knight
             - event_target_trait_has: CS
     summary: "[All Turns] Suspend this Digimon to give the played Royal Knight/CS Rush/Raid/Reboot/Blocker"
     process:

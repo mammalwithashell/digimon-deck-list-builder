@@ -42,7 +42,6 @@ effects:
     when: on_digivolution_card_trashed
     condition:
       all_of:
-        - event_target_owner: you
         - trashed_source_card_id_is: EX8-048
         - any_of:
             - host_permanent_trait_has: Mineral
@@ -52,6 +51,8 @@ effects:
             zone: [battle_area]
             kind: digimon
             play_cost_lte: 4
+    trigger_if:
+      event_target_owner: you
     summary: "When this source is trashed from a Mineral/Rock Digimon, delete an opponent Digimon cost 4 or less"
     process:
       - select_opponent_permanent:

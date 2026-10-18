@@ -255,7 +255,7 @@ fn bt21_029_clause_d_deletion_arm_fires_on_opponent_digimon_deleted() {
         "clause (d) deletion arm is mandatory"
     );
     assert!(
-        clause_d_del.condition.is_some(),
+        clause_d_del.trigger_if.is_some(),
         "deletion arm must filter event target owner/kind"
     );
 }

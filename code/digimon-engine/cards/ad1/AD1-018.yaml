@@ -85,12 +85,12 @@ effects:
   - when: on_any_digimon_played
     once_per_turn: true
     summary: "[All Turns][OPT] When you play a [Knightmon]/[Lucemon]-text Digimon, De-Digivolve 2 an opponent Digimon"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - any_of:
-            - event_card_text_contains: "Knightmon"
-            - event_card_text_contains: "Lucemon"
+            - event_card_text_contains: Knightmon
+            - event_card_text_contains: Lucemon
     process:
       - select_opponent_permanent:
           bind_as: target

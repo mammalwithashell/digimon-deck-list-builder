@@ -65,7 +65,7 @@ fn bt22_088_exposes_security_and_token_or_puppet_played_observer() {
         .find(|triggered| triggered.when.contains(&CompiledTiming::OnAnyDigimonPlayed))
         .expect("All Turns Token/Puppet played observer is present");
     let condition = observer
-        .condition
+        .trigger_if
         .as_ref()
         .expect("observer needs event-target gates");
     assert!(

@@ -94,12 +94,13 @@ effects:
     when: on_digivolution_card_trashed
     condition:
       all_of:
-        - event_target_owner: you
         - trashed_source_card_id_is: EX7-066
         - any_permanent:
             of: you
             zone: [battle_area]
             kind: digimon
+    trigger_if:
+      event_target_owner: you
     summary: "[Inherited] When effects trash this card from digivolution cards, 1 of your Digimon gets +3000 DP until the end of your opponent's turn"
     process:
       - select_own_permanent:

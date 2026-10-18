@@ -50,10 +50,11 @@ effects:
     active_when: { your_turn: true }
     optional: true
     condition:
+      source_is_unsuspended: true
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
-        - source_is_unsuspended: true
     summary: "[Your Turn] When any of your Digimon unsuspend, by suspending this Tamer, Draw 1; then 1 of your Digimon may digivolve into a [Veedramon]-name hand card for 2 less"
     process:
       - activation_cost: { suspend_self: true }

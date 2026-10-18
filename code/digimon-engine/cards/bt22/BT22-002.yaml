@@ -13,7 +13,7 @@ effects:
     active_when: { your_turn: true }
     once_per_turn: true
     summary: "[Your Turn][OPT] When your Token or other Puppet Digimon is deleted, Draw 1"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - any_of:

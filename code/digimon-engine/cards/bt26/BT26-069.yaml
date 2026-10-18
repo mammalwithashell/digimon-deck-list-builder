@@ -94,10 +94,10 @@ effects:
     when: on_discard_hand
     once_per_turn: true
     active_when:
-      all_of:
-        - your_turn: true
-        - event_discard_player: you
+      your_turn: true
     condition: { source_permanent_trait_has: Titan }
+    trigger_if:
+      event_discard_player: you
     summary: "[Inherited][Your Turn][Once Per Turn] When your hand is trashed from, this [Titan] Digimon may digivolve into [Titamon] or a [Titan] Digimon card in the trash with the cost reduced by 1"
     process:
       - select_union_zone:

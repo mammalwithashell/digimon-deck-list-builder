@@ -115,10 +115,10 @@ effects:
     when: on_discard_hand
     once_per_turn: true
     active_when:
-      all_of:
-        - all_turns: true
-        - event_discard_player: you
+      all_turns: true
     condition: { source_permanent_trait_has: Titan }
+    trigger_if:
+      event_discard_player: you
     summary: "[Inherited][All Turns][Once Per Turn] When your hand is trashed from, if this Digimon has the [Titan] trait, delete 1 of your opponent's level 4 or lower Digimon"
     process:
       - select_opponent_permanent:

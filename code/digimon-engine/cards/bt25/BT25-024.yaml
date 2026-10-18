@@ -79,9 +79,9 @@ effects:
     active_when: { your_turn: true }
     summary: "[Your Turn] When your Digimon are played/digivolve and any are red, this Digimon may digivolve into [Crescemon] in the trash with cost -1"
     condition:
-      all_of:
-        - event_target_owner: you
-        - event_card_color_has: [red]
+      event_card_color_has: [red]
+    trigger_if:
+      event_target_owner: you
     process:
       - select_trash:
           of: you

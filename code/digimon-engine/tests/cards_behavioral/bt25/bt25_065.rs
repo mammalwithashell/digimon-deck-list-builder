@@ -61,7 +61,7 @@ fn bt25_065_has_on_suspend_self_draw_clause() {
         .any(|s| matches!(s, CompiledStep::Draw { .. }));
     assert!(has_draw, "on_suspend clause must Draw 1");
     assert!(
-        clause.condition.is_some(),
+        clause.trigger_if.is_some(),
         "on_suspend must be self-gated (event_permanent_is_source) — printed 'this Digimon'"
     );
 }

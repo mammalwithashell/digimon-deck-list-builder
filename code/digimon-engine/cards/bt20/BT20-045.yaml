@@ -100,7 +100,7 @@ effects:
     once_per_turn: true
     optional: true
     summary: "[All Turns][OPT] When any Digimon suspends, this Digimon may unsuspend"
-    condition:
+    trigger_if:
       event_target_kind: digimon
     process:
       - unsuspend: { target: source }

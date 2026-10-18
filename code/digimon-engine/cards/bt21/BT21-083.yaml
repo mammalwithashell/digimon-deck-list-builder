@@ -30,12 +30,13 @@ effects:
     optional: true
     active_when: { your_turn: true }
     condition:
+      any_of:
+        - event_target_trait_has: Xros Heart
+        - event_target_trait_has: Hero
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
-        - any_of:
-            - event_target_trait_has: "Xros Heart"
-            - event_target_trait_has: Hero
     summary: "[Your Turn] When your Xros Heart/Hero Digimon is played or digivolves, suspend this Tamer and it may attack"
     process:
       - suspend: { target: source }
