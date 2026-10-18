@@ -7758,7 +7758,7 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "At the end of P0's turn an attack with the <Engage> Digimon is offered (with PASS); it checks security, then the turn ends. The engine then parks EndOfTurnAction once more with PASS as the only legal action: a forced no-op decision point logged as G-ENGINE-ENGAGE-EOT-PASS-ONLY-STEP (blocks_training: false); the rule itself holds.",
+      "note": "At the end of P0's turn an attack with the <Engage> Digimon is offered (with PASS); it checks security, then the turn passes to P1 with no further decision: no PASS-only EndOfTurnAction step follows the attack (G-ENGINE-ENGAGE-EOT-PASS-ONLY-STEP resolved).",
       "status": "proven",
       "tests": [
         "ch16_new_keywords::engage_optional_eot_attack"
