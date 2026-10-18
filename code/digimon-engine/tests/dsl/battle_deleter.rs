@@ -498,11 +498,13 @@ fn winner_that_evolves_into_the_trait_during_opponents_on_deletion_did_not_trigg
     winner_identity_after_deletion(false, false);
 }
 
+// Since G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER this passes because the non-[Evolved] winner never triggers the observer at the battle (§15-8-3-4), not because of identity tracking.
 #[test]
 fn winner_predicates_do_not_follow_a_reused_slot_after_winner_deletion() {
     winner_identity_after_deletion(true, false);
 }
 
+// Since G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER this passes because the non-[Evolved] winner never triggers the observer at the battle (§15-8-3-4), not because of identity tracking.
 #[test]
 fn winner_predicates_do_not_follow_materials_into_a_new_dna_digimon() {
     winner_identity_after_deletion(false, true);

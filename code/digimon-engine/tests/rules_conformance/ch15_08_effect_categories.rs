@@ -816,6 +816,10 @@ fn battle_result_trigger_condition_false_at_the_battle_never_activates() {
         "f6da78dabd1b18295353a717881824e6ae0d9133240bedc83b290853047e1483"
     );
     cite!(
+        "15-8-3-4",
+        "71d0451f75557827933628c0bf96a1437a5c750f4cd432b91ad8ce246f9be375"
+    );
+    cite!(
         "15-4-4-5",
         "71bf5b7f1273d0267e98f23107451b614fc0644a66410a19605e28c4c4274329"
     );

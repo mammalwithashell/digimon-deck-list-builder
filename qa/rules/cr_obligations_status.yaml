@@ -88,6 +88,12 @@
   gap_id: G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS
   tests: ["ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish"]
   note: "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: from an Option [Main] the observer waits (green half); from an [On Play] it resolves before 'Then, gain 1 memory' (inline drain in fire_digivolution_card_trashed). Test is #[ignore]d."
+"15-8-3-4":
+  status: gap
+  blocks_training: true
+  gap_id: G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER
+  tests: ["ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"]
+  note: "Battle half proven: 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers, though a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (the battle result decides its trigger condition at the battle, Game::discard_entries_not_triggered). Every other observer timing still enqueues without deciding its trigger condition, and the DSL can't tell a trigger qualifier from a processing condition in condition / active_when (OBS_PLAY_LE4K vs OBS_OPP_PLAY_GE4), so a qualifier false at the event activates once a pooled sibling makes it true."
 "15-8-3-5":
   status: proven
   tests: ["ch15_08_effect_categories::inherited_on_deletion_is_pending_on_the_former_top_card"]

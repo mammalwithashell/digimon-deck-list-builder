@@ -4742,16 +4742,18 @@
       "text": "A trigger-type effect will trigger when the specific conditions are met for the effect on that card to trigger."
     },
     "15-8-3-4": {
-      "blocks_training": false,
+      "blocks_training": true,
       "chapter": 15,
       "fingerprint": "71d0451f75557827933628c0bf96a1437a5c750f4cd432b91ad8ce246f9be375",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
+      "note": "Battle half proven: 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers, though a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (the battle result decides its trigger condition at the battle, Game::discard_entries_not_triggered). Every other observer timing still enqueues without deciding its trigger condition, and the DSL can't tell a trigger qualifier from a processing condition in condition / active_when (OBS_PLAY_LE4K vs OBS_OPP_PLAY_GE4), so a qualifier false at the event activates once a pooled sibling makes it true.",
       "status": "gap",
-      "tests": [],
+      "tests": [
+        "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"
+      ],
       "text": "Trigger-type effects won't trigger when their trigger conditions aren't met."
     },
     "15-8-3-5": {
@@ -15343,8 +15345,8 @@
     },
     "gap": 625,
     "mechanics": {
-      "gap_blocking": 22,
-      "gap_nonblocking": 322,
+      "gap_blocking": 23,
+      "gap_nonblocking": 321,
       "not_testable": 152,
       "proven": 219
     },
