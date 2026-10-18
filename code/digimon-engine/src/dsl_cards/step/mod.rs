@@ -418,6 +418,7 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::AllianceSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::BlockSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::RaidSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::BlitzAttackDecision(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::CounterSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::CounterBlastDnaFieldMaterial(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::CounterBlastDnaHandMaterial(s)) => s.outer_conts.push(cont),

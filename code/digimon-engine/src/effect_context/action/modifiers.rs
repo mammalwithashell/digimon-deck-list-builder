@@ -618,6 +618,13 @@ impl<'a> EffectContext<'a> {
         self.game.mark_until_condition_dirty();
         // §16-39-2: a `<Progress>` gained mid-attack shields at once.
         self.game.refresh_progress_shield();
+        // §16-16-2: "<Blitz> effects execute processing." The effect that
+        // grants <Blitz> ("[When Digivolving] <Blitz>", "Then, <Blitz>")
+        // executes its processing here, in place: the optional attack
+        // declaration, gated on the opponent's memory at activation.
+        if keyword == Keyword::Blitz {
+            crate::cards::keyword_effects::blitz_process(self, target);
+        }
     }
 
     /// Register the granted keyword's TRIGGERED auto-effect(s) so they fire
@@ -657,6 +664,16 @@ impl<'a> EffectContext<'a> {
         // attack declaration (see `keyword_trigger_dispatched_from_registry`);
         // a body here would make them fire twice.
         if crate::cards::keyword_effects::keyword_trigger_dispatched_from_registry(keyword) {
+            return;
+        }
+        // `<Blitz>` granted by an effect executes now, in place
+        // (`grant_keyword` → `blitz_process`, §16-16-2); its [When
+        // Digivolving] auto-effect is the PRINTED family's trigger and must
+        // not be installed by a grant (it would fire again on a later
+        // digivolution). A card that "gains '[When Digivolving] <Blitz>'"
+        // (EX2-056, BT9-102) must be authored as a granted triggered effect,
+        // not with `grant_keyword: Blitz`.
+        if keyword == Keyword::Blitz {
             return;
         }
         let autos = crate::cards::keyword_effects::keyword_to_auto_effect(keyword, card);

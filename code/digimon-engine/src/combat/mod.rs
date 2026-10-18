@@ -2664,6 +2664,116 @@ impl Game {
         }
     }
 
+    /// Park an effect-offered attack declaration for `attacker`'s controller:
+    /// one optional prompt whose choices are `valid_action_ids` (the
+    /// carrier's legal `encode_attack` declarations) and PASS. Resume-driven
+    /// (`ResumeFrame::BlitzAttackDecision`); the closures only mirror the
+    /// frame. A declinable decision, so it marks the §18-3 loop watch
+    /// (`mark_pending_selection_as_optional_decision`). The selecting player
+    /// is always the attacker's controller (the Digimon "may attack" for its
+    /// controller), whatever selecting-player override the enclosing effect
+    /// runs under. Returns whether a prompt was installed (none when nothing
+    /// is offered or a decision is already parked).
+    ///
+    /// While parked, `check_turn_end` is a no-op (a selection is pending), so
+    /// the turn cannot end, and the mask exposes only this prompt's choices.
+    ///
+    /// TODO(Task 21): carry `source_kind`, `without_suspending`,
+    /// `ignore_summoning_sickness` and `cost_upgrade` in the state (hard-coded
+    /// here for <Blitz>) when this generalises to `AttackDeclarationDecision`
+    /// for Engage / Execute / Vortex / Overclock, and fold
+    /// `ResumeSelectKind::BeginAttack` into it.
+    pub(crate) fn install_attack_declaration_decision(
+        &mut self,
+        attacker: PermanentHandle,
+        source_card: CardHandle,
+        valid_action_ids: Vec<u16>,
+        prompt: &str,
+    ) -> bool {
+        if valid_action_ids.is_empty() || self.pending_selection.is_some() {
+            return false;
+        }
+        let state = crate::resume::AttackDeclarationDecisionState {
+            attacker,
+            source_card,
+            valid_action_ids: valid_action_ids.clone(),
+            outer_conts: Vec::new(),
+        };
+        let callback_state = state.clone();
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::SelectTarget;
+        self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
+            kind: SelectionKind::Target,
+            selecting_player: attacker.player,
+            previous_phase,
+            valid_action_ids,
+            is_optional: true,
+            prompt: prompt.to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: Some(attacker),
+            source_kind: crate::enums::EffectSourceKind::Digimon,
+            // Resume-driven (frame below); the closures mirror it.
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                game.run_attack_declaration_decision_step(&callback_state, action_id, false);
+            }),
+            on_decline: Some(Box::new(|_game: &mut Game| {})),
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::BlitzAttackDecision(state)],
+        });
+        self.mark_pending_selection_as_optional_decision();
+        true
+    }
+
+    /// Resolve a parked effect-offered attack declaration: PASS declares
+    /// nothing; a pick among the offered declarations declares the attack
+    /// through the normal procedure (§11-1-5: every following timing occurs).
+    /// The attack does not re-check the memory gate that let the effect offer
+    /// it (§16-16-4 for `<Blitz>`). The caller runs the frame's
+    /// `outer_conts`.
+    pub(crate) fn run_attack_declaration_decision_step(
+        &mut self,
+        state: &crate::resume::AttackDeclarationDecisionState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        // TODO(Task 21): this decode → `AttackTarget` → `begin_attack_open` is
+        // the fifth copy (see `ResumeSelectKind::BeginAttack`, the
+        // `may_attack_now*` / redirect closures); extract one
+        // `decode_effect_attack_target` when the frames are folded.
+        use crate::action::space::{decode_attack, SECURITY_TARGET};
+        if is_pass || !state.valid_action_ids.contains(&action_id) {
+            return;
+        }
+        let (decoded_attacker, decoded_target) = decode_attack(action_id);
+        if decoded_attacker as u8 != state.attacker.index {
+            return;
+        }
+        let opponent = self.next_clockwise(state.attacker.player);
+        let target = if decoded_target == SECURITY_TARGET {
+            AttackTarget::Player(opponent)
+        } else {
+            AttackTarget::Digimon(PermanentHandle {
+                player: opponent,
+                index: decoded_target as u8,
+            })
+        };
+        let _ = self.begin_attack_open(AttackOpen {
+            attacker: state.attacker,
+            initiator: AttackInitiator::Effect {
+                source: Some(state.source_card),
+                optional: true,
+            },
+            suspend_attacker: true,
+            ignore_summoning_sickness: false,
+            target_constraint: TargetConstraint::Forced(target),
+            allow_cancel: true,
+            cost_upgrade: None,
+        });
+    }
+
     /// Phase 9 Task 4 — Raid target-switch rider. Evaluates the
     /// post-Block checkpoint:
     ///

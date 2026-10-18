@@ -1094,7 +1094,8 @@ fn forced_prompt_loop_with_growing_state_still_ends_in_a_draw() {
         "18-3-2",
         "989de42a09e690aa1c0e80632ee1aeb9f94eb27d3fdfeff9b09fa784f38f29ca"
     );
-    within("growing forced loop", Duration::from_secs(120), || {
+    // Load-sensitive: ~60 s idle; 300 s keeps parallel-build runs green.
+    within("growing forced loop", Duration::from_secs(300), || {
         let (mut r, cp, _) = loop_board("LOOP_PICK_GROW");
         let mut picks = 0usize;
         for _ in 0..20_000 {

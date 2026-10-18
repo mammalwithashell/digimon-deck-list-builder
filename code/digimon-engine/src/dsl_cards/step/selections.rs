@@ -1566,6 +1566,13 @@ pub(crate) fn run_resume(
         ResumeFrame::OverclockSelection(state) => {
             game.run_overclock_selection_step(state, action_id, is_pass);
         }
+        ResumeFrame::BlitzAttackDecision(state) => {
+            // §16-16-3: the <Blitz> attack (or its decline) is processing of
+            // the effect that contains it; that effect's remaining steps run
+            // after the declaration.
+            game.run_attack_declaration_decision_step(&state, action_id, is_pass);
+            run_outer_conts(game, state.outer_conts);
+        }
         ResumeFrame::PlayOrderSelection => {
             game.last_play_order_choice = Some(if action_id == crate::action::space::PLAY_FIRST {
                 crate::selection::PlayOrder::First

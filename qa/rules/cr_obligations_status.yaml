@@ -766,35 +766,25 @@
   tests: ["ch16_attack_keywords::rush_kind_matches_rule"]
   note: "A Digimon played this turn gains <Rush> from a Tamer aura ('All of your Digimon gain <Rush>') and may attack at once; no decision."
 "16-16-1":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK
+  status: proven
   tests: ["ch16_attack_keywords::blitz_optionality_matches_rule"]
-  note: "After a digivolution pays the memory to 1 on the opponent's side, the turn ends at once: the [When Digivolving] <Blitz> never offers its attack. #[ignore]d."
+  note: "P0 digivolves into a [When Digivolving] <Blitz> Digimon, paying the memory to 1 on P1's side: before the turn can end <Blitz> offers its attack (a ResumeFrame::BlitzAttackDecision prompt; only the attack and PASS legal); the attack checks security, then the turn passes."
 "16-16-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK
+  status: proven
   tests: ["ch16_attack_keywords::blitz_kind_matches_rule"]
-  note: "Same cause: the <Blitz> attack is never offered, so its place inside the effect's processing cannot be observed. #[ignore]d."
+  note: "<Blitz> is processing of the effect that contains it: ordered after a memory-losing observer in one TriggerOrder, its activation offers the attack inside that effect (only the attack and the decline legal)."
 "16-16-3":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK
+  status: proven
   tests: ["ch16_attack_keywords::blitz_optionality_matches_rule"]
-  note: "Neither the attack nor its decline is offered. #[ignore]d."
+  note: "Opponent memory 1 or more: the attack is offered as an optional decision; P0 may attack (security checked, then the turn ends) or decline (no attack, the turn ends)."
 "16-16-4":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK
+  status: proven
   tests: ["ch16_attack_keywords::blitz_attack_proceeds_after_memory_returns_to_zero_or_more"]
-  note: "The <Blitz> attack is never declared. #[ignore]d."
+  note: "The <Blitz> attack's [When Attacking] gains 2 memory (memory back on P0's side): the declared attack proceeds and checks security."
 "16-16-5":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK
+  status: proven
   tests: ["ch16_attack_keywords::blitz_cannot_attack_when_memory_already_zero_or_more"]
-  note: "Not proven, in either half. The no-attack half (memory 0 when <Blitz> activates, observer then moves it to the opponent's side) passes today only because the engine ends the turn after any digivolution that leaves the memory on the opponent's side, never offering a <Blitz> attack at all; the control (memory on the opponent's side when <Blitz> activates) is never offered the attack. #[ignore]d."
+  note: "Ordered first, <Blitz> activates at memory 0: no attack is offered, and once the observer moves the memory to P1's side the turn ends; control: the observer first (memory 2 on P1's side), then <Blitz> offers the attack."
 "16-23-1":
   status: proven
   tests: ["ch16_attack_keywords::raid_switches_to_highest_dp_unsuspended_attacker_chooses_tie", "ch16_attack_keywords::raid_attacker_declares_on_a_legal_target_then_may_switch"]

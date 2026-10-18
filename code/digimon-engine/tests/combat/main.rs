@@ -2,6 +2,7 @@
 //! security pipeline, Rush exemption, Force-Attack mask, and Overclock.
 
 mod alliance_interrupt;
+mod blitz_attack_decision;
 mod block_interrupt;
 mod cannot_suspend_enforcement;
 mod collision_mandatory;
