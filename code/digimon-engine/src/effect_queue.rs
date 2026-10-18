@@ -52,6 +52,25 @@ use crate::trigger_context::TriggerContext;
 /// chained triggers) stay far below it.
 pub const MAX_CHAIN_DEPTH: u16 = 10_000;
 
+/// Outcome of [`Game::install_single_trigger_optional_gate`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum OptionalGate {
+    /// No decision to park: the caller runs the effect now.
+    NotNeeded,
+    /// An accept / decline prompt is parked for the effect's controller.
+    Parked,
+}
+
+/// The "you may" prompt shape a lone optional effect parks before its body
+/// (see [`Game::single_trigger_optional_prompt`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SingleTriggerOptionalPrompt {
+    /// Decline the activation cost before it is paid (§15-7-2).
+    PreCost,
+    /// Accept / decline before a body whose first step is mandatory.
+    Outer,
+}
+
 /// RAII guard that installs a `TriggerContext` onto `Game.current_trigger_context`
 /// for the lifetime of the guard and restores the previous value on drop —
 /// including on panic. Used to evaluate a triggered effect's condition with the
@@ -221,6 +240,19 @@ impl Game {
 
     fn queued_refired_effect(&self, effect: ReFireableEffect) -> QueuedEffect {
         let is_turn_player = effect.controller == self.turn_player();
+        // §15-15-7-4 (Ver. 4.3): the refired effect keeps its own optional
+        // processing condition even when the effect activating it is
+        // mandatory, so the queued entry carries the borrowed effect's
+        // optionality (its decision gate, and the §15-7-4 drop of an
+        // unpayable condition in `run_queued_effect_inner`, key on it).
+        let is_optional = self
+            .effects_for_card(&effect.card_id, effect.source_card)
+            .and_then(|effects| {
+                effects
+                    .get(effect.effect_id as usize)
+                    .map(|effect| effect.optional)
+            })
+            .unwrap_or(false);
         QueuedEffect {
             source_card: effect.source_card,
             source_permanent: Some(effect.source),
@@ -232,7 +264,7 @@ impl Game {
             timing: effect.timing,
             trigger_context: None,
             effect_slot: effect.effect_id,
-            is_optional: false,
+            is_optional,
             is_turn_player,
             card_id: effect.card_id,
             allow_below_top_liveness: false,
@@ -244,8 +276,26 @@ impl Game {
         }
     }
 
+    /// Run a refired effect ("activate … as an effect of this Digimon").
+    ///
+    /// §15-15-7-4 (Ver. 4.3) "Even if the effect activating another effect is
+    /// mandatory, the player can still choose whether or not to processes
+    /// that other effect's optional processing conditions." The refired
+    /// effect passes through the same optional-decision gate as a lone
+    /// queued trigger ([`Self::install_single_trigger_optional_gate`]): when
+    /// it parks, the decision belongs to the refired effect's controller (the
+    /// refiring effect's controller), ACCEPT runs it through
+    /// `run_queued_effect` with its `bypass_once_per_turn` and attribution
+    /// stamping intact (the parked `QueuedEffect` carries both), and a decline
+    /// drops it alone -- the invoking effect's remaining steps compose onto
+    /// the parked frame and run either way. An unpayable condition (§15-7-4)
+    /// is not offered and the effect is dropped as if declined.
+    /// G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION.
     pub(crate) fn run_refired_effect(&mut self, effect: ReFireableEffect) {
         let qe = self.queued_refired_effect(effect);
+        if self.install_single_trigger_optional_gate(&qe) == OptionalGate::Parked {
+            return;
+        }
         self.run_queued_effect(qe);
     }
 
@@ -1746,58 +1796,17 @@ impl Game {
                 // optionality is exposed by the body's first actionable
                 // pending selection; auto-fire is intentional there so we
                 // don't prompt when filters produce no legal follow-up.
-                let needs_pre_cost_prompt = {
-                    let (
-                        is_optional,
-                        card_id,
-                        source_card,
-                        source_permanent,
-                        source_kind,
-                        controller,
-                        effect_slot,
-                        trigger_context,
-                    ) = {
-                        let qe = &self.effect_queue[idx];
-                        (
-                            qe.is_optional,
-                            qe.card_id.clone(),
-                            qe.source_card,
-                            qe.source_permanent,
-                            self.queued_effect_activation_kind(qe),
-                            qe.controller,
-                            qe.effect_slot as usize,
-                            qe.trigger_context.clone(),
-                        )
-                    };
-                    if is_optional {
-                        if let Some(effects) = self.effects_for_card(&card_id, source_card) {
-                            if let Some(eff) = effects.get(effect_slot) {
-                                // Only install a pre-cost prompt when the
-                                // effect has an activation_cost AND the
-                                // condition (if any) currently passes. If the
-                                // condition would suppress the effect anyway,
-                                // auto-fire so it silently skips — no prompt.
-                                // §15-7-4 (Ver. 4.3): an activation cost that
-                                // can't be paid can't be chosen either — no
-                                // prompt; `run_queued_effect_inner` then
-                                // drops the effect as if declined.
-                                let has_cost = eff.activation_cost_fn.is_some();
-                                let payable = has_cost
-                                    && self.queued_optional_condition_payable(
-                                        &self.effect_queue[idx],
-                                        eff,
-                                    );
-                                // `payable` implies `has_cost`.
-                                payable && self.queued_effect_condition_passes(idx)
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
+                // The pre-cost prompt is the one-entry `TriggerOrder` over
+                // the still-queued entry; the other shape (outer accept /
+                // decline) is installed by `install_single_trigger_optional_gate`
+                // below, after the entry leaves the queue. §15-7-4 (Ver. 4.3):
+                // an activation cost that can't be paid can't be chosen either
+                // -- no prompt; `run_queued_effect_inner` then drops the
+                // effect as if declined.
+                let needs_pre_cost_prompt = self.effect_queue[idx].is_optional && {
+                    let qe = self.effect_queue[idx].clone();
+                    self.single_trigger_optional_prompt(&qe)
+                        == Some(SingleTriggerOptionalPrompt::PreCost)
                 };
                 if needs_pre_cost_prompt {
                     self.install_trigger_order_selection(chooser, &bundle, true);
@@ -1827,8 +1836,7 @@ impl Game {
                 // declinable PASS, the inner PASS is the decline path and the
                 // flag stays false). The outer prompt is skipped entirely
                 // when the effect's preconditions already fail.
-                if qe.is_optional && self.queued_effect_wants_outer_optional_prompt(&qe) {
-                    self.install_outer_optional_trigger_selection(qe);
+                if self.install_single_trigger_optional_gate(&qe) == OptionalGate::Parked {
                     return;
                 }
                 // Every queued effect's body runs as ONE effect: triggers it
@@ -5687,22 +5695,35 @@ impl Game {
     /// `gate_optional` is false for a one-entry `TriggerOrder`: that prompt
     /// IS the pre-cost decline gate, and its pick is the acceptance.
     fn run_picked_trigger(&mut self, qe: QueuedEffect, gate_optional: bool) {
-        if gate_optional && self.picked_trigger_needs_optional_gate(&qe) {
-            self.install_outer_optional_trigger_selection(qe);
+        if gate_optional && self.install_single_trigger_optional_gate(&qe) == OptionalGate::Parked
+        {
             return;
         }
         self.run_queued_effect(qe);
     }
 
-    fn picked_trigger_needs_optional_gate(&mut self, qe: &QueuedEffect) -> bool {
+    /// Which "you may" prompt a lone OPTIONAL effect (a single queued
+    /// trigger, a `TriggerOrder` pick, a refired effect) must park before its
+    /// body, or `None` when it runs at once: a mandatory effect, an optional
+    /// one whose decision is its body's own first declinable step, or one
+    /// that would not do anything (failed condition, spent OPT, dead source,
+    /// unpayable optional processing condition -- §15-7-4, Ver. 4.3).
+    /// The two shapes are mutually exclusive in practice: a cost-bearing
+    /// optional effect gets exactly one decline gate (the pre-cost one), a
+    /// cost-free one exactly one (the outer prompt).
+    fn single_trigger_optional_prompt(
+        &mut self,
+        qe: &QueuedEffect,
+    ) -> Option<SingleTriggerOptionalPrompt> {
         if !qe.is_optional {
-            return false;
+            return None;
         }
-        if self.queued_effect_wants_outer_optional_prompt(qe) {
-            return true;
-        }
-        // §15-7-4 (Ver. 4.3): an unpayable activation cost can't be chosen,
-        // so it parks no pre-cost decline; `run_queued_effect_inner` drops it.
+        // Single trigger with activation_cost_fn + optional: true → the
+        // player can decline the activation cost itself (e.g. "By returning
+        // this Tamer to the bottom of the deck, you may …"); without a prompt
+        // the cost would fire automatically. Only when the cost is payable
+        // (§15-7-4) and the condition (if any) currently passes: if the
+        // condition would suppress the effect anyway, it silently skips.
         let has_payable_activation_cost = self
             .effects_for_queued(qe)
             .and_then(|effects| {
@@ -5712,7 +5733,36 @@ impl Game {
                 })
             })
             .unwrap_or(false);
-        has_payable_activation_cost && self.queued_entry_condition_passes(qe)
+        if has_payable_activation_cost && self.queued_entry_condition_passes(qe) {
+            return Some(SingleTriggerOptionalPrompt::PreCost);
+        }
+        // G-OUTER-OPTIONAL-NOT-INSTALLED: an optional effect whose body's
+        // first step is mandatory surfaces an explicit outer accept / decline.
+        if self.queued_effect_wants_outer_optional_prompt(qe) {
+            return Some(SingleTriggerOptionalPrompt::Outer);
+        }
+        None
+    }
+
+    /// The optional-decision gate of a lone OPTIONAL effect that is about to
+    /// run outside a queue bundle (§15-7; §15-15-7-4 for a refired effect).
+    /// When [`Self::single_trigger_optional_prompt`] asks for a prompt, park
+    /// the accept / decline (`ResumeFrame::OuterOptionalTrigger`: ACCEPT runs
+    /// `run_queued_effect` on the carried entry, decline drops it) and return
+    /// [`OptionalGate::Parked`]; otherwise [`OptionalGate::NotNeeded`] and the
+    /// caller runs the effect. A pre-cost decline parks as the same outer
+    /// prompt here (the entry is not in `effect_queue`, so the queue drain's
+    /// one-entry `TriggerOrder` shape does not apply); accepting it pays the
+    /// activation cost inside `run_queued_effect`.
+    pub(crate) fn install_single_trigger_optional_gate(
+        &mut self,
+        effect: &QueuedEffect,
+    ) -> OptionalGate {
+        if self.single_trigger_optional_prompt(effect).is_none() {
+            return OptionalGate::NotNeeded;
+        }
+        self.install_outer_optional_trigger_selection(effect.clone());
+        OptionalGate::Parked
     }
 
     /// §15-7-4 (Ver. 4.3) "If executing an optional processing condition's

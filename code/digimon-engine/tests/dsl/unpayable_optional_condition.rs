@@ -15,7 +15,10 @@
 //! - a `TriggerOrder` bundle excludes an unpayable optional entry only
 //!   transiently, and RE-OFFERS it once a sibling has made it payable;
 //! - an unpayable `[Main]` can't be declared, so attempting it does not
-//!   consume its `[Once Per Turn]`.
+//!   consume its `[Once Per Turn]`;
+//! - a REFIRED effect ("activate … as an effect of this Digimon", §15-15-7-4)
+//!   whose optional processing condition can't be executed is not offered
+//!   either (G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION).
 
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
@@ -73,6 +76,29 @@ effects:
     process:
       - trash_top_security: { of: you }
       - draw: { of: you, count: 1 }
+"#;
+
+/// "[On Play] By trashing your top security card, gain 1 memory." and the
+/// mandatory "[When Attacking] Activate 1 of this Digimon's [On Play] effects."
+const REFIRE_TRASH_SEC: &str = r#"
+card: T-UNPAY-REFIRE
+name: RefireTester
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - when: on_play
+    optional: true
+    summary: "[On Play] By trashing your top security card, gain 1 memory."
+    process:
+      - trash_top_security: { of: you }
+      - gain_memory: 1
+  - when: when_attacking
+    summary: "[When Attacking] Activate 1 of this Digimon's [On Play] effects."
+    process:
+      - refire_effect: { source: source, timing: on_play }
 "#;
 
 fn field_main_action(h: PermanentHandle) -> u16 {
@@ -186,4 +212,57 @@ fn unpayable_main_does_not_consume_its_once_per_turn() {
         0.0,
         "control: after a real activation the [Once Per Turn] is spent"
     );
+}
+
+/// §15-15-7-4 with §15-7-4: the mandatory [When Attacking] activates the
+/// [On Play] "By trashing your top security card, gain 1 memory". With 0
+/// security cards the refired effect's condition can't be executed, so no
+/// decision is offered and nothing is gained. Control: with 1 security card
+/// the refired effect's own optional decision IS offered (the invoker being
+/// mandatory does not force it), and accepting it pays and gains.
+#[test]
+fn unpayable_refired_optional_condition_is_not_offered() {
+    let board = |security: &[&str]| {
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(REFIRE_TRASH_SEC)
+            .expect("tester compiles")
+            .add_card(make_test_card("FILL", "Filler"))
+            .deck(0, &["FILL"; 4])
+            .deck(1, &["FILL"; 4])
+            .security(0, security)
+            .memory(3)
+            .start();
+        let me = r.place_on_field(0, "T-UNPAY-REFIRE", Some(0));
+        let memory_before = r.memory();
+        r.game
+            .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(me));
+        r.game.drain_effect_queue();
+        (r, memory_before)
+    };
+
+    let (r, memory_before) = board(&[]);
+    assert!(
+        r.pending_selection().is_none(),
+        "0 security cards: the refired condition is not offered: {:?}",
+        r.pending_selection()
+    );
+    assert_eq!(r.memory(), memory_before, "the payload did not run for free");
+
+    let (mut r, memory_before) = board(&["FILL"]);
+    let sel = r
+        .pending_selection()
+        .expect("1 security card: the refired effect's own decision is offered");
+    assert_eq!(sel.selecting_player, 0);
+    assert!(sel.is_optional, "the refired condition can be declined: {sel:?}");
+    assert_eq!(r.security_count(0), 1, "nothing is paid before the decision");
+    let accept = sel
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != PASS)
+        .expect("an accept action");
+    r.execute_action(0, accept).expect("accept the refired condition");
+    let _ = r.auto_resolve();
+    assert_eq!(r.security_count(0), 0, "the top security card was trashed");
+    assert_eq!(r.memory(), memory_before + 1, "the refired effect gained 1 memory");
 }

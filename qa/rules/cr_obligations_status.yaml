@@ -169,11 +169,9 @@
   tests: ["ch15_07_optional_conditions::optional_condition_decided_before_processing_effect"]
   note: "Ver. 4.3 wording. '[When Attacking] By trashing your top security card, 1 of your opponent's Digimon gets -5000 DP' with two candidate targets: the first prompt is the optional yes/no (security untouched); the OppField target pick comes after it, with the security card already trashed."
 "15-15-7-4":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION
+  status: proven
   tests: ["ch15_07_optional_conditions::mandatory_invoker_does_not_force_invoked_optional_condition"]
-  note: "Ver. 4.3 rewrite. The DSL expresses borrowing (refire_card_effect, BT15-102 idiom). A mandatory '[When Attacking] Place 1 [Lender] card from your trash under this Digimon; activate 1 of its [On Play] effects as an effect of this Digimon' runs a borrowed 'By trashing your top security card, gain 1 memory' with no decision (security trashed, memory gained); a borrowed hand-pick condition keeps its PASS. Test is #[ignore]d."
+  note: "Ver. 4.3 rewrite. The DSL expresses borrowing (refire_card_effect, BT15-102 idiom). A mandatory '[When Attacking] Place 1 [Lender] card from your trash under this Digimon; activate 1 of its [On Play] effects as an effect of this Digimon' offers the borrowed 'By trashing your top security card, gain 1 memory' its own optional decision: declining keeps the security card and gains nothing, accepting trashes it and gains 1 memory; a borrowed hand-pick condition keeps its PASS. A refired effect goes through the same optional-decision gate as a lone queued trigger (Game::install_single_trigger_optional_gate, with the §15-7-4 payability guard: an unpayable borrowed condition is not offered, pinned in tests/dsl unpayable_optional_condition)."
 
 # ── ch15-15 "Isn't affected by effects" (§15-15-5) — tests/rules_conformance/ch15_15_unaffected.rs ──
 "15-15-5":

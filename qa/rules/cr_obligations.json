@@ -3339,15 +3339,15 @@
       "text": "If an effect that activates another effect has text such as \"activate as this card's effect,\" the card that activated this effect will be considered to have activated the effect."
     },
     "15-15-7-4": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 15,
       "fingerprint": "dfbb74f72cbbf179b325e51c074de8561efa8fba4c696d24501e848805b2752d",
-      "gap_id": "G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION",
+      "gap_id": null,
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Ver. 4.3 rewrite. The DSL expresses borrowing (refire_card_effect, BT15-102 idiom). A mandatory '[When Attacking] Place 1 [Lender] card from your trash under this Digimon; activate 1 of its [On Play] effects as an effect of this Digimon' runs a borrowed 'By trashing your top security card, gain 1 memory' with no decision (security trashed, memory gained); a borrowed hand-pick condition keeps its PASS. Test is #[ignore]d.",
-      "status": "gap",
+      "note": "Ver. 4.3 rewrite. The DSL expresses borrowing (refire_card_effect, BT15-102 idiom). A mandatory '[When Attacking] Place 1 [Lender] card from your trash under this Digimon; activate 1 of its [On Play] effects as an effect of this Digimon' offers the borrowed 'By trashing your top security card, gain 1 memory' its own optional decision: declining keeps the security card and gains nothing, accepting trashes it and gains 1 memory; a borrowed hand-pick condition keeps its PASS. A refired effect goes through the same optional-decision gate as a lone queued trigger (Game::install_single_trigger_optional_gate, with the §15-7-4 payability guard: an unpayable borrowed condition is not offered, pinned in tests/dsl unpayable_optional_condition).",
+      "status": "proven",
       "tests": [
         "ch15_07_optional_conditions::mandatory_invoker_does_not_force_invoked_optional_condition"
       ],
@@ -15275,9 +15275,9 @@
         "total": 10
       },
       "15": {
-        "gap": 138,
+        "gap": 137,
         "not_testable": 66,
-        "proven": 40,
+        "proven": 41,
         "total": 244
       },
       "16": {
@@ -15347,15 +15347,15 @@
         "total": 13
       }
     },
-    "gap": 615,
+    "gap": 614,
     "mechanics": {
-      "gap_blocking": 15,
+      "gap_blocking": 14,
       "gap_nonblocking": 320,
       "not_testable": 152,
-      "proven": 228
+      "proven": 229
     },
     "not-testable": 246,
-    "proven": 258
+    "proven": 259
   },
   "version": 1
 }

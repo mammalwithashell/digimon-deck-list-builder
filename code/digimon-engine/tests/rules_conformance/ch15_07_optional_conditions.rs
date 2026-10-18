@@ -602,7 +602,6 @@ fn borrow_board(lender: &str) -> DebugRunner {
 /// Control: accepting `LEND_SEC_MEM`'s condition trashes the security card and
 /// gains the memory.
 #[test]
-#[ignore = "G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION (§15-15-7-4)"]
 fn mandatory_invoker_does_not_force_invoked_optional_condition() {
     cite!(
         "15-15-7-4",
