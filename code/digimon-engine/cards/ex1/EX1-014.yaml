@@ -41,13 +41,18 @@
 #     && (card.PermanentOfThisCard().TopCard.ContainsCardName("Imperialdramon")
 #         || card.PermanentOfThisCard().TopCard.CardTraits.Contains("Free"))
 #
-# ─── Name arm: self_digivolution_contains_name ───────────────────────────────
+# ─── Name arm: source_name_contains ──────────────────────────────────────────
 #
-# `self_digivolution_contains_name: "Imperialdramon"` scans the carrier
-# permanent's digivolution stack (all cards including the top card) for a card
-# whose name contains "Imperialdramon". In the expected play pattern
-# (ExVeemon → Imperialdramon), the carrier is Imperialdramon and the check
-# passes correctly.
+# `source_name_contains: "Imperialdramon"` reads the carrier's name: its TOP
+# card's rules name (synthesized identity) — DCGO
+# `TopCard.ContainsCardName("Imperialdramon")`. Official Q&A Q3225 (EX1-038,
+# the same "[Imperialdramon] in its name or [Free] in its traits" shape)
+# treats the name as the top card's: once the top card is trashed the Digimon
+# is "without ... [Imperialdramon] in its name". FIX
+# (G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS, 2026-10-17): was
+# `self_digivolution_contains_name`, which also scanned the digivolution cards
+# and over-granted <Jamming> when an [Imperialdramon] card sat under a
+# non-Imperialdramon top card.
 #
 # DSL lowering: `scope: inherited / kind: aura` with `target: {}` so the keyword
 # applies only to the carrier permanent whose stack contains this card.
@@ -86,7 +91,7 @@ effects:
       all_of:
         - your_turn: true
         - any_of:
-            - self_digivolution_contains_name: "Imperialdramon"
+            - source_name_contains: "Imperialdramon"
             - source_permanent_trait_has: "Free"
     target: {}
     grant_keyword: { keyword: Jamming }

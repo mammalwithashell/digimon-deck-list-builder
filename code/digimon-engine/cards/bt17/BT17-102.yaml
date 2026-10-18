@@ -53,29 +53,19 @@
 # Implemented with `source_dp: {}` in `FormulaSpec`/`CompiledFormula`, which
 # reads `ctx.source_permanent.and_then(|h| ctx.game.effective_dp(h))`.
 #
-# ─── DSL-GAP — Self-name-is predicate  [G-DSL-SELF-NAME-IS] ─────────────────
+# ─── Self-name-is predicate  [G-DSL-SELF-NAME-IS — RESOLVED] ─────────────────
 #
-# "If this Digimon's name is [Koromon]" should check the carrier permanent's
-# top-card name. Existing predicates:
-#   - `name_contains` / `name_is`: filter CANDIDATE cards in selections, not self
-#   - `source_name_contains`: parses but never evaluated (G-DSL-SOURCE-NAME-CONTAINS)
-#   - `self_digivolution_contains_name`: scans THIS card's digivolution stack
-#     (RESOLVED 2026-05-02 by Group 7)
-#
-# Sibling AD1-014 documents G-DSL-SELF-NAME-CONTAINS (top-card name check from
-# below the stack — for inherited effects).
-#
-# For BT17-102 [When Digivolving], "this Digimon's name is Koromon" semantically
-# requires the [All Turns] alias (which makes Koromon-in-stack count as a name).
-# The stack-scanning predicate `self_digivolution_contains_name: "Koromon"` is
-# the closest faithful approximation under the current DSL — it correctly fires
-# in the standard play pattern (Koromon → Greymon BT17-102) and stays false
-# when Koromon is not in the digivolution material stack.
-#
-# The dynamic [All Turns] alias is now implemented below through
-# `identity.source_name_aliases`; this trigger still uses the direct stack
-# predicate because the printed condition is evaluated during BT17-102's own
-# when-digivolving timing.
+# "If this Digimon's name is [Koromon]" reads this Digimon's NAME: its top
+# card's names in the synthesized identity — the printed [Greymon] plus the
+# names the [All Turns] clause gains from level 3 or lower digivolution cards
+# (DCGO `TopCard.EqualsCardName("Koromon")` with `ChangeCardNamesClass`
+# applied). `source_name_contains: "Koromon"` reads exactly that; it is exact
+# in practice ("Koromon" is no other card's name or a substring of one).
+# FIX (G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS, 2026-10-17): was
+# `self_digivolution_contains_name: "Koromon"`, which scanned every card in
+# the stack and so also counted a [Koromon]-named card the name gain does not
+# cover (level 4 or higher) — a Digimon's name is its top card's (§4-7-7
+# ruling; official Q&A Q3225), not every card's in its stack.
 #
 # ─── RESOLVED — Dynamic name aliases from material stack  [G-DYNAMIC-NAME-ALIAS-FROM-STACK] ──
 #
@@ -135,9 +125,10 @@ effects:
   #   or less DP as this Digimon."
   #
   # Implementation status:
-  #   - +3000 DP if Koromon: IMPLEMENTED via `self_digivolution_contains_name:
-  #     "Koromon"` (the [All Turns] alias makes Koromon-in-stack equivalent to
-  #     "name is Koromon" per DCGO's dynamic ChangeCardNamesClass).
+  #   - +3000 DP if Koromon: IMPLEMENTED via `source_name_contains:
+  #     "Koromon"` — this Digimon's name, including the names the [All Turns]
+  #     clause gains from level 3 or lower digivolution cards (DCGO
+  #     `TopCard.EqualsCardName` with `ChangeCardNamesClass`).
   #   - Delete sub-clause: IMPLEMENTED (G-FORMULA-SOURCE-DP resolved
   #     2026-05-19). `dp_lte: { formula: { source_dp: {} } }` reads the
   #     carrier permanent's effective DP — exactly DCGO's
@@ -153,11 +144,11 @@ effects:
   # delete check uses the now-buffed DP. The `if` buff step precedes the
   # delete step in `process:` so the `source_dp` formula sees the buffed DP.
   - when: when_digivolving
-    summary: "[When Digivolving] +3000 DP if [Koromon] in digi-stack, then delete 1 opp Digimon with DP ≤ this Digimon"
+    summary: "[When Digivolving] If this Digimon's name is [Koromon], it gets +3000 DP for the turn. Then, delete 1 opp Digimon with DP ≤ this Digimon"
     process:
       - if:
           condition:
-            self_digivolution_contains_name: "Koromon"
+            source_name_contains: "Koromon"
           then:
             - add_dp_modifier:
                 target: source

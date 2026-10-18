@@ -43,8 +43,8 @@ effects:
       - if:
           condition:
             any_of:
-              - self_digivolution_contains_name: "WereGarurumon"
-              - self_digivolution_contains_name: "X Antibody"
+              - self_digivolution_sources_contain_name: "WereGarurumon"
+              - self_digivolution_sources_contain_name: "X Antibody"
           then:
             - select_trash:
                 of: you

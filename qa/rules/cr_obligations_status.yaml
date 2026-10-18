@@ -140,6 +140,14 @@
   status: proven
   tests: ["ch15_08_effect_categories::immediate_effect_with_condition_met_later_can_activate"]
   note: "Two would-be-deleted effects on one card: 'if you have 4 or more security cards, it isn't deleted' (unmet at 3) and '<Recovery +1 (Deck)>'; after the recovery the first activates. Control: empty deck, Digimon deleted."
+"4-8-2":
+  status: proven
+  tests: ["ch15_08_effect_categories::digimon_name_is_the_top_cards_name"]
+  note: "Proven for names: 'While [Greymon] is in this Digimon's digivolution cards' (production idiom self_digivolution_sources_contain_name, BT16-027 / BT20-020 / BT20-102) is not satisfied by a [Greymon] top card and is satisfied by a [Greymon] digivolution card. The same test pins the converse for 4-7-7 (a Digimon's name is its top card's). Traits / level / colour of digivolution cards are not staged here."
+"4-7-7":
+  status: gap
+  tests: ["ch15_08_effect_categories::digimon_name_is_the_top_cards_name"]
+  note: "Controller ruling (Tasks 31 / 35, provisional, for owner sign-off): 4-7-7 governs stack membership; a Digimon's characteristics (name, traits) are its top card's -- official Q&A Q3225 (EX1-038: after its top card is trashed the Digimon is 'without [Free] in its traits or [Imperialdramon] in its name' although EX1-038 [Free] stays in the stack; EX1-038's own 'While this Digimon has [Imperialdramon] in its name or [Free] in its traits' would always hold under a stack scan) and DCGO TopCard reads. digimon_name_is_the_top_cards_name pins the NAME half ('While this Digimon has [Greymon] in its name': a [Greymon] digivolution card under a non-[Greymon] top card gives no +1000; G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS). Neither sentence is proven as written; the second sentence (not on the field / place-under removes from the field) is untested."
 
 # ── ch15-07 Optional Processing Conditions (§15-7, §15-1-2, §15-15-7-4) — tests/rules_conformance/ch15_07_optional_conditions.rs ──
 "15-7-1":

@@ -101,13 +101,15 @@ effects:
   #   - `target: {}` — self aura: the +1000 DP attaches to the carrier (the
   #     permanent BT12-059 is stacked under), via the static `dp_modifier`
   #     field that `Game::source_dp_contribution` reads.
-  #   - `active_when` uses `self_digivolution_contains_name` to scan the
-  #     carrier's full source stack for a card whose name contains
-  #     "Greymon" or "Omnimon". Because BT12-059 itself is named "Agumon",
-  #     the predicate is only satisfied when a Greymon-named or Omnimon-named
-  #     card has digivolved on top of (or as a material in the stack of)
-  #     BT12-059 — exactly the DCGO `TopCard.HasGreymonName` semantics for
-  #     this Lv3 source slot.
+  #   - `active_when` uses `source_name_contains`, which reads the carrier's
+  #     name: its TOP card's rules name (synthesized identity, so name-gain
+  #     effects count) — DCGO `TopCard.HasGreymonName` /
+  #     `TopCard.ContainsCardName("Omnimon")`. A Digimon's name is its top
+  #     card's (§4-7-7 ruling; official Q&A Q3225), so a [Greymon] card lower
+  #     in the stack under a non-[Greymon] top card does NOT satisfy it.
+  #     FIX (G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS, 2026-10-17): was
+  #     `self_digivolution_contains_name`, which scanned every card in the
+  #     stack and over-granted the +1000.
   #   - `all_turns: true` encodes the [All Turns] scope.
   - scope: inherited
     kind: aura
@@ -115,8 +117,8 @@ effects:
       all_of:
         - all_turns: true
         - any_of:
-            - self_digivolution_contains_name: "Greymon"
-            - self_digivolution_contains_name: "Omnimon"
+            - source_name_contains: "Greymon"
+            - source_name_contains: "Omnimon"
     target: {}
     dp_modifier: 1000
     summary: "[Inherited][All Turns] +1000 DP while carrier name contains Greymon or Omnimon"

@@ -42,8 +42,9 @@ use super::support::snapshot;
 // ─── Combo-piece fixtures ────────────────────────────────────────────────────
 
 /// Koromon — the digivolution-stack enabler whose presence grants Greymon the
-/// +3000 buff (Greymon's clause condition is `self_digivolution_contains_name:
-/// "Koromon"`).
+/// +3000 buff (Greymon's clause condition is `source_name_contains: "Koromon"`,
+/// satisfied through its [All Turns] gain of level 3 or lower digivolution
+/// cards' names).
 fn make_koromon(id: &str) -> CardData {
     let mut c = make_test_card(id, "Koromon");
     c.card_kind = CardKind::Digimon;

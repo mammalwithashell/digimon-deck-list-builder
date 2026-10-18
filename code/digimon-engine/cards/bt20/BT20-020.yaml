@@ -131,10 +131,12 @@ effects:
   #     two modifiers with the same expiry — this clause does the same via DSL.
   #
   # (b) Conditional security trash:
-  #     An `if:` step checks `self_digivolution_contains_name: "Imperialdramon:
-  #     Dragon Mode"`. This predicate (RESOLVED 2026-05-02, Group 7) scans the
-  #     carrier permanent's digivolution card_sources stack via
-  #     `Permanent::contains_card_name`. In a `when_digivolving` process body,
+  #     An `if:` step checks `self_digivolution_sources_contain_name:
+  #     "Imperialdramon: Dragon Mode"`, which scans only the cards UNDER this
+  #     Digimon (§4-8-2; DCGO `PermanentOfThisCard().DigivolutionCards`). FIX
+  #     (G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS, 2026-10-17): was
+  #     `self_digivolution_contains_name`, which also read the top card. In a
+  #     `when_digivolving` process body,
   #     `ctx.source_permanent` is set, so the `If` step's `PredicateSubject::None`
   #     correctly falls through to `subject_or_source_permanent → rctx.source_permanent()`.
   #
@@ -158,7 +160,7 @@ effects:
       # trash opponent's top security card.
       - if:
           condition:
-            self_digivolution_contains_name: "Imperialdramon: Dragon Mode"
+            self_digivolution_sources_contain_name: "Imperialdramon: Dragon Mode"
           then:
             - trash_top_security: { of: opponent }
 

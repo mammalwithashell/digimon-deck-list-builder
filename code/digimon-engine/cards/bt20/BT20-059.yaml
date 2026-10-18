@@ -82,9 +82,9 @@
 #   "Jesmon GX" → two `scope: inherited, kind: aura` clauses granting Reboot /
 #   Blocker to ALL own battle-area Digimon, gated on opponent's turn AND the
 #   carrier being [Jesmon GX]. "While this Digimon is [Jesmon GX]" → the
-#   carrier's top card is Jesmon GX → `self_digivolution_contains_name:
-#   "Jesmon GX"` (Permanent::contains_card_name scans the top card; BT12-050
-#   "[Imperialdramon] in its name" idiom).
+#   carrier's top card is Jesmon GX → `source_name_contains: "Jesmon GX"`
+#   (the top card's rules name; BT12-050 "[Imperialdramon] in its name"
+#   idiom; G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS).
 
 card: BT20-059
 name: "Gankoomon (X Antibody)"
@@ -192,12 +192,19 @@ effects:
     summary: "[Opponent's Turn] Your Sistermon/Huckmon-named or Royal Knight Digimon gain Blocker"
 
   # ─── Inherited ESS — [Opponent's Turn] while [Jesmon GX], all allies Reboot ──
+  # "While this Digimon is [Jesmon GX]" reads the carrier's name: its TOP
+  # card's (§4-7-7 ruling; Q3225; DCGO `TopCard.EqualsCardName("Jesmon GX")`).
+  # `source_name_contains` reads the top card's rules name; it is exact in
+  # practice ("Jesmon GX" is no other card's name or a substring of one).
+  # FIX (G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS, 2026-10-17): was
+  # `self_digivolution_contains_name`, which also matched a [Jesmon GX]
+  # digivolution card under another top card.
   - scope: inherited
     kind: aura
     active_when:
       all_of:
         - opponents_turn: true
-        - self_digivolution_contains_name: "Jesmon GX"
+        - source_name_contains: "Jesmon GX"
     target:
       owner: you
       zone: [battle_area]
@@ -211,7 +218,7 @@ effects:
     active_when:
       all_of:
         - opponents_turn: true
-        - self_digivolution_contains_name: "Jesmon GX"
+        - source_name_contains: "Jesmon GX"
     target:
       owner: you
       zone: [battle_area]
