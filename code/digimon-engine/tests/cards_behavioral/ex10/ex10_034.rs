@@ -437,10 +437,10 @@ fn ex10_034_clause_b_no_source_multi_when_zero_own_sources() {
     runner.game.drain_effect_queue();
 
     // §15-7-4: the unpayable condition can't be chosen -- no prompt.
-    assert_ne!(
-        runner.pending_kind(),
-        Some(SelectionKind::Replacement),
-        "0 sources: \"by trashing 2 digivolution cards\" can't be chosen, so it is not offered"
+    assert!(
+        runner.pending_selection().is_none(),
+        "0 sources: \"by trashing 2 digivolution cards\" can't be chosen, so nothing is offered: {:?}",
+        runner.pending_kind()
     );
     runner.auto_resolve().ok(); // drain any follow-up
 
@@ -487,10 +487,10 @@ fn ex10_034_clause_b_no_source_multi_when_only_one_source() {
     );
     runner.game.drain_effect_queue();
 
-    assert_ne!(
-        runner.pending_kind(),
-        Some(SelectionKind::Replacement),
-        "1 source: the 2-card condition can't be chosen, so it is not offered (§15-7-4)"
+    assert!(
+        runner.pending_selection().is_none(),
+        "1 source: the 2-card condition can't be chosen, so nothing is offered (§15-7-4): {:?}",
+        runner.pending_kind()
     );
     runner.auto_resolve().ok();
 

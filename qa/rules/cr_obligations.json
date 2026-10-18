@@ -4494,12 +4494,12 @@
       "blocks_training": false,
       "chapter": 15,
       "fingerprint": "6fec437e69b9e804b0e88f485422acc9a753dbef3820933d7774817b35686d30",
-      "gap_id": "G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK",
+      "gap_id": null,
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "DSL vocabulary gap (controller ruling, task 9 review): the rule's example in BT18-019's production idiom authors the compound condition as two independent picks, so with only [Kimeramon] in the trash it is returned alone and the [Millenniummon] play is still offered; the engine has no way to know the second pick belongs to the condition. BT18-019 is affected (qa/dsl-vocab-gaps.md). Control (both present) passes. Test is #[ignore]d.",
-      "status": "gap",
+      "note": "The rule's example in BT18-019's production idiom (two sequential trash picks, each returned): with only [Kimeramon] in the trash the condition can be performed only in part, so it is not offered; nothing is returned and [Millenniummon] is not played. Control (both present) passes. The engine gates the leading run of same-zone picks all-or-nothing (leading_cost_guard: one distinct card per pick). Compounds across DIFFERENT step kinds are not composed (gated on the first part only); that stays the DSL by: block, G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK (OPEN).",
+      "status": "proven",
       "tests": [
         "ch15_07_optional_conditions::partial_payment_of_compound_condition_is_impossible"
       ],
@@ -15261,9 +15261,9 @@
         "total": 10
       },
       "15": {
-        "gap": 140,
+        "gap": 139,
         "not_testable": 66,
-        "proven": 38,
+        "proven": 39,
         "total": 244
       },
       "16": {
@@ -15333,15 +15333,15 @@
         "total": 13
       }
     },
-    "gap": 623,
+    "gap": 622,
     "mechanics": {
       "gap_blocking": 20,
-      "gap_nonblocking": 322,
+      "gap_nonblocking": 321,
       "not_testable": 152,
-      "proven": 221
+      "proven": 222
     },
     "not-testable": 246,
-    "proven": 250
+    "proven": 251
   },
   "version": 1
 }

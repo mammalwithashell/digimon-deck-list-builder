@@ -264,18 +264,19 @@ fn compound_condition_board(trash: &[&str]) -> DebugRunner {
 /// [Millenniummon] is not played. Control: with both in the trash, both are
 /// returned and [Millenniummon] may be played.
 ///
-/// Red because the DSL has no construct for a compound optional processing
-/// condition: the idiom authors "1 [Kimeramon] and 1 [Machinedramon]" as two
-/// independent picks, and nothing tells the engine the second (mandatory, no
-/// candidate, so skipped) belongs to the condition
-/// (`G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK`).
+/// The DSL has no construct for a compound optional processing condition: the
+/// idiom authors "1 [Kimeramon] and 1 [Machinedramon]" as two independent
+/// picks. The engine recognises the leading run of same-zone picks as the
+/// condition and gates it all-or-nothing (one distinct trash card per pick;
+/// `leading_cost_guard`, G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED), so
+/// with only [Kimeramon] nothing is offered. Compounds across different step
+/// kinds still need the DSL `by:` block (`G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK`).
 ///
 /// DCGO (`BT18_019.cs`) activates the effect when EITHER name is in the trash
 /// (`CanActivateCondition` ORs them) but its one multi-pick can't end without
 /// both (`canEndSelectCondition`), so the player can only decline: no partial
 /// return, though a decline-only prompt is shown. The PDF governs the prompt.
 #[test]
-#[ignore = "G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK (§15-7-3)"]
 fn partial_payment_of_compound_condition_is_impossible() {
     cite!(
         "15-7-3",

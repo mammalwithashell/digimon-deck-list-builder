@@ -165,6 +165,7 @@ mod trash_link_card_of_own_digimon;
 mod trash_option_from_own_stacks;
 mod union_zone_cost;
 mod union_zone_origin_play;
+mod unpayable_optional_condition;
 mod unsuspend_phase_lock;
 mod validator;
 mod xros_reusable_primitives;

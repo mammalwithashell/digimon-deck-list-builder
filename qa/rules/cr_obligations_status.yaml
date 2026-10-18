@@ -149,11 +149,9 @@
   tests: ["ch15_07_optional_conditions::declining_condition_skips_everything_after_it"]
   note: "The rule's example (trash 2 → unsuspend; After, if [WereGarurumon] in sources, may return a [Garurumon]): declining leaves the Digimon suspended and never offers the 'After' return; control: trashing 2 unsuspends and the return is offered and performed."
 "15-7-3":
-  status: gap
-  blocks_training: false
-  gap_id: G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK
+  status: proven
   tests: ["ch15_07_optional_conditions::partial_payment_of_compound_condition_is_impossible"]
-  note: "DSL vocabulary gap (controller ruling, task 9 review): the rule's example in BT18-019's production idiom authors the compound condition as two independent picks, so with only [Kimeramon] in the trash it is returned alone and the [Millenniummon] play is still offered; the engine has no way to know the second pick belongs to the condition. BT18-019 is affected (qa/dsl-vocab-gaps.md). Control (both present) passes. Test is #[ignore]d."
+  note: "The rule's example in BT18-019's production idiom (two sequential trash picks, each returned): with only [Kimeramon] in the trash the condition can be performed only in part, so it is not offered; nothing is returned and [Millenniummon] is not played. Control (both present) passes. The engine gates the leading run of same-zone picks all-or-nothing (leading_cost_guard: one distinct card per pick). Compounds across DIFFERENT step kinds are not composed (gated on the first part only); that stays the DSL by: block, G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK (OPEN)."
 "15-7-4":
   status: proven
   tests: ["ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen"]
