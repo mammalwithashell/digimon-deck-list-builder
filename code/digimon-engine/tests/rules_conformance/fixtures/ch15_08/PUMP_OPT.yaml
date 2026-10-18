@@ -1,0 +1,19 @@
+# PUMP_OPT -- Option, red, use cost 1.
+#   [Main] 1 of your Digimon gets +3000 DP for the turn.
+card: PUMP_OPT
+name: Power Up
+kind: option
+color: [red]
+cost: 1
+effects:
+  - when: main_from_hand
+    summary: "[Main] 1 of your Digimon gets +3000 DP for the turn."
+    process:
+      - select_own_permanent:
+          bind_as: pumped
+          filter: { kind: digimon }
+          prompt: "Select 1 of your Digimon to get +3000 DP for the turn"
+      - add_dp_modifier:
+          target: pumped
+          value: 3000
+          expiry: end_of_turn
