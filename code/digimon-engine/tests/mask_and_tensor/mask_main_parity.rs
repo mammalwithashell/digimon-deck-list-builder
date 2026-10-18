@@ -217,8 +217,9 @@ fn mask_blitz_keyword_does_not_unlock_main_phase_attack_under_negative_memory() 
     );
 }
 
-/// Blitz only exempts memory<0 when the attacker digivolved *this* turn.
-/// A Blitz Digimon that wasn't freshly digivolved still can't attack.
+/// There is no Blitz exemption from the Main-phase memory gate at all
+/// (§16-16-2): a Blitz Digimon that wasn't freshly digivolved can't attack
+/// under memory<0 either.
 #[test]
 fn mask_blitz_without_digivolving_does_not_attack_under_negative_memory() {
     let mut r = DebugRunner::builder()

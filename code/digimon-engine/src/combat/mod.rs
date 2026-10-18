@@ -2677,6 +2677,12 @@ impl Game {
     ///
     /// While parked, `check_turn_end` is a no-op (a selection is pending), so
     /// the turn cannot end, and the mask exposes only this prompt's choices.
+    ///
+    /// TODO(Task 21): carry `source_kind`, `without_suspending`,
+    /// `ignore_summoning_sickness` and `cost_upgrade` in the state (hard-coded
+    /// here for <Blitz>) when this generalises to `AttackDeclarationDecision`
+    /// for Engage / Execute / Vortex / Overclock, and fold
+    /// `ResumeSelectKind::BeginAttack` into it.
     pub(crate) fn install_attack_declaration_decision(
         &mut self,
         attacker: PermanentHandle,
@@ -2733,6 +2739,10 @@ impl Game {
         action_id: u16,
         is_pass: bool,
     ) {
+        // TODO(Task 21): this decode → `AttackTarget` → `begin_attack_open` is
+        // the fifth copy (see `ResumeSelectKind::BeginAttack`, the
+        // `may_attack_now*` / redirect closures); extract one
+        // `decode_effect_attack_target` when the frames are folded.
         use crate::action::space::{decode_attack, SECURITY_TARGET};
         if is_pass || !state.valid_action_ids.contains(&action_id) {
             return;

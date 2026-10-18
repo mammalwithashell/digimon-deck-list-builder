@@ -666,6 +666,16 @@ impl<'a> EffectContext<'a> {
         if crate::cards::keyword_effects::keyword_trigger_dispatched_from_registry(keyword) {
             return;
         }
+        // `<Blitz>` granted by an effect executes now, in place
+        // (`grant_keyword` → `blitz_process`, §16-16-2); its [When
+        // Digivolving] auto-effect is the PRINTED family's trigger and must
+        // not be installed by a grant (it would fire again on a later
+        // digivolution). A card that "gains '[When Digivolving] <Blitz>'"
+        // (EX2-056, BT9-102) must be authored as a granted triggered effect,
+        // not with `grant_keyword: Blitz`.
+        if keyword == Keyword::Blitz {
+            return;
+        }
         let autos = crate::cards::keyword_effects::keyword_to_auto_effect(keyword, card);
         for effect in autos {
             // Only plain-process triggered timings route through the

@@ -692,8 +692,10 @@ pub(crate) fn keyword_trigger_dispatched_from_registry(keyword: Keyword) -> bool
     matches!(keyword, Keyword::Alliance | Keyword::Raid | Keyword::Piercing)
 }
 
-/// `<Blitz>`'s processing (§16-16), executed in place by the effect that
-/// grants it (the DSL idiom `grant_keyword: { keyword: Blitz }`, EX3-063):
+/// `<Blitz>`'s processing (§16-16), executed when the effect that contains it
+/// activates: a printed "[When Digivolving] <Blitz>" (the `Keyword::Blitz`
+/// auto-effect below) or, in place, an effect that grants it (the DSL idiom
+/// `grant_keyword: { keyword: Blitz }`, EX3-063's "Then, <Blitz>"):
 ///
 /// - §16-16-3 / §16-16-5: the processing condition is 1 or more memory on
 ///   the opponent's side, read NOW, at activation (after any effect resolved
@@ -718,6 +720,9 @@ pub(crate) fn blitz_process(
     carrier: crate::permanent::PermanentHandle,
 ) {
     let game = &*ctx.game;
+    // §11-2-4: no new attack declaration with <Blitz> during an attack. The
+    // parked-selection check is defensive: the DSL step runner parks later
+    // steps behind any pending prompt, so it should be unreachable.
     if game.pending_attack.is_some() || game.pending_selection.is_some() {
         return;
     }
@@ -2637,15 +2642,36 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
             })
             .build()],
 
-        // §16-16-2 (Ver. 4.3): "<Blitz> effects execute processing." <Blitz>
-        // is never a standalone trigger: every printing is "[When Digivolving]
-        // ... <Blitz>" / "Then, <Blitz>", processing of the effect that
-        // contains it. So nothing is installed on the permanent here (a
-        // timing-bound body would fire outside its effect, e.g. EX3-063's
-        // DNA-only clause on any digivolution). The body is
-        // [`blitz_process`], executed in place by the effect that grants
-        // <Blitz> (`EffectContext::grant_keyword`).
-        Keyword::Blitz => Vec::new(),
+        // §16-16-2 (Ver. 4.3): "<Blitz> effects execute processing"; it runs
+        // when the effect that contains it activates (§2-3-3-4 lists
+        // "[When Digivolving] <Blitz>" as one effect). Two printed families:
+        //
+        // - Bare "[When Digivolving] <Blitz>" (BT14-017, ST12-10, LM-039, ...
+        //   17 printings): `card_data::parse_printed_keywords` classifies the
+        //   token as innate (its left context ends in `]`), and this arm is
+        //   that card's own [When Digivolving] trigger, whose processing is
+        //   `blitz_process` (memory gate at activation, one resumable
+        //   decision). DCGO `CardEffectFactory.BlitzSelfEffect`.
+        // - Sequenced / conditional "Then, <Blitz>" / "If ..., <Blitz>"
+        //   (EX3-063, BT10-112, BT9-068, BT10-070 [On Play]): the parser does
+        //   NOT make these innate (left context is prose, `card_data.rs`
+        //   `parse_printed_keywords` "Innate iff the left context ..."), so
+        //   this arm never installs for them; the card's own effect runs
+        //   `blitz_process` in place through `grant_keyword: Blitz`
+        //   (`EffectContext::grant_keyword`), which in turn does NOT install
+        //   this trigger (`grant_keyword_triggered_auto_effects` skips
+        //   <Blitz>). DCGO `BlitzProcess` inline (EX3_063.cs).
+        //
+        // The trigger itself is not optional: it always activates, and its
+        // processing offers the attack or PASS (§16-16-3).
+        Keyword::Blitz => vec![Effect::when_digivolving(card)
+            .name("<Blitz>")
+            .process(|ctx| {
+                if let Some(carrier) = ctx.source_permanent {
+                    blitz_process(ctx, carrier);
+                }
+            })
+            .build()],
 
         // `<Digisorption -N>` acts from the HAND, before the digivolution
         // cost is paid (§16-10-2): the digivolve reducer chain reads the hand

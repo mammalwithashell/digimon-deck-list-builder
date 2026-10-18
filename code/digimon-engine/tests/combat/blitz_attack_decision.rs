@@ -11,7 +11,9 @@
 
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{encode_attack, encode_digivolve, PASS, SECURITY_TARGET};
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::card_data::EvoCost;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::Keyword;
 use digimon_engine::game::Game;
 use digimon_engine::resume::ResumeFrame;
 
@@ -133,4 +135,96 @@ fn blitz_decision_clones_and_resolves_on_the_clone_accept_and_decline() {
     let mut r = r;
     r.execute_action(0, PASS).unwrap();
     assert_eq!(r.game.turn_player(), 1);
+}
+
+// ─── Printed "[When Digivolving] <Blitz>" (innate keyword, no grant) ─────────
+//
+// §16-16-2 / §2-3-3-4: a bare printed "[When Digivolving] <Blitz>" (BT14-017,
+// ST12-10, LM-039, ...) is the card's own [When Digivolving] effect; its
+// processing is the same <Blitz> decision. Synthetic card: `PBLITZ` (red
+// Lv.4) with the innate `Keyword::Blitz` (what `parse_printed_keywords` gives
+// those printings) and no effect script; digivolves from a red Lv.3 for 3.
+
+/// P0 (memory `memory`, hand `[PBLITZ]`) digivolves its field `PBASE` into
+/// `PBLITZ`. Returns the runner and the attack on P1 by that Digimon.
+fn printed_blitz_digivolved(memory: i16) -> (DebugRunner, u16) {
+    let base = make_test_card("PBASE", "Printed Base");
+    let mut blitz = make_test_card("PBLITZ", "Printed Blitz");
+    blitz.level = Some(4);
+    blitz.dp = Some(5000);
+    blitz.play_cost = 5;
+    blitz.keywords = vec![Keyword::Blitz];
+    blitz.evo_costs = vec![EvoCost {
+        card_color: 0,
+        level: 3,
+        memory_cost: 3,
+    }];
+    let mut r = DebugRunner::builder()
+        .add_card(base)
+        .add_card(blitz)
+        .hand(0, &["PBLITZ"])
+        .deck(0, &["PBASE"; 6])
+        .deck(1, &["PBASE"; 6])
+        .security(0, &["PBASE"; 3])
+        .security(1, &["PBASE"; 3])
+        .memory(memory)
+        .start();
+    let base = r.place_on_field(0, "PBASE", Some(0));
+    assert_eq!(
+        build_action_mask(&r.game, 0)[encode_digivolve(0, base.index as u16) as usize],
+        1.0,
+        "witness: the digivolution is legal"
+    );
+    r.game
+        .decode_action(encode_digivolve(0, base.index as u16), 0);
+    assert_eq!(
+        r.game.players[0].battle_area[base.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "PBLITZ"
+    );
+    (r, encode_attack(base.index as u16, SECURITY_TARGET))
+}
+
+#[test]
+fn printed_when_digivolving_blitz_offers_the_attack_and_clones() {
+    let (r, attack) = printed_blitz_digivolved(2);
+    let sel = r
+        .pending_selection()
+        .expect("§16-16-1/-3: printed <Blitz> offers its attack (memory 1 on P1's side)");
+    assert_eq!(sel.selecting_player, 0);
+    assert!(sel.is_optional);
+    assert_eq!(sel.valid_action_ids, vec![attack]);
+    assert!(matches!(
+        r.game.pending_selection_resume.as_ref().map(|s| &s.frames[..]),
+        Some([ResumeFrame::BlitzAttackDecision(_)])
+    ));
+    assert_eq!(r.game.turn_player(), 0, "the turn has not ended");
+    let original = r.game.clone();
+    assert_eq!(mask_bits(&original), vec![PASS, attack]);
+
+    let mut accept = original.clone();
+    accept.resolve_selection(0, attack).unwrap();
+    assert_eq!(accept.players[1].security.len(), 2, "the <Blitz> attack");
+    assert_eq!(accept.turn_player(), 1);
+
+    let mut decline = original.clone();
+    decline.resolve_selection(0, PASS).unwrap();
+    assert_eq!(decline.players[1].security.len(), 3, "declined: no attack");
+    assert_eq!(decline.turn_player(), 1);
+
+    assert!(original.pending_selection.is_some(), "the original is untouched");
+}
+
+#[test]
+fn printed_when_digivolving_blitz_offers_nothing_with_memory_on_own_side() {
+    // §16-16-5: memory 4 - 3 = 1 on P0's own side when <Blitz> activates.
+    let (r, _) = printed_blitz_digivolved(4);
+    assert!(
+        r.pending_selection().is_none(),
+        "no <Blitz> decision: {:?}",
+        r.pending_selection().map(|s| &s.prompt)
+    );
+    assert_eq!(r.game.turn_player(), 0, "P0's turn continues (memory 1)");
+    assert_eq!(r.game.players[1].security.len(), 3, "no attack");
 }
