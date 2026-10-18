@@ -24,6 +24,13 @@ fn invisimon(tamer: bool) -> DebugRunner {
         lower.card_kind = CardKind::Tamer;
         lower.level = None;
         lower.dp = None;
+    } else {
+        // Invisimon's check trigger resolves BEFORE the Security Digimon battle
+        // (§13-1-8-2 then §13-1-8-3-1; b41f3f5f1), so the battle is fought by
+        // the Digimon now topped by LOWER. It must out-DP the 2000-DP FILL
+        // Security Digimon, or both lose and LOWER is deleted (§14-2-1-3,
+        // §14-2-2) before its [End of Attack] can trigger.
+        lower.dp = Some(3000);
     }
     let mut r = DebugRunner::builder()
         .dsl_card("BT20-055")

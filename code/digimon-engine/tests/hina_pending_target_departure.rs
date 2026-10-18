@@ -88,7 +88,14 @@ fn two_pending_hina_can_each_pay_after_evolved_target_leaves() {
         assert_eq!(p.kind, SelectionKind::TriggerOrder);
         assert_eq!(p.valid_action_ids.len(), 2);
         let first = p.valid_action_ids[0];
-        choose(&mut game, first); // Choosing a queued optional effect consents to activation.
+        // Choosing which pending effect activates (§15-4-3-5-1) is not choosing
+        // to execute its optional processing condition "by suspending this
+        // Tamer" (§15-7-1, §15-7-5): the picked Hina keeps its own accept/decline
+        // gate before anything is suspended (da93979e8, run_picked_trigger).
+        choose(&mut game, first);
+        assert_eq!(game.players[0].battle_area.iter().filter(|p| p.is_suspended).count(), 0);
+        let accept = optional_action(&game);
+        choose(&mut game, accept);
         assert_eq!(game.players[0].battle_area.iter().filter(|p| p.is_suspended).count(), 1);
         let accept = optional_action(&game);
         choose(&mut game, accept);
