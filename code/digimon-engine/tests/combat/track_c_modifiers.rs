@@ -266,8 +266,9 @@ fn cannot_switch_attack_target_suppresses_raid_retarget() {
 #[test]
 fn cannot_be_redirected_filters_raid_retarget_candidate() {
     // Two Raid candidates: one protected, one unprotected. The
-    // protected one is filtered out of `raid_retarget_candidates` so
-    // the selection only offers the unprotected one.
+    // protected one is filtered out of the `<Raid>` switch candidates
+    // (`raid_switch_candidates`) so the selection only offers the
+    // unprotected one.
     let mut r = DebugRunner::builder()
         .add_card(digimon("ATK", 5000))
         .add_card(digimon("DEF_OK", 5000))
@@ -330,9 +331,9 @@ fn cannot_be_redirected_filters_raid_retarget_candidate() {
 
 #[test]
 fn cannot_be_redirected_fizzles_raid_when_only_candidate_is_protected() {
-    // If the only legal Raid retarget candidate is protected, the
-    // candidate list comes back empty and `try_enter_raid_retarget`
-    // routes through Fizzled — the attack cleans up with no selection.
+    // If the only legal Raid switch candidate is protected, <Raid> offers
+    // nothing; the removed target stays the target and the attack fails
+    // (§11-2-6) — it cleans up with no selection.
     let mut r = DebugRunner::builder()
         .add_card(digimon("ATK", 5000))
         .add_card(digimon("DEF_LOCK", 5000))

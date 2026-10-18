@@ -1117,9 +1117,8 @@ pub enum AttackState {
     /// Phase 9 Task 4 — post-Block / pre-Battle checkpoint. The state
     /// machine lands here unconditionally once the Block window closes
     /// (whether a block was declared, declined, or no candidate existed).
-    /// The PostBlock arm tests whether `effective_target` is still valid;
-    /// if not, it considers Raid-driven retarget before either transitioning
-    /// to Battle or fizzling to Cleanup. Spec §4.2.
+    /// The PostBlock arm transitions to Battle; a removed target is not
+    /// retargeted (§11-2-6) and Battle ends the attack as not successful.
     PostBlock,
     /// No further interrupts pending. `resolve_pending_battle` will fire.
     Battle,

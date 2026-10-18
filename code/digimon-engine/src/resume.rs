@@ -708,9 +708,8 @@ pub enum ResumeFrame {
     /// rewrite the attack target when a block is declared, advance combat, then
     /// run/re-wrap any composed DSL outer tails. See [`CombatBlockState`].
     BlockSelection(CombatBlockState),
-    /// Combat Raid target-selection prompt. Covers both the optional printed
-    /// Raid switch before Alliance and the mandatory post-Block invalid-target
-    /// Raid retarget. See [`CombatRaidSelectionState`].
+    /// Combat `<Raid>` target-switch prompt: the optional body of the `<Raid>`
+    /// trigger (§16-23-2 / §16-23-3). See [`CombatRaidSelectionState`].
     RaidSelection(CombatRaidSelectionState),
     /// Combat Counter declaration prompt. Decodes the selected Counter candidate
     /// or PASS, runs the Counter effect path, advances combat, then composes any
@@ -829,8 +828,10 @@ pub struct CombatBlockState {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CombatRaidSelectionMode {
+    /// The `<Raid>` trigger body's optional switch. (The mandatory post-Block
+    /// "retarget" mode was removed: a removed attack target makes the attack
+    /// fail, §11-2-6; `<Raid>` triggers only on the attack, §16-23-2.)
     Switch,
-    Retarget,
 }
 
 #[derive(Debug, Clone)]

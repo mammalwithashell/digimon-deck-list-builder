@@ -6,7 +6,7 @@
 //! attack the otherwise-illegal target"). Pinned at every consult site
 //! that reads `CannotAttackTarget`:
 //!
-//! - `combat::raid_retarget_candidates` — unsuspended pass + fallback pass
+//! - `combat::raid_switch_candidates` (the `<Raid>` switch body)
 //! - `action::decode` attack-action validation
 //! - `action::mask` standard-attack emission
 //! - `action::mask` granted-attack emission
