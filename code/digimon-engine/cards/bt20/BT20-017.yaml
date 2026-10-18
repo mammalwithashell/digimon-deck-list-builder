@@ -27,8 +27,9 @@ effects:
     once_per_turn: true
     summary: "[Your Turn][OPT] When another own Digimon is played, delete <=8000 DP; then 1 own Digimon may attack"
     condition:
+      your_turn: true
+    trigger_if:
       all_of:
-        - your_turn: true
         - event_target_owner: you
         - any_of:
             - event_target_kind: digimon

@@ -60,10 +60,12 @@ effects:
     when: on_add_digivolution_cards
     once_per_turn: true
     active_when: { your_turn: true }
-    condition:
+    trigger_if:
       all_of:
         - event_host_permanent_is_source: true
-        - event_added_card_any: { kind: option, trait_has: Three Musketeers }
+        - event_added_card_any:
+            kind: option
+            trait_has: Three Musketeers
     summary: "[Your Turn][Once Per Turn] When effects place Option cards with the [Three Musketeers] trait in this Digimon's digivolution cards, gain 1 memory"
     process:
       - gain_memory: 1

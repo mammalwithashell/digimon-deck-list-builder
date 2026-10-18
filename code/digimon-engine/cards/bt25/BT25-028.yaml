@@ -103,9 +103,9 @@ effects:
     once_per_turn: true
     optional: true
     active_when:
-      all_of:
-        - all_turns: true
-        - event_target_kind: digimon
+      all_turns: true
+    trigger_if:
+      event_target_kind: digimon
     summary: "[All Turns][OPT] When any Digimon are played/digivolve, you may trash any 4 digivolution cards from opp Digimon; then 2 of your Digimon may DNA digivolve into [GraceNovamon] in the hand"
     process:
       - select_opponent_sources:

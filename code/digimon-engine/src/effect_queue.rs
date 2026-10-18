@@ -71,6 +71,17 @@ enum SingleTriggerOptionalPrompt {
     Outer,
 }
 
+/// Which clause-level gate of a queued entry to evaluate.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum QueuedGate {
+    /// `Effect::condition`: read when the effect activates (processing
+    /// conditions, plus the folded-in trigger qualifier, §15-4-4-5).
+    Condition,
+    /// `Effect::trigger_qualifier`: decided when the event triggers the
+    /// effect (§15-8-3-1 / §15-8-3-4).
+    TriggerQualifier,
+}
+
 /// RAII guard that installs a `TriggerContext` onto `Game.current_trigger_context`
 /// for the lifetime of the guard and restores the previous value on drop —
 /// including on panic. Used to evaluate a triggered effect's condition with the
@@ -423,8 +434,35 @@ impl Game {
     }
 
     pub fn enqueue_triggered(&mut self, timing: EffectTiming, source: TriggerSource) {
+        self.enqueue_triggered_with_context(timing, source, |_| {});
+    }
+
+    /// [`Self::enqueue_triggered`] for an event whose trigger context is
+    /// completed by its caller: `patch` runs on the trigger context of every
+    /// just-queued `timing` entry (a deletion's last-known snapshot and cause,
+    /// for example) BEFORE the trigger qualifiers are decided, so the
+    /// qualifier reads the same trigger context the entry carries to
+    /// activation (§15-8-3-1 / §15-8-3-4 / §15-8-3-8).
+    pub(crate) fn enqueue_triggered_with_context(
+        &mut self,
+        timing: EffectTiming,
+        source: TriggerSource,
+        mut patch: impl FnMut(&mut TriggerContext),
+    ) {
         self.event_snapshot_cache = None;
+        let first = self.effect_queue.len();
         self.enqueue_triggered_scan(timing, source);
+        for queued in self.effect_queue.iter_mut().skip(first) {
+            if queued.timing != timing {
+                continue;
+            }
+            if let Some(trigger) = queued.trigger_context.as_mut() {
+                patch(trigger);
+            }
+        }
+        // §15-8-3-1 / §15-8-3-4: only the effects whose trigger qualifier
+        // this event met trigger.
+        self.discard_entries_not_triggered(first);
         self.event_snapshot_cache = None;
     }
 
@@ -3714,10 +3752,32 @@ impl Game {
     /// out of the queue: a simultaneous-play group passes when any member's
     /// context does.
     fn queued_entry_condition_passes(&mut self, qe: &QueuedEffect) -> bool {
-        if qe.trigger_context.as_ref().is_some_and(|c| !c.simultaneous_play_members.is_empty()) {
-            return !self.matching_simultaneous_play_contexts(qe).is_empty();
+        self.queued_entry_gate_passes(qe, QueuedGate::Condition)
+    }
+
+    /// Evaluate one clause-level gate of an entry (see [`QueuedGate`]) with
+    /// the entry's trigger context: a simultaneous-play group passes when any
+    /// member's context does.
+    fn queued_entry_gate_passes(&mut self, qe: &QueuedEffect, gate: QueuedGate) -> bool {
+        if let Some(group) = qe
+            .trigger_context
+            .as_ref()
+            .filter(|c| !c.simultaneous_play_members.is_empty())
+        {
+            if gate == QueuedGate::Condition {
+                return !self.matching_simultaneous_play_contexts(qe).is_empty();
+            }
+            // Defensive: simultaneous-play groups are formed after the
+            // enqueue-time qualifier check (`collapse_event_batch`), so this
+            // arm is not reached by `discard_entries_not_triggered` today.
+            let members = group.simultaneous_play_members.clone();
+            return members.into_iter().any(|member| {
+                let mut probe = qe.clone();
+                probe.trigger_context = Some(member);
+                self.queued_single_effect_gate_passes(&probe, gate)
+            });
         }
-        self.queued_single_effect_condition_passes(qe)
+        self.queued_single_effect_gate_passes(qe, gate)
     }
 
     fn matching_simultaneous_play_contexts(&mut self, qe: &QueuedEffect) -> Vec<TriggerContext> {
@@ -3730,6 +3790,10 @@ impl Game {
     }
 
     fn queued_single_effect_condition_passes(&mut self, qe: &QueuedEffect) -> bool {
+        self.queued_single_effect_gate_passes(qe, QueuedGate::Condition)
+    }
+
+    fn queued_single_effect_gate_passes(&mut self, qe: &QueuedEffect, gate: QueuedGate) -> bool {
         // A provenance deletion whose played Digimon already left the battle
         // area has nothing to delete: DCGO attaches it to that permanent
         // (`EX11_022.cs`), so it vanishes with it. Not an orderable branch.
@@ -3788,7 +3852,11 @@ impl Game {
         };
         let condition_passes = if let Some(effects) = looked_up {
             if let Some(eff) = effects.get(effect_slot) {
-                if let Some(cond) = &eff.condition {
+                let gate_fn = match gate {
+                    QueuedGate::Condition => eff.condition.as_ref(),
+                    QueuedGate::TriggerQualifier => eff.trigger_qualifier.as_ref(),
+                };
+                if let Some(cond) = gate_fn {
                     let gate = trigger_context
                         .as_ref()
                         .and_then(|context| self.gate_trigger_context(context));
@@ -4026,52 +4094,40 @@ impl Game {
         }
     }
 
-    /// Drop the entries at `first_index..` whose trigger condition is not met
+    /// Drop the entries at `first_index..` whose trigger qualifier is not met
     /// when the event triggers them. A trigger-type effect triggers as soon as
     /// its trigger conditions are met and won't trigger when they aren't
-    /// (§15-8-3-1, §15-8-3-4), and what its condition names is read in the
-    /// state where the event triggered it (§15-8-3-8). The drainer's
+    /// (§15-8-3-1, §15-8-3-4), and what its trigger condition names is read in
+    /// the state where the event triggered it (§15-8-3-8). The drainer's
     /// per-iteration non-firing filter (`non_firing_queued_effect_indices_for`)
-    /// only HIDES such an entry, so without this it activates once a sibling
-    /// effect in the same pool makes its condition true. The activation-time
-    /// re-check is unchanged (§15-4-4-5). DCGO evaluates `CanUseCondition`
-    /// when the event stacks the effect (`AutoProcessing.StackSkillInfos`;
-    /// `CanTriggerWhenWinBattle`).
+    /// only HIDES an entry whose gate fails now, so without this an entry
+    /// whose qualifier was false at the event activates once a sibling effect
+    /// in the same pool makes it true. DCGO evaluates `CanUseCondition` (the
+    /// trigger qualifier) when the event stacks the effect
+    /// (`AutoProcessing.StackSkillInfos`; `CanTriggerWhenWinBattle`).
     ///
-    /// Each entry is evaluated through `queued_effect_condition_passes`, with
-    /// the trigger context attached to it: live while the event referent is
-    /// on the field, its last-known snapshot once it has left
-    /// (`Game::gate_trigger_context`).
-    ///
-    /// Only for a timing whose clause-level condition IS its trigger
-    /// condition (the battle result: "when ... wins a battle" / "deletes ...
-    /// in battle", §14-2-4). The DSL does not separate a clause's trigger
-    /// condition from a processing condition authored in the same
-    /// `condition` / `active_when` (§15-8-3-9-1: "if that Digimon is level 4
-    /// or higher" must still be read at activation), so other observer
-    /// timings keep the activation-time reading alone
-    /// (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER). Kept
-    /// as is: keyword bodies (`<Piercing>`'s gate mixes its trigger condition
-    /// with activation conditions -- DCGO `CanActivatePierce`: still the
-    /// attacking Digimon, the opponent has security), granted bodies and
-    /// pending processing (no clause condition).
-    /// G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER.
+    /// Called by [`Self::enqueue_triggered`] on the entries every observer
+    /// scan just queued. Evaluates `Effect::trigger_qualifier` (DSL
+    /// `trigger_if:`) with the trigger context attached to the entry: live
+    /// while the event referent is on the field, its last-known snapshot once
+    /// it has left (`Game::gate_trigger_context`). An effect's `condition`
+    /// is NOT read here: it holds processing conditions, read at activation
+    /// (§15-8-3-9-1 / §15-8-3-9-3), and the qualifier is folded into it for
+    /// the activation-time re-check (§15-4-4-5; `EffectBuilder::build`).
+    /// Kept as is: keyword bodies (`<Piercing>`'s gate mixes its trigger
+    /// condition with activation conditions -- DCGO `CanActivatePierce`),
+    /// granted bodies and pending processing (none carries a qualifier).
+    /// Entries pushed directly onto `effect_queue` (not through
+    /// `enqueue_triggered*`: `enqueue_self_trashed_from_hand`, the arts-card
+    /// [When Digivolving] and Option [Main] paths, pending processing, the
+    /// delayed Option) bypass this check; no clause on those paths carries a
+    /// qualifier today -- route the helper through here before adding one.
+    /// G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER.
     pub(crate) fn discard_entries_not_triggered(&mut self, first_index: usize) {
-        // Scope guard until the general fix gives the DSL a trigger-condition
-        // field: only the battle result's clause condition is known to be its
-        // trigger condition.
-        debug_assert!(
-            self.effect_queue
-                .iter()
-                .skip(first_index)
-                .all(|qe| qe.timing == EffectTiming::BattleResult),
-            "discard_entries_not_triggered is BattleResult-only \
-             (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER)"
-        );
         let mut i = first_index;
         while i < self.effect_queue.len() {
-            if self.queued_entry_has_clause_trigger_condition(i)
-                && !self.queued_effect_condition_passes(i)
+            if self.queued_entry_has_trigger_qualifier(i)
+                && !self.queued_effect_trigger_qualifier_passes(i)
             {
                 self.effect_queue.remove(i);
             } else {
@@ -4081,9 +4137,9 @@ impl Game {
     }
 
     /// True when `effect_queue[i]` is a card's own clause (not a keyword
-    /// body, granted body or pending processing) with a clause-level
-    /// condition. See [`Self::discard_entries_not_triggered`].
-    fn queued_entry_has_clause_trigger_condition(&self, i: usize) -> bool {
+    /// body, granted body or pending processing) with a trigger qualifier.
+    /// See [`Self::discard_entries_not_triggered`].
+    fn queued_entry_has_trigger_qualifier(&self, i: usize) -> bool {
         let Some(qe) = self.effect_queue.get(i) else {
             return false;
         };
@@ -4095,9 +4151,18 @@ impl Game {
         }
         self.effects_for_queued(qe).is_some_and(|effects| {
             effects.get(qe.effect_slot as usize).is_some_and(|effect| {
-                effect.keyword_source.is_none() && effect.condition.is_some()
+                effect.keyword_source.is_none() && effect.trigger_qualifier.is_some()
             })
         })
+    }
+
+    /// Evaluate `effect_queue[i]`'s trigger qualifier with its trigger
+    /// context. See [`Self::discard_entries_not_triggered`].
+    fn queued_effect_trigger_qualifier_passes(&mut self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i).cloned() else {
+            return false;
+        };
+        self.queued_entry_gate_passes(&qe, QueuedGate::TriggerQualifier)
     }
 
     fn queued_effect_activation_kind(&self, qe: &QueuedEffect) -> EffectSourceKind {

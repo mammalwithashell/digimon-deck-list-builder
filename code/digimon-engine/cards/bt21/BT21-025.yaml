@@ -26,7 +26,7 @@ effects:
   - when: on_attack_target_change
     active_when: { your_turn: true }
     once_per_turn: true
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - any_of:

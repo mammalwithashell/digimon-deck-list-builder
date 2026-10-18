@@ -127,7 +127,7 @@ fn ex13_001_has_one_inherited_your_turn_opt_clause() {
     let t = triggered[0];
     assert_eq!(t.scope, CompiledScope::Inherited);
     assert!(t.once_per_turn, "[Once Per Turn]");
-    assert!(t.condition.is_some(), "gated on a red Tamer of yours being played");
+    assert!(t.trigger_if.is_some(), "gated on a red Tamer of yours being played");
 }
 
 // ─── Section 2/3 — trigger + behavior ────────────────────────────────────────

@@ -38,6 +38,7 @@ effects:
     when: on_option_placed
     active_when: { in_breeding: true }
     once_per_turn: true
-    condition: { event_card_trait_has: "Royal Knight" }
+    trigger_if:
+      event_card_trait_has: Royal Knight
     process:
       - gain_memory: 1

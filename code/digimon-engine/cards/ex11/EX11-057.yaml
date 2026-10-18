@@ -185,7 +185,7 @@ effects:
   - when: on_digivolution_card_trashed
     optional: true
     summary: "[All Turns] When effects trash digivolution cards from your opponent's Digimon, by suspending this Tamer, gain 1 memory"
-    condition:
+    trigger_if:
       all_of:
         # "from your opponent's Digimon" — the trashed-from host belongs to
         # the opponent (DCGO PermanentCondition).
@@ -198,6 +198,8 @@ effects:
             - event_cause: own_effect
             - event_cause: opponent_effect
             - event_cause: cost
+    condition:
+      all_of:
         # Suspend-cost payability gate (DCGO CanActivateSuspendCostEffect).
         - source_is_unsuspended: true
     process:

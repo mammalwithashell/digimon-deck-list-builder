@@ -64,10 +64,12 @@ effects:
   - scope: inherited
     when: on_ally_won_battle
     once_per_turn: true
-    condition:
+    trigger_if:
       all_of:
         - event_winner_is_source: true
-        - event_battle_deleter: { owner: you, kind: digimon }
+        - event_battle_deleter:
+            owner: you
+            kind: digimon
     summary: "Inherited [All Turns][Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, trash their top security card"
     process:
       - trash_top_security: { of: opponent }

@@ -369,7 +369,7 @@ fn ad1_018_dedigivolve_observer_keys_on_played_card_text() {
         .expect("AD1-018 must carry an OnAnyDigimonPlayed De-Digivolve observer");
 
     let cond = clause
-        .condition
+        .trigger_if
         .as_ref()
         .expect("observer must be gated on the played card's text");
     assert!(

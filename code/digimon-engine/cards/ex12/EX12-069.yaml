@@ -22,8 +22,9 @@ effects:
     when: on_ally_attack
     optional: true
     active_when:
+      your_turn: true
+    trigger_if:
       all_of:
-        - your_turn: true
         - event_target_owner: you
         - event_target_level_gte: 4
         - event_target_trait_has: VB

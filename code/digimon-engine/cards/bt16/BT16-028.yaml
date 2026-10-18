@@ -187,14 +187,15 @@ effects:
     active_when: { all_turns: true }
     summary: "[All Turns] When effect plays/digivolves opp Digimon + own Tamer, may free-digivolve self into Fighter Mode"
     condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+    trigger_if:
       all_of:
         - event_target_owner: opponent
         - event_target_kind: digimon
         - event_is_effect_initiated: true
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            kind: tamer
     process:
       - select_hand:
           of: you

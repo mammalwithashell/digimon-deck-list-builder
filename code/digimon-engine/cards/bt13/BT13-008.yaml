@@ -158,7 +158,7 @@ effects:
     optional: true
     once_per_turn: true
     active_when: { your_turn: true }
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: tamer

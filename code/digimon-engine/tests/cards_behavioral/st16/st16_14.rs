@@ -213,9 +213,9 @@ fn st16_14_discard_hand_clause_gates_own_hand_and_own_effect() {
     }
 
     let aw = clause
-        .active_when
+        .trigger_if
         .as_ref()
-        .expect("active_when must gate this ability");
+        .expect("the trigger qualifier (trigger_if) must gate this ability");
     assert!(has_discard_player_you(aw), "must gate on your own hand");
     assert!(has_own_effect_true(aw), "must gate on your own effect");
 }

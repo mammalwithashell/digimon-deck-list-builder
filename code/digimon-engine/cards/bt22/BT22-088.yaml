@@ -66,7 +66,7 @@ effects:
   - when: on_any_digimon_played
     active_when: { all_turns: true }
     summary: "[All Turns] When your Token/Puppet is played, suspend this Tamer to Draw 1"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - any_of:

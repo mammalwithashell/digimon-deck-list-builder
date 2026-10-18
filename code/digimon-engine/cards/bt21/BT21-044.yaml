@@ -158,7 +158,7 @@ effects:
     once_per_turn: true
     optional: true
     summary: "[All Turns][OPT] When your yellow/red Tamer is deleted, may place a Marcus Damon from trash as top security"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: tamer
@@ -189,7 +189,7 @@ effects:
     once_per_turn: true
     optional: true
     summary: "[Inherited][All Turns][OPT] When your yellow/red Tamer is deleted, may place a Marcus Damon from trash as top security"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: tamer

@@ -9,14 +9,15 @@ effects:
     optional: true
     active_when: { your_turn: true }
     condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: ST6-14
+        is_unsuspended: true
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            card_number_is: "ST6-14"
-            is_unsuspended: true
     summary: "[Your Turn] When one of your Digimon is deleted, suspend this Tamer to gain 1 memory"
     process:
       - activation_cost: { suspend_self: true }

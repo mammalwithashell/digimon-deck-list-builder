@@ -58,8 +58,9 @@ effects:
   - when: on_add_to_hand
     optional: true
     active_when:
+      all_turns: true
+    trigger_if:
       all_of:
-        - all_turns: true
         - event_add_to_hand_player: opponent
         - event_is_effect_initiated: true
     summary: "[All Turns] When effects add cards to your opponent's hand, by suspending this Tamer you may place the top 2 deck cards face down under this Tamer"

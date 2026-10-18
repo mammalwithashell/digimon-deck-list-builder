@@ -2,7 +2,7 @@
 #   [All Turns] When any of your [TS] trait Digimon win a battle, gain 1
 #   memory.
 # "any of your [TS] trait Digimon win a battle" is the trigger condition (the
-# `active_when` qualifier), read in the state where the effect triggered
+# `trigger_if:` qualifier), read in the state where the effect triggered
 # (§15-8-3-8): a winner that has left the field keeps its last-known
 # information. The BT25-020 Marsmon shape.
 card: OBS_WIN_TS
@@ -12,7 +12,7 @@ color: [red]
 cost: 3
 effects:
   - when: on_ally_won_battle
-    active_when:
+    trigger_if:
       all_of:
         - event_winner_owner: you
         - event_winner_trait_has: TS

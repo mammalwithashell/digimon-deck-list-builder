@@ -66,12 +66,13 @@ effects:
     optional: true
     summary: "[Your Turn] When your Digimon digivolves into a same-level [X Antibody] Digimon, by suspending this Tamer gain 1 memory and draw 1"
     condition:
+      source_is_unsuspended: true
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
-        - event_target_trait_has: "X Antibody"
+        - event_target_trait_has: X Antibody
         - event_target_same_level_as_previous: true
-        - source_is_unsuspended: true
     process:
       - activation_cost: { suspend_self: true }
       - gain_memory: 1

@@ -1,0 +1,22 @@
+# OBS_OPP_PLAY_IF_LE4K -- Tamer, red, play cost 3.
+#   [All Turns] When your opponent plays a Digimon, if that Digimon has 4000
+#   DP or less, gain 1 memory.
+# The processing-condition twin of `OBS_OPP_PLAY_LE4K`: "your opponent plays
+# a Digimon" is the trigger condition (`trigger_if:`); "if that Digimon has
+# 4000 DP or less" is a processing condition (§15-6-1, `condition:`), read
+# when the effect activates (§15-8-3-9-3).
+card: OBS_OPP_PLAY_IF_LE4K
+name: Assessor Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_any_digimon_played
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    condition: { event_target_dp_lte: 4000 }
+    summary: "[All Turns] When your opponent plays a Digimon, if that Digimon has 4000 DP or less, gain 1 memory."
+    process:
+      - gain_memory: 1

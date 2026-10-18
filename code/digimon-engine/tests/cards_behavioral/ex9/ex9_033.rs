@@ -155,7 +155,7 @@ fn ex9_033_deletion_observer_is_opt_and_excludes_deleted_source() {
         "printed delete effect is mandatory when a legal target exists"
     );
     let condition = deletion_observer
-        .condition
+        .trigger_if
         .as_ref()
         .expect("observer must gate on deleted-object event context");
     assert!(

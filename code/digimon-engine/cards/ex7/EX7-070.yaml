@@ -126,12 +126,13 @@ effects:
     when: on_digivolution_card_trashed
     condition:
       all_of:
-        - event_target_owner: you
         - trashed_source_card_id_is: EX7-070
         - any_permanent:
             of: opponent
             zone: [battle_area]
             kind: digimon
+    trigger_if:
+      event_target_owner: you
     summary: "[Inherited] When effects trash this card from digivolution cards, De-Digivolve 1 opponent Digimon"
     process:
       - select_opponent_permanent:

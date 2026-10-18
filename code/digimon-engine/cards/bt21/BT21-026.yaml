@@ -77,7 +77,7 @@ effects:
     once_per_turn: true
     optional: true
     summary: "[All Turns][OPT] When any opp Digimon is deleted, may unsuspend self"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: opponent
         - event_target_kind: digimon

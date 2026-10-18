@@ -22,7 +22,7 @@ cost: 4
 dp: 1000
 effects:
   - when: on_ally_won_battle
-    condition:
+    trigger_if:
       event_battle_deleter:
         owner: you
         kind: digimon

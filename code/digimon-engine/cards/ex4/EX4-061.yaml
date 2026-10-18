@@ -175,13 +175,13 @@ effects:
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] On own Gabumon/Agumon play, may suspend self to gain 1 memory"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
         - any_of:
-            - event_card_name_contains: "Gabumon"
-            - event_card_name_contains: "Agumon"
+            - event_card_name_contains: Gabumon
+            - event_card_name_contains: Agumon
     process:
       # Cost: suspend this Tamer ("by suspending this Tamer"). `source`
       # resolves to CompiledBindingRef::Source → ctx.source_permanent.

@@ -142,12 +142,13 @@ effects:
 
   # ─── [All Turns] your hand is trashed from -> delete 1 opp lowest DP ───────
   - when: on_discard_hand
-    active_when: { event_discard_player: you }
     condition:
       any_permanent:
         of: opponent
         zone: [battle_area]
         kind: digimon
+    trigger_if:
+      event_discard_player: you
     summary: "[All Turns] When your hand is trashed from, delete 1 of your opponent's lowest DP Digimon"
     process:
       - select_opponent_permanent:

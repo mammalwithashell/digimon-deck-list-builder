@@ -38,9 +38,7 @@ effects:
     once_per_turn: true
     optional: true
     active_when:
-      all_of:
-        - your_turn: true
-        - event_caused_by_own_effect: true
+      your_turn: true
     condition:
       count_gte:
         filter:
@@ -50,6 +48,8 @@ effects:
           in_text_contains: "Chronomon"
           can_digivolve_from_source: true
         n: 1
+    trigger_if:
+      event_caused_by_own_effect: true
     summary: "Inherited [Your Turn][OPT] When your effects add to decks, this Digimon may digivolve into a [Chronomon]-text Digimon card in the hand with the cost reduced by 1"
     process:
       - select_hand:

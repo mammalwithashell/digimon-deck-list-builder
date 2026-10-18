@@ -61,9 +61,9 @@ effects:
   - when: on_suspend
     optional: true
     active_when:
-      all_of:
-        - all_turns: true
-        - event_target_kind: digimon
+      all_turns: true
+    trigger_if:
+      event_target_kind: digimon
     summary: "[All Turns] When any Digimon suspend, by suspending this Tamer you may place the top 2 deck cards face down under this Tamer"
     process:
       - activation_cost: { suspend_self: true }

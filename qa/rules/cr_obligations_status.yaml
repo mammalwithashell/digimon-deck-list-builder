@@ -80,18 +80,16 @@
 # ── ch15-08 Effect Categories (§15-8) — tests/rules_conformance/ch15_08_effect_categories.rs ──
 "15-8-3-1":
   status: proven
-  tests: ["ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves", "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"]
-  note: "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not (G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX). Converse: with a winner without [TS] the effect never triggers, even when a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER)."
+  tests: ["ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves", "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates", "ch15_08_effect_categories::observer_whose_qualifier_was_false_at_the_trigger_never_activates"]
+  note: "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not (G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX). Converse: with a winner without [TS] the effect never triggers, even when a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER). Every observer timing: 'When your opponent plays a Digimon with 4000 DP or less' (trigger_if:) never triggers on a 6000 DP play, though the played Digimon's own [On Play] lowers it to 4000 DP before the observer would activate; control with a 1000 DP play activates (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER)."
 "15-8-3-2":
   status: proven
   tests: ["ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish"]
   note: "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: the observer waits for the trashing effect's 'Then, gain 1 memory' whether the cause is an Option [Main] or an [On Play] trigger. fire_digivolution_card_trashed no longer drains inline; source-trash observers are enqueued inside a deferred-drain event scope (G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS resolved)."
 "15-8-3-4":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER
-  tests: ["ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"]
-  note: "Battle half proven: 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers, though a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (the battle result decides its trigger condition at the battle, Game::discard_entries_not_triggered). Every other observer timing still enqueues without deciding its trigger condition, and the DSL can't tell a trigger qualifier from a processing condition in condition / active_when (OBS_PLAY_LE4K vs OBS_OPP_PLAY_GE4), so a qualifier false at the event activates once a pooled sibling makes it true."
+  status: proven
+  tests: ["ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates", "ch15_08_effect_categories::observer_whose_qualifier_was_false_at_the_trigger_never_activates"]
+  note: "A trigger qualifier (DSL trigger_if:) is decided when the event triggers the effect, at every observer timing (Game::enqueue_triggered -> discard_entries_not_triggered): 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers though a pooled sibling digivolves the winner into a [TS] Digimon first; 'When your opponent plays a Digimon with 4000 DP or less' never triggers on a 6000 DP play though its own [On Play] lowers it to 4000 DP first. Processing conditions (condition / active_when) are still read at activation (15-8-3-9-3)."
 "15-8-3-5":
   status: proven
   tests: ["ch15_08_effect_categories::inherited_on_deletion_is_pending_on_the_former_top_card"]
@@ -117,8 +115,8 @@
   note: "Two witnesses. The 15-8-3-9-3 example (two branches). Single-branch OBS_OPP_PLAY_GE4 ('if that Digimon is level 4 or higher, gain 1 memory', mandatory): the level 3 play triggers it with the processing condition unmet; digivolved to 4 before activation it activates, otherwise it can't (15-6-3). 'Triggered' is shown through the later activation, not a pending-list entry."
 "15-8-3-9-3":
   status: proven
-  tests: ["ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger", "ch15_08_effect_categories::trigger_processing_condition_read_at_processing_after_attacker_leaves", "ch15_08_effect_categories::processing_condition_in_active_when_read_at_processing"]
-  note: "The rule's example text; control (no digivolve) takes the level 3 <Draw 1> branch."
+  tests: ["ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger", "ch15_08_effect_categories::trigger_processing_condition_read_at_processing_after_attacker_leaves", "ch15_08_effect_categories::processing_condition_in_active_when_read_at_processing", "ch15_08_effect_categories::processing_condition_is_still_read_at_activation"]
+  note: "The rule's example text; control (no digivolve) takes the level 3 <Draw 1> branch. 'When your opponent plays a Digimon, if that Digimon has 4000 DP or less' (condition:) triggers on a 6000 DP play and activates once its own [On Play] has lowered it to 4000 DP: the same board the trigger_if: qualifier decides the other way."
 "15-8-3-9-4":
   status: proven
   tests: ["ch15_08_effect_categories::removal_trigger_processing_condition_uses_trigger_state"]

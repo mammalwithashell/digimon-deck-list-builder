@@ -25,7 +25,8 @@ effects:
   # [All Turns] When this Digimon suspends, <Draw 1>.
   - when: on_suspend
     active_when: { all_turns: true }
-    condition: { event_permanent_is_source: true }
+    trigger_if:
+      event_permanent_is_source: true
     summary: "[All Turns] When this Digimon suspends, Draw 1"
     process:
       - draw: { of: you, count: 1 }

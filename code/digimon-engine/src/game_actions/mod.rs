@@ -2267,8 +2267,7 @@ impl Game {
         snapshot: crate::trigger_context::DeletedObjectSnapshot,
     ) {
         let card = snapshot.top_card;
-        let queue_start = self.effect_queue.len();
-        self.enqueue_triggered(
+        self.enqueue_triggered_with_context(
             crate::enums::EffectTiming::OnLeaveField,
             crate::selection::TriggerSource::EventObserved {
                 player: handle.player,
@@ -2278,18 +2277,13 @@ impl Game {
                 // (`trigger.cause`), not this bit.
                 effect_initiated: false,
             },
-        );
-        for queued in self.effect_queue.iter_mut().skip(queue_start) {
-            if queued.timing != crate::enums::EffectTiming::OnLeaveField {
-                continue;
-            }
-            if let Some(trigger) = queued.trigger_context.as_mut() {
+            |trigger| {
                 trigger.deleted_object = Some(snapshot.clone());
                 trigger.cause = Some(snapshot.cause);
                 trigger.affected_player = Some(snapshot.former_controller);
                 trigger.subject = Some(crate::trigger_context::EventSubject::Permanent(handle));
-            }
-        }
+            },
+        );
         // G-DSL-OUTER-TAIL-NESTED-PARK: maybe_drain defers when inside
         // a select-callback / outer-tail scope.
         self.maybe_drain_effect_queue();

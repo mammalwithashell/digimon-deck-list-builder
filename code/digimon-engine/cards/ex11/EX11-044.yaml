@@ -84,7 +84,7 @@ effects:
     once_per_turn: true
     optional: true
     summary: "[All Turns][OPT] When effects trash this Digimon's source, place 3 Mineral/Rock from trash as bottom sources"
-    condition:
+    trigger_if:
       event_host_permanent_is_source: true
     process:
       - select_trash:

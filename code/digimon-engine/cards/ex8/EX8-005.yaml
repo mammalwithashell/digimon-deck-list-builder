@@ -9,9 +9,10 @@ effects:
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:
+      trashed_source_card_id_is: EX8-005
+    trigger_if:
       all_of:
         - event_target_owner: you
-        - trashed_source_card_id_is: EX8-005
         - any_of:
             - host_permanent_trait_has: Mineral
             - host_permanent_trait_has: Rock

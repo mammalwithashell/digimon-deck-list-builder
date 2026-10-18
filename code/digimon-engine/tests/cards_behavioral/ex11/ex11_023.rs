@@ -177,7 +177,7 @@ fn ex11_023_has_optional_opt_on_any_deletion_observer_with_self_exclusion() {
         "printed observer is [Once Per Turn]"
     );
     let condition = observer
-        .condition
+        .trigger_if
         .as_ref()
         .expect("observer must inspect the deleted-object event context");
     assert!(

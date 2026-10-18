@@ -3457,7 +3457,9 @@ impl Game {
                         // same winner referent.
                         self.security_battle_end_referent =
                             Some((winner_identity, winner_snapshot.clone()));
-                        let first = self.effect_queue.len();
+                        // §15-8-3-1 / §15-8-3-4: only the effects whose trigger
+                        // qualifier this battle met trigger
+                        // (`enqueue_triggered` -> `discard_entries_not_triggered`).
                         self.enqueue_triggered(
                             EffectTiming::BattleResult,
                             TriggerSource::BattleResolved {
@@ -3469,9 +3471,6 @@ impl Game {
                                 winner_snapshot,
                             },
                         );
-                        // §15-8-3-1 / §15-8-3-4: only the effects whose trigger
-                        // condition this battle met trigger.
-                        self.discard_entries_not_triggered(first);
                     }
                     self.drain_effect_queue();
                     if self.pending_selection.is_some() {
@@ -4780,12 +4779,12 @@ impl Game {
         state.result_enqueued = true;
         let state = state.clone();
         let source = self.battle_resolved_source(&state);
+        // §15-8-3-1 / §15-8-3-4: an effect whose trigger qualifier is not met
+        // by this battle never triggers, even if a sibling in the pool (the
+        // loser's [On Deletion]) makes it true before it would activate
+        // (`enqueue_triggered` -> `discard_entries_not_triggered`).
         let first = self.effect_queue.len();
         self.enqueue_triggered(EffectTiming::BattleResult, source);
-        // §15-8-3-1 / §15-8-3-4: an effect whose trigger condition is not met
-        // by this battle never triggers, even if a sibling in the pool (the
-        // loser's [On Deletion]) makes it true before it would activate.
-        self.discard_entries_not_triggered(first);
         // §16-7-5: one <Piercing> check per attack however many instances the
         // attacker has; DCGO stacks exactly one (`CardController.cs`
         // `PutStackedSkill(skillInfos_Pierce[0])`). Keep one <Piercing> entry

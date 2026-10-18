@@ -12,7 +12,7 @@ color: [red]
 cost: 3
 effects:
   - when: on_ally_won_battle
-    active_when:
+    trigger_if:
       all_of:
         - event_winner_owner: you
     summary: "[All Turns] When any of your Digimon win a battle, 1 of your [TS] trait Digimon and 1 of your level 3 Digimon DNA digivolve into a level 6 Digimon card in your hand without paying the cost, ignoring DNA digivolution requirements."

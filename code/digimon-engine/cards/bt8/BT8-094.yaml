@@ -28,11 +28,12 @@ effects:
     optional: true
     summary: "[All Turns] When opponent's Lv.5 or lower Digimon is deleted, may suspend self to Draw 1"
     condition:
+      source_is_unsuspended: true
+    trigger_if:
       all_of:
         - event_target_owner: opponent
         - event_target_kind: digimon
         - event_target_level_lte: 5
-        - source_is_unsuspended: true
     process:
       - activation_cost: { suspend_self: true }
       - draw: { of: you, count: 1 }
@@ -40,7 +41,7 @@ effects:
   - when: on_move
     active_when: { opponents_turn: true }
     summary: "[Opponent's Turn] When opponent's Lv.3 Digimon moves from breeding, gain 2 memory"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: opponent
         - event_target_kind: digimon

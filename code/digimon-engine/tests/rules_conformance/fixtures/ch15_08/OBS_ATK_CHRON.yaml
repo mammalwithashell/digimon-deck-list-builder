@@ -2,7 +2,7 @@
 #   [Your Turn] When one of your [Chronicle] trait Digimon attacks, gain 1
 #   memory.
 # "one of your [Chronicle] trait Digimon attacks" is the trigger condition
-# (the `active_when` qualifier), read in the state where the effect
+# (the `trigger_if:` qualifier), read in the state where the effect
 # triggered (§15-8-3-8); there is no processing condition.
 card: OBS_ATK_CHRON
 name: Chronicler
@@ -11,9 +11,9 @@ color: [red]
 cost: 3
 effects:
   - when: on_ally_attack
-    active_when:
+    active_when: { your_turn: true }
+    trigger_if:
       all_of:
-        - your_turn: true
         - event_target_owner: you
         - event_target_trait_has: Chronicle
     summary: "[Your Turn] When one of your [Chronicle] trait Digimon attacks, gain 1 memory."

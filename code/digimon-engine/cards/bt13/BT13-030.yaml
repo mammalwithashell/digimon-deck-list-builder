@@ -80,13 +80,13 @@ effects:
     once_per_turn: true
     active_when: { your_turn: true }
     summary: "[Your Turn][OPT] On own [Royal Knight]/blue-Tamer play, return 1 opp Digimon with no sources to hand"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - any_of:
             - all_of:
                 - event_target_kind: digimon
-                - event_target_trait_has: "Royal Knight"
+                - event_target_trait_has: Royal Knight
             - all_of:
                 - event_target_kind: tamer
                 - event_target_color_any_of: [blue]

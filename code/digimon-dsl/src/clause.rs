@@ -56,6 +56,29 @@ pub struct TriggeredClause {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub condition: Option<PredicateSpec>,
 
+    /// The clause's TRIGGER QUALIFIER: the part of a trigger-type effect's
+    /// trigger condition that qualifies the event -- "When one of your
+    /// Digimon **with 4000 DP or less** is played", "When any of your **[TS]
+    /// trait** Digimon win a battle", "When **this Digimon** deletes your
+    /// opponent's Digimon in battle". Decided when the event triggers the
+    /// effect: an effect whose `trigger_if` is false then never triggers,
+    /// even if a sibling effect in the same pool makes it true before it
+    /// would activate (§15-8-3-1, §15-8-3-4); what it names is read in the
+    /// triggered state (live while the event's referent is on the field, its
+    /// last-known information once it has left, §15-8-3-8). Re-checked at
+    /// activation only as "no longer met" (§15-4-4-5).
+    ///
+    /// `condition` / `active_when` stay PROCESSING conditions ("..., if that
+    /// Digimon is level 4 or higher, ..."): an effect triggers regardless of
+    /// them and they are read when it activates (§15-8-3-9-1, §15-8-3-9-3).
+    /// Rule of thumb from the printed text: "When [a Digimon that is Y] does
+    /// X" puts Y here; "When X happens, if Y, do Z" puts Y in `condition`.
+    /// The turn scope (`your_turn` / `all_turns`) and the source's own state
+    /// stay in `active_when`. Lowers to `Effect::trigger_qualifier`.
+    /// G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_if: Option<PredicateSpec>,
+
     /// Per-timing condition overrides (G-SHARED-OPT-HETEROGENEOUS-TIMING). For a
     /// clause whose `when:` lists MULTIPLE heterogeneous timings sharing ONE
     /// once-per-turn counter but each gated by a *different* condition, list one
@@ -136,18 +159,16 @@ pub enum Timing {
     /// one pool, turn player first (§15-4-3-5-1). NO
     /// forced self-filter (unlike the carrier-scoped
     /// `source_deleted_battle_opponent` idiom on `on_any_deletion`). Gate scope
-    /// via `active_when:` — `event_winner_owner: you` (the winner's controller)
+    /// via `trigger_if:` — `event_winner_owner: you` (the winner's controller)
     /// and `event_winner_trait_has: <trait>` (the winner's trait). Never fires
     /// on a tie (mutual destruction — no winner) or a direct player attack.
-    /// The clause's `condition` / `active_when` is its TRIGGER condition: it
-    /// is decided when the battle triggers the effect, and an effect whose
-    /// condition fails then never triggers (§15-8-3-1, §15-8-3-4); it is
-    /// re-checked at activation only as "no longer met" (§15-4-4-5), never as
-    /// a processing condition. So read only the battle (`event_winner_*`,
-    /// `event_battle_deleter`, `event_battle_surviving_deleter`) and the turn
-    /// there, and author a processing "if" as a body `if:` (`dsl-lint` warns)
-    /// until the DSL has a separate trigger-condition field
-    /// (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER).
+    /// The battle qualifier ("any of your [TS] trait Digimon", "this
+    /// Digimon", "deletes ... in battle": `event_winner_*`,
+    /// `event_battle_deleter`, `event_battle_surviving_deleter`) is the
+    /// trigger qualifier: author it in `trigger_if:`, decided when the battle
+    /// triggers the effect (§15-8-3-1, §15-8-3-4; `dsl-lint` warns when a
+    /// `condition` / `active_when` reads it). `condition` / `active_when`
+    /// are processing conditions, read at activation.
     OnAllyWonBattle,
     /// Hand-discard observer: "[All Turns] When your hand is trashed from, …"
     /// (`when: on_discard_hand`, BT25-080/084; ST16-14; G-ENGINE-ON-DISCARD-HAND).
@@ -164,7 +185,7 @@ pub enum Timing {
     /// permanent / stack, trash, hand, security or digivolution card. Cards
     /// revealed from the deck and put back, and Digi-Eggs routed to the
     /// Digi-Egg deck, never fire it. Gate "your effects" with
-    /// `event_caused_by_own_effect: true` in `active_when:`. Mirrors DCGO
+    /// `event_caused_by_own_effect: true` in `trigger_if:`. Mirrors DCGO
     /// `OnAddLibraryAnyone` + `CanTriggerOnAddLibrary`. G-ENGINE-ON-ADD-TO-DECK.
     OnAddToDeck,
     OnEnterFieldAnyone,
@@ -176,7 +197,7 @@ pub enum Timing {
     /// `[All Turns]`-style observer: an EFFECT added one or more cards to a
     /// player's hand (return-to-hand, security/trash/deck/reveal-to-hand, …).
     /// Gate the gaining player with `event_add_to_hand_player:` and effect-vs-draw
-    /// with `event_is_effect_initiated:` inside `active_when:`. See
+    /// with `event_is_effect_initiated:` inside `trigger_if:`. See
     /// G-ON-ADD-TO-HAND-OBSERVER.
     OnAddToHand,
     OnHatch,
@@ -214,7 +235,7 @@ pub enum Timing {
     /// `CanTriggerOnAddDigivolutionCard` requires a non-null one). Placing a
     /// card whose own inherited effect carries this timing DOES trigger it
     /// (rule 15-5-3). Board-wide fan-out with NO forced host filter — gate
-    /// scope in `active_when:` with `event_host_permanent_is_source: true`
+    /// scope in `trigger_if:` with `event_host_permanent_is_source: true`
     /// ("under THIS Digimon"), `event_caused_by_own_effect: true` ("one of
     /// YOUR effects"), and `event_added_card_any: { <card predicate> }` (the
     /// batch's card gate, DCGO `cardCondition` — ANY added card must match).
@@ -224,7 +245,7 @@ pub enum Timing {
     /// `[All Turns]`-style observer: a digivolution source was RETURNED to the
     /// bottom of a player's deck (not trashed) — "when any [Vemmon] return to
     /// the bottom of the deck from this Digimon's digivolution cards" (BT21-058,
-    /// BT18-065). Gate host-scope with `active_when:
+    /// BT18-065). Gate host-scope with `trigger_if:
     /// { event_host_permanent_is_source: true }` and the returned card's name
     /// with `event_card_name_contains:`. Distinct from
     /// `on_digivolution_card_trashed`. G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
@@ -304,10 +325,10 @@ pub enum Timing {
     /// DigiLink board-wide observer: "[Your Turn] When your Digimon get
     /// linked, …" (`when: on_any_link`). Fires for EVERY link event the
     /// engine dispatches — no forced self/host filter (unlike `when_linked` /
-    /// `when_card_linked_to_this`). Gate the scope with `active_when:`
+    /// `when_card_linked_to_this`). Gate the scope with `trigger_if:`
     /// predicates: `event_target_owner: you` (the link HOST's controller),
-    /// `event_card_trait_has:` (the just-linked card's traits), and
-    /// `your_turn: true`. Mirrors DCGO `CanTriggerWhenLinked` with a
+    /// `event_card_trait_has:` (the just-linked card's traits), and the turn
+    /// with `active_when: { your_turn: true }`. Mirrors DCGO `CanTriggerWhenLinked` with a
     /// board-wide `PermanentCondition` (BT21-084 / BT21-101 / P-217 / P-241).
     /// G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED.
     OnAnyLink,

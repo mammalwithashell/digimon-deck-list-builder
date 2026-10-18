@@ -628,6 +628,140 @@ fn processing_condition_in_active_when_read_at_processing() {
     );
 }
 
+// ─── §15-8-3-1 / §15-8-3-4 vs §15-8-3-9-3 — trigger qualifier vs processing ─
+
+/// P1's Tamer `observer` on the field; P0 (the turn player) holds `played`
+/// and plays it. Returns the runner and an event checkpoint taken before the
+/// play.
+fn opponent_play_board(observer: &str, played: &str) -> (DebugRunner, usize) {
+    let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
+        .hand(0, &[played])
+        .deck(0, &[FILL; 4])
+        .deck(1, &[FILL; 4])
+        .memory(5)
+        .start();
+    r.place_on_field(1, observer, Some(0));
+    let cp = r.event_checkpoint();
+    r.play(0, 0);
+    (r, cp)
+}
+
+/// §15-8-3-1 "Trigger-type effects trigger as soon as their trigger
+/// conditions are met." §15-8-3-4: an effect whose trigger conditions are
+/// not met when the event happens does not trigger.
+///
+/// `OBS_OPP_PLAY_LE4K`: "[All Turns] When your opponent plays a Digimon with
+/// 4000 DP or less, gain 1 memory" -- "with 4000 DP or less" qualifies the
+/// trigger condition (`trigger_if:`). P0 plays `PLAY_DP_DOWN` at 6000 DP: the
+/// play does not meet P1's trigger condition, so P1's effect never triggers.
+/// The turn player's `[On Play]` ("This Digimon gets -2000 DP for the turn")
+/// activates first (§15-4-3-5-1) and makes it a 4000 DP Digimon before P1's
+/// effect would have activated: the effect still does not activate.
+/// - Control: P0 plays the 1000 DP `VANILLA_LV3` -- the trigger condition is
+///   met and P1 gains 1 memory.
+///
+/// (DCGO decides the trigger qualifier, `CanUseCondition`, when the event
+/// stacks the effect, `AutoProcessing.StackSkillInfos`.)
+/// G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER.
+#[test]
+fn observer_whose_qualifier_was_false_at_the_trigger_never_activates() {
+    cite!(
+        "15-8-3-1",
+        "f6da78dabd1b18295353a717881824e6ae0d9133240bedc83b290853047e1483"
+    );
+    cite!(
+        "15-8-3-4",
+        "71d0451f75557827933628c0bf96a1437a5c750f4cd432b91ad8ce246f9be375"
+    );
+    // Control: a 1000 DP Digimon is played -- the trigger condition is met.
+    let (mut r, cp) = opponent_play_board("OBS_OPP_PLAY_LE4K", "VANILLA_LV3");
+    resolve_prompts(&mut r);
+    assert_eq!(field_top_ids(&r, 0), owned(&["VANILLA_LV3"]));
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(1, "OBS_OPP_PLAY_LE4K".to_string())],
+        "control: a Digimon with 4000 DP or less was played"
+    );
+
+    // A 6000 DP Digimon is played, then lowered to 4000 DP by its [On Play].
+    let (mut r, cp) = opponent_play_board("OBS_OPP_PLAY_LE4K", "PLAY_DP_DOWN");
+    resolve_prompts(&mut r);
+    let played = r.perm_handle(0, 0);
+    assert_eq!(field_top_ids(&r, 0), owned(&["PLAY_DP_DOWN"]));
+    assert_eq!(
+        r.effective_dp(played),
+        Some(4000),
+        "the [On Play] resolved: the played Digimon now has 4000 DP"
+    );
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "the play did not meet the trigger condition (6000 DP when played): the effect never \
+         triggered, so it does not activate once the Digimon has 4000 DP: {:?}",
+        memory_sources(&r, cp)
+    );
+    assert!(
+        r.pending_selection().is_none(),
+        "{:?}",
+        r.pending_selection()
+    );
+}
+
+/// §15-8-3-9-3 "If a reference is to be made in the processing conditions
+/// for a trigger-type effect, the reference is made in the state when the
+/// processing is being performed."
+///
+/// The processing-condition twin of
+/// `observer_whose_qualifier_was_false_at_the_trigger_never_activates`:
+/// `OBS_OPP_PLAY_IF_LE4K` ("[All Turns] When your opponent plays a Digimon,
+/// if that Digimon has 4000 DP or less, gain 1 memory") triggers on the 6000
+/// DP play (its trigger condition is only "your opponent plays a Digimon"),
+/// and its "if" is read when it activates, after the turn player's `[On
+/// Play]` made the Digimon 4000 DP: it activates. The same board decides the
+/// opposite way only because the DP reading is a processing condition here
+/// and a trigger qualifier there.
+///
+/// The §15-8-3-9-1 single-branch shape (`OBS_OPP_PLAY_GE4`, its "if that
+/// Digimon is level 4 or higher" authored in `condition:`) still triggers on
+/// the level 3 play and activates once the Digimon is level 4.
+#[test]
+fn processing_condition_is_still_read_at_activation() {
+    cite!(
+        "15-8-3-9-3",
+        "5b7a0031fb2110b5f52c02890fe2231471493a3cf527d6ee65f538904d4ca7ed"
+    );
+    let (mut r, cp) = opponent_play_board("OBS_OPP_PLAY_IF_LE4K", "PLAY_DP_DOWN");
+    resolve_prompts(&mut r);
+    let played = r.perm_handle(0, 0);
+    assert_eq!(r.effective_dp(played), Some(4000), "the [On Play] resolved");
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(1, "OBS_OPP_PLAY_IF_LE4K".to_string())],
+        "4000 DP when the processing condition is referenced at activation: gain 1 memory"
+    );
+
+    // Control: a 5000 DP Digimon with no [On Play] -- the condition is unmet
+    // at activation.
+    let (mut r, cp) = opponent_play_board("OBS_OPP_PLAY_IF_LE4K", "LV4_PLAIN");
+    resolve_prompts(&mut r);
+    assert_eq!(field_top_ids(&r, 0), owned(&["LV4_PLAIN"]));
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "more than 4000 DP at activation: no memory: {:?}",
+        memory_sources(&r, cp)
+    );
+
+    // The GE4 shape: triggered at level 3, activates once it is level 4.
+    let (mut r, _) = processing_reference_board("OBS_OPP_PLAY_GE4");
+    let cp = r.event_checkpoint();
+    pick_hand_card(&mut r, 0, "LV4_PLAIN");
+    resolve_prompts(&mut r);
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(1, "OBS_OPP_PLAY_GE4".to_string())],
+        "its processing condition, unmet at the trigger, is read when it activates"
+    );
+}
+
 // ─── §15-8-3-1 / §15-8-3-8 — "wins a battle" after the winner leaves ───────
 
 /// P0's `winner` and P0's Tamer `OBS_WIN_TS` ("[All Turns] When any of your

@@ -151,10 +151,10 @@ effects:
     once_per_turn: true
     optional: true
     active_when:
-      all_of:
-        - your_turn: true
-        - event_target_owner: you
+      your_turn: true
     condition: { source_is_unsuspended: false }
+    trigger_if:
+      event_target_owner: you
     summary: "[Your Turn][OPT] When your Digimon gets linked, unsuspend Gaiamon → trash opponent's top security"
     process:
       - unsuspend: { target: source }

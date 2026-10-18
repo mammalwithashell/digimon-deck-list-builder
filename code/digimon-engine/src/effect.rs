@@ -336,7 +336,24 @@ pub struct Effect {
     pub clause_group: Option<u32>,
 
     // Behavior
+    /// The gate read when the effect ACTIVATES: a DSL clause's processing
+    /// conditions (`condition` / `active_when`, §15-8-3-9-1 / §15-8-3-9-3),
+    /// plus -- folded in by [`EffectBuilder::build`] -- its
+    /// [`Self::trigger_qualifier`], re-checked as "no longer met"
+    /// (§15-4-4-5). Every activation-time reader evaluates only this field.
     pub condition: Option<ConditionFn>,
+    /// The trigger qualifier of a trigger-type effect (DSL `trigger_if:`):
+    /// "When one of your Digimon **with 4000 DP or less** is played". Decided
+    /// when the event triggers the effect -- `Game::enqueue_triggered` drops
+    /// a just-queued entry whose qualifier is false
+    /// (`Game::discard_entries_not_triggered`, §15-8-3-1 / §15-8-3-4), read
+    /// through the entry's own trigger context (live while the event's
+    /// referent is on the field, its snapshot once it has left,
+    /// `Game::gate_trigger_context`, §15-8-3-8). [`EffectBuilder::build`]
+    /// also ANDs it into [`Self::condition`], so the activation-time check
+    /// re-reads it without a second gate (§15-4-4-5).
+    /// G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER.
+    pub trigger_qualifier: Option<ConditionFn>,
     /// Context-aware candidate filter for `WhenWouldBe*` replacement timings.
     /// Evaluated in `replacement::collect_candidates` AFTER `condition`,
     /// with replacement cause/source/subject context attached to the read
@@ -935,6 +952,7 @@ impl EffectBuilder {
                 shared_opt_group: None,
                 clause_group: None,
                 condition: None,
+                trigger_qualifier: None,
                 replacement_condition: None,
                 process: None,
                 cost_reduction_fn: None,
@@ -1166,6 +1184,17 @@ impl EffectBuilder {
         f: impl Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     ) -> Self {
         self.inner.condition = Some(Arc::new(f));
+        self
+    }
+
+    /// Set the trigger qualifier (see [`Effect::trigger_qualifier`]): decided
+    /// when the event triggers the effect, and folded into `condition` by
+    /// [`Self::build`] so activation re-checks it (§15-4-4-5).
+    pub fn trigger_qualifier(
+        mut self,
+        f: impl Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
+    ) -> Self {
+        self.inner.trigger_qualifier = Some(Arc::new(f));
         self
     }
 
@@ -1565,11 +1594,20 @@ impl EffectBuilder {
         self
     }
 
-    pub fn build(self) -> Effect {
+    pub fn build(mut self) -> Effect {
         debug_assert!(
             !(self.inner.linked && self.inner.inherited),
             ".linked() and .inherited() are mutually exclusive — a linked card's effects apply to its host, not to stack-above levels"
         );
+        // A pending effect whose trigger conditions are no longer met can't
+        // activate (§15-4-4-5): the activation-time gate re-reads the
+        // trigger qualifier before the processing conditions.
+        if let Some(qualifier) = self.inner.trigger_qualifier.clone() {
+            let processing = self.inner.condition.take();
+            self.inner.condition = Some(Arc::new(move |rctx: &EffectReadContext| {
+                qualifier(rctx) && processing.as_ref().is_none_or(|c| c(rctx))
+            }));
+        }
         self.inner
     }
 }

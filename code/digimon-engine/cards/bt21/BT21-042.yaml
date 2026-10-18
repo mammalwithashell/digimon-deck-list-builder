@@ -137,10 +137,10 @@ effects:
     once_per_turn: true
     active_when: { all_turns: true }
     summary: "[All Turns][OPT] On own [Marcus Damon] play, may free-digivolve self into a yellow [RizeGreymon] hand card"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
-        - event_card_name_contains: "Marcus Damon"
+        - event_card_name_contains: Marcus Damon
     process:
       - select_hand:
           of: you

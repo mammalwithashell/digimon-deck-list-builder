@@ -123,7 +123,7 @@ effects:
     optional: true
     active_when: { all_turns: true }
     summary: "[All Turns] On own Digimon play/digivolve, suspend self → +1 memory per Greymon and per Garurumon on field"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon

@@ -39,7 +39,7 @@ effects:
     active_when: { all_turns: true }
     optional: true
     summary: "[All Turns] When opponent plays a Digimon, by suspending this Tamer: gain 1 memory if Lv>=4, Draw 1 if Lv==3"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: opponent
         - event_target_kind: digimon

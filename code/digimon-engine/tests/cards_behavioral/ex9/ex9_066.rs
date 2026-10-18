@@ -255,7 +255,7 @@ fn ex9_066_clause2_is_all_turns_observer_optional_faceup() {
         "all-turns observer must declare active_when (all_turns: true)"
     );
     assert!(
-        clause.condition.is_some(),
+        clause.trigger_if.is_some(),
         "observer must have a condition (event_target_owner: you AND event_target_kind: digimon)"
     );
 }

@@ -61,16 +61,17 @@ effects:
     optional: true
     summary: "[All Turns][OPT] When your [Knightmon] text Digimon is played or deleted, by placing 1 [Knightmon] text card from your hand or trash under this Tamer, <Draw 1>"
     condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          in_text_contains: Knightmon
+        n: 1
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
         - event_target_in_text_contains: Knightmon
-        - count_gte:
-            filter:
-              of: you
-              zone: [hand, trash]
-              in_text_contains: Knightmon
-            n: 1
     process:
       - select_union_zone:
           of: you

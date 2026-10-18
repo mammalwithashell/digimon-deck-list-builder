@@ -48,7 +48,6 @@ effects:
     optional: true
     condition:
       all_of:
-        - event_target_owner: you
         - source_is_unsuspended: true
         - count_lte:
             filter:
@@ -73,6 +72,8 @@ effects:
                       zone: [hand, trash]
                       name_is: Agumon
                     n: 1
+    trigger_if:
+      event_target_owner: you
     summary: "[Your Turn] When your Digimon digivolves, if you have 1 or fewer Digimon, by suspending this Tamer, play [Gabumon] (if [Greymon]) or [Agumon] (if [Garurumon]) from hand or trash free"
     process:
       - activation_cost: { suspend_self: true }

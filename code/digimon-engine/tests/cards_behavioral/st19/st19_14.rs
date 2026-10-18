@@ -86,7 +86,7 @@ fn st19_14_has_effect_played_token_or_puppet_rush_observer() {
         .expect("Your Turn effect-played Token/Puppet Rush observer should exist");
 
     let condition = observer
-        .condition
+        .trigger_if
         .as_ref()
         .expect("observer must inspect the played-object event context");
     assert!(

@@ -76,9 +76,8 @@ effects:
     once_per_turn: true
     optional: true
     active_when: { all_turns: true }
-    condition:
-      all_of:
-        - event_target_owner: opponent
+    trigger_if:
+      event_target_owner: opponent
     summary: "[All Turns][Once Per Turn] When any of your opponent's Digimon or Tamers digivolve (placed-under half still OMITTED here; G-DSL-ON-CARD-PLACED-UNDER-TRIGGER RESOLVED 2026-09-17 via `when: on_add_digivolution_cards` — authorable), by trashing any 2 of this Digimon's digivolution cards, trash your opponent's top security card"
     process:
       # Cost: ANY 2 of this Digimon's digivolution cards — a player-choice

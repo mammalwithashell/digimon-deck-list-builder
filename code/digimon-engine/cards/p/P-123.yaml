@@ -103,11 +103,12 @@ effects:
     once_per_turn: true
     active_when: { your_turn: true }
     condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: P-123
+    trigger_if:
       all_of:
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            card_number_is: "P-123"
         - event_target_owner: you
         - event_target_kind: digimon
     summary: "[Your Turn][OPT] On your Digimon moving breeding→battle: may hatch, then gain 1 memory"

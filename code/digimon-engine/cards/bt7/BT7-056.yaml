@@ -122,7 +122,7 @@ effects:
     when: on_add_digivolution_cards
     once_per_turn: true
     active_when: { your_turn: true }
-    condition:
+    trigger_if:
       all_of:
         - event_host_permanent_is_source: true
         - event_caused_by_own_effect: true

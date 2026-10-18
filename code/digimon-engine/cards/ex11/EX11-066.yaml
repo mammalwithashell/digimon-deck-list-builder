@@ -81,9 +81,11 @@ effects:
       all_of:
         - all_turns: true
         - source_is_unsuspended: true
+        - event_target_in_text_contains: Vemmon
+    trigger_if:
+      all_of:
         - event_target_owner: you
         - event_target_kind: digimon
-        - event_target_in_text_contains: "Vemmon"
     summary: "[All Turns] When your [Vemmon]-text Digimon is played/digivolves, suspend this Tamer: reveal top 2, place all [Vemmon] as its bottom sources, trash the rest"
     process:
       - activation_cost: { suspend_self: true }

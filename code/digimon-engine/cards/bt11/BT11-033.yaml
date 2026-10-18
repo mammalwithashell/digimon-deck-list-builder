@@ -103,7 +103,7 @@ effects:
     once_per_turn: true
     active_when: { all_turns: true }
     summary: "[All Turns][OPT] When an effect adds cards to opponent's hand, gain 1 memory per 4 cards in opponent's hand"
-    condition:
+    trigger_if:
       all_of:
         - event_add_to_hand_player: opponent
         - event_is_effect_initiated: true
