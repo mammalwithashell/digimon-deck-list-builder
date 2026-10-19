@@ -26316,7 +26316,7 @@
       ]
     }
   },
-  "cards_root": "C:/Users/james/.codex/worktrees/toho-jupiter-pr739-integration/digimon-deck-list-builder-1/code/digimon-engine/cards",
+  "cards_root": "code/digimon-engine/cards",
   "predicates": {
     "affordable_with_cost_reduce": [
       "BT26-084"
