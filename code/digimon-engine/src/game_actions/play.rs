@@ -204,7 +204,7 @@ impl Game {
         }
 
         let card = self.player_mut(player_id).trash.remove(trash_index);
-        self.player_mut(player_id).hand.push(card);
+        self.player_mut(player_id).put_in_hand(card);
         let hand_index = self.player(player_id).hand.len() - 1;
 
         match self.play_from_hand_with_cost_result_from_origin_suppress(
@@ -224,7 +224,7 @@ impl Game {
                     .hand
                     .pop()
                     .expect("invariant: card was just pushed to hand");
-                self.player_mut(player_id).trash.insert(trash_index, card);
+                self.player_mut(player_id).insert_in_trash(trash_index, card);
                 None
             }
         }

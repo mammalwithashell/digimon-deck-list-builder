@@ -94,7 +94,7 @@ impl Player {
     /// Draw one card from deck to hand. Returns false if deck is empty (deck-out).
     pub fn draw(&mut self) -> bool {
         if let Some(card) = self.deck.pop() {
-            self.hand.push(card);
+            self.put_in_hand(card);
             true
         } else {
             false
@@ -122,7 +122,7 @@ impl Player {
 
     /// Append `card` to hand.
     pub fn add_to_hand(&mut self, card: crate::card_source::CardSource) {
-        self.hand.push(card);
+        self.put_in_hand(card);
     }
 
     /// Draw multiple cards. Returns number actually drawn.
@@ -167,11 +167,85 @@ impl Player {
                 .any(|perm| permanent_contains_card(perm, handle))
     }
 
+    // ── Zone entry ───────────────────────────────────────────────────────
+    //
+    // Every card entering this player's trash, hand or security stack goes
+    // through one of these, so each area's placement rule holds by
+    // construction. A card moved to another area is a new card that keeps
+    // none of its previous statuses or states (§3-1-3-1-1 / §3-1-3-1-2) and is
+    // placed by the rules of its new area unless specified otherwise
+    // (§3-1-3-5). `CardSource::face_down` is the state a digivolution card
+    // stashed face-down under a permanent carries (§4-7-9); it must not leak
+    // into another area. A source-scan guard
+    // (`player::tests::zone_entries_go_through_the_player_helpers`) keeps
+    // direct `trash` / `hand` / `security` pushes out of `src/`.
+
+    /// Put `card` on top of the trash. The trash is a public area; cards are
+    /// placed face-up in it (§3-6-3).
+    pub fn put_in_trash(&mut self, mut card: CardSource) {
+        card.face_down = false;
+        self.trash.push(card);
+    }
+
+    /// As [`Self::put_in_trash`], at `index` (a rollback restoring a card to
+    /// the position it was taken from, §3-6-2 lets the order change anyway).
+    pub fn insert_in_trash(&mut self, index: usize, mut card: CardSource) {
+        card.face_down = false;
+        self.trash.insert(index, card);
+    }
+
+    /// [`Self::put_in_trash`] each card in order.
+    pub fn put_all_in_trash(&mut self, cards: impl IntoIterator<Item = CardSource>) {
+        for card in cards {
+            self.put_in_trash(card);
+        }
+    }
+
+    /// Put `card` in the hand. The hand is the owner's private area, which
+    /// they may always look at (§3-5-3): a hand card carries no face-down
+    /// placement.
+    pub fn put_in_hand(&mut self, mut card: CardSource) {
+        card.face_down = false;
+        self.hand.push(card);
+    }
+
+    /// As [`Self::put_in_hand`], at `index`.
+    pub fn insert_in_hand(&mut self, index: usize, mut card: CardSource) {
+        card.face_down = false;
+        self.hand.insert(index, card);
+    }
+
+    /// [`Self::put_in_hand`] each card in order.
+    pub fn put_all_in_hand(&mut self, cards: impl IntoIterator<Item = CardSource>) {
+        for card in cards {
+            self.put_in_hand(card);
+        }
+    }
+
+    /// Put `card` on top of the security stack. Security cards are placed
+    /// face-down (§3-7-2, §3-1-3-5's example); the engine records a security
+    /// card's face by `face_up_security` membership (absent = face-down, the
+    /// state a face-up placement (§3-7-4) adds explicitly), so a stale
+    /// `face_down` flag from a digivolution card is cleared rather than
+    /// duplicated. An opaque-deck placeholder keeps its own marker.
+    pub fn put_on_security_top(&mut self, card: CardSource) {
+        let index = self.security.len();
+        self.insert_in_security(index, card);
+    }
+
+    /// As [`Self::put_on_security_top`], at `index` (0 = bottom).
+    pub fn insert_in_security(&mut self, index: usize, mut card: CardSource) {
+        if !card.is_opaque_placeholder {
+            card.face_down = false;
+        }
+        self.security.insert(index, card);
+    }
+
     /// Set up the security stack by moving cards from the top of the deck.
     pub fn setup_security(&mut self, count: u8) {
         for _ in 0..count {
             if let Some(card) = self.deck.pop() {
-                self.security.push(card);
+                self.put_on_security_top(card);
             }
         }
     }
@@ -241,7 +315,7 @@ impl Player {
             // deletion-finalizer. Defensive parity with the non-empty
             // branch below.
             for card in perm.linked_cards {
-                self.trash.push(card);
+                self.put_in_trash(card);
             }
             return;
         }
@@ -251,15 +325,11 @@ impl Player {
         if perm.top_card().is_token {
             return;
         }
-        // The trash is a public area; cards are placed face-up in it
-        // (§3-6-3), a face-down card stashed under a Tamer (§4-7-9) too.
-        for mut card in perm.card_sources {
-            card.face_down = false;
-            self.trash.push(card);
+        for card in perm.card_sources {
+            self.put_in_trash(card);
         }
-        for mut card in perm.linked_cards {
-            card.face_down = false;
-            self.trash.push(card);
+        for card in perm.linked_cards {
+            self.put_in_trash(card);
         }
     }
 
@@ -326,4 +396,71 @@ fn permanent_contains_card(
             .linked_cards
             .iter()
             .any(|card| card.handle() == handle)
+}
+
+#[cfg(test)]
+mod tests {
+    /// Every card entering a trash, hand or security stack goes through the
+    /// `Player` zone-entry helpers (`put_in_trash`, `put_in_hand`,
+    /// `insert_in_security`, ...), which apply the area's placement rule
+    /// (§3-6-3 / §3-5-3 / §3-7-2) and drop the `face_down` state a card
+    /// carried as a digivolution card (§3-1-3-1-2). A direct push into one of
+    /// those `Vec`s anywhere else in `src/` would bypass that, so this scan
+    /// fails on it; the helpers' own bodies in this file are the only
+    /// exceptions.
+    #[test]
+    fn zone_entries_go_through_the_player_helpers() {
+        const PATTERNS: [&str; 12] = [
+            ".trash.push(",
+            ".trash.insert(",
+            ".trash.extend(",
+            ".trash.append(",
+            ".hand.push(",
+            ".hand.insert(",
+            ".hand.extend(",
+            ".hand.append(",
+            ".security.push(",
+            ".security.insert(",
+            ".security.extend(",
+            ".security.append(",
+        ];
+        fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+            for entry in std::fs::read_dir(dir).expect("read src dir") {
+                let path = entry.expect("dir entry").path();
+                if path.is_dir() {
+                    walk(&path, out);
+                } else if path.extension().is_some_and(|e| e == "rs") {
+                    out.push(path);
+                }
+            }
+        }
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut files = Vec::new();
+        walk(&root, &mut files);
+        let mut direct = Vec::new();
+        let mut in_helpers = 0;
+        for file in files {
+            let text = std::fs::read_to_string(&file).expect("read source");
+            let is_player = file.ends_with("player.rs") && file.parent() == Some(root.as_path());
+            for (n, line) in text.lines().enumerate() {
+                if PATTERNS.iter().any(|p| line.contains(p)) {
+                    if is_player {
+                        in_helpers += 1;
+                    } else {
+                        direct.push(format!("{}:{}: {}", file.display(), n + 1, line.trim()));
+                    }
+                }
+            }
+        }
+        assert!(
+            direct.is_empty(),
+            "direct trash / hand / security pushes bypass the Player zone-entry helpers:\n{}",
+            direct.join("\n")
+        );
+        // put_in_trash, insert_in_trash, put_in_hand, insert_in_hand,
+        // insert_in_security -- and nothing else in this file. The PATTERNS
+        // array above is built from string literals that also match, so they
+        // are counted too (12).
+        assert_eq!(in_helpers, 5 + 12, "player.rs pushes outside the zone-entry helpers");
+    }
 }

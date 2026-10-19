@@ -1461,7 +1461,7 @@ impl Game {
         kind: crate::opaque_deck::RevealKind,
     ) -> Result<bool, String> {
         let card = self.materialize_reveal(pid, kind)?;
-        self.players[pid as usize].hand.push(card);
+        self.players[pid as usize].put_in_hand(card);
         Ok(true)
     }
 
@@ -1812,9 +1812,7 @@ impl Game {
         }
 
         let turn = self.turn_count;
-        let mut card_source = self.player_mut(player_id).hand.remove(hand_index);
-        // A played card is placed face-up on the field (§3-4-2).
-        card_source.face_down = false;
+        let card_source = self.player_mut(player_id).hand.remove(hand_index);
         let perm = crate::permanent::Permanent::new(card_source, turn);
         self.player_mut(player_id).battle_area.push(perm);
         let field_index = self.player(player_id).battle_area.len() - 1;
@@ -1912,10 +1910,7 @@ impl Game {
 
         let turn = self.turn_count;
         let mut entered = Vec::with_capacity(removed.len());
-        for (player_id, mut card_source) in removed {
-            // A played card is placed face-up on the field (§3-4-2), even a
-            // face-down digivolution card played from under a permanent.
-            card_source.face_down = false;
+        for (player_id, card_source) in removed {
             let card = card_source.handle();
             let emitted_card_id = card_source.card_id(&self.card_data).to_string();
             let emitted_card_name = card_source.card_name(&self.card_data).to_string();
@@ -2028,8 +2023,7 @@ impl Game {
 
         let turn = self.turn_count;
         let mut entered = Vec::with_capacity(taken_cards.len());
-        for mut card_source in taken_cards {
-            card_source.face_down = false;
+        for card_source in taken_cards {
             let emitted_card_id = card_source.card_id(&self.card_data).to_string();
             let emitted_card_name = card_source.card_name(&self.card_data).to_string();
             let cost_printed = self.card_data[card_source.data_index].play_cost as i16;
@@ -2294,8 +2288,9 @@ impl Game {
     /// This helper is the canonical "trash a card" path for any zone
     /// transition into trash (battle-area cleanup, hand discard, deck
     /// mill, source manipulation, security-stack effects, etc.). New
-    /// engine code should prefer this over direct `player.trash.push(...)`
-    /// so the event surface stays uniform.
+    /// engine code should prefer this over a bare `Player::put_in_trash`
+    /// so the event surface stays uniform; both place the card face-up
+    /// (§3-6-3).
     pub fn trash_card(
         &mut self,
         player: crate::enums::PlayerId,
@@ -2314,7 +2309,7 @@ impl Game {
             card_id,
             card_name,
         });
-        self.player_mut(player).trash.push(card);
+        self.player_mut(player).put_in_trash(card);
     }
 
     /// Record that an EFFECT (controlled by `cause_controller`) just trashed a
@@ -2578,16 +2573,7 @@ impl Game {
         if field_index >= p.battle_area.len() {
             return;
         }
-        let mut perm = p.battle_area.remove(field_index);
-        // The trash is a public area; cards are placed face-up in it
-        // (§3-6-3), a face-down card stashed under a Tamer (§4-7-9) too.
-        for card in perm
-            .card_sources
-            .iter_mut()
-            .chain(perm.linked_cards.iter_mut())
-        {
-            card.face_down = false;
-        }
+        let perm = p.battle_area.remove(field_index);
 
         // Empty-stack guard (parity with Player::delete_permanent): if the
         // stack was already drained by a mid-deletion effect, only linked
@@ -2605,7 +2591,7 @@ impl Game {
                     card_id,
                     card_name,
                 });
-                self.player_mut(player).trash.push(card);
+                self.player_mut(player).put_in_trash(card);
             }
             return;
         }
@@ -2629,7 +2615,7 @@ impl Game {
                 card_id,
                 card_name,
             });
-            self.player_mut(player).trash.push(card);
+            self.player_mut(player).put_in_trash(card);
         }
         for card in perm.linked_cards {
             let card_id = card.card_id(&self.card_data).to_string();
@@ -2641,7 +2627,7 @@ impl Game {
                 card_id,
                 card_name,
             });
-            self.player_mut(player).trash.push(card);
+            self.player_mut(player).put_in_trash(card);
         }
     }
 
@@ -2818,8 +2804,7 @@ impl Game {
             let card_name = card.card_name(&self.card_data).to_string();
             card.also_treated_as.clear();
             card.clear_reveal_overlay();
-            card.face_down = false; // Trash is face-up (3-6-3).
-            self.player_mut(owner).trash.push(card);
+            self.player_mut(owner).put_in_trash(card);
             let seq = self.next_event_seq();
             self.events.push(crate::events::GameEvent::Trash {
                 seq, player: owner, card_id, card_name,
@@ -2945,7 +2930,7 @@ impl Game {
             } else {
                 perm_a.card_sources.extend(perm_b.card_sources);
             }
-            perm_a.card_sources.push(new_top);
+            perm_a.push_top(new_top);
             perm_a.turn_digivolved = turn;
         }
 
@@ -3094,7 +3079,7 @@ impl Game {
         {
             let perm = &mut self.player_mut(target.player).battle_area[target.index as usize];
             perm.card_sources.push(partner_source);
-            perm.card_sources.push(result_source);
+            perm.push_top(result_source);
             perm.turn_digivolved = turn;
         }
 
@@ -3229,7 +3214,7 @@ impl Game {
         {
             let perm = &mut self.player_mut(target.player).battle_area[target.index as usize];
             perm.card_sources.push(trash_material);
-            perm.card_sources.push(result_source);
+            perm.push_top(result_source);
             perm.turn_digivolved = turn;
         }
 
@@ -3478,7 +3463,7 @@ impl Game {
         // drain is safe.
         if had_linked {
             for card in linked_cards {
-                self.player_mut(src.player).trash.push(card);
+                self.player_mut(src.player).put_in_trash(card);
             }
             for pid in 0..self.players.len() {
                 self.enqueue_triggered(
@@ -4612,7 +4597,7 @@ mod resolve_token_as_battle_area_top_tests {
         let next_idx = r.game.next_card_index();
         let veemon_source = CardSource::new(veemon_data_index, 0, next_idx);
         let card_index = veemon_source.card_index;
-        r.game.players[0].trash.push(veemon_source);
+        r.game.players[0].put_in_trash(veemon_source);
 
         let token = ProvenanceToken(card_index as u64);
         assert_eq!(

@@ -217,7 +217,7 @@ impl Game {
             // Rule 3-1-3-9-2: a Digi-Egg cannot enter hand.
             self.player_mut(top_owner).digitama_deck.insert(0, top);
         } else {
-            self.player_mut(top_owner).hand.push(top);
+            self.player_mut(top_owner).put_in_hand(top);
         }
 
         // Sources below the top go to each source's owner's trash and fire
@@ -235,7 +235,7 @@ impl Game {
             // attribution still uses `handle.player` (the host's controller)
             // for event-source-player binding.
             let owner = card.owner;
-            self.player_mut(owner).trash.push(card);
+            self.player_mut(owner).put_in_trash(card);
             trashed.push(super::TrashedSource {
                 player: handle.player,
                 host: handle,
@@ -251,7 +251,7 @@ impl Game {
         for card in perm.linked_cards {
             // Owner-routed: linked cards return to their own owner's trash.
             let owner = card.owner;
-            self.player_mut(owner).trash.push(card);
+            self.player_mut(owner).put_in_trash(card);
         }
         // Phase 8 Task 4: fire OnLinkedCardTrashed if the returning host was
         // carrying any linked cards (they cannot ride the host back to hand).
@@ -516,7 +516,7 @@ impl Game {
             for card in perm.card_sources {
                 let source_card = card.handle();
                 let owner = card.owner;
-                self.player_mut(owner).trash.push(card);
+                self.player_mut(owner).put_in_trash(card);
                 trashed.push(super::TrashedSource {
                     player: handle.player,
                     host: handle,
@@ -534,7 +534,7 @@ impl Game {
         for card in perm.linked_cards {
             // Owner-routed: linked cards return to their own owner's trash.
             let owner = card.owner;
-            self.player_mut(owner).trash.push(card);
+            self.player_mut(owner).put_in_trash(card);
         }
         // Phase 8 Task 4: fire OnLinkedCardTrashed if the returning host was
         // carrying any linked cards.

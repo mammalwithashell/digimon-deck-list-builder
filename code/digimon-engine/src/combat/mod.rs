@@ -2185,7 +2185,7 @@ impl Game {
             } else {
                 perm.card_sources.push(material_card);
             }
-            perm.card_sources.push(result_card);
+            perm.push_top(result_card);
             perm.turn_digivolved = turn;
         }
 
@@ -3753,7 +3753,7 @@ impl Game {
                     if let Some(defender) = self.security_resolution.as_ref().map(|s| s.defender) {
                         if let Some(pending) = self.pending_security.take() {
                             if !pending.played {
-                                self.player_mut(defender).trash.push(pending.card);
+                                self.player_mut(defender).put_in_trash(pending.card);
                             }
                         }
                     }
@@ -3878,7 +3878,7 @@ impl Game {
             }
             ReplacementOutcome::Redirected(crate::enums::Zone::Hand) => {
                 if let Some(pending) = self.pending_security.take() {
-                    self.player_mut(pending.defender).hand.push(pending.card);
+                    self.player_mut(pending.defender).put_in_hand(pending.card);
                 }
                 self.set_security_phase(SecurityPhase::DisposeFinalize);
             }
@@ -3906,7 +3906,7 @@ impl Game {
             return;
         };
         let card_index = pending.card.card_index;
-        self.player_mut(defender).security.push(pending.card);
+        self.player_mut(defender).put_on_security_top(pending.card);
         if was_face_up {
             self.player_mut(defender)
                 .face_up_security

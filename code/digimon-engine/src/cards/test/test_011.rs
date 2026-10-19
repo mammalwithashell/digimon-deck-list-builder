@@ -36,7 +36,7 @@ impl CardEffect for Test011 {
                         let player = ctx.game.player_mut(me);
                         if hand_index < player.hand.len() {
                             let card = player.hand.remove(hand_index);
-                            player.trash.push(card);
+                            player.put_in_trash(card);
                         }
                         ctx.draw(me, 2);
                     },

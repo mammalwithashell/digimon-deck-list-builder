@@ -75,12 +75,12 @@ impl Game {
         card.card_index = next_idx;
         let p = &mut self.players[player as usize];
         match zone {
-            "hand" => p.hand.push(card),
+            "hand" => p.put_in_hand(card),
             // Deck top = end of the vec (draw pops from the end).
             "deck_top" => p.deck.push(card),
             // Security top = end of the vec.
-            "security_top" => p.security.push(card),
-            "trash" => p.trash.push(card),
+            "security_top" => p.put_on_security_top(card),
+            "trash" => p.put_in_trash(card),
             other => return Err(format!("stage_inject_card: unknown zone {other}")),
         }
         Ok(())

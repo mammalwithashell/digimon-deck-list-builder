@@ -237,13 +237,13 @@ impl Game {
             CardSourceRef::Hand(p, i) => {
                 let player = self.player_mut(p);
                 let idx = i.min(player.hand.len());
-                player.hand.insert(idx, taken.card);
+                player.insert_in_hand(idx, taken.card);
                 true
             }
             CardSourceRef::Trash(p, i) => {
                 let player = self.player_mut(p);
                 let idx = i.min(player.trash.len());
-                player.trash.insert(idx, taken.card);
+                player.insert_in_trash(idx, taken.card);
                 true
             }
             CardSourceRef::DeckTop(p) => {
@@ -253,7 +253,7 @@ impl Game {
             CardSourceRef::Security(p, i) => {
                 let player = self.player_mut(p);
                 let idx = i.min(player.security.len());
-                player.security.insert(idx, taken.card);
+                player.insert_in_security(idx, taken.card);
                 true
             }
             CardSourceRef::PendingSecurity => {

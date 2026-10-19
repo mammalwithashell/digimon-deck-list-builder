@@ -82,21 +82,21 @@ impl Game {
                 if top.card_kind(&self.card_data) == CardKind::DigiEgg {
                     self.player_mut(owner).digitama_deck.insert(0, top);
                 } else {
-                    self.player_mut(owner).hand.push(top);
+                    self.player_mut(owner).put_in_hand(top);
                     completed.push((card, true));
                     hand_events.push(owner);
                 }
             }
             for source in p.card_sources {
                 let source_card = source.handle();
-                self.player_mut(source.owner).trash.push(source);
+                self.player_mut(source.owner).put_in_trash(source);
                 source_events.push((original, card, source_card));
             }
             if !p.linked_cards.is_empty() {
                 linked_events += 1;
             }
             for linked in p.linked_cards {
-                self.player_mut(linked.owner).trash.push(linked);
+                self.player_mut(linked.owner).put_in_trash(linked);
             }
             leave_events.push((original, snapshot));
         }

@@ -167,7 +167,7 @@ impl<'a> EffectContext<'a> {
             .position(|revealed| revealed.handle() == card)?;
         let mut taken = self.game.revealed_cards.remove(reveal_index);
         taken.clear_reveal_overlay();
-        self.game.player_mut(player).hand.push(taken);
+        self.game.player_mut(player).put_in_hand(taken);
         let hand_index = self.game.player(player).hand.len() - 1;
 
         match self.with_play_controller(|game| {
@@ -689,7 +689,7 @@ impl<'a> EffectContext<'a> {
         let mut revealed = self.game.revealed_cards.remove(reveal_index);
         revealed.clear_reveal_overlay();
 
-        self.game.player_mut(player).hand.push(revealed);
+        self.game.player_mut(player).put_in_hand(revealed);
         let hand_index = self.game.player(player).hand.len() - 1;
 
         match self.with_play_controller(|game| {
@@ -754,7 +754,7 @@ impl<'a> EffectContext<'a> {
 
         // Park at end of hand and play through the established hand-free
         // path. The hand index is the new last position.
-        self.game.player_mut(player).hand.push(card);
+        self.game.player_mut(player).put_in_hand(card);
         let hand_index = self.game.player(player).hand.len() - 1;
 
         match self.with_play_controller(|game| {
@@ -791,7 +791,7 @@ impl<'a> EffectContext<'a> {
                 // gated rollbacks.
                 let player_state = self.game.player_mut(player);
                 let restore_at = security_index.min(player_state.security.len());
-                player_state.security.insert(restore_at, card);
+                player_state.insert_in_security(restore_at, card);
                 None
             }
         }
@@ -949,7 +949,7 @@ impl<'a> EffectContext<'a> {
 
         // Park at the end of `player`'s hand and route through the standard
         // play-from-hand path. The hand index is the new last position.
-        self.game.player_mut(player).hand.push(source);
+        self.game.player_mut(player).put_in_hand(source);
         let hand_index = self.game.player(player).hand.len() - 1;
 
         match self.with_play_controller(|game| {
@@ -1048,7 +1048,7 @@ impl<'a> EffectContext<'a> {
             .remove(source_index);
         let source_card = source.handle();
 
-        self.game.player_mut(player).hand.push(source);
+        self.game.player_mut(player).put_in_hand(source);
         let hand_index = self.game.player(player).hand.len() - 1;
 
         match self.with_play_controller(|game| {

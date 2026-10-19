@@ -760,7 +760,7 @@ impl Game {
         for card in sources {
             let scard = card.handle();
             let owner = card.owner;
-            self.player_mut(owner).trash.push(card);
+            self.player_mut(owner).put_in_trash(card);
             trashed.push(super::TrashedSource {
                 player: source.player,
                 host: source,
@@ -776,7 +776,7 @@ impl Game {
         let had_linked = !perm.linked_cards.is_empty();
         for card in perm.linked_cards {
             let owner = card.owner;
-            self.player_mut(owner).trash.push(card);
+            self.player_mut(owner).put_in_trash(card);
         }
         if had_linked {
             for pid in 0..self.players.len() {
@@ -803,7 +803,7 @@ impl Game {
             Some(hp) => hp.linked_cards.push(top),
             None => {
                 // Host vanished — route the top card to its owner's trash.
-                self.player_mut(top_owner).trash.push(top);
+                self.player_mut(top_owner).put_in_trash(top);
                 return;
             }
         }
@@ -932,7 +932,7 @@ impl Game {
         {
             Some(hp) => hp.linked_cards.push(moved),
             None => {
-                self.player_mut(moved_owner).trash.push(moved);
+                self.player_mut(moved_owner).put_in_trash(moved);
                 return false;
             }
         }
@@ -980,7 +980,7 @@ impl Game {
         let host_card = perm.top_card().handle();
         let removed = perm.linked_cards.remove(pos);
         let owner = removed.owner;
-        self.player_mut(owner).trash.push(removed);
+        self.player_mut(owner).put_in_trash(removed);
 
         // Fire OnLinkedCardTrashed globally (every battle area + event-gated
         // Delays) carrying the host, the trashed card and the cause — an
@@ -1301,7 +1301,7 @@ impl Game {
         for card in removed {
             let handle = card.handle();
             let owner = card.owner;
-            self.player_mut(owner).trash.push(card);
+            self.player_mut(owner).put_in_trash(card);
             self.enqueue_triggered(
                 EffectTiming::OnLinkedCardTrashed,
                 TriggerSource::LinkCardTrashed {

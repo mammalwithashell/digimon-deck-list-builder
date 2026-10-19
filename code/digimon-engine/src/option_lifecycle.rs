@@ -424,7 +424,7 @@ impl Game {
         // Any sources beneath the Option's top (not expected for a single-card
         // Option) route to trash — they are not part of the moved card.
         for source in cards {
-            self.player_mut(source.owner).trash.push(source);
+            self.player_mut(source.owner).put_in_trash(source);
         }
 
         // Seat the moved card under the target (re-resolved by stable identity;
@@ -466,7 +466,7 @@ impl Game {
             .filter(|perm| !perm.top_card().is_token)
             .map(|perm| perm.top_card().handle())
         else {
-            self.player_mut(card.owner).trash.push(card);
+            self.player_mut(card.owner).put_in_trash(card);
             return false;
         };
         let target_now = self.players.iter().enumerate().find_map(|(pid, player)| {
@@ -480,7 +480,7 @@ impl Game {
                 })
         });
         let Some(target_now) = target_now else {
-            self.player_mut(card.owner).trash.push(card);
+            self.player_mut(card.owner).put_in_trash(card);
             return false;
         };
         card.face_down = face_down;
@@ -526,9 +526,9 @@ impl Game {
         };
         let card = top.handle();
         for source in cards {
-            self.player_mut(source.owner).trash.push(source);
+            self.player_mut(source.owner).put_in_trash(source);
         }
-        self.player_mut(top.owner).trash.push(top);
+        self.player_mut(top.owner).put_in_trash(top);
         self.enqueue_triggered(
             EffectTiming::OnOptionTrashed,
             TriggerSource::OptionTrashed {

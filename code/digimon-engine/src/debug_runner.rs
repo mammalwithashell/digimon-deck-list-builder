@@ -305,7 +305,7 @@ impl DebugRunner {
         };
         let source_handle = removed.handle();
         let owner = removed.owner;
-        self.game.player_mut(owner).trash.push(removed);
+        self.game.player_mut(owner).put_in_trash(removed);
         self.game.fire_digivolution_card_trashed(
             host.player,
             host,
@@ -1265,7 +1265,7 @@ impl DebugRunnerBuilder {
             if let Some(ids) = self.hands.get(&pid) {
                 for card_id in ids {
                     let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
-                    game.players[pid as usize].hand.push(card);
+                    game.players[pid as usize].put_in_hand(card);
                 }
             }
             if let Some(ids) = self.decks.get(&pid) {
@@ -1277,7 +1277,7 @@ impl DebugRunnerBuilder {
             if let Some(ids) = self.securities.get(&pid) {
                 for card_id in ids {
                     let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
-                    game.players[pid as usize].security.push(card);
+                    game.players[pid as usize].put_on_security_top(card);
                 }
             }
             if let Some(ids) = self.digitamas.get(&pid) {
