@@ -1857,8 +1857,13 @@ fn dual_unqualified_reference_holds_through_one_information() {
 /// §4-6-3 "A DUAL card placed on the field is treated as a Digimon. It can't
 /// be referenced as an Option card placed on the field."
 ///
-/// A DUAL card under a Digimon (a digivolution card) is on the field, so a
-/// color reference over digivolution cards reads only its Digimon information.
+/// §4-6-3 governs the DUAL card AS the permanent (its top card,
+/// `dual_on_field_is_a_digimon_not_an_option`). A DUAL card lying under a
+/// Digimon is referenced by what the reference names (Task 37; official Q&A
+/// Q6395, `dual_digivolution_card_referenced_as_option_card_for_digivolution_card_search`).
+/// This test pins that the field location adds nothing for a reference that
+/// names NEITHER category: like anywhere else it reads the DUAL card's Digimon
+/// information only (§4-6-1, §4-6-5-2; owner ruling W5 (b)).
 /// P1's stack is `[LV5_PLAIN, DUAL_ARTS]` with `DUAL_ARTS` underneath
 /// (Digimon information red, Option information purple):
 /// - `SRC_PICK_RED_ANY` ("Trash 1 red card from the digivolution cards of 1 of
@@ -1892,7 +1897,7 @@ fn dual_digivolution_card_on_field_reads_digimon_information() {
     step_prompt(&mut r); // the opponent's only Digimon
     assert!(
         r.pending_selection().is_none(),
-        "purple is only the Option information, not readable on the field: {:?}",
+        "purple is only the Option information, not read by an unqualified reference: {:?}",
         r.pending_selection()
     );
     resolve_prompts(&mut r);
@@ -1901,22 +1906,37 @@ fn dual_digivolution_card_on_field_reads_digimon_information() {
 
 /// §4-6-3 "A DUAL card placed on the field is treated as a Digimon. It can't
 /// be referenced as an Option card placed on the field."
+/// §4-6-6-2 "A DUAL card's Option information can be referenced when
+/// referencing the card as an Option card."
 ///
 /// Whatever reads a card through the general predicate -- here a Digimon
-/// counting its OWN digivolution cards (`self_source_count`) -- sees a DUAL
-/// digivolution card as a Digimon card with only its Digimon information.
+/// counting its OWN digivolution cards (`self_source_count`) -- reads a DUAL
+/// digivolution card through the information its reference names. §4-6-3
+/// makes the DUAL card that IS a permanent (its top card) a Digimon; a DUAL
+/// card lying in the digivolution cards is an Option card to an "Option card"
+/// reference (official Q&A Q6395: LadyDevimon BT25-083 trashes BeelStarmon
+/// BT25-085 from digivolution cards as "1 Option card"; Q6404).
 /// `DUAL_ARTS` (Digimon information red, Option information purple) under the
 /// attacker: "[When Attacking] If this Digimon has ... in its digivolution
 /// cards, gain 3 memory."
 /// - `DUALSRC_RED` ("a red card") and `DUALSRC_DIGI` ("a Digimon card") count it;
 /// - `DUALSRC_PURPLE` ("a purple card") counts 0: purple is only the Option
-///   information;
-/// - `DUALSRC_OPT` ("an Option card") counts 0: it can't be referenced as one.
+///   information, which an unqualified reference does not read (§4-6-1, owner
+///   ruling W5 (b));
+/// - `DUALSRC_OPT` ("an Option card") counts it: referenced as an Option card.
+///   Re-pinned by Task 37 (was "counts 0", Task 18's reading that every DUAL
+///   card on the field, digivolution cards included, can't be referenced as an
+///   Option card; Q6395 contradicts it). Test renamed from
+///   `dual_digivolution_card_counts_as_digimon_only`.
 #[test]
-fn dual_digivolution_card_counts_as_digimon_only() {
+fn dual_digivolution_card_counts_through_the_referenced_information() {
     cite!(
         "4-6-3",
         "a73913aee829c3e62eba607984ce4c0cf52b6708908f0c90353cff4b678be173"
+    );
+    cite!(
+        "4-6-6-2",
+        "048c65a256d7f9e5a4d1bfb47bdb99c098feb6678a7d999b6b2062c4e2e40b52"
     );
     let gains_memory = |top: &str| {
         let mut r = ch16_new()
@@ -1935,11 +1955,84 @@ fn dual_digivolution_card_counts_as_digimon_only() {
     assert!(gains_memory("DUALSRC_DIGI"), "a Digimon card");
     assert!(
         !gains_memory("DUALSRC_PURPLE"),
-        "purple is only the Option information, which isn't readable on the field"
+        "purple is only the Option information, which an unqualified reference doesn't read"
     );
     assert!(
-        !gains_memory("DUALSRC_OPT"),
-        "a DUAL on the field can't be referenced as an Option card"
+        gains_memory("DUALSRC_OPT"),
+        "a DUAL digivolution card is an Option card to an \"Option card\" reference (Q6395)"
+    );
+}
+
+/// §4-6-6-2 "A DUAL card's Option information can be referenced when
+/// referencing the card as an Option card."
+///
+/// Official Q&A Q6395 (LadyDevimon BT25-083, "By trashing 1 Option card from
+/// any of your Digimon's digivolution cards, you may use 1 [Three Musketeers]
+/// trait Option card from your trash with the cost reduced by 3"): "Can I ...
+/// trash BT25-085 [BeelStarmon/Fly Bullet] from my Digimon's digivolution
+/// cards, then use the trashed card?" -- "Yes, you can." (Q6404: BT25-085 "is
+/// treated as an Option card with the [Three Musketeers] trait".) §4-6-3 makes
+/// a DUAL card placed on the field a Digimon -- the card AS the permanent
+/// (`dual_on_field_is_a_digimon_not_an_option`); a DUAL card lying in a
+/// Digimon's digivolution cards is still an Option card to an "Option card
+/// from ... digivolution cards" reference.
+///
+/// `DUALSRC_TRASH_USE` (red Lv.5, LadyDevimon's clause with "[Artsy]" and
+/// "reduced by 1") attacks with `DUAL_ARTS` (trait [Artsy]; Option
+/// information purple, use cost 2) as its only digivolution card; P0 has the
+/// purple `PURPLE_LV3` for the Option's color requirement and memory 5, P1 has
+/// `LV5_PLAIN`.
+/// - the cost's search offers `DUAL_ARTS` as an Option card, and paying it
+///   moves it from the digivolution cards to the trash;
+/// - the trashed `DUAL_ARTS` is then used from the trash as an Option: its use
+///   cost 2 reduced by 1 is paid (memory 5 -> 4) and its [Main] deletes
+///   `LV5_PLAIN`.
+#[test]
+fn dual_digivolution_card_referenced_as_option_card_for_digivolution_card_search() {
+    cite!(
+        "4-6-6-2",
+        "048c65a256d7f9e5a4d1bfb47bdb99c098feb6678a7d999b6b2062c4e2e40b52"
+    );
+    let mut r = board(&[]);
+    r.place_on_field(0, "PURPLE_LV3", Some(0));
+    let h = r.place_stack(0, &["DUAL_ARTS", "DUALSRC_TRASH_USE"]);
+    r.place_on_field(1, "LV5_PLAIN", Some(0));
+    r.attack_player(h, 1, false);
+
+    accept(&mut r, 0); // "By trashing 1 Option card ..." -- execute it
+    {
+        let sel = r
+            .pending_selection()
+            .expect("the cost's search finds the DUAL digivolution card as an Option card");
+        assert!(
+            matches!(sel.kind, SelectionKind::UnionZone { .. }),
+            "the digivolution-card search: {sel:?}"
+        );
+        assert_eq!(
+            sel.valid_action_ids.len(),
+            1,
+            "DUAL_ARTS is the only Option card in any digivolution cards: {sel:?}"
+        );
+    }
+    step_prompt(&mut r); // trash DUAL_ARTS as the cost
+    assert_eq!(
+        stack_ids(&r, h),
+        owned(&["DUALSRC_TRASH_USE"]),
+        "the cost trashed the DUAL card from the digivolution cards"
+    );
+    assert_eq!(trash_ids(&r, 0), owned(&["DUAL_ARTS"]));
+
+    step_prompt(&mut r); // "you may use 1 [Artsy] trait Option card from your trash"
+    settle_declining(&mut r); // its [Main]'s only target; decline Arts Digivolve
+    assert_eq!(r.memory(), 4, "the Option's use cost 2, reduced by 1, was paid");
+    assert!(
+        field_top_ids(&r, 1).is_empty(),
+        "the used Option's [Main] deleted LV5_PLAIN"
+    );
+    assert_eq!(
+        trash_ids(&r, 0),
+        owned(&["DUAL_ARTS"]),
+        "the used Option is trashed again after its [Main]"
     );
 }
 

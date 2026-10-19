@@ -100,6 +100,16 @@ gated, the two rows must be removed or the line stops lowering.
 - `effect#1` / `effect#2` / `inherited#0`: sequences as documented in each
   file's header (authored 2026-09-13, re-lowered 2026-09-16 unchanged apart
   from the cost row above).
+- **Update 2026-10-19 (Task 37, G-ENGINE-DUAL-DIGIVOLUTION-CARD-NOT-AN-OPTION-CARD):**
+  the clause-2 half of this finding is closed in the engine, not the YAML:
+  `leading_cost_guard` gained a union-zone arm (`CostGuard::UnionZoneTrash`,
+  §15-7-4), so a `select_union_zone` pick paid by `trash_union_bound` with no
+  trashable candidate is not offered -- the WD/WA gate and, with it, the
+  TriggerOrder are gone. The sim-only rows were removed from `effect0`,
+  `effect2-scope-neg` and `inherited0-leave-play` (the leave-play line keeps
+  one sim-only decline: the tuck's union pick, which DCGO asks as its
+  generic_int menu). Clause 1's vacuous union pick is unchanged (an optional
+  pick with no candidates installs nothing).
 
 ## Update 2026-09-18 (oracle) — 4 clauses: 2 confirmed, 2 diverged (aborts, upstream)
 

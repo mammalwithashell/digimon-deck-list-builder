@@ -721,6 +721,22 @@ pub enum CostGuard {
     /// "By trashing N bottom face-down cards from under your Tamers": N
     /// face-down digivolution cards across your Tamers.
     FaceDownUnderTamers { n: usize },
+    /// "By trashing 1 [X] from your hand / your Digimon's digivolution cards"
+    /// (BT25-083 "1 Option card from any of your Digimon's digivolution
+    /// cards"): the `select_union_zone` pick that `trash_union_bound` pays
+    /// offers a card whose trash isn't blocked -- asked through the pick's own
+    /// candidate builder (`union_zone_candidate_actions`), so the guard reads a
+    /// card exactly as the pick does (a DUAL digivolution card is an Option
+    /// card there, §4-6-6-2, official Q&A Q6395).
+    UnionZoneTrash {
+        zones: crate::selection::UnionZoneSet,
+        /// The material carrier is the effect's own permanent
+        /// (`material_of: source`); `false` scans every own Digimon.
+        material_of_source: bool,
+        filter: CompiledPredicate,
+        zone_filters: digimon_dsl::compiled::CompiledUnionZoneFilters,
+        material_carrier_filter: Option<CompiledPredicate>,
+    },
 }
 
 /// The zone a `CostGuard::ZonePicks` condition draws its cards from.
@@ -747,6 +763,9 @@ pub enum CostPickZone {
 /// - `select_own_sources { target: source }` ⇒ `min` matching sources.
 /// - `trash_bottom_face_down_source(s)_under_tamer(s)` ⇒ that many face-down
 ///   cards under your Tamers.
+/// - `select_union_zone { of: you }` (`cost: true` or mandatory; material
+///   carrier unpinned or `source`) whose pick `trash_union_bound` trashes next
+///   ⇒ the pick has a trashable card.
 ///
 /// One guard per clause: a compound condition is gated as a whole only when
 /// it is one pick run (§15-7-3, "1 [A] and 1 [B]" from the same zone, matched
@@ -838,6 +857,60 @@ pub(crate) fn leading_cost_guard(steps: &[CompiledStep]) -> Option<CostGuard> {
         } if *count > 0 => Some(CostGuard::FaceDownUnderTamers {
             n: *count as usize,
         }),
+        CompiledStep::SelectUnionZone {
+            of: CompiledPlayerRef::You,
+            zones,
+            material_of,
+            filter,
+            zone_filters,
+            material_carrier_filter,
+            bind_as: Some(bound),
+            optional,
+            cost,
+            then,
+            ..
+        } if *cost || !*optional => {
+            // The pick's success tail is `then` followed by the clause's
+            // remaining steps; its first step must trash the picked card.
+            let consumer = if then.is_empty() {
+                steps.get(1)
+            } else {
+                then.first()
+            };
+            let pays_trash = matches!(
+                consumer,
+                Some(CompiledStep::TrashUnionBound { binding }) if binding == bound
+            );
+            let material_of_source = match material_of {
+                None => false,
+                Some(CompiledBindingRef::Source) => true,
+                // A carrier bound earlier in the clause is not known before
+                // the clause activates.
+                Some(_) => return None,
+            };
+            let mut set = crate::selection::UnionZoneSet(0);
+            for zone in zones {
+                match zone {
+                    digimon_dsl::compiled::CompiledZone::Hand => {
+                        set |= crate::selection::UnionZoneSet::HAND
+                    }
+                    digimon_dsl::compiled::CompiledZone::Trash => {
+                        set |= crate::selection::UnionZoneSet::TRASH
+                    }
+                    digimon_dsl::compiled::CompiledZone::Material => {
+                        set |= crate::selection::UnionZoneSet::MATERIAL
+                    }
+                    _ => {}
+                }
+            }
+            (pays_trash && set.0 != 0).then(|| CostGuard::UnionZoneTrash {
+                zones: set,
+                material_of_source,
+                filter: filter.clone(),
+                zone_filters: zone_filters.clone(),
+                material_carrier_filter: material_carrier_filter.clone(),
+            })
+        }
         _ => None,
     }
 }
@@ -998,6 +1071,66 @@ impl CostGuard {
                     rctx,
                     rctx.player,
                 ) >= *n
+            }
+            CostGuard::UnionZoneTrash {
+                zones,
+                material_of_source,
+                filter,
+                zone_filters,
+                material_carrier_filter,
+            } => {
+                use crate::selection::UnionZoneSet;
+                let material_of = if *material_of_source {
+                    match rctx.source_permanent {
+                        Some(host) => Some(host),
+                        None => return false,
+                    }
+                } else {
+                    None
+                };
+                // The candidate builder hands back `game` (== `rctx.game`); the
+                // predicates read through the effect's own context.
+                let carrier_filter =
+                    |_: &crate::game::Game, handle: crate::permanent::PermanentHandle| {
+                        material_carrier_filter.as_ref().is_none_or(|pred| {
+                            eval_predicate(pred, rctx, PredicateSubject::Permanent(handle))
+                        })
+                    };
+                let card_filter = |_: &crate::game::Game,
+                                   card: &crate::card_source::CardSource,
+                                   zone: UnionZoneSet| {
+                    let active = if zone == UnionZoneSet::HAND {
+                        zone_filters.hand.as_ref()
+                    } else if zone == UnionZoneSet::TRASH {
+                        zone_filters.trash.as_ref()
+                    } else {
+                        zone_filters.material.as_ref()
+                    }
+                    .unwrap_or(filter);
+                    eval_predicate(active, rctx, PredicateSubject::Card(card.handle()))
+                };
+                let offered = crate::effect_context::selections::union_zone_candidate_actions(
+                    game,
+                    rctx.player,
+                    *zones,
+                    material_of,
+                    Some(&carrier_filter),
+                    &card_filter,
+                );
+                // A digivolution card whose trash is prohibited can't pay
+                // "by trashing" (§15-7-4); a hand card can always be trashed.
+                crate::dsl_cards::step::selections::union_zone_candidates(
+                    game,
+                    rctx.player,
+                    &offered,
+                )
+                .into_iter()
+                .any(|(_, card, origin)| match origin {
+                    crate::selection::UnionZoneOrigin::Material { carrier, .. } => {
+                        !game.source_card_trash_blocked(carrier, card, rctx.player)
+                    }
+                    _ => true,
+                })
             }
         }
     }

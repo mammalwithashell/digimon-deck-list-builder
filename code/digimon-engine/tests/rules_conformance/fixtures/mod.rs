@@ -195,6 +195,7 @@ const CH16_NEW: &[&str] = &[
     include_str!("ch16_new/DUALSRC_OPT.yaml"),
     include_str!("ch16_new/DUALSRC_PURPLE.yaml"),
     include_str!("ch16_new/DUALSRC_RED.yaml"),
+    include_str!("ch16_new/DUALSRC_TRASH_USE.yaml"),
     include_str!("ch16_new/ENGAGE.yaml"),
     include_str!("ch16_new/GUARD.yaml"),
     include_str!("ch16_new/HAND_PICK_BLUE_ANY.yaml"),

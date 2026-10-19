@@ -6298,6 +6298,9 @@ fn own_digimon_with_link_cards(ctx: &EffectContext<'_>, player: PlayerId) -> Vec
 /// is an Option (tagged `Digivolution`) plus every LINK CARD that is an Option
 /// (tagged `Link`). Mirrors DCGO `permanent.DigivolutionOrLinkCards.Where(IsOption)`
 /// (`DigivolutionCards` excludes the top card, so only below-top sources qualify).
+/// A DUAL card there is an Option card to this reference (DCGO
+/// `CardSource.IsOption`; §4-6-6-2, official Q&A Q6395 / Q6404): only a
+/// permanent's top card is a Digimon whatever the reference (§4-6-3).
 fn stack_option_candidates(
     game: &crate::game::Game,
     host: PermanentHandle,
@@ -6318,7 +6321,7 @@ fn stack_option_candidates(
     let n = perm.card_sources.len();
     if n > 1 {
         for source in perm.card_sources.iter().take(n - 1) {
-            if source.is_option(data)
+            if source.is_option_card_for_search(data)
                 && !game.source_card_trash_blocked(host, source.handle(), controller)
             {
                 out.push((
@@ -6329,7 +6332,7 @@ fn stack_option_candidates(
         }
     }
     for linked in perm.linked_cards.iter() {
-        if linked.is_option(data) {
+        if linked.is_option_card_for_search(data) {
             out.push((linked.handle(), crate::resume::StackOptionZone::Link));
         }
     }
@@ -9356,7 +9359,7 @@ fn install_select_ordered_permutation(
 /// the four ranges (breeding-source / field-source / trash / hand). Built at
 /// install time — the selection is parked, so handles are stable — for the
 /// resumable-VM `UnionZone` frame, which linear-searches rather than decodes.
-fn union_zone_candidates(
+pub(crate) fn union_zone_candidates(
     game: &crate::game::Game,
     of_player: PlayerId,
     valid_action_ids: &[u16],

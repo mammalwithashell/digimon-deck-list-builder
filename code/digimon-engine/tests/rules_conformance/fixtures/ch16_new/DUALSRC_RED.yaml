@@ -1,9 +1,9 @@
 # DUALSRC_RED -- Digimon, Lv.5, red, 7000 DP, play cost 7.
 #   [When Attacking] If this Digimon has a red card in its digivolution cards,
 #   gain 3 memory.
-# Counts its own digivolution cards (`self_source_count`). A DUAL card among
-# them is on the field, where it is a Digimon and can't be referenced as an
-# Option card (§4-6-3): only its Digimon information is read.
+# Counts its own digivolution cards (`self_source_count`). The reference names
+# neither category, so a DUAL card among them is read through its Digimon
+# information only (§4-6-1, §4-6-5-2; owner ruling W5 (b)).
 card: DUALSRC_RED
 name: Source Counter RED
 kind: digimon

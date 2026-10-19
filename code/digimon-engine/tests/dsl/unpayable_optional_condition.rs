@@ -18,14 +18,19 @@
 //!   consume its `[Once Per Turn]`;
 //! - a REFIRED effect ("activate … as an effect of this Digimon", §15-15-7-4)
 //!   whose optional processing condition can't be executed is not offered
-//!   either (G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION).
+//!   either (G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION);
+//! - a condition paid by a `select_union_zone` pick that `trash_union_bound`
+//!   trashes ("by trashing 1 Option card from any of your Digimon's
+//!   digivolution cards", BT25-083) is offered only while that pick has a
+//!   card, read like the pick itself reads it (a DUAL digivolution card is an
+//!   Option card there, §4-6-6-2, official Q&A Q6395).
 
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
     EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
 };
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{EffectTiming, GamePhase};
+use digimon_engine::enums::{CardKind, EffectTiming, GamePhase};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
@@ -265,4 +270,100 @@ fn unpayable_refired_optional_condition_is_not_offered() {
     let _ = r.auto_resolve();
     assert_eq!(r.security_count(0), 0, "the top security card was trashed");
     assert_eq!(r.memory(), memory_before + 1, "the refired effect gained 1 memory");
+}
+
+/// "[When Attacking] By trashing 1 Option card from any of your Digimon's
+/// digivolution cards, gain 1 memory." -- LadyDevimon (BT25-083)'s condition
+/// shape: a clause-level "you may", a mandatory material union pick, and
+/// `trash_union_bound` paying it.
+const WA_TRASH_SOURCE_OPTION: &str = r#"
+card: T-UNPAY-UNION
+name: UnionTester
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 7000
+effects:
+  - when: when_attacking
+    optional: true
+    summary: "[When Attacking] By trashing 1 Option card from any of your Digimon's digivolution cards, gain 1 memory."
+    process:
+      - select_union_zone:
+          of: you
+          zones: [material]
+          bind_as: paid
+          filter: { kind: option }
+          prompt: "Trash 1 Option card from any of your Digimon's digivolution cards"
+      - trash_union_bound: { binding: paid }
+      - gain_memory: 1
+"#;
+
+/// §15-7-4 for a union-zone trash condition. Under the tester (its only
+/// digivolution card):
+/// - `FILL` (a Digimon card): no Option card to trash, so the effect is not
+///   offered and nothing is gained;
+/// - `OPT` (an Option card): offered; executing it trashes `OPT` and gains 1;
+/// - `BT25-085` (a DUAL card): offered -- the guard reads it as an Option card
+///   exactly as the pick does (§4-6-6-2, Q6395) -- and executing it trashes it.
+#[test]
+fn unpayable_union_zone_trash_condition_is_not_offered() {
+    let board = |source: &str| {
+        let mut option = make_test_card("OPT", "Plain Option");
+        option.card_kind = CardKind::Option;
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(WA_TRASH_SOURCE_OPTION)
+            .expect("tester compiles")
+            .dsl_card("BT25-085")
+            .expect("BT25-085 compiles")
+            .add_card(make_test_card("FILL", "Filler"))
+            .add_card(option)
+            .deck(0, &["FILL"; 4])
+            .deck(1, &["FILL"; 4])
+            .memory(3)
+            .start();
+        let me = r.place_stack(0, &[source, "T-UNPAY-UNION"]);
+        let memory_before = r.memory();
+        r.game
+            .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(me));
+        r.game.drain_effect_queue();
+        (r, me, memory_before)
+    };
+
+    let (r, me, memory_before) = board("FILL");
+    assert!(
+        r.pending_selection().is_none(),
+        "no Option card in any digivolution cards: the condition is not offered: {:?}",
+        r.pending_selection()
+    );
+    assert_eq!(r.memory(), memory_before, "the payload did not run for free");
+    assert_eq!(r.game.players[0].battle_area[me.index as usize].card_sources.len(), 2);
+
+    for source in ["OPT", "BT25-085"] {
+        let (mut r, me, memory_before) = board(source);
+        let sel = r
+            .pending_selection()
+            .unwrap_or_else(|| panic!("{source}: the condition is payable and offered"));
+        assert_eq!(sel.selecting_player, 0);
+        assert!(sel.is_optional, "{source}: the condition can be declined: {sel:?}");
+        r.accept_optional_trigger()
+            .unwrap_or_else(|e| panic!("{source}: accept: {e:?}"));
+        let sel = r
+            .pending_selection()
+            .unwrap_or_else(|| panic!("{source}: the pick has its card"));
+        assert!(
+            matches!(sel.kind, SelectionKind::UnionZone { .. }),
+            "{source}: {sel:?}"
+        );
+        let pick = sel.valid_action_ids[0];
+        r.execute_action(0, pick)
+            .unwrap_or_else(|e| panic!("{source}: pay: {e:?}"));
+        let _ = r.auto_resolve();
+        assert_eq!(
+            r.game.players[0].battle_area[me.index as usize].card_sources.len(),
+            1,
+            "{source} was trashed from the digivolution cards"
+        );
+        assert_eq!(r.memory(), memory_before + 1, "{source}: gained 1 memory");
+    }
 }

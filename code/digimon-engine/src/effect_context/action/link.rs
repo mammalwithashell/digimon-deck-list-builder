@@ -345,7 +345,9 @@ impl<'a> EffectContext<'a> {
 /// The below-top digivolution sources of `perm` that are Option cards — the
 /// candidate set for [`EffectContext::trash_own_digivolution_option_and_cancel_leave`]
 /// (EX7-048 "1 Option card from this Digimon's digivolution cards"). The top
-/// card is excluded (it is the Digimon itself, not a digivolution source).
+/// card is excluded (it is the Digimon itself, not a digivolution source). A
+/// DUAL card among them is an Option card to this reference (§4-6-6-2;
+/// official Q&A Q6395); §4-6-3 makes only the top card a Digimon.
 fn own_digivolution_option_handles(
     perm: &crate::permanent::Permanent,
     data: &[crate::card_data::CardData],
@@ -357,7 +359,7 @@ fn own_digivolution_option_handles(
     perm.card_sources
         .iter()
         .take(n - 1)
-        .filter(|s| s.is_option(data))
+        .filter(|s| s.is_option_card_for_search(data))
         .map(|s| s.handle())
         .collect()
 }

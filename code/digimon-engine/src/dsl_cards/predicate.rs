@@ -62,9 +62,11 @@ pub fn eval_predicate_with_bindings(
     // information only, as a `kind: digimon` reference does (§4-6-5-2; owner
     // ruling W5 (b), 2026-10-17: "This would be the Digimon colour/s"). The
     // Option information is read only under a `kind: option` qualifier
-    // (§4-6-6-2), which `conjunct_dual_ref` resolves node by node. A DUAL card
-    // on the field is a Digimon (§4-6-3); `eval_card_fields` enforces that
-    // from the card's location whatever reference reaches it.
+    // (§4-6-6-2), which `conjunct_dual_ref` resolves node by node -- also for
+    // a DUAL card lying in a permanent's digivolution or link cards (official
+    // Q&A Q6395). A DUAL card that is a permanent's TOP card is a Digimon
+    // (§4-6-3); `eval_card_fields` enforces that from the card's location
+    // whatever reference reaches it.
     eval_predicate_ref(pred, rctx, subject, bindings, DualRef::Digimon)
 }
 
@@ -109,16 +111,16 @@ fn eval_predicate_ref(
     inherited_ref: DualRef,
 ) -> bool {
     // A node's own category (its `kind` or an `all_of` conjunct) wins over the
-    // one inherited from an enclosing node.
-    let mut dual_ref = match conjunct_dual_ref(pred) {
+    // one inherited from an enclosing node. A `Source` subject (a digivolution
+    // card) reads like any card in a card zone: a DUAL card lying in the
+    // digivolution cards is referenced as an Option card by an "Option card
+    // from ... digivolution cards" reference (§4-6-6-2; official Q&A Q6395).
+    // Only the TOP card of a permanent is a Digimon whatever the reference
+    // (§4-6-3), which `eval_card_fields` enforces from the card's location.
+    let dual_ref = match conjunct_dual_ref(pred) {
         DualRef::Either => inherited_ref,
         own => own,
     };
-    // §4-6-3: a DUAL card placed on the field is treated as a Digimon and can't
-    // be referenced as an Option card there; a digivolution card is on the field.
-    if matches!(subject, PredicateSubject::Source(_)) {
-        dual_ref = DualRef::Digimon;
-    }
     // Source subjects: evaluate source-stack-metadata leaves here, then
     // degrade the subject to Card so every existing card-identity leaf
     // (trait_has / kind / name / etc.) continues to work unchanged.
@@ -3191,11 +3193,14 @@ fn eval_card_fields(
         Some(d) => d,
         None => return false,
     };
-    // §4-6-3: a DUAL card placed on the field (top card, digivolution card,
-    // link card, breeding) is treated as a Digimon and can't be referenced as
-    // an Option card there, whatever the caller asked for.
-    let on_field_dual = data.dual.is_some() && rctx.game.card_is_on_field(card);
-    let dual_ref = if on_field_dual {
+    // §4-6-3: a DUAL card placed on the field -- the TOP card of a battle-area
+    // or breeding-area permanent, i.e. the permanent itself -- is treated as a
+    // Digimon and can't be referenced as an Option card, whatever the caller
+    // asked for. A DUAL card lying in a permanent's digivolution or link cards
+    // keeps the caller's reference: as an Option card it reads its Option
+    // information (§4-6-6-2; official Q&A Q6395, Q6404).
+    let top_card_dual = data.dual.is_some() && rctx.game.card_is_permanent_top_card(card);
+    let dual_ref = if top_card_dual {
         DualRef::Digimon
     } else {
         dual_ref
@@ -3269,7 +3274,7 @@ fn eval_card_fields(
         .flatten();
 
     if let Some(want) = pred.kind {
-        if on_field_dual && matches!(want, CompiledCardKind::Option) {
+        if top_card_dual && matches!(want, CompiledCardKind::Option) {
             return false;
         }
         let overlay_match = overlay
