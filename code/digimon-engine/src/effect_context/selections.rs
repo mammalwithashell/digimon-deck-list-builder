@@ -3202,6 +3202,19 @@ fn install_dp_budget_selection(
 /// loop, and the three re-derivations inside the count-capped resolution
 /// callback) MUST route through this so a breeding carrier and a battle
 /// carrier behave identically.
+pub(crate) fn material_carrier_permanent(
+    game: &Game,
+    perm: PermanentHandle,
+) -> Option<&crate::permanent::Permanent> {
+    if perm.index == crate::action::space::BREEDING_TARGET as u8 {
+        game.player(perm.player).breeding_area.as_ref()
+    } else {
+        game.player(perm.player)
+            .battle_area
+            .get(perm.index as usize)
+    }
+}
+
 /// The action ids a union-zone pick (`EffectContext::select_union_zone`)
 /// offers: every card of `of_player`'s hand / trash (capped at the action
 /// space's limits) and every below-top digivolution card of the material
@@ -3288,19 +3301,6 @@ pub(crate) fn union_zone_candidate_actions(
     }
 
     valid_action_ids
-}
-
-pub(crate) fn material_carrier_permanent(
-    game: &Game,
-    perm: PermanentHandle,
-) -> Option<&crate::permanent::Permanent> {
-    if perm.index == crate::action::space::BREEDING_TARGET as u8 {
-        game.player(perm.player).breeding_area.as_ref()
-    } else {
-        game.player(perm.player)
-            .battle_area
-            .get(perm.index as usize)
-    }
 }
 
 /// The carrier's `card_sources` slice — the bottom-up digivolution stack

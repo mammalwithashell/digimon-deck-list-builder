@@ -888,21 +888,7 @@ pub(crate) fn leading_cost_guard(steps: &[CompiledStep]) -> Option<CostGuard> {
                 // the clause activates.
                 Some(_) => return None,
             };
-            let mut set = crate::selection::UnionZoneSet(0);
-            for zone in zones {
-                match zone {
-                    digimon_dsl::compiled::CompiledZone::Hand => {
-                        set |= crate::selection::UnionZoneSet::HAND
-                    }
-                    digimon_dsl::compiled::CompiledZone::Trash => {
-                        set |= crate::selection::UnionZoneSet::TRASH
-                    }
-                    digimon_dsl::compiled::CompiledZone::Material => {
-                        set |= crate::selection::UnionZoneSet::MATERIAL
-                    }
-                    _ => {}
-                }
-            }
+            let set = crate::dsl_cards::step::selections::union_zone_set(zones);
             (pays_trash && set.0 != 0).then(|| CostGuard::UnionZoneTrash {
                 zones: set,
                 material_of_source,
@@ -1079,7 +1065,6 @@ impl CostGuard {
                 zone_filters,
                 material_carrier_filter,
             } => {
-                use crate::selection::UnionZoneSet;
                 let material_of = if *material_of_source {
                     match rctx.source_permanent {
                         Some(host) => Some(host),
@@ -1096,18 +1081,19 @@ impl CostGuard {
                             eval_predicate(pred, rctx, PredicateSubject::Permanent(handle))
                         })
                     };
+                // The pick's own card matcher (no clause bindings exist before
+                // the clause activates; the guard reads a leading step).
                 let card_filter = |_: &crate::game::Game,
                                    card: &crate::card_source::CardSource,
-                                   zone: UnionZoneSet| {
-                    let active = if zone == UnionZoneSet::HAND {
-                        zone_filters.hand.as_ref()
-                    } else if zone == UnionZoneSet::TRASH {
-                        zone_filters.trash.as_ref()
-                    } else {
-                        zone_filters.material.as_ref()
-                    }
-                    .unwrap_or(filter);
-                    eval_predicate(active, rctx, PredicateSubject::Card(card.handle()))
+                                   zone: crate::selection::UnionZoneSet| {
+                    crate::dsl_cards::step::selections::union_zone_card_matches(
+                        rctx,
+                        filter,
+                        zone_filters,
+                        card.handle(),
+                        zone,
+                        None,
+                    )
                 };
                 let offered = crate::effect_context::selections::union_zone_candidate_actions(
                     game,
