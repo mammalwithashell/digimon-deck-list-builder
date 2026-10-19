@@ -1,0 +1,12 @@
+# MAIN_TRASH_UNDER -- Option, red, use cost 0.
+#   [Main] Trash the bottom face-down card from under 1 of your Tamers.
+card: MAIN_TRASH_UNDER
+name: Undertrash Lite
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash the bottom face-down card from under 1 of your Tamers."
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }

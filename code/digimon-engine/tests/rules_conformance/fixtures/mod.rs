@@ -28,6 +28,17 @@ const COMMON: &[&str] = &[
     include_str!("common/WA_MEM.yaml"),
 ];
 
+/// Chapter 3 areas: a Tamer, the cards stashed face-down under it, and the
+/// Options that move one to another area (`ch03_areas.rs`).
+const CH03: &[&str] = &[
+    include_str!("ch03/AREA_LV3.yaml"),
+    include_str!("ch03/AREA_LV4.yaml"),
+    include_str!("ch03/AREA_TAMER.yaml"),
+    include_str!("ch03/MAIN_SRC_TO_HAND.yaml"),
+    include_str!("ch03/MAIN_SRC_TO_SECURITY.yaml"),
+    include_str!("ch03/MAIN_TRASH_UNDER.yaml"),
+];
+
 /// §11-14 "Attacking", "Blocking", "Security Checks", "Battles" chapter
 /// cards, with the §16-4/§16-5/§16-7/§16-9 keyword cards
 /// (`ch11_14_attack_procedure.rs`).
@@ -358,6 +369,11 @@ pub fn common_cards() -> &'static [&'static str] {
     COMMON
 }
 
+/// Every `ch03/` card's YAML source.
+pub fn ch03_cards() -> &'static [&'static str] {
+    CH03
+}
+
 /// Every `ch11_14/` card's YAML source.
 pub fn ch11_14_cards() -> &'static [&'static str] {
     CH11_14
@@ -447,6 +463,7 @@ fn every_fixture_file_is_listed() {
     );
     for (dir, listed) in [
         ("common", COMMON.len()),
+        ("ch03", CH03.len()),
         ("ch11_14", CH11_14.len()),
         ("ch15_04", CH15_04.len()),
         ("ch15_07", CH15_07.len()),

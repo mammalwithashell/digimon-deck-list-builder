@@ -1,0 +1,7 @@
+# AREA_TAMER -- Tamer, red, play cost 2. No text.
+# A Tamer to hold a face-down card underneath it (the chapter 3 tests).
+card: AREA_TAMER
+name: Area Tamer
+kind: tamer
+color: [red]
+cost: 2

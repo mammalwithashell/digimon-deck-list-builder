@@ -25,6 +25,24 @@
   status: not-testable
   note: "Keyword icon <Security A.> with a formerly-named parenthetical (※formerly <Security Attack>); a keyword label, not a testable rule."
 
+# ── ch03 Areas (§3) — tests/rules_conformance/ch03_areas.rs ──
+"3-4-2":
+  status: proven
+  tests: ["ch03_areas::face_down_card_returned_to_hand_then_played_is_face_up_on_the_field", "ch03_areas::face_down_card_digivolved_into_is_a_face_up_top_card"]
+  note: "A card that becomes a new permanent or a new top card is face-up: Permanent::new and Permanent::push_top (digivolution, DNA, Blast DNA) clear the face-down state a digivolution card carried (3-1-3-1-2), so a card stashed face-down under a Tamer and played or digivolved into from the hand is not trashed by the rule check (17-1-3-2-4; official Q&A Q6958's mechanism, G-ENGINE-PLAY-FROM-TRASH-OF-JUST-TRASHED-SOURCE-NOT-PLAYED)."
+"3-5-3":
+  status: proven
+  tests: ["ch03_areas::face_down_card_returned_to_hand_then_played_is_face_up_on_the_field"]
+  note: "A hand card carries no face-down placement: every hand entry goes through Player::put_in_hand / insert_in_hand / put_all_in_hand, which clear the face-down state (3-1-3-1-2); player::tests::zone_entries_go_through_the_player_helpers keeps direct pushes out of src/."
+"3-6-3":
+  status: proven
+  tests: ["ch03_areas::face_down_card_trashed_from_under_a_tamer_is_face_up_in_the_trash"]
+  note: "Every trash entry goes through Player::put_in_trash / insert_in_trash / put_all_in_trash (face-up); player::tests::zone_entries_go_through_the_player_helpers keeps direct pushes out of src/."
+"3-7-2":
+  status: proven
+  tests: ["ch03_areas::face_down_card_placed_in_security_is_face_down_there"]
+  note: "A card placed in the security stack with no face specified is face-down (also 3-1-3-5's example): the engine records the face by Player::face_up_security membership (absent = face-down), and the security-entry helpers (Player::put_on_security_top / insert_in_security) clear the per-card face-down state a digivolution card carried (3-1-3-1-2) instead of duplicating the face; an opaque-deck placeholder keeps its marker."
+
 # ── ch15-04 Effect States (§15-4) — tests/rules_conformance/ch15_04_effect_states.rs ──
 "15-4-1-2":
   status: proven
