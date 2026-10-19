@@ -81,10 +81,8 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
-  # OUR engine parks the clause's `optional: true` gate even though no Option
-  # sits under any Digimon; DCGO's AdditionalActivateCondition2 fails and asks
-  # nothing. Declined sim-side only: nothing goes on the wire.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-    expect: { prompt: OptionalSkill }
+  # No Option sits under any Digimon, so neither engine offers the clause:
+  # DCGO's AdditionalActivateCondition2 fails, and since Task 37 our §15-7-4
+  # union-zone payability guard withholds the `optional: true` gate (the
+  # sim-only decline that folded our old vacuous gate was removed then).
 assert: []

@@ -122,22 +122,13 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT25-083 } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: our engine triggers BOTH of LadyDevimon's [When Digivolving]
-  # clauses unconditionally (BT25-083.yaml carries neither of DCGO's
-  # AdditionalActivateCondition gates) and parks a TriggerOrder between two
-  # effects that have no material here; DCGO activates neither and asks
-  # nothing. The order is outcome-void, so the fold hides no finding -- the
-  # over-exposure itself is recorded in NOTES-BT25-083.md.
-  - actor: 0
-    do: { select: { cards: [BT25-083], ordinal: 0, sim_only: true } }
-    expect: { prompt: MultipleSkills }
-  # SIM-ONLY: branch 0 is the WD/WA clause, whose `optional: true` gate our
-  # engine parks even with no Option under any own Digimon. Declined; the
-  # other clause's union pick then self-skips on zero candidates. DCGO asks
-  # nothing for either.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-    expect: { prompt: OptionalSkill }
+  # Neither engine asks anything here. The WD/WA clause's "by trashing 1
+  # Option card from any of your Digimon's digivolution cards" can't be
+  # executed (no Option under any own Digimon), so since Task 37 our §15-7-4
+  # union-zone payability guard does not offer it (DCGO:
+  # AdditionalActivateCondition2); with it gone there is no TriggerOrder, and
+  # the tuck's union pick self-skips on zero candidates. (The two sim-only
+  # rows that folded our old vacuous prompts were removed then.)
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -148,12 +139,12 @@ steps:
 assert:
   # The witness for "Cost 3" is the T5 arithmetic (4 -> 1), read at P0's
   # trailing pass; the board is read on P1's turn.
-  - at: 15
+  - at: 13
     that:
       turn: 5
       phase: Main
       p0.memory: 1
-  - at: 16
+  - at: 14
     that:
       turn: 6
       p0.memory: -3

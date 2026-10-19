@@ -589,11 +589,11 @@ fn decline_clause1_union_pick_if_present(runner: &mut DebugRunner) {
     }
 }
 
-/// Negative: no own Digimon has an Option-kind digivolution source -> even if
-/// the outer "you may activate" gate is accepted (it surfaces regardless of
-/// downstream eligibility — the EX11-065/EX11-038 `select_union_zone`
-/// precedent), the inner cost pick has zero eligible candidates and silently
-/// no-ops (no forced/fabricated pick, no state change).
+/// Negative: no own Digimon has an Option card among its digivolution cards
+/// -> "By trashing 1 Option card from any of your Digimon's digivolution
+/// cards" can't be executed, so the effect is not offered at all (§15-7-4:
+/// the union-zone trash condition's payability guard, Task 37; DCGO's
+/// `CanActivateCondition` requires such a Digimon) and nothing changes.
 #[test]
 fn bt25_083_wd_wa_no_fire_without_option_source() {
     let mut runner = base().memory(10).start();
@@ -618,19 +618,13 @@ fn bt25_083_wd_wa_no_fire_without_option_source() {
     // TM-trait card available either, so declining/no-op there too.
     resolve_trigger_order_if_present(&mut runner);
     decline_clause1_union_pick_if_present(&mut runner);
-    // Accept clause 2's outer gate (it surfaces regardless of eligibility).
-    if matches!(runner.pending_kind(), Some(SelectionKind::Replacement)) {
-        runner
-            .accept_optional_trigger()
-            .expect("accept clause 2's outer accept/decline gate");
-    }
 
-    // The inner select_union_zone{material, kind: option} step must find zero
-    // candidates (PLAIN-FIELD is a Digimon, not an Option) and silently
-    // no-op — no further prompt should install.
+    // Clause 2's condition can't be executed (PLAIN-FIELD is a Digimon card,
+    // not an Option card): its "you may" is not offered (§15-7-4), and no
+    // other prompt installs.
     if let Some(sel) = runner.pending_selection() {
         panic!(
-            "unexpected pending selection after accepting the outer gate: kind={:?} prompt={:?} valid_action_ids={:?}",
+            "the unpayable clause 2 must not be offered: kind={:?} prompt={:?} valid_action_ids={:?}",
             sel.kind, sel.prompt, sel.valid_action_ids
         );
     }
@@ -778,6 +772,115 @@ fn bt25_083_wd_wa_declining_reduced_use_still_pays_cost() {
             .iter()
             .any(|c| c.card_id(&runner.game.card_data) == "TM-OPT-TRASH"),
         "declining the reduced-cost use must leave the [Three Musketeers] Option in trash"
+    );
+}
+
+/// Official Q&A Q6395 (2026-06-19): "Can I use this card's [When Digivolving]
+/// [When Attacking] effect to trash BT25-085 [BeelStarmon/Fly Bullet] from my
+/// Digimon's digivolution cards, then use the trashed card?" -- "Yes, you
+/// can." The DUAL BeelStarmon lying in LadyDevimon's digivolution cards is an
+/// Option card to "1 Option card from any of your Digimon's digivolution
+/// cards" (§4-6-6-2; Q6404: BT25-085 "is treated as an Option card with the
+/// [Three Musketeers] trait"); §4-6-3 makes a DUAL a Digimon only as the
+/// permanent itself. So the cost trashes it, and the same card is then used
+/// from the trash at its use cost 6 reduced by 3 (memory 10 -> 7); its [Main]
+/// deletes the opponent's highest level Digimon.
+#[test]
+fn bt25_083_q6395_trashes_dual_bt25_085_from_digivolution_cards_then_uses_it() {
+    let mut runner = base()
+        .dsl_card("BT25-085")
+        .expect("BT25-085 YAML parses and compiles")
+        .memory(10)
+        .start();
+
+    let ladydevimon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.push_source(ladydevimon, "BT25-085");
+    runner.place_on_field(1, "PLAIN-FIELD", Some(0));
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        digimon_engine::selection::TriggerSource::Permanent(ladydevimon),
+    );
+    runner.game.drain_effect_queue();
+    if matches!(runner.pending_kind(), Some(SelectionKind::Replacement)) {
+        runner
+            .accept_optional_trigger()
+            .expect("accept the [When Attacking] effect");
+    }
+
+    // The cost: BT25-085 is the only Option card in any digivolution cards.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::UnionZone {
+            zones: digimon_engine::selection::UnionZoneSet::MATERIAL
+        }),
+        "the cost's search must find BT25-085 among the digivolution cards (Q6395): {:?}",
+        runner.pending_selection()
+    );
+    let sel = runner.pending_selection().unwrap();
+    assert_eq!(sel.valid_action_ids.len(), 1, "{sel:?}");
+    let cost_act = sel.valid_action_ids[0];
+    runner
+        .execute_action(0, cost_act)
+        .expect("trash BT25-085 from the digivolution cards");
+    assert_eq!(
+        runner.game.players[0].battle_area[ladydevimon.index as usize]
+            .card_sources
+            .len(),
+        1,
+        "BT25-085 left the digivolution cards"
+    );
+
+    // "you may use 1 [Three Musketeers] trait Option card from your trash":
+    // the card just trashed.
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Trash));
+    let use_act = runner
+        .pending_selection()
+        .unwrap()
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != PASS)
+        .expect("BT25-085 can be used from the trash");
+    runner
+        .execute_action(0, use_act)
+        .expect("use BT25-085 from the trash");
+
+    // Its [Main] deletes the only (highest level) opponent Digimon; decline
+    // <Arts Digivolve>.
+    for _ in 0..8 {
+        let Some(sel) = runner.pending_selection() else {
+            break;
+        };
+        if sel.is_optional {
+            runner
+                .decline_optional_trigger()
+                .expect("decline an optional prompt");
+        } else {
+            assert_eq!(
+                sel.valid_action_ids.len(),
+                1,
+                "the [Main]'s delete target is the opponent's only Digimon: {sel:?}"
+            );
+            let act = sel.valid_action_ids[0];
+            runner.execute_action(0, act).expect("take the only pick");
+        }
+    }
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(
+        runner.game.memory, 7,
+        "BT25-085's use cost 6, reduced by 3, was paid"
+    );
+    assert!(
+        runner.game.players[1].battle_area.is_empty(),
+        "BT25-085's [Main] deleted the opponent's highest level Digimon"
+    );
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BT25-085"),
+        "the used Option is trashed after its [Main]"
     );
 }
 

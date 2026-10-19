@@ -1375,100 +1375,20 @@ impl<'a> EffectContext<'a> {
             + 'static,
     {
         use crate::action::space::{
-            decode_breeding_source_select, decode_source_select, encode_breeding_source_select,
-            encode_source_select, HAND_MAIN_LIMIT, PLAY_HAND_END, PLAY_HAND_START,
+            decode_breeding_source_select, decode_source_select, PLAY_HAND_END, PLAY_HAND_START,
             SOURCE_SELECT_END, SOURCE_SELECT_START, TRASH_EFFECT_END, TRASH_EFFECT_START,
-            TRASH_MAIN_LIMIT,
         };
-        use crate::selection::UnionZoneSet;
 
-        let mut valid_action_ids: Vec<u16> = Vec::new();
-
-        // Hand zone — collect lengths first, then filter per index to avoid
-        // simultaneous `&game` + `&game.player.hand[i]` borrows.
-        if zones.contains(UnionZoneSet::HAND) {
-            let hand_len = self.game.player(of_player).hand.len();
-            let cap = hand_len.min(HAND_MAIN_LIMIT);
-            for i in 0..cap {
-                // Clone the CardSource so we can release the borrow on
-                // `self.game` before passing `&Game` to the filter.
-                let card_clone = self.game.player(of_player).hand[i].clone();
-                if filter(self.game, &card_clone, UnionZoneSet::HAND) {
-                    valid_action_ids.push(PLAY_HAND_START + i as u16);
-                }
-            }
-        }
-
-        // Trash zone — same pattern.
-        if zones.contains(UnionZoneSet::TRASH) {
-            let trash_len = self.game.player(of_player).trash.len();
-            let cap = trash_len.min(TRASH_MAIN_LIMIT);
-            for i in 0..cap {
-                let card_clone = self.game.player(of_player).trash[i].clone();
-                if filter(self.game, &card_clone, UnionZoneSet::TRASH) {
-                    valid_action_ids.push(TRASH_EFFECT_START + i as u16);
-                }
-            }
-        }
-
-        if zones.contains(UnionZoneSet::MATERIAL) {
-            let material_carriers: Vec<crate::permanent::PermanentHandle> =
-                if let Some(carrier) = material_of {
-                    vec![carrier]
-                } else {
-                    self.game
-                        .player(of_player)
-                        .battle_area
-                        .iter()
-                        .enumerate()
-                        .filter_map(|(index, perm)| {
-                            (perm.top_card().is_digimon(&self.game.card_data)
-                                && perm.card_sources.len() > 1)
-                                .then_some(crate::permanent::PermanentHandle {
-                                    player: of_player,
-                                    index: index as u8,
-                                })
-                        })
-                        // G-UNION-HAND-SOURCE-PLAY: restrict the field carrier
-                        // scan to carriers matching `material_carrier_filter`
-                        // (e.g. a [King Drasil_7D6] top card). Only applies to
-                        // the broad `material_of: None` scan; a pinned carrier
-                        // above bypasses this.
-                        .filter(|handle| {
-                            material_carrier_filter
-                                .as_ref()
-                                .map(|f| f(self.game, *handle))
-                                .unwrap_or(true)
-                        })
-                        .collect()
-                };
-            for carrier in material_carriers {
-                let candidates: Vec<(usize, CardSource)> =
-                    material_carrier_permanent(self.game, carrier)
-                        .map(|perm| {
-                            perm.card_sources
-                                .iter()
-                                .take(perm.card_sources.len().saturating_sub(1))
-                                .cloned()
-                                .enumerate()
-                                .collect()
-                        })
-                        .unwrap_or_default();
-                for (source_index, card_clone) in candidates {
-                    if !filter(self.game, &card_clone, UnionZoneSet::MATERIAL) {
-                        continue;
-                    }
-                    let action = if carrier.index == crate::action::space::BREEDING_TARGET as u8 {
-                        encode_breeding_source_select(carrier.player, source_index as u16)
-                    } else {
-                        encode_source_select(carrier.index as u16, source_index as u16)
-                    };
-                    if let Some(action) = action {
-                        valid_action_ids.push(action);
-                    }
-                }
-            }
-        }
+        let valid_action_ids = union_zone_candidate_actions(
+            self.game,
+            of_player,
+            zones,
+            material_of,
+            material_carrier_filter
+                .as_ref()
+                .map(|f| &**f as &dyn Fn(&Game, crate::permanent::PermanentHandle) -> bool),
+            &filter,
+        );
 
         if valid_action_ids.is_empty() {
             return;
@@ -3293,6 +3213,94 @@ pub(crate) fn material_carrier_permanent(
             .battle_area
             .get(perm.index as usize)
     }
+}
+
+/// The action ids a union-zone pick (`EffectContext::select_union_zone`)
+/// offers: every card of `of_player`'s hand / trash (capped at the action
+/// space's limits) and every below-top digivolution card of the material
+/// carriers that `filter` accepts. Material carriers: `material_of` when
+/// pinned, otherwise each of `of_player`'s battle-area permanents whose top
+/// card is a Digimon with at least one digivolution card, restricted by
+/// `material_carrier_filter`. Read-only, so the §15-7-4 payability guard of a
+/// "by trashing 1 card from ..." condition (`CostGuard::UnionZoneTrash`) asks
+/// exactly what the pick will offer.
+pub(crate) fn union_zone_candidate_actions(
+    game: &Game,
+    of_player: crate::enums::PlayerId,
+    zones: crate::selection::UnionZoneSet,
+    material_of: Option<PermanentHandle>,
+    material_carrier_filter: Option<&dyn Fn(&Game, PermanentHandle) -> bool>,
+    filter: &dyn Fn(&Game, &CardSource, crate::selection::UnionZoneSet) -> bool,
+) -> Vec<u16> {
+    use crate::action::space::{
+        encode_breeding_source_select, encode_source_select, HAND_MAIN_LIMIT, PLAY_HAND_START,
+        TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
+    };
+    use crate::selection::UnionZoneSet;
+
+    let mut valid_action_ids: Vec<u16> = Vec::new();
+    let player = game.player(of_player);
+
+    if zones.contains(UnionZoneSet::HAND) {
+        for (i, card) in player.hand.iter().take(HAND_MAIN_LIMIT).enumerate() {
+            if filter(game, card, UnionZoneSet::HAND) {
+                valid_action_ids.push(PLAY_HAND_START + i as u16);
+            }
+        }
+    }
+
+    if zones.contains(UnionZoneSet::TRASH) {
+        for (i, card) in player.trash.iter().take(TRASH_MAIN_LIMIT).enumerate() {
+            if filter(game, card, UnionZoneSet::TRASH) {
+                valid_action_ids.push(TRASH_EFFECT_START + i as u16);
+            }
+        }
+    }
+
+    if zones.contains(UnionZoneSet::MATERIAL) {
+        let material_carriers: Vec<PermanentHandle> = if let Some(carrier) = material_of {
+            vec![carrier]
+        } else {
+            player
+                .battle_area
+                .iter()
+                .enumerate()
+                .filter_map(|(index, perm)| {
+                    (perm.top_card().is_digimon(&game.card_data) && perm.card_sources.len() > 1)
+                        .then_some(PermanentHandle {
+                            player: of_player,
+                            index: index as u8,
+                        })
+                })
+                // G-UNION-HAND-SOURCE-PLAY: restrict the field carrier scan to
+                // carriers matching `material_carrier_filter` (e.g. a [King
+                // Drasil_7D6] top card). Only applies to the broad
+                // `material_of: None` scan; a pinned carrier above bypasses this.
+                .filter(|handle| material_carrier_filter.is_none_or(|f| f(game, *handle)))
+                .collect()
+        };
+        for carrier in material_carriers {
+            let Some(perm) = material_carrier_permanent(game, carrier) else {
+                continue;
+            };
+            let below_top = perm.card_sources.len().saturating_sub(1);
+            for (source_index, card) in perm.card_sources.iter().take(below_top).enumerate() {
+                if !filter(game, card, UnionZoneSet::MATERIAL) {
+                    continue;
+                }
+                let action = if carrier.index == crate::action::space::BREEDING_TARGET as u8 {
+                    encode_breeding_source_select(carrier.player, source_index as u16)
+                } else {
+                    encode_source_select(carrier.index as u16, source_index as u16)
+                };
+                if let Some(action) = action {
+                    valid_action_ids.push(action);
+                }
+            }
+        }
+    }
+
+    valid_action_ids
 }
 
 /// The carrier's `card_sources` slice — the bottom-up digivolution stack

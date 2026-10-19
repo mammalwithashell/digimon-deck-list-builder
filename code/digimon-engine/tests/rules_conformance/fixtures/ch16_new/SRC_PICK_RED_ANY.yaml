@@ -1,10 +1,9 @@
 # SRC_PICK_RED_ANY -- Option, red, use cost 0.
 #   [Main] Trash 1 red card from the digivolution cards of 1 of your
 #   opponent's Digimon.
-# An UNQUALIFIED color reference over digivolution cards. A DUAL card under a
-# Digimon is on the field, where it is treated as a Digimon and can't be
-# referenced as an Option card (§4-6-3): only its Digimon information (red for
-# DUAL_ARTS) is read.
+# An UNQUALIFIED color reference over digivolution cards. It names neither
+# category, so a DUAL card under a Digimon is read through its Digimon
+# information only (§4-6-1, §4-6-5-2; owner ruling W5 (b)): red for DUAL_ARTS.
 card: SRC_PICK_RED_ANY
 name: Any red Source Audit
 kind: option

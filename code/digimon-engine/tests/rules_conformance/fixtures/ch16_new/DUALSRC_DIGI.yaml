@@ -2,8 +2,7 @@
 #   [When Attacking] If this Digimon has a Digimon card in its digivolution cards,
 #   gain 3 memory.
 # Counts its own digivolution cards (`self_source_count`). A DUAL card among
-# them is on the field, where it is a Digimon and can't be referenced as an
-# Option card (§4-6-3): only its Digimon information is read.
+# them is a Digimon card to this "Digimon card" reference (§4-6-5-2).
 card: DUALSRC_DIGI
 name: Source Counter DIGI
 kind: digimon

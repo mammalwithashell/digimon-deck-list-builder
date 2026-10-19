@@ -2,8 +2,10 @@
 #   [When Attacking] If this Digimon has an Option card in its digivolution cards,
 #   gain 3 memory.
 # Counts its own digivolution cards (`self_source_count`). A DUAL card among
-# them is on the field, where it is a Digimon and can't be referenced as an
-# Option card (§4-6-3): only its Digimon information is read.
+# them is an Option card to this "Option card" reference: §4-6-3 makes only the
+# DUAL card that IS the permanent (its top card) a Digimon; one lying in the
+# digivolution cards is referenced as an Option card (§4-6-6-2; official Q&A
+# Q6395).
 card: DUALSRC_OPT
 name: Source Counter OPT
 kind: digimon

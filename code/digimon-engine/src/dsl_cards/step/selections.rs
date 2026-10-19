@@ -4912,18 +4912,7 @@ pub fn try_install(
             then,
             ..
         } => {
-            use crate::selection::UnionZoneSet;
-            let mut zoneset = UnionZoneSet(0);
-            for z in zones {
-                match z {
-                    CompiledZone::Hand => zoneset |= UnionZoneSet::HAND,
-                    CompiledZone::Trash => zoneset |= UnionZoneSet::TRASH,
-                    CompiledZone::Material => zoneset |= UnionZoneSet::MATERIAL,
-                    // Other zones not yet exposed by UnionZoneSet bitfield.
-                    // Silently skip — future tasks widen engine API as needed.
-                    _ => {}
-                }
-            }
+            let zoneset = union_zone_set(zones);
             if zoneset.0 == 0 {
                 // No supported zones: silent no-op; tail runs synchronously.
                 return InstallResult::Continue;
@@ -6298,6 +6287,9 @@ fn own_digimon_with_link_cards(ctx: &EffectContext<'_>, player: PlayerId) -> Vec
 /// is an Option (tagged `Digivolution`) plus every LINK CARD that is an Option
 /// (tagged `Link`). Mirrors DCGO `permanent.DigivolutionOrLinkCards.Where(IsOption)`
 /// (`DigivolutionCards` excludes the top card, so only below-top sources qualify).
+/// A DUAL card there is an Option card to this reference (DCGO
+/// `CardSource.IsOption`; §4-6-6-2, official Q&A Q6395 / Q6404): only a
+/// permanent's top card is a Digimon whatever the reference (§4-6-3).
 fn stack_option_candidates(
     game: &crate::game::Game,
     host: PermanentHandle,
@@ -6318,7 +6310,7 @@ fn stack_option_candidates(
     let n = perm.card_sources.len();
     if n > 1 {
         for source in perm.card_sources.iter().take(n - 1) {
-            if source.is_option(data)
+            if source.is_option_card_for_search(data)
                 && !game.source_card_trash_blocked(host, source.handle(), controller)
             {
                 out.push((
@@ -6329,7 +6321,7 @@ fn stack_option_candidates(
         }
     }
     for linked in perm.linked_cards.iter() {
-        if linked.is_option(data) {
+        if linked.is_option_card_for_search(data) {
             out.push((linked.handle(), crate::resume::StackOptionZone::Link));
         }
     }
@@ -9350,13 +9342,62 @@ fn install_select_ordered_permutation(
     }
 }
 
+/// The `UnionZoneSet` a `select_union_zone` step's `zones:` names. Zones the
+/// bitfield does not expose are skipped. Shared by the step's installer and
+/// the §15-7-4 guard `CostGuard::UnionZoneTrash` (`lower_triggered.rs`), so
+/// the guard asks about exactly the zones the pick offers.
+pub(crate) fn union_zone_set(zones: &[CompiledZone]) -> crate::selection::UnionZoneSet {
+    use crate::selection::UnionZoneSet;
+    let mut set = UnionZoneSet(0);
+    for zone in zones {
+        match zone {
+            CompiledZone::Hand => set |= UnionZoneSet::HAND,
+            CompiledZone::Trash => set |= UnionZoneSet::TRASH,
+            CompiledZone::Material => set |= UnionZoneSet::MATERIAL,
+            // Other zones not yet exposed by UnionZoneSet bitfield.
+            // Silently skip — future tasks widen engine API as needed.
+            _ => {}
+        }
+    }
+    set
+}
+
+/// Whether `card`, a candidate from origin `zone`, matches a
+/// `select_union_zone` step's filter: the per-zone override
+/// (`zone_filters.{hand,trash,material}`, G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY)
+/// or else the shared `filter`, read as a card subject (PUPPETS-G021: so DP
+/// constraints work for hand / trash candidates; a DUAL digivolution card is
+/// read by what the reference names, §4-6-6-2). The ONE definition used by
+/// the pick (`install_select_union_zone`) and by the §15-7-4 guard
+/// `CostGuard::UnionZoneTrash`, so the two can't read a card differently.
+pub(crate) fn union_zone_card_matches(
+    rctx: &crate::effect_context::EffectReadContext<'_>,
+    filter: &CompiledPredicate,
+    zone_filters: &digimon_dsl::compiled::CompiledUnionZoneFilters,
+    card: crate::card_source::CardHandle,
+    zone: crate::selection::UnionZoneSet,
+    bindings: Option<&Bindings>,
+) -> bool {
+    use crate::selection::UnionZoneSet;
+    let active = if zone == UnionZoneSet::HAND {
+        zone_filters.hand.as_ref()
+    } else if zone == UnionZoneSet::TRASH {
+        zone_filters.trash.as_ref()
+    } else {
+        zone_filters.material.as_ref()
+    }
+    .unwrap_or(filter);
+    eval_predicate_with_bindings(active, rctx, PredicateSubject::Card(card), bindings)
+}
+
 #[allow(clippy::too_many_arguments)]
 /// Reconstruct the `(action_id, handle, origin)` candidates of a parked
 /// union-zone selection, mirroring `select_union_zone`'s callback decode across
 /// the four ranges (breeding-source / field-source / trash / hand). Built at
 /// install time — the selection is parked, so handles are stable — for the
 /// resumable-VM `UnionZone` frame, which linear-searches rather than decodes.
-fn union_zone_candidates(
+/// Also read by the §15-7-4 guard `CostGuard::UnionZoneTrash`.
+pub(crate) fn union_zone_candidates(
     game: &crate::game::Game,
     of_player: PlayerId,
     valid_action_ids: &[u16],
@@ -9531,16 +9572,6 @@ fn install_select_union_zone(
         // without an override fall back to `filter`. This lets one prompt offer
         // "1 X from trash OR 1 Y from breeding sources" with different filters.
         move |game, card, zone| {
-            use crate::selection::UnionZoneSet;
-            let active = if zone == UnionZoneSet::HAND {
-                zone_filters.hand.as_ref()
-            } else if zone == UnionZoneSet::TRASH {
-                zone_filters.trash.as_ref()
-            } else {
-                zone_filters.material.as_ref()
-            }
-            .unwrap_or(&filter);
-            let handle = card.handle();
             let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
                 game,
                 source_card,
@@ -9548,10 +9579,12 @@ fn install_select_union_zone(
                 source_kind,
                 player,
             );
-            eval_predicate_with_bindings(
-                active,
+            union_zone_card_matches(
                 &read_ctx,
-                PredicateSubject::Card(handle),
+                &filter,
+                &zone_filters,
+                card.handle(),
+                zone,
                 Some(&filter_bindings),
             )
         },

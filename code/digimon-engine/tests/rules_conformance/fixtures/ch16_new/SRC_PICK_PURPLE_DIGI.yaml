@@ -1,0 +1,32 @@
+# SRC_PICK_PURPLE_DIGI -- Option, red, use cost 0.
+#   [Main] Trash 1 purple Digimon card from the digivolution cards of 1 of your
+#   opponent's Digimon.
+# References a digivolution card AS A DIGIMON CARD by a colour: for a DUAL card
+# lying under a Digimon the colour of that information is read (§4-6-5-2 /
+# §4-6-6-2; official Q&A Q6395) -- §4-6-3 makes only a permanent's top card a
+# Digimon whatever the reference.
+card: SRC_PICK_PURPLE_DIGI
+name: purple Digimon Source Audit
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash 1 purple Digimon card from the digivolution cards of 1 of your opponent's Digimon."
+    process:
+      - select_opponent_permanent:
+          bind_as: opp_stack
+          filter: { kind: digimon }
+          prompt: "Choose an opponent Digimon"
+      - select_opponent_sources:
+          target: opp_stack
+          min: 1
+          max: 1
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+          bind_as: picked
+          prompt: "Trash 1 purple Digimon digivolution card"
+          then:
+            - trash_selected_sources: { source_refs: picked }

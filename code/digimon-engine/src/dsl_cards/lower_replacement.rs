@@ -857,7 +857,9 @@ fn required_selection_step_has_candidate(
             }),
         // EX7-048 — the protect-OTHERS Option-trash cost is payable only when the
         // CARRIER (the effect's own `source_permanent`, NOT the leaving subject)
-        // has ≥1 Option among its below-top digivolution sources. Gates the
+        // has ≥1 Option among its below-top digivolution sources (a DUAL card
+        // there is one, §4-6-6-2 / Q6395, the same set as
+        // `own_digivolution_option_handles`). Gates the
         // optional accept prompt so it is not offered when the carrier cannot pay.
         CompiledStep::TrashOptionFromOwnDigivolutionCardsAndCancelLeave => ctx
             .source_permanent
@@ -866,7 +868,7 @@ fn required_selection_step_has_candidate(
                 let n = perm.card_sources.len();
                 n > 1
                     && perm.card_sources.iter().take(n - 1).any(|s| {
-                        s.is_option(ctx.card_data())
+                        s.is_option_card_for_search(ctx.card_data())
                             && !ctx.game.source_card_trash_blocked(
                                 ctx.source_permanent.unwrap(),
                                 s.handle(),
