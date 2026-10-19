@@ -133,6 +133,12 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
+  # RE-LOWERED 2026-10-19: the pass ends the turn, and <Execute> is now an
+  # [End of Your Turn] trigger whose attack is its own decision inside the
+  # end-of-turn pool (§16-38-2; Task 21, b46d19d80) -- a parked prompt the line
+  # must answer. Declined (DCGO: the OptionalSkill "no" of its Execute gate).
+  - actor: 0
+    do: { pass: {} }
 assert:
   # After the play + pick: both Gasamon are fielded and unsuspended (the lock
   # is a restriction, not a suspension), Ryugumon sits at 14000 effective DP
