@@ -487,6 +487,12 @@ mod tests {
     /// cards (`std::mem::take` + reassign for a shuffle or a mulligan) and the
     /// state builders that create fresh cards (`runners::replay` recordings,
     /// `determinize` / `search` re-deals of hidden cards).
+    ///
+    /// Blind spots of the two regexes (none exists in `src/` today outside the
+    /// builders above; a reviewer adding one must route it through a helper):
+    /// a match-arm alias (`=> &mut p.trash,`), a zone passed as a function
+    /// argument (`f(&mut p.trash, card)`), index assignment (`p.trash[i] = c`)
+    /// and a `mem::take` + reassign that adds cards rather than reordering.
     #[test]
     fn zone_entries_go_through_the_player_helpers() {
         let push = regex::Regex::new(
