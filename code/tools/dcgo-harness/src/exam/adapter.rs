@@ -1873,7 +1873,19 @@ impl TriggerCandidate {
 /// The `Debug` name minus any payload: `Keyword::MaterialSave(1)` is the
 /// `<Material Save>` trigger, and the `1` is that keyword's PARAMETER, not part
 /// of its name. `trigger:` names the keyword; it does not address a parameter.
+///
+/// `<Piercing>` is spelled `Pierce`: that is DCGO's `ICardEffect.EffectName`
+/// for the keyword (`KeyWordEffects/Pierce.cs`, `SetUpICardEffect("Pierce",
+/// ...)`), the same wire name [`crate::exam::projection::KEYWORD_PROBES`]
+/// pairs with `Keyword::Piercing`. A `trigger:` / `trigger_not:` row is ONE
+/// string both engines normalize and match against their own branch names, so
+/// our side must spell the branch the way DCGO does -- `trigger_not: Pierce`
+/// otherwise excludes nothing here (EX13-045's battle-result pool, where
+/// <Piercing> became a pooled trigger, Task 28).
 fn keyword_display_name(keyword: digimon_engine::enums::Keyword) -> String {
+    if matches!(keyword, digimon_engine::enums::Keyword::Piercing) {
+        return "Pierce".to_string();
+    }
     let debug = format!("{keyword:?}");
     match debug.split_once('(') {
         Some((name, _payload)) => name.to_string(),
@@ -3051,6 +3063,18 @@ steps:
         // A parameterized keyword is still named by its KEYWORD, not by its
         // parameter: `<Material Save 1>` is the `MaterialSave` trigger.
         assert_eq!(keyword_display_name(Keyword::MaterialSave(1)), "MaterialSave");
+    }
+
+    #[test]
+    fn keyword_display_name_spells_piercing_as_dcgo_does() {
+        // DCGO names the keyword effect "Pierce" (KeyWordEffects/Pierce.cs), so a
+        // shared `trigger_not: Pierce` row must exclude our <Piercing> branch.
+        use digimon_engine::enums::Keyword;
+        assert_eq!(keyword_display_name(Keyword::Piercing), "Pierce");
+        assert_eq!(
+            normalize_trigger_name(&keyword_display_name(Keyword::Piercing)),
+            normalize_trigger_name("Pierce")
+        );
     }
 
     #[test]
