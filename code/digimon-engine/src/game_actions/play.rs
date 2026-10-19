@@ -199,8 +199,31 @@ impl Game {
         source: PlaySource,
         suppress_on_play: bool,
     ) -> Option<usize> {
+        self.play_from_trash_with_cost_result_suppress(
+            player_id,
+            trash_index,
+            cost_delta,
+            source,
+            suppress_on_play,
+        )
+        .into_option()
+    }
+
+    /// As [`Self::play_from_trash_with_cost_suppress`], but keeps the three
+    /// outcomes apart: `Played`, `Pending` (the play parked on a decision --
+    /// a cost-reduction prompt, a would-play window, a DigiXros pick -- and
+    /// its own resume frame finishes it), or `Failed` (refused before the card
+    /// moved, see [`Self::trash_play_refusal`], or rolled back to the trash).
+    pub(crate) fn play_from_trash_with_cost_result_suppress(
+        &mut self,
+        player_id: PlayerId,
+        trash_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        suppress_on_play: bool,
+    ) -> PlayFromHandCostResult {
         if self.trash_play_refusal(player_id, trash_index, source).is_some() {
-            return None;
+            return PlayFromHandCostResult::Failed;
         }
 
         let card = self.player_mut(player_id).trash.remove(trash_index);
@@ -216,8 +239,6 @@ impl Game {
             PendingWouldPlayOrigin::Trash { index: trash_index },
             suppress_on_play,
         ) {
-            PlayFromHandCostResult::Played(field_index) => Some(field_index),
-            PlayFromHandCostResult::Pending => None,
             PlayFromHandCostResult::Failed => {
                 let card = self
                     .player_mut(player_id)
@@ -225,8 +246,9 @@ impl Game {
                     .pop()
                     .expect("invariant: card was just pushed to hand");
                 self.player_mut(player_id).insert_in_trash(trash_index, card);
-                None
+                PlayFromHandCostResult::Failed
             }
+            other => other,
         }
     }
 

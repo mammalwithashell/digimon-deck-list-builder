@@ -23,6 +23,17 @@ use crate::selection::*;
 use crate::token_registry::*;
 use crate::trigger_context::*;
 
+/// What became of an effect's play of a card from the trash.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TrashPlayOutcome {
+    /// The card is on the field.
+    Played(PermanentHandle),
+    /// The play parked on a decision; its own resume frame finishes it.
+    Parked,
+    /// The card was not played, for this reason.
+    NotPlayed(&'static str),
+}
+
 impl<'a> EffectContext<'a> {
     /// Preserve the original effect controller even when a different player is
     /// selecting or receiving the card. Restore the surrounding scope after play.
@@ -1181,37 +1192,56 @@ impl<'a> EffectContext<'a> {
         card: CardHandle,
         suppress_on_play: bool,
     ) -> Option<PermanentHandle> {
-        let trash_index = self
+        match self.play_from_trash_free_unsuspended_outcome_for(controller, card, suppress_on_play)
+        {
+            TrashPlayOutcome::Played(played) => Some(played),
+            TrashPlayOutcome::Parked | TrashPlayOutcome::NotPlayed(_) => None,
+        }
+    }
+
+    /// As [`Self::play_from_trash_free_unsuspended_for`], reporting what
+    /// became of the play. The refusal is read inside the same
+    /// effect-controller scope the play runs in, so the reason is the one the
+    /// real gate applied.
+    pub(crate) fn play_from_trash_free_unsuspended_outcome_for(
+        &mut self,
+        controller: crate::enums::PlayerId,
+        card: CardHandle,
+        suppress_on_play: bool,
+    ) -> TrashPlayOutcome {
+        let Some(trash_index) = self
             .game
             .player(controller)
             .trash
             .iter()
-            .position(|c| c.handle() == card);
-        let trash_index = match trash_index {
-            Some(i) => i,
-            None => {
-                #[cfg(debug_assertions)]
-                eprintln!(
-                    "[debug] play_from_trash_free_unsuspended: card {:?} not in \
-                     player {}'s trash; another effect likely relocated it. \
-                     Skipping replay.",
-                    card, controller
-                );
-                return None;
-            }
+            .position(|c| c.handle() == card)
+        else {
+            return TrashPlayOutcome::NotPlayed("the card is no longer in the trash");
         };
-        let field_index = self.with_play_controller(|game| {
-            game.play_from_trash_with_cost_suppress(
+        self.with_play_controller(|game| {
+            if let Some(reason) =
+                game.trash_play_refusal(controller, trash_index, PlaySource::ByEffect)
+            {
+                return TrashPlayOutcome::NotPlayed(reason);
+            }
+            match game.play_from_trash_with_cost_result_suppress(
                 controller,
                 trash_index,
                 crate::enums::CostDelta::Free,
                 PlaySource::ByEffect,
                 suppress_on_play,
-            )
-        })?;
-        Some(PermanentHandle {
-            player: controller,
-            index: field_index as u8,
+            ) {
+                crate::game_actions::PlayFromHandCostResult::Played(field_index) => {
+                    TrashPlayOutcome::Played(PermanentHandle {
+                        player: controller,
+                        index: field_index as u8,
+                    })
+                }
+                crate::game_actions::PlayFromHandCostResult::Pending => TrashPlayOutcome::Parked,
+                crate::game_actions::PlayFromHandCostResult::Failed => {
+                    TrashPlayOutcome::NotPlayed("the play did not complete")
+                }
+            }
         })
     }
 

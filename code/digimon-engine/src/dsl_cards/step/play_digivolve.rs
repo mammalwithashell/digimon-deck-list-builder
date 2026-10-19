@@ -27,6 +27,7 @@ use crate::dsl_cards::binding_ref::{
 };
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::resolve_player;
+use crate::effect_context::TrashPlayOutcome;
 use crate::effect_context::EffectContext;
 use crate::enums::CardSourceRef;
 use crate::enums::CostDelta;
@@ -723,25 +724,17 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     _ => None,
                 };
             if let Some((controller, h)) = resolved {
-                // Read before the play moves the card: if the play does not
-                // happen, the reason is reported below.
-                let trash_index = ctx
+                // Named before the play moves the card, for the report below.
+                let card_name = ctx
                     .game
                     .player(controller)
                     .trash
                     .iter()
-                    .position(|c| c.handle() == h);
-                let card_id = trash_index
-                    .map(|i| {
-                        ctx.game.player(controller).trash[i]
-                            .card_id(&ctx.game.card_data)
-                            .to_string()
-                    })
-                    .unwrap_or_default();
-                let refusal = trash_index.map_or(Some("the card is no longer in the trash"), |i| {
-                    ctx.game
-                        .trash_play_refusal(controller, i, crate::enums::PlaySource::ByEffect)
-                });
+                    .find(|c| c.handle() == h)
+                    .map_or_else(
+                        || format!("card {}", h.0),
+                        |c| c.card_id(&ctx.game.card_data).to_string(),
+                    );
                 // G-PLAY-ENTERS-SUSPENDED (Q28 / EX5-060): a flagged play
                 // enters suspended — the commit site consumes the slot.
                 if *suspended {
@@ -754,32 +747,29 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 // suppressor identity — `fire_play_event_triggers` consults
                 // `permanent_is_unaffected_by_effect` against it before
                 // honoring the skip (judge-quiz Q28).
-                let played = if *suppress_on_play {
+                if *suppress_on_play {
                     ctx.game.on_play_suppressor = Some((ctx.player, ctx.source_kind));
-                    ctx.play_from_trash_free_unsuspended_for(controller, h, true)
-                } else {
-                    ctx.play_from_trash_free_unsuspended_for(controller, h, false)
-                };
+                }
+                let outcome =
+                    ctx.play_from_trash_free_unsuspended_outcome_for(controller, h, *suppress_on_play);
                 // The play may have been rejected (full field, lock) — clear
                 // any unconsumed slots so they cannot leak to a later play.
                 ctx.game.play_enters_suspended = false;
                 ctx.game.on_play_suppressor = None;
-                match played {
-                    Some(played) => bindings.record_played(played),
-                    // A parked play (a cost-reduction prompt) is not dropped:
-                    // its own resume frame finishes it, and the remaining
-                    // steps park behind that prompt.
-                    None if ctx.game.pending_selection.is_some() => {}
+                match outcome {
+                    TrashPlayOutcome::Played(played) => bindings.record_played(played),
+                    // A parked play is not dropped: its own resume frame
+                    // finishes it, and the remaining steps park behind it.
+                    TrashPlayOutcome::Parked => {}
                     // The chosen card could not be played: say why rather
                     // than do nothing silently.
-                    None => {
+                    TrashPlayOutcome::NotPlayed(reason) => {
                         let seq = ctx.game.next_event_seq();
                         ctx.game.events.push(crate::events::GameEvent::EffectFizzled {
                             seq,
                             source_permanent: ctx.source_permanent,
                             reason: format!(
-                                "play of {card_id} from the trash not performed: {}",
-                                refusal.unwrap_or("the play did not complete")
+                                "play of {card_name} from the trash not performed: {reason}"
                             ),
                         });
                     }
