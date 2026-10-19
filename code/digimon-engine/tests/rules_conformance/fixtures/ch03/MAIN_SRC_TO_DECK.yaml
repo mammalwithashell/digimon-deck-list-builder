@@ -1,0 +1,21 @@
+# MAIN_SRC_TO_DECK -- Option, red, use cost 0.
+#   [Main] Return 1 card from under 1 of your Tamers to the bottom of the
+#   deck.
+# A Digi-Egg card goes to the bottom of the Digi-Egg deck instead.
+card: MAIN_SRC_TO_DECK
+name: Underdeck
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Return 1 card from under 1 of your Tamers to the bottom of the deck."
+    process:
+      - select_own_sources:
+          filter: { host_kind_is: tamer }
+          min: 1
+          max: 1
+          bind_as: pick
+          prompt: "Return 1 card from under 1 of your Tamers to the bottom of the deck"
+          then:
+            - return_selected_sources_to_deck: { source_refs: pick, position: bottom }

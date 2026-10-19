@@ -31,10 +31,12 @@ const COMMON: &[&str] = &[
 /// Chapter 3 areas: a Tamer, the cards stashed face-down under it, and the
 /// Options that move one to another area (`ch03_areas.rs`).
 const CH03: &[&str] = &[
+    include_str!("ch03/AREA_EGG.yaml"),
     include_str!("ch03/AREA_LV3.yaml"),
     include_str!("ch03/AREA_LV4.yaml"),
     include_str!("ch03/AREA_TAMER.yaml"),
     include_str!("ch03/MAIN_SRC_TO_HAND.yaml"),
+    include_str!("ch03/MAIN_SRC_TO_DECK.yaml"),
     include_str!("ch03/MAIN_SRC_TO_SECURITY.yaml"),
     include_str!("ch03/MAIN_TRASH_UNDER.yaml"),
 ];

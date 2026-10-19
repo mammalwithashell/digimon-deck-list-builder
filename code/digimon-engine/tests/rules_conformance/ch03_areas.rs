@@ -119,6 +119,11 @@ fn face_down_card_placed_in_security_is_face_down_there() {
         "cdc05aa98bea875decb0e8006e9382602211756f91fafff3fb02ed33d53101a9"
     );
     let (mut r, tamer, _) = stash_board("AREA_LV3", "MAIN_SRC_TO_SECURITY");
+    // A stale face-up record for the card (as if an earlier stint in the
+    // security stack had left it): the card that now enters is a new card
+    // (§3-1-3-1-2), placed face down.
+    let stale = r.game.players[0].battle_area[tamer.index as usize].card_sources[0].card_index;
+    r.game.players[0].face_up_security.insert(stale);
     let security_before = r.game.players[0].security.len();
     use_on_the_stashed_card(&mut r, "MAIN_SRC_TO_SECURITY");
     assert_eq!(
@@ -132,10 +137,71 @@ fn face_down_card_placed_in_security_is_face_down_there() {
     assert_eq!(top.card_id(&r.game.card_data), "AREA_LV3", "placed at the top");
     assert!(
         !r.game.players[0].face_up_security.contains(&top.card_index),
-        "the security card is face-down"
+        "the security card is face-down, a stale face-up record notwithstanding"
     );
     assert!(
         !top.face_down,
+        "the card keeps no face-down state from under the Tamer (§3-1-3-1-2)"
+    );
+}
+
+// ─── §3-2-2 / §3-3-2 ────────────────────────────────────────────────────────
+
+/// §3-2-2 "The deck is a private area. Cards are placed face-down in this
+/// area."
+///
+/// "[Main] Return 1 card from under 1 of your Tamers to the bottom of the
+/// deck." returns the face-down `AREA_LV3`. The deck's face is the area's own
+/// (every deck card is face-down); the card keeps no face-down state from
+/// under the Tamer (§3-1-3-1-2), so wherever it goes next -- even under a
+/// permanent by a step that does not set a face -- it is not counted as a
+/// face-down card (a "face-down card under your Tamer" reference, §4-7-9).
+#[test]
+fn face_down_card_returned_to_the_deck_keeps_no_face_down_state() {
+    cite!(
+        "3-2-2",
+        "65a3b5591b7fbf7f3ae2a0b2b36ad006a5fa09f324147eaf2d2493b5f1a17dad"
+    );
+    let (mut r, tamer, _) = stash_board("AREA_LV3", "MAIN_SRC_TO_DECK");
+    use_on_the_stashed_card(&mut r, "MAIN_SRC_TO_DECK");
+    assert_eq!(
+        r.game.players[0].battle_area[tamer.index as usize].card_sources.len(),
+        1,
+        "the face-down card left the Tamer"
+    );
+    let bottom = r.game.players[0].deck.first().expect("a deck card");
+    assert_eq!(bottom.card_id(&r.game.card_data), "AREA_LV3", "at the bottom");
+    assert!(
+        !bottom.face_down,
+        "the card keeps no face-down state from under the Tamer (§3-1-3-1-2)"
+    );
+}
+
+/// §3-3-2 "The Digi-egg deck is a private area. Cards are placed face-down in
+/// this area."
+///
+/// The same Option on a face-down Digi-Egg card under the Tamer: it goes to the
+/// bottom of the Digi-Egg deck and keeps no face-down state (§3-1-3-1-2).
+#[test]
+fn face_down_digi_egg_returned_to_the_digi_egg_deck_keeps_no_face_down_state() {
+    cite!(
+        "3-3-2",
+        "7602375d087f0672f32f7a31ab5aa49248726bf8ae9356001ac48dabda789b48"
+    );
+    let (mut r, tamer, _) = stash_board("AREA_EGG", "MAIN_SRC_TO_DECK");
+    use_on_the_stashed_card(&mut r, "MAIN_SRC_TO_DECK");
+    assert_eq!(
+        r.game.players[0].battle_area[tamer.index as usize].card_sources.len(),
+        1,
+        "the face-down card left the Tamer"
+    );
+    let bottom = r.game.players[0]
+        .digitama_deck
+        .first()
+        .expect("a Digi-Egg deck card");
+    assert_eq!(bottom.card_id(&r.game.card_data), "AREA_EGG", "at the bottom");
+    assert!(
+        !bottom.face_down,
         "the card keeps no face-down state from under the Tamer (§3-1-3-1-2)"
     );
 }

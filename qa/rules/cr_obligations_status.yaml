@@ -26,6 +26,14 @@
   note: "Keyword icon <Security A.> with a formerly-named parenthetical (※formerly <Security Attack>); a keyword label, not a testable rule."
 
 # ── ch03 Areas (§3) — tests/rules_conformance/ch03_areas.rs ──
+"3-2-2":
+  status: proven
+  tests: ["ch03_areas::face_down_card_returned_to_the_deck_keeps_no_face_down_state"]
+  note: "The deck carries its own face (every deck card is face-down); a card entering it keeps no face-down state it had as a digivolution card (3-1-3-1-2), so a later placement under a permanent that sets no face does not count it as a face-down card (4-7-9). Every deck entry goes through Player::put_on_deck_top / insert_in_deck / put_all_on_deck_top / insert_all_in_deck / put_in_deck_or_digi_egg_deck; player::tests::zone_entries_go_through_the_player_helpers keeps direct pushes (and local &mut aliases) out of src/."
+"3-3-2":
+  status: proven
+  tests: ["ch03_areas::face_down_digi_egg_returned_to_the_digi_egg_deck_keeps_no_face_down_state"]
+  note: "As 3-2-2 for the Digi-Egg deck: Player::put_on_digi_egg_deck_top / insert_in_digi_egg_deck / insert_all_in_digi_egg_deck / put_in_deck_or_digi_egg_deck drop the face-down state; a Digi-Egg card returned 'to the deck' goes to the Digi-Egg deck."
 "3-4-2":
   status: proven
   tests: ["ch03_areas::face_down_card_returned_to_hand_then_played_is_face_up_on_the_field", "ch03_areas::face_down_card_digivolved_into_is_a_face_up_top_card"]
@@ -41,7 +49,7 @@
 "3-7-2":
   status: proven
   tests: ["ch03_areas::face_down_card_placed_in_security_is_face_down_there"]
-  note: "A card placed in the security stack with no face specified is face-down (also 3-1-3-5's example): the engine records the face by Player::face_up_security membership (absent = face-down), and the security-entry helpers (Player::put_on_security_top / insert_in_security) clear the per-card face-down state a digivolution card carried (3-1-3-1-2) instead of duplicating the face; an opaque-deck placeholder keeps its marker."
+  note: "A card placed in the security stack with no face specified is face-down (also 3-1-3-5's example): the engine records the face by Player::face_up_security membership (absent = face-down), and the security-entry helpers (Player::put_on_security_top / insert_in_security) clear the per-card face-down state a digivolution card carried (3-1-3-1-2) instead of duplicating the face; an opaque-deck placeholder keeps its marker. The arriving card is a new card placed face down: insert_in_security also removes a stale face_up_security record for it (pre-existing, fixed under Task 38); a face-up placement (3-7-4) marks it after the insert."
 
 # ── ch15-04 Effect States (§15-4) — tests/rules_conformance/ch15_04_effect_states.rs ──
 "15-4-1-2":
