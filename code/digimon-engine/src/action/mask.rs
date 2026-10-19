@@ -935,68 +935,32 @@ pub(crate) fn effect_attack_target_action_ids(
 ///   it may attack the turn it was played (`can_attack(.., vortex = true)`).
 ///
 /// The same player- and permanent-scoped gates as every other offered attack
-/// (`CannotAttack`, `CannotAttackPlayer`, `MayAttackPlayerOnly`, per-target
-/// `CannotAttackTarget` with its `CanAttackTargetDefendingPermanent`
-/// override); no Main-phase memory gate.
+/// (`attack_declaration_action_ids`: `CannotAttack`, `CannotAttackPlayer`,
+/// `MayAttackPlayerOnly` and the per-target bans in
+/// `attack_target_blocked_by_modifier`); no Main-phase memory gate.
 pub(crate) fn end_of_turn_keyword_attack_action_ids(
     game: &Game,
     attacker: PermanentHandle,
     keyword: Keyword,
 ) -> Vec<u16> {
-    let (vortex, player_target, unsuspended_targets) = match keyword {
-        Keyword::Engage => (false, true, false),
-        Keyword::Execute => (false, true, true),
+    let (restriction, vortex, unsuspended_targets) = match keyword {
+        Keyword::Engage => (AttackTargetRestriction::Any, false, false),
+        Keyword::Execute => (AttackTargetRestriction::Any, false, true),
         Keyword::Vortex => (
+            if game
+                .modifiers
+                .has(attacker, ModifierType::VortexCanAttackPlayer)
+            {
+                AttackTargetRestriction::Any
+            } else {
+                AttackTargetRestriction::DigimonOnly
+            },
             true,
-            game.modifiers
-                .has(attacker, ModifierType::VortexCanAttackPlayer),
             false,
         ),
         _ => return Vec::new(),
     };
-    if game
-        .modifiers
-        .player_has(attacker.player, ModifierType::CannotAttack)
-        || game.modifiers.has(attacker, ModifierType::CannotAttack)
-    {
-        return Vec::new();
-    }
-    if !game.can_attack(attacker, vortex) {
-        return Vec::new();
-    }
-    let mut action_ids = Vec::new();
-    let opponent = game.next_clockwise(attacker.player);
-    let attacker_index = attacker.index as u16;
-    if player_target && !game.modifiers.has(attacker, ModifierType::CannotAttackPlayer) {
-        action_ids.push(encode_attack(attacker_index, SECURITY_TARGET));
-    }
-    if game
-        .modifiers
-        .player_has(attacker.player, ModifierType::MayAttackPlayerOnly)
-    {
-        return action_ids;
-    }
-    let can_attack_unsuspended = unsuspended_targets
-        || game
-            .modifiers
-            .has(attacker, ModifierType::CanAttackUnsuspended);
-    let max_opp = game.player(opponent).battle_area.len().min(FIELD_SLOTS);
-    for j in 0..max_opp {
-        let target_handle = PermanentHandle {
-            player: opponent,
-            index: j as u8,
-        };
-        if !game.permanent_is_digimon_for_rules(target_handle) {
-            continue;
-        }
-        if game.attack_target_blocked_by_modifier(attacker, target_handle) {
-            continue;
-        }
-        if game.player(opponent).battle_area[j].is_suspended || can_attack_unsuspended {
-            action_ids.push(encode_attack(attacker_index, j as u16));
-        }
-    }
-    action_ids
+    attack_declaration_action_ids(game, attacker, restriction, false, false, vortex, unsuspended_targets)
 }
 
 pub(crate) fn effect_attack_target_action_ids_with_options(
@@ -1005,6 +969,31 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
     restriction: AttackTargetRestriction,
     without_suspending: bool,
     ignore_summoning_sickness: bool,
+) -> Vec<u16> {
+    attack_declaration_action_ids(
+        game,
+        attacker,
+        restriction,
+        without_suspending,
+        ignore_summoning_sickness,
+        false,
+        false,
+    )
+}
+
+/// The one target enumeration behind every effect-offered attack
+/// declaration (`effect_attack_target_action_ids*`, the end-of-turn attack
+/// keywords). `vortex` exempts the played-this-turn check (§16-33-1);
+/// `unsuspended_targets` adds the opponent's unsuspended Digimon
+/// (`<Execute>`, §16-38-1) on top of a `CanAttackUnsuspended` grant.
+fn attack_declaration_action_ids(
+    game: &Game,
+    attacker: PermanentHandle,
+    restriction: AttackTargetRestriction,
+    without_suspending: bool,
+    ignore_summoning_sickness: bool,
+    vortex: bool,
+    unsuspended_targets: bool,
 ) -> Vec<u16> {
     if game
         .modifiers
@@ -1023,9 +1012,9 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
     } else if ignore_summoning_sickness {
         game.can_attack_ignoring_summoning_sickness(attacker)
     } else if without_suspending {
-        game.can_attack_without_suspending(attacker, false)
+        game.can_attack_without_suspending(attacker, vortex)
     } else {
-        game.can_attack(attacker, false)
+        game.can_attack(attacker, vortex)
     };
     if !attacker_can_attack {
         return Vec::new();
@@ -1049,9 +1038,10 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
         restriction,
         AttackTargetRestriction::Any | AttackTargetRestriction::DigimonOnly
     ) {
-        let can_attack_unsuspended = game
-            .modifiers
-            .has(attacker, ModifierType::CanAttackUnsuspended);
+        let can_attack_unsuspended = unsuspended_targets
+            || game
+                .modifiers
+                .has(attacker, ModifierType::CanAttackUnsuspended);
         let max_opp = game.player(opponent).battle_area.len().min(FIELD_SLOTS);
 
         for j in 0..max_opp {

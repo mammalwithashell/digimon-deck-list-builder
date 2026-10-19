@@ -455,3 +455,106 @@ fn action_id_decodes_correctly_when_sac_at_higher_index() {
     // One permanent gone, Overclock and first two fillers still present.
     assert_eq!(r.game.player(tp).battle_area.len(), before - 1);
 }
+
+// ─── G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL ─────────────────────
+
+/// `[End of Your Turn] Gain 2 memory.`
+struct EndOfTurnGainTwo;
+
+impl CardEffect for EndOfTurnGainTwo {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::end_of_your_turn(card)
+            .name("[End of Your Turn] Gain 2 memory")
+            .process(|ctx| ctx.gain_memory(2))
+            .build()]
+    }
+}
+
+/// P0: `OC` (<Overclock>, any other Digimon is a cost), `SAC` as a 2-card
+/// stack with <Armor Purge> (its deletion parks an optional replacement), and
+/// `EOT` ("[End of Your Turn] Gain 2 memory"). P0 ends the turn and activates
+/// <Overclock> first, then picks `SAC`; the <Armor Purge> decision parks
+/// inside the cost's deletion. Returns the runner, the event checkpoint and
+/// P1's security count.
+fn overclock_cost_parks_board() -> (DebugRunner, usize, usize) {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("OC", 7000))
+        .add_card(make_digimon("SAC", 3000))
+        .add_card(make_digimon("SAC_BASE", 2000))
+        .add_card(make_digimon("EOT", 1000))
+        .start();
+    r.register_effect("EOT", Arc::new(EndOfTurnGainTwo));
+    let tp = r.game.turn_player();
+    let oc = r.place_on_field(tp, "OC", Some(0));
+    let sac = r.place_stack(tp, &["SAC_BASE", "SAC"]);
+    r.place_on_field(tp, "EOT", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
+    r.game
+        .modifiers
+        .grant_keyword(sac, Keyword::ArmorPurge, Expiry::EndOfTurn, tp);
+    let security_before = r.game.player(1 - tp).security.len();
+    let cp = r.event_checkpoint();
+    r.game.end_turn();
+    let order = r.pending_selection().expect("the end-of-turn pool's TriggerOrder");
+    assert_eq!(order.kind, SelectionKind::TriggerOrder, "{order:?}");
+    let pick = order
+        .effect_choices
+        .as_ref()
+        .and_then(|cs| cs.iter().find(|c| c.label.starts_with("OC")))
+        .map(|c| c.action_id)
+        .expect("<Overclock> in the TriggerOrder");
+    r.game.resolve_selection(tp, pick).expect("activate <Overclock> first");
+    r.game
+        .resolve_selection(tp, encode_attack(0, sac.index as u16))
+        .expect("pick SAC as the cost");
+    assert!(r.pending_selection().is_some(), "<Armor Purge> parks inside the deletion");
+    (r, cp, security_before)
+}
+
+/// §11-1-4 (Ver. 4.3) "After declaring an attack, the counter timing won't
+/// begin until any triggered [When Attacking] effects and other triggered
+/// effects have been resolved"; Q3869: the other `[End of Your Turn]` effect
+/// activates AFTER the keyword's attack declaration. When <Overclock>'s cost
+/// deletion parks a decision (here <Armor Purge>, declined), the attack is
+/// declared from `resume_pending_overclock_attack` at the `resolve_selection`
+/// tail, AFTER the tail's drain has already resolved the pool's remaining
+/// entry: `EOT`'s memory gain comes before the declaration.
+#[test]
+#[ignore = "G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL (§11-1-4, §16-34-2)"]
+fn overclock_attack_declared_before_the_rest_of_the_pool_when_its_cost_parks() {
+    let (mut r, cp, _) = overclock_cost_parks_board();
+    let tp = r.turn_player();
+    r.game.resolve_selection(tp, PASS).expect("decline <Armor Purge>");
+    let events = r.events_since(cp);
+    let declared = events
+        .iter()
+        .position(|e| matches!(e, digimon_engine::events::GameEvent::Attack { .. }))
+        .expect("the <Overclock> attack was declared");
+    let gain = events
+        .iter()
+        .position(|e| matches!(e, digimon_engine::events::GameEvent::MemoryChange { source_card_id: Some(id), .. } if id == "EOT"))
+        .expect("EOT resolved");
+    assert!(declared < gain, "declaration (#{declared}) < EOT (#{gain})");
+}
+
+/// §16-34-3 "If the content of that condition is executed, the processing
+/// for "the Digimon with this effect attacks a player without suspending"
+/// will be mandatory"; §15-7-2: an optional processing condition that is not
+/// executed does not let the processing after it happen. <Armor Purge>
+/// prevents the cost's deletion, so nothing was deleted and <Overclock> does
+/// not attack (DCGO `OverclockProcess` attacks only on `isDeleted`).
+#[test]
+#[ignore = "G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL (§16-34-3, §15-7-2)"]
+fn overclock_does_not_attack_when_its_cost_deletion_is_prevented() {
+    let (mut r, cp, security_before) = overclock_cost_parks_board();
+    r.accept_optional_trigger().expect("<Armor Purge> prevents the deletion");
+    let _ = r.auto_resolve_declining_end_of_turn_attacks();
+    let attacked = r
+        .events_since(cp)
+        .iter()
+        .any(|e| matches!(e, digimon_engine::events::GameEvent::Attack { .. }));
+    assert!(!attacked, "the condition was not executed: no attack");
+    assert_eq!(r.game.player(1).security.len(), security_before);
+}

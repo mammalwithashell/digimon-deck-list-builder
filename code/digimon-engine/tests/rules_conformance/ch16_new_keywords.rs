@@ -549,17 +549,11 @@ fn engage_board(extra: &[&str]) -> (DebugRunner, PermanentHandle) {
 /// Whether P0 is offered `engage`'s attack on P1. §16-44-2 (2026-10-18,
 /// G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS): <Engage>'s processing
 /// is its own decision inside the `[End of Your Turn]` pool, so the attack is
-/// a pending selection of P0's (with PASS = decline, §16-44-3); the former
-/// post-drain `EndOfTurnAction` window is accepted too.
+/// a pending selection of P0's (with PASS = decline, §16-44-3).
 fn engage_attack_offered(r: &DebugRunner, engage: PermanentHandle) -> bool {
     let attack = encode_attack(engage.index as u16, SECURITY_TARGET);
-    match r.pending_selection() {
-        Some(sel) => sel.selecting_player == 0 && sel.valid_action_ids.contains(&attack),
-        None => {
-            r.current_phase() == GamePhase::EndOfTurnAction
-                && build_action_mask(&r.game, 0)[attack as usize] == 1.0
-        }
-    }
+    r.pending_selection()
+        .is_some_and(|sel| sel.selecting_player == 0 && sel.valid_action_ids.contains(&attack))
 }
 
 /// §16-44-1 "<Engage> is a keyword effect where a Digimon with this effect

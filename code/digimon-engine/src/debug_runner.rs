@@ -892,18 +892,7 @@ impl DebugRunner {
     /// or `<Overclock>`'s cost pick (`ResumeFrame::OverclockSelection`)
     /// (Comprehensive Rules 4.3 §16-44-2, §16-38-2, §16-33-2, §16-34-2).
     pub fn pending_is_end_of_turn_keyword_decision(&self) -> bool {
-        match self
-            .game
-            .pending_selection_resume
-            .as_ref()
-            .map(|stack| stack.frames.as_slice())
-        {
-            Some([crate::resume::ResumeFrame::AttackDeclarationDecision(state)]) => {
-                state.end_of_turn_keyword.is_some()
-            }
-            Some([crate::resume::ResumeFrame::OverclockSelection(_)]) => true,
-            _ => false,
-        }
+        self.game.pending_end_of_turn_keyword_decision().is_some()
     }
 
     /// [`Self::auto_resolve`], except that every end-of-turn attack keyword's

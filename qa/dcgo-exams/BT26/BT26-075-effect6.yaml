@@ -24,7 +24,8 @@
 #      optional), so the line declines it with one shared row; before #708
 #      the turn rotated straight to p1 and the next row (p1's pass) is what
 #      the harness's actor check refused. The assert moved from `at: 10`
-#      to 11.
+#      to 11, and back to 10 when the obsolete sim_only decline was dropped
+#      (2026-10-18).
 # WITNESS: memory -3 (= the use cost only), BT26-075 on top of Armalizamon,
 # P0's trash empty.
 #
@@ -69,14 +70,13 @@ steps:
   - actor: 0
     do: { play: { card: BT26-075, from: hand } }
     expect: { prompt: main_phase }
-  # ENGINE FINDING: Armalizamon's "[Your Turn][OPT] When you would use a
-  # [Glowing Dawn] Option card, by trashing the bottom face-down card under
-  # any of your Tamers, reduce the cost by 3" is OFFERED with no Tamer in
-  # play (its cost is unpayable). DCGO gates the ActivateClass on a Tamer
-  # carrying a face-down source (BT25-049.yaml crosscheck), so it asks
-  # nothing -> sim_only decline.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+  # (Was an ENGINE FINDING answered by a sim_only decline: Armalizamon's
+  # "[Your Turn][OPT] When you would use a [Glowing Dawn] Option card, by
+  # trashing the bottom face-down card under any of your Tamers, reduce the
+  # cost by 3" used to be OFFERED with no Tamer in play. An unpayable cost is
+  # no longer offered (Plan 4 Task 8, §15-7-4), matching DCGO, which gates
+  # the ActivateClass on a Tamer carrying a face-down source; the step is
+  # gone and the asserts moved down by one.)
   # [Main]: no opponent Digimon -> nothing to delete, no prompt.
   # THE CLAUSE: instead of being trashed, the Option digivolves Armalizamon
   # into ScourgeChiropmon for free.
@@ -94,7 +94,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 11
+  - at: 10
     that:
       turn: 4
       # 1 - 4 for the USE and nothing else: the digivolution was free.

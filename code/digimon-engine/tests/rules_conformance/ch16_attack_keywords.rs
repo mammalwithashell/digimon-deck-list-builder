@@ -188,34 +188,22 @@ fn legal(r: &DebugRunner, player: PlayerId, action: u16) -> bool {
 }
 
 /// Whether `attacker`'s player may attack `target` with it at the end of its
-/// turn: either a pending selection of that player whose actions include the
-/// attack (an end-of-turn keyword offering its attack as its own decision),
-/// or the `EndOfTurnAction` window's mask.
+/// turn: a pending selection of that player whose actions include the attack
+/// (an end-of-turn keyword offering its attack as its own decision inside the
+/// `[End of Your Turn]` pool, §16-33-2 / §16-38-2 / §16-44-2).
 fn eot_attack_offered(r: &DebugRunner, attacker: PermanentHandle, target: u16) -> bool {
     let attack = encode_attack(attacker.index as u16, target);
-    if r.turn_player() != attacker.player {
-        return false;
-    }
-    match r.pending_selection() {
-        Some(sel) => {
+    r.turn_player() == attacker.player
+        && r.pending_selection().is_some_and(|sel| {
             sel.selecting_player == attacker.player && sel.valid_action_ids.contains(&attack)
-        }
-        None => {
-            r.current_phase() == GamePhase::EndOfTurnAction && legal(r, attacker.player, attack)
-        }
-    }
+        })
 }
 
-/// Declare the attack `eot_attack_offered` found, in whichever representation
-/// it was offered.
+/// Declare the attack `eot_attack_offered` found (the keyword's decision).
 fn declare_eot_attack(r: &mut DebugRunner, attacker: PermanentHandle, target: u16) {
     let attack = encode_attack(attacker.index as u16, target);
-    if r.pending_selection().is_some() {
-        r.execute_action(attacker.player, attack)
-            .unwrap_or_else(|e| panic!("the attack was rejected: {e:?}"));
-    } else {
-        r.game.decode_action(attack, attacker.player);
-    }
+    r.execute_action(attacker.player, attack)
+        .unwrap_or_else(|e| panic!("the attack was rejected: {e:?}"));
 }
 
 /// Index in the event log (since `cp`) of the first attack declaration.
@@ -2450,4 +2438,3 @@ fn progress_kind_matches_rule() {
     );
     assert_eq!(r.effective_dp(a), Some(3000), "affected once the attack ends");
 }
-

@@ -762,6 +762,28 @@ impl Game {
         });
     }
 
+    /// The end-of-turn attack keyword whose own decision is the pending
+    /// selection, if any: an `<Engage>` / `<Execute>` / `<Vortex>` attack
+    /// declaration (`ResumeFrame::AttackDeclarationDecision` carrying its
+    /// end-of-turn keyword) or `<Overclock>`'s cost pick
+    /// (`ResumeFrame::OverclockSelection`), offered inside the `[End of Your
+    /// Turn]` pool (§16-44-2, §16-38-2, §16-33-2, §16-34-2). Read by the
+    /// DCGO exam lowering and the test harness.
+    pub fn pending_end_of_turn_keyword_decision(&self) -> Option<Keyword> {
+        self.pending_selection.as_ref()?;
+        match self
+            .pending_selection_resume
+            .as_ref()
+            .map(|stack| stack.frames.as_slice())
+        {
+            Some([crate::resume::ResumeFrame::AttackDeclarationDecision(state)]) => {
+                state.end_of_turn_keyword
+            }
+            Some([crate::resume::ResumeFrame::OverclockSelection(_)]) => Some(Keyword::Overclock),
+            _ => None,
+        }
+    }
+
     /// True iff the given player has an action for the `EndOfTurnAction`
     /// window: a registered end-of-turn DNA route, or a Digimon with a
     /// `MayAttack` grant that can attack. (The end-of-turn attack keywords

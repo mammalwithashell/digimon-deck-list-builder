@@ -820,12 +820,21 @@ pub(crate) fn end_of_turn_keyword_attack_process(ctx: &mut EffectContext<'_>, ke
     let Some(carrier) = ctx.source_permanent else {
         return;
     };
-    if carrier.player != ctx.game.turn_player() || ctx.game.pending_selection.is_some() {
+    if carrier.player != ctx.game.turn_player() {
         return;
     }
     let source_card = ctx.source_card;
     let source_kind = ctx.source_kind;
-    if ctx.game.pending_attack.is_some() {
+    // The drainer activates a pool entry only while nothing is parked, so a
+    // pending selection here is an engine bug: assert it in tests. In a
+    // release build the offer is still not dropped -- it is queued exactly
+    // like one behind an attack in progress and made once the end of turn
+    // resumes (`Game::resume_pending_end_turn`), so the decision is never lost.
+    debug_assert!(
+        ctx.game.pending_selection.is_none(),
+        "an end-of-turn keyword entry activated while a selection was parked"
+    );
+    if ctx.game.pending_attack.is_some() || ctx.game.pending_selection.is_some() {
         if ctx
             .game
             .players
@@ -2185,7 +2194,12 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // trigger-type effect at the end of your turn; §16-34-3: the deletion
         // is an optional processing condition, the attack mandatory once it is
         // executed (`Game::install_overclock_selection`). Nothing triggers
-        // without a legal candidate (DCGO `CanActivateOverclock`).
+        // without a legal candidate (DCGO `CanActivateOverclock`): the cost's
+        // payability is this trigger's ACTIVATION condition, not the generic
+        // optional-condition payability guard (`queued_optional_condition_payable`),
+        // so with no candidate the entry is absent from the `TriggerOrder`
+        // rather than present with an unexecutable condition -- the same shape
+        // as the other three keywords' `CanActivate*`.
         Keyword::Overclock => vec![Effect::end_of_your_turn(card)
             .name("<Overclock>")
             .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Overclock))

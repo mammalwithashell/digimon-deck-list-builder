@@ -2762,6 +2762,12 @@ impl Game {
     /// opposing player; any other target index is that opponent's Digimon.
     /// Shared by every effect-offered declaration decode
     /// (`run_attack_declaration_decision_step`, `ResumeSelectKind::BeginAttack`).
+    ///
+    /// TODO: three decode-to-attack copies still bypass this helper -- the
+    /// redirect and may-attack closures in `effect_context/action/combat.rs`
+    /// (~L250, ~L467) and the `ResumeSelectKind::AttackTarget` redirect in
+    /// `dsl_cards/step/selections.rs` (~L1081) -- and `ResumeSelectKind::BeginAttack`
+    /// is still its own DSL frame rather than `ResumeFrame::AttackDeclarationDecision`.
     pub(crate) fn decode_effect_attack_target(
         &self,
         attacker: PermanentHandle,
