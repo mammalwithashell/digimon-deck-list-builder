@@ -108,20 +108,16 @@ steps:
   - actor: 0
     do: { select: { value: 1, dcgo_only: true } }
     expect: { prompt: generic_int }
-  # SIM-ONLY: BT25-041's inherited [End of Attack] (cost unpayable, no Tamer;
-  # see ST23-09-effect1.yaml) -- DCGO is expected to ask nothing.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+  # (RE-LOWERED 2026-10-19: BT25-041's inherited [End of Attack] is no longer
+  # offered -- with no Tamer its optional processing condition can't be
+  # executed, so it can't be chosen (§15-7-4; Task 8, 82a2bf29c). Its two
+  # sim-only decline rows are gone.)
   # [Once Per Turn]: Habakirimon is unsuspended, so it attacks AGAIN -- and the
   # [When Attacking] trigger does NOT fire a second time (no prompt, no
   # Recovery). P1's security 4 -> 3.
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: the same unpayable inherited [End of Attack], offered again (a
-  # declined optional does not spend its [Once Per Turn]).
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
   # One step past the clause; P0 still holds the turn on 3.
   - actor: 0
     do: { pass: {} }
@@ -129,7 +125,7 @@ steps:
 assert:
   # After the first attack (before the second): the trigger fired once --
   # Recovery then the own-security trash, and Habakirimon is UNSUSPENDED.
-  - at: 17
+  - at: 16
     that:
       turn: 5
       p0.memory: 3
@@ -143,7 +139,7 @@ assert:
           sources: [BT25-041]
   # After the second attack: NO second Recovery / trash (security still 6,
   # trash unchanged) and Habakirimon stays suspended -- [Once Per Turn].
-  - at: 19
+  - at: 17
     that:
       turn: 5
       p0.security: 6

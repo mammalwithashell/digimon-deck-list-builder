@@ -54,16 +54,9 @@ steps:
   - actor: 0
     do: { play: { card: ST23-15, from: hand } }
     expect: { prompt: main_phase }
-  # SIM-ONLY + ENGINE FINDING: BT25-090's "[Your Turn][Once Per Turn] When you
-  # would use [Glowing Dawn] trait Option cards, by trashing the bottom
-  # face-down card from under any of your Tamers, reduce the cost by 1" is
-  # OFFERED although no Tamer holds a face-down card (the cost is unpayable;
-  # accepting it reduces nothing -- probed: memory still ends at 0). 15-7-3:
-  # an optional "by X" whose X can't be performed can't be chosen. DCGO's
-  # reducer is expected to be gated (no Tamer with a face-down source -> no
-  # prompt), so this row emits nothing to the wire.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+  # (BT25-090's Option cost reducer is no longer offered here: its "by trashing
+  # the bottom face-down card" is unpayable with no face-down source, so the
+  # player can't choose it -- §15-7-4; Task 8. The sim-only decline row is gone.)
   # [Main]: the union hand-or-trash pick. P0's trash is EMPTY, so DCGO's
   # Hand/Trash/Don't-play SetIntSelection collapses to the hand side (the
   # EX12-074-security0 precedent) and asks SelectHandEffect (PlayForFree).
@@ -89,7 +82,7 @@ assert:
   # T3 after the Option resolved (before P0's pass): memory 3 -> 0 paid in full
   # for e-Pulse with NO white card on the field; the free-played Tamer and the
   # Option both sit in the battle area; nothing trashed.
-  - at: 9
+  - at: 8
     that:
       turn: 3
       p0.memory: 0
