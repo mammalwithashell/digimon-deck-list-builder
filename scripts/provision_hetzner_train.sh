@@ -88,8 +88,7 @@ ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no root@"$IP" "
       --log-dir /app/runs/$RUN --record-games eval --record-games-max 300 \
       --set run_name=$RUN --set tensor_profile=standard_lite_deck_v2 \
       --set reward_profile_override=starter1_6_flat --opponent greedy \
-      --archetypes 'ST-1 Gaia Red' 'ST-2 Cocytus Blue' \"ST-3 Heaven's Yellow\" \
-      'ST-4 Giga Green' 'ST-5 Machine Black' 'ST-6 Venomous Violet' \
+      --archetypes \"ST-1 Gaia Red,ST-2 Cocytus Blue,ST-3 Heaven's Yellow,ST-4 Giga Green,ST-5 Machine Black,ST-6 Venomous Violet\" \
       --set n_envs=$WANT_VCPU --set vec_env_backend=subproc
 "
 echo "launched $RUN ($MF, n_envs=$WANT_VCPU) on $NAME / $IP"

@@ -139,12 +139,18 @@ is the principled cure for self-play's non-stationarity; the champion registry
 >   `(1 - agent_wr) ** power` once an opponent has ≥5 games (uniform before).
 >   The tally is per env worker and per process — not persisted, not shared
 >   across `SubprocVecEnv` workers.
-> - **`opponent="pool"` — effectively uniform.** `make_pool_opponent_fn`
->   (`pilot_training.py`) calls `OpponentPool.sample(mode=cfg.opponent_pool_mode)`
->   (default `"pfsp"`), but `OpponentPool.record_match` (`opponent_pool.py`) is
->   still never called outside its unit test, so every entry keeps the
->   `win_rate_vs_pool` it was written with (`emit-pool` writes 0.5 for all) and
->   the PFSP weights are flat. The exploiter forces `opponent_pool_mode="uniform"`.
+> - **`opponent="pool"` — live (since 2026-10-19).** `make_pool_opponent_fn`
+>   (`pilot_training.py`) samples via `OpponentPool.sample(mode=cfg.opponent_pool_mode)`
+>   (default `"pfsp"`) and exposes `record_outcome`; `OpponentWrapper` reports
+>   each finished game (before `reset` / `reset_inner_only`; draws and
+>   truncated games are skipped) into `OpponentPool.record_match`.
+>   `win_rate_vs_pool` is the opponent's win rate against the agent, and PFSP
+>   weights are `max(0.01, win_rate_vs_pool) ** power`. Before this, the tally
+>   was never updated (every `emit-pool` entry sat at 0.5, so sampling was
+>   flat) and the weight was inverted (`1 - win_rate_vs_pool`, favouring
+>   opponents the agent beats). Like the league tally, stats are per process
+>   and not written back to the manifest. The exploiter forces
+>   `opponent_pool_mode="uniform"`.
 > - **`LeagueOpponentWrapper`** (`league_wrapper.py`) also has its own PFSP
 >   tracking, but nothing in production constructs it.
 

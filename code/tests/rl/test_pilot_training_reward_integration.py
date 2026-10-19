@@ -74,6 +74,31 @@ def test_factory_raises_when_gameplay_path_missing():
         _build_reward_profile_factory(cfg)
 
 
+def test_default_paths_fall_back_to_package_when_cwd_is_not_repo_root(
+    tmp_path: Path, monkeypatch
+):
+    """The training image flattens `code/` into `/app`, so the repo-relative
+    defaults don't exist from the cwd; they resolve to the installed
+    `digimon_gym` package copy instead of failing at run start."""
+    import digimon_gym
+
+    monkeypatch.chdir(tmp_path)
+    factory = _build_reward_profile_factory(TrainingConfig())
+    assert factory.active is True
+    package_reward_dir = Path(digimon_gym.__file__).resolve().parent / "agents" / "reward"
+    assert factory.loader.profiles_path == package_reward_dir / "profiles.yaml"
+    assert factory.loader.gameplay_path == package_reward_dir / "gameplay.yaml"
+
+
+def test_package_fallback_still_fails_fast_on_a_typo(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    cfg = TrainingConfig(
+        reward_profiles_path="code/digimon_gym/agents/reward/profilez.yaml"
+    )
+    with pytest.raises(FileNotFoundError, match=r"profilez\.yaml"):
+        _build_reward_profile_factory(cfg)
+
+
 def test_factory_null_opt_out_yields_legacy_identity():
     """Explicit `reward_profiles_path: null` (None) is the only way to get
     the legacy reward path — no profile files required."""

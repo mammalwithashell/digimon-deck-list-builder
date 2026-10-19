@@ -276,8 +276,10 @@ ln -sf /workspace/jobs   /app/jobs
 # The image flattens code/digimon_gym -> /app/digimon_gym, but the
 # TrainingConfig reward-profile defaults are repo-relative
 # (code/digimon_gym/agents/reward/{gameplay,profiles}.yaml) and a configured
-# but missing reward YAML is a hard FileNotFoundError at run start. Recreate
-# the code/ prefix and run from /app so they resolve.
+# but missing reward YAML is a hard FileNotFoundError at run start. Since
+# 2026-10-19 pilot_training falls back to the installed package copy
+# (`_resolve_reward_yaml_path`), so images built from that commit on don't
+# need this; it is kept so older training-v* images still start.
 mkdir -p /app/code && ln -sf /app/digimon_gym /app/code/digimon_gym
 cd /app
 

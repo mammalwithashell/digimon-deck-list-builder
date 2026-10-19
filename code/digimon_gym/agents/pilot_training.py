@@ -188,6 +188,29 @@ def _build_game_log_row(
     }
 
 
+def _resolve_reward_yaml_path(raw: str) -> Path:
+    """Resolve a reward YAML path from the config.
+
+    The defaults are repo-relative (`code/digimon_gym/agents/reward/*.yaml`)
+    and only exist when the cwd is the repo root. The training image
+    flattens `code/` into `/app`, so when a `code/digimon_gym/...` path is
+    missing from the cwd, fall back to the same file inside the installed
+    `digimon_gym` package. Any other missing path is returned unchanged so
+    the caller's fail-fast check still fires.
+    """
+    path = Path(raw)
+    if path.exists() or path.is_absolute():
+        return path
+    parts = path.parts
+    if parts[:2] == ("code", "digimon_gym"):
+        import digimon_gym
+
+        candidate = Path(digimon_gym.__file__).resolve().parent.joinpath(*parts[2:])
+        if candidate.exists():
+            return candidate
+    return path
+
+
 def _build_reward_profile_factory(cfg: TrainingConfig):
     """Build a wrapper-applier closure for the reward profiles capability.
 
@@ -226,10 +249,12 @@ def _build_reward_profile_factory(cfg: TrainingConfig):
     from digimon_gym.agents.reward.wrapper import RewardProfileWrapper
 
     profiles_path = (
-        Path(cfg.reward_profiles_path) if cfg.reward_profiles_path else None
+        _resolve_reward_yaml_path(cfg.reward_profiles_path)
+        if cfg.reward_profiles_path else None
     )
     gameplay_path = (
-        Path(cfg.reward_gameplay_path) if cfg.reward_gameplay_path else None
+        _resolve_reward_yaml_path(cfg.reward_gameplay_path)
+        if cfg.reward_gameplay_path else None
     )
 
     # Effective override: explicit cfg.reward_profile_override wins.
@@ -593,7 +618,15 @@ def make_pool_opponent_fn(
                 reset()
         current[0] = None
 
+    def _record_outcome(agent_won: bool) -> None:
+        # Called by `OpponentWrapper` once per finished game, before
+        # `reset_state` drops the current opponent. Feeds PFSP; stats are
+        # per process (each SubprocVecEnv worker holds its own pool copy).
+        if current[0] is not None:
+            pool.record_match(current[0][0], agent_won=agent_won)
+
     _opponent.reset_state = _reset_state  # type: ignore[attr-defined]
+    _opponent.record_outcome = _record_outcome  # type: ignore[attr-defined]
     return _opponent
 
 
@@ -658,6 +691,7 @@ class OpponentWrapper(gymnasium.Wrapper):
         self._unwrapped_env: DigimonEnv = env
 
     def reset(self, **kwargs):
+        self._report_finished_game()
         reset = getattr(self.opponent_fn, "reset_state", None)
         if reset is not None:
             reset()
@@ -665,6 +699,20 @@ class OpponentWrapper(gymnasium.Wrapper):
         # If Player 2 goes first, auto-play until Player 1's turn
         obs, info = self._advance_opponent(obs, info)
         return obs, info
+
+    def _report_finished_game(self) -> None:
+        """Tell an outcome-tracking opponent (`make_pool_opponent_fn`) who won
+        the game that is about to be reset away. Truncated / unfinished games
+        and draws carry no result and are skipped."""
+        record = getattr(self.opponent_fn, "record_outcome", None)
+        if record is None:
+            return
+        env = self._unwrapped_env
+        if not env.is_game_over:
+            return
+        winner = env.winner_id
+        if winner is not None:
+            record(agent_won=(winner == 1))
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(int(action))
@@ -724,6 +772,7 @@ class OpponentWrapper(gymnasium.Wrapper):
         so the wrapper returns at the agent's first decision point in
         the new game.
         """
+        self._report_finished_game()
         obs, info = self.env.reset(**kwargs)
         return self._advance_opponent(obs, info)
 
@@ -2132,8 +2181,11 @@ def make_env(opponent: str = "greedy",
     Returns:
         ActionMasker-wrapped environment ready for MaskablePPO.
 
-    Wrapper chain:
-        DigimonEnv -> OpponentWrapper -> DeckPoolWrapper -> GauntletWrapper -> ActionMasker
+    Wrapper chain (innermost first; bracketed wrappers are conditional):
+        DigimonEnv -> [RewardProfileWrapper] -> OpponentWrapper -> [MatchEnv (bo3)]
+        -> [DeckPoolWrapper] -> [GeneralistDeckPoolWrapper] -> [LeaguePoolWrapper]
+        -> [GauntletWrapper] -> TrainingRecordingWrapper -> [MulliganLogWrapper]
+        -> ActionMasker
     """
     if generalist_deck_pool is not None and gauntlet is not None:
         raise ValueError("--generalist cannot be combined with --gauntlet")

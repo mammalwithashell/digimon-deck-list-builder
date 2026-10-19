@@ -115,8 +115,12 @@ class OpponentPool:
         if mode == "uniform":
             return self.entries[int(rng.integers(0, len(self.entries)))]
         if mode == "pfsp":
+            # PFSP "hard" weighting: `win_rate_vs_pool` is the OPPONENT's win
+            # rate against the agent (see `record_match`), so opponents that
+            # beat the agent more get sampled more. Floored so an opponent the
+            # agent already beats is still revisited occasionally.
             weights = np.array(
-                [(1.0 - entry.win_rate_vs_pool) ** power for entry in self.entries],
+                [max(0.01, entry.win_rate_vs_pool) ** power for entry in self.entries],
                 dtype=np.float64,
             )
             if float(weights.sum()) == 0.0:
@@ -126,6 +130,10 @@ class OpponentPool:
         raise ValueError(f"unknown sampling mode: {mode}")
 
     def record_match(self, opponent_name: str, agent_won: bool) -> None:
+        """Fold one finished game into ``opponent_name``'s running win rate.
+
+        ``win_rate_vs_pool`` tracks how often this opponent beat the agent.
+        """
         entry = self.get(opponent_name)
         new_total = entry.games_played + 1
         prior_opponent_wins = entry.win_rate_vs_pool * entry.games_played
