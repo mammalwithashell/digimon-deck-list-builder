@@ -731,3 +731,73 @@ Tasks 16–20 touch disjoint files and may run in parallel sessions (each on its
 - [ ] **Step 3: Run → PASS**; regression list; full `cards_behavioral`.
 - [ ] **Step 4: Sidecar:** `16-34-3` → proven (list the tests); the ordering half stays an open non-blocking note under the gap. Regenerate; `--check`. Entry: blocking half RESOLVED.
 - [ ] **Step 5: Commit** — `engine: <Overclock> attacks only when its cost deletion happened (§16-34-3, §15-7-1, §15-8-5-2; G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL)`.
+
+## Phase H — Divergences surfaced by the exam-sim re-lowering (added 2026-10-19; owner rule: each blocking gap gets its own task)
+
+Two are campaign regressions (Tasks 37, 38 — introduced by Tasks 18 and 6), two are pre-existing engine behaviour the re-lowering could no longer paper over (Tasks 39, 40). Each task: TDD against the cited rule, clone-safe (any new parked decision on `crate::resume::ResumeFrame`, never a closure `pending_selection`; `clone_fuzz` in the keep-green list), full `cards_behavioral` before the report, sidecar + `cr_obligations.json` regenerated and `--check`ed. The exam scenario named in each task is the acceptance line: it must pass under `dcgo-harness exam --sim-only` on the task head.
+
+### Task 37: a DUAL card among digivolution cards is an "Option card" for an "Option card from digivolution cards" reference (regression of Task 18)
+
+**Gap:** `G-ENGINE-DUAL-DIGIVOLUTION-CARD-NOT-AN-OPTION-CARD` (OPEN, blocking). **Rules:** §4-6-6-2 (a DUAL card's Option information is referenced when the card is referenced as an Option card), §4-6-3 (a DUAL card *placed on the field* is a Digimon — governs the card as a permanent/top card, not a card lying in the digivolution cards); official Q&A Q6395 (LadyDevimon BT25-083 may trash BeelStarmon BT25-085 from digivolution cards as "1 Option card" and then use it) and Q6404 (BT25-085 referenced as an Option card with its traits); BT25-085's own "use 1 ... Option card from this Digimon's digivolution cards". DCGO: read `BT25_083.cs` / `BT25_085.cs` for how the digivolution-card search filters.
+
+**Files:**
+- Modify: `code/digimon-engine/src/dsl_cards/predicate.rs` (the `kind: option` predicate: for a card in a digivolution-card or link-card zone, a `kind: option` reference reads the Option information; the TOP card of a permanent keeps the §4-6-3 Digimon-only reading) and `code/digimon-engine/src/game/handles.rs::card_is_on_field` (split "is a permanent's top card" from "lies in a permanent's digivolution/link cards" if that is the lever).
+- Tests: `tests/rules_conformance/ch16_new_keywords.rs` — add `dual_digivolution_card_referenced_as_option_card_for_digivolution_card_search` (BT25-083 cost finds BT25-085 under LadyDevimon; the Option is used; Q6395 cited); re-read `dual_digivolution_card_on_field_reads_digimon_information` and `dual_digivolution_card_counts_as_digimon_only` — keep the halves §4-6-3 actually governs (the DUAL as the top card / counted as a Digimon on the field) and re-pin the half that contradicts Q6395. Behavioral: `tests/cards_behavioral/bt25/bt25_083.rs` pin of Q6395.
+- Acceptance exam: `qa/dcgo-exams/BT25/BT25-083-qa-Q6395.yaml` passes sim-only.
+- Keep green: `--test rules_conformance`, `--test dsl`, `--test cards_behavioral -- bt25_08 three_musketeers dual` (filter), `--test clone_fuzz --features dsl-yaml-loader`, dcgo-harness tests, then the FULL `cards_behavioral`.
+
+- [ ] **Step 1: Write the Q6395 conformance test; run → FAIL.**
+- [ ] **Step 2: Implement** the zone-aware reading.
+- [ ] **Step 3: Run → PASS**; regression list; exam line; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** `4-6-6-2` add the test; `4-6-3` note the zone split; regenerate; `--check`. Gap entry → RESOLVED.
+- [ ] **Step 5: Commit** — `engine: a DUAL card among digivolution cards reads its Option information for an Option-card reference (§4-6-6-2, §4-6-3; Q6395; G-ENGINE-DUAL-DIGIVOLUTION-CARD-NOT-AN-OPTION-CARD)`.
+
+### Task 38: the card BT26-005's cost just trashed from under a Tamer can be played from the trash while the source-trash trigger is pending (regression of Task 6)
+
+**Gap:** `G-ENGINE-PLAY-FROM-TRASH-OF-JUST-TRASHED-SOURCE-NOT-PLAYED` (OPEN, blocking). **Rules:** official Q&A Q6958 (Pinamon BT26-005 inherited: "By trashing the bottom face-down card from under any of your Tamers, you may play 1 ... from your trash" — yes, the trashed card may be played); §15-8-3-2 (the source-trash trigger of Keenan BT26-094 waits for the causing effect — Task 6 — so it is PENDING while the play runs). Reproduce exactly as the exam does: BT26-005 under a Digimon, BT26-094 Keenan with BT26-091 face-down under it, the Digimon deleted, cost paid, BT26-091 picked.
+
+**Files:**
+- Investigate first (report the root cause before fixing): `code/digimon-engine/src/game_actions/play.rs::play_from_trash_with_cost_suppress` (~L154; returns `None` on a prohibited or `Pending` play) and `code/digimon-engine/src/dsl_cards/step/play_digivolve.rs` (`PlayFromTrashFree` silently no-ops on `None`). Candidate causes named in the gap: event membership of the just-trashed card, a stale bound trash index after the trash shifted the pile, or a `Pending` play result dropped. Fix the cause; in addition `PlayFromTrashFree` must never silently drop a legal play — a `Pending` result must park via `ResumeFrame` (clone-safe), a prohibition must be a traced reason.
+- Tests: `tests/cards_behavioral/bt26/bt26_005.rs` pin of Q6958 (the trashed BT26-091 is played; Keenan's trigger then resolves); a conformance test in `ch15_08_effect_categories.rs` for "a play from trash of the card the same effect's cost just trashed, with the source-trash trigger pending" (cite Q6958 + §15-8-3-2); clone-while-parked if a park is added.
+- Acceptance exam: `qa/dcgo-exams/BT26/BT26-005-qa-Q6958.yaml` passes sim-only (its `expect_ruling` is the publisher's answer).
+- Keep green: `--test rules_conformance`, `--test timing_dispatch`, `--test cards_behavioral -- bt26_00 bt26_09 data_squad` (filter), `--test clone_fuzz --features dsl-yaml-loader`, dcgo-harness tests, then the FULL `cards_behavioral`.
+
+- [ ] **Step 1: Behavioral pin of Q6958; run → FAIL** (card stays in trash).
+- [ ] **Step 2: Root-cause** (write it in the report), then **implement**.
+- [ ] **Step 3: Run → PASS**; regression list; exam line; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** `15-8-3-2` add the test; regenerate; `--check`. Gap entry → RESOLVED with the root cause.
+- [ ] **Step 5: Commit** — `engine: play from trash of the card the same effect's cost just trashed while its source-trash trigger pends (Q6958, §15-8-3-2; G-ENGINE-PLAY-FROM-TRASH-OF-JUST-TRASHED-SOURCE-NOT-PLAYED)`.
+
+### Task 39: triggers from every event of one effect's resolution pend in ONE simultaneous pool (pre-existing)
+
+**Gap:** `G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS` (OPEN, blocking; filed by the exam re-lowering fix round). **Rules:** §15-4-3-2 ("If multiple effects are triggered before a single rule or effect is resolved, they all trigger simultaneously"), §15-4-3-5-1 (the turn player orders them), §15-4-2-4 (one trigger per fulfilment). Case: Crowmon BT26-076 [When Digivolving] deletes, then trashes a card from under a Tamer (event 1: Keenan BT26-094's and Crowmon's own [Your Turn] triggers), then the opponent trashes from hand (event 2: both again). All four pend together after the [When Digivolving] finishes (DCGO measured a 4-entry MultipleSkills; the effect2 oracle run aborted on the ambiguity). Ours drains event 1's pair before event 2 happens — a second pool. Crowmon's [Once Per Turn] means only one of its two entries will resolve; the pool still offers both (the OPT lockout applies at activation; DCGO `timesPerTurn`), say so in the test.
+
+**Files:**
+- Modify: `code/digimon-engine/src/effect_queue.rs` — the drain point for triggers raised during a resolving effect: entries raised by ANY event inside one effect's resolution are released into one `TriggerOrder` when that effect finishes (today the source-trash deferral from Task 6 releases per event). Reuse the Task 6 deferral mechanism; do not add a second queue. Check `enqueue_triggered_with_context` and `discard_entries_not_triggered` (Task 34) still evaluate `trigger_if:` at each event, not at the combined release.
+- Tests: `tests/rules_conformance/ch15_04_effect_states.rs` — `triggers_from_two_events_of_one_effect_pend_in_one_pool` (two observers, two events inside one effect, one TriggerOrder of 4 candidates, turn player orders; the OPT entry declined once it has activated). Behavioral: `tests/cards_behavioral/bt26/bt26_076.rs` (the 4-entry pool). Clone-while-parked at the 4-entry TriggerOrder.
+- Acceptance exams: `qa/dcgo-exams/BT26/BT26-076-effect1.yaml` and `-effect2.yaml` (re-lowered to the 4-entry expectation) pass sim-only. Then re-run the FULL exam-sim: other scenarios that encoded per-event pools will move and must be re-lowered with the rule citation in the same task.
+- Keep green: `--test rules_conformance`, `--test timing_dispatch`, `--test archetypes`, `--test cards_behavioral -- bt26 st23 bt25 glowing_dawn data_squad` (filter), `--test clone_fuzz --features dsl-yaml-loader`, dcgo-harness tests, `exam_sim_all.py`, then the FULL `cards_behavioral`.
+
+- [ ] **Step 1: Conformance test; run → FAIL** (two pools).
+- [ ] **Step 2: Implement** the per-effect release.
+- [ ] **Step 3: Run → PASS**; regression list; both exam lines; full exam-sim; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** `15-4-3-2` add the test; regenerate; `--check`. Gap → RESOLVED.
+- [ ] **Step 5: Commit** — `engine: triggers from every event of one effect's resolution pend in one pool (§15-4-3-2, §15-4-3-5-1; G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS)`.
+
+### Task 40: one N-card cost trash is ONE event — one trigger per observer (pre-existing)
+
+**Gap:** `G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS` (OPEN, blocking; filed by the exam re-lowering fix round). **Rules:** §15-5-2 ("A triggering from 1 trigger condition is considered to only trigger once, even if it occurred multiple times at the same time"), §15-4-2-4. Case: BT25-035 "by trashing 2 bottom face-down cards from under any of your Tamers" — ST23-13 ("When effects trash cards from under this Tamer") triggers ONCE; ours asks two per-card Tamer picks and raises two events, so ST23-13 triggers twice (the old exam line's ENGINE FINDING 2; DCGO asks one selection and triggers once).
+
+**Files:**
+- Modify: `code/digimon-engine/src/dsl_cards/step/selections.rs` — `CompiledStep::TrashBottomFaceDownSourcesUnderTamers { of, count }` (~L3935) and its lowering at ~L6921-7004 (which re-pushes a `count: remaining-1` step per pick): keep the per-card picks (the choice of WHICH Tamers is a real decision — do not auto-select) but collect them and trash as one batched source-trash event carrying all N cards, so each observer triggers once with the N-card event; the `CostGuard` for the cost shape (Task 8) must still require N payable cards. Check `lower_triggered.rs:835` (the triggered lowering of the same step) follows.
+- Tests: `tests/rules_conformance/ch15_04_effect_states.rs` (or `ch15_08_effect_categories.rs` if that is where §15-5 lives) — `one_multi_card_cost_trash_triggers_each_observer_once` (two cards from one Tamer → one trigger; one from each of two Tamers → one trigger per Tamer-scoped observer, cite §15-5-2 with the example in the rule text). Behavioral: `tests/cards_behavioral/bt25/bt25_035.rs` (ST23-13 offered once). Clone-while-parked across the two picks.
+- Acceptance exam: `qa/dcgo-exams/BT25/BT25-035-effect1.yaml` passes sim-only; re-run the FULL exam-sim and re-lower any other line that encoded the per-card events (cite §15-5-2).
+- Keep green: `--test rules_conformance`, `--test cost_hooks`, `--test cards_behavioral -- bt25_03 st23 glowing_dawn tamer` (filter), `--test clone_fuzz --features dsl-yaml-loader`, dcgo-harness tests, `exam_sim_all.py`, then the FULL `cards_behavioral`.
+
+- [ ] **Step 1: Conformance test; run → FAIL** (two triggers).
+- [ ] **Step 2: Implement** the batched event.
+- [ ] **Step 3: Run → PASS**; regression list; exam line; full exam-sim; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** `15-5-2` → proven (new entry; it has none today); regenerate; `--check`. Gap → RESOLVED.
+- [ ] **Step 5: Commit** — `engine: one multi-card cost trash is one event, each observer triggers once (§15-5-2; G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS)`.
+
+**Phase H in Task 23's closure:** the digest's residuals list drops the two exam divergences once Tasks 37/38 land; the "Blocking gaps closed" list adds all four ids; the exam-sim line in the digest/PR body is re-measured on the final head.
