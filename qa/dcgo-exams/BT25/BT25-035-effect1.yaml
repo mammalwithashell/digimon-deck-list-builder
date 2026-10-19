@@ -36,13 +36,13 @@
 #      digivolve into" only admits cards this Digimon can digivolve into;
 #      expect DCGO's candidate list to omit the Lv.6s.
 #   2. ST23-13's "When effects trash cards from under this Tamer" fires once
-#      PER CARD (twice here) and the first copy resolves BETWEEN the two
-#      trashes (mid-effect). One effect trashing two cards is one event, and
-#      a trigger waits until the effect finishes. Probed: if the first copy is
-#      accepted (Tamer suspended), the second is still offered and does
-#      nothing. Second copy is a sim_only row; the first may sit at a
-#      different position in DCGO's sequence (after the digivolve, possibly
-#      batched with BT25-041's [When Digivolving] as MultipleSkills).
+#      PER CARD in our engine (twice here). One effect trashing two cards is
+#      ONE event (§15-5-2), so ST23-13 triggers once; since Task 6 the trigger
+#      waits for the causing effect (§15-8-3-2), so the extra copy now shows up
+#      as a duplicate ST23-13 entry in the post-effect TriggerOrder. Filed as
+#      G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS (Plan 4
+#      Task 40); the line expects the rules-correct single entry and fails at
+#      the DIVERGENCE marker below until the engine is fixed.
 #
 # PROMPT SHAPE (BT25-035.yaml DCGO crosscheck): -3000 pick is
 # SelectPermanentEffect canNoSelect: false. The "Then" is a trash-2 cost over
@@ -138,21 +138,30 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # ST23-13 "[Your Turn] When effects trash cards from under this Tamer, by
-  # suspending this Tamer, ..." fires off the FIRST trashed card, mid-cost.
-  # Declined.
-  - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
   # SIM-ONLY: the 2nd per-card Tamer pick. With one Tamer holding >=2
   # face-down cards DCGO's single Tamer selection covers both (BT25-035.yaml:
   # CanEndSelectCondition "2 from one Tamer").
   - actor: 0
     do: { select: { targets: [own.field.0], sim_only: true } }
-  # SIM-ONLY: ST23-13 fires AGAIN for the second card (one effect trashing two
-  # cards is one trigger event) -- see ENGINE FINDING in the header.
+  # ST23-13 "[Your Turn] When effects trash cards from under this Tamer, by
+  # suspending this Tamer, ..." -- RE-LOWERED 2026-10-19: it no longer fires
+  # mid-cost; it waits until BT25-035's effect (the digivolve) finishes
+  # (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS, 0870820d1) and pends
+  # beside BT25-041's [When Digivolving]. The turn player picks ST23-13's
+  # first, then declines.
+  # DIVERGENCE: G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS.
+  # BT25-035's "by trashing 2 bottom face-down cards" is ONE processing
+  # condition: the two cards leave in one event and ST23-13 triggers once
+  # (§15-5-2). Our cost trashes per card (one Tamer pick each), so ST23-13
+  # pends TWICE; this line is left FAILING here on the rules-correct pool
+  # [ST23-13, BT25-041] (header ENGINE FINDING 2; pre-existing -- the line
+  # carried a sim-only decline for the extra copy before this branch).
   - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+    do: { select: { cards: [ST23-13] } }
+    expect: { prompt: MultipleSkills, candidates: [ST23-13, BT25-041] }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
   # Free digivolve into Murasamemon done; BT25-041's optional [When
   # Digivolving] -> decline.
   - actor: 0

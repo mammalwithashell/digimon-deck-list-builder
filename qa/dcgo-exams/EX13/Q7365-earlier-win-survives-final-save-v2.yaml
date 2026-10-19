@@ -158,15 +158,30 @@ steps:
     select:
       targets:
       - opp.field.1
+# RE-LOWERED 2026-10-19: the effect battle's result triggers (the win
+# effect, <Piercing>) and the attack's <Raid> now pend in ONE pool when the
+# [When Digivolving] effect finishes (§15-8-3-2, §16-23-2, §16-7-2/§16-7-4;
+# Tasks 1, 6, 28). Order: <Raid> first (switch onto the target, the Raid
+# OptionalSkill folded into the pick), then the win effect, then <Piercing>.
 - actor: 0
   do:
     select:
-      'yes': true
+      cards:
+      - EX13-045
+      trigger: Raid
 - actor: 0
   do:
     select:
       targets:
       - opp.field.1
+  expect:
+    prompt: OptionalSkill
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX13-045
+      trigger_not: Pierce
 - actor: 1
   do:
     select:
@@ -185,7 +200,7 @@ steps:
 expect_ruling:
   q_id: Q7365
   assert:
-  - at: 24
+  - at: 25
     that:
       p0.field:
       - card_id: EX13-045

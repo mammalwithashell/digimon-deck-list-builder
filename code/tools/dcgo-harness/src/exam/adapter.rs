@@ -1873,7 +1873,24 @@ impl TriggerCandidate {
 /// The `Debug` name minus any payload: `Keyword::MaterialSave(1)` is the
 /// `<Material Save>` trigger, and the `1` is that keyword's PARAMETER, not part
 /// of its name. `trigger:` names the keyword; it does not address a parameter.
+///
+/// A keyword in [`crate::exam::projection::KEYWORD_PROBES`] takes that
+/// table's wire name -- DCGO's spelling -- so the one shared table is the
+/// single source of truth: `<Piercing>` is `Pierce` there, DCGO's
+/// `ICardEffect.EffectName` for the keyword (`KeyWordEffects/Pierce.cs`,
+/// `SetUpICardEffect("Pierce", ...)`). A `trigger:` / `trigger_not:` row is ONE
+/// string both engines normalize and match against their own branch names, so
+/// our side must spell the branch the way DCGO does -- `trigger_not: Pierce`
+/// otherwise excludes nothing (EX13-045's battle-result pool, where <Piercing>
+/// became a pooled trigger, Task 28). Every other probe name equals the
+/// `Debug` name once normalized.
 fn keyword_display_name(keyword: digimon_engine::enums::Keyword) -> String {
+    if let Some((wire, _)) = crate::exam::projection::KEYWORD_PROBES
+        .iter()
+        .find(|(_, k)| *k == keyword)
+    {
+        return (*wire).to_string();
+    }
     let debug = format!("{keyword:?}");
     match debug.split_once('(') {
         Some((name, _payload)) => name.to_string(),
@@ -3051,6 +3068,18 @@ steps:
         // A parameterized keyword is still named by its KEYWORD, not by its
         // parameter: `<Material Save 1>` is the `MaterialSave` trigger.
         assert_eq!(keyword_display_name(Keyword::MaterialSave(1)), "MaterialSave");
+    }
+
+    #[test]
+    fn keyword_display_name_spells_piercing_as_dcgo_does() {
+        // DCGO names the keyword effect "Pierce" (KeyWordEffects/Pierce.cs), so a
+        // shared `trigger_not: Pierce` row must exclude our <Piercing> branch.
+        use digimon_engine::enums::Keyword;
+        assert_eq!(keyword_display_name(Keyword::Piercing), "Pierce");
+        assert_eq!(
+            normalize_trigger_name(&keyword_display_name(Keyword::Piercing)),
+            normalize_trigger_name("Pierce")
+        );
     }
 
     #[test]

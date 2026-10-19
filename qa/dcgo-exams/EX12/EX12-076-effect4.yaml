@@ -33,54 +33,48 @@
 # memory), T6 lands a fresh Gasamon AFTER the -12000 has expired at the end of
 # P0's T5, and T7 attacks.
 #
-# THE ATTACK NAMES P1's DIGIMON, NOT THE SECURITY STACK, and that is the
-# load-bearing correction from the 2026-08-24 oracle run. The first version of
-# this line declared against the player and ABORTED at the very first prompt
-# after the attack: "step 19 expected prompt 'SelectPermanentEffect' but DCGO
-# asked 'MultipleSkills'".
+# THE ATTACK NAMES P1's SECURITY STACK (RE-LOWERED 2026-10-19). PROVISIONAL:
+# the security-target line below has not been oracle-run; the values its
+# assert block expects are our engine's, re-derived from the card text.
 #
-# The cause is a genuine structural asymmetry, re-derived from the C#. DCGO
-# registers <Raid> as a QUEUED TRIGGER in the same `EffectTiming.OnAllyAttack`
-# batch as this clause (EX12_076.cs:36-40 `RaidSelfEffect`, alongside the
-# WhenAttackingClass at :97), so an attack that can raid stacks TWO effects on
-# one card and DCGO opens `MultipleSkills` to order them. Our engine models the
-# same keyword as an attack-state window (`AttackState::RaidOpen` ->
-# `try_enter_raid_switch`, combat/mod.rs) rather than a trigger, so it parks
-# only this clause's pick and never a `TriggerOrder`. The scenario format has
-# no DCGO-only row to absorb the difference (`optional_gate_fold` is hardwired
-# to `OptionalSkill`, and `ordinal:` is refused when our live prompt is not
-# `TriggerOrder`), so the fix has to come from the LINE.
+# Why the security stack: the attack cannot name P1's Gasamon. A Digimon is a
+# legal declaration target only when SUSPENDED (or under a "can attack an
+# unsuspended Digimon" grant), and Gasamon was played on T6 and stands
+# unsuspended (§11-2-7-1). <Raid> does not widen the declaration -- it only
+# switches the target after the attack is declared (§16-23-1/-2); our engine
+# dropped its old declaration-time <Raid> arm in Task 33 (d5b90d8fb), and
+# DCGO's `Permanent.CanAttackTargetDigimon` has no such arm either. Do NOT
+# "restore" the Digimon target: it is an illegal declaration.
 #
-# It does, and cheaply: `MultipleSkills` only opens over effects that pass
-# `CanActivate` (MultipleSkills.cs, `skillInfos_active` filter -- a
-# single-survivor stack goes straight to `Activate(true)` with no prompt), and
-# `CardEffectCommons.CanActivateRaid` requires an unsuspended enemy Digimon
-# that is `!= attackProcess.DefendingPermanent`. Declaring the attack ON P1's
-# ONLY Digimon makes that candidate set empty at filter time, so <Raid> drops
-# out of the stack and THIS clause is the lone survivor -- exactly the
-# single-prompt shape our engine produces. Our side agrees by construction:
-# `raid_switch_candidates` excludes the current attack target too. <Raid> is
-# not measured here; it has its own line (EX12-076-effect1.yaml).
+# Declared on the player, <Raid> (Gasamon is an unsuspended candidate) and this
+# clause trigger together: both engines now stack them in one [When
+# Attacking] pool -- DCGO in the `EffectTiming.OnAllyAttack` batch
+# (EX12_076.cs:36-40 `RaidSelfEffect` beside the WhenAttackingClass at :97,
+# the `MultipleSkills` the 2026-08-24 oracle run aborted on), ours since Task 1
+# (ab044bb9f, §16-23-2, §15-4-3-2) -- so the line answers a SHARED
+# MultipleSkills row picking this clause as the non-Raid branch
+# (`trigger_not: Raid`, as EX12-076-effect1.yaml does). The clause then places
+# Gasamon as P1's top security card and trashes it (4 colours) with
+# <Recovery +1>; <Raid> is left with no unsuspended enemy Digimon and asks
+# nothing; the attack then checks ONE security card.
 #
-# NO SECURITY CHECK, and that is the point of the new shape. This clause
-# resolves at attack declaration and moves the declared defender into the
-# security stack, so by the battle step the defending permanent is no longer in
-# the battle area: DCGO's `DetermineAttackOutcome` takes neither the
-# "no defender -> DoSecurityCheck" branch (DefendingPermanent is non-null) nor
-# the battle branch (`IsPermanentExistsOnBattleAreaDigimon` is false), and the
-# attack simply ends. Our engine ends it the same way -- verified sim-side:
-# `p1.security` stays 5 and `p1.field` is empty.
-#
-# THE DISCRIMINATOR IS P1's TRASH. With no security check the two readings of
-# "trash their top security card" separate cleanly on trash contents alone:
-# trashing the JUST-PLACED Gasamon leaves EX12-020 in P1's trash and EX12-075
-# (P1's pre-existing top security, pinned at stack[9]) untouched on top of the
-# stack; trashing the PRE-EXISTING top instead would put EX12-075 in the trash
-# and leave Gasamon as P1's top security card. Both readings leave P1 on 5
-# security, so the count cannot tell them apart and `p1.trash` is what does.
+# THE DISCRIMINATOR IS STILL P1's TRASH. Trashing the JUST-PLACED Gasamon puts
+# EX12-020 in P1's trash and leaves EX12-075 (P1's pre-existing top security,
+# pinned at stack[9]) on top, so the attack's security check flips EX12-075
+# (Kunlun's Imperial Decree, "[Security] Place this card in the battle area")
+# into P1's battle area. Trashing the PRE-EXISTING top instead would put
+# EX12-075 in P1's trash and leave Gasamon to be the checked card.
 #
 # Security arithmetic on P1: 5 -> 6 (Gasamon placed) -> 5 (clause trashes the
-# top). P0: 5 -> 6 via <Recovery +1>.
+# top) -> 4 (the attack's security check). P0: 5 -> 6 via <Recovery +1>.
+#
+# RETIRED LINE (2026-08-24 .. 2026-10-19): the attack was declared ON Gasamon
+# so that DCGO's `CanActivateRaid` (needs an unsuspended enemy Digimon other
+# than the defender) dropped <Raid> from its stack and no MultipleSkills
+# opened -- a workaround for the pre-Task-1 engine, which had no <Raid>
+# trigger to order. Its "no security check" end state (P1 security 5, P1 field
+# empty) was the oracle-confirmed one; that declaration is illegal under
+# §11-2-7-1, so the verdict must be re-earned on the line above.
 #
 # Stack layout: hand [0..4], security [5..9] REVERSED (9 = TOP), then draws in
 # order. DIGIVOLVING DRAWS A CARD, so P0's draw slots are T3-turn, T3-digivolve,
@@ -208,22 +202,32 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T7 (P0, memory 3): THE CLAUSE. Susanoomon attacks P1's ONLY Digimon --
-  # naming it as the defender is what keeps <Raid> out of DCGO's OnAllyAttack
-  # stack (see the header), leaving this clause as the single trigger both
-  # engines resolve without an ordering prompt.
+  # T7 (P0, memory 3): THE CLAUSE. RE-LOWERED 2026-10-19: Susanoomon attacks
+  # P1's SECURITY. The old line declared the attack on P1's only Digimon, the
+  # UNSUSPENDED Gasamon -- not a legal attack target (§11-2-7-1: the opponent
+  # or a suspended Digimon; <Raid> only switches the target AFTER the
+  # declaration, §16-23-1/-2; Task 33, d5b90d8fb; DCGO's own
+  # `Permanent.CanAttackTargetDigimon` has no <Raid> arm either). Declared on
+  # the player, <Raid> (Gasamon is an unsuspended candidate) and this clause
+  # pend together in BOTH engines (Task 1, ab044bb9f): the shared
+  # MultipleSkills row below picks this clause as the non-Raid branch.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
-    do: { attack: { attacker: field.0, target: field.0 } }
+    do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
-  # The forced pick: P1's only Digimon becomes their top security card.
+  - actor: 0
+    do: { select: { cards: [EX12-076], trigger_not: Raid } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-076, EX12-076] }
+  # The forced pick: P1's only Digimon becomes their top security card. It is
+  # then trashed and <Recovery +1> refills P0; <Raid> is left with no
+  # unsuspended enemy Digimon and asks nothing.
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
   # Trailing pass so the whole attack -- clause, security trash, Recovery, and
-  # the defender-less end of the attack -- lands in the projection. It is a
+  # the security check that ends the attack -- lands in the projection. It is a
   # main-phase prompt for P0: attacking spends no memory, so P0 still holds the
   # turn at 3. (Shishimamon's inherited [End of Attack] IS in the attacking
   # permanent's sources and so passes DCGO's `CanTriggerOnAttack`, but its
@@ -244,20 +248,27 @@ assert:
   #  * P0's security went 5 -> 6: <Recovery +1>, which only runs on the
   #    "4 or more colors" branch, and is the witness for the clause's second
   #    sentence;
-  #  * P1's security is back to 5 -- the net of +1 placed, -1 trashed -- and
-  #    P1's battle area is EMPTY: the declared defender was moved into the
-  #    security stack before the battle step, so no battle and no security
-  #    check ever ran (see "NO SECURITY CHECK" in the header);
+  #  * RE-LOWERED 2026-10-19 (attack on the player, see step 18): the clause
+  #    nets P1's security +1 placed / -1 trashed = 5, then the attack checks
+  #    ONE security card -- P1's pre-existing top card EX12-075 (Kunlun's
+  #    Imperial Decree, "[Security] Place this card in the battle area"), which
+  #    lands in P1's battle area: P1 security 4, P1 field [EX12-075]. Had the
+  #    clause trashed EX12-075 instead of the placed Gasamon, EX12-075 would be
+  #    in P1's TRASH and Gasamon would have been the checked card, so the
+  #    discriminator above still holds. (The header's "RETIRED LINE"
+  #    paragraph describes the old no-check line.) PROVISIONAL until the oracle
+  #    re-runs this line;
   #  * Susanoomon still stands on the pinned 4-colour stack, suspended from
   #    its own attack.
-  - at: 20
+  - at: 21
     that:
       turn: 7
       memory: 3
       p0.security: 6
-      p1.security: 5
+      p1.security: 4
       p1.trash: [EX12-011, EX12-020, EX12-020]
-      p1.field: []
+      p1.field:
+        - { card_id: EX12-075, dp: -1, suspended: false, sources: [] }
       p0.field:
         - card_id: EX12-076
           dp: 16000

@@ -67,26 +67,40 @@ steps:
   - actor: 0
     do: {select: {targets: [own.field.0]}}
     expect: {prompt: SelectPermanentEffect, count: 1}
-  # Our engine parks the trigger order first; DCGO asks P1's hand pick first.
-  - actor: 0
-    do: {select: {cards: [BT26-076], sim_only: true}}
-  - actor: 0
-    do: {select: {cards: [BT26-082], sim_only: true}}
-  - actor: 0
-    do: {select: {choice: "pay", sim_only: true}}
+  # RE-LOWERED 2026-10-19: the reactive triggers now wait until Crowmon's
+  # [When Digivolving] finishes (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-
+  # TRIGGERS, 0870820d1), so P1's hand pick comes first in BOTH engines and
+  # the three sim-only rows that answered our earlier trigger order are gone;
+  # the stacked-trigger rows below, formerly dcgo_only, are shared.
   - actor: 1
     do: {select: {cards: [ST1-08]}}
     expect: {prompt: SelectHandEffect}
+  # DIVERGENCE: G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS.
+  # Crowmon's one [When Digivolving] trashes a Tamer source AND P1's hand card,
+  # so Keenan (BT26-094) and Crowmon (BT26-076 [Your Turn]) each trigger once
+  # per event (§15-4-2-4) -- four triggers, all triggered before that one
+  # effect resolved, so they trigger simultaneously and form ONE pool the turn
+  # player orders (§15-4-3-2, §15-4-3-5-1); DCGO measured exactly that
+  # (BT26-076-effect2's oracle abort: a 4-entry MultipleSkills). Our engine
+  # offers two successive per-event pairs, so this line is left FAILING here
+  # on the rules-correct 4-entry expectation. (Picking one of Crowmon's two
+  # entries will need `ordinal:` once the pool is fixed.) The rows after this
+  # one still encode the per-pair order and must be re-authored with the fix.
   - actor: 0
-    do: {select: {cards: [BT26-076], dcgo_only: true}}
-    expect: {prompt: MultipleSkills}
-  # THE CLAUSE: accept the optional gate (DCGO-only), then pick the target.
+    do: {select: {cards: [BT26-076]}}
+    expect: {prompt: MultipleSkills, candidates: [BT26-094, BT26-094, BT26-076, BT26-076]}
+  # THE CLAUSE: accept the optional gate, then pick the target.
   - actor: 0
-    do: {select: {yes: true, dcgo_only: true}}
+    do: {select: {yes: true}}
     expect: {prompt: OptionalSkill}
   - actor: 0
-    do: {select: {cards: [BT26-082], dcgo_only: true}}
+    do: {select: {cards: [BT26-082]}}
     expect: {prompt: SelectCardEffect}
+  # The digivolution cost route (pre-existing on main): [Crowmon] special
+  # condition 3 - 1 = 2 vs the purple Lv.5 circle 4 - 1 = 3. Take 2.
+  - actor: 0
+    do: {select: {value: 2}}
+    expect: {prompt: SelectCountEffect}
   # Keenan reacts to the Tamer-source trash and the hand trash; decline both.
   - actor: 0
     do: {select: {decline: true}}

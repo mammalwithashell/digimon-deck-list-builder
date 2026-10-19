@@ -121,12 +121,14 @@ steps:
     select:
       targets:
       - opp.field.0
+# RE-LOWERED 2026-10-19: shared (was dcgo_only). <Piercing> is now a pooled
+# battle-result trigger (§16-7-2, §15-4-3-5-1; Task 28, 055806250), so our engine
+# orders it against BT20-042's battle-deletion trigger exactly as DCGO does.
 - actor: 0
   do:
     select:
       cards:
       - BT20-042
-      dcgo_only: true
   expect:
     prompt: MultipleSkills
 - actor: 0

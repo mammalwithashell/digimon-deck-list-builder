@@ -101,17 +101,29 @@ steps:
   - actor: 0
     do: {select: {targets: [own.field.0]}}
     expect: {prompt: SelectPermanentEffect, count: 1}
-  # Two reactive triggers stack on the Tamer trash (Keenan's Execute gate and
-  # Crowmon's own once-per-turn digivolve); resolve Crowmon's, decline it.
-  - actor: 0
-    do: {select: {cards: [BT26-076]}}
-    expect: {prompt: MultipleSkills, count: 2, candidates: [BT26-094, BT26-076]}
-  - actor: 0
-    do: {select: {decline: true}}
-  # The opponent trashes 1 card from hand.
+  # The opponent trashes 1 card from hand. RE-LOWERED 2026-10-19: this now
+  # comes BEFORE the reactive triggers -- they wait until Crowmon's
+  # [When Digivolving] finishes (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-
+  # TRIGGERS, 0870820d1) instead of resolving inline at the Tamer trash.
   - actor: 1
     do: {select: {cards: [ST1-08]}}
     expect: {prompt: SelectHandEffect}
+  # DIVERGENCE: G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS.
+  # Crowmon's one [When Digivolving] trashes a Tamer source AND P1's hand card,
+  # so Keenan (BT26-094) and Crowmon (BT26-076 [Your Turn]) each trigger once
+  # per event (§15-4-2-4) -- four triggers, all triggered before that one
+  # effect resolved, so they trigger simultaneously and form ONE pool the turn
+  # player orders (§15-4-3-2, §15-4-3-5-1); DCGO measured exactly that
+  # (BT26-076-effect2's oracle abort: a 4-entry MultipleSkills). Our engine
+  # offers two successive per-event pairs, so this line is left FAILING here
+  # on the rules-correct 4-entry expectation. (Picking one of Crowmon's two
+  # entries will need `ordinal:` once the pool is fixed.) The rows after this
+  # one still encode the per-pair order and must be re-authored with the fix.
+  - actor: 0
+    do: {select: {cards: [BT26-076]}}
+    expect: {prompt: MultipleSkills, candidates: [BT26-094, BT26-094, BT26-076, BT26-076]}
+  - actor: 0
+    do: {select: {decline: true}}
   # Keenan's reactive Execute grant (Tamer-trash event): our TriggerOrder(1) is
   # sim-only; DCGO asks an OptionalSkill gate, then the Digimon pick. Accepting
   # it suspends Keenan, so the hand-trash event's second Keenan trigger below
@@ -124,6 +136,4 @@ steps:
   - actor: 0
     do: {select: {targets: [own.field.1]}}
     expect: {prompt: SelectPermanentEffect, count: 1}
-  - actor: 0
-    do: {select: {cards: [BT26-094], sim_only: true}}
 assert: []

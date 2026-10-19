@@ -115,6 +115,13 @@ steps:
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
   # ST23-13's trash-from-under trigger -> yes, +3000 to the digivolver.
+  # RE-LOWERED 2026-10-19: the trigger waits until the digivolution finishes
+  # (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS, 0870820d1) and pends
+  # beside BT25-041's [When Digivolving]; the turn player orders them --
+  # ST23-13's first, then its own "by suspending" optional gate.
+  - actor: 0
+    do: { select: { cards: [ST23-13] } }
+    expect: { prompt: MultipleSkills }
   - actor: 0
     do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
@@ -129,7 +136,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 21
+  - at: 22
     that:
       turn: 3
       p0.memory: 0

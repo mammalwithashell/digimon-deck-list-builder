@@ -69,12 +69,14 @@ steps:
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
   - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-  - actor: 0
     do: { select: { cards: [BT26-091] } }
     expect: { prompt: SelectCardEffect }
+  # Keenan's trigger, after Pinamon's effect has finished -- in both engines
+  # now (RE-LOWERED 2026-10-19: §15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-
+  # TRIGGERS, 0870820d1): a shared row, and the sim-only inline decline at
+  # the Tamer pick is gone.
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
 meta: {produced_by: 20261006T225056812806Z-pilot-data-squad-e8e383}
 assert: []
@@ -82,7 +84,7 @@ assert: []
 expect_ruling:
   q_id: Q6958
   assert:
-  - at: 17
+  - at: 16
     that:
       p0.field:
       - card_id: BT26-091

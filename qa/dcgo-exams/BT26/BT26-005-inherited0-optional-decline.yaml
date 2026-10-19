@@ -82,16 +82,16 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
-  # Our Keenan observer is inline. Accept suspension even without a target.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
   # THE PROBE: decline the independently optional result AFTER payment.
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectCardEffect }
-  # DCGO resolves the same Keenan trigger after Pinamon has finished.
+  # DCGO resolves the same Keenan trigger after Pinamon has finished -- and so
+  # does ours now (RE-LOWERED 2026-10-19: §15-8-3-2; G-ENGINE-INLINE-DRAIN-
+  # SIBLING-TRIGGERS, 0870820d1), so the row is shared and the sim-only inline
+  # accept before the probe is gone.
   - actor: 0
-    do: { select: { yes: true, dcgo_only: true } }
+    do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
   # A real main-phase action proves the decline closes Pinamon's resolution.
   - actor: 0

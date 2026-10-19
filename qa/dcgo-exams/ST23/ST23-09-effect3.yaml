@@ -83,22 +83,17 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # SIM-ONLY -- ENGINE FINDING: BT25-041's inherited "[End of Attack] [Once
-  # Per Turn] By trashing the bottom face-down card from under any of your
-  # Tamers, this Digimon ... unsuspends" is offered to P0 at the end of P1's
-  # attack. Our EndOfAttack is an observer timing fanned out to every battle
-  # area (combat/mod.rs end-of-attack cleanup) and BT25-041.yaml carries no
-  # "this Digimon attacked" gate, nor a payability gate (P0 has no Tamer).
-  # [End of Attack] reads as THIS Digimon's attack ending; DCGO is expected to
-  # stack nothing here -> sim_only decline. Expected oracle agreement on state.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+  # (RE-LOWERED 2026-10-19: BT25-041's inherited [End of Attack] "By trashing
+  # the bottom face-down card from under any of your Tamers, ... unsuspends"
+  # is no longer offered -- with no Tamer its optional processing condition
+  # can't be executed, so it can't be chosen (§15-7-4; Task 8, 82a2bf29c).
+  # The sim-only decline row that answered it is gone.)
   # One step past the clause; attacking spent no memory, P1 keeps the turn.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 14
+  - at: 13
     that:
       turn: 4
       p1.memory: 3

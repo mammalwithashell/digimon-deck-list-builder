@@ -35,7 +35,9 @@
 # "in an attack" -> expected oracle divergence on that line.
 #
 # PROMPT SHAPE: the [When Digivolving] TriggerOrder picks `ordinal: 0`
-# between two same-id BT25-057 triggers -- an ours-only ordering; DCGO may
+# between two same-id BT25-057 triggers -- RE-LOWERED 2026-10-19: now a
+# dcgo_only row (our engine no longer offers the unpayable De-Digivolve
+# branch, §15-7-4, Task 8 82a2bf29c, so it asks no TriggerOrder); DCGO may
 # not stage the unpayable De-Digivolve branch at all (BT25-057.yaml DCGO
 # note: "RemoveUse if no cost paid" -- i.e. DCGO lets it activate and
 # refunds), so this row may need a dcgo_only/sim_only rework after the
@@ -94,18 +96,25 @@ steps:
   # to nothing. The remaining "may battle" is then offered alone as an
   # optional Replacement gate -> declined (the effect battle does NOT carry
   # the Retaliation target in our engine; see header).
+  # RE-LOWERED 2026-10-19: DCGO-ONLY now. Our engine no longer offers the
+  # De-Digivolve branch at all -- its optional processing condition can't be
+  # executed with no Tamer, so it can't be chosen (§15-7-4; Task 8,
+  # 82a2bf29c) -- so it asks no TriggerOrder and goes straight to the "may
+  # battle" gate. DCGO (no CanActivate gate on the shared class) still
+  # stacks both in MultipleSkills.
   - actor: 0
-    do: { select: { cards: [BT25-057], ordinal: 0 } }
+    do: { select: { cards: [BT25-057], ordinal: 0, dcgo_only: true } }
   - actor: 0
     do: { select: { decline: true } }
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
   # [When Attacking]: Liollmon's (BT26-025) inherited "may add top security"
-  # (yes). UPDATED 2026-10-04 (post-#708): our engine no longer offers
-  # Monarchlizamon's [WD][WA][OPT] here -- the unpayable [When Digivolving]
-  # half above resolved and spent the shared OPT (15-14-1), and #708 stopped
-  # offering spent-OPT entries (G-ENGINE-OPT-SPENT-TRIGGER-IN-TRIGGER-ORDER).
+  # (yes). Our engine does not offer Monarchlizamon's [WD][WA][OPT] here:
+  # with no Tamer holding a face-down card its optional processing condition
+  # can't be executed, so it can't be chosen (§15-7-4; Task 8, 82a2bf29c --
+  # RE-LOWERED 2026-10-19; the earlier "spent shared OPT" reason, post-#708,
+  # no longer applies since the [When Digivolving] half never resolves).
   # DCGO still asks: BT25_057.cs calls activateClass.RemoveUse() when the
   # Tamer cost was not paid, so the WA half is live again and
   # MultipleSkills.cs orders it against BT26_025's inherited WA. The row is

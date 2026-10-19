@@ -118,11 +118,9 @@ steps:
   - actor: 0
     do: { play: { card: BT4-104, from: hand } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: our 9-1-5 ordering between Blinding Ray's disposal and the
-  # inherited trigger (TriggerOrder [BT4-104, BT25-025]); DCGO hard-codes the
-  # disposal and asks nothing, so this row takes DCGO's order.
-  - actor: 0
-    do: { select: { cards: [BT4-104], sim_only: true } }
+  # (RE-LOWERED 2026-10-19: the used Blinding Ray is trashed right after its
+  # [Main], uninterrupted -- §9-1-5 Ver. 4.3; Task 7, c2b25d0b5 -- so the
+  # sim-only disposal-ordering row before the inherited trigger is gone.)
   # THE CLAUSE: unsuspend Minervamon.
   - actor: 0
     do: { select: { targets: [own.field.0] } }
@@ -137,7 +135,7 @@ assert:
       p0.security: 5
       p0.field:
         - { card_id: BT24-041, dp: 12000, suspended: true, sources: [BT25-025] }
-  - at: 18
+  - at: 17
     that:
       turn: 5
       p0.memory: 2
