@@ -124,6 +124,15 @@ steps:
     select:
       cards:
       - EX13-044
+# SIM-ONLY (RE-LOWERED 2026-10-19): the optional effect picked from our
+# TriggerOrder now passes through its own you-may gate (§15-7-1; Task 2,
+# da93979e8). DCGO registers EX13_044's battle class optional: false and
+# carries the "may" on the canNoSelect pick, so it asks nothing here.
+- actor: 0
+  do:
+    select:
+      'yes': true
+      sim_only: true
 - actor: 0
   do:
     select:
@@ -143,7 +152,7 @@ assert: []
 expect_ruling:
   q_id: Q7345
   assert:
-  - at: 17
+  - at: 18
     that:
       memory: -9
       p0.field:

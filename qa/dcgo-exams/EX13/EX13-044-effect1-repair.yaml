@@ -121,6 +121,9 @@ steps:
   do:
     select:
       decline: true
+# RE-LOWERED 2026-10-19: shared (was dcgo_only). <Piercing> is now a pooled
+# battle-result trigger (§16-7-2, §15-4-3-5-1; Task 28, 055806250), so our
+# engine orders it against Groundramon's battle-win reward exactly as DCGO does.
 # DCGO queues Piercing alongside Groundramon's mandatory battle-win reward.
 # Resolve the inherited security trash first, matching the engine's battle
 # trigger drain before Piercing checks. The final shared state compares both.
@@ -130,7 +133,6 @@ steps:
       cards:
       - EX13-041
       trigger_not: Pierce
-      dcgo_only: true
   expect:
     prompt: MultipleSkills
 - actor: 0

@@ -208,17 +208,27 @@ steps:
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # T7 (P0, memory 3): THE CLAUSE. Susanoomon attacks P1's ONLY Digimon --
-  # naming it as the defender is what keeps <Raid> out of DCGO's OnAllyAttack
-  # stack (see the header), leaving this clause as the single trigger both
-  # engines resolve without an ordering prompt.
+  # T7 (P0, memory 3): THE CLAUSE. RE-LOWERED 2026-10-19: Susanoomon attacks
+  # P1's SECURITY. The old line declared the attack on P1's only Digimon, the
+  # UNSUSPENDED Gasamon -- not a legal attack target (§11-2-7-1: the opponent
+  # or a suspended Digimon; <Raid> only switches the target AFTER the
+  # declaration, §16-23-1/-2; Task 33, d5b90d8fb; DCGO's own
+  # `Permanent.CanAttackTargetDigimon` has no <Raid> arm either). Declared on
+  # the player, <Raid> (Gasamon is an unsuspended candidate) and this clause
+  # pend together in BOTH engines (Task 1, ab044bb9f): the shared
+  # MultipleSkills row below picks this clause as the non-Raid branch.
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 0
-    do: { attack: { attacker: field.0, target: field.0 } }
+    do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
-  # The forced pick: P1's only Digimon becomes their top security card.
+  - actor: 0
+    do: { select: { cards: [EX12-076], trigger_not: Raid } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-076, EX12-076] }
+  # The forced pick: P1's only Digimon becomes their top security card. It is
+  # then trashed and <Recovery +1> refills P0; <Raid> is left with no
+  # unsuspended enemy Digimon and asks nothing.
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
@@ -244,20 +254,27 @@ assert:
   #  * P0's security went 5 -> 6: <Recovery +1>, which only runs on the
   #    "4 or more colors" branch, and is the witness for the clause's second
   #    sentence;
-  #  * P1's security is back to 5 -- the net of +1 placed, -1 trashed -- and
-  #    P1's battle area is EMPTY: the declared defender was moved into the
-  #    security stack before the battle step, so no battle and no security
-  #    check ever ran (see "NO SECURITY CHECK" in the header);
+  #  * RE-LOWERED 2026-10-19 (attack on the player, see step 18): the clause
+  #    nets P1's security +1 placed / -1 trashed = 5, then the attack checks
+  #    ONE security card -- P1's pre-existing top card EX12-075 (Kunlun's
+  #    Imperial Decree, "[Security] Place this card in the battle area"), which
+  #    lands in P1's battle area: P1 security 4, P1 field [EX12-075]. Had the
+  #    clause trashed EX12-075 instead of the placed Gasamon, EX12-075 would be
+  #    in P1's TRASH and Gasamon would have been the checked card, so the
+  #    discriminator above still holds. (The "NO SECURITY CHECK" header
+  #    paragraph describes the retired line.) PROVISIONAL until the oracle
+  #    re-runs this line;
   #  * Susanoomon still stands on the pinned 4-colour stack, suspended from
   #    its own attack.
-  - at: 20
+  - at: 21
     that:
       turn: 7
       memory: 3
       p0.security: 6
-      p1.security: 5
+      p1.security: 4
       p1.trash: [EX12-011, EX12-020, EX12-020]
-      p1.field: []
+      p1.field:
+        - { card_id: EX12-075, dp: -1, suspended: false, sources: [] }
       p0.field:
         - card_id: EX12-076
           dp: 16000

@@ -243,6 +243,14 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
+  # RE-LOWERED 2026-10-19 -- the UNBLOCK this header asked for, now on BOTH
+  # sides: <Raid> is a [When Attacking]-timing trigger in the attack-
+  # declaration pool (§16-23-2, §15-4-3-2; Task 1, ab044bb9f), so our engine
+  # parks the same two-trigger order DCGO's MultipleSkills asks. Shared row;
+  # the [When Attacking] clause named as the non-Raid branch.
+  - actor: 0
+    do: { select: { cards: [EX12-076], trigger_not: Raid } }
+    expect: { prompt: MultipleSkills, count: 1, candidates: [EX12-076, EX12-076] }
   # Clause #4 resolves first on our side: Gasamon becomes P1's top security
   # card and is then trashed (4 source colours), and <Recovery +1> refills P0.
   - actor: 0
@@ -267,7 +275,7 @@ assert:
   # check is exactly what "switch the target of attack" means. Seasarmon, the
   # card the switch redirected onto, is in P1's trash after losing 5000 to
   # 16000, and P1's battle area is empty.
-  - at: 25
+  - at: 26
     that:
       turn: 9
       memory: 2
