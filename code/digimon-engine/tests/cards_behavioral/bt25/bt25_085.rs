@@ -579,6 +579,65 @@ fn bt25_085_unsuspend_decline_stays_suspended() {
     );
 }
 
+/// A DUAL card in another Digimon's digivolution cards, or linked to it, is
+/// "1 Option card from any of your Digimon's digivolution cards or link
+/// cards" (§4-6-6-2; official Q&A Q6395 / Q6404 -- §4-6-3 makes only a
+/// permanent's top card a Digimon; DCGO `DigivolutionOrLinkCards.Any(IsOption)`
+/// with `CardSource.IsOption` true for a DUAL card). The clause's condition
+/// (a predicate) and its cost search (`stack_option_candidates`) must agree:
+/// the gate is offered, the DUAL card is the only Option to trash, and this
+/// Digimon unsuspends. Here the DUAL card is a second BeelStarmon.
+#[test]
+fn bt25_085_unsuspend_cost_takes_a_dual_card_from_digivolution_or_link_cards() {
+    for zone in ["digivolution", "link"] {
+        let mut runner = base().memory(3).start();
+        let beel = runner.place_on_field(0, CARD_ID, Some(0));
+        let other = runner.place_on_field(0, "PLAIN-DIGI", Some(0));
+        if zone == "digivolution" {
+            runner.push_source(other, CARD_ID);
+        } else {
+            // A linked card needs a [Link] requirement to stay linked
+            // (§17-1-3-2-6 / -7), as in `bt25_085_trash_option_link_card_unsuspends`.
+            runner.give_link_requirement(CARD_ID, 0);
+            runner.push_linked_owned(other, CARD_ID, 0);
+        }
+        runner.game.players[0].battle_area[beel.index as usize].is_suspended = true;
+        fire(&mut runner, EffectTiming::WhenAttacking, beel);
+        resolve_trigger_order_if_present(&mut runner);
+        assert_eq!(
+            runner.pending_kind(),
+            Some(SelectionKind::Replacement),
+            "{zone}: the condition sees the DUAL card as an Option card"
+        );
+        runner.accept_optional_trigger().expect("accept");
+        assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField), "{zone}");
+        runner
+            .execute_action(0, encode_attack(0, other.index as u16))
+            .unwrap_or_else(|e| panic!("{zone}: pick the Digimon: {e:?}"));
+        let options = runner
+            .pending_selection()
+            .unwrap_or_else(|| panic!("{zone}: the cost search offers the DUAL card"))
+            .valid_action_ids
+            .clone();
+        assert_eq!(options.len(), 1, "{zone}: the DUAL card is the only Option");
+        runner
+            .execute_action(0, options[0])
+            .unwrap_or_else(|e| panic!("{zone}: trash it: {e:?}"));
+        runner.auto_resolve().ok();
+        assert!(!is_suspended(&runner, beel), "{zone}: this Digimon unsuspends");
+        let host = &runner.game.players[0].battle_area[other.index as usize];
+        assert_eq!(host.card_sources.len(), 1, "{zone}: no digivolution card left");
+        assert!(host.linked_cards.is_empty(), "{zone}: no link card left");
+        assert!(
+            runner.game.players[0]
+                .trash
+                .iter()
+                .any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
+            "{zone}: the DUAL card was trashed as the cost"
+        );
+    }
+}
+
 #[test]
 fn bt25_085_unsuspend_no_option_anywhere_no_prompt() {
     let mut runner = base().memory(3).start();

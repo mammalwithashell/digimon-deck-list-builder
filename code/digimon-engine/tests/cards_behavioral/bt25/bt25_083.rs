@@ -857,6 +857,11 @@ fn bt25_083_q6395_trashes_dual_bt25_085_from_digivolution_cards_then_uses_it() {
                 .decline_optional_trigger()
                 .expect("decline an optional prompt");
         } else {
+            assert_eq!(
+                sel.valid_action_ids.len(),
+                1,
+                "the [Main]'s delete target is the opponent's only Digimon: {sel:?}"
+            );
             let act = sel.valid_action_ids[0];
             runner.execute_action(0, act).expect("take the only pick");
         }
