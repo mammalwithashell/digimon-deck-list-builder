@@ -107,9 +107,21 @@ steps:
   - actor: 0
     do: { select: { cards: [BT25-057], ordinal: 1 } }
     expect: { prompt: MultipleSkills, count: 1, candidates: [BT25-057, BT25-057] }
+  # SIM-ONLY (RE-LOWERED 2026-10-19): an optional effect picked from our
+  # TriggerOrder now passes through its own you-may gate (Task 2, da93979e8;
+  # BT25-057's De-Digivolve clause is optional since 65c2a1b41, §15-7-1).
+  # DCGO registers both clauses optional: false and carries the "may" on the
+  # canNoSelect pick, so it asks nothing here.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
+  # SIM-ONLY: the De-Digivolve clause, now alone, still asks our you-may gate
+  # (optional since 65c2a1b41); DCGO (optional: false) goes straight to the
+  # canNoSelect Tamer pick.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
@@ -117,7 +129,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 15
+  - at: 17
     that:
       turn: 4
       p0.memory: -3

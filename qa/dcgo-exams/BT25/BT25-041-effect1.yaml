@@ -152,13 +152,25 @@ steps:
     do: { attack: { attacker: field.1, target: security } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { cards: [BT25-041] } }
+    do: { select: { cards: [BT25-041], trigger_not: Alliance } }
     expect: { prompt: MultipleSkills }
+  # RE-LOWERED 2026-10-19: <Alliance> now pends in the same [When Attacking]
+  # pool (§16-24-2, §15-4-3-2; Task 1, ab044bb9f), so the pick above names the
+  # non-keyword branch (`trigger_not: Alliance`); and an optional effect picked
+  # from our TriggerOrder now passes through its own you-may gate (Task 2,
+  # da93979e8) -- a sim-only accept before our pay-cost EffectChoice.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
   - actor: 0
     do: { select: { value: 3, dcgo_only: true } }
     expect: { prompt: generic_int }
   - actor: 0
     do: { select: { choice: "Don't pay", sim_only: true } }
+  # Then the remaining pair [<Alliance>, ST23-01]: Kekkomon's first (declined),
+  # then the Alliance ally pick.
+  - actor: 0
+    do: { select: { cards: [ST23-01] } }
+    expect: { prompt: MultipleSkills }
   - actor: 0
     do: { select: { decline: true } }
   - actor: 0
@@ -168,7 +180,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 31
+  - at: 33
     that:
       turn: 5
       p0.memory: 4

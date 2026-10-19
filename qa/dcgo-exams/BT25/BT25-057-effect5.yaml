@@ -117,20 +117,31 @@ steps:
   - actor: 0
     do: { select: { cards: [BT25-057], ordinal: 0 } }
     expect: { prompt: MultipleSkills, count: 1, candidates: [BT25-057, BT25-057] }
+  # SIM-ONLY (RE-LOWERED 2026-10-19): an optional effect picked from our
+  # TriggerOrder now passes through its own you-may gate (Task 2, da93979e8;
+  # BT25-057's De-Digivolve clause is optional since 65c2a1b41, §15-7-1).
+  # DCGO registers both clauses optional: false and carries the "may" on the
+  # canNoSelect pick, so it asks nothing here.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
   - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
-  - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
+  # RE-LOWERED 2026-10-19: the optional battle [When Digivolving] is now asked
+  # AFTER the De-Digivolve body finishes (§15-8-3-2; G-ENGINE-INLINE-DRAIN-
+  # SIBLING-TRIGGERS, 0870820d1) -- the order this file's ENGINE FINDING
+  # predicted for DCGO.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 22
+  - at: 23
     that:
       turn: 5
       p0.memory: 0

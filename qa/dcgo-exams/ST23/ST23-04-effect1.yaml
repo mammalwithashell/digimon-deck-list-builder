@@ -126,6 +126,14 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.1, target: security } }
     expect: { prompt: main_phase }
+  # RE-LOWERED 2026-10-19: <Alliance> is a [When Attacking] trigger that pends
+  # beside Kekkomon's (ST23-01) inherited [When Attacking] (§16-24-2, §15-4-3-2;
+  # Task 1, ab044bb9f: one attack-declaration pool), so the turn player orders
+  # them -- the shared MultipleSkills row this header predicted. ST23-01 first
+  # (declined), then the Alliance ally pick.
+  - actor: 0
+    do: { select: { cards: [ST23-01] } }
+    expect: { prompt: MultipleSkills }
   - actor: 0
     do: { select: { decline: true } }
   - actor: 0
@@ -135,7 +143,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 24
+  - at: 25
     that:
       turn: 5
       p0.memory: 4

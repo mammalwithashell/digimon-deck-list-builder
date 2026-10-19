@@ -179,6 +179,12 @@ steps:
   - actor: 0
     do: { select: { cards: [BT25-085], ordinal: 1 } }
     expect: { prompt: MultipleSkills, count: 1, candidates: [BT25-085, BT25-085] }
+  # SIM-ONLY (RE-LOWERED 2026-10-19): the optional effect picked from our
+  # TriggerOrder now passes through its own you-may gate (§15-7-1; Task 2,
+  # da93979e8). DCGO registers it optional: false and carries the "may" on
+  # the canNoSelect picks, so it asks nothing here.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
@@ -200,7 +206,7 @@ assert:
   # cards into the trash. P1's security is 5 - 1 (P-180's [Main] at T7) - 1 (this
   # attack's check) = 3; both trashed security cards are Dracomon (ST1-04).
   # Attacks cost nothing: memory is still 3 and the turn is still P0's.
-  - at: 28
+  - at: 29
     that:
       turn: 9
       p0.memory: 3
