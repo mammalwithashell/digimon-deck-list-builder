@@ -36,13 +36,13 @@
 #      digivolve into" only admits cards this Digimon can digivolve into;
 #      expect DCGO's candidate list to omit the Lv.6s.
 #   2. ST23-13's "When effects trash cards from under this Tamer" fires once
-#      PER CARD (twice here) and the first copy resolves BETWEEN the two
-#      trashes (mid-effect). One effect trashing two cards is one event, and
-#      a trigger waits until the effect finishes. Probed: if the first copy is
-#      accepted (Tamer suspended), the second is still offered and does
-#      nothing. Second copy is a sim_only row; the first may sit at a
-#      different position in DCGO's sequence (after the digivolve, possibly
-#      batched with BT25-041's [When Digivolving] as MultipleSkills).
+#      PER CARD in our engine (twice here). One effect trashing two cards is
+#      ONE event (§15-5-2), so ST23-13 triggers once; since Task 6 the trigger
+#      waits for the causing effect (§15-8-3-2), so the extra copy now shows up
+#      as a duplicate ST23-13 entry in the post-effect TriggerOrder. Filed as
+#      G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS (Plan 4
+#      Task 40); the line expects the rules-correct single entry and fails at
+#      the DIVERGENCE marker below until the engine is fixed.
 #
 # PROMPT SHAPE (BT25-035.yaml DCGO crosscheck): -3000 pick is
 # SelectPermanentEffect canNoSelect: false. The "Then" is a trash-2 cost over

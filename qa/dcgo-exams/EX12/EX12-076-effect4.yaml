@@ -227,7 +227,7 @@ steps:
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
   # Trailing pass so the whole attack -- clause, security trash, Recovery, and
-  # the defender-less end of the attack -- lands in the projection. It is a
+  # the security check that ends the attack -- lands in the projection. It is a
   # main-phase prompt for P0: attacking spends no memory, so P0 still holds the
   # turn at 3. (Shishimamon's inherited [End of Attack] IS in the attacking
   # permanent's sources and so passes DCGO's `CanTriggerOnAttack`, but its
