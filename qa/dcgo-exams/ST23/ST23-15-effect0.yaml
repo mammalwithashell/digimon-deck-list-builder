@@ -54,9 +54,9 @@ steps:
   - actor: 0
     do: { play: { card: ST23-15, from: hand } }
     expect: { prompt: main_phase }
-  # (BT25-090's Option cost reducer is no longer offered here: its "by trashing
+  # (RE-LOWERED 2026-10-19: BT25-090's Option cost reducer is no longer offered: its "by trashing
   # the bottom face-down card" is unpayable with no face-down source, so the
-  # player can't choose it -- §15-7-4; Task 8. The sim-only decline row is gone.)
+  # player can't choose it -- §15-7-4; Task 8, 82a2bf29c. The sim-only decline row is gone.)
   # [Main]: the union hand-or-trash pick. P0's trash is EMPTY, so DCGO's
   # Hand/Trash/Don't-play SetIntSelection collapses to the hand side (the
   # EX12-074-security0 precedent) and asks SelectHandEffect (PlayForFree).

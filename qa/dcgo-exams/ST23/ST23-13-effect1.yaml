@@ -101,12 +101,9 @@ steps:
   # THE CLAUSE: the cost trash above fired Tomoro & Kyo's "[Your Turn] When
   # effects trash cards from under this Tamer". One declinable trigger ->
   # DCGO OptionalSkill (TriggerOrder at bundle length 1).
-  # ENGINE FINDING (expected oracle divergence in prompt ORDER): ours resolves
-  # it HERE, mid-way through Kekkomon's effect, before the digivolve.
-  # general_rule.pdf 15-8-3-2: a trigger-type effect can't activate during
-  # effect processing -- it waits until Kekkomon's effect finishes. DCGO is
-  # expected to ask this AFTER the digivolve, with BT25-049 as the target.
-  # Outcome-neutral here: the DP modifier rides the same permanent either way.
+  # (RETIRED ENGINE FINDING: before 0870820d1 our engine resolved it mid-way
+  # through Kekkomon's effect, before the digivolve; it now waits until that
+  # effect finishes, §15-8-3-2, and the DP target is BT25-049.)
   # RE-LOWERED 2026-10-19 (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS,
   # 0870820d1): the engine now holds the trigger until the effect finishes.
   # It now pends beside BT25-049's [When Digivolving] after the digivolve, so

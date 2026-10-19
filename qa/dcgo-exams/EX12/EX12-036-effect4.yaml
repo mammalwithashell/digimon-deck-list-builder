@@ -139,6 +139,7 @@ steps:
   # must answer. Declined (DCGO: the OptionalSkill "no" of its Execute gate).
   - actor: 0
     do: { pass: {} }
+    expect: { prompt: OptionalSkill }
 assert:
   # After the play + pick: both Gasamon are fielded and unsuspended (the lock
   # is a restriction, not a suspension), Ryugumon sits at 14000 effective DP

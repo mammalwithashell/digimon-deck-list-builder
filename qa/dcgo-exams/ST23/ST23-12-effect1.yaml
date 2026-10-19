@@ -88,13 +88,10 @@ steps:
   # RE-LOWERED 2026-10-19 (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS,
   # 0870820d1): the engine now holds the trigger until the effect finishes.
   # So the payoff pick (SelectCardEffect) comes first, then this trigger.
-  # ENGINE FINDING (expected oracle divergence): the cost trash fires
-  # Tomoro & Kyo's [Your Turn] "When effects trash cards from under this
-  # Tamer" trigger, and OUR engine resolves it HERE -- mid-way through
-  # Chiropmon's [On Play], before the payoff pick. general_rule.pdf 15-8-3-2:
-  # a trigger-type effect can't activate during effect processing; it waits
-  # pending until Chiropmon's effect finishes. Expected DCGO order: the trash
-  # pick (SelectCardEffect) FIRST, then OptionalSkill + the DP target.
+  # The cost trash fired Tomoro & Kyo's [Your Turn] "When effects trash cards
+  # from under this Tamer" trigger; it waited for Chiropmon's [On Play] and is
+  # answered here. (RETIRED ENGINE FINDING: before 0870820d1 our engine
+  # resolved it mid-way through the [On Play], before the payoff pick.)
   - actor: 0
     do: { select: { cards: [ST23-13] } }
     expect: { prompt: OptionalSkill }
