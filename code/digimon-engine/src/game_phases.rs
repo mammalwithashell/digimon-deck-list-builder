@@ -852,7 +852,30 @@ impl Game {
             .collect()
     }
 
+    /// A legal `<Overclock>` cost: a specified candidate
+    /// (`is_specified_overclock_cost`) whose deletion can be executed.
+    /// §15-7-4 (Ver. 4.3): "If executing an optional processing condition's
+    /// contents isn't possible, then the player can't choose to execute
+    /// them" -- a Digimon that can't be deleted (a passive
+    /// `CannotBeDestroyed*` restriction) is not offered. An optional or
+    /// effect-based prevention (<Armor Purge>) stays offered: the deletion is
+    /// executable and only replaced (§15-8-5-2); `run_overclock_selection_step`
+    /// reads the outcome.
     fn is_legal_overclock_cost(
+        &self,
+        player: PlayerId,
+        overclock_index: usize,
+        candidate: PermanentHandle,
+    ) -> bool {
+        self.is_specified_overclock_cost(player, overclock_index, candidate)
+            && !crate::replacement::deletion_passively_prevented(
+                self,
+                candidate,
+                crate::replacement::ReplacementCause::Cost,
+            )
+    }
+
+    fn is_specified_overclock_cost(
         &self,
         player: PlayerId,
         overclock_index: usize,
@@ -970,8 +993,10 @@ impl Game {
     /// pool: the optional processing condition "by deleting 1 of your Tokens
     /// or 1 of your other specified Digimon" as one optional pick over the
     /// legal candidates (`overclock_cost_action_ids`; PASS declines). A pick
-    /// deletes it and the mandatory processing follows: `carrier` attacks
-    /// the opponent without suspending (`run_overclock_selection_step`). The
+    /// deletes it and, only when it was actually deleted (§15-7-1; a
+    /// prevented deletion executes nothing, §15-7-2 / §15-8-5-2), the
+    /// mandatory processing follows: `carrier` attacks the opponent without
+    /// suspending (`run_overclock_selection_step`). The
     /// attack is declared inside the pool, so the pool's other entries
     /// resolve before its counter timing (§11-1-4). Resume-driven
     /// (`ResumeFrame::OverclockSelection`); the closures only mirror the
@@ -1135,31 +1160,78 @@ impl Game {
             index: sacrifice_index,
         };
 
+        if self
+            .players
+            .get(state.player as usize)
+            .and_then(|p| p.battle_area.get(sacrifice_index as usize))
+            .is_none()
+        {
+            return;
+        }
+
+        // §16-34-3 / §15-7-1: the attack follows only if the condition "by
+        // deleting 1 of your Tokens or 1 of your other specified Digimon" is
+        // EXECUTED -- the chosen Digimon is actually deleted. A replacement
+        // that prevents the deletion (§15-8-5-2: "it isn't deleted"; <Armor
+        // Purge>, a "can't be deleted" grant) leaves the condition
+        // unexecuted, and §15-7-2: nothing after it happens. The deletion's
+        // outcome is read from a deletion receipt, which the batched flow
+        // fills at commit and carries through a parked replacement decision
+        // (`with_deletion_receipt`), so both the immediate and the parked
+        // path read the same outcome. DCGO `OverclockProcess`:
+        // `DeletePeremanentAndProcessAccordingToResult` → attack only
+        // `if (isDeleted)`.
+        let cost_identity = self.capture_digivolve_host_identity(sacrifice_handle);
+        let receipt = self.open_deletion_receipt();
+
         let previous_cause = self.current_deletion_event_cause_override;
         self.current_deletion_event_cause_override =
             Some(crate::trigger_context::EventCause::Overclock);
-        self.delete_permanent_with_cause(
-            sacrifice_handle,
+        let _ = self.delete_permanents_batch_with_receipt(
+            vec![sacrifice_handle],
             crate::replacement::ReplacementCause::Cost,
+            Some(receipt),
         );
         self.current_deletion_event_cause_override = previous_cause;
 
         if self.pending_selection.is_some() {
-            self.pending_overclock_attack = Some((state.player, state.source_card, state.opponent));
+            // A decision parked inside the deletion (an optional replacement
+            // such as <Armor Purge>, or a deletion trigger): the attack waits
+            // for it and re-checks the receipt (`resume_pending_overclock_attack`).
+            // A second <Overclock> parking before the first resumed overwrites
+            // the single slot (the open §11-1-4 ordering half of
+            // G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL); close the
+            // overwritten entry's receipt so it does not linger.
+            if let Some((.., stale_receipt)) = self.pending_overclock_attack {
+                self.deletion_receipts.retain(|(id, _)| *id != stale_receipt);
+            }
+            self.pending_overclock_attack = Some((
+                state.player,
+                state.source_card,
+                state.opponent,
+                cost_identity,
+                receipt,
+            ));
             return;
         }
 
-        self.resume_overclock_attack(state.player, state.source_card, state.opponent);
+        if self.take_deletion_receipt_matching(receipt, state.player, cost_identity, None) {
+            self.resume_overclock_attack(state.player, state.source_card, state.opponent);
+        }
     }
 
     pub(crate) fn resume_pending_overclock_attack(&mut self) {
         if self.pending_selection.is_some() {
             return;
         }
-        let Some((player, source_card, opponent)) = self.pending_overclock_attack.take() else {
+        let Some((player, source_card, opponent, cost_identity, receipt)) =
+            self.pending_overclock_attack.take()
+        else {
             return;
         };
-        self.resume_overclock_attack(player, source_card, opponent);
+        if self.take_deletion_receipt_matching(receipt, player, cost_identity, None) {
+            self.resume_overclock_attack(player, source_card, opponent);
+        }
     }
 
     fn resume_overclock_attack(

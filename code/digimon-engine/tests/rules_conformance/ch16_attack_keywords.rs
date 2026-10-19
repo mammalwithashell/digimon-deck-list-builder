@@ -1935,6 +1935,127 @@ fn overclock_optionality_matches_rule() {
     assert_eq!(r.turn_player(), 1);
 }
 
+/// P0 has `OVERCLOCK` (slot 0) and, in slot 1, a [Puppet] stack with <Armor
+/// Purge>: `PUPPET` under `PUPPET_ARMOR`. P1 has 3 security cards.
+fn overclock_armor_purge_board() -> DebugRunner {
+    let mut r = board(&[FILL; 3]);
+    r.place_on_field(0, "OVERCLOCK", Some(0));
+    r.place_stack(0, &["PUPPET", "PUPPET_ARMOR"]);
+    r
+}
+
+/// §16-34-3 "If the content of that condition is EXECUTED, the processing
+/// for "the Digimon with this effect attacks a player without suspending"
+/// will be mandatory." With §15-7-1 ("If the player chooses to execute the
+/// processing for the conditions and is successful, the processing after the
+/// conditions is performed"), §15-7-2 and §15-8-5-2 (a "would be deleted"
+/// effect that prevents the removal: "it isn't deleted").
+///
+/// At the end of P0's turn P0 chooses the [Puppet] stack as <Overclock>'s
+/// condition; its <Armor Purge> (accepted) trashes `PUPPET_ARMOR` and the
+/// Digimon isn't deleted. The condition was not executed: `OVERCLOCK` does
+/// not attack, and the turn passes to P1 with `PUPPET` still on P0's field.
+/// (DCGO `CardEffectCommons.OverclockProcess` attacks only `if (isDeleted)`.)
+#[test]
+fn overclock_prevented_condition_does_not_attack() {
+    cite!(
+        "16-34-3",
+        "3b555b19ab0a61d1f67e101c4efabf15414ca10ee988576313a8c36c33aa9fd9"
+    );
+    let mut r = overclock_armor_purge_board();
+    let cp = r.event_checkpoint();
+    r.end_turn();
+    let p = current_prompt(&r).expect("the condition's pick");
+    assert_eq!(offered_slots(&p), vec![1], "the [Puppet] stack");
+    pick_field(&mut r, 1);
+    accept(&mut r, 0);
+    settle_declining(&mut r);
+    finish_end_of_turn(&mut r);
+    assert_eq!(
+        field_top_ids(&r, 0),
+        owned(&["OVERCLOCK", "PUPPET"]),
+        "<Armor Purge>: not deleted"
+    );
+    assert_eq!(trash_ids(&r, 0), owned(&["PUPPET_ARMOR"]));
+    assert_eq!(attack_event_index(&r, cp), None, "no attack");
+    assert!(revealed(&r, cp, 1).is_empty(), "no security check");
+    assert_eq!(r.turn_player(), 1);
+}
+
+/// §16-34-3 (control for `overclock_prevented_condition_does_not_attack`):
+/// P0 declines <Armor Purge>, so the [Puppet] Digimon is deleted -- the
+/// condition WAS executed and the attack follows with no decision.
+#[test]
+fn overclock_condition_executed_after_declined_prevention_attacks() {
+    cite!(
+        "16-34-3",
+        "3b555b19ab0a61d1f67e101c4efabf15414ca10ee988576313a8c36c33aa9fd9"
+    );
+    let mut r = overclock_armor_purge_board();
+    let cp = r.event_checkpoint();
+    r.end_turn();
+    pick_field(&mut r, 1);
+    let p = current_prompt(&r).expect("<Armor Purge>");
+    assert!(p.optional, "{p:?}");
+    r.decline_optional_trigger().expect("decline <Armor Purge>");
+    let prompts = settle_declining(&mut r);
+    assert!(prompts.is_empty(), "the attack is mandatory: {prompts:?}");
+    finish_end_of_turn(&mut r);
+    assert_eq!(field_top_ids(&r, 0), owned(&["OVERCLOCK"]), "deleted");
+    assert_eq!(trash_ids(&r, 0), owned(&["PUPPET", "PUPPET_ARMOR"]));
+    assert_eq!(revealed(&r, cp, 1), owned(&[FILL]), "OVERCLOCK attacked P1");
+}
+
+/// §16-34-2 "<Overclock> is a trigger-type effect that triggers at the end of
+/// your turn": it activates once in the end-of-turn pool, and that activation
+/// spends it. A prevented condition is "not executed" (§15-7-2), which stops
+/// only the processing after it; nothing re-opens the trigger. The exact
+/// prompt sequence: P0's condition pick, P0's <Armor Purge> decision (accepted)
+/// -- then no further P0 decision (no second <Overclock> pick), and the end of
+/// turn proceeds to P1's turn with the [Puppet] Digimon still on P0's field.
+#[test]
+fn overclock_prevented_condition_is_not_offered_again() {
+    cite!(
+        "16-34-2",
+        "d2abce098c733349c81dcc728df5453f32a89e52a3085a72af19a83d50e7d4aa"
+    );
+    let mut r = overclock_armor_purge_board();
+    r.end_turn();
+    let pick = current_prompt(&r).expect("the condition's pick");
+    assert_eq!(
+        (pick.player, pick.kind, pick.optional),
+        (0, SelectionKind::OwnField, true),
+        "{pick:?}"
+    );
+    assert_eq!(offered_slots(&pick), vec![1], "the [Puppet] stack");
+    pick_field(&mut r, 1);
+    let purge = current_prompt(&r).expect("<Armor Purge>");
+    assert_eq!((purge.player, purge.optional), (0, true), "{purge:?}");
+    assert_ne!(purge, pick, "a different decision than the pick");
+    accept(&mut r, 0);
+    assert_eq!(current_prompt(&r), None, "no second <Overclock> pick");
+    for _ in 0..4 {
+        if r.turn_player() != 0 || r.current_phase() != GamePhase::EndOfTurnAction {
+            break;
+        }
+        let mask = build_action_mask(&r.game, 0);
+        let legal: Vec<usize> = (0..mask.len()).filter(|&i| mask[i] == 1.0).collect();
+        assert_eq!(legal, vec![PASS as usize], "only PASS is left");
+        r.game.decode_action(PASS, 0);
+        let next = current_prompt(&r);
+        assert!(
+            next.as_ref().map_or(true, |p| p.player != 0),
+            "no further P0 decision: {next:?}"
+        );
+    }
+    assert_eq!(r.turn_player(), 1, "the turn passed");
+    assert_eq!(
+        field_top_ids(&r, 0),
+        owned(&["OVERCLOCK", "PUPPET"]),
+        "<Armor Purge>: not deleted"
+    );
+}
+
 /// §16-34-2 "<Overclock> is a trigger-type effect that triggers at the end of
 /// YOUR turn."
 ///

@@ -7042,11 +7042,12 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "Timing (not in the main phase, not at the opponent's end of turn) and kind: <Overclock> is a trigger-type end-of-turn effect pending with EOT_MEM in one TriggerOrder; activated first, its condition is offered inside the pool, and after the deletion the attack is declared there; EOT_MEM resolves before the security check (Q3868/Q3869 by analogy, W3 reading (a)).",
+      "note": "Timing (not in the main phase, not at the opponent's end of turn) and kind: <Overclock> is a trigger-type end-of-turn effect pending with EOT_MEM in one TriggerOrder; activated first, its condition is offered inside the pool, and after the deletion the attack is declared there; EOT_MEM resolves before the security check (Q3868/Q3869 by analogy, W3 reading (a)). One activation per end of turn: a prevented condition (<Armor Purge> accepted on the cost) spends it and no second pick is offered (Task 36).",
       "status": "proven",
       "tests": [
         "ch16_attack_keywords::overclock_kind_matches_rule",
-        "ch16_attack_keywords::overclock_timing_matches_rule"
+        "ch16_attack_keywords::overclock_timing_matches_rule",
+        "ch16_attack_keywords::overclock_prevented_condition_is_not_offered_again"
       ],
       "text": "<Overclock> is a trigger-type effect that triggers at the end of your turn. (For details, refer to 15-8-3 \"Trigger- Type Effects\")15-8-341"
     },
@@ -7058,11 +7059,13 @@
       "mechanisms": [
         "keywords"
       ],
-      "note": "Declining the condition: nothing deleted, no attack. Executing it: the attack follows with no decision. Matrix row Overclock (optional_cost_then_mandatory) agrees.",
+      "note": "Declining the condition: nothing deleted, no attack. Executing it: the attack follows with no decision. Matrix row Overclock (optional_cost_then_mandatory) agrees. 'Executed' means the chosen Digimon is actually deleted (§15-7-1 'and is successful', §15-8-5-2): <Armor Purge> accepted on the [Puppet] cost -> it isn't deleted, no attack; declined -> deleted, the attack follows. Was the BLOCKING half of G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL (Task 21 re-review M-4), resolved by Task 36: the engine keys the attack on the cost's deletion receipt on both the immediate and the parked path (combat::overclock::overclock_does_not_attack_when_a_mandatory_replacement_prevents_its_cost_deletion / ..._when_its_cost_deletion_is_prevented / ..._clones_while_parked_and_each_branch_keys_on_the_outcome; §15-7-4: a passively undeletable candidate is not offered, ..._does_not_offer_a_cost_that_cannot_be_deleted). The gap's ordering half (§11-1-4: the attack declares after the rest of the pool when the cost parks) stays OPEN, non-blocking.",
       "status": "proven",
       "tests": [
         "ch16_attack_keywords::overclock_optional_cost_then_mandatory_attack_without_suspending",
-        "ch16_attack_keywords::overclock_optionality_matches_rule"
+        "ch16_attack_keywords::overclock_optionality_matches_rule",
+        "ch16_attack_keywords::overclock_prevented_condition_does_not_attack",
+        "ch16_attack_keywords::overclock_condition_executed_after_declined_prevention_attacks"
       ],
       "text": "\"By deleting 1 of your Tokens or 1 of your other specified Digimon\" in <Overclock> is an optional processing condition. If the content of that condition is executed, the processing for \"the Digimon with this effect attacks a player without suspending\" will be mandatory."
     },

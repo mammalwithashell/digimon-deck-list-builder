@@ -1015,10 +1015,15 @@ pub struct Game {
     pub(crate) current_deletion_event_cause_override: Option<crate::trigger_context::EventCause>,
 
     /// Paused Overclock attack after the sacrifice deletion installed one or
-    /// more observer selections. Once those selections finish, the source card
-    /// is re-resolved by handle/token instead of trusting the old slot.
+    /// more selections (a replacement decision such as <Armor Purge>, or an
+    /// observer). Once those selections finish, the attack is declared only
+    /// if the cost's deletion actually happened -- read from the deletion
+    /// receipt (the last field, a `deletion_receipts` id) -- and the source
+    /// card is re-resolved by handle/token instead of trusting the old slot.
+    /// The penultimate field is the cost Digimon's stack identity
+    /// (`capture_digivolve_host_identity`). §16-34-3, §15-7-1, §15-8-5-2.
     #[doc(hidden)]
-    pub(crate) pending_overclock_attack: Option<(PlayerId, CardHandle, PlayerId)>,
+    pub(crate) pending_overclock_attack: Option<(PlayerId, CardHandle, PlayerId, u64, u64)>,
     /// Overclock source cards whose optional cost was declined this end of
     /// turn. <Overclock> is a trigger that activates once per end of turn
     /// (§16-34-2), so nothing re-offers it; the set is kept (cleared on

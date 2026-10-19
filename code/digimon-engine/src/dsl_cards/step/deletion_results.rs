@@ -24,8 +24,7 @@ pub(super) fn expand(step:&CompiledStep,ctx:&mut EffectContext<'_>,bindings:&Bin
     targets.retain(|h|ctx.game.player(h.player).battle_area.get(h.index as usize).is_some() && ctx.can_affect_permanent(*h));
     if targets.is_empty(){return Some(Vec::new());}
     let captured=targets.into_iter().map(|h|(h.player,ctx.game.capture_digivolve_host_identity(h))).collect();
-    let receipt=ctx.game.next_deletion_receipt;
-    ctx.game.next_deletion_receipt=receipt.checked_add(1).expect("deletion receipt exhausted");
+    let receipt=ctx.game.allocate_deletion_receipt();
     Some(vec![CompiledStep::DeleteCapturedBatch{receipt,targets:captured},CompiledStep::DeleteReceiptFinalize{receipt}])
 }
 
@@ -97,9 +96,7 @@ fn select_paid_prevention_member(ctx:&mut EffectContext<'_>,members:&[(u8,u16,u6
 }
 
 fn take_paid_receipt(ctx:&mut EffectContext<'_>,receipt:u64,payer:(u8,u16,u64))->bool {
-    let Some(i)=ctx.game.deletion_receipts.iter().position(|(id,_)|*id==receipt) else{return false;};
-    let (_,completed)=ctx.game.deletion_receipts.remove(i);
-    completed.iter().any(|(h,_,_,identity)|h.player==payer.0 && *identity==(payer.1,payer.2))
+    ctx.game.take_deletion_receipt_matching(receipt,payer.0,payer.2,Some(payer.1))
 }
 fn paid_target_matches(ctx:&EffectContext<'_>,h:PermanentHandle,filter:&digimon_dsl::compiled::CompiledPredicate,cause:digimon_dsl::compiled::CompiledReplacementCause,cause_player:Option<u8>)->bool {
     use digimon_dsl::compiled::CompiledReplacementCause as C;

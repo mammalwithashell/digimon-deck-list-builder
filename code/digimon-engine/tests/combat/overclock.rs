@@ -17,8 +17,9 @@ use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword};
-use digimon_engine::replacement::ReplacementCause;
+use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
+use digimon_engine::replacement::{ReplacementCause, ReplacementSubject};
 use digimon_engine::selection::{AttackTarget, SelectionKind};
 
 fn make_digimon(id: &str, dp: i32) -> CardData {
@@ -522,7 +523,7 @@ fn overclock_cost_parks_board() -> (DebugRunner, usize, usize) {
 /// tail, AFTER the tail's drain has already resolved the pool's remaining
 /// entry: `EOT`'s memory gain comes before the declaration.
 #[test]
-#[ignore = "G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL (§11-1-4, §16-34-2)"]
+#[ignore = "G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL ordering half: stays open, non-blocking by controller ruling (§11-1-4, §16-34-2; Task 21 re-review M-4 / Task 36 brief)"]
 fn overclock_attack_declared_before_the_rest_of_the_pool_when_its_cost_parks() {
     let (mut r, cp, _) = overclock_cost_parks_board();
     let tp = r.turn_player();
@@ -546,7 +547,6 @@ fn overclock_attack_declared_before_the_rest_of_the_pool_when_its_cost_parks() {
 /// prevents the cost's deletion, so nothing was deleted and <Overclock> does
 /// not attack (DCGO `OverclockProcess` attacks only on `isDeleted`).
 #[test]
-#[ignore = "G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL (§16-34-3, §15-7-2)"]
 fn overclock_does_not_attack_when_its_cost_deletion_is_prevented() {
     let (mut r, cp, security_before) = overclock_cost_parks_board();
     r.accept_optional_trigger().expect("<Armor Purge> prevents the deletion");
@@ -557,4 +557,185 @@ fn overclock_does_not_attack_when_its_cost_deletion_is_prevented() {
         .any(|e| matches!(e, digimon_engine::events::GameEvent::Attack { .. }));
     assert!(!attacked, "the condition was not executed: no attack");
     assert_eq!(r.game.player(1).security.len(), security_before);
+}
+
+/// The `<Armor Purge>` decision of [`overclock_cost_parks_board`] is a parked
+/// VM decision, so the game clones there (`Game: Clone`, rule 28). Each
+/// branch keys the attack on the cost's actual outcome (§16-34-3, §15-7-1,
+/// §15-8-5-2): accepting <Armor Purge> prevents the deletion (no attack, the
+/// stack stays with `SAC_BASE` on top); declining lets the deletion happen
+/// and the mandatory attack follows (a security check). Resolving either
+/// clone leaves the original parked at the prompt.
+#[test]
+fn overclock_cost_prevention_clones_while_parked_and_each_branch_keys_on_the_outcome() {
+    let (mut r, cp, security_before) = overclock_cost_parks_board();
+    let tp = r.turn_player();
+    let opp = 1 - tp;
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "<Armor Purge> parks on a data frame"
+    );
+    let accepted = r.game.clone();
+    let declined = r.game.clone();
+    let original = std::mem::replace(&mut r.game, accepted);
+
+    r.accept_optional_trigger()
+        .expect("<Armor Purge> prevents the deletion");
+    let _ = r.auto_resolve_declining_end_of_turn_attacks();
+    let attacked = r
+        .events_since(cp)
+        .iter()
+        .any(|e| matches!(e, digimon_engine::events::GameEvent::Attack { .. }));
+    assert!(!attacked, "accepted: the deletion was prevented, no attack");
+    assert_eq!(r.game.player(opp).security.len(), security_before);
+    let tops: Vec<String> = r
+        .game
+        .player(tp)
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&r.game.card_data).to_string())
+        .collect();
+    assert!(
+        tops.contains(&"SAC_BASE".to_string()),
+        "accepted: <Armor Purge> trashed the top card, the Digimon stayed: {tops:?}"
+    );
+
+    r.game = declined;
+    r.game
+        .resolve_selection(tp, PASS)
+        .expect("decline <Armor Purge>");
+    let _ = r.auto_resolve_declining_end_of_turn_attacks();
+    let attacked = r
+        .events_since(cp)
+        .iter()
+        .any(|e| matches!(e, digimon_engine::events::GameEvent::Attack { .. }));
+    assert!(
+        attacked,
+        "declined: the cost was deleted, the attack is mandatory"
+    );
+    // P1 has no security cards on this board: the attack's check is the
+    // direct hit that wins the game.
+    assert_eq!(security_before, 0);
+    assert_eq!(r.game.winner, Some(tp), "declined: the attack hit P1");
+    assert!(
+        r.game
+            .player(tp)
+            .battle_area
+            .iter()
+            .all(|p| p.top_card().card_id(&r.game.card_data) != "SAC_BASE"),
+        "declined: SAC was deleted"
+    );
+
+    r.game = original;
+    assert!(
+        r.pending_selection().is_some(),
+        "resolving the clones leaves the original at the <Armor Purge> prompt"
+    );
+    assert_eq!(r.game.player(opp).security.len(), security_before);
+}
+
+/// "When this Digimon would be deleted, it isn't deleted" -- a MANDATORY
+/// replacement: the cost's deletion is prevented without parking a decision.
+struct PreventOwnDeletion;
+
+impl CardEffect for PreventOwnDeletion {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::when_would_be_deleted(card)
+            .name("When this Digimon would be deleted, it isn't deleted")
+            .replacement_condition(|ctx, subject| {
+                matches!(subject, ReplacementSubject::Permanent(h) if Some(*h) == ctx.source_permanent)
+            })
+            .replacement_process(|ctx| ctx.cancel())
+            .build()]
+    }
+}
+
+/// §16-34-3 / §15-7-1 "If the player chooses to execute the processing for
+/// the conditions and is successful, the processing after the conditions is
+/// performed"; §15-8-5-2: a "would be deleted" effect that prevents the
+/// removal means "it isn't deleted". The non-parking path: a mandatory
+/// prevention stops the cost's deletion with no decision, so the condition
+/// was not executed and <Overclock> does not attack (DCGO `OverclockProcess`
+/// attacks only on `isDeleted`).
+#[test]
+fn overclock_does_not_attack_when_a_mandatory_replacement_prevents_its_cost_deletion() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("OC", 7000))
+        .add_card(make_digimon("SAC", 3000))
+        .start();
+    r.register_effect("SAC", Arc::new(PreventOwnDeletion));
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let oc = r.place_on_field(tp, "OC", Some(0));
+    let sac = r.place_on_field(tp, "SAC", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
+    let security_before = r.game.player(opp).security.len();
+    let cp = r.event_checkpoint();
+    r.game.end_turn();
+    r.game
+        .resolve_selection(tp, encode_attack(0, sac.index as u16))
+        .expect("pick SAC as the cost");
+    let _ = r.auto_resolve_declining_end_of_turn_attacks();
+    let attacked = r
+        .events_since(cp)
+        .iter()
+        .any(|e| matches!(e, digimon_engine::events::GameEvent::Attack { .. }));
+    assert!(!attacked, "the deletion was prevented: no attack");
+    assert_eq!(r.game.player(opp).security.len(), security_before);
+    assert_eq!(
+        r.game.player(tp).battle_area.len(),
+        2,
+        "SAC was not deleted"
+    );
+}
+
+/// §15-7-4 (Ver. 4.3) "If executing an optional processing condition's
+/// contents isn't possible, then the player can't choose to execute them."
+/// A Digimon that can't be deleted (a passive `CannotBeDestroyed`) is not a
+/// cost <Overclock> can choose: with another candidate only that one is
+/// offered; with no other candidate the condition is not offered at all.
+#[test]
+fn overclock_does_not_offer_a_cost_that_cannot_be_deleted() {
+    let build = || {
+        let mut r = DebugRunner::builder()
+            .add_card(make_digimon("OC", 7000))
+            .add_card(make_digimon("SAC", 3000))
+            .add_card(make_digimon("SAC2", 3000))
+            .start();
+        let tp = r.game.turn_player();
+        let oc = r.place_on_field(tp, "OC", Some(0));
+        let sac = r.place_on_field(tp, "SAC", Some(0));
+        r.game
+            .modifiers
+            .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
+        r.game.modifiers.add(
+            sac,
+            ModifierEntry::simple(ModifierType::CannotBeDestroyed, 1, Expiry::EndOfTurn, tp),
+        );
+        (r, tp, sac)
+    };
+
+    // Another candidate: only it is offered.
+    let (mut r, tp, sac) = build();
+    let sac2 = r.place_on_field(tp, "SAC2", Some(0));
+    r.game.end_turn();
+    let sel = r.pending_selection().expect("the condition's pick");
+    assert_eq!(
+        sel.valid_action_ids,
+        vec![encode_attack(0, sac2.index as u16)],
+        "only the deletable Digimon is offered, not {sac:?}"
+    );
+
+    // No other candidate: the condition is not offered and the turn passes.
+    let (mut r, tp, _) = build();
+    r.game.end_turn();
+    assert!(
+        !r.pending_is_end_of_turn_keyword_decision(),
+        "no <Overclock> pick: {:?}",
+        r.pending_selection()
+    );
+    let _ = r.auto_resolve_declining_end_of_turn_attacks();
+    assert_eq!(r.game.turn_player(), 1 - tp, "the turn passed");
 }
